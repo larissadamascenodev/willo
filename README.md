@@ -1,4 +1,4 @@
-# Dinhub
+# Willo
 
 .
 
@@ -29,8 +29,8 @@ npm run dev
 
 O projeto já tem o Capacitor instalado (`@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`) e configurado em [`capacitor.config.ts`](capacitor.config.ts):
 
-- App name: `DinHub`
-- App ID: `com.dinhub.app`
+- App name: `Willo`
+- App ID: `com.willo.app`
 - Web dir: `dist`
 
 ### Plataforma iOS

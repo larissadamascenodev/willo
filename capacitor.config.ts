@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.dinhub.app',
+  appId: 'com.willo.app',
   appName: 'Willo',
   webDir: 'dist'
 };
