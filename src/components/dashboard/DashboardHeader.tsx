@@ -1,10 +1,12 @@
 import { memo, useMemo, useState, useRef, useEffect } from "react";
-import { LayoutDashboard, ArrowLeftRight, Plus, Bot, User, Bell, Flame, PiggyBank, Settings, LogOut, TrendingUp, TrendingDown, Camera } from "lucide-react";
+import { LayoutDashboard, ArrowLeftRight, Plus, BrainCircuit, User, Bell, Flame, Settings, LogOut, TrendingUp, TrendingDown, Camera } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import NotificationsPanel, { useNotifications } from "./NotificationsPanel";
+import { useIsMobile } from "@/hooks/use-mobile";
+import wordmarkOnDark from "@/assets/logo/willo-wordmark-light.png";
 
 export const useGreeting = () => {
   return useMemo(() => {
@@ -23,14 +25,19 @@ const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
   { label: "Transações", icon: ArrowLeftRight, path: "/transacoes" },
   { label: "Nova transação", icon: Plus, path: "/nova-transacao", isAction: true },
-  { label: "Bot Huby", icon: Bot, path: "/bot-finance" },
+  { label: "Raio-X", icon: BrainCircuit, path: "/bot-finance" },
   { label: "Perfil", icon: User, path: "/configuracoes" },
 ];
 
-const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profile?: { display_name: string | null } | null; streak?: number; streakDates?: string[] }) => {
+/** Routes that keep the app header; every other screen shows a back bar instead. */
+// Home is left out: BalanceHeroCard draws its own top row there.
+const MAIN_TABS = ["/transacoes", "/gestao", "/bot-finance"];
+
+const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profile?: { display_name: string | null; avatar_url?: string | null } | null; streak?: number; streakDates?: string[] }) => {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useIsMobile();
   const initial = (profile?.display_name ?? user?.email ?? "U").charAt(0).toUpperCase();
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "Usuário";
   const email = user?.email ?? "";
@@ -174,10 +181,7 @@ const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profi
       <div className="hidden md:flex items-center justify-between sticky top-0 z-50 bg-background/70 backdrop-blur-2xl px-6 py-3 border-b border-border/10 -mx-4 md:-mx-6 mb-4">
         {/* Logo */}
         <div className="flex items-center gap-2 flex-shrink-0 cursor-pointer" onClick={() => navigate("/")}>
-          <PiggyBank className="w-8 h-8 text-primary" />
-          <span className="font-display font-bold text-2xl text-primary">
-            Willo
-          </span>
+          <img src={wordmarkOnDark} alt="Willo" className="h-7 w-auto" style={{ filter: "brightness(0) invert(1)" }} />
         </div>
 
         {/* Center: Floating nav pill */}
@@ -212,7 +216,7 @@ const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profi
                       >
                         <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-card/95 border-l border-t border-border/15" />
                         <button onClick={() => handleTransacaoOption("receita")} className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors">
-                          <TrendingUp className="w-3.5 h-3.5 text-primary" />
+                          <TrendingUp className="w-3.5 h-3.5 text-willo-green" />
                           <span className="text-[11px] font-medium text-foreground whitespace-nowrap">Receita</span>
                         </button>
                         <button onClick={() => handleTransacaoOption("despesa")} className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-destructive/10 transition-colors">
@@ -259,7 +263,7 @@ const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profi
           </div>
           <div className="relative" ref={notifRef}>
             <BellButton />
-            <NotificationsPanel open={notifOpen} onClose={handleCloseNotif} />
+            {!isMobile && <NotificationsPanel open={notifOpen} onClose={handleCloseNotif} />}
           </div>
           {/* Profile chip + dropdown */}
           <div className="relative" ref={menuRef}>
@@ -310,30 +314,39 @@ const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profi
         </div>
       </div>
 
-      {/* Mobile Header */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl px-4 py-3 md:hidden -mx-4 mb-2">
+      {/* Mobile Header — same top row as BalanceHeroCard on the home route
+          (which renders its own), sitting directly on the page background. */}
+      <header
+        className={cn("md:hidden -mx-4 px-4 pb-4", !MAIN_TABS.includes(location.pathname) && "hidden")}
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
+      >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <PiggyBank className="w-7 h-7 text-primary" />
-            <span className="font-display font-bold text-xl text-primary">
-              Willo
-            </span>
-          </div>
-          <div className="flex items-center gap-1 bg-card/60 backdrop-blur-xl border border-border/20 rounded-full px-1.5 py-1">
+          <button onClick={() => navigate("/")} aria-label="Início">
+            <img src={wordmarkOnDark} alt="Willo" className="h-5 w-auto" style={{ filter: "brightness(0) invert(1)" }} />
+          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
             <div className="relative" ref={notifRef}>
-              <BellButton size="sm" />
-              <NotificationsPanel open={notifOpen} onClose={handleCloseNotif} />
-            </div>
-            <div className="relative" ref={streakRef}>
               <button
-                onClick={() => setStreakOpen((v) => !v)}
-                className="flex items-center gap-1 px-2 py-1 rounded-full bg-warning/10 border border-warning/20"
+                onClick={handleOpenNotif}
+                className="relative w-9 h-9 flex items-center justify-center text-white/85 hover:text-white transition-colors"
+                aria-label="Notificações"
               >
-                <Flame className="w-3 h-3 text-warning" />
-                <span className="text-[11px] font-bold text-warning">{streak}</span>
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-willo-green ring-2 ring-[#0B0B0B]" />}
               </button>
-              {renderStreakPopover()}
+              {isMobile && <NotificationsPanel open={notifOpen} onClose={handleCloseNotif} />}
             </div>
+            <button
+              onClick={() => navigate("/configuracoes")}
+              className="w-9 h-9 rounded-full overflow-hidden bg-white/10 flex items-center justify-center text-[13px] font-bold text-white active:scale-95 transition-transform"
+              aria-label="Perfil"
+            >
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                initial
+              )}
+            </button>
           </div>
         </div>
       </header>

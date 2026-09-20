@@ -1,62 +1,22 @@
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Target, Plus, Wallet, Clock, MoreVertical, Sparkles, Edit2, Trash2, Brain } from "lucide-react";
+import { Target, Plus, Wallet, Clock, MoreVertical, Sparkles, Edit2, Trash2, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchGoals, createGoal, createGoalDeposit, deleteGoal, generateGoalCoverImage, updateGoal, type Goal } from "@/services/goalService";
+import { fetchGoals, createGoal, createGoalDeposit, deleteGoal, type Goal } from "@/services/goalService";
+import { getGoalPreset } from "@/lib/goalIcons";
 import GoalCreateModal from "@/components/goals/GoalCreateModal";
 import GoalDepositModal from "@/components/goals/GoalDepositModal";
 import GoalEditModal from "@/components/goals/GoalEditModal";
 import GoalConfirmModal from "@/components/goals/GoalConfirmModal";
 import AIFinancialWizardModal from "@/components/shared/AIFinancialWizardModal";
+import BottomSheet from "@/components/shared/BottomSheet";
+import { PageHeader, SectionTitle } from "@/components/shared/MobilePage";
 
+import { getCurrency } from "@/lib/currency";
 const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-const GOAL_COLORS = [
-  "hsl(40 90% 55%)",
-  "hsl(150 100% 45%)",
-  "hsl(210 80% 55%)",
-  "hsl(330 80% 55%)",
-  "hsl(270 70% 60%)",
-  "hsl(180 70% 50%)",
-];
-
-const DonutChart = ({ goals, avgProgress }: { goals: Goal[]; avgProgress: number }) => {
-  const size = 80;
-  const stroke = 7;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const segments = goals.map((g, i) => ({
-    progress: Math.min(1, g.current_amount / g.target_amount),
-    color: GOAL_COLORS[i % GOAL_COLORS.length],
-  }));
-  const arcPer = 1 / (segments.length || 1);
-
-  return (
-    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="hsl(var(--border) / 0.15)" strokeWidth={stroke} />
-        {segments.map((seg, i) => {
-          const segLength = circumference * arcPer;
-          const gap = circumference * 0.01;
-          const fillLength = (segLength - gap) * seg.progress;
-          const offset = -circumference * arcPer * i;
-          return (
-            <circle key={i} cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={seg.color} strokeWidth={stroke} strokeLinecap="round"
-              strokeDasharray={`${fillLength} ${circumference - fillLength}`} strokeDashoffset={offset}
-              style={{ transition: "stroke-dasharray 0.8s ease-out" }} />
-          );
-        })}
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-sm font-bold text-primary tabular-nums">{Math.round(avgProgress * 100)}%</span>
-        <span className="text-[7px] text-muted-foreground">guardado</span>
-      </div>
-    </div>
-  );
-};
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 const Metas = () => {
   const { user } = useAuth();
@@ -75,19 +35,6 @@ const Metas = () => {
     try {
       const data = await fetchGoals();
       setGoals(data);
-
-      for (const goal of data) {
-        if (!goal.cover_image) {
-          generateGoalCoverImage(goal.name).then(async (imageUrl) => {
-            if (imageUrl) {
-              await updateGoal(goal.id, { cover_image: imageUrl });
-              setGoals((prev) =>
-                prev.map((g) => (g.id === goal.id ? { ...g, cover_image: imageUrl } : g))
-              );
-            }
-          });
-        }
-      }
     } catch {
       toast.error("Erro ao carregar metas");
     } finally {
@@ -100,11 +47,10 @@ const Metas = () => {
   }, [loadGoals]);
 
   const handleCreateGoal = useCallback(
-    async (data: { name: string; target_amount: number; monthly_contribution?: number | null; deadline?: string | null }) => {
+    async (data: { name: string; target_amount: number; monthly_contribution?: number | null; deadline?: string | null; cover_image?: string | null }) => {
       if (!user) return;
       try {
-        const coverImage = await generateGoalCoverImage(data.name);
-        await createGoal({ ...data, cover_image: coverImage }, user.id);
+        await createGoal(data, user.id);
         toast.success("Meta criada com sucesso! 🎯");
         setShowCreateModal(false);
         loadGoals();
@@ -150,102 +96,93 @@ const Metas = () => {
 
   const totalGuardado = goals.reduce((s, g) => s + g.current_amount, 0);
   const totalObjetivo = goals.reduce((s, g) => s + g.target_amount, 0);
-  const avgProgress =
-    goals.length > 0
-      ? goals.reduce((s, g) => s + Math.min(1, g.current_amount / g.target_amount), 0) / goals.length
-      : 0;
+
+  const overallPct = totalObjetivo > 0 ? Math.min(totalGuardado / totalObjetivo, 1) : 0;
+  const menuGoal = goals.find((g) => g.id === menuGoalId) ?? null;
 
   return (
-    <div className="space-y-5 pb-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold font-display text-foreground">Suas Metas</h1>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Acompanhe seu progresso financeiro</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowAIWizard(true)}
-            className="w-8 h-8 rounded-xl bg-primary/15 border border-primary/20 flex items-center justify-center hover:bg-primary/20 transition-colors"
-            title="Criar com IA"
-          >
-            <Brain className="w-4 h-4 text-primary" />
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
+    <div className="mx-auto max-w-lg pb-28 md:max-w-5xl">
+      <PageHeader
+        title="Metas"
+        subtitle="Junte dinheiro para o que importa"
+        action={
+          <button
             onClick={() => setShowCreateModal(true)}
-            className="w-8 h-8 rounded-xl bg-primary/15 border border-primary/20 flex items-center justify-center hover:bg-primary/20 transition-colors"
+            aria-label="Nova meta"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#0B0B0B] active:scale-95 transition-transform"
           >
-            <Plus className="w-4 h-4 text-primary" />
-          </motion.button>
-        </div>
-      </div>
+            <Plus className="h-5 w-5" strokeWidth={2.5} />
+          </button>
+        }
+      />
 
-      {/* Summary card with donut */}
+      {/* Summary */}
       {goals.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl overflow-hidden relative">
-          <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, hsl(220 15% 14% / 0.6) 0%, hsl(220 18% 8% / 0.75) 50%, hsl(220 20% 4% / 0.9) 100%)" }} />
-          <div className="absolute inset-0 border border-border/10 rounded-xl" />
-          <div className="relative px-4 py-4">
-            <div className="flex items-center gap-4">
-              <DonutChart goals={goals} avgProgress={avgProgress} />
-              <div className="flex-1 min-w-0">
-                <p className="text-[8px] text-muted-foreground uppercase tracking-[0.15em] font-semibold">Total Guardado</p>
-                <p className="text-xl font-bold font-display text-foreground tabular-nums mt-0.5">{fmt(totalGuardado)}</p>
-                <p className="text-[10px] text-muted-foreground/60 mt-0.5">de {fmt(totalObjetivo)}</p>
-                <div className="mt-2.5 space-y-1">
-                  {goals.map((g, i) => {
-                    const pct = Math.round(Math.min(1, g.current_amount / g.target_amount) * 100);
-                    return (
-                      <div key={g.id} className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: GOAL_COLORS[i % GOAL_COLORS.length] }} />
-                          <span className="text-[10px] text-foreground/80 truncate">{g.name}</span>
-                        </div>
-                        <span className={`text-[10px] font-bold tabular-nums ${pct >= 100 ? "text-primary" : "text-foreground/70"}`}>{pct}%</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+        <div className="mt-6">
+          <p className="text-[15px] text-white/50">Total guardado</p>
+          <p className="text-[40px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{fmt(totalGuardado)}</p>
+          <p className="text-[14px] text-white/45 tabular-nums">de {fmt(totalObjetivo)} · {Math.round(overallPct * 100)}%</p>
+          <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-white/[0.08]">
+            <motion.div
+              className="h-full rounded-full bg-white"
+              initial={{ width: 0 }}
+              animate={{ width: `${overallPct * 100}%` }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+            />
           </div>
-        </motion.div>
+        </div>
       )}
 
-      {/* Section title */}
-      {goals.length > 0 && (
-        <p className="text-sm font-bold font-display text-foreground">Todas as Metas</p>
-      )}
+      {/* AI helper */}
+      <button
+        onClick={() => setShowAIWizard(true)}
+        className="mt-5 flex w-full items-center gap-3 rounded-[22px] border border-white/[0.07] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-3.5 text-left active:scale-[0.99] transition-transform"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.08]">
+          <Sparkles className="h-4 w-4 text-white" />
+        </span>
+        <span className="flex-1">
+          <span className="block text-[15px] font-medium text-white">Planejar com IA</span>
+          <span className="block text-[12px] text-white/45">Diga seu objetivo e montamos o plano</span>
+        </span>
+        <ChevronRight className="h-4 w-4 text-white/30" />
+      </button>
 
-      {/* Goals grid — 2 per row on desktop, 1 on mobile */}
+      {goals.length > 0 && <SectionTitle>Suas metas</SectionTitle>}
+
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
           {[1, 2].map((i) => (
-            <div key={i} className="h-48 rounded-xl bg-card/60 animate-pulse" />
+            <div key={i} className="h-56 animate-pulse rounded-[24px] bg-[#141414]" />
           ))}
         </div>
       ) : goals.length === 0 ? (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
-            <Target className="w-8 h-8 text-primary" />
-          </div>
-          <h3 className="text-sm font-bold text-foreground mb-1">Nenhuma meta criada</h3>
-          <p className="text-xs text-muted-foreground max-w-[240px]">Crie sua primeira meta e comece a acompanhar seu progresso financeiro</p>
-          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowCreateModal(true)}
-            className="mt-4 flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary/15 text-primary border border-primary/20 hover:bg-primary/25 text-xs font-bold">
-            <Plus className="w-4 h-4" /> Criar meta
-          </motion.button>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-12 flex flex-col items-center px-8 text-center">
+          <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.05]">
+            <Target className="h-8 w-8 text-white/40" />
+          </span>
+          <p className="mt-5 text-[18px] font-bold text-white">Nenhuma meta ainda</p>
+          <p className="mt-1 text-[14px] text-white/45">Crie sua primeira meta e acompanhe quanto falta para chegar lá.</p>
+          <button onClick={() => setShowCreateModal(true)} className="mt-5 h-12 rounded-full bg-white px-6 text-[15px] font-semibold text-[#0B0B0B]">
+            Criar meta
+          </button>
         </motion.div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <AnimatePresence>
             {goals.map((goal, idx) => {
               const progress = Math.min(1, goal.current_amount / goal.target_amount);
-              const remaining = goal.target_amount - goal.current_amount;
+              const remaining = Math.max(goal.target_amount - goal.current_amount, 0);
               const isComplete = progress >= 1;
-              const isMenuOpen = menuGoalId === goal.id;
+              const deadline = goal.deadline ? new Date(`${goal.deadline}T12:00:00`) : null;
+              const details = [
+                `Faltam ${fmt(remaining)}`,
+                goal.monthly_contribution ? `${fmt(goal.monthly_contribution)}/mês` : null,
+                deadline ? `até ${deadline.toLocaleDateString("pt-BR", { month: "short", year: "numeric" })}` : null,
+              ].filter(Boolean).join(" · ");
+
+              const goalPreset = getGoalPreset(goal);
+              const GoalIcon = goalPreset.icon;
 
               return (
                 <motion.div
@@ -255,117 +192,70 @@ const Metas = () => {
                   exit={{ opacity: 0, y: -12 }}
                   transition={{ delay: idx * 0.05 }}
                   onClick={() => navigate(`/metas/${goal.id}`)}
-                  className="rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-transform relative group"
-                  style={{ boxShadow: "0 4px 24px -4px rgba(0,0,0,0.35)" }}
+                  className="cursor-pointer overflow-hidden rounded-[24px] border border-white/[0.07] bg-[#141414] p-4 active:scale-[0.99] transition-transform"
                 >
-                  {/* Full card background image */}
-                  <div className="relative">
-                    {goal.cover_image ? (
-                      <img src={goal.cover_image} alt={goal.name} className="w-full h-44 md:h-48 object-cover" />
-                    ) : (
-                      <div className="w-full h-44 md:h-48 bg-gradient-to-br from-primary/20 via-card to-card flex items-center justify-center">
-                        <Target className="w-12 h-12 text-primary/20" />
-                      </div>
-                    )}
-                    {/* Dark overlay gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20" />
-
-                    {/* Three dots menu — top right */}
-                    <div className="absolute top-3 right-3 z-10">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setMenuGoalId(isMenuOpen ? null : goal.id); }}
-                        className="w-8 h-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center hover:bg-black/60 transition-colors"
-                      >
-                        <MoreVertical className="w-4 h-4 text-white/80" />
-                      </button>
-
-                      <AnimatePresence>
-                        {isMenuOpen && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: -4 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: -4 }}
-                            className="absolute right-0 mt-1 w-36 rounded-xl bg-card border border-border/20 shadow-xl overflow-hidden z-20"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              onClick={() => { setEditGoal(goal); setMenuGoalId(null); }}
-                              className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-semibold text-foreground hover:bg-muted/10 transition-colors"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" /> Editar
-                            </button>
-                            <button
-                              onClick={() => { setDeleteGoalId(goal.id); setMenuGoalId(null); }}
-                              className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" /> Excluir
-                            </button>
-                          </motion.div>
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full" style={{ background: `${goalPreset.hex}22` }}>
+                        {goal.cover_image ? (
+                          <img src={goal.cover_image} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <GoalIcon className="h-5 w-5" style={{ color: goalPreset.hex }} />
                         )}
-                      </AnimatePresence>
+                      </span>
+                      <div className="min-w-0">
+                        {isComplete && (
+                          <span className="mb-1 inline-block rounded-full bg-willo-green px-2 py-0.5 text-[10px] font-bold text-[#0B0B0B]">Concluída</span>
+                        )}
+                      </div>
                     </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setMenuGoalId(goal.id); }}
+                      aria-label="Opções"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/60"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                  </div>
 
-                    {/* Badge top left */}
-                    {isComplete && (
-                      <div className="absolute top-3 left-3">
-                        <span className="text-[10px] font-bold bg-primary/25 backdrop-blur-md text-primary px-2.5 py-1 rounded-full border border-primary/30">
-                          ✓ Concluída
-                        </span>
+                  {/* Body */}
+                  <div className="relative mt-3">
+                    <p className="truncate text-[17px] font-semibold text-white">{goal.name}</p>
+                    <div className="mt-1 flex items-baseline justify-between gap-2">
+                      <p className="text-[15px] tabular-nums">
+                        <span className="font-bold text-white">{fmt(goal.current_amount)}</span>
+                        <span className="text-white/40"> de {fmt(goal.target_amount)}</span>
+                      </p>
+                      <span className={`text-[13px] font-semibold tabular-nums ${isComplete ? "text-willo-green" : "text-white"}`}>{Math.round(progress * 100)}%</span>
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.08]">
+                      <motion.div
+                        className={`h-full rounded-full ${isComplete ? "bg-willo-green" : "bg-white"}`}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progress * 100}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut", delay: idx * 0.06 }}
+                      />
+                    </div>
+                    <p className="mt-2 truncate text-[12px] text-white/45">{isComplete ? "Meta alcançada" : details}</p>
+
+                    {!isComplete && (
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDepositGoal(goal); }}
+                          className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-white text-[14px] font-semibold text-[#0B0B0B] active:scale-[0.98] transition-transform"
+                        >
+                          <Wallet className="h-4 w-4" /> Guardar dinheiro
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate(`/metas/${goal.id}`); }}
+                          aria-label="Histórico"
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-white/70"
+                        >
+                          <Clock className="h-4 w-4" />
+                        </button>
                       </div>
                     )}
-
-                    {/* Content overlay at bottom */}
-                    <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-8">
-                      {/* Title */}
-                      <p className="text-base font-bold text-white truncate mb-1">{goal.name}</p>
-
-                      {/* Amount row */}
-                      <div className="flex items-baseline gap-1.5 mb-3">
-                        <span className="text-lg font-bold text-primary tabular-nums">{fmt(goal.current_amount)}</span>
-                        <span className="text-[11px] text-white/40">/ {fmt(goal.target_amount)}</span>
-                      </div>
-
-                      {/* Progress bar */}
-                      <div className="flex items-center gap-2.5 mb-3">
-                        <div className="flex-1 relative h-2 rounded-full bg-white/10 overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progress * 100}%` }}
-                            transition={{ duration: 0.8, ease: "easeOut", delay: idx * 0.08 }}
-                            className="h-full rounded-full"
-                            style={{
-                              background: isComplete
-                                ? "hsl(150 100% 45%)"
-                                : "linear-gradient(90deg, hsl(150 100% 45% / 0.5), hsl(150 100% 45%))",
-                              boxShadow: "0 0 8px hsl(150 100% 45% / 0.4)",
-                            }}
-                          />
-                        </div>
-                        <span className="text-xs font-bold text-primary tabular-nums min-w-[32px] text-right">
-                          {Math.round(progress * 100)}%
-                        </span>
-                      </div>
-
-                      {/* Action buttons */}
-                      {!isComplete && (
-                        <div className="flex items-center gap-2">
-                          <motion.button
-                            whileTap={{ scale: 0.95 }}
-                            onClick={(e) => { e.stopPropagation(); setDepositGoal(goal); }}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-primary/20 backdrop-blur-sm border border-primary/25 text-primary text-xs font-bold hover:bg-primary/30 transition-colors"
-                          >
-                            <Wallet className="w-3.5 h-3.5" /> Depositar
-                          </motion.button>
-                          <motion.button
-                            whileTap={{ scale: 0.95 }}
-                            onClick={(e) => { e.stopPropagation(); navigate(`/metas/${goal.id}`); }}
-                            className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm border border-white/10 flex items-center justify-center hover:bg-white/15 transition-colors flex-shrink-0"
-                          >
-                            <Clock className="w-4 h-4 text-white/60" />
-                          </motion.button>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </motion.div>
               );
@@ -374,12 +264,35 @@ const Metas = () => {
         </div>
       )}
 
-      {/* Close menu on outside click */}
-      {menuGoalId && (
-        <div className="fixed inset-0 z-[5]" onClick={() => setMenuGoalId(null)} />
-      )}
+      {/* Goal actions */}
+      <BottomSheet open={!!menuGoal} onClose={() => setMenuGoalId(null)}>
+        <div className="px-5 pb-2">
+          <p className="truncate text-[20px] font-bold text-white">{menuGoal?.name}</p>
+          <div className="mt-4 space-y-2">
+            <button
+              onClick={() => { if (menuGoal) setEditGoal(menuGoal); setMenuGoalId(null); }}
+              className="flex w-full items-center gap-3 rounded-[20px] bg-white/[0.05] px-4 py-3.5 text-left"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#0B0B0B]"><Edit2 className="h-4 w-4" /></span>
+              <span className="text-[15px] font-medium text-white">Editar meta</span>
+            </button>
+            <button
+              onClick={() => { if (menuGoal) setDeleteGoalId(menuGoal.id); setMenuGoalId(null); }}
+              className="flex w-full items-center gap-3 rounded-[20px] bg-red-500/[0.08] px-4 py-3.5 text-left"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/15"><Trash2 className="h-4 w-4 text-red-400" /></span>
+              <span className="text-[15px] font-medium text-red-400">Excluir meta</span>
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
 
-      <GoalCreateModal open={showCreateModal} onClose={() => setShowCreateModal(false)} onSubmit={handleCreateGoal} />
+      <GoalCreateModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={handleCreateGoal}
+        existingNames={goals.map((g) => g.name)}
+      />
       <GoalDepositModal open={!!depositGoal} onClose={() => setDepositGoal(null)} onSubmit={handleDeposit} goalName={depositGoal?.name ?? ""} />
       {editGoal && (
         <GoalEditModal open={!!editGoal} onClose={() => setEditGoal(null)} goal={editGoal} onUpdated={loadGoals} />

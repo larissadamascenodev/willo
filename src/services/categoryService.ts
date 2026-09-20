@@ -52,15 +52,50 @@ export async function getCustomCategories(type?: "receita" | "despesa") {
   return result;
 }
 
+const normalizeName = (value: string) =>
+  value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+/** Names that would make the app useless for analysis. */
+const FORBIDDEN_NAMES = ["outros", "outro", "diversos", "geral", "varios", "sem categoria"];
+
+/** Every category name and color must be unique, so nothing gets confused later. */
+export async function assertCategoryIsUnique(
+  name: string,
+  color: string,
+  type: string,
+  ignoreId?: string,
+) {
+  const clean = normalizeName(name);
+  if (!clean) throw new Error("Dê um nome para a categoria");
+  if (FORBIDDEN_NAMES.includes(clean)) {
+    throw new Error("Escolha um nome específico: “Outros” não ajuda a entender seus gastos");
+  }
+
+  const { DEFAULT_CATEGORY_TYPE, DEFAULT_CATEGORY_HEX } = await import("@/lib/categoryIcons");
+  const defaults = Object.keys(DEFAULT_CATEGORY_TYPE).filter((n) => DEFAULT_CATEGORY_TYPE[n] === type);
+  if (defaults.some((n) => normalizeName(n) === clean)) throw new Error(`Já existe a categoria “${name.trim()}”`);
+  if (Object.values(DEFAULT_CATEGORY_HEX).some((hex) => hex.toLowerCase() === color.toLowerCase())) {
+    throw new Error("Essa cor já é usada por outra categoria. Escolha outra.");
+  }
+
+  const existing = await getCustomCategories();
+  const clash = existing.filter((c) => c.id !== ignoreId);
+  if (clash.some((c) => normalizeName(c.name) === clean)) throw new Error(`Já existe a categoria “${name.trim()}”`);
+  if (clash.some((c) => (c.color ?? "").toLowerCase() === color.toLowerCase())) {
+    throw new Error("Essa cor já é usada por outra categoria. Escolha outra.");
+  }
+}
+
 export async function createCustomCategory(
   userId: string,
   input: { name: string; icon: string; color: string; type: string }
 ) {
+  await assertCategoryIsUnique(input.name, input.color, input.type);
   const { data, error } = await supabase
     .from("custom_categories" as any)
     .insert({
       user_id: userId,
-      name: input.name,
+      name: input.name.trim(),
       icon: input.icon,
       color: input.color,
       type: input.type,
@@ -75,8 +110,18 @@ export async function createCustomCategory(
 
 export async function updateCustomCategory(
   id: string,
-  updates: { name?: string; icon?: string; color?: string }
+  updates: { name?: string; icon?: string; color?: string; type?: string }
 ) {
+  if (updates.name || updates.color) {
+    const all = await getCustomCategories();
+    const current = all.find((c) => c.id === id);
+    await assertCategoryIsUnique(
+      updates.name ?? current?.name ?? "",
+      updates.color ?? current?.color ?? "",
+      updates.type ?? current?.type ?? "despesa",
+      id,
+    );
+  }
   const { data, error } = await supabase
     .from("custom_categories" as any)
     .update(updates)

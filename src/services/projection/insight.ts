@@ -105,7 +105,7 @@ export function getInsight(
     ];
     const tips = [
       "Revise suas despesas recorrentes e veja onde pode cortar.",
-      "Mesmo R$100 a menos por mês faz diferença em 6 meses.",
+      "Mesmo 100 a menos por mês faz diferença em 6 meses.",
       "Use a simulação pra encontrar o ponto de equilíbrio.",
     ];
     return { text: pick(texts, seed), tip: pick(tips, seed + 1), tone: "negative" };

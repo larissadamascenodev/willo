@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from "framer-motion";
-import {
+import { ArrowUpRight, ArrowDownLeft,
   SlidersHorizontal,
   Trash2, RefreshCw, Layers, X, Search, Plus, Pencil, CreditCard, Wallet,
   Sparkles, Calendar as CalendarIcon, Clock,
@@ -22,28 +22,11 @@ import NovaTransacaoModal from "@/components/dashboard/NovaTransacaoModal";
 import TransactionTypeChooser from "@/components/dashboard/TransactionTypeChooser";
 import TransactionDetailModal from "@/components/dashboard/TransactionDetailModal";
 import FaturaDetailModal from "@/components/fatura/FaturaDetailModal";
+import { TransactionListItem, TransactionTabs, TransactionsSummaryCard, formatDateHeader, type TabFilter, type TransactionRow } from "@/components/transactions/TransactionParts";
 import type { DashboardData } from "@/types/finance";
 
+import { getCurrency } from "@/lib/currency";
 // ── Types ──────────────────────────────────────────────
-type TransactionRow = {
-  id: string;
-  name: string;
-  category: string;
-  date: string;
-  time?: string | null;
-  amount: number;
-  type: string;
-  status: string;
-  payment_method: string;
-  recurrence_type: string;
-  installment_current: number | null;
-  installments: number | null;
-  observation: string | null;
-  account_id: string | null;
-  credit_card_id: string | null;
-  created_at?: string;
-};
-
 type AccountRow = { id: string; name: string; type: string; is_default: boolean; color: string | null; created_at?: string; initial_balance?: number; };
 
 type TransactionsPageSnapshot = {
@@ -102,161 +85,8 @@ const buildSeedTransactions = (data: DashboardData, month: number, year: number)
 
 // ── Helpers ────────────────────────────────────────────
 const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
-const WEEKDAYS = ["Domingo", "Segunda-Feira", "Terça-Feira", "Quarta-Feira", "Quinta-Feira", "Sexta-Feira", "Sábado"];
-const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-
-
-const formatDateHeader = (dateStr: string) => {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  const today = new Date();
-  const isToday = date.toDateString() === today.toDateString();
-  const weekday = WEEKDAYS[date.getDay()];
-  const month = MONTHS_FULL[date.getMonth()];
-  const label = `${weekday}, ${d} De ${month}`;
-  return { label, isToday };
-};
-
-type TabFilter = "todos" | "receita" | "despesa";
-
-// ── Swipeable Transaction Item ─────────────────────────
-const SwipeableItem = ({
-  tx,
-  accountName,
-  onDelete,
-  onEdit,
-  customCategories,
-  creditCards,
-}: {
-  tx: TransactionRow;
-  accountName: string;
-  onDelete: (id: string) => void;
-  onEdit: (tx: TransactionRow) => void;
-  customCategories?: CustomCategory[];
-  creditCards?: any[];
-}) => {
-  const x = useMotionValue(0);
-  const editOpacity = useTransform(x, [0, 60, 120], [0, 0.5, 1]);
-  const deleteOpacity = useTransform(x, [-120, -60, 0], [1, 0.5, 0]);
-  const isReceita = tx.type === "receita";
-
-  // Resolve icon & color based on special entries
-  const isFatura = tx.id.startsWith("fatura-");
-  const isInitialBalance = tx.id.startsWith("initial-balance-");
-
-  let CatIcon = getCategoryIcon(tx.category, customCategories);
-  let catColor = getCategoryColor(tx.category, customCategories);
-
-  if (isFatura) {
-    CatIcon = CreditCard;
-    const card = creditCards?.find((c: any) => c.id === tx.credit_card_id);
-    if (card?.color) {
-      // Convert hex to HSL for consistency
-      const hex = card.color;
-      const r = parseInt(hex.slice(1, 3), 16) / 255;
-      const g = parseInt(hex.slice(3, 5), 16) / 255;
-      const b = parseInt(hex.slice(5, 7), 16) / 255;
-      const max = Math.max(r, g, b), min = Math.min(r, g, b);
-      let h = 0, s = 0;
-      const l = (max + min) / 2;
-      if (max !== min) {
-        const d = max - min;
-        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-        if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-        else if (max === g) h = ((b - r) / d + 2) / 6;
-        else h = ((r - g) / d + 4) / 6;
-      }
-      catColor = `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-    } else {
-      catColor = "260 70% 60%"; // fallback purple
-    }
-  } else if (isInitialBalance) {
-    CatIcon = Wallet;
-    catColor = "210 80% 55%"; // blue
-  }
-  const isRecurring = tx.recurrence_type === "fixa" || (tx.installments && tx.installments > 1);
-  const isPending = tx.status !== "pago";
-
-  const handleDragEnd = (_: any, info: PanInfo) => {
-    if (info.offset.x > 100) {
-      onEdit(tx);
-    } else if (info.offset.x < -100) {
-      onDelete(tx.id);
-    }
-  };
-
-  return (
-    <div className="relative overflow-hidden rounded-xl">
-      {/* Background actions */}
-      <div className="absolute inset-0 flex">
-        <motion.div
-          style={{ opacity: editOpacity }}
-          className="flex items-center justify-start pl-4 w-1/2 bg-primary/20"
-        >
-          <Pencil className="w-4 h-4 text-primary" />
-        </motion.div>
-        <motion.div
-          style={{ opacity: deleteOpacity }}
-          className="flex items-center justify-end pr-4 w-1/2 ml-auto bg-destructive/20"
-        >
-          <Trash2 className="w-4 h-4 text-destructive" />
-        </motion.div>
-      </div>
-
-      {/* Draggable card */}
-      <motion.div
-        drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.3}
-        onDragEnd={handleDragEnd}
-        style={{ x }}
-        className="relative flex items-center gap-2.5 px-3 py-2.5 md:gap-3 md:px-4 md:py-3.5 backdrop-blur-xl cursor-grab active:cursor-grabbing rounded-xl bg-card/95"
-        onClick={() => onEdit(tx)}
-        whileTap={{ scale: 0.99 }}
-      >
-        {/* Category icon */}
-        <div
-          className="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0"
-          style={{ background: `hsl(${catColor} / 0.12)` }}
-        >
-          <CatIcon className="w-4 h-4 md:w-[18px] md:h-[18px]" style={{ color: `hsl(${catColor})` }} />
-        </div>
-
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <p className="text-xs md:text-[13px] font-bold text-foreground truncate">{tx.name}</p>
-            {isRecurring && <RefreshCw className="w-3 h-3 text-muted-foreground/30" />}
-          </div>
-          <p className="text-[9px] md:text-[10px] text-muted-foreground/40 mt-0.5">
-            {tx.category}
-            {tx.installments && tx.installment_current ? ` · ${tx.installment_current}/${tx.installments}x` : ""}
-            {accountName ? ` · ${accountName}` : ""}
-            {tx.time ? ` · ${tx.time}` : ""}
-          </p>
-        </div>
-
-        {/* Amount + status tag */}
-        <div className="text-right shrink-0">
-          <p
-            className="text-xs md:text-sm font-bold tabular-nums"
-            style={{ color: isPending ? "hsl(40 80% 50%)" : isReceita ? "hsl(var(--primary))" : "hsl(var(--destructive))" }}
-          >
-            {isReceita ? "+" : "−"}{fmt(tx.amount)}
-          </p>
-          <span
-            className={`block mt-0.5 text-[8px] md:text-[9px] font-bold uppercase tracking-wide ${isPending ? "" : "text-muted-foreground/40"}`}
-            style={isPending ? { color: "hsl(40 80% 50% / 0.7)" } : undefined}
-          >
-            {isPending ? (isReceita ? "A Receber" : "Pendente") : (isReceita ? "Recebido" : "Pago")}
-          </span>
-        </div>
-      </motion.div>
-    </div>
-  );
-};
 
 // ── Edit Modal ─────────────────────────────────────────
 // EditTransactionModal removed – replaced by TransactionDetailModal
@@ -664,8 +494,8 @@ const Transacoes = () => {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-lg font-bold text-foreground">Transações</h1>
+      <div className="flex items-center justify-between gap-3 pt-1">
+        <h1 className="text-[28px] font-extrabold tracking-tight text-white">Transações</h1>
         <MonthSelector selectedMonth={selectedMonth} selectedYear={selectedYear} onMonthChange={(m, y) => setMonth(m, y)} />
       </div>
 
@@ -674,67 +504,49 @@ const Transacoes = () => {
         <SaldoCard saldoAtual={financeData.saldoAtual} saldoPrevisto={financeData.saldoPrevisto} isFutureMonth={financeData.isFutureMonth} isPastMonth={financeData.isPastMonth} />
         <ReceitasDespesasCards receitas={totals.receitas} receitasRecebidas={totals.receitasRecebidas} receitasPendentes={totals.receitasPendentes} despesas={totals.despesas} despesasPagas={totals.despesasPagas} despesasPendentes={totals.despesasPendentes} />
       </motion.div>
+
       {/* Summary - mobile */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="md:hidden space-y-2">
-        <SaldoCard saldoAtual={financeData.saldoAtual} saldoPrevisto={financeData.saldoPrevisto} isFutureMonth={financeData.isFutureMonth} isPastMonth={financeData.isPastMonth} mobile />
-        <ReceitasDespesasCards receitas={totals.receitas} receitasRecebidas={totals.receitasRecebidas} receitasPendentes={totals.receitasPendentes} despesas={totals.despesas} despesasPagas={totals.despesasPagas} despesasPendentes={totals.despesasPendentes} mobile />
-      </motion.div>
-
-
-
+      <TransactionsSummaryCard
+        className="md:hidden"
+        saldoAtual={financeData.saldoAtual}
+        saldoPrevisto={financeData.saldoPrevisto}
+        receitas={totals.receitas}
+        despesas={totals.despesas}
+      />
 
       {/* Tabs + Search + Filter */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            {([
-              { key: "todos" as TabFilter, label: "Todos" },
-              { key: "receita" as TabFilter, label: "Receitas" },
-              { key: "despesa" as TabFilter, label: "Despesas" },
-            ]).map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`px-4 py-2 text-sm font-semibold transition-colors relative ${
-                  activeTab === tab.key ? "text-foreground" : "text-muted-foreground/50 hover:text-muted-foreground/70"
-                }`}
-              >
-                {tab.label}
-                {activeTab === tab.key && (
-                  <motion.div
-                    layoutId="tx-tab-underline"
-                    className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center gap-2">
+          <TransactionTabs value={activeTab} onChange={setActiveTab} />
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`p-2 rounded-lg transition-colors ${
-              activeFiltersCount > 0 || showFilters
-                ? "text-primary bg-primary/10"
-                : "text-muted-foreground/40 hover:text-muted-foreground/60"
+            aria-label="Filtros"
+            className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors ${
+              activeFiltersCount > 0 || showFilters ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.07] bg-[#141414] text-white/70"
             }`}
           >
             <SlidersHorizontal className="w-4 h-4" />
+            {activeFiltersCount > 0 && !showFilters && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-willo-green px-1 text-[9px] font-bold text-[#0B0B0B]">
+                {activeFiltersCount}
+              </span>
+            )}
           </button>
         </div>
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/35" />
           <input
             type="text"
             placeholder="Buscar transação..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-9 pl-8 pr-3 rounded-xl bg-card border border-border/30 text-xs text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all"
+            className="w-full h-11 pl-11 pr-10 rounded-full bg-[#141414] border border-white/[0.07] text-[14px] text-white placeholder:text-white/30 focus:outline-none focus:border-white/25 transition-colors"
           />
           {search && (
-            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
-              <X className="w-3 h-3 text-muted-foreground/40" />
+            <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2">
+              <X className="w-4 h-4 text-white/40" />
             </button>
           )}
         </div>
@@ -750,22 +562,22 @@ const Transacoes = () => {
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
             className="overflow-hidden"
           >
-            <div className="glass-card p-3 space-y-3">
+            <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-4 space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Filtros</span>
+                <span className="text-[15px] font-semibold text-white">Filtros</span>
                 {activeFiltersCount > 0 && (
-                  <button onClick={clearFilters} className="text-[10px] text-primary hover:underline">Limpar</button>
+                  <button onClick={clearFilters} className="text-[13px] text-white/60">Limpar</button>
                 )}
               </div>
 
               {/* Status */}
               <div>
-                <p className="text-[10px] text-muted-foreground/50 mb-1.5">Status</p>
+                <p className="text-[12px] text-white/45 mb-2">Status</p>
                 <div className="flex gap-1.5">
                   {["todos", "pago", "pendente"].map((s) => (
                     <button key={s} onClick={() => setFilterStatus(s)}
-                      className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
-                        filterStatus === s ? "bg-accent text-foreground border border-border/30" : "bg-transparent text-muted-foreground/50 border border-border/20 hover:border-border/40"
+                      className={`px-3.5 py-1.5 rounded-full text-[12px] font-medium transition-all ${
+                        filterStatus === s ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/70 border border-white/[0.06]"
                       }`}
                     >
                       {s === "todos" ? "Todos" : s === "pago" ? "Pago" : "Pendente"}
@@ -777,17 +589,17 @@ const Transacoes = () => {
               {/* Account */}
               {accounts.length > 0 && (
                 <div>
-                  <p className="text-[10px] text-muted-foreground/50 mb-1.5">Conta</p>
+                  <p className="text-[12px] text-white/45 mb-2">Conta</p>
                   <div className="flex flex-wrap gap-1.5">
                     <button onClick={() => setFilterAccount("todos")}
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${
-                        filterAccount === "todos" ? "bg-accent text-foreground border border-border/30" : "bg-transparent text-muted-foreground/50 border border-border/20 hover:border-border/40"
+                      className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
+                        filterAccount === "todos" ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/70 border border-white/[0.06]"
                       }`}
                     >Todas</button>
                     {accounts.map((a) => (
                       <button key={a.id} onClick={() => setFilterAccount(a.id)}
-                        className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${
-                          filterAccount === a.id ? "bg-accent text-foreground border border-border/30" : "bg-transparent text-muted-foreground/50 border border-border/20 hover:border-border/40"
+                        className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
+                          filterAccount === a.id ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/70 border border-white/[0.06]"
                         }`}
                       >{a.name}</button>
                     ))}
@@ -798,17 +610,17 @@ const Transacoes = () => {
               {/* Category */}
               {categories.length > 0 && (
                 <div>
-                  <p className="text-[10px] text-muted-foreground/50 mb-1.5">Categoria</p>
+                  <p className="text-[12px] text-white/45 mb-2">Categoria</p>
                   <div className="flex flex-wrap gap-1.5">
                     <button onClick={() => setFilterCategory("todos")}
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${
-                        filterCategory === "todos" ? "bg-accent text-foreground border border-border/30" : "bg-transparent text-muted-foreground/50 border border-border/20 hover:border-border/40"
+                      className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
+                        filterCategory === "todos" ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/70 border border-white/[0.06]"
                       }`}
                     >Todas</button>
                     {categories.map((c) => (
                       <button key={c} onClick={() => setFilterCategory(c)}
-                        className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${
-                          filterCategory === c ? "bg-accent text-foreground border border-border/30" : "bg-transparent text-muted-foreground/50 border border-border/20 hover:border-border/40"
+                        className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
+                          filterCategory === c ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/70 border border-white/[0.06]"
                         }`}
                       >{c}</button>
                     ))}
@@ -823,21 +635,18 @@ const Transacoes = () => {
       {/* Timeline list */}
       {loading && filtered.length === 0 ? (
         <div className="flex items-center justify-center py-16">
-          <div className="animate-pulse text-primary text-sm">Carregando...</div>
+          <div className="animate-pulse text-white/50 text-sm">Carregando...</div>
         </div>
       ) : filtered.length === 0 && !(selectedMonth === new Date().getMonth() && selectedYear === new Date().getFullYear()) ? (
-        <div className="glass-card p-8 text-center">
-          <Layers className="w-6 h-6 text-muted-foreground/20 mx-auto mb-2" />
-          <p className="text-xs text-muted-foreground/40">Nenhuma transação encontrada</p>
+        <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-8 text-center">
+          <Layers className="w-6 h-6 text-white/25 mx-auto mb-2" />
+          <p className="text-[14px] text-white/50">Nenhuma transação encontrada</p>
           {activeFiltersCount > 0 && (
-            <button onClick={clearFilters} className="text-[11px] text-primary mt-2 hover:underline">Limpar filtros</button>
+            <button onClick={clearFilters} className="text-[13px] text-white mt-2 underline underline-offset-4">Limpar filtros</button>
           )}
         </div>
       ) : (
-        <div className="relative pl-6">
-          {/* Timeline line */}
-          <div className="absolute left-[7px] top-3 bottom-0 w-px bg-border/30" />
-
+        <div>
           {(() => {
             const now = new Date();
             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -854,39 +663,32 @@ const Transacoes = () => {
             return (
               <div key={date} className={gi > 0 ? "mt-5" : ""}>
                 {/* Date header */}
-                <div className="relative flex items-center mb-3">
-                  <div
-                    className="absolute -left-6 w-3.5 h-3.5 rounded-full border-2 z-10"
-                    style={{
-                      borderColor: "hsl(var(--primary))",
-                      background: isToday ? "hsl(var(--primary))" : "hsl(var(--background))",
-                    }}
-                  />
-                  {isToday ? (
-                    <div className="flex-1 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="py-1 px-2.5 rounded-lg border border-primary/20 text-[11px] md:text-xs font-bold text-primary" style={{ background: "hsl(var(--primary) / 0.06)" }}>
-                          Hoje, {label}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex items-center justify-between">
-                      <span className="text-[11px] md:text-xs font-semibold text-muted-foreground/70">{label}</span>
-                    </div>
+                <div className="mb-2 flex items-center justify-between px-1">
+                  <span className={`text-[13px] font-semibold ${isToday ? "text-white" : "text-white/50"}`}>
+                    {isToday ? `Hoje, ${label}` : label}
+                  </span>
+                  {txs.length > 0 && dayTotal.net !== 0 && (
+                    <span className={`text-[12px] tabular-nums ${dayTotal.net > 0 ? "text-willo-green" : "text-white/45"}`}>
+                      {dayTotal.net > 0 ? "+" : "−"}{fmt(Math.abs(dayTotal.net))}
+                    </span>
                   )}
                 </div>
 
                 {/* Transactions */}
-                <div className="space-y-1.5 ml-2">
+                {txs.length === 0 && (
+                  <div className="rounded-[22px] border border-dashed border-white/[0.08] py-4 text-center text-[13px] text-white/35">
+                    Nada registrado hoje
+                  </div>
+                )}
+                <div className={txs.length > 0 ? "overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#141414] divide-y divide-white/[0.06]" : ""}>
                   {txs.map((tx, i) => (
                     <motion.div
                       key={tx.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.04, type: "spring", stiffness: 300, damping: 25 }}
                     >
-                      <SwipeableItem
+                      <TransactionListItem
                         tx={tx}
                         accountName={tx.account_id ? (accountMap[tx.account_id] || "Conta") : tx.payment_method === "cartao" ? "Cartão" : "Sem conta"}
                         onDelete={handleDelete}
@@ -916,7 +718,7 @@ const Transacoes = () => {
 
       {/* Count */}
       {!loading && filtered.length > 0 && (
-        <p className="text-center text-[10px] text-muted-foreground/30 pt-2 pb-4">
+        <p className="text-center text-[12px] text-white/30 pt-2 pb-4">
           {filtered.length} transaç{filtered.length === 1 ? "ão" : "ões"} · {grouped.length} dia{grouped.length !== 1 && "s"}
         </p>
       )}

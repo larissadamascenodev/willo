@@ -6,8 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+import { currencySymbol, getCurrency } from "@/lib/currency";
 const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 const DAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
@@ -173,7 +174,7 @@ const GastosSemanaisCard = memo(() => {
             <div className="flex items-baseline gap-2 mt-0.5">
               <p className="text-lg font-bold text-foreground tabular-nums">{fmt(total)}</p>
               {variation !== null && (
-                <span className={`text-xs font-semibold ${variation > 0 ? "text-primary" : "text-emerald-400"}`}>
+                <span className={`text-xs font-semibold ${variation > 0 ? "text-willo-green" : "text-emerald-400"}`}>
                   {variation > 0 ? "↑" : "↓"}{Math.abs(variation)}%
                 </span>
               )}
@@ -185,8 +186,8 @@ const GastosSemanaisCard = memo(() => {
         <div className="px-4 pb-3 pt-2">
           <div className="relative">
             <div className="absolute right-0 top-0 bottom-4 flex flex-col justify-between text-[9px] text-muted-foreground/40 tabular-nums pointer-events-none">
-              <span>{fmt(yMax).replace("R$\u00a0", "R$ ")}</span>
-              <span>R$ 0</span>
+              <span>{fmt(yMax).replace("\u00a0", " ")}</span>
+              <span>{currencySymbol()} 0</span>
             </div>
 
             <div className="flex items-end justify-between gap-1.5 pr-14" style={{ height: "60px" }}>

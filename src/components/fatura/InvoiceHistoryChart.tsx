@@ -103,7 +103,7 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
     >
       {/* Header — title only, no legend here */}
       <div className="flex items-center gap-2">
-        <TrendingUp className="w-4 h-4 text-primary" />
+        <TrendingUp className="w-4 h-4 text-willo-green" />
         <h2 className="text-sm font-bold text-foreground">Histórico de Faturas</h2>
       </div>
 

@@ -1,5 +1,5 @@
 import { memo, useEffect, useState, useMemo, useCallback } from "react";
-import { ChevronRight, ChevronUp, Pencil, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Pencil, Repeat, Trash2, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMonth } from "@/contexts/MonthContext";
@@ -9,6 +9,7 @@ import { deleteTransaction, getTransactionById } from "@/services/transactionSer
 import { getRecurringSourceId, getRecurringTransactionsForMonth } from "@/services/recurringService";
 import { toast } from "sonner";
 
+import { getCurrency } from "@/lib/currency";
 type RecurringType = "despesa" | "receita";
 
 interface Subscription {
@@ -24,7 +25,7 @@ interface Subscription {
 }
 
 const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 type BrandInfo = {
   bg: string;
@@ -139,7 +140,7 @@ const BrandIcon = ({ name, category, brand, customCategories }: { name: string; 
 
   if (brand.matched && brand.logo && !imgError) {
     return (
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-md overflow-hidden" style={{ background: brand.bg }}>
+      <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 overflow-hidden border border-white/[0.06]" style={{ background: brand.bg }}>
         <img src={brand.logo} alt={name} className="w-6 h-6 object-contain" onError={() => setImgError(true)} loading="lazy" />
       </div>
     );
@@ -147,7 +148,7 @@ const BrandIcon = ({ name, category, brand, customCategories }: { name: string; 
 
   if (brand.matched) {
     return (
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-md" style={{ background: brand.bg, color: brand.fg }}>
+      <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 border border-white/[0.06]" style={{ background: brand.bg, color: brand.fg }}>
         <span className="text-[11px] font-black leading-none">{brand.icon || name.charAt(0).toUpperCase()}</span>
       </div>
     );
@@ -155,8 +156,8 @@ const BrandIcon = ({ name, category, brand, customCategories }: { name: string; 
 
   const IconComponent = getCategoryIcon(category, customCategories);
   return (
-    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-md bg-primary/10">
-      <IconComponent className="w-5 h-5 text-primary" />
+    <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 bg-white/[0.06]">
+      <IconComponent className="w-5 h-5 text-white/80" />
     </div>
   );
 };
@@ -280,133 +281,139 @@ const AssinaturasCard = memo(() => {
   const receitaCount = useMemo(() => subscriptions.filter((s) => s.txType === "receita").length, [subscriptions]);
 
   if (loading) {
+    return <div className="h-[200px] animate-pulse rounded-[22px] border border-white/[0.07] bg-[#141414]" />;
+  }
+
+  if (subscriptions.length === 0) {
     return (
-      <div className="rounded-2xl bg-card/90 backdrop-blur-xl border border-border/30 shadow-lg shadow-black/20 p-4">
-        <div className="animate-pulse space-y-3">
-          <div className="h-4 w-28 bg-muted/30 rounded" />
-          <div className="h-20 w-full bg-muted/10 rounded-xl" />
+      <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-4">
+        <h2 className="text-[16px] font-semibold text-white">Recorrentes</h2>
+        <p className="text-[12px] text-white/40">Contas fixas e assinaturas do mês</p>
+        <div className="mt-4 flex items-center gap-3 rounded-[16px] bg-white/[0.04] px-3.5 py-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
+            <Repeat className="h-4 w-4 text-white/50" />
+          </span>
+          <p className="flex-1 text-[13px] text-white/50">Nenhuma despesa ou receita recorrente ainda.</p>
         </div>
       </div>
     );
   }
 
-  if (subscriptions.length === 0) return null;
-
   const displaySubs = expanded ? filtered : filtered.slice(0, 3);
   const hasMore = filtered.length > 3;
+  const paidCount = filtered.filter((sub) => sub.isPaidThisMonth).length;
 
   return (
     <>
-      <div className="rounded-2xl bg-card/90 backdrop-blur-xl border border-border/30 shadow-lg shadow-black/20 overflow-hidden">
+      <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] overflow-hidden">
         {/* Header with total */}
-        <div className="flex items-start justify-between px-4 pt-3.5 pb-1">
+        <div className="flex items-start justify-between gap-3 px-4 pt-4">
           <div>
-            <h2 className="text-sm font-bold text-foreground">Recorrentes</h2>
-            <p className="text-[10px] text-muted-foreground/50 mt-0.5">Seus gastos fixos mensais</p>
+            <h2 className="text-[16px] font-semibold text-white">Recorrentes</h2>
+            <p className="text-[12px] text-white/40">
+              {paidCount} de {filtered.length} {activeTab === "receita" ? "recebidas" : "pagas"} este mês
+            </p>
           </div>
-          <div className="text-right pt-1">
-            <p className="text-[10px] text-muted-foreground/50">Total/mês</p>
-            <p className={`text-[15px] font-bold tabular-nums ${activeTab === "receita" ? "text-emerald-400" : "text-primary"}`}>{fmt(total)}</p>
+          <div className="text-right">
+            <p className="text-[11px] text-white/40">Total/mês</p>
+            <p className={`text-[17px] font-bold tabular-nums ${activeTab === "receita" ? "text-willo-green" : "text-white"}`}>{fmt(total)}</p>
           </div>
         </div>
+
+        {/* Progress of the month */}
+        {filtered.length > 0 && (
+          <div className="mx-4 mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
+            <motion.div
+              className={`h-full rounded-full ${activeTab === "receita" ? "bg-willo-green" : "bg-white"}`}
+              initial={{ width: 0 }}
+              animate={{ width: `${(paidCount / filtered.length) * 100}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            />
+          </div>
+        )}
 
         {/* Tabs */}
-        <div className="px-4 mt-1 mb-1.5">
-          <div className="relative flex rounded-lg bg-muted/20 p-0.5">
-            <motion.div
-              className="absolute top-0.5 bottom-0.5 rounded-md bg-primary/15 border border-primary/20"
-              layoutId="recorrentes-tab"
-              style={{ width: "50%", left: activeTab === "despesa" ? "0%" : "50%" }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            />
-            <button
-              onClick={() => { setActiveTab("despesa"); setExpanded(false); }}
-              className={`relative z-10 flex-1 text-[10px] font-semibold py-1.5 rounded-md transition-colors ${activeTab === "despesa" ? "text-primary" : "text-muted-foreground/50"}`}
-            >
-              Despesas {despesaCount > 0 && <span className="ml-0.5 opacity-60">({despesaCount})</span>}
-            </button>
-            <button
-              onClick={() => { setActiveTab("receita"); setExpanded(false); }}
-              className={`relative z-10 flex-1 text-[10px] font-semibold py-1.5 rounded-md transition-colors ${activeTab === "receita" ? "text-primary" : "text-muted-foreground/50"}`}
-            >
-              Receitas {receitaCount > 0 && <span className="ml-0.5 opacity-60">({receitaCount})</span>}
-            </button>
+        <div className="px-4 mt-3">
+          <div className="grid grid-cols-2 rounded-full bg-white/[0.06] p-1">
+            {(["despesa", "receita"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => { setActiveTab(tab); setExpanded(false); }}
+                className="relative h-8 rounded-full text-[12px] font-semibold"
+              >
+                {activeTab === tab && (
+                  <motion.span
+                    layoutId="recorrentes-tab"
+                    className="absolute inset-0 rounded-full bg-white"
+                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                  />
+                )}
+                <span className={`relative z-10 transition-colors ${activeTab === tab ? "text-[#0B0B0B]" : "text-white/55"}`}>
+                  {tab === "despesa" ? "Despesas" : "Receitas"} ({tab === "despesa" ? despesaCount : receitaCount})
+                </span>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Cards list */}
-        <div className="px-3 pb-2 mt-1.5 space-y-2">
-          <AnimatePresence mode="popLayout">
+        {/* List */}
+        <div className="px-4 pt-1 divide-y divide-white/[0.06]">
+          <AnimatePresence mode="popLayout" initial={false}>
             {displaySubs.length > 0 ? displaySubs.map((sub, idx) => {
               const brand = getBrand(sub.name);
               const days = getDaysUntil(sub.dueDay);
+              const dueSoon = !sub.isPaidThisMonth && days <= 3;
 
               return (
-                <motion.div
+                <motion.button
                   key={sub.id}
-                  initial={{ opacity: 0, y: 8 }}
+                  layout
+                  initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ delay: idx * 0.04, type: "spring", stiffness: 400, damping: 30 }}
-                  className="relative rounded-xl border border-white/[0.06] overflow-hidden cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-transform"
-                  style={{
-                    background: sub.isPaidThisMonth
-                      ? "linear-gradient(135deg, hsl(142 70% 20% / 0.3), hsl(142 70% 15% / 0.15))"
-                      : "linear-gradient(135deg, hsl(var(--card) / 0.95), hsl(var(--card) / 0.7))",
-                    backdropFilter: "blur(16px)",
-                  }}
+                  exit={{ opacity: 0 }}
+                  transition={{ delay: idx * 0.03 }}
+                  className="flex w-full items-center gap-3 py-3 text-left active:opacity-70"
                   onClick={() => { setSelectedSub(sub); setShowActions(true); }}
                 >
-
-                  {sub.isPaidThisMonth && (
-                    <div className="absolute inset-0 border border-emerald-500/20 rounded-xl pointer-events-none" />
-                  )}
-
-                  <div className="relative flex items-center gap-3 px-3 py-3">
-                    <BrandIcon name={sub.name} category={sub.category} brand={brand} customCategories={customCats} />
-
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-semibold text-foreground/90 truncate">{sub.name}</p>
-                      <p className="text-[10px] text-muted-foreground/50 mt-0.5">
-                        {sub.isPaidThisMonth
-                          ? "✓ Já pago"
-                          : `Dia ${sub.dueDay} · ${days === 0 ? "Hoje" : days === 1 ? "Amanhã" : `Em ${days} dias`}`
-                        }
-                      </p>
-                    </div>
-
-                    <div className="text-right shrink-0">
-                      <p className={`text-[13px] font-bold tabular-nums ${sub.isPaidThisMonth ? "text-emerald-400" : "text-foreground"}`}>{fmt(sub.amount)}</p>
-                    </div>
+                  <BrandIcon name={sub.name} category={sub.category} brand={brand} customCategories={customCats} />
+                  <div className="min-w-0 flex-1">
+                    <p className={`truncate text-[15px] font-medium ${sub.isPaidThisMonth ? "text-white/55" : "text-white"}`}>{sub.name}</p>
+                    <p className={`text-[12px] ${dueSoon ? "text-amber-300/90" : "text-white/40"}`}>
+                      {sub.isPaidThisMonth
+                        ? activeTab === "receita" ? "Recebido este mês" : "Pago este mês"
+                        : `Dia ${sub.dueDay} · ${days === 0 ? "hoje" : days === 1 ? "amanhã" : `em ${days} dias`}`}
+                    </p>
                   </div>
-                </motion.div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <p className={`text-[15px] font-semibold tabular-nums ${sub.isPaidThisMonth ? "text-white/55" : "text-white"}`}>{fmt(sub.amount)}</p>
+                    <span
+                      className={`flex h-5 w-5 items-center justify-center rounded-full ${
+                        sub.isPaidThisMonth ? "bg-willo-green text-[#0B0B0B]" : "border border-white/15"
+                      }`}
+                    >
+                      {sub.isPaidThisMonth && <Check className="h-3 w-3" strokeWidth={3} />}
+                    </span>
+                  </div>
+                </motion.button>
               );
             }) : (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center text-[11px] text-muted-foreground/40 py-4"
-              >
-                Nenhum {activeTab === "receita" ? "receita recorrente" : "gasto recorrente"}
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-6 text-center text-[13px] text-white/40">
+                Nenhuma {activeTab === "receita" ? "receita recorrente" : "despesa recorrente"}
               </motion.p>
             )}
           </AnimatePresence>
         </div>
 
         {/* Ver todos / Recolher */}
-        {hasMore && (
-          <div className="px-4 pb-3">
-            <button
-              onClick={() => setExpanded((v) => !v)}
-              className="w-full flex items-center justify-center gap-1 text-[11px] text-primary font-semibold py-1.5 rounded-lg hover:bg-primary/5 transition-colors"
-            >
-              {expanded ? (
-                <>Recolher <ChevronUp className="w-3.5 h-3.5" /></>
-              ) : (
-                <>Ver todos ({filtered.length}) <ChevronRight className="w-3.5 h-3.5" /></>
-              )}
-            </button>
-          </div>
+        {hasMore ? (
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="flex w-full items-center justify-center gap-1 border-t border-white/[0.06] py-3 text-[13px] font-medium text-white/60 active:opacity-60"
+          >
+            {expanded ? <>Mostrar menos <ChevronUp className="h-4 w-4" /></> : <>Ver todas ({filtered.length}) <ChevronDown className="h-4 w-4" /></>}
+          </button>
+        ) : (
+          <div className="h-1" />
         )}
       </div>
 
@@ -426,7 +433,7 @@ const AssinaturasCard = memo(() => {
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl bg-card border border-border/20 shadow-2xl p-5 pb-24 sm:pb-5"
+              className="w-full sm:max-w-sm rounded-t-[28px] sm:rounded-[28px] bg-[#141414] border border-white/[0.08] shadow-2xl p-5 pb-24 sm:pb-5"
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold text-foreground">{selectedSub.name}</h3>
@@ -439,10 +446,10 @@ const AssinaturasCard = memo(() => {
                 <motion.button
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleEdit(selectedSub)}
-                  className="w-full flex items-center gap-3 rounded-xl border border-border/15 bg-muted/10 hover:bg-muted/20 px-4 py-3.5 text-left transition-colors"
+                  className="w-full flex items-center gap-3 rounded-[20px] bg-white/[0.05] hover:bg-white/[0.08] px-4 py-3.5 text-left transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                    <Pencil className="w-5 h-5 text-primary" />
+                  <div className="w-10 h-10 rounded-full bg-white text-[#0B0B0B] flex items-center justify-center shrink-0">
+                    <Pencil className="w-4 h-4" />
                   </div>
                   <div>
                     <p className="text-[13px] font-bold text-foreground">Editar</p>
@@ -453,9 +460,9 @@ const AssinaturasCard = memo(() => {
                 <motion.button
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="w-full flex items-center gap-3 rounded-xl border border-red-500/15 bg-red-500/5 hover:bg-red-500/10 px-4 py-3.5 text-left transition-colors"
+                  className="w-full flex items-center gap-3 rounded-[20px] bg-red-500/[0.08] hover:bg-red-500/[0.12] px-4 py-3.5 text-left transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center shrink-0">
                     <Trash2 className="w-5 h-5 text-red-400" />
                   </div>
                   <div>
@@ -485,7 +492,7 @@ const AssinaturasCard = memo(() => {
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-2xl bg-card border border-border/20 shadow-2xl p-5"
+              className="w-full max-w-sm rounded-[28px] bg-[#141414] border border-white/[0.08] shadow-2xl p-5"
             >
               <h3 className="text-sm font-bold text-foreground mb-1">Cancelar recorrência</h3>
               <p className="text-[12px] text-muted-foreground mb-5">
@@ -495,14 +502,14 @@ const AssinaturasCard = memo(() => {
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 text-[12px] font-semibold py-2.5 rounded-xl bg-muted/20 hover:bg-muted/30 text-foreground transition-colors"
+                  className="flex-1 text-[13px] font-semibold h-11 rounded-full bg-white/[0.08] hover:bg-white/[0.12] text-white transition-colors"
                 >
                   Voltar
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="flex-1 text-[12px] font-semibold py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/20 transition-colors disabled:opacity-50"
+                  className="flex-1 text-[13px] font-semibold h-11 rounded-full bg-red-500 text-white transition-opacity disabled:opacity-50"
                 >
                   {deleting ? "Removendo..." : "Confirmar"}
                 </button>

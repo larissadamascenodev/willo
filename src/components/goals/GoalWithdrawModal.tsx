@@ -4,6 +4,7 @@ import { X, Wallet, Calendar, ChevronDown, ArrowUpRight } from "lucide-react";
 import { Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+import { currencySymbol, getCurrency } from "@/lib/currency";
 interface Account {
   id: string;
   name: string;
@@ -21,7 +22,7 @@ interface GoalWithdrawModalProps {
 }
 
 const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 const GoalWithdrawModal = ({ open, onClose, onSubmit, goalName, maxAmount }: GoalWithdrawModalProps) => {
   const [amount, setAmount] = useState("");
@@ -173,7 +174,7 @@ const GoalWithdrawModal = ({ open, onClose, onSubmit, goalName, maxAmount }: Goa
             <div>
               <p className="text-[10px] text-muted-foreground mb-2">Valor do saque</p>
               <div className="flex items-baseline gap-1">
-                <span className="text-sm text-muted-foreground">R$</span>
+                <span className="text-sm text-muted-foreground">{currencySymbol()}</span>
                 <input type="text" inputMode="decimal" value={amount} onChange={(e) => handleAmountChange(e.target.value)} placeholder="0,00" className="bg-transparent text-3xl font-bold text-foreground outline-none w-full tabular-nums placeholder:text-muted-foreground/30" autoFocus />
               </div>
               {exceedsBalance && <p className="text-[10px] text-destructive mt-1 font-medium">Valor excede o saldo da meta</p>}

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+import { currencySymbol } from "@/lib/currency";
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -61,8 +62,8 @@ export default function CreditCardEditModal({ open, onClose, card, onUpdated, on
       const usedLimit = (cardData as any)?.used_limit ?? 0;
       if (parsedLimit < usedLimit) {
         toast.error(
-          `Não é possível diminuir o limite para R$ ${parsedLimit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}. ` +
-          `O limite utilizado atualmente é R$ ${usedLimit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}. ` +
+          `Não é possível diminuir o limite para ${currencySymbol()} ${parsedLimit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}. ` +
+          `O limite utilizado atualmente é ${currencySymbol()} ${usedLimit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}. ` +
           `Pague as faturas em aberto para liberar limite antes de diminuí-lo.`
         );
         return;
@@ -178,7 +179,7 @@ export default function CreditCardEditModal({ open, onClose, card, onUpdated, on
               <div className="space-y-1.5">
                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Limite</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{currencySymbol()}</span>
                   <input
                     type="text"
                     inputMode="decimal"

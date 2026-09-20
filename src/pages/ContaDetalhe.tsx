@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Landmark, Banknote, PiggyBank, Pencil, Trash2, X, TrendingUp, TrendingDown, ChevronRight, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { ChevronLeft, Landmark, Banknote, Vault, Pencil, Trash2, X, TrendingUp, TrendingDown, ChevronRight, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { useMonth } from "@/contexts/MonthContext";
 import { getAccounts, getTransactions, updateAccount, deleteAccount } from "@/services/transactionService";
 import { cn } from "@/lib/utils";
 
+import { getCurrency } from "@/lib/currency";
 interface Account {
   id: string;
   name: string;
@@ -37,7 +38,7 @@ interface Transaction {
 const ACCOUNT_TYPE_LABELS: Record<string, { label: string; icon: typeof Landmark }> = {
   cash: { label: "Dinheiro", icon: Banknote },
   checking: { label: "Conta corrente", icon: Landmark },
-  savings: { label: "Poupança", icon: PiggyBank },
+  savings: { label: "Poupança", icon: Vault },
 };
 
 const COLOR_OPTIONS = [
@@ -67,7 +68,7 @@ function getAccent(color: string | null) {
 }
 
 function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return value.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 }
 
 const MONTH_NAMES = [
@@ -185,9 +186,9 @@ const ContaDetalhe = () => {
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate("/gestao")}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="-ml-2 flex h-9 items-center gap-0.5 text-sm text-white/70 hover:text-white active:opacity-60 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ChevronLeft className="w-6 h-6" strokeWidth={2.25} />
           Voltar
         </button>
         <div className="flex items-center gap-2">
@@ -238,7 +239,7 @@ const ContaDetalhe = () => {
           {/* Balance */}
           <div>
             <div className="flex items-center gap-1.5 mb-1.5">
-              <div className={cn("w-1.5 h-1.5 rounded-full", balance >= 0 ? "bg-primary" : "bg-destructive")} />
+              <div className={cn("w-1.5 h-1.5 rounded-full", balance >= 0 ? "bg-willo-green" : "bg-destructive")} />
               <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-medium">Saldo disponível</p>
             </div>
             <p className={cn("text-3xl font-extrabold tabular-nums tracking-tight", balance >= 0 ? "text-foreground" : "text-destructive")}>
@@ -270,7 +271,7 @@ const ContaDetalhe = () => {
               </div>
               <span className="text-[9px] text-muted-foreground uppercase tracking-widest font-medium">Receitas</span>
             </div>
-            <p className="text-lg font-extrabold text-primary tabular-nums">{formatCurrency(totalReceitas)}</p>
+            <p className="text-lg font-extrabold text-willo-green tabular-nums">{formatCurrency(totalReceitas)}</p>
           </div>
           <div
             className="rounded-2xl border border-border/10 p-4"

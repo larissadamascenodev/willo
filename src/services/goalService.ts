@@ -1,5 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 
+import { currencySymbol } from "@/lib/currency";
+
+/** The emergency reserve is a goal with this reserved name; every other goal is a "cofrinho". */
+export const RESERVE_NAME = "Reserva de emergência";
+const normalizeGoalName = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+export const isReserveGoal = (goal: { name: string }) => normalizeGoalName(goal.name) === normalizeGoalName(RESERVE_NAME);
+
 export interface Goal {
   id: string;
   user_id: string;
@@ -235,71 +242,6 @@ export async function deleteGoalDepositWithRefund(
   }
 }
 
-/**
- * Generate a cover image for a goal using AI based on goal name.
- */
-export async function generateGoalCoverImage(goalName: string): Promise<string | null> {
-  try {
-    const prompt = `Generate a beautiful, cinematic, slightly dark and moody photograph representing the concept of "${goalName}" as a financial savings goal. No text. Photorealistic, wide angle, atmospheric lighting.`;
-    
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3.1-flash-image-preview",
-        messages: [{ role: "user", content: prompt }],
-        modalities: ["image", "text"],
-      }),
-    });
-
-    if (!response.ok) {
-      console.error("Cover image generation failed:", response.status);
-      return null;
-    }
-
-    const data = await response.json();
-    console.log("Cover image response keys:", JSON.stringify(Object.keys(data)));
-    
-    // Try multiple response formats
-    const choice = data.choices?.[0]?.message;
-    
-    // Format 1: images array
-    const imageUrl = choice?.images?.[0]?.image_url?.url;
-    if (imageUrl) return imageUrl;
-    
-    // Format 2: content parts with image_url
-    if (Array.isArray(choice?.content)) {
-      for (const part of choice.content) {
-        if (part.type === "image_url" && part.image_url?.url) {
-          return part.image_url.url;
-        }
-        if (part.type === "image" && part.image_url?.url) {
-          return part.image_url.url;
-        }
-      }
-    }
-
-    // Format 3: inline_data in parts
-    if (Array.isArray(choice?.content)) {
-      for (const part of choice.content) {
-        if (part.inline_data?.data) {
-          const mime = part.inline_data.mime_type || "image/png";
-          return `data:${mime};base64,${part.inline_data.data}`;
-        }
-      }
-    }
-
-    console.error("No image found in response:", JSON.stringify(data).slice(0, 500));
-    return null;
-  } catch (err) {
-    console.error("Failed to generate cover image:", err);
-    return null;
-  }
-}
-
 export function computeGoalInsights(
   goal: Goal,
   transactions: GoalTransaction[],
@@ -316,7 +258,7 @@ export function computeGoalInsights(
   if (goal.monthly_contribution && goal.monthly_contribution > 0) {
     const monthsLeft = Math.ceil(remaining / goal.monthly_contribution);
     insights.push(
-      `Se continuar depositando R$ ${goal.monthly_contribution.toFixed(0)}/mês, você conclui em ${monthsLeft} ${monthsLeft === 1 ? "mês" : "meses"} 👀`
+      `Se continuar depositando ${currencySymbol()} ${goal.monthly_contribution.toFixed(0)}/mês, você conclui em ${monthsLeft} ${monthsLeft === 1 ? "mês" : "meses"} 👀`
     );
   }
 
@@ -342,7 +284,7 @@ export function computeGoalInsights(
 
   if (topExpenseCategory) {
     insights.push(
-      `Se reduzir gastos em "${topExpenseCategory}" em R$ 100/mês, você atinge sua meta mais rápido 😉`
+      `Se reduzir gastos em "${topExpenseCategory}" em ${currencySymbol()} 100/mês, você atinge sua meta mais rápido 😉`
     );
   }
 

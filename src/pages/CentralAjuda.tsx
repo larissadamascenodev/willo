@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Search, BarChart3, Sparkles, Target, Swords, Radar, HeartPulse, ScanLine, CreditCard, Wallet, Tags, CalendarClock, Bot, ChevronRight } from "lucide-react";
+import { ChevronLeft, Search, BarChart3, Sparkles, Target, Radar, HeartPulse, ScanLine, CreditCard, Wallet, Tags, CalendarClock, Bot, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -45,13 +45,6 @@ const features: Feature[] = [
     color: "hsl(40 80% 55%)",
     description:
       "Crie metas de economia com valores e prazos definidos. Faça depósitos e saques a qualquer momento, acompanhe o progresso com barras visuais e receba lembretes para manter a consistência nos aportes.",
-  },
-  {
-    icon: <Swords className="w-5 h-5" />,
-    label: "Desafios",
-    color: "hsl(25 85% 55%)",
-    description:
-      "Gamifique sua vida financeira! Aceite desafios como '7 dias sem delivery' ou '30 dias economizando', faça check-in diário para registrar seu progresso e veja a economia potencial ao completar cada desafio.",
   },
   {
     icon: <ScanLine className="w-5 h-5" />,
@@ -129,11 +122,6 @@ const faqItems: FaqItem[] = [
       "Sim! Ao criar uma transação, escolha 'Transferência'. Selecione a conta de origem e a conta de destino. O saldo é ajustado automaticamente em ambas.",
   },
   {
-    question: "Como funcionam os desafios?",
-    answer:
-      "Acesse a seção 'Desafios', escolha um que se encaixe no seu objetivo e aceite. Faça check-in diário para registrar que está cumprindo. Ao completar, veja quanto economizou!",
-  },
-  {
     question: "Meus dados estão seguros?",
     answer:
       "Sim! Seus dados são armazenados de forma segura na nuvem com criptografia. Apenas você tem acesso às suas informações financeiras através da sua conta autenticada.",
@@ -202,9 +190,9 @@ const CentralAjuda = () => {
       <div className="flex items-center gap-3 mb-1">
         <button
           onClick={() => navigate(-1)}
-          className="w-9 h-9 rounded-full bg-card/60 backdrop-blur border border-border/40 flex items-center justify-center text-muted-foreground"
+          className="-ml-2 flex h-9 items-center gap-0.5 text-sm text-white/70 hover:text-white active:opacity-60 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ChevronLeft className="w-6 h-6" strokeWidth={2.25} />
         </button>
         <div>
           <h1 className="text-lg font-bold text-foreground">Central de Ajuda</h1>

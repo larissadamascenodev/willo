@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { getCurrency } from "@/lib/currency";
 /**
  * Animated counter that smoothly transitions between values
  */
@@ -59,7 +60,7 @@ export function useFormattedCounter(target: number, duration = 600) {
   const animated = useAnimatedCounter(target, duration);
   return animated.toLocaleString("pt-BR", {
     style: "currency",
-    currency: "BRL",
+    currency: getCurrency(),
     minimumFractionDigits: 2,
   });
 }

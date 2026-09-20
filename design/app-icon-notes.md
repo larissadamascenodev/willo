@@ -1,33 +1,29 @@
-# Ícone do app (iOS) — especificação
+# Ícone do app
 
-> Não gerado ainda. Este arquivo documenta o padrão a seguir quando formos
-> exportar o ícone final, perto da publicação na App Store.
+Gerado a partir do próprio "w" do wordmark (`src/assets/logo/willo-wordmark-dark.png`),
+recortado e recolorido — a letra do ícone é exatamente a da marca.
 
-## Especificação
+## Arquivos
 
-- **Fundo**: verde-willo `#C8F36D` (sólido, sem gradiente)
-- **Símbolo**: "W" preto `#0B0B0B`, centralizado
-- **Cantos**: **retos** no arquivo-fonte — não arredondar manualmente. O iOS
-  aplica a máscara de "squircle" automaticamente a partir de um PNG quadrado.
-  Um ícone com cantos já arredondados no arquivo fica com borda dupla/serrilhada
-  quando o sistema aplica a própria máscara por cima.
+| Arquivo | Uso |
+| --- | --- |
+| `app-icon-1024.png` | Ícone padrão: "w" branco sobre preto `#0B0B0B` |
+| `app-icon-1024-dark.png` | Variante escura do iOS 18 (igual à padrão) |
+| `app-icon-1024-tinted.png` | Variante tingida do iOS 18 (tons de cinza) |
+| `app-icon-1024-alt-verde.png` | Alternativa: "w" preto sobre verde `#C8F36D` |
 
-## Referência
+Os três primeiros já estão em `ios/App/App/Assets.xcassets/AppIcon.appiconset/`
+e registrados no `Contents.json`. Para a web, `public/favicon.png`,
+`public/app-icon.png` e `public/apple-touch-icon.png`.
 
-A referência visual veio das imagens de marca anexadas na conversa (monograma
-"W" preto sobre fundo verde-willo, cantos arredondados só na composição de
-apresentação — não no arquivo-fonte real).
+## Regras seguidas
 
-Existe também uma variante inversa nas mesmas referências (fundo preto,
-"W" verde-willo) — mantê-la disponível como ícone alternativo/dark, já que o
-iOS (17+) suporta variantes de ícone "escuras" e "tintadas" (`Dark Icon` /
-`Tinted Icon`) registradas junto com o ícone padrão no `Assets.xcassets`.
+- 1024×1024, **sem canal alpha** e com **cantos retos** no arquivo-fonte: o iOS
+  aplica a máscara arredondada sozinho. Cantos já arredondados criam borda dupla.
+- Letra ocupando 58% da largura, centralizada.
 
-## Quando gerar o ícone final
+## Como regerar
 
-Vamos precisar exportar o PNG-fonte em 1024×1024 (sem cantos arredondados, sem
-alpha) e gerar o conjunto de tamanhos via Xcode (`Assets.xcassets` já aceita
-um único 1024×1024 desde iOS 14+ e gera os demais tamanhos automaticamente) ou
-via uma ferramenta como o `App Icon Generator`. Isso entra no fluxo do
-[README.md](../README.md#plataforma-ios), quando o projeto `ios/` for aberto
-no Xcode.
+O script que gera todos os tamanhos está no histórico do projeto; qualquer
+mudança de cor ou proporção é feita recortando o glifo do wordmark e
+recolorindo, para a letra nunca sair diferente da marca.

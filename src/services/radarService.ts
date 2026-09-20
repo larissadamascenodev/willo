@@ -5,6 +5,7 @@
 
 import type { DashboardData, Transaction } from "@/types/finance";
 
+import { getCurrency } from "@/lib/currency";
 export interface RadarInsight {
   id: string;
   tipo: "alerta" | "atencao" | "oportunidade";
@@ -52,7 +53,7 @@ function countByCategory(txs: Transaction[]): Record<string, number> {
 }
 
 function fmt(v: number): string {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 }
 
 // ─── engine ─────────────────────────────────────────────────────────

@@ -1,10 +1,10 @@
 import { motion } from "framer-motion";
-import {
+import { ChevronLeft,
   Shield, Lock, Brain, BarChart3, Users, Cookie, Megaphone,
-  ShieldCheck, UserCheck, Clock, RefreshCw, Mail, ArrowLeft,
-  Fingerprint, Sparkles, Heart, Eye, Settings2, Database,
+  ShieldCheck, UserCheck, Clock, RefreshCw, Mail, Fingerprint, Sparkles, Heart, Eye, Settings2, Database,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { SUPPORT_EMAIL } from "@/lib/support";
 
 /* ─── types ─── */
 interface Section {
@@ -20,100 +20,108 @@ const sections: Section[] = [
     icon: Database,
     title: "Quais dados coletamos",
     content: [
-      "**Dados de cadastro:** nome, e-mail e senha.",
-      "**Dados financeiros:** receitas, despesas, metas e contas que **você mesmo insere**.",
-      "**Dados de uso:** como navegação, frequência de acesso e funcionalidades utilizadas.",
+      "**Cadastro:** nome, e-mail e senha. A senha é guardada de forma criptografada pelo nosso provedor de autenticação — nem nós conseguimos vê-la. Se você entrar com Apple ou Google, recebemos apenas o identificador e o e-mail informado por eles.",
+      "**Perfil (opcional):** foto e a frase que você escreve.",
+      "**Dados financeiros:** contas, cartões, transações, faturas e metas que **você mesmo registra**.",
+      "**Fotos que você envia:** comprovantes e faturas que você fotografa para o app ler, e capas de metas.",
+      "**Uso:** dias em que você abriu o app (para a sequência) e suas preferências, como moeda e lembretes.",
     ],
-    warning: "O Willo não acessa contas bancárias nem dados externos automaticamente.",
+    warning: "O Willo não se conecta ao seu banco e não movimenta dinheiro. Tudo vem do que você informa.",
   },
   {
     icon: BarChart3,
-    title: "Como usamos seus dados",
+    title: "Para que usamos",
     content: [
-      "**Funcionamento do app:** para exibir seus registros e gerar relatórios.",
-      "**Personalização:** adaptar a experiência ao seu perfil financeiro.",
-      "**Insights e análises:** gerar gráficos, projeções e alertas inteligentes.",
-      "**Comunicação:** enviar notificações relevantes e avisos importantes.",
+      "**Fazer o app funcionar:** guardar e exibir seus lançamentos, saldos, faturas e metas.",
+      "**Calcular:** gráficos, projeções, score do Raio-X e alertas.",
+      "**Avisar:** lembretes de contas e faturas a vencer, enviados pelo próprio aparelho.",
+      "Não usamos seus dados financeiros para publicidade e **não vendemos seus dados**.",
     ],
   },
   {
     icon: Brain,
-    title: "Uso de Inteligência Artificial",
+    title: "Inteligência artificial",
     content: [
-      "Utilizamos IA para analisar **padrões de gastos** e gerar insights personalizados.",
-      "Todas as análises são **automáticas e informativas**. Nunca tomamos decisões por você.",
-      "Seus dados alimentam apenas a **sua própria experiência**, não modelos compartilhados.",
+      "Quando você fotografa um comprovante ou uma fatura, **a imagem é enviada ao Google (Gemini)** para extrair estabelecimento, valores e datas.",
+      "Para sugerir categorias e gerar as análises e o plano, enviamos **textos e números dos seus lançamentos** à Anthropic (Claude).",
+      "Enviamos apenas o necessário para aquela tarefa, e o resultado volta para a sua conta. **Não treinamos modelos com os seus dados.** O tratamento dentro de cada provedor segue os termos deles.",
+      "A leitura automática pode errar: confira antes de salvar.",
     ],
   },
   {
     icon: Users,
-    title: "Compartilhamento de dados",
+    title: "Com quem compartilhamos",
     content: [
-      "**Pagamentos:** processadores de pagamento para assinaturas.",
-      "**Infraestrutura:** servidores seguros para armazenamento e funcionamento.",
-      "**Comunicação:** serviços de e-mail para notificações essenciais.",
+      "**Supabase:** banco de dados, login e armazenamento das fotos.",
+      "**Google (Gemini)** e **Anthropic (Claude):** leitura dos comprovantes e geração das análises, como explicado acima.",
+      "**Vercel:** hospedagem da versão web do app.",
+      "Também podemos compartilhar dados se a lei exigir. Fora isso, ninguém mais recebe suas informações.",
     ],
     warning: "Nunca vendemos seus dados. Ponto final.",
   },
   {
-    icon: Cookie,
-    title: "Cookies e tecnologias",
-    content: [
-      "Usamos cookies e tecnologias semelhantes para **melhorar sua experiência**.",
-      "Ferramentas de analytics nos ajudam a entender como o app é utilizado.",
-      "Você pode gerenciar cookies nas **configurações do seu navegador**.",
-    ],
-  },
-  {
-    icon: Megaphone,
-    title: "Marketing e comunicação",
-    content: [
-      "Podemos enviar comunicações sobre **novidades e melhorias** do Willo.",
-      "Toda comunicação é baseada em dados de uso para ser **relevante** a você.",
-      "Você pode **desativar notificações** a qualquer momento nas configurações.",
-    ],
-  },
-  {
-    icon: ShieldCheck,
+    icon: Lock,
     title: "Segurança",
     content: [
-      "**Criptografia:** seus dados são protegidos em trânsito e em repouso.",
-      "**Controle de acesso:** apenas sistemas autorizados acessam informações.",
-      "**Monitoramento:** detectamos e respondemos a atividades suspeitas.",
+      "Os dados trafegam **criptografados** (HTTPS) e ficam criptografados também no armazenamento do provedor.",
+      "Cada conta só enxerga os próprios dados: isso é garantido por **regras no banco**, por usuário, e não apenas pela tela do app.",
+      "Nunca pedimos sua senha por e-mail, WhatsApp ou telefone.",
+    ],
+  },
+  {
+    icon: Eye,
+    title: "Dados guardados no seu aparelho",
+    content: [
+      "Guardamos no próprio aparelho algumas preferências, como a **moeda escolhida** e o estado do onboarding, para o app abrir do jeito que você deixou.",
+      "Não usamos cookies de publicidade nem rastreadores de terceiros.",
     ],
   },
   {
     icon: UserCheck,
     title: "Seus direitos (LGPD)",
     content: [
-      "**Acessar:** consultar quais dados armazenamos sobre você.",
-      "**Corrigir:** atualizar informações incorretas ou incompletas.",
-      "**Excluir:** solicitar a remoção dos seus dados pessoais.",
-      "**Revogar consentimento:** retirar permissões a qualquer momento.",
+      "**Acessar e corrigir:** tudo o que guardamos aparece no app e pode ser editado por você.",
+      "**Excluir:** você apaga seus dados ou a conta inteira quando quiser, dentro do app.",
+      "**Revogar consentimento:** desligue os lembretes nas configurações ou exclua a conta.",
+      "Se precisar de ajuda para exercer qualquer um desses direitos, fale com o suporte.",
+    ],
+  },
+  {
+    icon: Shield,
+    title: "Excluir sua conta",
+    content: [
+      "No app: **Configurações → Dados → Excluir minha conta**.",
+      "Isso apaga **de forma imediata e definitiva** sua conta, transações, contas, cartões, faturas, metas e fotos enviadas. Não há como recuperar depois.",
+      "Cópias de segurança automáticas do provedor podem manter os dados por até **30 dias** antes de serem descartadas.",
+      "Se não conseguir entrar na conta, escreva para o suporte que apagamos para você.",
     ],
   },
   {
     icon: Clock,
-    title: "Retenção de dados",
+    title: "Por quanto tempo guardamos",
     content: [
-      "Seus dados são mantidos **enquanto sua conta estiver ativa**.",
-      "Após cancelamento, os dados são retidos por até **90 dias** para eventual recuperação e depois **removidos permanentemente**.",
+      "Enquanto a sua conta existir. Quando você exclui a conta, os dados são apagados conforme explicado acima.",
+    ],
+  },
+  {
+    icon: Heart,
+    title: "Crianças e adolescentes",
+    content: [
+      "O Willo não é destinado a **menores de 13 anos** e não coletamos dados dessa faixa etária de forma consciente.",
     ],
   },
   {
     icon: RefreshCw,
     title: "Alterações nesta política",
     content: [
-      "Podemos atualizar esta política periodicamente.",
-      "Alterações relevantes serão comunicadas **dentro do app** ou por e-mail.",
+      "Podemos atualizar esta política. Mudanças relevantes serão avisadas dentro do app.",
     ],
   },
   {
     icon: Mail,
     title: "Contato",
     content: [
-      "Dúvidas sobre privacidade? Fale conosco pelo **suporte dentro do app**.",
-      "Estamos sempre prontos para esclarecer qualquer questão.",
+      `Dúvidas sobre privacidade ou sobre os seus dados? Escreva para **${SUPPORT_EMAIL}**.`,
     ],
   },
 ];
@@ -175,9 +183,9 @@ const PoliticaPrivacidade = () => {
         initial={{ opacity: 0, x: -8 }}
         animate={{ opacity: 1, x: 0 }}
         onClick={() => navigate(-1)}
-        className="w-8 h-8 rounded-xl bg-card/60 backdrop-blur-xl border border-border/10 flex items-center justify-center hover:bg-card transition-colors"
+        className="-ml-2 flex h-9 items-center gap-0.5 text-sm text-white/70 hover:text-white active:opacity-60 transition-colors"
       >
-        <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+        <ChevronLeft className="w-6 h-6" strokeWidth={2.25} />
       </motion.button>
 
       {/* Hero */}

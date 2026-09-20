@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
+import Anthropic from "npm:@anthropic-ai/sdk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -81,6 +82,27 @@ const CATEGORY_ICON_MAP: Record<string, { icon: string; color: string }> = {
   "Prêmio": { icon: "award", color: "#ffc107" },
 };
 
+/** Calls Claude forcing a single tool call and returns the tool input (or null). */
+async function callClaudeTool<T>(
+  system: string,
+  user: string,
+  tool: { name: string; description: string; input_schema: Record<string, unknown> },
+): Promise<T | null> {
+  const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
+  const response = await anthropic.messages.create({
+    model: "claude-opus-5",
+    max_tokens: 16000,
+    thinking: { type: "disabled" },
+    output_config: { effort: "low" },
+    system,
+    messages: [{ role: "user", content: user }],
+    tools: [tool as Anthropic.Tool],
+    tool_choice: { type: "tool", name: tool.name },
+  });
+  const block = response.content.find((b) => b.type === "tool_use");
+  return block && block.type === "tool_use" ? (block.input as T) : null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -107,8 +129,7 @@ serve(async (req) => {
     }
 
     const { description, type, customCategories } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!Deno.env.get("ANTHROPIC_API_KEY")) throw new Error("ANTHROPIC_API_KEY not configured");
 
     const baseCategories = type === "receita" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
     // Merge custom categories from client
@@ -119,68 +140,30 @@ serve(async (req) => {
       }
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [
-          {
-            role: "system",
-            content: `You categorize Brazilian financial transactions. Given a description, return the most likely category from this list: ${allCategories.join(", ")}. 
+    let category: string | null = null;
+    const args = await callClaudeTool<{ category?: string }>(
+      `You categorize Brazilian financial transactions. Given a description, return the most likely category from this list: ${allCategories.join(", ")}. 
 IMPORTANT RULES:
 - NEVER return "Outros" as a category. Always pick a specific category.
 - If no existing category fits well, suggest a NEW descriptive category name in Portuguese (e.g., "Supermercado", "Farmácia", "Academia", "Streaming").
 - The category name should be a single word or short phrase, capitalized.
 - Return ONLY the category name.`,
+      String(description ?? ""),
+      {
+        name: "suggest_category",
+        description: "Suggest a category for the transaction",
+        input_schema: {
+          type: "object",
+          properties: {
+            category: { type: "string", description: "The category name. Must NOT be 'Outros'." },
           },
-          {
-            role: "user",
-            content: description,
-          },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "suggest_category",
-              description: "Suggest a category for the transaction",
-              parameters: {
-                type: "object",
-                properties: {
-                  category: { type: "string", description: "The category name. Must NOT be 'Outros'." },
-                },
-                required: ["category"],
-                additionalProperties: false,
-              },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "suggest_category" } },
-      }),
-    });
-
-    if (!response.ok) {
-      return new Response(JSON.stringify({ category: null }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    let category: string | null = null;
-
-    if (toolCall?.function?.arguments) {
-      try {
-        const args = JSON.parse(toolCall.function.arguments);
-        if (args.category && args.category !== "Outros") {
-          category = args.category;
-        }
-      } catch {}
+          required: ["category"],
+          additionalProperties: false,
+        },
+      },
+    );
+    if (args?.category && args.category !== "Outros") {
+      category = args.category;
     }
 
     // Determine icon/color for the category

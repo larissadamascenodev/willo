@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
+import Anthropic from "npm:@anthropic-ai/sdk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +13,27 @@ interface CategoryInput {
   amount: number;
   percentage: number;
   txCount: number;
+}
+
+/** Calls Claude forcing a single tool call and returns the tool input (or null). */
+async function callClaudeTool<T>(
+  system: string,
+  user: string,
+  tool: { name: string; description: string; input_schema: Record<string, unknown> },
+): Promise<T | null> {
+  const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
+  const response = await anthropic.messages.create({
+    model: "claude-opus-5",
+    max_tokens: 16000,
+    thinking: { type: "disabled" },
+    output_config: { effort: "low" },
+    system,
+    messages: [{ role: "user", content: user }],
+    tools: [tool as Anthropic.Tool],
+    tool_choice: { type: "tool", name: tool.name },
+  });
+  const block = response.content.find((b) => b.type === "tool_use");
+  return block && block.type === "tool_use" ? (block.input as T) : null;
 }
 
 serve(async (req) => {
@@ -46,8 +68,7 @@ serve(async (req) => {
       previousMonthCategories: CategoryInput[];
     };
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!Deno.env.get("ANTHROPIC_API_KEY")) throw new Error("ANTHROPIC_API_KEY not configured");
 
     const prevMap = new Map(previousMonthCategories.map((c) => [c.name, c.amount]));
 
@@ -73,19 +94,12 @@ ${catSummary}
 
 Gere insights financeiros usando a ferramenta fornecida.`;
 
-    const requestBody = JSON.stringify({
-      model: "google/gemini-2.5-flash-lite",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: "generate_financial_insights",
-            description: "Gera insights, alertas, sugestões de limite e projeções financeiras.",
-            parameters: {
+    let result: unknown = null;
+    try {
+      result = await callClaudeTool(systemPrompt, userPrompt, {
+        name: "generate_financial_insights",
+        description: "Gera insights, alertas, sugestões de limite e projeções financeiras.",
+        input_schema: {
               type: "object",
               properties: {
                 insights: {
@@ -125,65 +139,23 @@ Gere insights financeiros usando a ferramenta fornecida.`;
               required: ["insights", "alerts", "limitSuggestions"],
               additionalProperties: false,
             },
-          },
-        },
-      ],
-      tool_choice: { type: "function", function: { name: "generate_financial_insights" } },
-    });
-
-    let response: Response | null = null;
-    const MAX_RETRIES = 3;
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: requestBody,
       });
-
-      if (response.status === 429 && attempt < MAX_RETRIES - 1) {
-        const wait = Math.pow(2, attempt + 1) * 1000;
-        console.log(`Rate limited, retrying in ${wait}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
-        await new Promise((r) => setTimeout(r, wait));
-        continue;
-      }
-      break;
-    }
-
-    if (!response || !response.ok) {
-      const status = response?.status ?? 500;
-      if (status === 429) {
-        return new Response(
-          JSON.stringify({ insights: ["⏳ Muitas requisições no momento. Tente novamente em alguns segundos."], alerts: [], limitSuggestions: [] }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (status === 402) {
-        return new Response(
-          JSON.stringify({ insights: ["Serviço de IA temporariamente indisponível."], alerts: [], limitSuggestions: [] }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      const t = response ? await response.text() : "No response";
-      console.error("AI gateway error:", status, t);
+    } catch (err) {
+      console.error("Claude API error:", err);
+      const message = err instanceof Anthropic.RateLimitError
+        ? "⏳ Muitas requisições no momento. Tente novamente em alguns segundos."
+        : "Não foi possível gerar insights no momento.";
       return new Response(
-        JSON.stringify({ insights: ["Não foi possível gerar insights no momento."], alerts: [], limitSuggestions: [] }),
+        JSON.stringify({ insights: [message], alerts: [], limitSuggestions: [] }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const aiData = await response.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-
-    if (!toolCall?.function?.arguments) {
+    if (!result) {
       return new Response(JSON.stringify({ insights: [], alerts: [], limitSuggestions: [] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const result = JSON.parse(toolCall.function.arguments);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

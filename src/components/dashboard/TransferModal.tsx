@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getAccounts } from "@/services/transactionService";
 import { supabase } from "@/integrations/supabase/client";
 
+import { currencySymbol, getCurrency } from "@/lib/currency";
 interface Account {
   id: string;
   name: string;
@@ -34,7 +35,7 @@ function formatCurrencyDisplay(cents: number): string {
 }
 
 function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return value.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 }
 
 const TRANSFER_MESSAGES = [
@@ -143,7 +144,7 @@ const TransferModal = ({ open, onClose, onSuccess }: Props) => {
       const randomMsg = messages[Math.floor(Math.random() * messages.length)];
 
       toast.success(randomMsg, {
-        description: `R$ ${formatCurrencyDisplay(amountCents)} ${isInvestment ? "investido" : "transferido"}`,
+        description: `${currencySymbol()} ${formatCurrencyDisplay(amountCents)} ${isInvestment ? "investido" : "transferido"}`,
       });
 
       onSuccess();
@@ -200,7 +201,7 @@ const TransferModal = ({ open, onClose, onSuccess }: Props) => {
               >
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2">Valor</p>
                 <div className="flex items-baseline justify-center gap-2">
-                  <span className="text-xl font-bold text-sky-400">R$</span>
+                  <span className="text-xl font-bold text-sky-400">{currencySymbol()}</span>
                   <motion.span
                     key={amountCents}
                     initial={{ scale: 1.05 }}

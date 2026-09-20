@@ -10,6 +10,10 @@ export interface Profile {
   has_completed_profile: boolean;
   has_account: boolean;
   has_transactions: boolean;
+  has_card: boolean;
+  has_fixed_expenses: boolean;
+  initial_score: number | null;
+  initial_score_label: string | null;
 }
 
 export function useProfile() {

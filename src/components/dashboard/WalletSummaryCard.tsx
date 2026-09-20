@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Wallet, ChevronRight, Landmark, ArrowRightLeft, PiggyBank } from "lucide-react";
+import { Wallet, ChevronRight, Landmark, ArrowRightLeft, Vault } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAccounts } from "@/services/transactionService";
@@ -8,6 +8,7 @@ import { fetchGoals } from "@/services/goalService";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
+import { getCurrency } from "@/lib/currency";
 interface Account {
   id: string;
   name: string;
@@ -18,7 +19,7 @@ interface Account {
 
 
 function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return value.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 }
 
 const WalletSummaryCard = () => {
@@ -78,7 +79,7 @@ const WalletSummaryCard = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <p className={cn("text-lg font-bold tabular-nums md:hidden", patrimonio >= 0 ? "text-primary" : "text-destructive")}>
+          <p className={cn("text-lg font-bold tabular-nums md:hidden", patrimonio >= 0 ? "text-willo-green" : "text-destructive")}>
             {formatCurrency(patrimonio)}
           </p>
           <ChevronRight className="w-4 h-4 text-primary/30 group-hover:text-primary transition-colors" />
@@ -88,7 +89,7 @@ const WalletSummaryCard = () => {
       {/* Patrimônio total - desktop only */}
       <div className="relative text-center py-2 hidden md:block">
         <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Patrimônio Total</p>
-        <p className={cn("text-xl font-bold tabular-nums", patrimonio >= 0 ? "text-primary" : "text-destructive")}>
+        <p className={cn("text-xl font-bold tabular-nums", patrimonio >= 0 ? "text-willo-green" : "text-destructive")}>
           {formatCurrency(patrimonio)}
         </p>
       </div>
@@ -98,15 +99,15 @@ const WalletSummaryCard = () => {
         <div className="bg-background/40 backdrop-blur-sm rounded-xl p-3 text-center border border-border/10">
           <Landmark className="w-4 h-4 text-primary/60 mx-auto mb-1" />
           <p className="text-[10px] text-muted-foreground leading-tight">Contas</p>
-          <p className={cn("text-xs md:text-sm font-bold tabular-nums mt-1", totalBalance >= 0 ? "text-primary" : "text-destructive")}>
+          <p className={cn("text-xs md:text-sm font-bold tabular-nums mt-1", totalBalance >= 0 ? "text-willo-green" : "text-destructive")}>
             {formatCurrency(totalBalance)}
           </p>
         </div>
         <div className="bg-background/40 backdrop-blur-sm rounded-xl p-3 text-center border border-border/10">
-          <PiggyBank className="w-4 h-4 text-primary/60 mx-auto mb-1" />
+          <Vault className="w-4 h-4 text-primary/60 mx-auto mb-1" />
           <p className="text-[10px] text-muted-foreground leading-tight">Reservado</p>
           <p className={cn("text-xs md:text-sm font-bold tabular-nums mt-1", totalReservado > 0 ? "text-foreground" : "text-muted-foreground")}>
-            {totalReservado > 0 ? formatCurrency(totalReservado) : "R$ 0,00"}
+            {totalReservado > 0 ? formatCurrency(totalReservado) : formatCurrency(0)}
           </p>
         </div>
       </div>

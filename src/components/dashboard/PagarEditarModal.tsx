@@ -16,6 +16,7 @@ import { getCategoryHexColor } from "@/lib/categoryUtils";
 import { getIconComponent } from "@/components/dashboard/CategoryCreateModal";
 import type { FinanceEvent } from "@/types/finance";
 
+import { getCurrency } from "@/lib/currency";
 interface Props {
   open: boolean;
   event: FinanceEvent | null;
@@ -26,7 +27,7 @@ interface Props {
 // Categories are loaded dynamically
 
 const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 const extractCardIdFromInvoiceEventId = (eventId: string) => {
   const match = eventId.match(/^fatura-(.+)-(\d{1,2})-(\d{4})$/);

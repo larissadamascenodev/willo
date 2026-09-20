@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Sparkles, Clock, MoreVertical, Pencil, Trash2, ArrowDownLeft, ArrowUpRight, Target, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, Sparkles, Clock, MoreVertical, Pencil, Trash2, ArrowDownLeft, ArrowUpRight, Target, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -23,8 +23,9 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 
+import { getCurrency } from "@/lib/currency";
 const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 const MetaDetalhe = () => {
   const { goalId } = useParams<{ goalId: string }>();
@@ -165,8 +166,8 @@ const MetaDetalhe = () => {
     <div className="pt-2 pb-8 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate("/metas")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Voltar
+        <button onClick={() => navigate("/metas")} className="-ml-2 flex h-9 items-center gap-0.5 text-sm text-white/70 hover:text-white active:opacity-60 transition-colors">
+          <ChevronLeft className="w-6 h-6" strokeWidth={2.25} /> Voltar
         </button>
         <div className="relative">
           <button onClick={() => setShowMenu(v => !v)} className="w-8 h-8 rounded-xl bg-muted/20 flex items-center justify-center hover:bg-muted/30 transition-colors">

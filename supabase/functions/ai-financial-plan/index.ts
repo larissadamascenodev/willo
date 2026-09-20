@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import Anthropic from "npm:@anthropic-ai/sdk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,14 +8,34 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+/** Calls Claude forcing a single tool call and returns the tool input (or null). */
+async function callClaudeTool<T>(
+  system: string,
+  user: string,
+  tool: { name: string; description: string; input_schema: Record<string, unknown> },
+): Promise<T | null> {
+  const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
+  const response = await anthropic.messages.create({
+    model: "claude-opus-5",
+    max_tokens: 16000,
+    thinking: { type: "disabled" },
+    output_config: { effort: "low" },
+    system,
+    messages: [{ role: "user", content: user }],
+    tools: [tool as Anthropic.Tool],
+    tool_choice: { type: "tool", name: tool.name },
+  });
+  const block = response.content.find((b) => b.type === "tool_use");
+  return block && block.type === "tool_use" ? (block.input as T) : null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!Deno.env.get("ANTHROPIC_API_KEY")) throw new Error("ANTHROPIC_API_KEY not configured");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -152,25 +173,12 @@ ${financialSummary}
 
 Analise os dados e crie um plano financeiro personalizado.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "create_financial_plan",
-              description: "Cria um plano financeiro personalizado baseado nos dados do usuário",
-              parameters: {
+    let plan: unknown;
+    try {
+      plan = await callClaudeTool(systemPrompt, userPrompt, {
+        name: "create_financial_plan",
+        description: "Cria um plano financeiro personalizado baseado nos dados do usuário",
+        input_schema: {
                 type: "object",
                 properties: {
                   monthly_contribution: {
@@ -239,43 +247,18 @@ Analise os dados e crie um plano financeiro personalizado.`;
                 ],
                 additionalProperties: false,
               },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "create_financial_plan" } },
-      }),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("AI gateway error:", response.status, errText);
-      if (response.status === 429) {
+      });
+    } catch (err) {
+      console.error("Claude API error:", err);
+      if (err instanceof Anthropic.RateLimitError) {
         return new Response(JSON.stringify({ error: "Muitas requisições. Tente novamente em instantes." }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes. Adicione créditos nas configurações." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw new Error(`AI error: ${response.status}`);
+      throw new Error("Não foi possível gerar o plano agora.");
     }
-
-    const aiData = await response.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) {
-      throw new Error("AI did not return structured output");
-    }
-
-    let plan;
-    try {
-      plan = JSON.parse(toolCall.function.arguments);
-    } catch {
-      throw new Error("Failed to parse AI response");
-    }
+    if (!plan) throw new Error("AI did not return structured output");
 
     return new Response(JSON.stringify({ plan }), {
       status: 200,

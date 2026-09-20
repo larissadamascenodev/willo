@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
-import BotFinanceTools from "@/components/dashboard/BotFinanceTools";
+import FinanceOverviewCard from "@/components/dashboard/FinanceOverviewCard";
 import WalletSummaryCard from "@/components/dashboard/WalletSummaryCard";
+import BalanceHeroCard from "@/components/dashboard/BalanceHeroCard";
 import { useGreeting } from "@/components/dashboard/DashboardHeader";
 import SaldoCard from "@/components/dashboard/SaldoCard";
 import ReceitasDespesasCards from "@/components/dashboard/ReceitasDespesasCards";
@@ -11,7 +12,8 @@ import TransacoesRecentes from "@/components/dashboard/TransacoesRecentes";
 import ProximosEventos from "@/components/dashboard/ProximosEventos";
 import AssinaturasCard from "@/components/dashboard/AssinaturasCard";
 import GastosPorCategoria from "@/components/dashboard/GastosPorCategoria";
-import GastosSemanaisCard from "@/components/dashboard/GastosSemanaisCard";
+import FinanceChartCard from "@/components/dashboard/FinanceChartCard";
+import CardsOverviewSection from "@/components/dashboard/CardsOverviewSection";
 
 import MetasResumoCard from "@/components/dashboard/MetasResumoCard";
 import ParcelamentosAtivosCard from "@/components/dashboard/ParcelamentosAtivosCard";
@@ -104,8 +106,10 @@ const Index = () => {
               <OnboardingCard
                 profile={profile}
                 onUpdateName={updateDisplayName}
-                onGoToAccounts={() => navigate("/gestao")}
+                onGoToAccounts={() => navigate("/gestao?abrir=conta")}
                 onCreateTransaction={handleNovaTransacao}
+                onGoToCard={() => navigate("/gestao?abrir=cartao")}
+                onCreateFixedExpense={handleNovaTransacao}
               />
             )}
             <div>
@@ -127,8 +131,8 @@ const Index = () => {
           </div>
           <div className="space-y-4">
             <WalletSummaryCard />
-            {isCurrentMonth && <GastosSemanaisCard />}
-            <BotFinanceTools layout="grid" />
+            {isCurrentMonth && <FinanceChartCard />}
+            <FinanceOverviewCard receitas={receitas} despesas={despesas} saldoPrevisto={saldoPrevisto} nextMonthBalance={data.projection.nextMonthBalance} />
             <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
             <AssinaturasCard />
             <MetasResumoCard />
@@ -150,18 +154,20 @@ const Index = () => {
             <OnboardingCard
               profile={profile}
               onUpdateName={updateDisplayName}
-              onGoToAccounts={() => navigate("/gestao")}
+              onGoToAccounts={() => navigate("/gestao?abrir=conta")}
               onCreateTransaction={handleNovaTransacao}
+              onGoToCard={() => navigate("/gestao?abrir=cartao")}
+              onCreateFixedExpense={handleNovaTransacao}
             />
           )}
           <SaldoWalletCarousel saldoAtual={saldoMes} saldoPrevisto={saldoPrevisto} isFutureMonth={isFutureMonth} isPastMonth={data.isPastMonth} />
           <ReceitasDespesasCards receitas={receitas} receitasRecebidas={data.receitasRecebidas} receitasPendentes={data.receitasPendentes} despesas={despesas} despesasPagas={data.despesasPagas} despesasPendentes={data.despesasPendentes} compact />
           {/* MicroInteracoesCard temporarily disabled */}
-          {isCurrentMonth && <GastosSemanaisCard />}
-          <BotFinanceTools layout="carousel" />
+          <FinanceChartCard />
           {data.categories.length > 0 && (
             <GastosPorCategoria categories={data.categories} selectedMonth={selectedMonth} onVerAnalise={() => navigate("/transacoes")} />
           )}
+          <FinanceOverviewCard receitas={receitas} despesas={despesas} saldoPrevisto={saldoPrevisto} nextMonthBalance={data.projection.nextMonthBalance} />
           <TransacoesRecentes transactions={data.transactions} onDelete={refetch} />
           <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
           <AssinaturasCard />
@@ -171,38 +177,36 @@ const Index = () => {
 
         {/* MOBILE LAYOUT */}
         <div className="md:hidden space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="pl-0.5">
-              <h1 className="font-display text-base font-bold leading-tight mx-[2px]">
-                {greeting}, <span className="text-primary">{userName}</span>
-              </h1>
-              <p className="text-[10px] text-muted-foreground my-0 mx-[2px]">{dateStr}</p>
-            </div>
-            <MonthSelector selectedMonth={selectedMonth} selectedYear={selectedYear} onMonthChange={handleMonthChange} />
-          </div>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <BalanceHeroCard
+              saldoAtual={saldoMes}
+              changeAmount={balanco}
+              changePercent={receitas > 0 ? (balanco / receitas) * 100 : 0}
+              receitas={receitas}
+              despesas={despesas}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
+              onMonthChange={handleMonthChange}
+            />
+          </motion.div>
+
+          {/* MicroInteracoesCard temporarily disabled */}
+          {isCurrentMonth && <FinanceChartCard />}
           {profile && !isOnboardingComplete && (
             <OnboardingCard
               profile={profile}
               onUpdateName={updateDisplayName}
-              onGoToAccounts={() => navigate("/gestao")}
+              onGoToAccounts={() => navigate("/gestao?abrir=conta")}
               onCreateTransaction={handleNovaTransacao}
+              onGoToCard={() => navigate("/gestao?abrir=cartao")}
+              onCreateFixedExpense={handleNovaTransacao}
             />
           )}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-            <SaldoWalletCarousel saldoAtual={saldoMes} saldoPrevisto={saldoPrevisto} isFutureMonth={isFutureMonth} isPastMonth={data.isPastMonth} />
-            <ReceitasDespesasCards receitas={receitas} receitasRecebidas={data.receitasRecebidas} receitasPendentes={data.receitasPendentes} despesas={despesas} despesasPagas={data.despesasPagas} despesasPendentes={data.despesasPendentes} mobile compact />
-          </motion.div>
-          
-          {/* MicroInteracoesCard temporarily disabled */}
-          {isCurrentMonth && <GastosSemanaisCard />}
-          <BotFinanceTools layout="carousel" />
-          {data.categories.length > 0 && (
-            <GastosPorCategoria categories={data.categories} selectedMonth={selectedMonth} onVerAnalise={() => navigate("/transacoes")} />
-          )}
+          <GastosPorCategoria categories={data.categories} selectedMonth={selectedMonth} onVerAnalise={() => navigate("/transacoes")} />
+          <FinanceOverviewCard receitas={receitas} despesas={despesas} saldoPrevisto={saldoPrevisto} nextMonthBalance={data.projection.nextMonthBalance} />
+          <CardsOverviewSection />
           <TransacoesRecentes transactions={data.transactions} onDelete={refetch} />
-          <div className="-mt-3">
-            <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
-          </div>
+          <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
           <AssinaturasCard />
           <ParcelamentosAtivosCard />
           

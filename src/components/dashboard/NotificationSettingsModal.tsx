@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
-import { Calendar, Target, Flame, Bot, BarChart3 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { BarChart3, CalendarClock, Loader2, Target } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOrCreateSettings, updateSettings, type NotificationSettings } from "@/services/notificationService";
-import { toast } from "sonner";
+import BottomSheet from "@/components/shared/BottomSheet";
+import { SheetAction } from "@/components/wallet/sheetParts";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -14,11 +14,27 @@ interface Props {
 }
 
 const PERIOD_OPTIONS = [
-  { value: 0, label: "Somente na data" },
+  { value: 0, label: "No dia" },
   { value: 1, label: "1 dia antes" },
   { value: 3, label: "3 dias antes" },
 ] as const;
 
+function Toggle({ on, onChange, label }: { on: boolean; onChange: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      onClick={onChange}
+      className={cn("relative h-7 w-12 shrink-0 rounded-full transition-colors", on ? "bg-willo-green" : "bg-white/15")}
+    >
+      <motion.span className="absolute top-1 h-5 w-5 rounded-full bg-white shadow" animate={{ left: on ? 24 : 4 }} transition={{ type: "spring", stiffness: 500, damping: 32 }} />
+    </button>
+  );
+}
+
+/** "Lembretes e alertas": which reminders the app sends, as a bottom sheet. */
 export default function NotificationSettingsModal({ open, onOpenChange }: Props) {
   const { user } = useAuth();
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
@@ -37,20 +53,25 @@ export default function NotificationSettingsModal({ open, onOpenChange }: Props)
   const handleSave = async () => {
     if (!settings) return;
     setSaving(true);
-    await updateSettings(settings.id, {
-      bill_due_reminder: settings.bill_due_reminder,
-      bill_due_days_before: settings.bill_due_days_before,
-      invoice_reminder: settings.bill_due_reminder,
-      goal_reminder: settings.goal_reminder,
-      challenge_reminder: settings.challenge_reminder,
-      category_limit_alert: settings.category_limit_alert,
-      low_balance_alert: false,
-      low_balance_threshold: settings.low_balance_threshold,
-      weekly_summary: false,
-    });
-    setSaving(false);
-    toast.success("Configurações salvas!");
-    onOpenChange(false);
+    try {
+      await updateSettings(settings.id, {
+        bill_due_reminder: settings.bill_due_reminder,
+        bill_due_days_before: settings.bill_due_days_before,
+        invoice_reminder: settings.bill_due_reminder,
+        goal_reminder: settings.goal_reminder,
+        challenge_reminder: settings.challenge_reminder,
+        category_limit_alert: settings.category_limit_alert,
+        low_balance_alert: false,
+        low_balance_threshold: settings.low_balance_threshold,
+        weekly_summary: false,
+      });
+      toast.success("Lembretes salvos");
+      onOpenChange(false);
+    } catch {
+      toast.error("Não foi possível salvar");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggle = (key: keyof NotificationSettings) => {
@@ -58,141 +79,71 @@ export default function NotificationSettingsModal({ open, onOpenChange }: Props)
     setSettings({ ...settings, [key]: !settings[key] });
   };
 
-  const periodLabel = (days: number) => {
-    if (days === 0) return "Aviso somente no dia";
-    return `Aviso ${days} dia${days > 1 ? "s" : ""} antes`;
-  };
-
   const items = settings
     ? [
-        {
-          icon: Calendar,
-          label: "Contas a vencer",
-          sub: periodLabel(settings.bill_due_days_before),
-          enabled: settings.bill_due_reminder,
-          toggle: () => toggle("bill_due_reminder"),
-          extra: settings.bill_due_reminder && (
-            <div className="mt-2.5 space-y-1.5">
-              <span className="text-[10px] text-muted-foreground font-medium">Período de aviso:</span>
-              <div className="flex flex-wrap gap-1.5">
-                {PERIOD_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setSettings({ ...settings, bill_due_days_before: opt.value })}
-                    className={cn(
-                      "px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all",
-                      settings.bill_due_days_before === opt.value
-                        ? "bg-primary/15 text-primary border border-primary/30"
-                        : "bg-muted/20 text-muted-foreground hover:bg-muted/40 border border-transparent"
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ),
-        },
-        {
-          icon: Target,
-          label: "Metas financeiras",
-          sub: "Aviso quando prazo se aproxima",
-          enabled: settings.goal_reminder,
-          toggle: () => toggle("goal_reminder"),
-        },
-        {
-          icon: Flame,
-          label: "Desafios",
-          sub: "Lembrete de check-in diário",
-          enabled: settings.challenge_reminder,
-          toggle: () => toggle("challenge_reminder"),
-        },
-        {
-          icon: BarChart3,
-          label: "Limite de categoria",
-          sub: "Aviso ao se aproximar do limite",
-          enabled: settings.category_limit_alert,
-          toggle: () => toggle("category_limit_alert"),
-        },
+        { key: "bill_due_reminder" as const, icon: CalendarClock, label: "Contas e faturas a vencer", sub: "Antes de pagar juros" },
+        { key: "goal_reminder" as const, icon: Target, label: "Metas", sub: "Quando o prazo se aproxima" },
+        { key: "category_limit_alert" as const, icon: BarChart3, label: "Limite de categoria", sub: "Quando o gasto chega perto do limite" },
       ]
     : [];
 
-  const comingSoonItems = [
-    {
-      icon: Bot,
-      label: "Notificações do BotHub",
-      sub: "Dicas e alertas inteligentes",
-    },
-  ];
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border/30 rounded-2xl max-w-sm mx-auto p-0 overflow-hidden">
-        <div className="p-6 space-y-5">
-          <div className="text-center space-y-1">
-            <h3 className="text-lg font-bold text-foreground">Lembretes e Alertas</h3>
-            <p className="text-xs text-muted-foreground">Configure quais notificações deseja receber</p>
+    <BottomSheet
+      open={open}
+      onClose={() => onOpenChange(false)}
+      footer={<SheetAction onClick={handleSave} disabled={loading || !settings} loading={saving} loadingLabel="Salvando…">Salvar</SheetAction>}
+    >
+      <div className="px-5 pb-4">
+        <p className="text-[22px] font-bold tracking-tight text-white">Lembretes e alertas</p>
+        <p className="text-[14px] text-white/45">Escolha o que o Willo te avisa.</p>
+
+        {loading || !settings ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-5 w-5 animate-spin text-white/40" />
           </div>
-
-          {loading ? (
-            <div className="py-8 text-center text-xs text-muted-foreground">Carregando...</div>
-          ) : (
-            <>
-              <div className="space-y-1">
-                {items.map((item, i) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={i} className="p-3 rounded-xl hover:bg-muted/10 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                          <Icon className="w-4 h-4 text-primary" />
+        ) : (
+          <div className="mt-5 divide-y divide-white/[0.06] overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#141414]">
+            {items.map(({ key, icon: Icon, label, sub }) => {
+              const on = !!settings[key];
+              return (
+                <div key={key} className="px-4 py-3.5">
+                  <div className="flex items-center gap-3.5">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-white/[0.06]">
+                      <Icon className="h-[18px] w-[18px] text-white/80" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-medium text-white">{label}</span>
+                      <span className="block truncate text-[12.5px] text-white/45">{sub}</span>
+                    </span>
+                    <Toggle on={on} onChange={() => toggle(key)} label={label} />
+                  </div>
+                  <AnimatePresence initial={false}>
+                    {key === "bill_due_reminder" && on && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="mt-3 grid grid-cols-3 gap-1 rounded-full bg-white/[0.05] p-1">
+                          {PERIOD_OPTIONS.map((opt) => {
+                            const selected = settings.bill_due_days_before === opt.value;
+                            return (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setSettings({ ...settings, bill_due_days_before: opt.value })}
+                                className={cn("h-9 rounded-full text-[12.5px] font-semibold transition-colors", selected ? "bg-white text-[#0B0B0B]" : "text-white/55")}
+                              >
+                                {opt.label}
+                              </button>
+                            );
+                          })}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground">{item.label}</p>
-                          <p className="text-[10px] text-muted-foreground">{item.sub}</p>
-                        </div>
-                        <Switch checked={item.enabled as boolean} onCheckedChange={item.toggle} />
-                      </div>
-                      {item.extra}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="space-y-1 pt-2 border-t border-border/10">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-3 pb-1">Em breve</p>
-                {comingSoonItems.map((item, i) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={i} className="p-3 rounded-xl opacity-50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-muted/15 flex items-center justify-center shrink-0">
-                          <Icon className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground">{item.label}</p>
-                          <p className="text-[10px] text-muted-foreground">{item.sub}</p>
-                        </div>
-                        <span className="text-[9px] font-bold text-primary border border-primary/30 bg-primary/10 px-2 py-0.5 rounded-full shrink-0">
-                          BREVE
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-
-          <Button
-            onClick={handleSave}
-            disabled={saving || loading}
-            className="w-full h-11 rounded-xl font-bold bg-primary/15 text-primary hover:bg-primary/25 border border-primary/30"
-          >
-            {saving ? "Salvando..." : "Salvar configurações"}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </BottomSheet>
   );
 }

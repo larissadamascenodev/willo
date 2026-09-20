@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Outlet } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { clearOnboardingProgress } from "@/lib/onboardingProgress";
+import { processScanFile } from "@/lib/scanUpload";
+import { Outlet, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { Camera, ImageIcon } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import MobileBottomNav from "@/components/dashboard/MobileBottomNav";
@@ -10,14 +12,24 @@ import { MonthProvider } from "@/contexts/MonthContext";
 import NovaTransacaoModal, { type PrefillData, type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
 import TransactionTypeChooser from "@/components/dashboard/TransactionTypeChooser";
 import TransferModal from "@/components/dashboard/TransferModal";
-import InvoiceUploadReviewModal, { type ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
-import ScanProcessingOverlay from "@/components/dashboard/ScanProcessingOverlay";
+import type { ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
+import { showScanSavedToast } from "@/components/scan/scanSavedToast";
+import BottomSheet from "@/components/shared/BottomSheet";
+import ScanCaptureScreen from "@/components/scan/ScanCaptureScreen";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
+import WelcomeToAppModal from "@/components/dashboard/WelcomeToAppModal";
 import { supabase } from "@/integrations/supabase/client";
 import { createTransaction, getAccounts } from "@/services/transactionService";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useSwipeBack } from "@/hooks/useSwipeBack";
+import {
+  SKIP_LEGACY_ONBOARDING_KEY,
+  SHOW_WELCOME_MODAL_KEY,
+  readPendingOnboardingProfile,
+  clearPendingOnboardingProfile,
+  markShowWelcomeModal,
+} from "@/lib/onboardingQuiz";
 
 interface ScanAccountOption {
   id: string;
@@ -31,6 +43,7 @@ const DashboardLayout = () => {
   const profileState = useProfile();
   const { profile, loading: profileLoading, refetch: refetchProfile } = profileState;
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { streak, streakDates } = useLoginStreak();
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
   const [showTypeChooser, setShowTypeChooser] = useState(false);
@@ -39,11 +52,12 @@ const DashboardLayout = () => {
   const [modalType, setModalType] = useState<"receita" | "despesa">("despesa");
 
   // OCR state
-  const [scanProcessing, setScanProcessing] = useState(false);
+  const [showScanScreen, setShowScanScreen] = useState(false);
+  const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null);
+  const [scanResultReady, setScanResultReady] = useState(false);
   const [extractedItems, setExtractedItems] = useState<ExtractedItem[]>([]);
-  const [extractedMessage, setExtractedMessage] = useState("");
   const [avgConfidence, setAvgConfidence] = useState<number>(0);
-  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [scanAccountId, setScanAccountId] = useState<string | null>(null);
   const [confirmingImport, setConfirmingImport] = useState(false);
   const [showScanChooser, setShowScanChooser] = useState(false);
   const [scanAccounts, setScanAccounts] = useState<ScanAccountOption[]>([]);
@@ -65,18 +79,18 @@ const DashboardLayout = () => {
     const parsed = new Date(`${rawDate}T12:00:00`);
     if (Number.isNaN(parsed.getTime())) return fallback;
 
-    // Allow dates from the past (receipts/invoices may be from previous months)
-    // Only reject dates in the future
+    // Keep the date printed on the receipt, even from past months; only
+    // future dates are treated as a misread.
     if (parsed > today) return fallback;
 
     return rawDate;
   }, []);
 
-  const handleScanFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleScanFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) handleScanFile(file);
     e.target.value = "";
-  }, []);
+  };
 
   // Global listener for the mobile + button and desktop "Nova transação"
   useEffect(() => {
@@ -100,15 +114,24 @@ const DashboardLayout = () => {
         setShowModal(true);
       }
     };
+    // Fired after "Apagar tudo" in Configurações — brings back the
+    // "Vamos deixar tudo pronto?" prompt, same as right after signup.
+    const handleShowWelcome = () => {
+      markShowWelcomeModal();
+      setShowWelcomeModal(true);
+      refetchProfile();
+    };
     window.addEventListener("open-nova-transacao-direct", handleDirect);
     window.addEventListener("open-scanner", handleScanner);
     window.addEventListener("edit-transaction", handleEditTransaction);
+    window.addEventListener("show-welcome-modal", handleShowWelcome);
     return () => {
       window.removeEventListener("open-nova-transacao-direct", handleDirect);
       window.removeEventListener("open-scanner", handleScanner);
       window.removeEventListener("edit-transaction", handleEditTransaction);
+      window.removeEventListener("show-welcome-modal", handleShowWelcome);
     };
-  }, []);
+  }, [refetchProfile]);
 
   const handleTypeSelected = useCallback((type: "receita" | "despesa" | "transferencia") => {
     setShowTypeChooser(false);
@@ -125,7 +148,7 @@ const DashboardLayout = () => {
   }, []);
 
   useEffect(() => {
-    if (!showReviewModal || !user) return;
+    if (!showScanScreen || !user) return;
 
     getAccounts()
       .then((accounts) => {
@@ -135,23 +158,27 @@ const DashboardLayout = () => {
       .catch(() => {
         toast.error("Erro ao carregar contas");
       });
-  }, [showReviewModal, user]);
+  }, [showScanScreen, user]);
 
-  // OCR scan handler
+  const closeScanScreen = useCallback(() => {
+    setShowScanScreen(false);
+    setScanResultReady(false);
+    setScanPhotoUrl((url) => {
+      if (url) setTimeout(() => URL.revokeObjectURL(url), 600);
+      return null;
+    });
+  }, []);
+
+  // OCR scan handler: show the photo while the AI reads it, then the confirm card
   const handleScanFile = useCallback(async (file: File) => {
-    setScanProcessing(true);
     setShowScanChooser(false);
+    setExtractedItems([]);
+    setScanResultReady(false);
+    // Same capture screen for camera and gallery; some gallery files (HEIC) come without a MIME type
+    setScanPhotoUrl(file.type === "application/pdf" ? null : URL.createObjectURL(file));
+    setShowScanScreen(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("context", "transaction");
-
-      const { data, error } = await supabase.functions.invoke("process-invoice", {
-        body: formData,
-      });
-
-      if (error) throw new Error(error.message || "Erro ao processar");
-      if (data?.error) throw new Error(data.error);
+      const data = await processScanFile(file, "transaction");
 
       const items: ExtractedItem[] = (data.items || []).map((item: any) => ({
         ...item,
@@ -159,58 +186,31 @@ const DashboardLayout = () => {
         selected: true,
       }));
 
-      const confidence = data.avg_confidence || 0;
-
-      // If single item with low confidence OR no items found, go to fallback
-      if (items.length === 1 && confidence < 0.7) {
-        const item = items[0];
-        setScanProcessing(false);
-        // Open NovaTransacaoModal pre-filled
-        setPrefillData({
-          name: item.description || "",
-          type: (item.type as "receita" | "despesa") || "despesa",
-          amount: item.amount || 0,
-          category: item.category || "",
-          date: getSafeTransactionDate(item.date),
-          recurrence_type: item.installment_total && item.installment_total > 1 ? "parcelado" : "unica",
-          installments: item.installment_total || null,
-        });
-        setModalType((item.type as "receita" | "despesa") || "despesa");
-        setShowModal(true);
-        toast.info("Confiança baixa — revise os dados antes de salvar", { duration: 4000 });
+      if (items.length === 0) {
+        closeScanScreen();
+        toast.error("Não encontramos nenhum valor nesse comprovante. Tente outra foto.");
         return;
       }
 
       setExtractedItems(items);
-      setExtractedMessage(data.message || "Lançamentos encontrados!");
-      setAvgConfidence(confidence);
-      setShowReviewModal(true);
+      setAvgConfidence(data.avg_confidence || 0);
+      setScanResultReady(true);
     } catch (err: any) {
+      closeScanScreen();
       toast.error(err?.message || "Erro ao processar documento");
-    } finally {
-      setScanProcessing(false);
     }
-  }, [getSafeTransactionDate]);
+  }, [getSafeTransactionDate, closeScanScreen]);
 
-  // Handle fallback from review modal: open NovaTransacaoModal pre-filled
-  const handleFallbackItem = useCallback((item: ExtractedItem) => {
-    setShowReviewModal(false);
-    setPrefillData({
-      name: item.description || "",
-      type: (item.type as "receita" | "despesa") || "despesa",
-      amount: item.amount || 0,
-      category: item.category || "",
-      date: getSafeTransactionDate(item.date),
-      recurrence_type: item.installment_total && item.installment_total > 1 ? "parcelado" : "unica",
-      installments: item.installment_total || null,
-    });
-    setModalType((item.type as "receita" | "despesa") || "despesa");
-    setShowModal(true);
-  }, [getSafeTransactionDate]);
+  // Preselect the default account once accounts load
+  useEffect(() => {
+    if (scanAccountId || scanAccounts.length === 0) return;
+    setScanAccountId((scanAccounts.find((a) => a.is_default) ?? scanAccounts[0]).id);
+  }, [scanAccounts, scanAccountId]);
 
   // Confirm import of scanned transactions
-  const handleConfirmScanImport = useCallback(async (selectedItems: ExtractedItem[]) => {
-    if (!user) return;
+  const handleConfirmScanImport = useCallback(async (scanned: ExtractedItem[]) => {
+    const selectedItems = scanned.filter((i) => i.selected !== false);
+    if (!user || selectedItems.length === 0) return false;
     setConfirmingImport(true);
     try {
       for (const item of selectedItems) {
@@ -220,10 +220,11 @@ const DashboardLayout = () => {
             type: (item.type as "receita" | "despesa") || "despesa",
             amount: item.amount,
             category: item.category || "outros",
-            date: getSafeTransactionDate(item.date),
+            // Already sanitized when scanned; keep whatever the person set while editing
+            date: item.date || getSafeTransactionDate(null),
             time: item.time || null,
             status: "pago",
-            account_id: item.account_id || null,
+            account_id: item.account_id || scanAccountId,
             payment_method: "conta",
             recurrence_type: item.is_recurring ? "fixa" : (item.installment_total && item.installment_total > 1 ? "parcelado" : "unica"),
             installments: item.installment_total || null,
@@ -233,16 +234,20 @@ const DashboardLayout = () => {
         );
       }
 
-      toast.success(`${selectedItems.length} transação${selectedItems.length > 1 ? "ões" : ""} importada${selectedItems.length > 1 ? "s" : ""} com sucesso! 🎉`);
-      setShowReviewModal(false);
+      showScanSavedToast(
+        selectedItems,
+        () => navigate("/transacoes"),
+      );
       setExtractedItems([]);
       handleSuccess();
+      return true;
     } catch (err: any) {
       toast.error(err?.message || "Erro ao importar transações");
+      return false;
     } finally {
       setConfirmingImport(false);
     }
-  }, [user, handleSuccess, getSafeTransactionDate]);
+  }, [user, handleSuccess, getSafeTransactionDate, scanAccountId, navigate]);
 
   const handleModalClose = useCallback(() => {
     setShowModal(false);
@@ -250,8 +255,62 @@ const DashboardLayout = () => {
     setEditTransaction(null);
   }, []);
 
+  // People who signed up through the new pre-signup onboarding quiz
+  // (Welcome carousel -> quiz -> account -> plans) shouldn't see this old
+  // onboarding again. CreateAccountStep flags this in localStorage right
+  // after signup — it can't mark profiles.has_completed_profile itself
+  // (RLS needs a live session, which doesn't exist yet for e-mail/password
+  // signups pending confirmation), so we finish that write here, the first
+  // time this layout mounts with both a real session and a loaded profile.
+  const [skippingLegacyOnboarding, setSkippingLegacyOnboarding] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem(SKIP_LEGACY_ONBOARDING_KEY) === "1"
+  );
+
+  // "Let's finish setting up?" modal — shown once, right after the new
+  // onboarding flow lands someone in the app for the first time.
+  const [showWelcomeModal, setShowWelcomeModal] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem(SHOW_WELCOME_MODAL_KEY) === "1"
+  );
+
+  useEffect(() => {
+    if (!skippingLegacyOnboarding || !user || !profile || profile.has_completed_profile) return;
+    localStorage.removeItem(SKIP_LEGACY_ONBOARDING_KEY);
+    const pending = readPendingOnboardingProfile();
+    clearPendingOnboardingProfile();
+    const update: Record<string, unknown> = { has_completed_profile: true };
+    if (pending?.displayName) update.display_name = pending.displayName;
+    if (typeof pending?.initialScore === "number") update.initial_score = pending.initialScore;
+    if (pending?.initialScoreLabel) update.initial_score_label = pending.initialScoreLabel;
+    supabase
+      .from("profiles" as any)
+      .update(update as any)
+      .eq("id", user.id)
+      .then(() => {
+        markShowWelcomeModal();
+        // The modal's own state was already initialized (at mount, before
+        // this async write landed) from localStorage — flip it directly too,
+        // otherwise it'd never show until a future remount picks the flag up.
+        setShowWelcomeModal(true);
+        refetchProfile();
+      });
+  }, [skippingLegacyOnboarding, user, profile, refetchProfile]);
+  // Signed in: the saved onboarding (result + paywall loop) has done its job
+  useEffect(() => {
+    if (user) clearOnboardingProgress();
+  }, [user]);
+
+  const dismissWelcomeModal = useCallback(() => {
+    localStorage.removeItem(SHOW_WELCOME_MODAL_KEY);
+    setShowWelcomeModal(false);
+  }, []);
+  const handleConfigureNow = useCallback(() => {
+    dismissWelcomeModal();
+    navigate("/configurar");
+  }, [dismissWelcomeModal, navigate]);
+
   // Show full-screen onboarding if profile loaded and name not set yet
-  const showOnboarding = !profileLoading && profile && !profile.has_completed_profile && !onboardingDismissed;
+  const showOnboarding =
+    !profileLoading && profile && !profile.has_completed_profile && !onboardingDismissed && !skippingLegacyOnboarding;
 
   const handleOnboardingComplete = useCallback(async () => {
     setOnboardingDismissed(true);
@@ -264,76 +323,62 @@ const DashboardLayout = () => {
       {showOnboarding && (
         <OnboardingFlow onComplete={handleOnboardingComplete} onRefetch={refetchProfile} />
       )}
-      <div className="dark min-h-screen bg-background text-foreground" style={showOnboarding ? { display: "none" } : undefined}>
+      <div className="willo-bg min-h-screen text-foreground" style={showOnboarding ? { display: "none" } : undefined}>
         <div className="w-full mx-auto px-4 md:px-6 lg:px-8 xl:px-12 pt-0 pb-24 md:pb-8">
           <DashboardHeader profile={profile} streak={streak} streakDates={streakDates} />
           <Outlet context={profileState} />
         </div>
         <MobileBottomNav />
+        <WelcomeToAppModal open={showWelcomeModal} onConfigure={handleConfigureNow} onSkip={dismissWelcomeModal} />
         <TransactionTypeChooser
           open={showTypeChooser}
           onClose={() => setShowTypeChooser(false)}
           onSelect={handleTypeSelected}
         />
-        {/* Scan chooser modal */}
-        <AnimatePresence>
-          {showScanChooser && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center"
-              onClick={() => setShowScanChooser(false)}
-            >
-              <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ type: "spring", damping: 28, stiffness: 300 }}
-                onClick={(e) => e.stopPropagation()}
-                className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl bg-card border border-border/20 shadow-2xl p-5 pb-24 sm:pb-5 space-y-3"
-              >
-                <h3 className="text-sm font-bold text-foreground">Escanear documento</h3>
-                <p className="text-xs text-muted-foreground">Escolha como deseja capturar o comprovante</p>
-                <div className="space-y-2">
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => { setShowScanChooser(false); scanCameraRef.current?.click(); }}
-                    className="w-full flex items-center gap-3 rounded-xl border border-border/15 bg-muted/10 hover:bg-muted/20 px-4 py-3.5 text-left transition-colors"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                      <Camera className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-[13px] font-bold text-foreground">Tirar foto</p>
-                      <p className="text-[11px] text-muted-foreground">Usar a câmera do celular</p>
-                    </div>
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => { setShowScanChooser(false); scanGalleryRef.current?.click(); }}
-                    className="w-full flex items-center gap-3 rounded-xl border border-border/15 bg-muted/10 hover:bg-muted/20 px-4 py-3.5 text-left transition-colors"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                      <ImageIcon className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-[13px] font-bold text-foreground">Galeria</p>
-                      <p className="text-[11px] text-muted-foreground">Selecionar foto da galeria</p>
-                    </div>
-                  </motion.button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Scan chooser */}
+        <BottomSheet open={showScanChooser} onClose={() => setShowScanChooser(false)}>
+          <div className="px-5 pb-2">
+            <p className="text-[22px] font-bold tracking-tight text-white">Escanear comprovante</p>
+            <p className="text-[14px] text-white/45">A IA lê o documento e preenche tudo para você revisar.</p>
+            <div className="mt-5 grid grid-cols-2 gap-2.5">
+              {[
+                { label: "Tirar foto", hint: "Usar a câmera", Icon: Camera, onClick: () => scanCameraRef.current?.click() },
+                { label: "Galeria", hint: "Escolher uma imagem", Icon: ImageIcon, onClick: () => scanGalleryRef.current?.click() },
+              ].map(({ label, hint, Icon, onClick }) => (
+                <motion.button
+                  key={label}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => { setShowScanChooser(false); onClick(); }}
+                  className="flex flex-col items-start rounded-[24px] border border-white/[0.06] bg-[#1A1A1A] p-4 text-left"
+                >
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#0B0B0B]">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className="mt-6 block text-[16px] font-semibold text-white">{label}</span>
+                  <span className="block text-[12px] text-white/45">{hint}</span>
+                </motion.button>
+              ))}
+            </div>
+          </div>
+        </BottomSheet>
         <input ref={scanCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanFileInput} />
         <input ref={scanGalleryRef} type="file" accept="image/*" className="hidden" onChange={handleScanFileInput} />
         
-        {/* Processing overlay */}
-        <AnimatePresence>
-          <ScanProcessingOverlay open={scanProcessing} />
-        </AnimatePresence>
+        <ScanCaptureScreen
+          open={showScanScreen}
+          photoUrl={scanPhotoUrl}
+          items={scanResultReady ? extractedItems : null}
+          onItemsChange={setExtractedItems}
+          accounts={scanAccounts}
+          accountId={scanAccountId}
+          onAccountChange={setScanAccountId}
+          lowConfidence={avgConfidence > 0 && avgConfidence < 0.7}
+          confirming={confirmingImport}
+          onClose={closeScanScreen}
+          onConfirm={async () => {
+            if (await handleConfirmScanImport(extractedItems)) closeScanScreen();
+          }}
+        />
 
         <NovaTransacaoModal
           open={showModal}
@@ -344,18 +389,6 @@ const DashboardLayout = () => {
           editTransaction={editTransaction}
         />
         <TransferModal open={showTransferModal} onClose={() => setShowTransferModal(false)} onSuccess={handleSuccess} />
-        <InvoiceUploadReviewModal
-          open={showReviewModal}
-          onClose={() => setShowReviewModal(false)}
-          items={extractedItems}
-          message={extractedMessage}
-          onConfirm={handleConfirmScanImport}
-          confirming={confirmingImport}
-          avgConfidence={avgConfidence}
-          onFallback={handleFallbackItem}
-          accounts={scanAccounts}
-          showAccountSelector
-        />
       </div>
     </MonthProvider>
   );

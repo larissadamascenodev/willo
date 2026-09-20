@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
+import { processScanFile } from "@/lib/scanUpload";
 import { motion } from "framer-motion";
-import {
-  ArrowLeft, Plus, MoreVertical, CreditCard,
+import { ChevronLeft,
+  Plus, MoreVertical, CreditCard,
   CalendarClock, CalendarCheck, Wallet, Shield,
   Pencil, Trash2, Undo2,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import { getInvoices, getInvoiceItems, getInvoicePayments, payInvoice, undoInvoi
 import { getAccounts, getCreditCards, createTransaction, updateTransaction, deleteTransaction, getTransactionById } from "@/services/transactionService";
 import type { RecurrenceScope } from "@/components/fatura/RecurrenceActionModal";
 import { cn } from "@/lib/utils";
+import { colorFor } from "@/lib/banks";
 import InvoiceCategoryBreakdown from "@/components/fatura/InvoiceCategoryBreakdown";
 import InvoiceTransactionList from "@/components/fatura/InvoiceTransactionList";
 import InvoicePayModal from "@/components/fatura/InvoicePayModal";
@@ -27,6 +29,7 @@ import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashb
 import MonthSelector from "@/components/dashboard/MonthSelector";
 import CreditCardEditModal from "@/components/fatura/CreditCardEditModal";
 
+import { getCurrency } from "@/lib/currency";
 export interface EnrichedItem {
   id: string;
   invoice_id: string;
@@ -71,7 +74,7 @@ export const MONTH_SHORT = [
 ];
 
 export function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return value.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 }
 
 const FaturaCartao = () => {
@@ -339,15 +342,7 @@ const FaturaCartao = () => {
     setUploadProcessing(true);
     toast.loading("Processando fatura com IA...", { id: "upload-processing" });
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const { data, error } = await supabase.functions.invoke("process-invoice", {
-        body: formData,
-      });
-
-      if (error) throw new Error(error.message || "Erro ao processar fatura");
-      if (data?.error) throw new Error(data.error);
+      const data = await processScanFile(file);
 
       const items: ExtractedItem[] = (data.items || []).map((item: any) => ({
         ...item,
@@ -372,9 +367,17 @@ const FaturaCartao = () => {
     setConfirmingImport(true);
     try {
       for (const item of selectedItems) {
-        const paidInstallments = item.installment_current && item.installment_total
-          ? item.installment_current
-          : 0;
+        const isParcelado = !!(item.installment_current && item.installment_total && item.installment_total > 1);
+        const paidInstallments = isParcelado ? item.installment_current! - 1 : 0;
+
+        // The invoice being viewed shows this specific installment being charged —
+        // the original purchase happened (installment_current - 1) invoices earlier.
+        let purchaseDate = item.date || new Date().toISOString().split("T")[0];
+        if (isParcelado) {
+          const day = item.date ? new Date(`${item.date}T12:00:00`).getDate() : 1;
+          const anchor = new Date(selectedYear, selectedMonth - 1 - (item.installment_current! - 1), day);
+          purchaseDate = `${anchor.getFullYear()}-${String(anchor.getMonth() + 1).padStart(2, "0")}-${String(anchor.getDate()).padStart(2, "0")}`;
+        }
 
         await createTransaction(
           {
@@ -382,11 +385,11 @@ const FaturaCartao = () => {
             type: "despesa",
             amount: item.amount,
             category: item.category || "outros",
-            date: item.date || new Date().toISOString().split("T")[0],
+            date: purchaseDate,
             status: "pago",
             payment_method: "cartao",
             credit_card_id: cardId,
-            recurrence_type: item.installment_total && item.installment_total > 1 ? "parcelado" : "unica",
+            recurrence_type: isParcelado ? "parcelado" : "unica",
             installments: item.installment_total || null,
             installment_current: item.installment_current || null,
             observation: paidInstallments > 0 ? `paid_installments:${paidInstallments}` : null,
@@ -469,26 +472,33 @@ const FaturaCartao = () => {
 
   const cardColor = card?.color || "hsl(150 100% 45%)";
 
+  const cardHex = colorFor(card?.name ?? "", card?.color, "#3A3A3F");
+  const statusChip =
+    invoiceStatus === "paid" ? { label: "Paga", hex: "#C8F36D" }
+      : invoiceStatus === "closed" ? { label: "Fechada", hex: "#FCD34D" }
+        : invoiceStatus === "open" ? { label: "Aberta", hex: "#FFFFFF" }
+          : null;
+
   return (
-    <div className="pt-2 pb-24 space-y-5">
-      {/* Header — Back + 3-dot menu */}
+    <div className="space-y-5 pb-24 pt-2">
+      {/* Header — back + menu */}
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate("/gestao")}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Voltar"
+          className="-ml-2 flex h-9 w-9 items-center justify-center text-white/70 transition-colors hover:text-white active:opacity-60"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Voltar
+          <ChevronLeft className="h-6 w-6" strokeWidth={2.25} />
         </button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-8 h-8 rounded-lg bg-muted/30 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
-              <MoreVertical className="w-4 h-4" />
+            <button aria-label="Opções do cartão" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-white/70 transition-colors hover:text-white">
+              <MoreVertical className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[180px]">
-            <DropdownMenuItem onClick={() => setShowEditCard(true)} className="gap-2 text-xs">
-              <Pencil className="w-3.5 h-3.5" />
+          <DropdownMenuContent align="end" className="min-w-[190px]">
+            <DropdownMenuItem onClick={() => setShowEditCard(true)} className="gap-2 text-[13px]">
+              <Pencil className="h-3.5 w-3.5" />
               Editar cartão
             </DropdownMenuItem>
             {currentInvoice && Number(currentInvoice.paid_amount ?? 0) > 0 && (
@@ -496,7 +506,7 @@ const FaturaCartao = () => {
                 onClick={async () => {
                   try {
                     await undoInvoicePayment(currentInvoice.id);
-                    toast.success("Pagamento desfeito com sucesso! ✅");
+                    toast.success("Pagamento desfeito");
                     const updated = await getInvoices(cardId!);
                     setInvoices(updated);
                     // Reload card to update used_limit
@@ -508,9 +518,9 @@ const FaturaCartao = () => {
                     toast.error(err?.message ?? "Erro ao desfazer pagamento");
                   }
                 }}
-                className="gap-2 text-xs text-destructive focus:text-destructive"
+                className="gap-2 text-[13px] text-destructive focus:text-destructive"
               >
-                <Undo2 className="w-3.5 h-3.5" />
+                <Undo2 className="h-3.5 w-3.5" />
                 Desfazer pagamento
               </DropdownMenuItem>
             )}
@@ -518,152 +528,121 @@ const FaturaCartao = () => {
         </DropdownMenu>
       </div>
 
-      {/* Month selector + Add button row */}
-      <div className="flex items-center justify-between">
+      {/* Month + add */}
+      <div className="flex items-center justify-between gap-2">
         <MonthSelector
           selectedMonth={selectedMonth - 1}
           selectedYear={selectedYear}
           onMonthChange={(m, y) => { setSelectedMonth(m + 1); setSelectedYear(y); }}
         />
-        <Button
-          variant="outline"
-          size="sm"
-          className="border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-[10px] sm:text-xs font-semibold gap-1 sm:gap-1.5 shrink-0 ml-2 px-2.5 sm:px-3 h-7 sm:h-8"
+        <button
+          type="button"
           onClick={() => setShowAddChooser(true)}
+          className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.08] bg-[#141414] px-3.5 text-[13px] font-semibold text-white active:scale-95"
         >
-          <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-          Adicionar lançamento
-        </Button>
+          <Plus className="h-3.5 w-3.5" /> Lançamento
+        </button>
       </div>
 
-      {/* ===== UNIFIED CARD: Fatura + Limite ===== */}
+      {/* ===== Invoice + limit ===== */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="relative rounded-2xl overflow-hidden border border-primary/20"
-        style={{ background: "linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%)" }}
+        className="relative overflow-hidden rounded-[26px] border border-white/[0.07] bg-[#141414] p-5"
       >
-        <div className="relative z-10 p-5 space-y-5">
-          {/* Card identity row */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-primary/15 flex items-center justify-center">
-                <CreditCard className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-sm font-bold text-foreground">{card?.name}</h1>
-                {card?.last_four_digits && (
-                  <span className="text-[10px] text-muted-foreground tracking-wider">•••• {card.last_four_digits}</span>
-                )}
-              </div>
-            </div>
-            {invoiceStatus === "paid" ? (
-              <div className="flex items-center gap-1.5 border border-primary/30 bg-primary/10 px-2.5 py-1 rounded-full">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                <span className="text-[10px] font-bold text-primary">Paga</span>
-              </div>
-            ) : invoiceStatus === "closed" ? (
-              <div className="flex items-center gap-1.5 border border-warning/30 bg-warning/10 px-2.5 py-1 rounded-full">
-                <div className="w-1.5 h-1.5 rounded-full bg-warning" />
-                <span className="text-[10px] font-bold text-warning">Fechada</span>
-              </div>
-            ) : invoiceStatus === "open" ? (
-              <div className="flex items-center gap-1.5 border border-primary/20 bg-primary/5 px-2.5 py-1 rounded-full">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary/60" />
-                <span className="text-[10px] font-bold text-primary/80">Aberta</span>
-              </div>
-            ) : null}
-          </div>
+        <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full blur-[70px]" style={{ background: cardHex, opacity: 0.3 }} />
 
-          {/* Invoice value — centered */}
-          <div className="text-center space-y-1">
-            <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-widest">
-              Fatura de {MONTH_NAMES[selectedMonth - 1]}
-            </p>
-            <p className="text-3xl font-extrabold text-foreground tracking-tight">
-              {formatCurrency(outstanding)}
-            </p>
-            {dueInfo && invoiceStatus !== "paid" && (
-              <span className={cn(
-                "text-[10px] font-semibold",
-                dueInfo.overdue ? "text-destructive" : "text-muted-foreground"
-              )}>
-                {dueInfo.text}
-              </span>
-            )}
-          </div>
-
-          {/* Dates chips */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-lg flex-1 justify-center border border-border/10">
-              <CalendarClock className="w-3.5 h-3.5 text-primary/60" />
-              <span>Fecha dia <span className="font-semibold text-foreground">{card?.closing_day}</span></span>
-            </div>
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-lg flex-1 justify-center border border-border/10">
-              <CalendarCheck className="w-3.5 h-3.5 text-primary/60" />
-              <span>Vence dia <span className="font-semibold text-foreground">{card?.due_day}</span></span>
+        {/* Card identity */}
+        <div className="relative flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px]" style={{ background: `${cardHex}26` }}>
+              <CreditCard className="h-[18px] w-[18px]" style={{ color: cardHex }} />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-[16px] font-bold text-white">{card?.name}</p>
+              {card?.last_four_digits && (
+                <p className="text-[12px] tabular-nums text-white/40">•••• {card.last_four_digits}</p>
+              )}
             </div>
           </div>
-
-          {/* Divider */}
-          <div className="h-px bg-border/10" />
-
-          {/* Limit section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className={cn("w-1.5 h-1.5 rounded-full", isOverLimit ? "bg-destructive" : "bg-primary")} />
-                <span className="text-[9px] text-muted-foreground uppercase tracking-widest font-medium">Limite</span>
-              </div>
-              <span className={cn("text-[10px] font-bold", isOverLimit ? "text-destructive" : "text-primary")}>
-                {usedPct.toFixed(0)}% utilizado
-              </span>
-            </div>
-
-            <div className="w-full h-1.5 rounded-full bg-muted/30 overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${usedPct}%` }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className={cn(
-                  "h-full rounded-full",
-                  isOverLimit ? "bg-destructive/60" : "bg-primary/40"
-                )}
-              />
-            </div>
-
-            {/* Limit values row */}
-            <div className="flex items-center justify-between text-[11px]">
-              <div className="text-center">
-                <p className="text-muted-foreground">Usado</p>
-                <p className="font-bold text-foreground">{formatCurrency(usedLimit)}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-muted-foreground">Disponível</p>
-                <p className="font-bold text-primary">{formatCurrency(availableLimit)}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-muted-foreground">Total</p>
-                <p className="font-bold text-foreground">{formatCurrency(limitTotal)}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Pay button */}
-          {currentInvoice && outstanding > 0 && (
-            <>
-              <div className="h-px bg-border/10" />
-              <Button
-                onClick={() => setShowPayModal(true)}
-                className="w-full h-11 rounded-xl text-xs font-bold bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25"
-              >
-                <Wallet className="w-3.5 h-3.5 mr-1.5" />
-                Pagar Fatura · {formatCurrency(outstanding)}
-              </Button>
-            </>
+          {statusChip && (
+            <span
+              className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold"
+              style={{ background: `${statusChip.hex}1F`, color: statusChip.hex }}
+            >
+              {statusChip.label}
+            </span>
           )}
         </div>
+
+        {/* Invoice total */}
+        <div className="relative mt-5">
+          <p className="text-[12px] text-white/45">Fatura de {MONTH_NAMES[selectedMonth - 1]}</p>
+          <p className="text-[36px] font-extrabold leading-tight tracking-tight text-white tabular-nums">
+            {formatCurrency(outstanding)}
+          </p>
+          {dueInfo && invoiceStatus !== "paid" && outstanding > 0 && (
+            <p className={cn("text-[13px]", dueInfo.overdue ? "text-red-400" : "text-white/45")}>{dueInfo.text}</p>
+          )}
+        </div>
+
+        {/* Closing / due */}
+        <div className="relative mt-4 grid grid-cols-2 gap-2">
+          <div className="flex items-center gap-2 rounded-[16px] bg-white/[0.04] px-3 py-2.5">
+            <CalendarClock className="h-4 w-4 shrink-0 text-white/40" />
+            <span className="text-[12.5px] text-white/55">Fecha dia <span className="font-semibold text-white">{card?.closing_day}</span></span>
+          </div>
+          <div className="flex items-center gap-2 rounded-[16px] bg-white/[0.04] px-3 py-2.5">
+            <CalendarCheck className="h-4 w-4 shrink-0 text-white/40" />
+            <span className="text-[12.5px] text-white/55">Vence dia <span className="font-semibold text-white">{card?.due_day}</span></span>
+          </div>
+        </div>
+
+        {/* Limit */}
+        <div className="relative mt-5 border-t border-white/[0.06] pt-4">
+          <div className="flex items-baseline justify-between">
+            <span className="text-[12px] text-white/45">Limite usado</span>
+            <span className={cn("text-[12.5px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-white/70")}>
+              {usedPct.toFixed(0)}%
+            </span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.07]">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(usedPct, 100)}%` }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="h-full rounded-full"
+              style={{ background: isOverLimit ? "#F87171" : cardHex }}
+            />
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+            <div>
+              <p className="text-[11.5px] text-white/40">Usado</p>
+              <p className="text-[14px] font-semibold text-white tabular-nums">{formatCurrency(usedLimit)}</p>
+            </div>
+            <div className="border-x border-white/[0.06]">
+              <p className="text-[11.5px] text-white/40">Disponível</p>
+              <p className={cn("text-[14px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-willo-green")}>{formatCurrency(availableLimit)}</p>
+            </div>
+            <div>
+              <p className="text-[11.5px] text-white/40">Total</p>
+              <p className="text-[14px] font-semibold text-white tabular-nums">{formatCurrency(limitTotal)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Pay */}
+        {currentInvoice && outstanding > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowPayModal(true)}
+            className="relative mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-full bg-white text-[15px] font-bold text-[#0B0B0B] active:scale-[0.99]"
+          >
+            <Wallet className="h-4 w-4" />
+            Pagar fatura · {formatCurrency(outstanding)}
+          </button>
+        )}
       </motion.div>
 
       {/* ===== HISTORY / PROJECTION CHART ===== */}

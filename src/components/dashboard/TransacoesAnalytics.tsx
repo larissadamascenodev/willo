@@ -12,8 +12,9 @@ import { getRecurringForMonth } from "@/services/recurringService";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryUtils";
 
+import { getCurrency } from "@/lib/currency";
 const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 
 const WEEKDAYS_SHORT = ["D", "S", "T", "Q", "Q", "S", "S"];
@@ -162,11 +163,11 @@ const TransacoesAnalytics = () => {
             <ArrowUpRight className="w-3.5 h-3.5 text-primary" />
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Receitas</span>
           </div>
-          <p className="text-base font-bold text-primary tabular-nums leading-none mb-2">{fmt(totals.receitas)}</p>
+          <p className="text-base font-bold text-willo-green tabular-nums leading-none mb-2">{fmt(totals.receitas)}</p>
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-[9px] text-muted-foreground/60">Recebido</span>
-              <span className="text-[10px] font-semibold text-primary/80 tabular-nums">{fmt(totals.receitasRecebidas)}</span>
+              <span className="text-[10px] font-semibold text-willo-green/80 tabular-nums">{fmt(totals.receitasRecebidas)}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[9px] text-muted-foreground/60">Pendente</span>

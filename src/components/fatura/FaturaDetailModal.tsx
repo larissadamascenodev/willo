@@ -8,6 +8,7 @@ import { getAccounts } from "@/services/transactionService";
 import { cn } from "@/lib/utils";
 import InvoicePayModal, { type PaymentDetails } from "@/components/fatura/InvoicePayModal";
 
+import { getCurrency } from "@/lib/currency";
 interface FaturaCardInfo {
   cardId: string;
   cardName: string;
@@ -44,7 +45,7 @@ interface RecentItem {
 }
 
 const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 const MONTH_NAMES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",

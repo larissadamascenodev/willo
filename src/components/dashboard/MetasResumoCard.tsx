@@ -1,32 +1,26 @@
 import { memo, useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Target, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { getGoalPreset } from "@/lib/goalIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
-interface GoalRow {
+import { getCurrency } from "@/lib/currency";
+export interface GoalRow {
   id: string;
   name: string;
   target_amount: number;
   current_amount: number;
+  cover_image: string | null;
+  deadline: string | null;
 }
 
 const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-const GOAL_COLORS = [
-  "hsl(40, 90%, 55%)",
-  "hsl(150, 100%, 45%)",
-  "hsl(210, 80%, 55%)",
-  "hsl(330, 80%, 55%)",
-  "hsl(270, 70%, 60%)",
-  "hsl(180, 70%, 50%)",
-];
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 const MetasResumoCard = memo(() => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [goals, setGoals] = useState<GoalRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,7 +30,7 @@ const MetasResumoCard = memo(() => {
     const load = async () => {
       const { data } = await supabase
         .from("goals")
-        .select("id, name, target_amount, current_amount")
+        .select("id, name, target_amount, current_amount, cover_image, deadline")
         .eq("user_id", user.id);
 
       setGoals(data || []);
@@ -50,126 +44,106 @@ const MetasResumoCard = memo(() => {
     return () => window.removeEventListener("finance-data-changed", handler);
   }, [user]);
 
+  return <MetasResumoView goals={goals} loading={loading} />;
+});
+
+/** The goals summary, fed with data — also drawn by the welcome showcase. */
+export function MetasResumoView({ goals, loading = false }: { goals: GoalRow[]; loading?: boolean }) {
+  const navigate = useNavigate();
   const totalGuardado = useMemo(() => goals.reduce((s, g) => s + g.current_amount, 0), [goals]);
   const totalObjetivo = useMemo(() => goals.reduce((s, g) => s + g.target_amount, 0), [goals]);
-  const avgProgress = useMemo(
-    () => goals.length > 0 ? goals.reduce((s, g) => s + Math.min(1, g.current_amount / g.target_amount), 0) / goals.length : 0,
-    [goals]
-  );
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-border/20 bg-card/60 backdrop-blur-xl p-4">
-        <div className="animate-pulse space-y-3">
-          <div className="h-4 w-28 bg-muted/30 rounded" />
-          <div className="h-16 w-full bg-muted/10 rounded-xl" />
-        </div>
-      </div>
+      <div className="h-[220px] animate-pulse rounded-[22px] border border-white/[0.07] bg-[#141414]" />
     );
   }
 
+  // Nothing to celebrate yet — stay out of the way instead of nagging.
   if (goals.length === 0) return null;
 
-  if (goals.length === 0) return null;
-
-  // Donut segments
-  const donutSegments = goals.map((g, i) => ({
-    ...g,
-    pct: totalObjetivo > 0 ? (g.current_amount / totalObjetivo) * 100 : 0,
-    progress: Math.min(1, g.current_amount / g.target_amount),
-    color: GOAL_COLORS[i % GOAL_COLORS.length],
-  }));
-
-  // SVG donut — each segment shows its proportion of total saved
-  let cumulativeOffset = 0;
-  const donutPaths = donutSegments.map((seg) => {
-    const offset = cumulativeOffset;
-    // Each arc represents the goal's share of total target, filled by its progress
-    const arcPct = totalObjetivo > 0 ? (seg.target_amount / totalObjetivo) * 100 : 0;
-    const fillPct = arcPct * seg.progress;
-    cumulativeOffset += arcPct;
-    return { ...seg, offset, arcPct, fillPct };
-  });
+  const overall = totalObjetivo > 0 ? Math.min(totalGuardado / totalObjetivo, 1) : 0;
+  const sortedGoals = [...goals].sort(
+    (a, b) => Math.min(1, b.current_amount / b.target_amount) - Math.min(1, a.current_amount / a.target_amount),
+  );
+  const visible = sortedGoals.slice(0, 3);
 
   return (
-    <div
-      className="rounded-2xl border border-border/20 bg-card/60 backdrop-blur-xl overflow-hidden cursor-pointer hover:border-border/30 transition-colors"
-      style={{ boxShadow: "0 4px 24px -4px rgba(0,0,0,0.3)" }}
+    <button
       onClick={() => navigate("/metas")}
+      className="block w-full rounded-[22px] border border-white/[0.07] bg-[#141414] p-4 text-left active:scale-[0.99] transition-transform"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-3.5 pb-1">
-        <div className="flex items-center gap-2">
-          <Target className="w-4 h-4 text-primary" />
-          <h2 className="text-sm font-bold text-foreground">Metas</h2>
-        </div>
-        <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
+      <div className="flex items-center justify-between">
+        <p className="text-[14px] text-white/50">Metas</p>
+        <span className="flex items-center gap-0.5 text-[13px] text-white/50">
+          {goals.length} {goals.length === 1 ? "meta" : "metas"} <ChevronRight className="h-4 w-4" />
+        </span>
       </div>
 
-      {/* Total with donut */}
-      <div className="flex items-center gap-4 px-4 py-3">
-        {/* Mini Donut */}
-        <div className="relative w-14 h-14 shrink-0">
-          <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-            <circle cx="18" cy="18" r="14" fill="none" stroke="hsl(var(--border) / 0.15)" strokeWidth="3.5" />
-            {donutPaths.map((seg, i) => (
-              <circle
-                key={i}
-                cx="18"
-                cy="18"
-                r="14"
-                fill="none"
-                stroke={seg.color}
-                strokeWidth="3.5"
-                strokeDasharray={`${(seg.fillPct / 100) * 87.96} ${87.96}`}
-                strokeDashoffset={`${-((seg.offset / 100) * 87.96)}`}
-                strokeLinecap="round"
-              />
-            ))}
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-[9px] font-bold text-primary tabular-nums">{Math.round(avgProgress * 100)}%</span>
-          </div>
-        </div>
-
-        <div>
-          <p className="text-[10px] text-muted-foreground/50">
-            Total guardado · {goals.length} {goals.length === 1 ? "meta" : "metas"}
-          </p>
-          <p className="text-lg font-bold text-foreground tabular-nums">{fmt(totalGuardado)}</p>
-          <p className="text-[9px] text-muted-foreground/40">de {fmt(totalObjetivo)}</p>
-        </div>
+      <div className="mt-1 flex items-baseline justify-between gap-3">
+        <p className="text-[26px] font-extrabold tracking-tight text-white tabular-nums">{fmt(totalGuardado)}</p>
+        <p className="text-[13px] text-white/45 tabular-nums">de {fmt(totalObjetivo)}</p>
       </div>
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.08]">
+        <motion.div
+          className="h-full rounded-full bg-white"
+          initial={{ width: 0 }}
+          animate={{ width: `${overall * 100}%` }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        />
+      </div>
+      <p className="mt-1.5 text-[12px] text-white/40 tabular-nums">{Math.round(overall * 100)}% do total guardado</p>
 
-      {/* Goals list */}
-      <div className="px-4 pb-3.5 space-y-2.5">
-        {donutSegments.map((goal, idx) => {
-          const pct = Math.round(goal.progress * 100);
-
+      <div className="mt-4 space-y-3 border-t border-white/[0.06] pt-3.5">
+        {visible.map((goal, idx) => {
+          const progress = Math.min(1, goal.current_amount / goal.target_amount);
+          const done = progress >= 1;
+          const preset = getGoalPreset(goal);
+          const GoalIcon = preset.icon;
           return (
             <motion.div
               key={goal.id}
-              initial={{ opacity: 0, x: -6 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
               className="flex items-center gap-3"
             >
-              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: goal.color }} />
-              <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-semibold text-foreground/90 truncate">{goal.name}</p>
-              </div>
-              <div className="text-right shrink-0">
-                <span className={`text-[12px] font-bold tabular-nums ${pct >= 100 ? "text-primary" : "text-foreground/70"}`}>
-                  {pct}%
-                </span>
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[14px]" style={{ background: `${preset.hex}22` }}>
+                {goal.cover_image ? (
+                  <img src={goal.cover_image} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <GoalIcon className="h-5 w-5" style={{ color: preset.hex }} />
+                )}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="truncate text-[14px] font-medium text-white">{goal.name}</p>
+                  <span className={`shrink-0 text-[12px] font-semibold tabular-nums ${done ? "text-willo-green" : "text-white/70"}`}>
+                    {Math.round(progress * 100)}%
+                  </span>
+                </div>
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+                  <motion.div
+                    className={`h-full rounded-full ${done ? "bg-willo-green" : "bg-white/80"}`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress * 100}%` }}
+                    transition={{ delay: 0.1 + idx * 0.05, duration: 0.6, ease: "easeOut" }}
+                  />
+                </div>
+                <p className="mt-1 truncate text-[11px] text-white/40 tabular-nums">
+                  {done ? "Meta alcançada" : `${fmt(goal.current_amount)} de ${fmt(goal.target_amount)}`}
+                </p>
               </div>
             </motion.div>
           );
         })}
+        {goals.length > visible.length && (
+          <p className="text-center text-[12px] text-white/45">+{goals.length - visible.length} {goals.length - visible.length === 1 ? "meta" : "metas"}</p>
+        )}
       </div>
-    </div>
+    </button>
   );
-});
+}
 
 MetasResumoCard.displayName = "MetasResumoCard";
 export default MetasResumoCard;

@@ -27,10 +27,9 @@ const ContactModal = ({ open, onClose }: ContactModalProps) => {
             exit={{ opacity: 0, y: 60 }}
             transition={{ type: "spring", duration: 0.5, bounce: 0.18 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-sm rounded-2xl border border-border/20 overflow-hidden"
+            className="relative w-full max-w-sm rounded-2xl overflow-hidden willo-glass"
             style={{
-              background: "linear-gradient(175deg, hsl(220 18% 10%) 0%, hsl(220 22% 5%) 100%)",
-              boxShadow: "0 -8px 40px -8px rgba(0,0,0,0.6), 0 0 60px -20px hsl(150 100% 45% / 0.06)",
+              boxShadow: "0 -8px 40px -8px rgba(0,0,0,0.5), 0 0 60px -20px hsl(150 100% 45% / 0.1)",
             }}
           >
 

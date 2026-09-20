@@ -17,24 +17,24 @@ const SaldoCard = memo(({ saldoAtual, saldoPrevisto, isFutureMonth, isPastMonth,
   return (
     <div
       className={`rounded-xl border border-border/10 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.5)] backdrop-blur-sm flex flex-col justify-between ${mobile ? "p-4" : "p-5"}`}
-      style={{ background: "linear-gradient(160deg, hsl(220 15% 14% / 0.6) 0%, hsl(220 18% 8% / 0.75) 50%, hsl(220 20% 4% / 0.9) 100%)" }}
+      style={{ background: "linear-gradient(160deg, hsl(0 0% 16% / 0.7) 0%, hsl(0 0% 10% / 0.85) 50%, hsl(0 0% 5% / 0.95) 100%)" }}
     >
       <div>
         {isFutureMonth ? (
           <>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
-                <TrendingUp className="w-3.5 h-3.5 text-primary" />
+                <TrendingUp className="w-3.5 h-3.5 text-willo-green" />
                 <span className="text-[10px] text-primary uppercase tracking-[0.15em] font-semibold">Saldo previsto</span>
               </div>
             </div>
-            <p className={`font-display ${mobile ? "text-3xl" : "text-4xl"} font-bold tracking-tight tabular-nums leading-none ${saldoAtual >= 0 ? "text-primary" : "text-destructive"} my-[7px]`}>
+            <p className={`font-display ${mobile ? "text-3xl" : "text-4xl"} font-bold tracking-tight tabular-nums leading-none ${saldoAtual >= 0 ? "text-willo-green" : "text-destructive"} my-[7px]`}>
               {animatedSaldo}
             </p>
             <div className="mt-4 flex items-center gap-2">
-              <div className={`w-1 h-1 rounded-full ${saldoPrevisto >= 0 ? "bg-primary" : "bg-destructive"}`} />
+              <div className={`w-1 h-1 rounded-full ${saldoPrevisto >= 0 ? "bg-willo-green" : "bg-destructive"}`} />
               <span className="text-[10px] text-muted-foreground/60">Projeção ao final do mês</span>
-              <span className={`text-[13px] font-semibold tabular-nums tracking-tight ${saldoPrevisto >= 0 ? "text-primary/80" : "text-destructive/80"}`}>
+              <span className={`text-[13px] font-semibold tabular-nums tracking-tight ${saldoPrevisto >= 0 ? "text-willo-green/80" : "text-destructive/80"}`}>
                 {animatedPrevisto}
               </span>
             </div>
@@ -63,9 +63,9 @@ const SaldoCard = memo(({ saldoAtual, saldoPrevisto, isFutureMonth, isPastMonth,
               {animatedSaldo}
             </p>
             <div className="mt-4 flex items-center gap-2">
-              <div className={`w-1 h-1 rounded-full ${saldoPrevisto >= 0 ? "bg-primary" : "bg-destructive"}`} />
+              <div className={`w-1 h-1 rounded-full ${saldoPrevisto >= 0 ? "bg-willo-green" : "bg-destructive"}`} />
               <span className="text-[10px] text-muted-foreground/60">Saldo previsto no final do mês</span>
-              <span className={`text-[13px] font-semibold tabular-nums tracking-tight ${saldoPrevisto >= 0 ? "text-primary/80" : "text-destructive/80"}`}>
+              <span className={`text-[13px] font-semibold tabular-nums tracking-tight ${saldoPrevisto >= 0 ? "text-willo-green/80" : "text-destructive/80"}`}>
                 {animatedPrevisto}
               </span>
             </div>

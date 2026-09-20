@@ -4,6 +4,7 @@ import { X, Wallet, Calendar, FileText, ChevronDown } from "lucide-react";
 import { Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+import { currencySymbol, getCurrency } from "@/lib/currency";
 interface Account {
   id: string;
   name: string;
@@ -22,7 +23,7 @@ interface GoalDepositModalProps {
 const QUICK_AMOUNTS = [50, 100, 200, 500, 1000];
 
 const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 const GoalDepositModal = ({ open, onClose, onSubmit, goalName }: GoalDepositModalProps) => {
   const [amount, setAmount] = useState("");
@@ -172,14 +173,14 @@ const GoalDepositModal = ({ open, onClose, onSubmit, goalName }: GoalDepositModa
             <div>
               <p className="text-[10px] text-muted-foreground mb-2">Valor do aporte</p>
               <div className="flex items-baseline gap-1">
-                <span className="text-sm text-muted-foreground">R$</span>
+                <span className="text-sm text-muted-foreground">{currencySymbol()}</span>
                 <input type="text" inputMode="decimal" value={amount} onChange={(e) => handleAmountChange(e.target.value)} placeholder="0,00" className="bg-transparent text-3xl font-bold text-foreground outline-none w-full tabular-nums placeholder:text-muted-foreground/30" autoFocus />
               </div>
               {insufficientFunds && <p className="text-[10px] text-destructive mt-1 font-medium">Saldo insuficiente nesta conta</p>}
               <div className="flex items-center gap-2 mt-3 flex-wrap">
                 {QUICK_AMOUNTS.map((v) => (
                   <motion.button key={v} whileTap={{ scale: 0.95 }} onClick={() => setAmount(String(v))} className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${amount === String(v) ? "bg-primary/15 border-primary/30 text-primary" : "bg-muted/10 border-border/15 text-muted-foreground hover:bg-muted/20"}`}>
-                    R$ {v}
+                    {currencySymbol()} {v}
                   </motion.button>
                 ))}
               </div>

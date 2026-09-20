@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Tag, Plus, MoreVertical, Pencil, Trash2, ArrowLeft } from "lucide-react";
+import { Tag, Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { PageHeader } from "@/components/shared/MobilePage";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -107,6 +108,8 @@ export default function GerenciarCategorias() {
   ).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 
   const allNames = unifiedCategories.map((c) => c.name);
+  // Each category keeps its own color, so the charts stay readable
+  const allColors = unifiedCategories.map((c) => c.color).filter(Boolean) as string[];
 
   const handleCreate = async (data: { name: string; icon: string; color: string }) => {
     if (!user) return;
@@ -115,8 +118,8 @@ export default function GerenciarCategorias() {
       toast.success("Categoria criada!");
       setShowCreateModal(false);
       fetchCategories();
-    } catch {
-      toast.error("Erro ao criar categoria");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao criar categoria");
     }
   };
 
@@ -132,8 +135,8 @@ export default function GerenciarCategorias() {
       toast.success("Categoria atualizada!");
       setEditingCat(null);
       fetchCategories();
-    } catch {
-      toast.error("Erro ao atualizar");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao atualizar");
     }
   };
 
@@ -152,180 +155,202 @@ export default function GerenciarCategorias() {
     }
   };
 
+
+  const actionCat = unifiedCategories.find((c) => c.id === menuOpenId) ?? null;
+  const renderIcon = (cat: UnifiedCategory, size = "h-[18px] w-[18px]") => {
+    const IconComp = cat.isDefault ? getDefaultCategoryIcon(cat.name) : getIconComponent(cat.icon);
+    return <IconComp className={size} style={{ color: cat.color }} />;
+  };
+
   return (
-    <div className="min-h-screen pb-24">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="w-9 h-9 rounded-full bg-muted/30 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-        <div className="flex items-center gap-2">
-          <Tag className="w-5 h-5 text-primary" />
-          <h1 className="text-lg font-bold text-foreground">Gerenciar Categorias</h1>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="px-4 mb-4">
-        <div className="flex gap-2 p-1 rounded-xl bg-muted/20 border border-border/10">
-          {(["despesa", "receita"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={cn(
-                "flex-1 py-2.5 rounded-lg text-xs font-bold transition-all",
-                tab === t
-                  ? "bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {t === "despesa" ? "Despesas" : "Receitas"}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Category list */}
-      <div className="px-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-            Categorias
-          </p>
+    <div className="min-h-screen px-4 pb-28">
+      <PageHeader
+        title="Categorias"
+        subtitle="Organize como seus gastos são agrupados"
+        action={
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1 text-xs text-primary font-semibold hover:opacity-80"
+            className="flex h-9 items-center gap-1.5 rounded-full bg-white px-3.5 text-[13px] font-semibold text-[#0B0B0B] active:scale-95 transition-transform"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="h-4 w-4" strokeWidth={2.5} />
             Nova
           </button>
-        </div>
+        }
+      />
 
-        {loading ? (
-          <div className="py-8 text-center">
-            <span className="text-xs text-muted-foreground animate-pulse">Carregando...</span>
-          </div>
-        ) : unifiedCategories.length === 0 ? (
-          <div className="py-8 text-center rounded-xl border border-dashed border-border/20 bg-muted/5">
-            <Tag className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-            <p className="text-xs text-muted-foreground">Nenhuma categoria</p>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="text-xs text-primary font-semibold mt-2 hover:opacity-80"
-            >
-              Criar primeira
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-1.5">
-            <AnimatePresence>
-              {unifiedCategories.map((cat) => {
-                const IconComp = cat.isDefault
-                  ? getDefaultCategoryIcon(cat.name)
-                  : getIconComponent(cat.icon);
-
-                return (
-                  <motion.div
-                    key={cat.id}
-                    layout
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -40 }}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-card/60 border border-border/10"
-                  >
-                    <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                      style={{
-                        backgroundColor: `${cat.color}20`,
-                        border: `1px solid ${cat.color}30`,
-                      }}
-                    >
-                      <IconComp className="w-4 h-4" style={{ color: cat.color }} />
-                    </div>
-                    <span className="flex-1 text-sm font-semibold text-foreground truncate">{cat.name}</span>
-                    <div
-                      className="w-3 h-3 rounded-full shrink-0"
-                      style={{ backgroundColor: cat.color }}
-                    />
-
-                    {/* 3-dot menu */}
-                    <div className="relative" ref={menuOpenId === cat.id ? menuRef : undefined}>
-                      <button
-                        onClick={() => setMenuOpenId(menuOpenId === cat.id ? null : cat.id)}
-                        className="w-7 h-7 rounded-full bg-muted/20 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <MoreVertical className="w-3.5 h-3.5" />
-                      </button>
-                      <AnimatePresence>
-                        {menuOpenId === cat.id && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            transition={{ duration: 0.12 }}
-                            className="absolute right-0 top-9 z-50 w-36 rounded-xl bg-card border border-border/30 shadow-xl overflow-hidden"
-                          >
-                            <button
-                              onClick={() => { setMenuOpenId(null); setEditingCat(cat); }}
-                              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-medium text-foreground hover:bg-muted/30 transition-colors"
-                            >
-                              <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => { setMenuOpenId(null); setConfirmDeleteCat(cat); }}
-                              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              Excluir
-                            </button>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-          </div>
-        )}
+      {/* Segmented control */}
+      <div className="mt-5 flex rounded-full border border-white/[0.07] bg-[#141414] p-1">
+        {(["despesa", "receita"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={cn(
+              "relative flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors",
+              tab === t ? "text-[#0B0B0B]" : "text-white/55",
+            )}
+          >
+            {tab === t && (
+              <motion.span
+                layoutId="cat-tab"
+                className="absolute inset-0 rounded-full bg-white"
+                transition={{ type: "spring", stiffness: 500, damping: 38 }}
+              />
+            )}
+            <span className="relative">{t === "despesa" ? "Despesas" : "Receitas"}</span>
+          </button>
+        ))}
       </div>
 
-      {/* Delete confirmation modal */}
+      <div className="mb-2.5 mt-6 flex items-center justify-between px-1">
+        <h2 className="text-[18px] font-bold text-white">
+          {tab === "despesa" ? "De despesa" : "De receita"}
+        </h2>
+        <span className="text-[13px] text-white/40">{unifiedCategories.length} categorias</span>
+      </div>
+
+      {loading ? (
+        <div className="space-y-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-[60px] animate-pulse rounded-[18px] bg-white/[0.04]" />
+          ))}
+        </div>
+      ) : unifiedCategories.length === 0 ? (
+        <div className="rounded-[22px] border border-dashed border-white/[0.1] px-6 py-10 text-center">
+          <Tag className="mx-auto mb-2 h-7 w-7 text-white/25" />
+          <p className="text-[14px] text-white/55">Nenhuma categoria por aqui</p>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="mt-4 rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-[#0B0B0B]"
+          >
+            Criar a primeira
+          </button>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#141414]">
+          <AnimatePresence initial={false}>
+            {unifiedCategories.map((cat, i) => (
+              <motion.button
+                key={cat.id}
+                layout
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, height: 0 }}
+                onClick={() => setMenuOpenId(cat.id)}
+                className={cn(
+                  "flex w-full items-center gap-3 px-4 py-3 text-left active:bg-white/[0.04]",
+                  i > 0 && "border-t border-white/[0.05]",
+                )}
+              >
+                <span
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: `${cat.color}1F` }}
+                >
+                  {renderIcon(cat)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] font-semibold text-white">{cat.name}</span>
+                  <span className="block text-[12px] text-white/40">
+                    {cat.isDefault ? "Padrão do Willo" : "Criada por você"}
+                  </span>
+                </span>
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: cat.color }} />
+                <MoreHorizontal className="h-5 w-5 shrink-0 text-white/30" />
+              </motion.button>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
+
+      <p className="mt-3 px-1 text-[12px] leading-relaxed text-white/35">
+        Cada categoria tem nome e cor únicos, para que seus gráficos fiquem fáceis de ler. Toque em uma categoria para editar ou excluir.
+      </p>
+
+      {/* Action sheet */}
+      <AnimatePresence>
+        {actionCat && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9998] flex items-end bg-black/60 backdrop-blur-sm"
+            onClick={() => setMenuOpenId(null)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 420, damping: 40 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full space-y-2 px-3"
+              style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
+            >
+              <div className="overflow-hidden rounded-[22px] bg-[#1A1A1A]">
+                <div className="flex items-center gap-3 px-4 py-3.5">
+                  <span
+                    className="flex h-10 w-10 items-center justify-center rounded-full"
+                    style={{ backgroundColor: `${actionCat.color}1F` }}
+                  >
+                    {renderIcon(actionCat)}
+                  </span>
+                  <span className="truncate text-[16px] font-semibold text-white">{actionCat.name}</span>
+                </div>
+                <button
+                  onClick={() => { setMenuOpenId(null); setEditingCat(actionCat); }}
+                  className="flex w-full items-center gap-3 border-t border-white/[0.06] px-4 py-3.5 text-[15px] text-white active:bg-white/[0.05]"
+                >
+                  <Pencil className="h-[18px] w-[18px] text-white/60" />
+                  Editar nome, ícone e cor
+                </button>
+                <button
+                  onClick={() => { setMenuOpenId(null); setConfirmDeleteCat(actionCat); }}
+                  className="flex w-full items-center gap-3 border-t border-white/[0.06] px-4 py-3.5 text-[15px] text-[#F87171] active:bg-white/[0.05]"
+                >
+                  <Trash2 className="h-[18px] w-[18px]" />
+                  Excluir categoria
+                </button>
+              </div>
+              <button
+                onClick={() => setMenuOpenId(null)}
+                className="w-full rounded-[22px] bg-[#1A1A1A] py-3.5 text-[15px] font-semibold text-white active:bg-[#222]"
+              >
+                Cancelar
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete confirmation */}
       <AnimatePresence>
         {confirmDeleteCat && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-6"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 px-8 backdrop-blur-sm"
             onClick={() => setConfirmDeleteCat(null)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.94, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              exit={{ scale: 0.94, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-xs rounded-2xl bg-card border border-border/20 p-5 space-y-4"
+              className="w-full max-w-[300px] rounded-[22px] border border-white/[0.08] bg-[#1A1A1A] p-5 text-center"
             >
-              <p className="text-sm font-bold text-foreground text-center">
-                Excluir "{confirmDeleteCat.name}"?
+              <p className="text-[16px] font-bold text-white">Excluir “{confirmDeleteCat.name}”?</p>
+              <p className="mt-1.5 text-[13px] text-white/50">
+                Transações antigas continuam salvas, mas essa categoria deixa de aparecer nas opções.
               </p>
-              <p className="text-xs text-muted-foreground text-center">
-                Essa ação não pode ser desfeita.
-              </p>
-              <div className="flex gap-2">
+              <div className="mt-5 flex gap-2">
                 <button
                   onClick={() => setConfirmDeleteCat(null)}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-muted/30 text-muted-foreground hover:bg-muted/50 transition-colors"
+                  className="flex-1 rounded-full bg-white/[0.07] py-2.5 text-[14px] font-semibold text-white"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={() => handleDelete(confirmDeleteCat)}
-                  className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-destructive/15 text-destructive hover:bg-destructive/25 transition-colors"
+                  className="flex-1 rounded-full bg-[#F87171] py-2.5 text-[14px] font-semibold text-[#0B0B0B]"
                 >
                   Excluir
                 </button>
@@ -335,16 +360,15 @@ export default function GerenciarCategorias() {
         )}
       </AnimatePresence>
 
-      {/* Create Modal */}
       <CategoryCreateModal
         open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSave={handleCreate}
         title="Nova Categoria"
         existingNames={allNames}
+        usedColors={allColors}
       />
 
-      {/* Edit Modal */}
       <CategoryCreateModal
         open={!!editingCat}
         onClose={() => setEditingCat(null)}
@@ -354,6 +378,7 @@ export default function GerenciarCategorias() {
         initialColor={editingCat?.color ?? "#8b5cf6"}
         title="Editar Categoria"
         existingNames={allNames.filter((n) => n !== editingCat?.name)}
+        usedColors={allColors.filter((c) => c !== editingCat?.color)}
       />
     </div>
   );

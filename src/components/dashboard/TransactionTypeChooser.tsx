@@ -48,7 +48,7 @@ const TransactionTypeChooser = ({ open, onClose, onSelect }: Props) => {
               className="flex flex-col items-center gap-3 w-28 py-6 rounded-2xl bg-card border border-border/30 shadow-2xl hover:border-primary/40 transition-colors"
             >
               <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-primary" />
+                <TrendingUp className="w-6 h-6 text-willo-green" />
               </div>
               <span className="text-xs font-bold text-foreground">Receita</span>
             </motion.button>

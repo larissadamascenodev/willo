@@ -8,13 +8,14 @@ import { getCustomCategories, type CustomCategory } from "@/services/categorySer
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+import { getCurrency } from "@/lib/currency";
 interface Props {
   categories: CategoryExpense[];
   selectedMonth?: number;
   onVerAnalise?: () => void;
 }
 
-const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 const INITIAL_COUNT = 5;
 
 const FALLBACK_COLORS = [
@@ -91,8 +92,7 @@ const GastosPorCategoria = memo(({ categories, selectedMonth, onVerAnalise }: Pr
 
   return (
     <div
-      className="rounded-2xl border border-border/20 bg-card/60 backdrop-blur-xl overflow-hidden"
-      style={{ boxShadow: "0 4px 24px -4px rgba(0,0,0,0.3)" }}
+      className="rounded-[22px] border border-white/[0.07] bg-[#141414] overflow-hidden"
     >
       {/* Header */}
       <div className="flex items-start justify-between px-4 pt-4 pb-3">
@@ -111,6 +111,13 @@ const GastosPorCategoria = memo(({ categories, selectedMonth, onVerAnalise }: Pr
           Análise completa <ChevronRight className="w-3 h-3" />
         </button>
       </div>
+
+      {sorted.length === 0 && (
+        <div className="px-4 pb-4">
+          <div className="h-2.5 rounded-full bg-white/[0.06]" />
+          <p className="mt-3 text-[13px] text-white/40">Nenhum gasto registrado em {monthLabel}.</p>
+        </div>
+      )}
 
       {/* Stacked color bar */}
       <div className="px-4">

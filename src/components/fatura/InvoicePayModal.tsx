@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatCurrency, type AccountInfo } from "@/pages/FaturaCartao";
 import { cn } from "@/lib/utils";
 
+import { currencySymbol } from "@/lib/currency";
 export type PaymentMode = "total" | "minimo" | "parcelado";
 
 export interface PaymentDetails {
@@ -205,7 +206,7 @@ export default function InvoicePayModal({
                         <DollarSign className="w-3 h-3" /> Quanto deseja pagar?
                       </label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{currencySymbol()}</span>
                         <input
                           type="text"
                           inputMode="decimal"
@@ -252,7 +253,7 @@ export default function InvoicePayModal({
                         <DollarSign className="w-3 h-3" /> Valor de entrada
                       </label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{currencySymbol()}</span>
                         <input
                           type="text"
                           inputMode="decimal"
@@ -289,7 +290,7 @@ export default function InvoicePayModal({
                         <Banknote className="w-3 h-3" /> Valor de cada parcela
                       </label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{currencySymbol()}</span>
                         <input
                           type="text"
                           inputMode="decimal"

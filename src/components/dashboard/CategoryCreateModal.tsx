@@ -5,7 +5,7 @@ import {
   ShoppingCart, Utensils, Car, Pill, Home, BookOpen, Shirt, PawPrint,
   Scissors, Gamepad2, Gift, Plane, Smartphone, DollarSign, Briefcase, Music,
   Coffee, Dumbbell, Clapperboard, FileText, Wrench, ShoppingBag, Lightbulb, Target,
-  Heart, Repeat, GraduationCap, TrendingUp, Award, Users, Wallet, PiggyBank,
+  Heart, Repeat, GraduationCap, TrendingUp, Award, Users, Wallet, Vault,
   Zap, Star, Globe, Camera, Headphones, Monitor, Tv, Bus,
   Landmark, Bike, Fuel, Baby, Stethoscope, Palette, UtensilsCrossed,
   Cigarette, Wine, Pizza, Hammer, Key, Shield, Umbrella,
@@ -26,6 +26,8 @@ interface Props {
   initialColor?: string;
   title?: string;
   existingNames?: string[];
+  /** Colors already taken by other categories — each category keeps its own color. */
+  usedColors?: string[];
 }
 
 const ICON_OPTIONS: { name: string; Icon: any }[] = [
@@ -60,7 +62,7 @@ const ICON_OPTIONS: { name: string; Icon: any }[] = [
   { name: "award", Icon: Award },
   { name: "users", Icon: Users },
   { name: "wallet", Icon: Wallet },
-  { name: "piggy-bank", Icon: PiggyBank },
+  { name: "piggy-bank", Icon: Vault },
   { name: "zap", Icon: Zap },
   { name: "star", Icon: Star },
   { name: "globe", Icon: Globe },
@@ -123,6 +125,7 @@ export default function CategoryCreateModal({
   initialName = "", initialIcon = "file-text", initialColor = "#00e676",
   title = "Nova Categoria",
   existingNames = [],
+  usedColors = [],
 }: Props) {
   const [name, setName] = useState(initialName);
   const [icon, setIcon] = useState(initialIcon);
@@ -134,22 +137,32 @@ export default function CategoryCreateModal({
     if (open) {
       setName(initialName);
       setIcon(initialIcon);
-      setColor(initialColor);
+      // Start on a color nobody else uses (edits pass usedColors without their own color)
+      const taken = new Set(usedColors.map((c) => c.toLowerCase()));
+      const free = COLOR_OPTIONS.find((c) => !taken.has(c.toLowerCase()));
+      setColor(taken.has(initialColor.toLowerCase()) && free ? free : initialColor);
       setShowDuplicateConfirm(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialName, initialIcon, initialColor]);
 
+  const trimmed = name.trim();
+  const normalize = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+  const FORBIDDEN = ["outros", "outro", "diversos", "geral", "varios", "sem categoria"];
+
+  const nameError = !trimmed
+    ? null
+    : FORBIDDEN.includes(normalize(trimmed))
+      ? "Escolha um nome específico: “Outros” não ajuda a entender seus gastos"
+      : existingNames.some((n) => normalize(n) === normalize(trimmed) && normalize(n) !== normalize(initialName))
+        ? `Já existe a categoria “${trimmed}”`
+        : null;
+
+  const takenColors = usedColors.map((c) => c.toLowerCase());
+  const colorError = takenColors.includes(color.toLowerCase()) ? "Essa cor já é de outra categoria" : null;
+
   const handleSave = () => {
-    if (!name.trim()) return;
-    const trimmed = name.trim();
-    // Check for duplicate
-    const isDuplicate = existingNames.some(
-      (n) => n.toLowerCase() === trimmed.toLowerCase() && n.toLowerCase() !== initialName.toLowerCase()
-    );
-    if (isDuplicate && !showDuplicateConfirm) {
-      setShowDuplicateConfirm(true);
-      return;
-    }
+    if (!trimmed || nameError || colorError) return;
     onSave({ name: trimmed, icon, color });
     setShowDuplicateConfirm(false);
   };
@@ -207,44 +220,23 @@ export default function CategoryCreateModal({
               <Input
                 placeholder="Ex: Streaming"
                 value={name}
-                onChange={(e) => { setName(e.target.value); setShowDuplicateConfirm(false); }}
+                onChange={(e) => setName(e.target.value)}
                 className="bg-muted/30 border-border/20 h-11 rounded-xl"
                 maxLength={30}
                 autoFocus
               />
             </div>
 
-            {/* Duplicate warning */}
+            {/* Why it can't be saved */}
             <AnimatePresence>
-              {showDuplicateConfirm && (
+              {(nameError || colorError) && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="rounded-xl bg-destructive/10 border border-destructive/20 p-3"
+                  className="rounded-xl border border-destructive/20 bg-destructive/10 p-3"
                 >
-                  <p className="text-xs text-destructive font-medium">
-                    Já existe uma categoria com esse nome. Deseja substituir?
-                  </p>
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowDuplicateConfirm(false)}
-                      className="flex-1 h-8 rounded-lg text-[10px] font-bold border border-border/30 text-muted-foreground"
-                    >
-                      Não
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSave({ name: name.trim(), icon, color });
-                        setShowDuplicateConfirm(false);
-                      }}
-                      className="flex-1 h-8 rounded-lg text-[10px] font-bold bg-destructive/20 text-destructive border border-destructive/30"
-                    >
-                      Sim, substituir
-                    </button>
-                  </div>
+                  <p className="text-xs font-medium text-destructive">{nameError ?? colorError}</p>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -279,7 +271,7 @@ export default function CategoryCreateModal({
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Cor</label>
               <div className="grid grid-cols-8 gap-1.5">
-                {COLOR_OPTIONS.map((c) => (
+                {COLOR_OPTIONS.filter((c) => !takenColors.includes(c.toLowerCase())).map((c) => (
                   <button
                     key={c}
                     type="button"
@@ -330,10 +322,10 @@ export default function CategoryCreateModal({
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={!name.trim()}
+                disabled={!trimmed || !!nameError || !!colorError}
                 className={cn(
                   "flex-1 h-11 rounded-xl text-xs font-bold transition-all backdrop-blur-md",
-                  name.trim()
+                  trimmed && !nameError && !colorError
                     ? "bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 shadow-[0_0_12px_-3px_hsl(var(--primary)/0.4)]"
                     : "bg-muted/20 text-muted-foreground border border-border/10 cursor-not-allowed"
                 )}

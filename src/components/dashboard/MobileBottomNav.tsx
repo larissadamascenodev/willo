@@ -1,22 +1,31 @@
-import { memo, useState } from "react";
-import { Home, ArrowLeftRight, Bot, User, Plus, X, TrendingUp, TrendingDown, Camera } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { memo, useCallback, useEffect, useState } from "react";
+import { Home, ArrowLeftRight, Wallet, BrainCircuit, Plus, TrendingUp, TrendingDown, Camera } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
-const navItems = [
+export const navItems = [
   { icon: Home, label: "Início", path: "/" },
   { icon: ArrowLeftRight, label: "Transações", path: "/transacoes" },
-  { icon: null, label: "", isCenter: true, path: "" },
-  { icon: Bot, label: "Bot Huby", path: "/bot-finance" },
-  { icon: User, label: "Perfil", path: "/configuracoes" },
+  { icon: Wallet, label: "Carteira", path: "/gestao" },
+  { icon: BrainCircuit, label: "Raio-X", path: "/bot-finance" },
 ];
+
+/** Same dark, translucent "droplet-glass" surface as BalanceHeroCard. */
+export const GLASS_BG = {
+  background: "linear-gradient(165deg, rgba(34,34,34,0.88) 0%, rgba(20,20,20,0.92) 100%)",
+  backdropFilter: "blur(24px) saturate(160%)",
+  WebkitBackdropFilter: "blur(24px) saturate(160%)",
+  boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.14), 0 12px 32px -12px rgba(0,0,0,0.6)",
+} as const;
 
 const MobileBottomNav = memo(() => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleOption = (type: "receita" | "despesa" | "scanner") => {
+  const close = useCallback(() => setIsOpen(false), []);
+  const handleOption = (type: AddActionType) => {
     setIsOpen(false);
     if (type === "scanner") {
       window.dispatchEvent(new CustomEvent("open-scanner"));
@@ -27,109 +36,200 @@ const MobileBottomNav = memo(() => {
 
   return (
     <>
-      {/* Backdrop */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsOpen(false)}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
-          />
-        )}
-      </AnimatePresence>
+      {/* Add menu: actions fly out of the + into an arch */}
+      <AddActionsMenu open={isOpen} onClose={close} onSelect={handleOption} />
 
-      {/* Floating action options */}
-      <AnimatePresence>
-        {isOpen && (
-          <div className="fixed bottom-[90px] left-0 right-0 z-50 flex justify-center md:hidden">
-            <motion.div
-              initial={{ opacity: 0, y: 8, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: 0.9 }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              className="flex gap-1.5 p-1.5 rounded-xl bg-card/95 backdrop-blur-2xl border border-border/15 shadow-2xl shadow-black/40"
-            >
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleOption("receita")}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors"
-              >
-                <TrendingUp className="w-3.5 h-3.5 text-primary" />
-                <span className="text-[11px] font-medium text-foreground whitespace-nowrap">Receita</span>
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleOption("despesa")}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-destructive/10 transition-colors"
-              >
-                <TrendingDown className="w-3.5 h-3.5 text-destructive" />
-                <span className="text-[11px] font-medium text-foreground whitespace-nowrap">Despesa</span>
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleOption("scanner")}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-blue-500/10 transition-colors"
-              >
-                <Camera className="w-3.5 h-3.5 text-blue-400" />
-                <span className="text-[11px] font-medium text-foreground whitespace-nowrap">Scanner</span>
-              </motion.button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Bottom Nav Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-8 pb-4 md:hidden">
-        <nav className="w-full max-w-[340px] rounded-2xl bg-card/90 backdrop-blur-xl border border-border/30 shadow-2xl shadow-black/40">
-          <div className="flex items-center justify-around h-[58px] px-2">
-            {navItems.map((item) => {
-              if (item.isCenter) {
-                return (
-                  <button
-                    key="add-center"
-                    onClick={() => setIsOpen(!isOpen)}
-                    className="relative -mt-3"
-                  >
-                    <motion.div
-                      whileTap={{ scale: 0.9 }}
-                      animate={isOpen ? { rotate: 45 } : { rotate: 0 }}
-                      className="w-[44px] h-[44px] rounded-full flex items-center justify-center backdrop-blur-sm border border-primary/30"
-                      style={{
-                        background: "linear-gradient(160deg, hsl(150 100% 45% / 0.15) 0%, hsl(150 100% 45% / 0.08) 100%)",
-                        boxShadow: "0 4px 16px -4px hsl(150 100% 45% / 0.3), inset 0 1px 0 rgba(255,255,255,0.06)",
-                      }}
-                    >
-                      {isOpen ? (
-                        <X className="w-5 h-5 text-primary drop-shadow-[0_0_6px_hsl(150_100%_45%/0.6)]" />
-                      ) : (
-                        <Plus className="w-5 h-5 text-primary drop-shadow-[0_0_6px_hsl(150_100%_45%/0.6)]" />
-                      )}
-                    </motion.div>
-                  </button>
-                );
-              }
-
-              const Icon = item.icon!;
-              const isActive = location.pathname === item.path;
-              return (
-                <button key={item.label} onClick={() => navigate(item.path)} className="flex flex-col items-center gap-0.5 min-w-[44px]">
-                  <motion.div whileTap={{ scale: 0.9 }}>
-                    <Icon className={`w-5 h-5 ${isActive ? "text-primary" : "text-muted-foreground/60"}`} />
-                  </motion.div>
-                  <span className={`text-[9px] font-medium ${isActive ? "text-primary" : "text-muted-foreground/50"}`}>
-                    {item.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </nav>
+      {/* Bottom Nav Bar — pill (Início/Transações/Carteira/IA) + separate add button */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-center gap-3 px-5 md:hidden"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}
+      >
+        <BottomNavBar
+          activePath={location.pathname}
+          plusOpen={isOpen}
+          onNavigate={(path) => navigate(path)}
+          onPlus={() => setIsOpen((v) => !v)}
+        />
       </div>
     </>
   );
 });
 
 MobileBottomNav.displayName = "MobileBottomNav";
+
+/**
+ * The nav pill + add button themselves, without positioning — the app pins
+ * it to the bottom of the screen; the welcome showcase draws it inside its
+ * phone so both always look exactly the same.
+ */
+export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus }: {
+  activePath: string;
+  plusOpen?: boolean;
+  onNavigate?: (path: string) => void;
+  onPlus?: () => void;
+}) {
+  return (
+    <>
+      <nav className="flex-1 max-w-[280px] rounded-full border border-white/10" style={GLASS_BG}>
+        <div className="flex items-center justify-around h-[58px] px-1.5">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activePath === item.path;
+            return (
+              <button
+                key={item.label}
+                onClick={() => onNavigate?.(item.path)}
+                aria-label={item.label}
+                className={cn(
+                  "flex items-center justify-center h-11 flex-1 mx-0.5 rounded-full transition-colors",
+                  isActive ? "bg-white/12" : "hover:bg-white/5"
+                )}
+              >
+                <Icon
+                  className={cn("w-5 h-5", isActive ? "text-white" : "text-white/45")}
+                  strokeWidth={isActive ? 2.25 : 2}
+                />
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      <button
+        onClick={onPlus}
+        aria-label="Adicionar transação"
+        className={cn(
+          "relative w-[58px] h-[58px] rounded-full flex items-center justify-center border shrink-0 transition-colors",
+          plusOpen ? "bg-white border-white" : "border-white/10"
+        )}
+        style={plusOpen ? undefined : GLASS_BG}
+      >
+        <motion.div animate={{ rotate: plusOpen ? 135 : 0 }} transition={{ type: "spring", stiffness: 380, damping: 24 }}>
+          <Plus className={cn("w-6 h-6", plusOpen ? "text-[#0B0B0B]" : "text-white")} strokeWidth={2.25} />
+        </motion.div>
+      </button>
+    </>
+  );
+}
 export default MobileBottomNav;
+
+export type AddActionType = "receita" | "despesa" | "transferencia" | "scanner";
+
+/** Left to right along the arch; the two up top are the everyday ones. */
+export const ADD_ACTIONS: { type: AddActionType; label: string; icon: typeof Plus; hex: string }[] = [
+  { type: "receita", label: "Receita", icon: TrendingUp, hex: "#C8F36D" },
+  { type: "despesa", label: "Despesa", icon: TrendingDown, hex: "#F87171" },
+  { type: "scanner", label: "Escanear", icon: Camera, hex: "#7DD3FC" },
+  { type: "transferencia", label: "Transferir", icon: ArrowLeftRight, hex: "#FFFFFF" },
+];
+
+const ARC_R = 148;
+const ARC_ANGLES = [155, 113, 67, 25];
+const arcPoint = (deg: number) => ({ x: ARC_R * Math.cos((deg * Math.PI) / 180), y: -ARC_R * Math.sin((deg * Math.PI) / 180) });
+/** Where the orbs fly out from and back into: roughly the + button. */
+const FROM = { x: 130, y: 70 };
+
+/**
+ * The "+" menu: the screen dims and the four actions fly out of the add
+ * button into an arch of glass orbs above the nav. `inline` draws it inside
+ * a positioned parent (the welcome showcase's phone) instead of the viewport.
+ */
+export function AddActionsMenu({ open, onClose, onSelect, inline = false, bottom }: {
+  open: boolean;
+  onClose: () => void;
+  onSelect?: (type: AddActionType) => void;
+  inline?: boolean;
+  /** Distance from the bottom edge to the arch's center. */
+  bottom?: string;
+}) {
+  useEffect(() => {
+    if (!open || inline) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open, inline, onClose]);
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <div className={cn(inline ? "absolute" : "fixed", "inset-0 z-40")}>
+          {/* Lightly blurred screen that darkens towards the arch, so the labels read */}
+          <motion.div
+            className="absolute inset-0 backdrop-blur-[2px]"
+            style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.68) 45%, rgba(0,0,0,0.9) 100%)" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            onClick={onClose}
+          />
+
+          {/* Everything hangs off one point above the nav */}
+          <div className="pointer-events-none absolute left-1/2 h-0 w-0" style={{ bottom: bottom ?? "calc(env(safe-area-inset-bottom, 0px) + 120px)" }}>
+            <motion.div
+              className="absolute w-[260px] text-center"
+              style={{ left: -130, top: -ARC_R - 74 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ delay: 0.14 }}
+            >
+              <p className="text-[15px] font-medium tracking-tight text-white/70">O que você quer registrar?</p>
+            </motion.div>
+
+            {ADD_ACTIONS.map((action, i) => {
+              const Icon = action.icon;
+              const p = arcPoint(ARC_ANGLES[i]);
+              return (
+                <motion.button
+                  key={action.type}
+                  type="button"
+                  data-action={action.type}
+                  aria-label={action.label}
+                  onClick={() => onSelect?.(action.type)}
+                  className="pointer-events-auto absolute flex w-[84px] flex-col items-center"
+                  style={{ left: -42, top: -34 }}
+                  initial={{ x: FROM.x, y: FROM.y, scale: 0.3, rotate: -24, opacity: 0 }}
+                  animate={{ x: p.x, y: p.y, scale: 1, rotate: 0, opacity: 1 }}
+                  exit={{ x: FROM.x, y: FROM.y, scale: 0.3, rotate: -24, opacity: 0, transition: { duration: 0.18, delay: (ADD_ACTIONS.length - 1 - i) * 0.02 } }}
+                  transition={{ type: "spring", stiffness: 320, damping: 24, delay: 0.02 + (ADD_ACTIONS.length - 1 - i) * 0.05 }}
+                  whileTap={{ scale: 0.92 }}
+                >
+                  {/* Glass orb: gradient hairline, dark core, the icon in the action's color */}
+                  <span
+                    className="relative flex h-[68px] w-[68px] rounded-full p-px"
+                    style={{
+                      background: "linear-gradient(180deg, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.05) 60%, rgba(255,255,255,0.02) 100%)",
+                      boxShadow: `0 22px 38px -22px ${action.hex}99`,
+                    }}
+                  >
+                    <span
+                      className="relative flex h-full w-full items-center justify-center rounded-full"
+                      style={{ background: "radial-gradient(120% 120% at 50% 0%, #2B2B2B 0%, #151515 58%, #0D0D0D 100%)" }}
+                    >
+                      {/* One soft ripple as it lands */}
+                      <motion.span
+                        className="absolute inset-0 rounded-full border"
+                        style={{ borderColor: `${action.hex}99` }}
+                        initial={{ scale: 0.95, opacity: 0.6 }}
+                        animate={{ scale: 1.4, opacity: 0 }}
+                        transition={{ duration: 0.8, delay: 0.2 + (ADD_ACTIONS.length - 1 - i) * 0.05, ease: "easeOut" }}
+                      />
+                      <Icon className="h-6 w-6" style={{ color: action.hex }} strokeWidth={2.2} />
+                    </span>
+                  </span>
+                  <span className="mt-2.5 text-[13px] font-semibold leading-tight text-white" style={{ textShadow: "0 1px 10px rgba(0,0,0,0.9)" }}>{action.label}</span>
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}

@@ -1,10 +1,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  ArrowLeft, ChevronRight, ChevronDown, ChevronUp, Sparkles, TrendingUp, TrendingDown,
-  AlertTriangle, Target, Brain, PieChart as PieChartIcon, Info, ShieldCheck, BarChart3,
-  Repeat,
+import { ChevronDown, ChevronUp, Sparkles, TrendingUp, TrendingDown,
+  AlertTriangle, Target, Brain, PieChart as PieChartIcon, Info, ShieldCheck,
+  Repeat, ChevronLeft, Check, Plus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,14 +14,19 @@ import { getCategoryIcon, getCategoryColor, getCategoryHexColor } from "@/lib/ca
 import MonthSelector from "@/components/dashboard/MonthSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
-  BarChart, Bar, Cell, AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid,
-  PieChart, Pie, Sector,
+  AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid,
+  Sector,
 } from "recharts";
 import { toast } from "sonner";
+import CategoryLimitSheet from "@/components/dashboard/CategoryLimitSheet";
+import {
+  SpendRing, TopSpendRow, CategoryRows, GroupCards, ViewToggle, groupCategories,
+} from "@/components/analytics/CategoryOverviewViews";
 
+import { currencySymbol, getCurrency } from "@/lib/currency";
 // ── Helpers ──────────────────────────────────────────────
 const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 const MONTH_NAMES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -117,54 +121,12 @@ function computeCategoryScore(pct: number, variation: number | null, txCount: nu
 // ── Reusable Glass Card ──────────────────────────────────
 const GlassCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
   <div
-    className={`rounded-2xl border border-border/20 bg-card/60 backdrop-blur-xl ${className}`}
-    style={{ boxShadow: "0 4px 24px -4px rgba(0,0,0,0.3)" }}
+    className={`rounded-[22px] border border-white/[0.07] bg-[#141414] ${className}`}
+    
   >
     {children}
   </div>
 );
-
-// ── Summary Card (unified) ───────────────────────────────
-const SummaryCard = ({ totalExpenses, topCategory, monthLabel }: {
-  totalExpenses: number; topCategory?: CategorySummary; monthLabel: string;
-}) => {
-  const annualEstimate = totalExpenses * 12;
-  return (
-    <div
-      className="rounded-2xl border border-border/20 p-3 md:p-5"
-      style={{
-        background: "linear-gradient(135deg, hsl(var(--card) / 0.8) 0%, hsl(var(--card) / 0.4) 50%, hsl(var(--card) / 0.6) 100%)",
-        backdropFilter: "blur(24px)",
-        boxShadow: "0 8px 32px -8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",
-      }}
-    >
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-[10px] text-muted-foreground/50 mb-0.5">Total em {monthLabel}</p>
-          <p className="text-2xl md:text-3xl font-bold text-foreground tabular-nums">{fmt(totalExpenses)}</p>
-        </div>
-        {topCategory && (
-          <div className="text-right">
-            <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider font-medium">Maior gasto</p>
-            <p className="text-xs font-bold text-foreground mt-0.5">{topCategory.name}</p>
-            <p className="text-[10px] text-muted-foreground/40">{topCategory.percentage}%</p>
-          </div>
-        )}
-      </div>
-
-      <div className="border-t border-border/5 mt-2 pt-2 grid grid-cols-2 gap-3">
-        <div>
-          <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider font-medium">Gasto anual estimado</p>
-          <p className="text-sm font-bold text-destructive mt-0.5 tabular-nums">{fmt(annualEstimate)}</p>
-        </div>
-        <div>
-          <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider font-medium">Média mensal</p>
-          <p className="text-sm font-bold text-foreground mt-0.5 tabular-nums">{fmt(totalExpenses)}</p>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ── Donut: default center shows total ────────────────────
 const DonutDefaultCenter = ({ total }: { total: number }) => (
@@ -205,219 +167,6 @@ const renderDefaultShape = (props: any) => {
     <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius} startAngle={startAngle} endAngle={endAngle} fill={fill} />
   );
 };
-
-// ── Custom bar shape with icon inside at the top ─────────
-const BarWithIcon = (props: any) => {
-  const { x, y, width, height, fill, payload } = props;
-  if (!payload?.iconName) return <rect x={x} y={y} width={width} height={height} fill={fill} rx={6} ry={6} />;
-
-  const IconComp = payload.iconComponent;
-  const iconSize = 14;
-  const iconX = x + width / 2 - iconSize / 2;
-  const iconY = y + 4;
-
-  return (
-    <g>
-      <rect x={x} y={y} width={width} height={height} fill={fill} rx={6} ry={6} />
-      {IconComp && height > iconSize + 6 && (
-        <foreignObject x={iconX} y={iconY} width={iconSize} height={iconSize}>
-          <div style={{ width: iconSize, height: iconSize, display: "flex", alignItems: "center", justifyContent: "center", filter: "brightness(0.45)" }}>
-            <IconComp style={{ width: iconSize, height: iconSize, color: fill }} />
-          </div>
-        </foreignObject>
-      )}
-    </g>
-  );
-};
-
-// ── Category Chart (Bar only) ─────────────────────────────
-const CategoryChartSection = ({ categoryData, isMobile }: {
-  categoryData: CategorySummary[];
-  isMobile: boolean;
-}) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragState = useRef({ startX: 0, scrollLeft: 0 });
-
-  const chartData = categoryData.map((c) => ({
-    name: c.name.length > 8 ? c.name.slice(0, 7) + "…" : c.name,
-    fullName: c.name,
-    value: c.amount,
-    fill: c.hexColor,
-    percentage: c.percentage,
-    iconComponent: c.icon,
-    iconName: c.name,
-  }));
-
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setIsDragging(true);
-    dragState.current = { startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft };
-    el.style.cursor = "grabbing";
-  }, []);
-  const onMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || !scrollRef.current) return;
-    e.preventDefault();
-    const el = scrollRef.current;
-    const x = e.pageX - el.offsetLeft;
-    el.scrollLeft = dragState.current.scrollLeft - (x - dragState.current.startX);
-  }, [isDragging]);
-  const onMouseUp = useCallback(() => {
-    setIsDragging(false);
-    if (scrollRef.current) scrollRef.current.style.cursor = "grab";
-  }, []);
-
-  return (
-    <GlassCard className="p-4 md:p-5">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-[10px] md:text-[11px] text-muted-foreground/60 font-semibold uppercase tracking-wider">
-          Gastos por Categoria
-        </p>
-        <BarChart3 className="w-4 h-4 text-muted-foreground/40" />
-      </div>
-
-      <div
-        ref={scrollRef}
-        className="overflow-x-auto scrollbar-none select-none"
-        style={{ cursor: "grab" }}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
-      >
-        <div style={{ height: 220, minWidth: Math.max(categoryData.length * 56, 300) }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ left: 4, right: 4, top: 24, bottom: 0 }}>
-              <XAxis dataKey="name" hide />
-              <YAxis hide />
-              <Tooltip
-                cursor={false}
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0].payload;
-                  return (
-                    <div className="rounded-lg bg-popover border border-border/30 px-3 py-2 shadow-xl">
-                      <p className="text-xs font-bold text-foreground">{d.fullName}</p>
-                      <p className="text-[11px] text-muted-foreground tabular-nums">{fmt(d.value)}</p>
-                      <p className="text-[10px] text-muted-foreground/60">{d.percentage}%</p>
-                    </div>
-                  );
-                }}
-              />
-              <Bar dataKey="value" shape={<BarWithIcon />} animationDuration={800}>
-                {chartData.map((entry, i) => (
-                  <Cell key={i} fill={entry.fill} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </GlassCard>
-  );
-};
-
-// ── Category List with expandable ────────────────────────
-const CategoryList = ({ categoryData, onSelect, selectedCat, prevCategoryData, habitMap }: {
-  categoryData: CategorySummary[];
-  onSelect: (name: string) => void;
-  selectedCat: string | null;
-  prevCategoryData?: { name: string; amount: number }[];
-  habitMap?: Record<string, HabitData>;
-}) => {
-  const [expanded, setExpanded] = useState(false);
-  const INITIAL_COUNT = 5;
-  const visibleData = expanded ? categoryData : categoryData.slice(0, INITIAL_COUNT);
-  const hasMore = categoryData.length > INITIAL_COUNT;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between px-1">
-        <p className="text-[10px] md:text-[11px] text-muted-foreground/60 font-semibold uppercase tracking-wider">
-          Categorias · {categoryData.length}
-        </p>
-      </div>
-      <div className="space-y-2">
-        {visibleData.map((cat, i) => {
-          const CatIcon = cat.icon;
-          const isSelected = selectedCat === cat.name;
-          const dimmed = selectedCat && !isSelected;
-          const prev = prevCategoryData?.find((p) => p.name === cat.name);
-          const prevAmount = prev?.amount ?? 0;
-          const variation = prevAmount > 0
-            ? Math.round(((cat.amount - prevAmount) / prevAmount) * 100)
-            : null;
-          const habit = habitMap?.[cat.name];
-          const isNew = prevAmount === 0 && cat.amount > 0;
-          return (
-            <motion.button
-              key={cat.name}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: dimmed ? 0.35 : 1, y: 0 }}
-              transition={{ delay: i * 0.03 }}
-              onClick={() => onSelect(cat.name)}
-              className={`w-full flex items-center gap-3 py-3 md:py-3.5 rounded-2xl transition-colors px-4 border ${
-                isSelected ? "border-primary/20" : "border-border/15 hover:border-border/30"
-              }`}
-              style={{
-                background: "linear-gradient(135deg, hsl(var(--card) / 0.8) 0%, hsl(var(--card) / 0.4) 50%, hsl(var(--card) / 0.6) 100%)",
-                backdropFilter: "blur(24px)",
-                boxShadow: "0 4px 20px -6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03)",
-              }}
-            >
-              <div
-                className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center shrink-0"
-                style={{ background: `${cat.hexColor}18` }}
-              >
-                <CatIcon className="w-4 h-4 md:w-[18px] md:h-[18px]" style={{ color: cat.hexColor }} />
-              </div>
-              <div className="flex-1 min-w-0 text-left">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <p className="text-xs md:text-sm font-semibold text-foreground truncate">{cat.name}</p>
-                  {habit?.isHabit && (
-                    <span className="text-[7px] md:text-[8px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary flex items-center gap-0.5">
-                      <Repeat className="w-2.5 h-2.5" /> Hábito
-                    </span>
-                  )}
-                  <span className="text-[9px] md:text-[10px] text-muted-foreground/40">{cat.txCount} lanç.</span>
-                </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="flex-1 h-1.5 bg-border/15 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${cat.percentage}%` }}
-                      transition={{ delay: 0.1 + i * 0.03, duration: 0.5, ease: "easeOut" }}
-                      className="h-full rounded-full"
-                      style={{ backgroundColor: cat.hexColor }}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="text-xs md:text-sm font-bold text-foreground tabular-nums">{fmt(cat.amount)}</p>
-                <p className="text-[9px] md:text-[10px] text-muted-foreground/40">{cat.percentage}%</p>
-              </div>
-              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/30" />
-            </motion.button>
-          );
-        })}
-      </div>
-      {hasMore && (
-        <div className="px-4">
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="w-full flex items-center justify-center gap-1 pt-2 border-t border-border/10 text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors font-medium"
-          >
-            {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
-
-
 
 // ── Comparison Insights Section (carousel) ────────────────
 const ComparisonInsightsSection = ({ categoryData, prevCategoryData }: {
@@ -463,7 +212,7 @@ const ComparisonInsightsSection = ({ categoryData, prevCategoryData }: {
     <GlassCard className="p-4 md:p-5">
       <div className="flex items-center gap-2 mb-3">
         <span className="text-sm">💡</span>
-        <p className="text-[10px] md:text-[11px] text-muted-foreground/60 font-semibold uppercase tracking-wider">
+        <p className="text-[14px] font-semibold text-white">
           Insights Inteligentes
         </p>
       </div>
@@ -530,7 +279,7 @@ const AIInsightsSection = ({ insights, loading }: { insights: AIInsights | null;
     <GlassCard className="p-4 md:p-5">
       <div className="flex items-center gap-2 mb-3">
         <Brain className="w-4 h-4 text-primary" />
-        <p className="text-[10px] md:text-[11px] text-muted-foreground/60 font-semibold uppercase tracking-wider">
+        <p className="text-[14px] font-semibold text-white">
           Dicas · Huby
         </p>
       </div>
@@ -590,7 +339,7 @@ const AlertsSection = ({ alerts }: { alerts: AIInsights["alerts"] }) => {
     <GlassCard className="p-4 md:p-5">
       <div className="flex items-center gap-2 mb-3">
         <AlertTriangle className="w-4 h-4 text-warning" />
-        <p className="text-[10px] md:text-[11px] text-muted-foreground/60 font-semibold uppercase tracking-wider">Alertas</p>
+        <p className="text-[14px] font-semibold text-white">Alertas</p>
       </div>
       <div className="relative overflow-hidden" style={{ minHeight: 48 }}>
         <AnimatePresence mode="wait">
@@ -675,7 +424,7 @@ const LimitSuggestionItem = ({ suggestion, currentAmount, onApplied }: { suggest
         <p className="text-[10px] text-muted-foreground/50 shrink-0">Limite:</p>
         {editing ? (
           <div className="flex items-center gap-1.5 flex-1">
-            <span className="text-[11px] text-muted-foreground/60">R$</span>
+            <span className="text-[11px] text-muted-foreground/60">{currencySymbol()}</span>
             <input
               type="number"
               value={customLimit}
@@ -737,7 +486,7 @@ const LimitSuggestions = ({ suggestions, categoryData, onApplied }: { suggestion
     <GlassCard className="p-4 md:p-5">
       <div className="flex items-center gap-2 mb-3">
         <Target className="w-4 h-4 text-primary" />
-        <p className="text-[10px] md:text-[11px] text-muted-foreground/60 font-semibold uppercase tracking-wider">Sugestões de Limite</p>
+        <p className="text-[14px] font-semibold text-white">Sugestões de Limite</p>
       </div>
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory" style={{ WebkitOverflowScrolling: "touch" }}>
         {suggestions.map((s, i) => {
@@ -771,16 +520,11 @@ const AllInstallmentsOverview = ({ impacts }: { impacts: InstallmentImpact[] }) 
 
   return (
     <div
-      className="rounded-2xl border border-border/20 p-3 md:p-4"
-      style={{
-        background: "linear-gradient(135deg, hsl(var(--card) / 0.8) 0%, hsl(var(--card) / 0.4) 50%, hsl(var(--card) / 0.6) 100%)",
-        backdropFilter: "blur(24px)",
-        boxShadow: "0 4px 20px -6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03)",
-      }}
+      className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-3 md:p-4"
     >
       <div className="flex items-center gap-2 mb-2.5">
         <Repeat className="w-4 h-4 text-primary/70" />
-        <p className="text-[9px] md:text-[10px] text-muted-foreground/60 font-semibold uppercase tracking-wider">Parcelamentos Ativos</p>
+        <p className="text-[14px] font-semibold text-white">Parcelamentos Ativos</p>
         <span className="ml-auto text-[9px] text-muted-foreground/40 bg-muted/10 px-1.5 py-0.5 rounded-full">{allItems.length} {allItems.length === 1 ? "item" : "itens"}</span>
       </div>
 
@@ -864,7 +608,7 @@ const InstallmentInsightsSection = ({ impacts }: { impacts: InstallmentImpact[] 
     <GlassCard className="p-4 md:p-5">
       <div className="flex items-center gap-2 mb-3">
         <span className="text-base">💳</span>
-        <p className="text-[10px] md:text-[11px] text-muted-foreground/60 font-semibold uppercase tracking-wider">Impacto de Parcelamentos</p>
+        <p className="text-[14px] font-semibold text-white">Impacto de Parcelamentos</p>
       </div>
       <div className="space-y-2.5">
         {relevant.map((imp, i) => {
@@ -894,16 +638,11 @@ const CategoryInstallmentDetail = ({ impact }: { impact: InstallmentImpact | und
   const isHighImpact = impact.impactPct > 30 || impact.totalRemaining > 1000;
   return (
     <div
-      className="rounded-2xl border border-border/20 p-3 md:p-4"
-      style={{
-        background: "linear-gradient(135deg, hsl(var(--card) / 0.8) 0%, hsl(var(--card) / 0.4) 50%, hsl(var(--card) / 0.6) 100%)",
-        backdropFilter: "blur(24px)",
-        boxShadow: "0 4px 20px -6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03)",
-      }}
+      className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-3 md:p-4"
     >
       <div className="flex items-center gap-2 mb-2.5">
         <span className="text-sm">💳</span>
-        <p className="text-[9px] md:text-[10px] text-muted-foreground/60 font-semibold uppercase tracking-wider">Parcelamentos Ativos</p>
+        <p className="text-[14px] font-semibold text-white">Parcelamentos Ativos</p>
       </div>
       <div className={`p-2.5 rounded-xl mb-2.5 ${isHighImpact ? "bg-warning/5 border border-warning/10" : "bg-muted/10 border border-border/10"}`}>
         <p className="text-[11px] text-foreground/80 leading-relaxed">
@@ -945,7 +684,7 @@ const EvolutionGlowDot = (props: any) => {
   return (
     <g>
       <circle cx={cx} cy={cy} r={8} fill={props.stroke} opacity={0.15} />
-      <circle cx={cx} cy={cy} r={4} fill={props.stroke} stroke="hsl(220 20% 5%)" strokeWidth={2} />
+      <circle cx={cx} cy={cy} r={4} fill={props.stroke} stroke="hsl(0 0% 12%)" strokeWidth={2} />
     </g>
   );
 };
@@ -954,9 +693,8 @@ const EvolutionChartTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload as HistoricalEntry;
   return (
-    <div className="bg-popover border border-border/40 rounded-xl px-3 py-2 shadow-xl">
-      <p className="text-[10px] text-muted-foreground">{MONTH_NAMES[d.month]}/{d.year}</p>
-      <p className="text-sm font-bold tabular-nums text-foreground">{fmt(d.amount)}</p>
+    <div className="rounded-full bg-white px-3 py-1 shadow-xl">
+      <p className="text-[11px] font-bold tabular-nums text-[#0B0B0B]">{MONTH_NAMES[d.month].slice(0, 3)} · {fmt(d.amount)}</p>
     </div>
   );
 };
@@ -973,9 +711,8 @@ const EvolutionChart = ({ data, hexColor, currentMonth }: {
   return (
     <GlassCard className="p-4 md:p-5">
       <div className="flex items-center gap-2 mb-3">
-        <TrendingUp className="w-4 h-4 text-primary" />
-        <p className="text-[10px] md:text-[11px] text-muted-foreground/60 font-semibold uppercase tracking-wider">
-          Evolução Mensal
+        <p className="text-[14px] font-semibold text-white">
+          Últimos 6 meses
         </p>
       </div>
       <div style={{ height: 180 }}>
@@ -987,21 +724,21 @@ const EvolutionChart = ({ data, hexColor, currentMonth }: {
                 <stop offset="95%" stopColor={hexColor} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 12% 16%)" strokeOpacity={0.4} vertical={false} />
+            <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fill: "hsl(220 8% 50%)", fontSize: 10 }}
+              tick={{ fill: "hsl(0 0% 50%)", fontSize: 10 }}
               tickLine={false}
               axisLine={false}
             />
             <YAxis
-              tick={{ fill: "hsl(220 8% 50%)", fontSize: 9 }}
+              tick={{ fill: "hsl(0 0% 50%)", fontSize: 9 }}
               tickLine={false}
               axisLine={false}
               tickFormatter={(v: number) => fmt(v)}
               width={72}
             />
-            <Tooltip content={<EvolutionChartTooltip />} cursor={{ stroke: "hsl(220 8% 50%)", strokeWidth: 1, strokeDasharray: "4 4" }} />
+            <Tooltip content={<EvolutionChartTooltip />} cursor={{ stroke: "hsl(0 0% 50%)", strokeWidth: 1, strokeDasharray: "4 4" }} />
             <Area
               type="monotone"
               dataKey="amount"
@@ -1009,7 +746,7 @@ const EvolutionChart = ({ data, hexColor, currentMonth }: {
               strokeWidth={2.5}
               fill={`url(#${gradientId})`}
               activeDot={<EvolutionGlowDot />}
-              dot={{ r: 3, fill: hexColor, stroke: "hsl(220 20% 5%)", strokeWidth: 2 }}
+              dot={{ r: 3, fill: hexColor, stroke: "hsl(0 0% 12%)", strokeWidth: 2 }}
               animationDuration={1200}
               animationEasing="ease-out"
             />
@@ -1021,9 +758,23 @@ const EvolutionChart = ({ data, hexColor, currentMonth }: {
 };
 
 // ── Category Detail View ─────────────────────────────────
+// ── Page nav: discreet back · right slot ─────────────
+const PageNav = ({ onBack, children }: { onBack: () => void; children: React.ReactNode }) => (
+  <div className="flex items-center justify-between gap-3">
+    <button
+      onClick={onBack}
+      className="-ml-2 flex h-10 items-center text-white/70 hover:text-white active:opacity-60 transition-colors"
+      aria-label="Voltar"
+    >
+      <ChevronLeft className="h-7 w-7" strokeWidth={2.25} />
+    </button>
+    <div className="flex min-w-0 justify-end">{children}</div>
+  </div>
+);
+
 const CategoryDetail = ({
   category, transactions, onBack, monthLabel, isMobile, totalExpenses,
-  historicalData, aiInsights, selectedMonth, installmentImpact, scoreData, habitData,
+  historicalData, aiInsights, selectedMonth, installmentImpact, scoreData, habitData, limit, onEditLimit,
 }: {
   category: CategorySummary;
   transactions: TxRow[];
@@ -1037,7 +788,10 @@ const CategoryDetail = ({
   installmentImpact?: InstallmentImpact;
   scoreData?: CategoryScoreData;
   habitData?: HabitData;
+  limit?: number;
+  onEditLimit: () => void;
 }) => {
+  const money = fmt;
   const catTxs = transactions
     .filter((t) => t.category === category.name && t.type === "despesa")
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -1052,6 +806,28 @@ const CategoryDetail = ({
   const daysElapsed = isCurrentMonth ? Math.max(now.getDate(), 1) : new Date(selectedYear, selectedMonth + 1, 0).getDate();
   const dailyCost = daysElapsed > 0 ? category.amount / daysElapsed : 0;
   const projectedMonthly = dailyCost * 30;
+  const paidAmount = catTxs.filter((t) => t.status === "pago").reduce((sum, t) => sum + t.amount, 0);
+  const pendingAmount = catTxs.filter((t) => t.status !== "pago").reduce((sum, t) => sum + t.amount, 0);
+
+  // Fixed (recurring) expenses repeat every month from here on
+  const fixedItems = Array.from(
+    catTxs
+      .filter((t) => t.recurrence_type === "fixa")
+      .reduce((map, t) => map.set(t.name, { name: t.name, amount: t.amount }), new Map<string, { name: string; amount: number }>())
+      .values(),
+  );
+  const fixedMonthly = fixedItems.reduce((sum, f) => sum + f.amount, 0);
+  const fixedPaidThisMonth = catTxs
+    .filter((t) => t.recurrence_type === "fixa" && t.status === "pago")
+    .reduce((sum, t) => sum + t.amount, 0);
+  const remainingMonths = Array.from({ length: 12 - selectedMonth }, (_, i) => {
+    const month = selectedMonth + i;
+    const status: "pago" | "pendente" | "previsto" =
+      i > 0 ? "previsto" : fixedPaidThisMonth >= fixedMonthly && fixedMonthly > 0 ? "pago" : "pendente";
+    return { month, label: MONTH_NAMES[month], status };
+  });
+  const [showAllMonths, setShowAllMonths] = useState(false);
+  const visibleMonths = showAllMonths ? remainingMonths : remainingMonths.slice(0, 3);
   const projectedAnnual = projectedMonthly * 12;
 
   // Habit intensity
@@ -1198,61 +974,154 @@ const CategoryDetail = ({
       className="space-y-4"
     >
       {/* Header */}
-      <div>
-        <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-muted/30 transition-colors mb-1">
-          <ArrowLeft className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
-        </button>
-        <div className="flex items-center gap-2.5">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: `${category.hexColor}20` }}
-          >
-            <CatIcon className="w-4 h-4" style={{ color: category.hexColor }} />
+      <PageNav onBack={onBack}>{null}</PageNav>
+      {/* Hero */}
+      <div className="px-1 pt-2">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: `${category.hexColor}26` }}>
+            <CatIcon className="w-5 h-5" style={{ color: category.hexColor }} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-base font-bold text-foreground truncate">{category.name}</h2>
-            <p className="text-[10px] text-muted-foreground/60">{monthLabel}</p>
+            <h2 className="text-[20px] font-bold tracking-tight text-white truncate">{category.name}</h2>
+            <p className="text-[13px] text-white/45">{category.percentage}% dos gastos de {monthLabel}</p>
           </div>
+        </div>
+        <p className="mt-5 text-[13px] text-white/45">Total em {monthLabel}</p>
+        <p className="text-[36px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{money(category.amount)}</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <span className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1.5 text-[12px] text-white/80 tabular-nums">
+            <span className="w-1.5 h-1.5 rounded-full bg-willo-green" /> {money(paidAmount)} pago
+          </span>
+          <span className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1.5 text-[12px] text-white/80 tabular-nums">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-300" /> {money(pendingAmount)} pendente
+          </span>
         </div>
       </div>
 
-      {/* Summary card */}
-      {(() => {
-        const paidAmount = catTxs.filter(t => t.status === "pago").reduce((s, t) => s + t.amount, 0);
-        const pendingAmount = catTxs.filter(t => t.status !== "pago").reduce((s, t) => s + t.amount, 0);
-        return (
-          <div
-            className="rounded-2xl border border-border/20 p-4 md:p-5"
-            style={{
-              background: "linear-gradient(135deg, hsl(var(--card) / 0.8) 0%, hsl(var(--card) / 0.4) 50%, hsl(var(--card) / 0.6) 100%)",
-              backdropFilter: "blur(24px)",
-              boxShadow: "0 8px 32px -8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",
-            }}
-          >
-            <p className="text-[10px] text-muted-foreground/50 mb-0.5">Total em {monthLabel}</p>
-            <p className="text-2xl md:text-3xl font-bold text-foreground tabular-nums">{fmt(category.amount)}</p>
-            <div className="flex items-center gap-4 mt-2">
-              <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70">
-                <span className="w-2 h-2 rounded-full bg-success" /> {fmt(paidAmount)} <span className="text-muted-foreground/40">pago</span>
-              </span>
-              <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70">
-                <span className="w-2 h-2 rounded-full bg-warning" /> {fmt(pendingAmount)} <span className="text-muted-foreground/40">pendente</span>
-              </span>
+      {/* Stats */}
+      <div className="grid grid-cols-3 divide-x divide-white/[0.06] rounded-[22px] border border-white/[0.07] bg-[#141414] py-3.5">
+        {[
+          { label: "Transações", value: String(category.txCount) },
+          { label: "Por transação", value: money(category.avgPerTx) },
+          { label: "Por dia", value: money(dailyCost) },
+        ].map((stat) => (
+          <div key={stat.label} className="px-3 text-center">
+            <p className="text-[11px] text-white/45">{stat.label}</p>
+            <p className="mt-0.5 text-[15px] font-semibold text-white tabular-nums truncate">{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Monthly limit */}
+      <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-4">
+        {limit ? (
+          <>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[14px] font-semibold text-white">Limite mensal</p>
+                <p className="text-[12px] text-white/45 tabular-nums">{money(category.amount)} de {money(limit)}</p>
+              </div>
+              <div className="text-right">
+                <p className={`text-[17px] font-bold tabular-nums ${category.amount > limit ? "text-red-400" : "text-white"}`}>
+                  {money(Math.abs(limit - category.amount))}
+                </p>
+                <p className="text-[11px] text-white/45">{category.amount > limit ? "acima do limite" : "ainda pode gastar"}</p>
+              </div>
             </div>
-            <div className="border-t border-border/5 mt-3 pt-3 grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider font-medium">Média/transação</p>
-                <p className="text-sm font-bold text-foreground mt-0.5 tabular-nums">{fmt(category.avgPerTx)}</p>
-              </div>
-              <div>
-                <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider font-medium">Transações</p>
-                <p className="text-sm font-bold text-foreground mt-0.5 tabular-nums">{category.txCount} lançamentos</p>
-              </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.08]">
+              <motion.div
+                className={`h-full rounded-full ${category.amount > limit ? "bg-red-400" : category.amount / limit >= 0.8 ? "bg-amber-300" : "bg-white"}`}
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(category.amount / limit, 1) * 100}%` }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+              />
+            </div>
+            <button onClick={onEditLimit} className="mt-3 text-[13px] font-medium text-white/60 active:opacity-60">
+              Editar limite
+            </button>
+          </>
+        ) : (
+          <button onClick={onEditLimit} className="flex w-full items-center gap-3 text-left active:opacity-70">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#0B0B0B]">
+              <Plus className="h-4 w-4" strokeWidth={2.5} />
+            </span>
+            <span className="flex-1">
+              <span className="block text-[15px] font-medium text-white">Definir limite para {category.name}</span>
+              <span className="block text-[12px] text-white/45">Acompanhe quanto ainda pode gastar no mês</span>
+            </span>
+          </button>
+        )}
+      </div>
+
+      {/* Fixed expenses in this category → yearly estimate + upcoming months */}
+      {fixedItems.length > 0 && (
+        <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[14px] font-semibold text-white">Despesa fixa</p>
+              <p className="text-[12px] text-white/45">{fixedItems.map((f) => f.name).join(", ")}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[11px] text-white/45">Até dezembro</p>
+              <p className="text-[15px] font-semibold text-white tabular-nums">{money(fixedMonthly * remainingMonths.length)}</p>
+              <p className="text-[11px] text-white/35 tabular-nums">{money(fixedMonthly * 12)}/ano</p>
             </div>
           </div>
-        );
-      })()}
+          <div className="mt-3 divide-y divide-white/[0.06]">
+            {visibleMonths.map((m) => (
+              <div key={m.month} className="flex items-center gap-3 py-2.5">
+                <span
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+                    m.status === "pago" ? "bg-willo-green text-[#0B0B0B]" : "border border-white/15"
+                  }`}
+                >
+                  {m.status === "pago" && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className={`text-[14px] ${m.status === "pago" ? "text-white/55" : "text-white"}`}>{m.label}</p>
+                  <p className="text-[12px] text-white/40">
+                    {m.status === "pago" ? "Pago" : m.status === "pendente" ? "Pendente este mês" : "Previsto"}
+                  </p>
+                </div>
+                <p className={`text-[14px] font-semibold tabular-nums ${m.status === "pago" ? "text-white/55 line-through decoration-white/30" : "text-white"}`}>
+                  {money(fixedMonthly)}
+                </p>
+              </div>
+            ))}
+          </div>
+          {remainingMonths.length > 3 && (
+            <button
+              onClick={() => setShowAllMonths((v) => !v)}
+              className="mt-1 flex w-full items-center justify-center gap-1 pt-2 text-[13px] font-medium text-white/70 active:opacity-60"
+            >
+              {showAllMonths ? "Mostrar menos" : `Ver até dezembro (${remainingMonths.length - 3} meses)`}
+              {showAllMonths ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+          )}
+        </div>
+      )}
 
+      {/* Transactions this month */}
+      {catTxs.length > 0 && (
+        <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] px-4 pt-3.5 pb-1">
+          <p className="text-[14px] font-semibold text-white">Transações em {monthLabel}</p>
+          <div className="mt-1 divide-y divide-white/[0.06]">
+            {catTxs.slice(0, 12).map((t) => (
+              <div key={`${t.id}-${t.date}`} className="flex items-center gap-3 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[14px] text-white">{t.name}</p>
+                  <p className="text-[12px] text-white/40">
+                    {new Date(t.date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                    {" · "}
+                    {t.status === "pago" ? "Pago" : "Pendente"}
+                  </p>
+                </div>
+                <p className="text-[14px] font-semibold text-white tabular-nums">{money(t.amount)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Evolution Chart (6 months) */}
       <EvolutionChart
@@ -1264,12 +1133,7 @@ const CategoryDetail = ({
       {/* 3-month trend */}
       {trendAnalysis && trendAnalysis.momChange != null && (
         <div
-          className="rounded-2xl border border-border/20 p-3 md:p-4"
-          style={{
-            background: "linear-gradient(135deg, hsl(var(--card) / 0.8) 0%, hsl(var(--card) / 0.4) 50%, hsl(var(--card) / 0.6) 100%)",
-            backdropFilter: "blur(24px)",
-            boxShadow: "0 4px 20px -6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03)",
-          }}
+          className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-3 md:p-4"
         >
           <div className="flex items-center gap-2 mb-2">
             {trendAnalysis.risingTrend ? (
@@ -1279,7 +1143,7 @@ const CategoryDetail = ({
             ) : (
               <TrendingUp className="w-4 h-4 text-muted-foreground" />
             )}
-            <p className="text-[9px] md:text-[10px] text-muted-foreground/60 font-semibold uppercase tracking-wider">
+            <p className="text-[14px] font-semibold text-white">
               Tendência · 3 meses
             </p>
           </div>
@@ -1309,16 +1173,11 @@ const CategoryDetail = ({
       {/* Internal distribution */}
       {merchantDistribution.length > 1 && (
         <div
-          className="rounded-2xl border border-border/20 p-3 md:p-4"
-          style={{
-            background: "linear-gradient(135deg, hsl(var(--card) / 0.8) 0%, hsl(var(--card) / 0.4) 50%, hsl(var(--card) / 0.6) 100%)",
-            backdropFilter: "blur(24px)",
-            boxShadow: "0 4px 20px -6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03)",
-          }}
+          className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-3 md:p-4"
         >
           <div className="flex items-center gap-2 mb-2.5">
             <PieChartIcon className="w-4 h-4 text-primary" />
-            <p className="text-[9px] md:text-[10px] text-muted-foreground/60 font-semibold uppercase tracking-wider">
+            <p className="text-[14px] font-semibold text-white">
               Distribuição interna
             </p>
           </div>
@@ -1357,98 +1216,6 @@ const CategoryDetail = ({
   );
 };
 
-// ── Active Limits Section ────────────────────────────────
-const ActiveLimitsSection = ({ limits, categoryData, onRemoved }: {
-  limits: { category: string; limit_amount: number; id: string }[];
-  categoryData: CategorySummary[];
-  onRemoved?: () => void;
-}) => {
-  const { user } = useAuth();
-  if (limits.length === 0) return null;
-
-  const handleRemove = async (id: string, category: string) => {
-    const { error } = await supabase.from("category_limits").delete().eq("id", id);
-    if (error) { toast.error("Erro ao remover limite"); return; }
-    toast.success(`Limite de ${category} removido`);
-    onRemoved?.();
-    window.dispatchEvent(new Event("finance-data-changed"));
-  };
-
-  return (
-    <GlassCard className="p-4 md:p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <ShieldCheck className="w-4 h-4 text-primary" />
-        <p className="text-[10px] md:text-[11px] text-muted-foreground/60 font-semibold uppercase tracking-wider">Limites Ativos</p>
-      </div>
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory" style={{ WebkitOverflowScrolling: "touch" }}>
-        {limits.map((lim) => {
-          const cat = categoryData.find((c) => c.name === lim.category);
-          const amount = cat?.amount ?? 0;
-          const ratio = lim.limit_amount > 0 ? amount / lim.limit_amount : 0;
-          const pct = Math.round(ratio * 100);
-          const CatIcon = getCategoryIcon(lim.category);
-          const hexColor = getCategoryHexColor(lim.category);
-          let statusColor = "text-success";
-          let statusLabel = "Sob controle";
-          let barColor = hexColor;
-          if (ratio > 1) { statusColor = "text-destructive"; statusLabel = "Ultrapassado"; barColor = "hsl(0 70% 55%)"; }
-          else if (ratio >= 0.8) { statusColor = "text-warning"; statusLabel = "Perto do limite"; barColor = "hsl(35 90% 55%)"; }
-
-          return (
-            <motion.div
-              key={lim.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="min-w-[220px] max-w-[250px] snap-start p-3 rounded-xl border border-border/15 flex flex-col gap-2"
-              style={{
-                background: "linear-gradient(135deg, hsl(var(--card) / 0.8) 0%, hsl(var(--card) / 0.4) 50%, hsl(var(--card) / 0.6) 100%)",
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <CatIcon className="w-4 h-4" style={{ color: hexColor }} />
-                <p className="text-xs font-semibold text-foreground truncate flex-1">{lim.category}</p>
-                <span className={`text-[9px] font-medium ${statusColor}`}>{statusLabel}</span>
-              </div>
-              <div className="relative w-full h-2 bg-border/20 rounded-full overflow-visible">
-                {(() => {
-                  const maxScale = Math.max(amount, lim.limit_amount) * 1.2;
-                  const barW = Math.min((amount / maxScale) * 100, 100);
-                  const markerPos = (lim.limit_amount / maxScale) * 100;
-                  return (
-                    <>
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${barW}%` }}
-                        transition={{ duration: 0.6 }}
-                        className="h-full rounded-full absolute top-0 left-0"
-                        style={{ backgroundColor: barColor }}
-                      />
-                      <div
-                        className="absolute top-[-2px] w-[2px] h-[calc(100%+4px)] rounded-full bg-foreground/50"
-                        style={{ left: `${markerPos}%` }}
-                      />
-                    </>
-                  );
-                })()}
-              </div>
-              <div className="flex justify-between text-[10px]">
-                <span className="text-muted-foreground/60 tabular-nums">{fmt(amount)}</span>
-                <span className="text-muted-foreground/40 tabular-nums">/ {fmt(lim.limit_amount)}</span>
-              </div>
-              <button
-                onClick={() => handleRemove(lim.id, lim.category)}
-                className="text-[9px] text-destructive/60 hover:text-destructive transition-colors self-end"
-              >
-                Remover limite
-              </button>
-            </motion.div>
-          );
-        })}
-      </div>
-    </GlassCard>
-  );
-};
-
 // ── Main Page ────────────────────────────────────────────
 const AnalyticsCategorias = () => {
   const navigate = useNavigate();
@@ -1460,12 +1227,25 @@ const AnalyticsCategorias = () => {
   const [historicalMap, setHistoricalMap] = useState<HistoricalMap>({});
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedCategory = searchParams.get("categoria");
+  const location = useLocation();
+  const openCategory = useCallback((name: string) => {
+    setSearchParams({ categoria: name }, { state: { fromOverview: true } });
+    window.scrollTo({ top: 0 });
+  }, [setSearchParams]);
+  // Opened from the overview → pop history; opened via direct link → swap in the overview.
+  const closeCategory = useCallback(() => {
+    if ((location.state as { fromOverview?: boolean } | null)?.fromOverview) navigate(-1);
+    else setSearchParams({}, { replace: true });
+  }, [location.state, navigate, setSearchParams]);
+  const [view, setView] = useState<"categorias" | "grupos">("categorias");
   const [aiInsights, setAiInsights] = useState<AIInsights | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [installmentImpacts, setInstallmentImpacts] = useState<InstallmentImpactMap>({});
   const [userStartDate, setUserStartDate] = useState<Date | null>(null);
   const [activeLimits, setActiveLimits] = useState<{ category: string; limit_amount: number; id: string }[]>([]);
+  const [limitSheet, setLimitSheet] = useState<{ open: boolean; category: string | null }>({ open: false, category: null });
 
   // Fetch active limits
   const fetchLimits = useCallback(async () => {
@@ -1477,7 +1257,12 @@ const AnalyticsCategorias = () => {
     setActiveLimits((data ?? []).map(r => ({ id: r.id, category: r.category, limit_amount: Number(r.limit_amount) })));
   }, [user]);
 
-  useEffect(() => { fetchLimits(); }, [fetchLimits]);
+  useEffect(() => {
+    fetchLimits();
+    const onChange = () => fetchLimits();
+    window.addEventListener("finance-data-changed", onChange);
+    return () => window.removeEventListener("finance-data-changed", onChange);
+  }, [fetchLimits]);
 
   // Fetch transactions for current month, previous month, and 6-month history
   useEffect(() => {
@@ -1805,6 +1590,7 @@ const AnalyticsCategorias = () => {
 
   const totalExpenses = useMemo(() => categoryData.reduce((s, c) => s + c.amount, 0), [categoryData]);
   const topCategory = categoryData[0];
+  const groups = useMemo(() => groupCategories(categoryData), [categoryData]);
 
   // Compute score map
   const scoreMap: Record<string, CategoryScoreData> = useMemo(() => {
@@ -1902,18 +1688,16 @@ const AnalyticsCategorias = () => {
     <div className={`pb-28 ${isMobile ? "max-w-lg mx-auto" : "max-w-5xl mx-auto"}`}>
       {/* Header — hidden when viewing category detail */}
       {!selectedCategory && (
-        <div className="mb-3">
-          <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-muted/30 transition-colors mb-1">
-            <ArrowLeft className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
-          </button>
-          <div className="flex items-center justify-between">
-            <h1 className="text-base md:text-xl font-bold text-foreground leading-tight">Categorias</h1>
-            <MonthSelector
-              selectedMonth={selectedMonth}
-              selectedYear={selectedYear}
-              onMonthChange={(m, y) => { setMonth(m, y); setSelectedCategory(null); setAiInsights(null); }}
-            />
-          </div>
+        <div className="mb-5 pt-1">
+          <PageNav onBack={() => navigate(-1)}>
+            <div className="rounded-full border border-white/[0.08] bg-[#141414] p-1">
+              <MonthSelector
+                selectedMonth={selectedMonth}
+                selectedYear={selectedYear}
+                onMonthChange={(m, y) => { setMonth(m, y); setAiInsights(null); }}
+              />
+            </div>
+          </PageNav>
         </div>
       )}
 
@@ -1923,7 +1707,7 @@ const AnalyticsCategorias = () => {
             key={selectedCategory}
             category={selectedCatData}
             transactions={transactions}
-            onBack={() => setSelectedCategory(null)}
+            onBack={closeCategory}
             monthLabel={monthLabel}
             isMobile={isMobile}
             totalExpenses={totalExpenses}
@@ -1933,6 +1717,8 @@ const AnalyticsCategorias = () => {
             installmentImpact={enrichedInstallmentImpacts.find((i) => i.category === selectedCategory)}
             scoreData={scoreMap[selectedCategory]}
             habitData={habitMap[selectedCategory]}
+            limit={activeLimits.find((l) => l.category === selectedCategory)?.limit_amount}
+            onEditLimit={() => setLimitSheet({ open: true, category: selectedCategory })}
           />
         ) : (
           <motion.div
@@ -1944,30 +1730,87 @@ const AnalyticsCategorias = () => {
           >
             {categoryData.length > 0 ? (
               <>
-                {/* Summary (unified card) */}
-                <SummaryCard totalExpenses={totalExpenses} topCategory={topCategory} monthLabel={monthLabel} />
+                {/* Ring: categories or groups, total in the center */}
+                <div className="pt-1">
+                  <SpendRing
+                    total={totalExpenses}
+                    caption={`gastos em ${monthLabel.toLowerCase()}`}
+                    segments={
+                      view === "categorias"
+                        ? categoryData.map((c) => ({ key: c.name, hex: c.hexColor, amount: c.amount }))
+                        : groups.map((g) => ({ key: g.def.name, hex: g.def.hex, amount: g.amount }))
+                    }
+                  />
+                </div>
 
-                {/* Chart — full width */}
-                <CategoryChartSection
-                  categoryData={categoryData}
-                  isMobile={isMobile}
+                {topCategory && <TopSpendRow category={topCategory} monthLabel={monthLabel} onOpen={openCategory} />}
+
+                <ViewToggle<"categorias" | "grupos">
+                  value={view}
+                  onChange={setView}
+                  options={[
+                    { key: "categorias", label: "Categorias" },
+                    { key: "grupos", label: "Grupos" },
+                  ]}
                 />
 
-                {/* All Categories list */}
-                <CategoryList
-                  categoryData={categoryData}
-                  onSelect={setSelectedCategory}
-                  selectedCat={null}
-                  prevCategoryData={prevCategoryData}
-                  habitMap={habitMap}
-                />
+                {view === "categorias" ? (
+                  <CategoryRows categories={categoryData} onOpen={openCategory} />
+                ) : (
+                  <GroupCards groups={groups} />
+                )}
 
-                {/* Active Limits */}
-                <ActiveLimitsSection
-                  limits={activeLimits}
-                  categoryData={categoryData}
-                  onRemoved={fetchLimits}
-                />
+                {/* Category limits */}
+                <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[16px] font-semibold text-white">Limites por categoria</p>
+                      <p className="text-[12px] text-white/45">Quanto você ainda pode gastar em cada uma</p>
+                    </div>
+                    <button
+                      onClick={() => setLimitSheet({ open: true, category: null })}
+                      className="flex h-9 items-center gap-1 rounded-full bg-white px-3.5 text-[13px] font-semibold text-[#0B0B0B] active:scale-95 transition-transform"
+                    >
+                      <Plus className="h-4 w-4" strokeWidth={2.5} /> Criar
+                    </button>
+                  </div>
+                  {activeLimits.length === 0 ? (
+                    <p className="mt-4 rounded-[16px] bg-white/[0.04] px-3.5 py-3 text-[13px] text-white/50">
+                      Nenhum limite ainda. Crie um para acompanhar quanto falta em cada categoria.
+                    </p>
+                  ) : (
+                    <div className="mt-4 space-y-3.5">
+                      {activeLimits.map((lim) => {
+                        const spent = categoryData.find((c) => c.name === lim.category)?.amount ?? 0;
+                        const ratio = lim.limit_amount > 0 ? spent / lim.limit_amount : 0;
+                        const left = lim.limit_amount - spent;
+                        const Icon = getCategoryIcon(lim.category, customCats);
+                        const hex = getCategoryHexColor(lim.category, customCats);
+                        const tone = left < 0 ? "text-red-400" : ratio >= 0.8 ? "text-amber-300" : "text-white/60";
+                        const bar = left < 0 ? "bg-red-400" : ratio >= 0.8 ? "bg-amber-300" : "bg-white";
+                        return (
+                          <button key={lim.id} onClick={() => setLimitSheet({ open: true, category: lim.category })} className="block w-full text-left active:opacity-70">
+                            <div className="flex items-center gap-2.5">
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: `${hex}22` }}>
+                                <Icon className="h-4 w-4" style={{ color: hex }} />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-[14px] text-white">{lim.category}</span>
+                                <span className="block text-[11px] text-white/40 tabular-nums">{fmt(spent)} de {fmt(lim.limit_amount)}</span>
+                              </span>
+                              <span className={`text-right text-[13px] font-semibold tabular-nums ${tone}`}>
+                                {left < 0 ? `${fmt(-left)} acima` : `${fmt(left)} livre`}
+                              </span>
+                            </div>
+                            <div className="ml-[46px] mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+                              <div className={`h-full rounded-full ${bar}`} style={{ width: `${Math.min(ratio, 1) * 100}%` }} />
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
                 {/* Limit Suggestions from AI */}
                 {aiInsights?.limitSuggestions && aiInsights.limitSuggestions.length > 0 && (
@@ -1992,6 +1835,14 @@ const AnalyticsCategorias = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <CategoryLimitSheet
+        open={limitSheet.open}
+        onClose={() => setLimitSheet({ open: false, category: null })}
+        initialCategory={limitSheet.category}
+        spentByCategory={Object.fromEntries(categoryData.map((c) => [c.name, c.amount]))}
+        currentLimits={Object.fromEntries(activeLimits.map((l) => [l.category, l.limit_amount]))}
+      />
     </div>
   );
 };

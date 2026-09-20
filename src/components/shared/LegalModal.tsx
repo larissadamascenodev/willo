@@ -61,9 +61,8 @@ const LegalModal = ({ open, onClose, type }: LegalModalProps) => {
             exit={{ opacity: 0, y: 18, scale: 0.98 }}
             transition={{ type: "spring", duration: 0.45, bounce: 0.14 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative flex max-h-[72vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-border/20 sm:max-h-[85vh] sm:max-w-lg"
+            className="relative flex max-h-[72vh] w-full max-w-md flex-col overflow-hidden rounded-2xl willo-glass sm:max-h-[85vh] sm:max-w-lg"
             style={{
-              background: "linear-gradient(160deg, hsl(220 18% 10%) 0%, hsl(220 20% 6%) 100%)",
               boxShadow: "0 12px 40px -8px rgba(0,0,0,0.6)",
             }}
           >

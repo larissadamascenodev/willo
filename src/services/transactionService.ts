@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { toTitleCase } from "@/lib/textCase";
 
 const ACCOUNTS_CACHE_KEY = "accounts-active";
 const ACCOUNTS_WITH_INACTIVE_CACHE_KEY = "accounts-all";
@@ -95,7 +96,7 @@ export async function createTransaction(input: CreateTransactionInput, userId: s
     .from("transactions")
     .insert({
       user_id: userId,
-      name: input.name,
+      name: toTitleCase(input.name),
       type: input.type,
       amount: input.amount,
       category: input.category,
@@ -147,9 +148,11 @@ export async function updateTransaction(id: string, updates: {
   account_id?: string | null;
   credit_card_id?: string | null;
 }) {
+  // Names are stored in a readable case, no matter how they were typed
+  const normalized = { ...updates, ...(updates.name ? { name: toTitleCase(updates.name) } : {}) };
   const { data, error } = await supabase
     .from("transactions")
-    .update(updates)
+    .update(normalized)
     .eq("id", id)
     .select()
     .single();
@@ -157,7 +160,7 @@ export async function updateTransaction(id: string, updates: {
   if (error) throw error;
 
   const childUpdates: Record<string, any> = {};
-  if (updates.name) childUpdates.name = updates.name;
+  if (normalized.name) childUpdates.name = normalized.name;
   if (updates.category) childUpdates.category = updates.category;
   if (updates.amount !== undefined) childUpdates.amount = updates.amount;
 
@@ -273,7 +276,7 @@ export async function createAccount(
     .from("accounts")
     .insert({
       user_id: userId,
-      name: input.name,
+      name: toTitleCase(input.name),
       type: input.type ?? "checking",
       is_default: false,
       initial_balance: balance,
@@ -314,7 +317,7 @@ export async function createCreditCard(input: CreditCardInput, userId: string) {
     .from("credit_cards" as any)
     .insert({
       user_id: userId,
-      name: input.name,
+      name: toTitleCase(input.name),
       limit: input.limit,
       closing_day: input.closing_day,
       due_day: input.due_day,

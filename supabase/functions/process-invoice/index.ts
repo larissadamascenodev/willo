@@ -121,35 +121,51 @@ function arrayBufferToBase64(buffer: Uint8Array): string {
   return btoa(binary);
 }
 
-async function callAI(
-  apiKey: string,
-  model: string,
-  systemPrompt: string,
-  userContent: any[]
-): Promise<{ ok: boolean; data?: any; status?: number; errorText?: string }> {
-  const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userContent },
-      ],
-      temperature: 0.1,
-    }),
-  });
+const SUPPORTED_IMAGES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 
-  if (!aiResponse.ok) {
-    const errText = await aiResponse.text();
-    return { ok: false, status: aiResponse.status, errorText: errText };
+// Free tier models, tried in order: lite answers fastest, flash is the backup
+const GEMINI_MODELS = ["gemini-3.5-flash-lite", "gemini-3.6-flash"];
+
+type GeminiPart = { text: string } | { inlineData: { mimeType: string; data: string } };
+
+class GeminiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
   }
+}
 
-  const data = await aiResponse.json();
-  return { ok: true, data };
+// Free-tier models can hang under high demand; give up early and try the next one
+const GEMINI_TIMEOUT_MS = 25_000;
+
+async function callGemini(apiKey: string, model: string, systemPrompt: string, parts: GeminiPart[]): Promise<string> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+  try {
+    let res: Response;
+    let data: any;
+    try {
+      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: "user", parts }],
+          generationConfig: { temperature: 0.1, responseMimeType: "application/json" },
+        }),
+      });
+      if (!res.ok) throw new GeminiError(res.status, (await res.text()).slice(0, 500));
+      data = await res.json();
+    } catch (err) {
+      if (err instanceof GeminiError) throw err;
+      // 504 = timed out or network failure, retried on the next model
+      throw new GeminiError(504, err instanceof Error ? err.message : "request failed");
+    }
+    const candidate = data.candidates?.[0];
+    return (candidate?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? "").join("").trim();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 serve(async (req) => {
@@ -179,8 +195,8 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const contentType = req.headers.get("content-type") || "";
 
@@ -243,65 +259,54 @@ serve(async (req) => {
     const userTextTransaction = "Extraia todas as transações deste comprovante/recibo/extrato. Identifique o tipo (receita ou despesa), valor, data, destinatário e categoria.";
     const userText = context === "transaction" ? userTextTransaction : userTextInvoice;
 
-    let userContent: any[];
+    let parts: GeminiPart[];
 
     if (csvText) {
-      userContent = [
-        {
-          type: "text",
-          text: `Extraia as transações deste conteúdo em formato CSV/planilha:\n\n${csvText}`,
-        },
-      ];
+      parts = [{ text: `Extraia as transações deste conteúdo em formato CSV/planilha:
+
+${csvText}` }];
     } else {
-      userContent = [
-        { type: "text", text: userText },
-        {
-          type: "image_url",
-          image_url: {
-            url: `data:${mimeType};base64,${imageBase64}`,
-          },
-        },
-      ];
+      if (mimeType !== "application/pdf" && !SUPPORTED_IMAGES.includes(mimeType)) {
+        throw new Error("Formato de imagem não suportado. Use JPG, PNG ou WEBP.");
+      }
+      parts = [{ inlineData: { mimeType, data: imageBase64! } }, { text: userText }];
     }
 
-    // Try primary model, then fallback
-    const models = ["google/gemini-2.5-flash", "google/gemini-2.5-pro"];
-    let aiData: any = null;
-    let lastError = "";
-
-    for (const model of models) {
-      console.log(`Trying model: ${model}`);
-      const result = await callAI(LOVABLE_API_KEY, model, systemPrompt, userContent);
-
-      if (result.ok) {
-        aiData = result.data;
-        console.log(`Success with model: ${model}`);
+    let rawContent = "";
+    let lastError: GeminiError | null = null;
+    for (const model of GEMINI_MODELS) {
+      try {
+        rawContent = await callGemini(GEMINI_API_KEY, model, systemPrompt, parts);
+        lastError = null;
         break;
+      } catch (err) {
+        if (!(err instanceof GeminiError)) throw err;
+        console.error(`Gemini ${model} failed: status=${err.status} ${err.message}`);
+        lastError = err;
+        // Quota, overload or a retired model are worth retrying on the next model
+        if (err.status !== 429 && err.status !== 404 && err.status < 500) break;
       }
+    }
 
-      console.error(`Model ${model} failed: status=${result.status}, error=${result.errorText?.substring(0, 200)}`);
-      lastError = result.errorText || "";
-
-      if (result.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Tente novamente em alguns segundos." }), {
+    if (lastError) {
+      if (lastError.status === 504 || lastError.status === 503) {
+        throw new Error("A leitura está demorando mais que o normal. Tente novamente em instantes.");
+      }
+      if (lastError.status === 429) {
+        return new Response(JSON.stringify({ error: "Limite gratuito de leituras atingido. Tente novamente em alguns minutos." }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (result.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes. Adicione créditos ao workspace." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      if ([401, 403].includes(lastError.status) || /API key/i.test(lastError.message)) {
+        throw new Error("A leitura por IA está indisponível no momento. Tente novamente mais tarde.");
       }
+      throw new Error("Não foi possível processar a imagem. Tente com uma foto mais nítida.");
     }
 
-    if (!aiData) {
-      console.error("All models failed. Last error:", lastError.substring(0, 300));
-      throw new Error("Não foi possível processar a imagem. Tente com uma foto mais nítida ou em formato diferente (JPG/PNG).");
-    }
-
-    let rawContent = aiData.choices?.[0]?.message?.content || "";
+    const jsonStart = rawContent.indexOf("{");
+    const jsonEnd = rawContent.lastIndexOf("}");
+    if (jsonStart >= 0 && jsonEnd > jsonStart) rawContent = rawContent.slice(jsonStart, jsonEnd + 1);
 
     rawContent = rawContent.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
 

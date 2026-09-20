@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+import { currencySymbol } from "@/lib/currency";
 interface OnboardingFlowProps {
   onComplete: () => void;
   onRefetch: () => Promise<void>;
@@ -24,7 +25,7 @@ const ACCOUNT_TYPES = [
 
 const EXPENSE_CATEGORIES = [
   "Alimentação", "Transporte", "Moradia", "Saúde", "Educação",
-  "Lazer", "Assinaturas", "Vestuário", "Supermercado", "Outros",
+  "Lazer", "Assinaturas", "Vestuário", "Supermercado",
 ];
 
 const OnboardingFlow = ({ onComplete, onRefetch }: OnboardingFlowProps) => {
@@ -43,7 +44,7 @@ const OnboardingFlow = ({ onComplete, onRefetch }: OnboardingFlowProps) => {
   // Step 2 - Transaction
   const [txName, setTxName] = useState("");
   const [txAmount, setTxAmount] = useState("");
-  const [txCategory, setTxCategory] = useState("Outros");
+  const [txCategory, setTxCategory] = useState("Alimentação");
   const [txType, setTxType] = useState<"despesa" | "receita">("despesa");
 
   const [createdAccountId, setCreatedAccountId] = useState<string | null>(null);
@@ -218,7 +219,7 @@ const OnboardingFlow = ({ onComplete, onRefetch }: OnboardingFlowProps) => {
                 </SelectContent>
               </Select>
               <Input
-                placeholder="Saldo inicial (R$)"
+                placeholder={`Saldo inicial (${currencySymbol()})`}
                 type="number"
                 inputMode="decimal"
                 value={accountBalance}
@@ -295,7 +296,7 @@ const OnboardingFlow = ({ onComplete, onRefetch }: OnboardingFlowProps) => {
                 autoFocus
               />
               <Input
-                placeholder="Valor (R$)"
+                placeholder={`Valor (${currencySymbol()})`}
                 type="number"
                 inputMode="decimal"
                 value={txAmount}

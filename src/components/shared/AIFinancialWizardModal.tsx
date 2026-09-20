@@ -7,6 +7,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+import { currencySymbol, getCurrency } from "@/lib/currency";
 interface FinancialPlan {
   monthly_contribution: number;
   estimated_months: number;
@@ -53,7 +54,7 @@ const TARGET_CHIPS = [
 ];
 
 const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 const AIFinancialWizardModal = ({ open, onClose, type, onConfirm }: AIFinancialWizardModalProps) => {
   const [step, setStep] = useState(0);
@@ -262,7 +263,7 @@ const AIFinancialWizardModal = ({ open, onClose, type, onConfirm }: AIFinancialW
 
                     <div className="rounded-2xl border border-border/15 bg-muted/5 p-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-muted-foreground/50">R$</span>
+                        <span className="text-sm font-bold text-muted-foreground/50">{currencySymbol()}</span>
                         <input
                           type="text"
                           inputMode="numeric"

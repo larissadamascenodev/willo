@@ -2,8 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, ArrowUpRight, ArrowDownRight, CheckCircle2, Clock,
-  ChevronDown, ChevronUp, CreditCard, TrendingUp, TrendingDown,
+  CheckCircle2, Clock, ChevronDown, ChevronUp, CreditCard, TrendingUp, TrendingDown,
   Wallet, Receipt,
 } from "lucide-react";
 import { useMonth } from "@/contexts/MonthContext";
@@ -15,12 +14,13 @@ import { getCategoryIcon, getCategoryColor } from "@/lib/categoryUtils";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { getTransactionById, getAccounts } from "@/services/transactionService";
 import TransactionDetailModal from "@/components/dashboard/TransactionDetailModal";
-import {
-  XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Area, AreaChart,
-} from "recharts";
+import { PageHeader, SectionTitle, Surface } from "@/components/shared/MobilePage";
+import { cn } from "@/lib/utils";
 
+import { currencySymbol, getCurrency } from "@/lib/currency";
 const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
+const compact = (v: number) => `${currencySymbol()} ${Math.abs(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
 
 const MONTH_NAMES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -38,26 +38,6 @@ interface InvoiceRow {
   id: string; credit_card_id: string; total_amount: number; is_paid: boolean;
   month: number; year: number; card_name?: string; card_color?: string;
 }
-
-/* ─── Circular Progress Ring ─── */
-const ProgressRing = ({ pct, size = 56, stroke = 4, color }: { pct: number; size?: number; stroke?: number; color: string }) => {
-  const r = (size - stroke) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ - (pct / 100) * circ;
-  return (
-    <svg width={size} height={size} className="rotate-[-90deg]">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(220 15% 15%)" strokeWidth={stroke} />
-      <motion.circle
-        cx={size / 2} cy={size / 2} r={r} fill="none"
-        stroke={color} strokeWidth={stroke} strokeLinecap="round"
-        strokeDasharray={circ}
-        initial={{ strokeDashoffset: circ }}
-        animate={{ strokeDashoffset: offset }}
-        transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
-      />
-    </svg>
-  );
-};
 
 const ReceitasDespesasDetalhe = () => {
   const { tipo } = useParams<{ tipo: string }>();
@@ -178,163 +158,103 @@ const ReceitasDespesasDetalhe = () => {
     } catch {}
   }, []);
 
-  const accent = isReceita ? "primary" : "destructive";
-  const accentHsl = isReceita ? "hsl(var(--primary))" : "hsl(var(--destructive))";
+  const accentHex = isReceita ? "#C8F36D" : "#F87171";
   const monthLabel = MONTH_NAMES[selectedMonth];
   const displayPending = showAll ? allPending : allPending.slice(0, 5);
   const displayPaid = showAll ? allPaid : allPaid.slice(0, 5);
   const hasMore = allPending.length > 5 || allPaid.length > 5;
   const trendPositive = isReceita ? trend > 0 : trend < 0;
   const HeroIcon = isReceita ? Wallet : Receipt;
+  const maxHistory = Math.max(...historyData.map((h) => h.value), 1);
 
   return (
-    <div className="pb-24 md:pb-8 w-full select-none">
-      {/* Header */}
-      <div className="mb-4">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors mb-2">
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-xs font-medium">Voltar</span>
-        </button>
-        <h1 className="text-lg font-bold font-display text-foreground">
-          {isReceita ? "Receitas" : "Despesas"} · {monthLabel}
-        </h1>
-      </div>
+    <div className="mx-auto max-w-lg pb-28">
+      <PageHeader title={isReceita ? "Receitas" : "Despesas"} subtitle={monthLabel} />
 
-      {/* ═══ Hero Card ═══ */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: "spring", stiffness: 220, damping: 18 }}
-        className="rounded-xl overflow-hidden mb-5 relative border border-border/10 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.5)] backdrop-blur-sm"
+      {/* Hero */}
+      <motion.section
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative mt-5 overflow-hidden rounded-[28px] border border-white/[0.08] p-5"
         style={{
-          background: "linear-gradient(160deg, hsl(220 15% 14% / 0.6) 0%, hsl(220 18% 8% / 0.75) 50%, hsl(220 20% 4% / 0.9) 100%)",
+          background: `radial-gradient(120% 90% at 100% 0%, ${accentHex}1C 0%, rgba(20,20,20,0.96) 55%, #0E0E0E 100%)`,
         }}
       >
-        {/* Subtle ambient glow */}
-        <div className="absolute -top-16 -right-16 w-40 h-40 rounded-full pointer-events-none" style={{ background: `radial-gradient(circle, ${accentHsl.replace(")", " / 0.08)")}, transparent 65%)`, filter: "blur(40px)" }} />
-
-        <div className="relative px-5 pt-5 pb-4">
-          {/* Top row: Ring + Total */}
-          <div className="flex items-center gap-4 mb-3">
-            <div className="relative flex-shrink-0">
-              <ProgressRing pct={paidPct} color={accentHsl} size={52} stroke={3.5} />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div
-                  className="w-6 h-6 rounded-lg flex items-center justify-center"
-                  style={{ background: `${accentHsl.replace(")", " / 0.12)")}` }}
-                >
-                  <HeroIcon className={`w-3 h-3 text-${accent}`} />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <p className="text-[9px] text-muted-foreground uppercase tracking-[0.15em] font-semibold mb-0.5">
-                Total {isReceita ? "Receitas" : "Despesas"}
-              </p>
-              <p className={`text-[22px] md:text-3xl font-bold tabular-nums font-display text-${accent} leading-none`}>
-                {fmt(total)}
-              </p>
-              {trend !== 0 && (
-                <div className="flex items-center gap-1.5 mt-1.5">
-                  <div
-                    className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full ${trendPositive ? "text-primary" : "text-destructive"}`}
-                    style={{
-                      background: trendPositive ? "hsl(var(--primary) / 0.1)" : "hsl(var(--destructive) / 0.1)",
-                      border: `1px solid ${trendPositive ? "hsl(var(--primary) / 0.15)" : "hsl(var(--destructive) / 0.15)"}`,
-                    }}
-                  >
-                    {trendPositive ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
-                    <span className="text-[8px] font-bold">
-                      {trend > 0 ? "+" : ""}{trend}%
-                    </span>
-                  </div>
-                  <span className="text-[8px] text-muted-foreground/35 font-medium">vs mês anterior</span>
-                </div>
-              )}
-            </div>
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: `${accentHex}22` }}>
+            <HeroIcon className="h-[18px] w-[18px]" style={{ color: accentHex }} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] text-white/55">Total {isReceita ? "de receitas" : "de despesas"}</p>
+            <p className="truncate text-[30px] font-extrabold leading-tight tracking-tight tabular-nums text-white">{fmt(total)}</p>
           </div>
-
-          {/* Subtle divider */}
-          <div className="h-px w-full mb-3 bg-border/10" />
-
-          {/* Paid / Pending inline indicators */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className={`w-3 h-3 text-${accent}/50`} />
-              <span className="text-[9px] text-muted-foreground/40 font-semibold">{isReceita ? "Recebido" : "Pago"}</span>
-              <span className={`text-[12px] font-bold tabular-nums text-${accent}`}>{fmt(paid)}</span>
-            </div>
-            <div className="w-px h-3 bg-border/10" />
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3 h-3 text-yellow-400/50" />
-              <span className="text-[9px] text-muted-foreground/40 font-semibold">Pendente</span>
-              <span className="text-[12px] font-bold tabular-nums text-yellow-400">{fmt(pending)}</span>
-            </div>
-          </div>
+          {trend !== 0 && (
+            <span className={cn("flex shrink-0 items-center gap-1 rounded-full bg-white/[0.08] px-2.5 py-1.5 text-[12px] font-semibold tabular-nums", trendPositive ? "text-willo-green" : "text-red-400")}>
+              {trendPositive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+              {trend > 0 ? "+" : ""}{trend}%
+            </span>
+          )}
         </div>
-      </motion.div>
 
-      {/* ═══ Evolution Chart ═══ */}
+        <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.07]">
+          <motion.div
+            className="h-full rounded-full"
+            style={{ background: accentHex }}
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(paidPct, 100)}%` }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+          />
+        </div>
+
+        <div className="mt-3 flex items-center gap-4">
+          <span className="flex items-center gap-1.5 text-[13px] text-white/60">
+            <CheckCircle2 className="h-3.5 w-3.5" style={{ color: accentHex }} />
+            {isReceita ? "Recebido" : "Pago"} <span className="font-semibold text-white tabular-nums">{fmt(paid)}</span>
+          </span>
+          <span className="flex items-center gap-1.5 text-[13px] text-white/60">
+            <Clock className="h-3.5 w-3.5 text-amber-300" />
+            Pendente <span className="font-semibold text-white tabular-nums">{fmt(pending)}</span>
+          </span>
+        </div>
+      </motion.section>
+
+      {/* Evolution chart */}
       {historyData.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="rounded-2xl border border-border/10 bg-card/70 backdrop-blur-xl overflow-hidden mb-5"
-          style={{ boxShadow: "0 4px 20px -4px rgba(0,0,0,0.2)" }}
-        >
-          <div className="px-4 pt-4 pb-1">
-            <p className="text-[11px] text-foreground/55 font-semibold">Evolução mensal</p>
-          </div>
-          <div className="px-1 pb-2">
-            <ResponsiveContainer width="100%" height={120}>
-              <AreaChart data={historyData} margin={{ top: 8, right: 12, left: 12, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="areaGradDetail" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={accentHsl} stopOpacity={0.3} />
-                    <stop offset="80%" stopColor={accentHsl} stopOpacity={0.03} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="month" tick={{ fill: "hsl(220 15% 50%)", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
-                <YAxis hide />
-                <RechartsTooltip
-                  contentStyle={{
-                    background: "hsl(220 20% 9%)",
-                    border: `1px solid ${accentHsl.replace(")", " / 0.2)")}`,
-                    borderRadius: "10px", fontSize: "11px", color: "hsl(220 15% 80%)",
-                    boxShadow: `0 8px 24px ${accentHsl.replace(")", " / 0.12)")}`,
-                  }}
-                  formatter={(value: number) => [fmt(value), isReceita ? "Receitas" : "Despesas"]}
-                />
-                <Area
-                  type="natural"
-                  dataKey="value"
-                  stroke={accentHsl}
-                  strokeWidth={2}
-                  fill="url(#areaGradDetail)"
-                  dot={{ fill: accentHsl, r: 3.5, strokeWidth: 2, stroke: "hsl(220 20% 9%)" }}
-                  activeDot={{ r: 5.5, fill: accentHsl, stroke: "hsl(220 20% 9%)", strokeWidth: 2 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
+        <>
+          <SectionTitle>Evolução mensal</SectionTitle>
+          <Surface className="p-4">
+            <div className="flex items-end justify-center gap-3">
+              {historyData.map((h, i) => {
+                const isCurrent = i === historyData.length - 1;
+                const barH = Math.max((h.value / maxHistory) * 84, 6);
+                return (
+                  <div key={h.month} className="flex flex-1 flex-col items-center gap-1.5">
+                    <span className={cn("whitespace-nowrap text-[10px] font-bold tabular-nums", isCurrent ? "text-white" : "text-white/40")}>
+                      {h.value > 0 ? compact(h.value) : "—"}
+                    </span>
+                    <motion.div
+                      className="w-full max-w-[28px] rounded-[8px]"
+                      style={{ background: isCurrent ? accentHex : `${accentHex}44` }}
+                      initial={{ height: 0 }}
+                      animate={{ height: barH }}
+                      transition={{ delay: i * 0.03, duration: 0.5, ease: "easeOut" }}
+                    />
+                    <span className={cn("text-[11px]", isCurrent ? "font-semibold text-white" : "text-white/40")}>{h.month}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </Surface>
+        </>
       )}
 
-      {/* ═══ Pending List ═══ */}
+      {/* Pending list */}
       {allPending.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-4">
-          <div className="flex items-center gap-2 mb-2.5">
-            <div className="w-5 h-5 rounded-md bg-yellow-400/10 flex items-center justify-center">
-              <Clock className="w-3 h-3 text-yellow-400" />
-            </div>
-            <h3 className="text-[11px] font-bold text-foreground/45 uppercase tracking-widest">
-              {isReceita ? "A Receber" : "Pendentes"}
-            </h3>
-            <span className="ml-auto text-[10px] font-bold text-yellow-400/50 tabular-nums">{allPending.length}</span>
-          </div>
-          <div className="space-y-1.5">
+        <>
+          <SectionTitle action={<span className="text-[12px] font-bold tabular-nums text-amber-300/70">{allPending.length}</span>}>
+            {isReceita ? "A receber" : "Pendentes"}
+          </SectionTitle>
+          <Surface className="divide-y divide-white/[0.06] px-3">
             <AnimatePresence mode="popLayout">
               {displayPending.map((item, i) =>
                 item.kind === "tx" ? (
@@ -344,23 +264,17 @@ const ReceitasDespesasDetalhe = () => {
                 )
               )}
             </AnimatePresence>
-          </div>
-        </motion.div>
+          </Surface>
+        </>
       )}
 
-      {/* ═══ Paid List ═══ */}
+      {/* Paid list */}
       {allPaid.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-4">
-          <div className="flex items-center gap-2 mb-2.5">
-            <div className={`w-5 h-5 rounded-md bg-${accent}/10 flex items-center justify-center`}>
-              <CheckCircle2 className={`w-3 h-3 text-${accent}`} />
-            </div>
-            <h3 className="text-[11px] font-bold text-foreground/45 uppercase tracking-widest">
-              {isReceita ? "Recebidas" : "Pagas"}
-            </h3>
-            <span className={`ml-auto text-[10px] font-bold text-${accent}/50 tabular-nums`}>{allPaid.length}</span>
-          </div>
-          <div className="space-y-1.5">
+        <>
+          <SectionTitle action={<span className="text-[12px] font-bold tabular-nums" style={{ color: `${accentHex}B0` }}>{allPaid.length}</span>}>
+            {isReceita ? "Recebidas" : "Pagas"}
+          </SectionTitle>
+          <Surface className="divide-y divide-white/[0.06] px-3">
             <AnimatePresence mode="popLayout">
               {displayPaid.map((item, i) =>
                 item.kind === "tx" ? (
@@ -370,19 +284,20 @@ const ReceitasDespesasDetalhe = () => {
                 )
               )}
             </AnimatePresence>
-          </div>
-        </motion.div>
+          </Surface>
+        </>
       )}
 
       {hasMore && (
-        <button onClick={() => setShowAll(!showAll)} className="w-full flex items-center justify-center gap-1.5 text-[11px] text-primary font-semibold py-2.5 rounded-xl hover:bg-primary/5 transition-colors">
-          {showAll ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        <button onClick={() => setShowAll(!showAll)} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-white/[0.06] py-3 text-[13px] font-semibold text-white active:opacity-70">
+          {showAll ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          {showAll ? "Ver menos" : "Ver todos"}
         </button>
       )}
 
       {loading && transactions.length === 0 && (
         <div className="flex items-center justify-center py-16">
-          <div className="animate-pulse text-primary text-sm font-medium">Carregando...</div>
+          <span className="animate-pulse text-[14px] font-medium text-white/50">Carregando...</span>
         </div>
       )}
 
@@ -404,42 +319,34 @@ const TxRowItem = ({
   const color = getCategoryColor(tx.category, customCats);
   const Icon = getCategoryIcon(tx.category, customCats);
   const dateFormatted = new Date(tx.date + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short" });
-  const statusColor = isPending ? "hsl(40 80% 50%)" : isReceita ? "hsl(var(--primary))" : "hsl(var(--destructive))";
+  const statusColor = isPending ? "#FCD34D" : isReceita ? "#C8F36D" : "#F87171";
 
   return (
-    <motion.div
+    <motion.button
       layout
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4 }}
       transition={{ delay: idx * 0.02, type: "spring", stiffness: 400, damping: 30 }}
-      className="flex items-center gap-3 pl-0 pr-3 py-0 rounded-xl cursor-pointer active:scale-[0.99] transition-transform overflow-hidden"
-      style={{
-        background: isPending ? "hsl(40 80% 50% / 0.04)" : "hsl(220 18% 12% / 0.6)",
-        border: `1px solid ${isPending ? "hsl(40 80% 50% / 0.1)" : "hsl(220 15% 18% / 0.3)"}`,
-      }}
       onClick={onClick}
+      className="flex w-full items-center gap-3 py-3 text-left active:opacity-70"
     >
-      {/* Left accent bar */}
-      <div className="w-[3px] self-stretch rounded-r-full flex-shrink-0" style={{ background: statusColor, opacity: 0.5 }} />
-      <div className="flex items-center gap-3 flex-1 min-w-0 py-3">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `hsl(${color} / 0.1)` }}>
-          <Icon className="w-4 h-4" style={{ color: `hsl(${color})` }} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-bold text-foreground/90 truncate">{tx.name}</p>
-          <p className="text-[10px] text-muted-foreground/40 mt-0.5 font-medium">{tx.category} · {dateFormatted}</p>
-        </div>
-        <div className="text-right shrink-0">
-          <p className="text-[13px] font-bold tabular-nums" style={{ color: statusColor }}>
-            {isReceita ? "+" : "−"}{fmt(tx.amount)}
-          </p>
-          <span className="block mt-0.5 text-[8px] font-bold uppercase tracking-wider" style={{ color: `${statusColor}`, opacity: 0.4 }}>
-            {isPending ? (isReceita ? "A Receber" : "Pendente") : (isReceita ? "Recebido" : "Pago")}
-          </span>
-        </div>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: `hsl(${color} / 0.15)` }}>
+        <Icon className="h-[18px] w-[18px]" style={{ color: `hsl(${color})` }} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[14.5px] font-semibold text-white">{tx.name}</p>
+        <p className="truncate text-[12px] text-white/40">{tx.category} · {dateFormatted}</p>
       </div>
-    </motion.div>
+      <div className="shrink-0 text-right">
+        <p className="text-[14px] font-bold tabular-nums" style={{ color: statusColor }}>
+          {isReceita ? "+" : "−"}{fmt(tx.amount)}
+        </p>
+        <span className="block text-[10.5px] font-medium" style={{ color: statusColor, opacity: 0.65 }}>
+          {isPending ? (isReceita ? "A receber" : "Pendente") : (isReceita ? "Recebido" : "Pago")}
+        </span>
+      </div>
+    </motion.button>
   );
 };
 
@@ -447,38 +354,31 @@ const TxRowItem = ({
 const InvoiceRowItem = ({
   inv, isPending, onClick, idx,
 }: { inv: InvoiceRow; isPending: boolean; onClick: () => void; idx: number }) => {
-  const statusColor = isPending ? "hsl(40 80% 50%)" : "hsl(var(--destructive))";
+  const statusColor = isPending ? "#FCD34D" : "#F87171";
   return (
-    <motion.div
+    <motion.button
       layout
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4 }}
       transition={{ delay: idx * 0.02, type: "spring", stiffness: 400, damping: 30 }}
-      className="flex items-center gap-3 pl-0 pr-3 py-0 rounded-xl cursor-pointer active:scale-[0.99] transition-transform overflow-hidden"
-      style={{
-        background: isPending ? "hsl(40 80% 50% / 0.04)" : "hsl(220 18% 12% / 0.6)",
-        border: `1px solid ${isPending ? "hsl(40 80% 50% / 0.1)" : "hsl(220 15% 18% / 0.3)"}`,
-      }}
       onClick={onClick}
+      className="flex w-full items-center gap-3 py-3 text-left active:opacity-70"
     >
-      <div className="w-[3px] self-stretch rounded-r-full flex-shrink-0" style={{ background: statusColor, opacity: 0.5 }} />
-      <div className="flex items-center gap-3 flex-1 min-w-0 py-3">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: inv.card_color ? `${inv.card_color}12` : "hsl(220 20% 16%)" }}>
-          <CreditCard className="w-4 h-4" style={{ color: inv.card_color || "hsl(220 15% 50%)" }} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-bold text-foreground/90 truncate">Fatura {inv.card_name}</p>
-          <p className="text-[10px] text-muted-foreground/40 mt-0.5 font-medium">{MONTH_SHORT[inv.month - 1]}/{inv.year}</p>
-        </div>
-        <div className="text-right shrink-0">
-          <p className="text-[13px] font-bold tabular-nums" style={{ color: statusColor }}>−{fmt(inv.total_amount)}</p>
-          <span className="block mt-0.5 text-[8px] font-bold uppercase tracking-wider" style={{ color: statusColor, opacity: 0.4 }}>
-            {isPending ? "Pendente" : "Paga"}
-          </span>
-        </div>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: inv.card_color ? `${inv.card_color}22` : "rgba(255,255,255,0.06)" }}>
+        <CreditCard className="h-[18px] w-[18px]" style={{ color: inv.card_color || "rgba(255,255,255,0.5)" }} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[14.5px] font-semibold text-white">Fatura {inv.card_name}</p>
+        <p className="truncate text-[12px] text-white/40">{MONTH_SHORT[inv.month - 1]}/{inv.year}</p>
       </div>
-    </motion.div>
+      <div className="shrink-0 text-right">
+        <p className="text-[14px] font-bold tabular-nums" style={{ color: statusColor }}>−{fmt(inv.total_amount)}</p>
+        <span className="block text-[10.5px] font-medium" style={{ color: statusColor, opacity: 0.65 }}>
+          {isPending ? "Pendente" : "Paga"}
+        </span>
+      </div>
+    </motion.button>
   );
 };
 

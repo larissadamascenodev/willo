@@ -1,8 +1,9 @@
 import { memo, useMemo, useState } from "react";
-import { Check, Clock, AlertTriangle, ChevronRight, ChevronUp, CalendarDays } from "lucide-react";
+import { Check, Clock, AlertTriangle, ChevronDown, ChevronUp, CalendarDays } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { FinanceEvent } from "@/types/finance";
 
+import { getCurrency } from "@/lib/currency";
 interface Props {
   events: FinanceEvent[];
   selectedMonth: number;
@@ -12,10 +13,10 @@ interface Props {
 }
 
 const STATUS_CONFIG = {
-  pago: { label: "Pago", accent: "150 100% 45%", Icon: Check },
-  pendente: { label: "Pendente", accent: "40 80% 50%", Icon: Clock },
-  atrasado: { label: "Atrasado", accent: "0 60% 50%", Icon: AlertTriangle },
-  recebido: { label: "Recebido", accent: "150 100% 45%", Icon: Check },
+  pago: { label: "Pago", accent: "80 84% 69%", Icon: Check },
+  pendente: { label: "Pendente", accent: "45 93% 64%", Icon: Clock },
+  atrasado: { label: "Atrasado", accent: "0 91% 71%", Icon: AlertTriangle },
+  recebido: { label: "Recebido", accent: "80 84% 69%", Icon: Check },
 };
 
 const getStatusLabel = (status: string, type?: string) => {
@@ -32,7 +33,7 @@ const getStatusLabel = (status: string, type?: string) => {
 };
 
 const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 const fmtDate = (d: Date) =>
   d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", "");
@@ -78,62 +79,47 @@ const ProximosEventos = memo(({ events, selectedMonth, selectedYear, onVerTodos,
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -4 }}
         transition={{ delay: idx * 0.03, type: "spring", stiffness: 500, damping: 35 }}
-        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${isClickable ? "cursor-pointer hover:scale-[1.01] active:scale-[0.99]" : ""}`}
-        style={{
-          background: isPaid ? `hsl(150 100% 45% / 0.06)` : `hsl(${a} / 0.05)`,
-          borderColor: isPaid ? `hsl(150 100% 45% / 0.15)` : `hsl(${a} / 0.12)`,
-        }}
+        className={`flex items-center gap-3 py-3 ${isClickable ? "cursor-pointer active:opacity-70" : ""}`}
         onClick={() => {
           if (isClickable && onEventClick) onEventClick(ev);
         }}
       >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: `hsl(${a} / 0.12)` }}>
+          <StatusIcon className="h-4 w-4" style={{ color: `hsl(${a})` }} />
+        </span>
+
         {/* Content */}
-        <div className="flex-1 min-w-0">
-          <p className={`text-[12px] font-semibold truncate ${isPaid ? "text-foreground/50" : "text-foreground/90"}`}>
-            {ev.name}
+        <div className="min-w-0 flex-1">
+          <p className={`truncate text-[15px] font-medium ${isPaid ? "text-white/45" : "text-white"}`}>{ev.name}</p>
+          <p className="text-[12px]" style={{ color: `hsl(${a} / 0.85)` }}>
+            {getStatusLabel(ev.status, ev.type)}
           </p>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <StatusIcon className="w-2.5 h-2.5" style={{ color: `hsl(${a})` }} />
-            <span className="text-[9px] font-medium" style={{ color: `hsl(${a} / 0.7)` }}>
-              {getStatusLabel(ev.status, ev.type)}
-            </span>
-          </div>
         </div>
 
         {/* Amount + date */}
-        <div className="text-right shrink-0">
-          <p className={`text-[12px] font-bold tabular-nums`} style={{ color: `hsl(${a})` }}>
-            {fmt(ev.amount)}
-          </p>
-          <p className="text-[9px] text-muted-foreground/50 mt-0.5">
-            {fmtDate(ev._date)}
-          </p>
+        <div className="shrink-0 text-right">
+          <p className={`text-[15px] font-semibold tabular-nums ${isPaid ? "text-white/45" : "text-white"}`}>{fmt(ev.amount)}</p>
+          <p className="text-[12px] text-white/40">{fmtDate(ev._date)}</p>
         </div>
       </motion.div>
     );
   };
 
   return (
-    <div className="rounded-2xl bg-card/90 backdrop-blur-xl border border-border/30 shadow-lg shadow-black/20 overflow-hidden">
+    <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
-        <div className="flex items-center gap-2">
-          <CalendarDays className="w-4 h-4 text-primary" />
-          <h2 className="text-sm font-bold text-foreground">Próximos Eventos</h2>
-        </div>
+      <div className="flex items-center gap-2 px-4 pt-4">
+        <CalendarDays className="h-4 w-4 text-white/60" />
+        <h2 className="text-[16px] font-semibold text-white">Próximos eventos</h2>
       </div>
 
       {/* Events list */}
-      <div className="px-3 pb-2 space-y-1.5">
-        <AnimatePresence mode="popLayout">
+      <div className="px-4 pt-1 divide-y divide-white/[0.06]">
+        <AnimatePresence mode="popLayout" initial={false}>
           {displayEvents.length > 0 ? (
             displayEvents.map((ev, idx) => renderEvent(ev, idx))
           ) : (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center text-[11px] text-muted-foreground/40 py-4"
-            >
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-5 text-center text-[13px] text-white/40">
               Nenhum evento este mês
             </motion.p>
           )}
@@ -141,19 +127,19 @@ const ProximosEventos = memo(({ events, selectedMonth, selectedYear, onVerTodos,
       </div>
 
       {/* Ver todos / Recolher */}
-      {hasMore && (
-        <div className="px-4 pb-3">
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="w-full flex items-center justify-center gap-1 text-[11px] text-primary font-semibold py-1.5 rounded-lg hover:bg-primary/5 transition-colors"
-          >
-            {expanded ? (
-              <>Recolher <ChevronUp className="w-3.5 h-3.5" /></>
-            ) : (
-              <>Ver todos ({sortedEvents.length}) <ChevronRight className="w-3.5 h-3.5" /></>
-            )}
-          </button>
-        </div>
+      {hasMore ? (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="flex w-full items-center justify-center gap-1 border-t border-white/[0.06] py-3 text-[13px] font-medium text-white/60 active:opacity-60"
+        >
+          {expanded ? (
+            <>Recolher <ChevronUp className="h-4 w-4" /></>
+          ) : (
+            <>Ver todos ({sortedEvents.length}) <ChevronDown className="h-4 w-4" /></>
+          )}
+        </button>
+      ) : (
+        <div className="h-1" />
       )}
     </div>
   );

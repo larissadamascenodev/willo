@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
+import { currencySymbol } from "@/lib/currency";
 export interface AppNotification {
   id: string;
   user_id: string;
@@ -62,6 +63,22 @@ export async function markAsRead(notificationId: string) {
   await supabase.from("notifications").update({ is_read: true } as any).eq("id", notificationId);
 }
 
+export async function deleteNotification(notificationId: string) {
+  await supabase.from("notifications").delete().eq("id", notificationId);
+}
+
+// Marks a notification and any older copies about the same item as read.
+export async function markRelatedAsRead(userId: string, notification: { id: string; category: string; related_id: string | null }) {
+  if (!notification.related_id) return markAsRead(notification.id);
+  await supabase
+    .from("notifications")
+    .update({ is_read: true } as any)
+    .eq("user_id", userId)
+    .eq("category", notification.category)
+    .eq("related_id", notification.related_id)
+    .eq("is_read", false);
+}
+
 export async function markAllAsRead(userId: string) {
   await supabase.from("notifications").update({ is_read: true } as any).eq("user_id", userId).eq("is_read", false);
 }
@@ -90,11 +107,26 @@ export async function updateSettings(id: string, updates: Partial<Omit<Notificat
 }
 
 // ── Generate notifications (runs on dashboard load) ──
-export async function generateNotifications(userId: string) {
+// Several components mount useNotifications at once, so concurrent calls for the
+// same user share one run instead of each inserting its own copies.
+const generationRuns = new Map<string, Promise<void>>();
+
+export function generateNotifications(userId: string) {
+  const inFlight = generationRuns.get(userId);
+  if (inFlight) return inFlight;
+
+  const run = runGenerateNotifications(userId).finally(() => generationRuns.delete(userId));
+  generationRuns.set(userId, run);
+  return run;
+}
+
+// Re-alert about the same item only when the previous alert was read and is older than this.
+const RENOTIFY_AFTER_MS = 24 * 60 * 60 * 1000;
+
+async function runGenerateNotifications(userId: string) {
   const settings = await getOrCreateSettings(userId);
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
-  const startOfToday = `${todayStr}T00:00:00`;
   const noDataResult = Promise.resolve({ data: null } as const);
 
   const billFutureDate = new Date(today);
@@ -159,13 +191,14 @@ export async function generateNotifications(userId: string) {
   const fetchExistingRelatedIds = async (relatedIds: string[], category: string) => {
     if (relatedIds.length === 0) return new Set<string>();
 
+    const renotifyCutoff = new Date(Date.now() - RENOTIFY_AFTER_MS).toISOString();
     const { data } = await supabase
       .from("notifications")
       .select("related_id")
       .eq("user_id", userId)
       .eq("category", category)
       .in("related_id", relatedIds)
-      .gte("created_at", startOfToday);
+      .or(`is_read.eq.false,created_at.gte.${renotifyCutoff}`);
 
     return new Set((data ?? []).map((item) => item.related_id).filter(Boolean) as string[]);
   };
@@ -201,7 +234,7 @@ export async function generateNotifications(userId: string) {
     notifications.push({
       user_id: userId,
       title: daysUntil === 0 ? "Conta vence hoje!" : `Conta vence em ${daysUntil} dia${daysUntil > 1 ? "s" : ""}`,
-      message: `${bill.name} — R$ ${Number(bill.amount).toFixed(2).replace(".", ",")}`,
+      message: `${bill.name} — ${currencySymbol()} ${Number(bill.amount).toFixed(2).replace(".", ",")}`,
       type: daysUntil === 0 ? "alert" : "warning",
       category: "vencimento",
       related_id: bill.id,
@@ -221,7 +254,7 @@ export async function generateNotifications(userId: string) {
     notifications.push({
       user_id: userId,
       title: daysUntil === 0 ? "Fatura vence hoje!" : `Fatura vence em ${daysUntil} dia${daysUntil > 1 ? "s" : ""}`,
-      message: `${card.name} — R$ ${Number(invoice.total_amount).toFixed(2).replace(".", ",")}`,
+      message: `${card.name} — ${currencySymbol()} ${Number(invoice.total_amount).toFixed(2).replace(".", ",")}`,
       type: daysUntil <= 1 ? "alert" : "warning",
       category: "fatura",
       related_id: invoice.id,
@@ -236,7 +269,7 @@ export async function generateNotifications(userId: string) {
     notifications.push({
       user_id: userId,
       title: `Meta "${goal.name}" vence em ${daysLeft} dias`,
-      message: `Progresso: ${pct}% — faltam R$ ${(goal.target_amount - goal.current_amount).toFixed(2).replace(".", ",")}`,
+      message: `Progresso: ${pct}% — faltam ${currencySymbol()} ${(goal.target_amount - goal.current_amount).toFixed(2).replace(".", ",")}`,
       type: "info",
       category: "meta",
       related_id: goal.id,
@@ -249,7 +282,7 @@ export async function generateNotifications(userId: string) {
     notifications.push({
       user_id: userId,
       title: "Saldo baixo",
-      message: `${account.name} está com R$ ${Number(account.current_balance).toFixed(2).replace(".", ",")}`,
+      message: `${account.name} está com ${currencySymbol()} ${Number(account.current_balance).toFixed(2).replace(".", ",")}`,
       type: "warning",
       category: "saldo",
       related_id: account.id,

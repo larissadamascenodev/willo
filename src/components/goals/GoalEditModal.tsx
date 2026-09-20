@@ -7,6 +7,7 @@ import { updateGoal, type Goal } from "@/services/goalService";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
+import { currencySymbol } from "@/lib/currency";
 interface GoalEditModalProps {
   open: boolean;
   onClose: () => void;
@@ -139,7 +140,7 @@ const GoalEditModal = ({ open, onClose, goal, onUpdated }: GoalEditModalProps) =
                 />
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground mb-1.5">Valor alvo (R$)</Label>
+                <Label className="text-xs text-muted-foreground mb-1.5">Valor alvo ({currencySymbol()})</Label>
                 <Input
                   type="number"
                   value={targetAmount}
@@ -151,7 +152,7 @@ const GoalEditModal = ({ open, onClose, goal, onUpdated }: GoalEditModalProps) =
                 />
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground mb-1.5">Aporte mensal (R$)</Label>
+                <Label className="text-xs text-muted-foreground mb-1.5">Aporte mensal ({currencySymbol()})</Label>
                 <Input
                   type="number"
                   value={monthlyContribution}

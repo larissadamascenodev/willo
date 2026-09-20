@@ -1,10 +1,11 @@
 import { motion } from "framer-motion";
-import {
+import { ChevronLeft,
   FileText, ShieldCheck, CreditCard, RotateCcw, XCircle, AlertTriangle,
-  ArrowLeft, Lock, CheckCircle2, Brain, Smartphone, Scale, RefreshCw,
+  Lock, CheckCircle2, Brain, Smartphone, Scale, RefreshCw,
   Mail, Sparkles, Heart, Copyright,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { SUPPORT_EMAIL } from "@/lib/support";
 
 /* ─── types ─── */
 interface Section {
@@ -17,102 +18,100 @@ interface Section {
 const sections: Section[] = [
   {
     icon: CheckCircle2,
-    title: "Aceitação dos Termos",
+    title: "Aceitação dos termos",
     content: [
-      "Ao utilizar o Willo, você concorda com estes Termos de Uso.",
-      "Nosso objetivo é garantir uma **experiência segura e transparente** para você.",
+      "Ao criar uma conta e usar o Willo, você concorda com estes Termos de Uso e com a nossa Política de Privacidade.",
+      "Se não concordar com algum ponto, é só não usar o app.",
     ],
   },
   {
     icon: Smartphone,
-    title: "Sobre o Willo",
+    title: "O que é o Willo",
     content: [
-      "O Willo é uma **ferramenta de organização financeira pessoal**.",
-      "Permite registrar receitas, despesas, metas e investimentos, tudo em um só lugar.",
-      "O app **não realiza movimentações bancárias** nem substitui consultoria financeira profissional.",
+      "O Willo é uma **ferramenta de organização financeira pessoal**: você registra receitas, despesas, cartões, contas e metas, e o app organiza, calcula e mostra o que está acontecendo com o seu dinheiro.",
+      "O Willo **não movimenta dinheiro**: não faz pagamentos, transferências, Pix, investimentos nem se conecta às suas contas bancárias. Tudo que aparece no app vem do que **você informa**, digitando ou enviando uma foto de comprovante.",
+      "O conteúdo é **educativo e informativo**. O Willo não é instituição financeira, não faz recomendação de investimento e não substitui um consultor ou planejador financeiro.",
     ],
   },
   {
     icon: ShieldCheck,
-    title: "Cadastro e Responsabilidade",
+    title: "Cadastro e responsabilidade",
     content: [
-      "Você é responsável por manter suas **credenciais de acesso** seguras.",
-      "As informações inseridas no app são de sua **inteira responsabilidade**.",
-      "Dados falsos ou uso indevido podem resultar em suspensão da conta.",
+      "Para usar o app é preciso criar uma conta com e-mail válido. O app é destinado a **maiores de 13 anos**.",
+      "Você é responsável por **guardar sua senha** e por tudo que acontecer na sua conta. Nunca pedimos sua senha por e-mail, WhatsApp ou telefone.",
+      "As informações que você registra são de **sua responsabilidade**. O Willo calcula em cima do que recebe.",
     ],
   },
   {
     icon: CreditCard,
-    title: "Planos e Acesso",
+    title: "Preço",
     content: [
-      "O Willo oferece um **período de teste gratuito** por tempo limitado, permitindo que você explore as funcionalidades da plataforma antes de contratar um plano.",
-      "Após o término do período de teste, o acesso completo às funcionalidades depende de uma **assinatura ativa**.",
+      "Hoje o Willo é **gratuito** e todas as funções estão liberadas. Não há assinatura nem cobrança dentro do app.",
+      "Se um plano pago for lançado no futuro, a compra será feita **pela própria App Store ou Google Play**, com os preços, a renovação e o cancelamento seguindo as regras dessas lojas. Você será avisado antes, e o que já existe na sua conta continua seu.",
     ],
   },
   {
-    icon: RefreshCw,
-    title: "Cobrança e Renovação",
+    icon: Brain,
+    title: "Inteligência artificial",
     content: [
-      "Após o período gratuito, a assinatura será iniciada automaticamente, conforme as condições informadas no momento da contratação, caso não haja cancelamento prévio.",
-      "A cobrança é **recorrente**, conforme o plano escolhido no momento da contratação.",
-      "Ao contratar um plano, você concorda com as condições de cobrança, valores e **renovação automática**.",
+      "O app usa IA para **ler fotos de comprovantes e faturas** e para **sugerir categorias e análises**.",
+      "Essas leituras e sugestões são automáticas e **podem conter erros**. Sempre confira os valores antes de salvar, e ajuste o que estiver diferente.",
+      "As análises e projeções são estimativas baseadas nos seus próprios registros, não promessas de resultado.",
+    ],
+  },
+  {
+    icon: Lock,
+    title: "Uso aceitável",
+    content: [
+      "Use o Willo para fins pessoais e legítimos.",
+      "É proibido tentar **acessar dados de outras pessoas**, sobrecarregar ou burlar o serviço, fazer engenharia reversa ou usar o app para qualquer atividade ilícita.",
     ],
   },
   {
     icon: XCircle,
-    title: "Cancelamento",
+    title: "Excluir sua conta e encerramento",
     content: [
-      "Você pode cancelar sua assinatura a qualquer momento diretamente pela plataforma.",
-      "Após o cancelamento, o acesso permanecerá ativo até o **final do período já pago**.",
-      "O não uso do serviço não implica cancelamento automático da assinatura.",
-    ],
-  },
-  {
-    icon: RotateCcw,
-    title: "Reembolso",
-    content: [
-      "Você pode solicitar reembolso integral no prazo de até **7 dias corridos** após a contratação, conforme previsto no Código de Defesa do Consumidor.",
-      "Após esse prazo, não haverá reembolso de valores já pagos.",
-    ],
-  },
-  {
-    icon: Scale,
-    title: "Uso Aceitável",
-    content: [
-      "Use o Willo apenas para fins pessoais e legítimos.",
-      "É proibido tentar **acessar dados de outros usuários**, fazer engenharia reversa ou usar o app para atividades ilícitas.",
+      "Você pode **excluir sua conta a qualquer momento** dentro do app, em Configurações → Dados → Excluir minha conta. Isso apaga seus dados de forma definitiva.",
+      "Podemos suspender ou encerrar contas que violem estes termos ou coloquem o serviço e outras pessoas em risco.",
     ],
   },
   {
     icon: AlertTriangle,
-    title: "Limitação de Responsabilidade",
+    title: "Limitação de responsabilidade",
     content: [
-      "O Willo oferece **ferramentas de organização**, não garantias de resultados financeiros.",
-      "Decisões financeiras tomadas com base nas análises do app são de **sua responsabilidade**.",
+      "O Willo é oferecido **como está**. Fazemos o possível para manter tudo funcionando e correto, mas não garantimos ausência de falhas, indisponibilidade ou erros de cálculo.",
+      "**As decisões financeiras são suas.** O Willo não responde por perdas, prejuízos ou escolhas tomadas com base nas informações e análises do app.",
     ],
   },
   {
     icon: Copyright,
-    title: "Propriedade Intelectual",
+    title: "Propriedade intelectual",
     content: [
-      "Todo o conteúdo, design, código e marca do Willo são de **propriedade exclusiva** da equipe Willo.",
-      "É proibida a reprodução sem autorização prévia.",
+      "O nome, a marca, o design, os textos e o código do Willo pertencem ao Willo.",
+      "Os **seus dados continuam seus**: usamos apenas para fazer o app funcionar para você, como explicado na Política de Privacidade.",
     ],
   },
   {
     icon: RefreshCw,
-    title: "Alterações nos Termos",
+    title: "Alterações nestes termos",
     content: [
-      "Podemos atualizar estes termos periodicamente.",
-      "Alterações relevantes serão comunicadas dentro do app ou por e-mail.",
+      "Podemos atualizar estes termos. Mudanças relevantes serão avisadas dentro do app.",
+      "Continuar usando o Willo depois do aviso significa que você concorda com a versão nova.",
+    ],
+  },
+  {
+    icon: Scale,
+    title: "Lei aplicável",
+    content: [
+      "Estes termos seguem as leis brasileiras, incluindo o **Código de Defesa do Consumidor** e a **LGPD** (Lei 13.709/2018).",
+      "Eventuais questões serão tratadas no foro do seu domicílio.",
     ],
   },
   {
     icon: Mail,
     title: "Contato",
     content: [
-      "Dúvidas? Fale conosco pelo **suporte dentro do app**.",
-      "Estamos sempre prontos para ajudar.",
+      `Dúvidas sobre estes termos? Escreva para **${SUPPORT_EMAIL}** ou use a página de suporte do app.`,
     ],
   },
 ];
@@ -166,9 +165,9 @@ const TermosDeUso = () => {
         initial={{ opacity: 0, x: -8 }}
         animate={{ opacity: 1, x: 0 }}
         onClick={() => navigate(-1)}
-        className="w-8 h-8 rounded-xl bg-card/60 backdrop-blur-xl border border-border/10 flex items-center justify-center hover:bg-card transition-colors"
+        className="-ml-2 flex h-9 items-center gap-0.5 text-sm text-white/70 hover:text-white active:opacity-60 transition-colors"
       >
-        <ArrowLeft className="w-4 h-4 text-muted-foreground" />
+        <ChevronLeft className="w-6 h-6" strokeWidth={2.25} />
       </motion.button>
 
       {/* Hero */}

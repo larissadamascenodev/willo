@@ -16,13 +16,14 @@ import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "@/lib/cat
 import { getCategoryIcon } from "@/lib/categoryUtils";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 
+import { currencySymbol, getCurrency } from "@/lib/currency";
 const CATEGORIES_EXPENSE = DEFAULT_EXPENSE_CATEGORIES;
 const CATEGORIES_INCOME = DEFAULT_INCOME_CATEGORIES;
 
 const MONTHS_FULL = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
 const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 function formatCurrency(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", {
@@ -738,7 +739,7 @@ const TransactionDetailModal = ({ open, tx, accountName, onClose, onRefresh, use
               >
                 <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2">Valor</p>
                 <div className="flex items-baseline justify-center gap-2">
-                  <span className="text-xl font-bold text-muted-foreground">R$</span>
+                  <span className="text-xl font-bold text-muted-foreground">{currencySymbol()}</span>
                   <motion.span
                     key={editAmountCents}
                     initial={{ scale: 1.05 }}

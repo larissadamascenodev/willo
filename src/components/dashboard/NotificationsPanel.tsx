@@ -1,26 +1,27 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { Bell, CheckCheck, AlertTriangle, Info, Target, CreditCard, Wallet, X, Check, ChevronLeft } from "lucide-react";
+import { Bell, CheckCheck, AlertTriangle, Info, Target, CreditCard, Wallet, X, Check, ChevronLeft, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   fetchNotifications,
   countUnread,
-  markAsRead,
+  markRelatedAsRead,
   markAllAsRead,
   generateNotifications,
+  deleteNotification,
   type AppNotification,
 } from "@/services/notificationService";
 import { cn } from "@/lib/utils";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const CATEGORY_CONFIG: Record<string, { icon: typeof Bell; className: string; bg: string }> = {
-  vencimento: { icon: AlertTriangle, className: "text-warning", bg: "bg-warning/10" },
-  fatura: { icon: CreditCard, className: "text-destructive", bg: "bg-destructive/10" },
-  meta: { icon: Target, className: "text-primary", bg: "bg-primary/10" },
-  saldo: { icon: Wallet, className: "text-orange-400", bg: "bg-orange-400/10" },
-  geral: { icon: Info, className: "text-muted-foreground", bg: "bg-muted/15" },
+  vencimento: { icon: AlertTriangle, className: "text-amber-300", bg: "bg-amber-300/[0.12]" },
+  fatura: { icon: CreditCard, className: "text-red-400", bg: "bg-red-400/[0.12]" },
+  meta: { icon: Target, className: "text-willo-green", bg: "bg-willo-green/[0.12]" },
+  saldo: { icon: Wallet, className: "text-orange-300", bg: "bg-orange-300/[0.12]" },
+  geral: { icon: Info, className: "text-white/80", bg: "bg-white/[0.08]" },
 };
 
 const NOTIFICATION_LIMIT = 30;
@@ -37,6 +38,31 @@ function timeAgo(dateStr: string) {
   const days = Math.floor(hrs / 24);
   if (days < 7) return `${days}d`;
   return `${Math.floor(days / 7)}sem`;
+}
+
+function groupLabel(dateStr: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const day = new Date(dateStr);
+  day.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((today.getTime() - day.getTime()) / 86400000);
+  if (diffDays <= 0) return "Hoje";
+  if (diffDays === 1) return "Ontem";
+  if (diffDays < 7) return "Esta semana";
+  return "Anteriores";
+}
+
+// Collapses repeated alerts about the same item (older duplicates stored before
+// generation was deduplicated), keeping the newest one.
+function dedupeNotifications(items: AppNotification[]) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (!item.related_id) return true;
+    const key = `${item.category}:${item.related_id}:${item.title}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function getUnreadTotal(items: AppNotification[]) {
@@ -62,6 +88,7 @@ async function ensureNotificationsLoaded(userId: string, force = false) {
   if (inFlight) return inFlight;
 
   const request = fetchNotifications(userId, NOTIFICATION_LIMIT)
+    .then(dedupeNotifications)
     .then((data) => {
       updateNotificationCache(userId, data);
       return data;
@@ -135,80 +162,80 @@ export function useNotifications() {
 
 function NotificationRow({
   notification: n,
+  isLast,
   onMarkRead,
+  onDelete,
 }: {
   notification: AppNotification;
+  isLast: boolean;
   onMarkRead: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   const config = CATEGORY_CONFIG[n.category] ?? CATEGORY_CONFIG.geral;
   const Icon = config.icon;
+  const canMarkRead = !n.is_read;
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
-    if (info.offset.x < -80) {
-      onMarkRead(n.id);
-    }
+    // Right → left deletes; left → right marks as read
+    if (info.offset.x < -70) onDelete(n.id);
+    else if (info.offset.x > 70 && canMarkRead) onMarkRead(n.id);
   };
 
   return (
-    <div className="relative overflow-hidden rounded-xl">
-      <div className="absolute inset-y-0 right-0 flex w-24 items-center justify-center rounded-r-xl bg-primary/15">
-        <div className="flex flex-col items-center gap-0.5">
-          <Check className="h-5 w-5 text-primary" />
-          <span className="text-[8px] font-bold text-primary">Lida</span>
+    <div className="relative overflow-hidden">
+      {/* iOS-style swipe actions revealed underneath — drag right to mark as read, left to delete */}
+      {canMarkRead && (
+        <div className="absolute inset-y-0 left-0 flex w-24 items-center justify-center bg-white">
+          <div className="flex flex-col items-center gap-0.5 text-[#0B0B0B]">
+            <Check className="h-4 w-4" strokeWidth={3} />
+            <span className="text-[10px] font-bold">Lida</span>
+          </div>
+        </div>
+      )}
+      <div className="absolute inset-y-0 right-0 flex w-24 items-center justify-center bg-[#F87171]">
+        <div className="flex flex-col items-center gap-0.5 text-white">
+          <Trash2 className="h-4 w-4" strokeWidth={2.5} />
+          <span className="text-[10px] font-bold">Excluir</span>
         </div>
       </div>
 
       <motion.div
         drag="x"
-        dragConstraints={{ left: -100, right: 0 }}
-        dragElastic={0.15}
+        dragDirectionLock
+        dragConstraints={{ left: -96, right: canMarkRead ? 96 : 0 }}
+        dragElastic={0.1}
+        dragSnapToOrigin
+        transition={{ type: "spring", stiffness: 420, damping: 42, mass: 0.6 }}
         onDragEnd={handleDragEnd}
-        whileDrag={{ scale: 0.98 }}
-        className={cn(
-          "relative flex cursor-grab select-none items-center gap-3 rounded-xl border p-3.5 active:cursor-grabbing",
-          n.is_read
-            ? "border-border/10 bg-card/60"
-            : "border-border/15 bg-card shadow-sm shadow-black/5"
-        )}
+        onClick={() => canMarkRead && onMarkRead(n.id)}
+        className="relative flex select-none items-start gap-3 bg-[#141414] pl-3 pr-4 pt-3.5"
       >
-        <div
-          className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-            config.bg,
-            !n.is_read && "ring-1 ring-inset",
-            !n.is_read && (n.category === "vencimento" ? "ring-warning/20" : n.category === "fatura" ? "ring-destructive/20" : "ring-primary/20")
-          )}
-        >
-          <Icon className={cn("h-4.5 w-4.5", config.className)} />
+        <span className={cn("mt-4 h-2 w-2 shrink-0 rounded-full", n.is_read ? "bg-transparent" : "bg-willo-green")} />
+        <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", config.bg)}>
+          <Icon className={cn("h-[18px] w-[18px]", config.className)} strokeWidth={2.25} />
         </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <p
-              className={cn(
-                "truncate text-[13px] font-semibold leading-snug",
-                n.is_read ? "text-muted-foreground/60" : "text-foreground"
-              )}
-            >
+        <div className={cn("min-w-0 flex-1 pb-3.5", !isLast && "border-b border-white/[0.06]")}>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className={cn("truncate text-[15px] font-semibold leading-snug tracking-tight", n.is_read ? "text-white/55" : "text-white")}>
               {n.title}
             </p>
-            <span className="shrink-0 text-[9px] text-muted-foreground/40">{timeAgo(n.created_at)}</span>
+            <span className="shrink-0 text-[12px] text-white/35 tabular-nums">{timeAgo(n.created_at)}</span>
           </div>
-          <p
-            className={cn(
-              "mt-0.5 line-clamp-1 text-[11px] leading-relaxed",
-              n.is_read ? "text-muted-foreground/40" : "text-muted-foreground/70"
-            )}
-          >
+          <p className={cn("mt-0.5 line-clamp-2 text-[13px] leading-snug", n.is_read ? "text-white/35" : "text-white/60")}>
             {n.message}
           </p>
         </div>
-
-        {!n.is_read && <div className="h-2.5 w-2.5 shrink-0 rounded-full bg-primary ring-[3px] ring-primary/15" />}
       </motion.div>
     </div>
   );
 }
+
+type Filter = "todas" | "nao-lidas";
+
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: "todas", label: "Todas" },
+  { key: "nao-lidas", label: "Não lidas" },
+];
 
 function NotificationContent({
   notifications,
@@ -216,90 +243,129 @@ function NotificationContent({
   unreadCount,
   onMarkAllRead,
   onMarkRead,
+  onDelete,
   onClose,
-  showHeader = true,
+  variant,
 }: {
   notifications: AppNotification[];
   loading: boolean;
   unreadCount: number;
   onMarkAllRead: () => void;
   onMarkRead: (id: string) => void;
+  onDelete: (id: string) => void;
   onClose: () => void;
-  showHeader?: boolean;
+  variant: "screen" | "dialog";
 }) {
-  return (
-    <div className="flex h-full max-h-[80vh] flex-col md:max-h-[70vh]">
-      {showHeader && (
-        <div className="flex shrink-0 items-center justify-between border-b border-border/10 px-4 py-3.5">
-          <div className="flex items-center gap-2.5">
-            <button onClick={onClose} className="p-1 -ml-1 text-muted-foreground hover:text-foreground md:hidden">
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold text-foreground">Notificações</h3>
-              {unreadCount > 0 && (
-                <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
-                  {unreadCount}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {unreadCount > 0 && (
-              <button
-                onClick={onMarkAllRead}
-                className="flex items-center gap-1 text-[11px] font-medium text-primary transition-colors hover:text-primary/80"
-              >
-                <CheckCheck className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Marcar todas</span>
-              </button>
-            )}
-            <button onClick={onClose} className="hidden rounded-lg p-1 text-muted-foreground hover:bg-muted/20 hover:text-foreground md:block">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
+  const [filter, setFilter] = useState<Filter>("todas");
+  const visible = filter === "todas" ? notifications : notifications.filter((n) => !n.is_read);
+  const isScreen = variant === "screen";
 
-      <div className="flex-1 space-y-2 overflow-y-auto overscroll-contain p-3">
-        {loading ? (
-          <div className="p-10 text-center">
-            <div className="mx-auto mb-3 flex h-10 w-10 animate-pulse items-center justify-center rounded-2xl bg-muted/15">
-              <Bell className="h-5 w-5 text-muted-foreground/30" />
-            </div>
-            <p className="text-xs text-muted-foreground">Carregando...</p>
-          </div>
-        ) : notifications.length === 0 ? (
-          <div className="space-y-3 p-10 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/10">
-              <Bell className="h-7 w-7 text-muted-foreground/20" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Tudo em dia!</p>
-              <p className="mt-1 text-[11px] text-muted-foreground/50">Nenhuma notificação no momento</p>
-            </div>
-          </div>
-        ) : (
-          <AnimatePresence initial={false}>
-            {notifications.map((n) => (
-              <motion.div
-                key={n.id}
-                layout
-                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <NotificationRow notification={n} onMarkRead={onMarkRead} />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        )}
+  const groups = visible.reduce<{ label: string; items: AppNotification[] }[]>((acc, n) => {
+    const label = groupLabel(n.created_at);
+    const group = acc.find((g) => g.label === label);
+    if (group) group.items.push(n);
+    else acc.push({ label, items: [n] });
+    return acc;
+  }, []);
+
+  return (
+    <div className={cn("flex flex-col", isScreen ? "h-full" : "max-h-[75vh]")}>
+      {/* Nav bar */}
+      <div
+        className="shrink-0 px-4"
+        style={{ paddingTop: isScreen ? "calc(env(safe-area-inset-top, 0px) + 10px)" : 16 }}
+      >
+        <div className="flex h-10 items-center justify-between">
+          <button
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.08] text-white transition-transform active:scale-95"
+            aria-label="Fechar"
+          >
+            {isScreen ? <ChevronLeft className="-ml-0.5 h-5 w-5" /> : <X className="h-4 w-4" />}
+          </button>
+          <button
+            onClick={onMarkAllRead}
+            disabled={unreadCount === 0}
+            className="flex h-10 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[13px] font-semibold text-white transition-opacity disabled:opacity-35"
+          >
+            <CheckCheck className="h-4 w-4" />
+            Ler todas
+          </button>
+        </div>
+
+        {/* Large title */}
+        <div className="mt-4 flex items-end justify-between gap-3">
+          <h1 className="text-[32px] font-extrabold leading-none tracking-tight text-white">Notificações</h1>
+          {unreadCount > 0 && (
+            <span className="mb-1 shrink-0 rounded-full bg-white px-2.5 py-0.5 text-[12px] font-bold tabular-nums text-[#0B0B0B]">
+              {unreadCount} {unreadCount === 1 ? "nova" : "novas"}
+            </span>
+          )}
+        </div>
+
+        {/* Segmented control */}
+        <div className="mt-4 grid grid-cols-2 rounded-full bg-white/[0.07] p-1">
+          {FILTERS.map(({ key, label }) => (
+            <button key={key} onClick={() => setFilter(key)} className="relative h-9 rounded-full text-[13px] font-semibold">
+              {filter === key && (
+                <motion.span
+                  layoutId={`notif-seg-${variant}`}
+                  className="absolute inset-0 rounded-full bg-white shadow-[0_4px_14px_-6px_rgba(255,255,255,0.4)]"
+                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                />
+              )}
+              <span className={cn("relative z-10 transition-colors", filter === key ? "text-[#0B0B0B]" : "text-white/55")}>
+                {label}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {notifications.length > 0 && (
-        <div className="shrink-0 border-t border-border/5 px-4 py-2">
-          <p className="select-none text-center text-[9px] text-muted-foreground/40">← Deslize para a esquerda para marcar como lida</p>
-        </div>
-      )}
+      {/* List */}
+      <div
+        className="mt-2 flex-1 overflow-y-auto overscroll-contain px-4"
+        style={{ paddingBottom: isScreen ? "calc(env(safe-area-inset-bottom, 0px) + 24px)" : 20 }}
+      >
+        {loading && notifications.length === 0 ? (
+          <div className="space-y-2 pt-6">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-[68px] animate-pulse rounded-[22px] bg-white/[0.05]" />
+            ))}
+          </div>
+        ) : groups.length === 0 ? (
+          <div className="flex flex-col items-center px-8 pt-20 text-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.06]">
+              <Bell className="h-8 w-8 text-white/40" />
+            </div>
+            <p className="mt-5 text-[18px] font-bold text-white">Tudo em dia</p>
+            <p className="mt-1 text-[14px] text-white/45">
+              {filter === "nao-lidas" ? "Você leu todas as suas notificações." : "Nenhuma notificação por aqui ainda."}
+            </p>
+          </div>
+        ) : (
+          groups.map((group) => (
+            <section key={group.label} className="pt-5">
+              <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-white/40">{group.label}</h2>
+              <div className="overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#141414]">
+                <AnimatePresence initial={false}>
+                  {group.items.map((n, i) => (
+                    <motion.div key={n.id} layout exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }}>
+                      <NotificationRow notification={n} isLast={i === group.items.length - 1} onMarkRead={onMarkRead} onDelete={onDelete} />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            </section>
+          ))
+        )}
+
+        {groups.length > 0 && (
+          <p className="select-none pt-5 text-center text-[12px] text-white/30">
+            {unreadCount > 0 ? "Deslize para a direita para marcar como lida, ou para a esquerda para excluir" : "Deslize para a esquerda para excluir"}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -350,85 +416,80 @@ export default function NotificationsPanel({ open, onClose }: NotificationsPanel
 
   useEffect(() => {
     if (!open || !user) return;
-
-    const cached = notificationCache.get(user.id);
-    if (cached) {
-      setNotifications(cached);
-      setLoading(false);
-      void load(true);
-      return;
-    }
-
     void load(true);
   }, [open, load, user]);
 
+  // Lock page scroll behind the full-screen mobile view
+  useEffect(() => {
+    if (!open || !isMobile) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open, isMobile]);
+
+  const applyUpdate = (next: AppNotification[]) => {
+    setNotifications(next);
+    if (user) updateNotificationCache(user.id, next);
+  };
+
   const handleMarkAllRead = async () => {
     if (!user) return;
+    applyUpdate(notifications.map((n) => ({ ...n, is_read: true })));
     await markAllAsRead(user.id);
-    updateNotificationCache(user.id, []);
-    setNotifications([]);
   };
 
   const handleMarkRead = async (id: string) => {
-    await markAsRead(id);
-    setNotifications((prev) => {
-      const next = prev.filter((item) => item.id !== id);
-      if (user) {
-        updateNotificationCache(user.id, next);
-      }
-      return next;
-    });
+    const target = notifications.find((n) => n.id === id);
+    if (!user || !target) return;
+    applyUpdate(notifications.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+    await markRelatedAsRead(user.id, target);
   };
 
-  const unreadCount = getUnreadTotal(notifications);
+  const handleDelete = async (id: string) => {
+    applyUpdate(notifications.filter((n) => n.id !== id));
+    await deleteNotification(id);
+  };
 
   const contentProps = {
     notifications,
     loading,
-    unreadCount,
+    unreadCount: getUnreadTotal(notifications),
     onMarkAllRead: handleMarkAllRead,
     onMarkRead: handleMarkRead,
+    onDelete: handleDelete,
     onClose,
   };
 
   if (isMobile) {
-    const mobilePanel = (
+    // Full-screen iOS push-style view sliding in from the right
+    const screen = (
       <AnimatePresence>
         {open && (
-          <>
-            <motion.div
-              key="notif-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm"
-              onClick={onClose}
-            />
-            <div className="pointer-events-none fixed inset-0 z-[9999] flex items-center justify-center p-3">
-              <motion.div
-                key="notif-panel"
-                initial={{ opacity: 0, y: 64, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 40, scale: 0.96 }}
-                transition={{ type: "spring", damping: 28, stiffness: 280 }}
-                className="pointer-events-auto w-full max-w-sm overflow-hidden rounded-2xl border border-border/20 bg-card/95 shadow-2xl backdrop-blur-2xl"
-              >
-                <NotificationContent {...contentProps} />
-              </motion.div>
-            </div>
-          </>
+          <motion.div
+            key="notif-screen"
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 34, stiffness: 320 }}
+            className="willo-bg fixed inset-0 z-[9999] shadow-[-20px_0_60px_rgba(0,0,0,0.6)]"
+          >
+            <NotificationContent {...contentProps} variant="screen" />
+          </motion.div>
         )}
       </AnimatePresence>
     );
 
-    return typeof document !== "undefined" ? createPortal(mobilePanel, document.body) : null;
+    return typeof document !== "undefined" ? createPortal(screen, document.body) : null;
   }
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-sm overflow-hidden rounded-2xl border-border/20 bg-card/95 p-0 backdrop-blur-2xl">
-        <NotificationContent {...contentProps} />
+      <DialogContent className="max-w-md overflow-hidden rounded-[28px] border-white/[0.08] bg-[#0E0E0E]/95 p-0 backdrop-blur-2xl [&>button]:hidden">
+        <DialogTitle className="sr-only">Notificações</DialogTitle>
+        <DialogDescription className="sr-only">Lista das suas notificações recentes.</DialogDescription>
+        <NotificationContent {...contentProps} variant="dialog" />
       </DialogContent>
     </Dialog>
   );

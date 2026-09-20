@@ -2,21 +2,20 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Check, Loader2, Sparkles, ShieldCheck, ShieldAlert, AlertTriangle,
-  Edit3, ChevronDown, ArrowDownCircle, ArrowUpCircle, Clock, Wallet,
-  Search, Plus, Settings, Tag,
+  Edit3, ChevronRight, Clock, Wallet, Search, Plus, Settings, Tag, Store, Repeat,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { DEFAULT_CATEGORY_ICONS, DEFAULT_CATEGORY_COLORS, DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES, getDefaultCategoryIcon } from "@/lib/categoryIcons";
+import { DEFAULT_EXPENSE_CATEGORIES, getDefaultCategoryIcon } from "@/lib/categoryIcons";
 import { getCustomCategories, createCustomCategory, type CustomCategory } from "@/services/categoryService";
 import { getCategoryHexColor } from "@/lib/categoryUtils";
 import CategoryCreateModal, { getIconComponent } from "@/components/dashboard/CategoryCreateModal";
+import BottomSheet from "@/components/shared/BottomSheet";
 import { useAuth } from "@/contexts/AuthContext";
 
+import { currencySymbol, getCurrency } from "@/lib/currency";
 export interface ExtractedItem {
   description: string;
   amount: number;
@@ -52,42 +51,52 @@ interface Props {
   showAccountSelector?: boolean;
 }
 
-const CATEGORIES = Object.keys(DEFAULT_CATEGORY_ICONS);
+const fmtMoney = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 function ConfidenceBadge({ confidence }: { confidence: number }) {
   const pct = Math.round(confidence * 100);
-  if (confidence >= 0.8) {
-    return (
-      <div className="flex items-center gap-1 bg-primary/10 border border-primary/20 px-2 py-1 rounded-full">
-        <ShieldCheck className="w-3 h-3 text-primary" />
-        <span className="text-[10px] font-bold text-primary">{pct}%</span>
-      </div>
-    );
-  }
-  if (confidence >= 0.5) {
-    return (
-      <div className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-full">
-        <ShieldAlert className="w-3 h-3 text-amber-400" />
-        <span className="text-[10px] font-bold text-amber-400">{pct}%</span>
-      </div>
-    );
-  }
+  const tone =
+    confidence >= 0.8
+      ? { Icon: ShieldCheck, cls: "text-willo-green bg-willo-green/10" }
+      : confidence >= 0.5
+        ? { Icon: ShieldAlert, cls: "text-amber-300 bg-amber-300/10" }
+        : { Icon: AlertTriangle, cls: "text-red-400 bg-red-400/10" };
   return (
-    <div className="flex items-center gap-1 bg-destructive/10 border border-destructive/20 px-2 py-1 rounded-full">
-      <AlertTriangle className="w-3 h-3 text-destructive" />
-      <span className="text-[10px] font-bold text-destructive">{pct}%</span>
-    </div>
+    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", tone.cls)}>
+      <tone.Icon className="h-3 w-3" /> {pct}%
+    </span>
   );
 }
 
-function CategoryPickerSheet({
-  open,
-  selected,
-  onSelect,
-  onClose,
-  customCategories,
-  onCreateCategory,
-}: {
+function categoryVisual(category: string, customCategories: CustomCategory[]) {
+  const custom = customCategories.find((c) => c.name === category);
+  const Icon = custom ? getIconComponent(custom.icon) : getDefaultCategoryIcon(category || "");
+  return { Icon, hex: getCategoryHexColor(category || "", customCategories) };
+}
+
+/** Settings-style row: icon, label on the left, control on the right. */
+const Row = ({ icon: Icon, label, children, onClick }: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  children?: React.ReactNode;
+  onClick?: () => void;
+}) => (
+  <div
+    role={onClick ? "button" : undefined}
+    onClick={onClick}
+    className={cn("flex min-h-[56px] items-center gap-3 px-4 py-2.5", onClick && "cursor-pointer active:bg-white/[0.03]")}
+  >
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
+      <Icon className="h-4 w-4 text-white/70" />
+    </span>
+    <span className="shrink-0 text-[15px] text-white">{label}</span>
+    <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 text-right">{children}</div>
+  </div>
+);
+
+const inlineInput = "w-full min-w-0 bg-transparent text-right text-[15px] text-white placeholder:text-white/30 focus:outline-none";
+
+function CategoryPickerSheet({ open, selected, onSelect, onClose, customCategories, onCreateCategory }: {
   open: boolean;
   selected: string;
   onSelect: (cat: string) => void;
@@ -98,426 +107,191 @@ function CategoryPickerSheet({
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
 
-  if (!open) return null;
-
-  const allCats = [
-    ...customCategories.filter(c => c.type === "despesa" && !c.is_hidden_default).map(c => c.name),
+  const unique = [...new Set([
+    ...customCategories.filter((c) => c.type === "despesa" && !c.is_hidden_default).map((c) => c.name),
     ...DEFAULT_EXPENSE_CATEGORIES,
-  ];
-  const uniqueCats = [...new Set(allCats)];
-  const filtered = search
-    ? uniqueCats.filter(c => c.toLowerCase().includes(search.toLowerCase()))
-    : uniqueCats;
+  ])];
+  const filtered = search ? unique.filter((c) => c.toLowerCase().includes(search.toLowerCase())) : unique;
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ type: "spring", damping: 25, stiffness: 350 }}
-          onClick={(e) => e.stopPropagation()}
-          className="w-[90%] max-w-sm rounded-2xl bg-card border border-border/30 shadow-2xl p-5"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-bold text-foreground">Categoria</h3>
-            <button
-              onClick={onClose}
-              className="w-7 h-7 rounded-full border border-primary/40 flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Search */}
-          <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar categoria"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-muted/30 border-border/20 h-10 rounded-xl"
-            />
-          </div>
-
-          {/* Category list */}
-          <div className="max-h-48 overflow-y-auto space-y-1 mb-3 scrollbar-none">
-            {filtered.length > 0 ? (
-              filtered.map((cat) => {
-                const customCat = customCategories.find((c) => c.name === cat && c.type === "despesa");
-                const catHex = getCategoryHexColor(cat, customCategories);
-                const isSelected = cat.toLowerCase() === selected.toLowerCase();
-
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => { onSelect(cat); onClose(); }}
-                    className={cn(
-                      "w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-xl text-sm transition-colors",
-                      isSelected
-                        ? "bg-primary/15 text-primary font-semibold"
-                        : "text-foreground hover:bg-muted/50"
-                    )}
-                  >
-                    {(() => {
-                      if (customCat) {
-                        const CatIcon = getIconComponent(customCat.icon);
-                        return (
-                          <span
-                            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                            style={{ backgroundColor: `${catHex}20`, border: `1px solid ${catHex}30` }}
-                          >
-                            <CatIcon className="w-3.5 h-3.5" style={{ color: catHex }} />
-                          </span>
-                        );
-                      }
-                      const DefaultIcon = getDefaultCategoryIcon(cat);
-                      return (
-                        <span
-                          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: `${catHex}20`, border: `1px solid ${catHex}30` }}
-                        >
-                          <DefaultIcon className="w-3.5 h-3.5" style={{ color: catHex }} />
-                        </span>
-                      );
-                    })()}
-                    {cat}
-                    {isSelected && <Check className="w-4 h-4 text-primary ml-auto" />}
-                  </button>
-                );
-              })
-            ) : (
-              <p className="text-center text-sm text-muted-foreground py-4">
-                Nenhuma categoria encontrada
-              </p>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between pt-2 border-t border-border/20">
-            <button
-              type="button"
-              onClick={onCreateCategory}
-              className="flex items-center gap-1 text-xs text-primary font-medium hover:opacity-80"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Criar categoria
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                navigate("/categorias");
-              }}
-              className="flex items-center gap-1 text-xs text-muted-foreground font-medium hover:text-foreground"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              Gerenciar
-            </button>
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+    <BottomSheet open={open} onClose={onClose} size="full" zIndex={80}>
+      <div className="px-5">
+        <div className="flex items-center justify-between">
+          <p className="text-[22px] font-bold text-white">Categoria</p>
+          <button type="button" onClick={() => { onClose(); navigate("/categorias"); }} className="flex items-center gap-1 text-[13px] text-white/55">
+            <Settings className="h-4 w-4" /> Gerenciar
+          </button>
+        </div>
+        <div className="relative mt-4">
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+          <input
+            placeholder="Buscar categoria"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-11 w-full rounded-full bg-white/[0.06] pl-11 pr-4 text-[15px] text-white placeholder:text-white/30 focus:outline-none"
+          />
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2 pb-4">
+          {filtered.map((cat) => {
+            const { Icon, hex } = categoryVisual(cat, customCategories);
+            const isSelected = cat.toLowerCase() === selected.toLowerCase();
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => { onSelect(cat); onClose(); }}
+                className={cn(
+                  "flex flex-col items-center gap-2 rounded-[20px] border px-2 py-3.5",
+                  isSelected ? "border-white bg-white/[0.08]" : "border-white/[0.06] bg-[#1A1A1A]",
+                )}
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: `${hex}22` }}>
+                  <Icon className="h-5 w-5" style={{ color: hex }} />
+                </span>
+                <span className="line-clamp-2 text-[12px] leading-tight text-white/85">{cat}</span>
+              </button>
+            );
+          })}
+          <button type="button" onClick={onCreateCategory} className="flex flex-col items-center gap-2 rounded-[20px] border border-dashed border-white/15 px-2 py-3.5">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06]">
+              <Plus className="h-5 w-5 text-white" />
+            </span>
+            <span className="text-[12px] text-white/70">Nova</span>
+          </button>
+        </div>
+      </div>
+    </BottomSheet>
   );
 }
-function SingleItemReview({
-  item,
-  onUpdate,
-  onConfirm,
-  confirming,
-  accounts = [],
-  showAccountSelector = false,
-}: {
+
+function SingleItemReview({ item, onUpdate, accounts = [], showAccountSelector = false, avgConfidence }: {
   item: ExtractedItem;
-  onUpdate: (field: keyof ExtractedItem, value: any) => void;
-  onConfirm: () => void;
-  confirming: boolean;
+  onUpdate: (field: keyof ExtractedItem, value: unknown) => void;
   accounts?: ReviewAccount[];
   showAccountSelector?: boolean;
+  avgConfidence?: number;
 }) {
   const { user } = useAuth();
-  const [editing, setEditing] = useState(false);
-  const [isRecurring, setIsRecurring] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showCategoryCreate, setShowCategoryCreate] = useState(false);
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
-  const conf = item.confidence || 0.5;
-  const isExpense = item.type === "despesa";
-  const [amountInput, setAmountInput] = useState(
-    item.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  );
+  const isExpense = item.type !== "receita";
+  const conf = item.confidence ?? avgConfidence ?? 0.5;
 
-  useEffect(() => {
-    setAmountInput(
-      item.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    );
-  }, [item.amount]);
+  const formatAmount = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   useEffect(() => {
     getCustomCategories("despesa").then(setCustomCategories).catch(() => {});
   }, []);
 
-  const formatAmount = (v: number) =>
-    v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-  const formatDate = (d: string | null) => {
-    if (!d) return "—";
-    const date = new Date(d + "T12:00:00");
-    return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
-  };
-
-  const catHex = getCategoryHexColor(item.category || "", customCategories);
-  const customCat = customCategories.find(c => c.name === item.category && c.type === "despesa");
-  const CatIconResolved = customCat
-    ? getIconComponent(customCat.icon)
-    : getDefaultCategoryIcon(item.category || "");
-
-  const valueAccentClass = isExpense ? "text-destructive" : "text-primary";
-  const accountColors = ["#8b5cf6", "#f97316", "#00e676", "#3b82f6", "#ec4899"];
-
-  const selectedAccountName = accounts.find(a => a.id === item.account_id)?.name || "Sem conta";
-
-  const handleAmountChange = (value: string) => {
-    const digits = value.replace(/\D/g, "");
-    const numericValue = digits ? Number(digits) / 100 : 0;
-    setAmountInput(formatAmount(numericValue));
-    onUpdate("amount", numericValue);
-  };
+  const { Icon: CatIcon, hex: catHex } = categoryVisual(item.category, customCategories);
 
   const handleCreateCategoryFromModal = async (data: { name: string; icon: string; color: string }) => {
     if (!user) return;
     try {
       const cat = await createCustomCategory(user.id, { ...data, type: "despesa" });
       setCustomCategories((prev) => [...prev, cat]);
-      onUpdate("category", data.name);
-      setShowCategoryCreate(false);
-    } catch {
+    } finally {
       onUpdate("category", data.name);
       setShowCategoryCreate(false);
     }
   };
 
   return (
-    <div className="space-y-4">
-      {/* Confidence badge */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" />
-          <span className="text-xs font-medium text-muted-foreground">Detecção por IA</span>
-        </div>
+    <div>
+      {/* AI banner */}
+      <div className="flex items-center justify-center gap-2 pt-2">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1 text-[12px] text-white/70">
+          <Sparkles className="h-3.5 w-3.5" /> Lido pela IA
+        </span>
         <ConfidenceBadge confidence={conf} />
       </div>
 
-      {/* Type badge */}
-      <div className="flex items-center gap-2">
-        <span className={cn(
-          "px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide",
-          isExpense ? "bg-destructive/15 text-destructive" : "bg-primary/15 text-primary"
-        )}>
-          {isExpense ? "Despesa" : "Receita"}
-        </span>
+      {/* Type */}
+      <div className="mx-auto mt-5 grid w-[220px] grid-cols-2 rounded-full bg-[#141414] p-1">
+        {(["despesa", "receita"] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => onUpdate("type", t)}
+            className={cn("h-9 rounded-full text-[13px] font-semibold transition-colors", (isExpense ? "despesa" : "receita") === t ? "bg-white text-[#0B0B0B]" : "text-white/55")}
+          >
+            {t === "despesa" ? "Despesa" : "Receita"}
+          </button>
+        ))}
       </div>
 
-      {/* Amount - clean, no colored border */}
-      <div className="text-left">
-        <div className="flex items-baseline gap-1">
-          <span className={cn("text-2xl font-bold", valueAccentClass)}>R$</span>
-          {editing ? (
-            <input
-              type="text"
-              inputMode="numeric"
-              value={amountInput}
-              onChange={(e) => handleAmountChange(e.target.value)}
-              className="bg-transparent border-none px-0 py-0 font-display text-[42px] font-bold tabular-nums tracking-tight text-foreground outline-none focus:ring-0 w-full"
-            />
-          ) : (
-            <span className="font-display text-[42px] font-bold tabular-nums tracking-tight text-foreground">
-              {formatAmount(item.amount)}
-            </span>
-          )}
-        </div>
+      {/* Amount */}
+      <label className="relative mt-5 flex items-baseline justify-center gap-2">
+        <span className="text-[24px] font-bold text-white/40">{currencySymbol()}</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={formatAmount(item.amount)}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, "");
+            onUpdate("amount", digits ? Number(digits) / 100 : 0);
+          }}
+          className="w-[70%] bg-transparent text-center text-[52px] font-extrabold leading-none tracking-tight text-white tabular-nums focus:outline-none"
+        />
+      </label>
+      <div className="mt-3 flex justify-center">
+        <span className="h-1 w-10 rounded-full" style={{ background: isExpense ? "#F87171" : "#C8F36D" }} />
       </div>
 
-      {editing ? (
-        /* ── EDIT MODE ── */
-        <div className="space-y-4">
-          {/* Account selector */}
-          {showAccountSelector && (
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Wallet className="w-4 h-4 text-muted-foreground" />
-                Conta
-              </div>
-              {accounts.length > 0 ? (
-                <Select
-                  value={item.account_id ?? undefined}
-                  onValueChange={(value) => onUpdate("account_id", value)}
-                >
-                  <SelectTrigger className="bg-muted/30 border-border/20 h-11 rounded-xl">
-                    <SelectValue placeholder="Selecionar conta" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[80]">
-                    {accounts.map((account, idx) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: accountColors[idx % accountColors.length] }} />
-                          {account.name} {account.is_default ? "(padrão)" : ""}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-center">
-                  <p className="text-xs text-muted-foreground">Cadastre uma conta primeiro</p>
-                </div>
-              )}
-            </div>
-          )}
+      {/* Fields */}
+      <div className="mt-7 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.07] bg-[#141414]">
+        <Row icon={Edit3} label="Descrição">
+          <input value={item.description} onChange={(e) => onUpdate("description", e.target.value)} placeholder="Nome" className={inlineInput} />
+        </Row>
+        <Row icon={Store} label="Local">
+          <input value={item.merchant || ""} onChange={(e) => onUpdate("merchant", e.target.value)} placeholder="Opcional" className={inlineInput} />
+        </Row>
+        <Row icon={Tag} label="Categoria" onClick={() => setShowCategoryPicker(true)}>
+          <CatIcon className="h-4 w-4 shrink-0" style={{ color: catHex }} />
+          <span className="truncate text-[15px] capitalize text-white">{item.category || "Escolher"}</span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-white/25" />
+        </Row>
+        <Row icon={Clock} label="Data">
+          <input
+            type="date"
+            value={item.date || ""}
+            onChange={(e) => onUpdate("date", e.target.value)}
+            className="bg-transparent text-right text-[15px] text-white [color-scheme:dark] focus:outline-none"
+          />
+          {item.time && <span className="text-[13px] text-white/40">{item.time}</span>}
+        </Row>
+        {showAccountSelector && (
+          <Row icon={Wallet} label="Conta">
+            {accounts.length > 0 ? (
+              <Select value={item.account_id ?? undefined} onValueChange={(value) => onUpdate("account_id", value)}>
+                <SelectTrigger className="h-9 w-auto max-w-[190px] gap-1.5 rounded-full border-0 bg-white/[0.06] px-3.5 text-[13px] text-white focus:ring-0">
+                  <SelectValue placeholder="Selecionar" />
+                </SelectTrigger>
+                <SelectContent className="z-[80]">
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name} {account.is_default ? "(padrão)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <span className="text-[13px] text-white/40">Cadastre uma conta</span>
+            )}
+          </Row>
+        )}
+        <Row icon={Repeat} label="Todo mês">
+          <Switch
+            checked={!!item.is_recurring}
+            onCheckedChange={(checked) => onUpdate("is_recurring", checked)}
+            className="data-[state=checked]:bg-willo-green data-[state=unchecked]:bg-white/15"
+          />
+        </Row>
+      </div>
 
-          {/* Description */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <Edit3 className="w-4 h-4 text-muted-foreground" /> Descrição
-            </div>
-            <Input
-              value={item.description}
-              onChange={(e) => onUpdate("description", e.target.value)}
-              className="bg-muted/30 border-border/20 h-11 rounded-xl"
-              placeholder="Nome da transação"
-            />
-          </div>
+      <p className="mt-4 px-2 text-center text-[12px] text-white/35">Confira os dados antes de confirmar. Você pode editar tudo aqui.</p>
 
-          {/* Merchant */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <Sparkles className="w-4 h-4 text-muted-foreground" /> Estabelecimento
-            </div>
-            <Input
-              value={item.merchant || ""}
-              onChange={(e) => onUpdate("merchant", e.target.value)}
-              placeholder="Nome do local"
-              className="bg-muted/30 border-border/20 h-11 rounded-xl"
-            />
-          </div>
-
-          {/* Date */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              Data {item.time && <span className="text-xs text-muted-foreground">· {item.time}</span>}
-            </div>
-            <Input
-              type="date"
-              value={item.date || ""}
-              onChange={(e) => onUpdate("date", e.target.value)}
-              className="bg-muted/30 border-border/20 h-11 rounded-xl [color-scheme:dark]"
-            />
-          </div>
-
-          {/* Category */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <Tag className="w-4 h-4 text-muted-foreground" /> Categoria
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowCategoryPicker(true)}
-              className="w-full flex items-center justify-between px-3 h-11 rounded-xl text-sm border bg-muted/30 border-border/20 text-foreground transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: `${catHex}20`, border: `1px solid ${catHex}30` }}>
-                  <CatIconResolved className="w-3 h-3" style={{ color: catHex }} />
-                </span>
-                <span className="capitalize">{item.category || "Selecionar categoria"}</span>
-              </div>
-              <Tag className="w-3.5 h-3.5 text-muted-foreground" />
-            </button>
-          </div>
-
-          {/* Type toggle */}
-          <div className="space-y-1.5">
-            <div className="text-sm font-medium text-foreground">Tipo</div>
-            <div className="flex gap-2">
-              <button onClick={() => onUpdate("type", "despesa")} className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all border", item.type === "despesa" ? "bg-destructive/15 text-destructive border-destructive/25" : "bg-muted/30 text-muted-foreground border-transparent hover:bg-muted/50")}>Despesa</button>
-              <button onClick={() => onUpdate("type", "receita")} className={cn("flex-1 py-2.5 rounded-xl text-xs font-bold transition-all border", item.type === "receita" ? "bg-primary/15 text-primary border-primary/25" : "bg-muted/30 text-muted-foreground border-transparent hover:bg-muted/50")}>Receita</button>
-            </div>
-          </div>
-
-          {/* Recurrence toggle */}
-          <div className="flex items-center justify-between rounded-xl bg-muted/30 border border-border/20 px-4 py-3">
-            <span className="text-sm font-medium text-foreground">Recorrente</span>
-            <Switch checked={isRecurring} onCheckedChange={(checked) => { setIsRecurring(checked); onUpdate("is_recurring", checked); }} />
-          </div>
-        </div>
-      ) : (
-        /* ── DETAIL MODE (read-only summary) ── */
-        <div className="bg-muted/10 border border-border/15 rounded-xl divide-y divide-border/10">
-          {/* Account */}
-          {showAccountSelector && (
-            <div className="flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-1.5">
-                <Wallet className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-[11px] text-muted-foreground uppercase tracking-wide">Conta</span>
-              </div>
-              <span className="text-[13px] font-semibold text-foreground">{selectedAccountName}</span>
-            </div>
-          )}
-
-          {/* Description */}
-          <div className="flex items-center justify-between px-4 py-3">
-            <span className="text-[11px] text-muted-foreground uppercase tracking-wide">Descrição</span>
-            <span className="text-[13px] font-semibold text-foreground truncate max-w-[60%] text-right">{item.description}</span>
-          </div>
-
-          {/* Merchant */}
-          {item.merchant && (
-            <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-[11px] text-muted-foreground uppercase tracking-wide">Estabelecimento</span>
-              <span className="text-[13px] text-foreground truncate max-w-[60%] text-right">{item.merchant}</span>
-            </div>
-          )}
-
-          {/* Date + time */}
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-[11px] text-muted-foreground uppercase tracking-wide">Data</span>
-            </div>
-            <div className="text-right">
-              <span className="text-[13px] font-semibold text-foreground capitalize">{formatDate(item.date)}</span>
-              {item.time && (
-                <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center justify-end gap-1">
-                  <Clock className="w-3 h-3" /> {item.time}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Category */}
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-1.5">
-              <Tag className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-[11px] text-muted-foreground uppercase tracking-wide">Categoria</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-md flex items-center justify-center" style={{ backgroundColor: `${catHex}20` }}>
-                <CatIconResolved className="w-3 h-3" style={{ color: catHex }} />
-              </span>
-              <span className="text-[13px] font-medium text-foreground capitalize">{item.category}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Category picker */}
       <CategoryPickerSheet
         open={showCategoryPicker}
         selected={item.category}
@@ -526,178 +300,89 @@ function SingleItemReview({
         customCategories={customCategories}
         onCreateCategory={() => { setShowCategoryPicker(false); setShowCategoryCreate(true); }}
       />
-
-      <CategoryCreateModal
-        open={showCategoryCreate}
-        onClose={() => setShowCategoryCreate(false)}
-        onSave={handleCreateCategoryFromModal}
-        title="Nova Categoria"
-      />
-
-      {/* Edit toggle */}
-      <button
-        onClick={() => setEditing(!editing)}
-        className="flex items-center gap-2 mx-auto text-xs text-primary hover:text-primary/80 transition-colors"
-      >
-        <Edit3 className="w-3.5 h-3.5" />
-        {editing ? "Fechar edição" : "Editar informações"}
-      </button>
-
-      {/* Confirm button */}
-      <Button
-        onClick={onConfirm}
-        disabled={confirming}
-        className="w-full h-12 rounded-xl text-sm font-bold"
-      >
-        {confirming ? (
-          <>
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            Importando...
-          </>
-        ) : (
-          <>
-            <Check className="w-4 h-4 mr-2" />
-            Confirmar lançamento
-          </>
-        )}
-      </Button>
+      <CategoryCreateModal open={showCategoryCreate} onClose={() => setShowCategoryCreate(false)} onSave={handleCreateCategoryFromModal} title="Nova Categoria" />
     </div>
   );
 }
-function MultiItemReview({
-  items,
-  setItems,
-  onConfirm,
-  confirming,
-  avgConfidence,
-  message,
-  onFallback,
-}: {
+
+function MultiItemReview({ items, setItems, avgConfidence, message, onFallback }: {
   items: ExtractedItem[];
   setItems: React.Dispatch<React.SetStateAction<ExtractedItem[]>>;
-  onConfirm: (items: ExtractedItem[]) => void;
-  confirming: boolean;
   avgConfidence?: number;
   message: string;
   onFallback?: (item: ExtractedItem) => void;
 }) {
-  const toggleItem = (idx: number) => {
-    setItems((prev) =>
-      prev.map((item, i) => (i === idx ? { ...item, selected: !item.selected } : item))
-    );
-  };
-
-  const removeItem = (idx: number) => {
-    setItems((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const selectedItems = items.filter((i) => i.selected);
-  const totalSelected = selectedItems.reduce((sum, i) => sum + i.amount, 0);
-
-  const formatCurrency = (v: number) =>
-    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const toggleItem = (idx: number) =>
+    setItems((prev) => prev.map((item, i) => (i === idx ? { ...item, selected: !item.selected } : item)));
+  const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
+  const allSelected = items.every((i) => i.selected);
 
   return (
-    <div className="flex flex-col max-h-[75vh]">
-      <div className="px-5 pb-3 shrink-0 space-y-2">
-        <div className="bg-primary/10 border border-primary/20 rounded-xl px-3.5 py-2.5">
-          <p className="text-[12px] text-primary font-medium">{message}</p>
-        </div>
-        {avgConfidence !== undefined && (
-          <div className={cn(
-            "flex items-center gap-2 rounded-lg px-3 py-2 text-[11px] font-medium",
-            avgConfidence >= 0.8
-              ? "bg-primary/5 text-primary border border-primary/10"
-              : "bg-amber-500/5 text-amber-400 border border-amber-500/10"
-          )}>
-            {avgConfidence >= 0.8 ? <ShieldCheck className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
-            <span>Confiança geral: {Math.round(avgConfidence * 100)}%</span>
-          </div>
-        )}
+    <div>
+      <div className="flex flex-col items-center pt-2 text-center">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1 text-[12px] text-white/70">
+          <Sparkles className="h-3.5 w-3.5" /> Lido pela IA
+          {avgConfidence !== undefined && <span className="text-white/40">· {Math.round(avgConfidence * 100)}% de confiança</span>}
+        </span>
+        <p className="mt-3 text-[26px] font-extrabold tracking-tight text-white">{items.length} lançamentos</p>
+        <p className="text-[14px] text-white/45">{message}</p>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 space-y-2 pb-3 min-h-0 scrollbar-none overscroll-contain">
-        {items.map((item, idx) => {
-          const conf = item.confidence || 0.5;
-          const matchedCat = CATEGORIES.find((c) => c.toLowerCase() === (item.category || "").toLowerCase());
-          const CatIcon = matchedCat ? DEFAULT_CATEGORY_ICONS[matchedCat] : null;
-          const catColor = matchedCat ? DEFAULT_CATEGORY_COLORS[matchedCat] : "0 0% 60%";
+      <div className="mt-6 flex items-center justify-between px-1">
+        <p className="text-[13px] font-semibold text-white/45">Selecione o que importar</p>
+        <button
+          type="button"
+          onClick={() => setItems((prev) => prev.map((i) => ({ ...i, selected: !allSelected })))}
+          className="text-[13px] text-white/70"
+        >
+          {allSelected ? "Desmarcar todos" : "Marcar todos"}
+        </button>
+      </div>
 
+      <div className="mt-2 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.07] bg-[#141414]">
+        {items.map((item, idx) => {
+          const { Icon, hex } = categoryVisual(item.category, []);
+          const isIn = item.type === "receita";
           return (
             <motion.div
               key={idx}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.03 }}
-              className={cn(
-                "rounded-xl border p-3 transition-colors",
-                item.selected ? "border-primary/30 bg-primary/5" : "border-border/15 bg-muted/10 opacity-50"
-              )}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.02 }}
+              className={cn("flex items-center gap-3 px-4 py-3 transition-opacity", !item.selected && "opacity-45")}
             >
-              <div className="flex items-start gap-2.5">
-                <button
-                  onClick={() => toggleItem(idx)}
-                  className={cn(
-                    "mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors",
-                    item.selected ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/30"
-                  )}
-                >
-                  {item.selected && <Check className="w-3 h-3" />}
-                </button>
-                <div className="flex-1 min-w-0 space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-[12px] font-semibold text-foreground truncate">{item.description}</p>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {onFallback && (
-                        <button onClick={() => onFallback(item)} className="text-primary/60 hover:text-primary transition-colors" title="Editar">
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      <button onClick={() => removeItem(idx)} className="text-muted-foreground/40 hover:text-destructive transition-colors">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[12px] font-bold text-foreground">{formatCurrency(item.amount)}</span>
-                    <span className={cn(
-                      "text-[10px] font-bold px-2 py-0.5 rounded-full",
-                      item.type === "receita" ? "text-primary bg-primary/10" : "text-destructive bg-destructive/10"
-                    )}>
-                      {item.type === "receita" ? "Receita" : "Despesa"}
-                    </span>
-                    {CatIcon && (
-                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ backgroundColor: `hsl(${catColor} / 0.1)` }}>
-                        <CatIcon className="w-3 h-3" style={{ color: `hsl(${catColor})` }} />
-                        <span className="text-[10px] capitalize" style={{ color: `hsl(${catColor})` }}>{item.category}</span>
-                      </div>
-                    )}
-                    <ConfidenceBadge confidence={conf} />
-                  </div>
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => toggleItem(idx)}
+                aria-label={item.selected ? "Desmarcar" : "Marcar"}
+                className={cn(
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors",
+                  item.selected ? "border-white bg-white text-[#0B0B0B]" : "border-white/25",
+                )}
+              >
+                {item.selected && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+              </button>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: `${hex}1F` }}>
+                <Icon className="h-4 w-4" style={{ color: hex }} />
+              </span>
+              <button type="button" onClick={() => onFallback?.(item)} className="min-w-0 flex-1 text-left">
+                <p className="truncate text-[15px] text-white">{item.description}</p>
+                <p className="flex items-center gap-1.5 truncate text-[12px] capitalize text-white/40">
+                  {item.category}
+                  {item.confidence !== undefined && item.confidence < 0.8 && <ConfidenceBadge confidence={item.confidence} />}
+                </p>
+              </button>
+              <p className={cn("shrink-0 text-[15px] font-semibold tabular-nums", isIn ? "text-willo-green" : "text-white")}>
+                {isIn ? "+" : "−"}{fmtMoney(item.amount)}
+              </p>
+              <button type="button" onClick={() => removeItem(idx)} aria-label="Remover" className="shrink-0 text-white/30">
+                <X className="h-4 w-4" />
+              </button>
             </motion.div>
           );
         })}
       </div>
-
-      <div className="p-5 pt-3 border-t border-border/10 shrink-0 space-y-3 pb-24 sm:pb-5">
-        <div className="flex items-center justify-between text-[12px]">
-          <span className="text-muted-foreground">{selectedItems.length} de {items.length} selecionados</span>
-          <span className="font-bold text-foreground">{formatCurrency(totalSelected)}</span>
-        </div>
-        <Button
-          onClick={() => onConfirm(selectedItems)}
-          disabled={selectedItems.length === 0 || confirming}
-          className="w-full h-11 rounded-xl text-xs font-bold"
-        >
-          {confirming ? (
-            <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Importando...</>
-          ) : (
-            <><Check className="w-3.5 h-3.5 mr-1.5" />Importar {selectedItems.length} lançamento{selectedItems.length !== 1 ? "s" : ""}</>
-          )}
-        </Button>
-      </div>
+      {onFallback && <p className="mt-3 px-2 text-center text-[12px] text-white/35">Toque em um lançamento para editar os detalhes.</p>}
     </div>
   );
 }
@@ -719,90 +404,86 @@ export default function InvoiceUploadReviewModal({
   useEffect(() => {
     if (initialItems && initialItems.length > 0) {
       const defaultAccountId = accounts.find((account) => account.is_default)?.id ?? accounts[0]?.id ?? null;
-
       setItems(
         initialItems.map((item) => ({
           ...item,
           account_id: item.account_id ?? (showAccountSelector ? defaultAccountId : null),
-        }))
+        })),
       );
     }
   }, [initialItems, accounts, showAccountSelector]);
 
-  if (!open) return null;
-
   const isSingleItem = items.length === 1;
+  const selectedItems = items.filter((i) => i.selected);
+  const totalSelected = selectedItems.reduce((sum, i) => sum + i.amount, 0);
 
-  const handleSingleConfirm = () => {
-    const item = items[0];
-    onConfirm([{ ...item, selected: true }]);
-  };
-
-  const handleSingleUpdate = (field: keyof ExtractedItem, value: any) => {
+  const handleSingleUpdate = (field: keyof ExtractedItem, value: unknown) => {
     setItems((prev) => prev.map((item, i) => (i === 0 ? { ...item, [field]: value } : item)));
   };
 
+  const confirm = () => (isSingleItem ? onConfirm([{ ...items[0], selected: true }]) : onConfirm(selectedItems));
+
   return (
     <AnimatePresence>
-      <motion.div
-        key="invoice-upload-review-overlay"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center"
-        onClick={onClose}
-      >
+      {open && (
         <motion.div
+          key="invoice-upload-review"
           initial={{ y: "100%" }}
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
-          transition={{ type: "spring", damping: 28, stiffness: 300 }}
-          onClick={(e) => e.stopPropagation()}
-          className={cn(
-            "w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl bg-card border border-border/20 shadow-2xl",
-            isSingleItem ? "" : "max-h-[85vh] flex flex-col"
-          )}
+          transition={{ type: "spring", damping: 34, stiffness: 320 }}
+          className="willo-bg fixed inset-0 z-[60] flex flex-col md:inset-auto md:left-1/2 md:top-1/2 md:h-[88vh] md:w-[440px] md:-translate-x-1/2 md:-translate-y-1/2 md:overflow-hidden md:rounded-[32px] md:border md:border-white/[0.08]"
         >
-          {/* Header */}
-          <div className="p-5 pb-3 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <h2 className="text-sm font-bold text-foreground">
-                {isSingleItem ? "Lançamento Detectado" : "Lançamentos Detectados"}
-              </h2>
+          {/* Nav */}
+          <div className="shrink-0 px-4" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
+            <div className="flex h-11 items-center justify-between">
+              <button onClick={onClose} aria-label="Fechar" className="-ml-1 flex h-10 w-10 items-center justify-center rounded-full text-white/70 active:opacity-60">
+                <X className="h-6 w-6" />
+              </button>
+              <span className="text-[16px] font-semibold text-white">{isSingleItem ? "Revisar lançamento" : "Revisar lançamentos"}</span>
+              <span className="w-10" />
             </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-lg bg-muted/30 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
 
-          {isSingleItem ? (
-            <div className="px-5 pb-24 sm:pb-5">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
+            {items.length === 0 ? null : isSingleItem ? (
               <SingleItemReview
                 item={items[0]}
                 onUpdate={handleSingleUpdate}
-                onConfirm={handleSingleConfirm}
-                confirming={confirming}
                 accounts={accounts}
                 showAccountSelector={showAccountSelector}
+                avgConfidence={avgConfidence}
               />
-            </div>
-          ) : (
-            <MultiItemReview
-              items={items}
-              setItems={setItems}
-              onConfirm={onConfirm}
-              confirming={confirming}
-              avgConfidence={avgConfidence}
-              message={message}
-              onFallback={onFallback}
-            />
-          )}
+            ) : (
+              <MultiItemReview items={items} setItems={setItems} avgConfidence={avgConfidence} message={message} onFallback={onFallback} />
+            )}
+          </div>
+
+          {/* Confirm */}
+          <div className="shrink-0 border-t border-white/[0.06] px-4 pt-3" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}>
+            {!isSingleItem && (
+              <div className="mb-2.5 flex items-center justify-between px-1 text-[13px]">
+                <span className="text-white/45">{selectedItems.length} de {items.length} selecionados</span>
+                <span className="font-semibold text-white tabular-nums">{fmtMoney(totalSelected)}</span>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={confirm}
+              disabled={confirming || (!isSingleItem && selectedItems.length === 0)}
+              className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-white text-[16px] font-bold text-[#0B0B0B] shadow-[0_10px_30px_-12px_rgba(255,255,255,0.35)] transition-opacity disabled:opacity-35"
+            >
+              {confirming ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Importando...</>
+              ) : isSingleItem ? (
+                <><Check className="h-4 w-4" strokeWidth={3} /> Confirmar lançamento</>
+              ) : (
+                <><Check className="h-4 w-4" strokeWidth={3} /> Importar {selectedItems.length} lançamento{selectedItems.length !== 1 ? "s" : ""}</>
+              )}
+            </button>
+          </div>
         </motion.div>
-      </motion.div>
+      )}
     </AnimatePresence>
   );
 }
