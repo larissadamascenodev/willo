@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Check, Loader2, Sparkles, ShieldCheck, ShieldAlert, AlertTriangle,
-  Edit3, ChevronRight, Clock, Wallet, Search, Plus, Settings, Tag, Store, Repeat, Layers,
+  Edit3, ChevronRight, Clock, Wallet, Search, Plus, Settings, Tag, Store, Repeat, Layers, RotateCcw,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,7 +18,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { currencySymbol, getCurrency } from "@/lib/currency";
 export interface ExtractedItem {
   description: string;
+  /** Negative on a refund, so the imported total matches the statement. */
   amount: number;
+  is_refund?: boolean;
   date: string | null;
   installment_current: number | null;
   installment_total: number | null;
@@ -46,6 +48,8 @@ interface Props {
   onConfirm: (items: ExtractedItem[]) => void;
   confirming: boolean;
   avgConfidence?: number;
+  /** "Total a pagar" printed on the statement, so the review can prove the maths closes. */
+  declaredTotal?: number | null;
   accounts?: ReviewAccount[];
   showAccountSelector?: boolean;
 }
@@ -432,11 +436,12 @@ function ItemEditSheet({ item, onClose, onChange }: {
   );
 }
 
-function MultiItemReview({ items, setItems, avgConfidence, message }: {
+function MultiItemReview({ items, setItems, avgConfidence, message, declaredTotal }: {
   items: ExtractedItem[];
   setItems: React.Dispatch<React.SetStateAction<ExtractedItem[]>>;
   avgConfidence?: number;
   message: string;
+  declaredTotal?: number | null;
 }) {
   const [editing, setEditing] = useState<number | null>(null);
   const toggleItem = (idx: number) =>
@@ -446,26 +451,85 @@ function MultiItemReview({ items, setItems, avgConfidence, message }: {
     setItems((prev) => prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item)));
   const allSelected = items.every((i) => i.selected);
   const plans = items.filter((i) => i.installment_total && i.installment_total > 1 && (i.installment_current ?? 1) > 1);
+  const refunds = items.filter((i) => i.amount < 0);
+  const selectedTotal = items.filter((i) => i.selected).reduce((sum, i) => sum + i.amount, 0);
+  const gap = declaredTotal ? Math.round((selectedTotal - declaredTotal) * 100) / 100 : null;
+  const matches = gap !== null && Math.abs(gap) <= 0.5;
+
+  const allPlans = items.filter((i) => (i.installment_total ?? 0) > 1);
 
   return (
     <div>
-      <div className="flex flex-col items-center pt-2 text-center">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1 text-[12px] text-white/70">
-          <Sparkles className="h-3.5 w-3.5" /> Lido pela IA
-          {avgConfidence !== undefined && <span className="text-white/40">· {Math.round(avgConfidence * 100)}% de confiança</span>}
-        </span>
-        <p className="mt-3 text-[26px] font-extrabold tracking-tight text-white">{items.length} lançamentos</p>
-        <p className="text-[14px] text-white/45">{message}</p>
+      {/* Hero: what is going in, and whether it reconciles with the statement */}
+      <div className="relative mt-1 overflow-hidden rounded-[26px] border border-white/[0.08] bg-gradient-to-b from-[#1A1A1A] to-[#121212] px-5 pb-4 pt-5">
+        {matches && (
+          <span className="pointer-events-none absolute -top-16 left-1/2 h-40 w-56 -translate-x-1/2 rounded-full bg-willo-green/[0.10] blur-[60px]" />
+        )}
+        <div className="relative flex items-center justify-between">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11.5px] text-white/65">
+            <Sparkles className="h-3 w-3" /> Lido pela IA
+          </span>
+          {avgConfidence !== undefined && <ConfidenceBadge confidence={avgConfidence} />}
+        </div>
+
+        <p className="relative mt-4 text-[38px] font-extrabold leading-none tracking-tighter text-white tabular-nums">
+          {fmtMoney(selectedTotal)}
+        </p>
+        <p className="relative mt-1.5 text-[13.5px] text-white/45">
+          {items.length} lançamento{items.length === 1 ? "" : "s"} nesta fatura
+        </p>
+
+        {declaredTotal != null && (
+          <div className="relative mt-4 border-t border-white/[0.07] pt-3">
+            <div className="flex items-center justify-between text-[13px]">
+              <span className="text-white/45">Total impresso na fatura</span>
+              <span className="font-semibold text-white tabular-nums">{fmtMoney(declaredTotal)}</span>
+            </div>
+            <div className="mt-2.5 flex items-center gap-2">
+              {matches ? (
+                <>
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-willo-green">
+                    <Check className="h-3 w-3 text-[#0B0B0B]" strokeWidth={3.5} />
+                  </span>
+                  <span className="text-[12.5px] font-medium text-willo-green">A conta fecha com a fatura</span>
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-300" />
+                  <span className="text-[12.5px] leading-snug text-white/65">
+                    {fmtMoney(Math.abs(gap!))} de diferença — {gap! < 0 ? "algo pode não ter sido lido" : "algo pode ter entrado duas vezes"}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {plans.length > 0 && (
-        <div className="mt-5 flex items-start gap-3 rounded-[22px] border border-willo-green/20 bg-willo-green/[0.06] px-4 py-3.5">
-          <Layers className="mt-0.5 h-4 w-4 shrink-0 text-willo-green" />
-          <p className="text-[13px] leading-snug text-white/70">
-            {plans.length === 1 ? "1 parcelamento já em andamento" : `${plans.length} parcelamentos já em andamento`}.
-            As parcelas pagas antes desta fatura não são lançadas — a cobrança continua daqui pra frente.
-          </p>
+      {(allPlans.length > 0 || refunds.length > 0) && (
+        <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+          {allPlans.length > 0 && (
+            <div className="rounded-[20px] border border-white/[0.07] bg-[#141414] px-4 py-3">
+              <Layers className="h-4 w-4 text-white/45" />
+              <p className="mt-2 text-[19px] font-bold leading-none text-white tabular-nums">{allPlans.length}</p>
+              <p className="mt-1 text-[11.5px] text-white/40">parcelamentos</p>
+            </div>
+          )}
+          {refunds.length > 0 && (
+            <div className="rounded-[20px] border border-willo-green/15 bg-willo-green/[0.05] px-4 py-3">
+              <RotateCcw className="h-4 w-4 text-willo-green" />
+              <p className="mt-2 text-[19px] font-bold leading-none text-white tabular-nums">{refunds.length}</p>
+              <p className="mt-1 text-[11.5px] text-white/40">estornos, viram crédito</p>
+            </div>
+          )}
         </div>
+      )}
+
+      {plans.length > 0 && (
+        <p className="mt-3 px-1 text-[12.5px] leading-snug text-white/40">
+          <span className="text-white/65">{plans.length} {plans.length === 1 ? "parcelamento já vinha de antes" : "parcelamentos já vinham de antes"}.</span>{" "}
+          As parcelas pagas antes desta fatura não são lançadas — a cobrança continua daqui pra frente.
+        </p>
       )}
 
       <div className="mt-6 flex items-center justify-between px-1">
@@ -483,6 +547,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message }: {
         {items.map((item, idx) => {
           const { Icon, hex } = categoryVisual(item.category, []);
           const isIn = item.type === "receita";
+          const isRefund = item.amount < 0;
           const day = shortDate(item.date);
           return (
             <motion.div
@@ -490,41 +555,47 @@ function MultiItemReview({ items, setItems, avgConfidence, message }: {
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.02 }}
-              className={cn("flex items-center gap-3 px-4 py-3 transition-opacity", !item.selected && "opacity-45")}
+              className={cn("flex items-center gap-2.5 px-3.5 py-3 transition-opacity", !item.selected && "opacity-45")}
             >
               <button
                 type="button"
                 onClick={() => toggleItem(idx)}
                 aria-label={item.selected ? "Desmarcar" : "Marcar"}
                 className={cn(
-                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors",
+                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors",
                   item.selected ? "border-white bg-white text-[#0B0B0B]" : "border-white/25",
                 )}
               >
-                {item.selected && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                {item.selected && <Check className="h-3 w-3" strokeWidth={3} />}
               </button>
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: `${hex}1F` }}>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: `${hex}1F` }}>
                 <Icon className="h-4 w-4" style={{ color: hex }} />
               </span>
               <button type="button" onClick={() => setEditing(idx)} className="min-w-0 flex-1 text-left">
-                <p className="truncate text-[15px] text-white">{item.description}</p>
-                <p className="flex items-center gap-1.5 truncate text-[12px] text-white/40">
-                  {day && <span className="tabular-nums">{day}</span>}
-                  {day && <span className="text-white/20">·</span>}
-                  <span className="truncate">{item.category}</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="min-w-0 flex-1 truncate text-[15px] text-white">{item.description}</span>
                   {item.installment_total && item.installment_total > 1 && (
                     <span className="shrink-0 rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[10.5px] font-semibold tabular-nums text-white/70">
                       {item.installment_current ?? 1}/{item.installment_total}
                     </span>
                   )}
+                  {isRefund && (
+                    <span className="shrink-0 rounded-full bg-willo-green/12 px-1.5 py-0.5 text-[10.5px] font-semibold text-willo-green">
+                      estorno
+                    </span>
+                  )}
+                </span>
+                <span className="mt-0.5 flex items-center gap-1 text-[11.5px] text-white/40">
+                  {day && <span className="shrink-0 tabular-nums">{day}</span>}
+                  <span className="min-w-0 flex-1 truncate">{item.category}</span>
                   {item.confidence !== undefined && item.confidence < 0.8 && <ConfidenceBadge confidence={item.confidence} />}
-                </p>
+                </span>
               </button>
-              <p className={cn("shrink-0 text-[15px] font-semibold tabular-nums", isIn ? "text-willo-green" : "text-white")}>
-                {isIn ? "+" : "−"}{fmtMoney(item.amount)}
+              <p className={cn("shrink-0 text-[14px] font-semibold tabular-nums", isIn || isRefund ? "text-willo-green" : "text-white")}>
+                {isIn || isRefund ? "+" : "−"}{fmtMoney(Math.abs(item.amount))}
               </p>
-              <button type="button" onClick={() => removeItem(idx)} aria-label="Remover" className="shrink-0 text-white/30">
-                <X className="h-4 w-4" />
+              <button type="button" onClick={() => removeItem(idx)} aria-label="Remover" className="-mr-1 shrink-0 p-1 text-white/25">
+                <X className="h-3.5 w-3.5" />
               </button>
             </motion.div>
           );
@@ -549,6 +620,7 @@ export default function InvoiceUploadReviewModal({
   onConfirm,
   confirming,
   avgConfidence,
+  declaredTotal,
   accounts = [],
   showAccountSelector = false,
 }: Props) {
@@ -608,7 +680,7 @@ export default function InvoiceUploadReviewModal({
                 avgConfidence={avgConfidence}
               />
             ) : (
-              <MultiItemReview items={items} setItems={setItems} avgConfidence={avgConfidence} message={message} />
+              <MultiItemReview items={items} setItems={setItems} avgConfidence={avgConfidence} message={message} declaredTotal={declaredTotal} />
             )}
           </div>
 

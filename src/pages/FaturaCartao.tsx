@@ -24,6 +24,7 @@ import InvoiceTransactionList from "@/components/fatura/InvoiceTransactionList";
 import InvoicePayModal from "@/components/fatura/InvoicePayModal";
 import InvoiceHistoryChart from "@/components/fatura/InvoiceHistoryChart";
 import InvoiceAddChooserModal, { type ScanMode } from "@/components/fatura/InvoiceAddChooserModal";
+import InvoiceScanScreen from "@/components/fatura/InvoiceScanScreen";
 import { anchorPurchaseDate } from "@/lib/installments";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
 import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
@@ -108,6 +109,10 @@ const FaturaCartao = () => {
   const [uploadProcessing, setUploadProcessing] = useState(false);
   const [extractedItems, setExtractedItems] = useState<ExtractedItem[]>([]);
   const [extractedMessage, setExtractedMessage] = useState("");
+  const [declaredTotal, setDeclaredTotal] = useState<number | null>(null);
+  const [avgConfidence, setAvgConfidence] = useState<number | undefined>(undefined);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanItems, setScanItems] = useState<ExtractedItem[] | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [confirmingImport, setConfirmingImport] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<EditTransactionData | null>(null);
@@ -343,7 +348,12 @@ const FaturaCartao = () => {
   const handleFileUpload = async (file: File, mode: ScanMode) => {
     const isInvoice = mode === "invoice";
     setUploadProcessing(true);
-    toast.loading(isInvoice ? "Lendo sua fatura..." : "Lendo a compra...", { id: "upload-processing" });
+    if (isInvoice) {
+      setScanItems(null);
+      setScanOpen(true);
+    } else {
+      toast.loading("Lendo a compra...", { id: "upload-processing" });
+    }
     try {
       const data = await processScanFile(file, isInvoice ? "invoice" : "transaction");
 
@@ -353,6 +363,7 @@ const FaturaCartao = () => {
       }));
 
       if (items.length === 0) {
+        setScanOpen(false);
         toast.dismiss("upload-processing");
         toast.error(isInvoice ? "Nenhuma compra encontrada nessa fatura." : "Nenhuma compra encontrada nessa imagem.");
         return;
@@ -360,9 +371,15 @@ const FaturaCartao = () => {
 
       setExtractedItems(items);
       setExtractedMessage(data.message || "Lançamentos encontrados!");
-      setShowReviewModal(true);
+      setDeclaredTotal(isInvoice ? (data.declared_total ?? null) : null);
+      setAvgConfidence(typeof data.avg_confidence === "number" ? data.avg_confidence : undefined);
       toast.dismiss("upload-processing");
+
+      // The scan screen reveals what was found, then hands over to the review
+      if (isInvoice) setScanItems(items);
+      else setShowReviewModal(true);
     } catch (err: any) {
+      setScanOpen(false);
       toast.dismiss("upload-processing");
       toast.error(err?.message || "Erro ao processar fatura");
     } finally {
@@ -378,7 +395,9 @@ const FaturaCartao = () => {
       const invoicePeriod = selectedYear * 12 + (selectedMonth - 1);
 
       for (const item of selectedItems) {
-        const isParcelado = !!(item.installment_current && item.installment_total && item.installment_total > 1);
+        // A refund is a single credit on this invoice, never an instalment plan
+        const isRefund = item.amount < 0;
+        const isParcelado = !isRefund && !!(item.installment_current && item.installment_total && item.installment_total > 1);
         // "4/10" means three instalments were charged in earlier statements; the card
         // triggers skip those, so this invoice is the first one billed here.
         const paidInstallments = isParcelado ? item.installment_current! - 1 : 0;
@@ -398,8 +417,8 @@ const FaturaCartao = () => {
             payment_method: "cartao",
             credit_card_id: cardId,
             recurrence_type: isParcelado ? "parcelado" : "unica",
-            installments: item.installment_total || null,
-            installment_current: item.installment_current || null,
+            installments: isParcelado ? item.installment_total : null,
+            installment_current: isParcelado ? item.installment_current : null,
             observation: paidInstallments > 0
               ? `paid_installments:${paidInstallments}${purchaseNote ? ` | ${purchaseNote}` : ""}`
               : null,
@@ -703,12 +722,22 @@ const FaturaCartao = () => {
         onScan={handleFileUpload}
       />
 
+      {/* Reading the statement: scan animation, then every line found */}
+      <InvoiceScanScreen
+        open={scanOpen}
+        items={scanItems}
+        onClose={() => { setScanOpen(false); setScanItems(null); }}
+        onDone={() => { setScanOpen(false); setScanItems(null); setShowReviewModal(true); }}
+      />
+
       {/* Upload Review Modal */}
       <InvoiceUploadReviewModal
         open={showReviewModal}
         onClose={() => setShowReviewModal(false)}
         items={extractedItems}
         message={extractedMessage}
+        declaredTotal={declaredTotal}
+        avgConfidence={avgConfidence}
         onConfirm={handleConfirmImport}
         confirming={confirmingImport}
       />

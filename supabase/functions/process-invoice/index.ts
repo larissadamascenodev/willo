@@ -10,12 +10,15 @@ const corsHeaders = {
 interface ExtractedItem {
   description: string;
   amount: number;
+  is_refund: boolean;
   date: string | null;
   installment_current: number | null;
   installment_total: number | null;
   category: string;
   type: string;
   confidence: number;
+  merchant?: string | null;
+  time?: string | null;
 }
 
 const NAME_RULES = `REGRA CRÍTICA DE DESCRIÇÃO — SIMPLIFIQUE NOMES:
@@ -36,6 +39,13 @@ const NAME_RULES = `REGRA CRÍTICA DE DESCRIÇÃO — SIMPLIFIQUE NOMES:
 - Mantenha o nome curto, limpo e reconhecível`;
 
 const CATEGORY_GUIDE = `CATEGORIAS DISPONÍVEIS (use EXATAMENTE um destes nomes, nunca invente outro):
+  * Pix no crédito — Pix parcelado ou no crédito, transferências, pagamento para uma pessoa física
+    (o nome da linha é o nome de alguém, ex: "Larissa Dias Damasceno", "Cleide da Silva Marcal")
+  * Tarifas e juros — juros, multa de atraso, IOF, anuidade, encargos, seguro do cartão
+  * Compras online — marketplaces e lojas online: Mercado Livre, Shopee, Amazon, AliExpress, Magalu,
+    Casas Bahia, Shein, Temu, quando não der para saber o que foi comprado
+  * Telefone e Internet — Vivo, Claro, Tim, Oi, Telefônica, internet, celular
+  * Serviços — SaaS, infoprodutos, plataformas digitais, serviços profissionais (Kiwify, Hotmart, hospedagem)
   * Alimentação — mercado de bairro, açougue, hortifruti, padaria (compra de alimentos)
   * Supermercado — redes de supermercado (Extra, Pão de Açúcar, Carrefour, Atacadão, Assaí)
   * Delivery — iFood, Rappi, Uber Eats, 99Food, Zé Delivery, Aiqfome
@@ -59,7 +69,11 @@ const CATEGORY_GUIDE = `CATEGORIAS DISPONÍVEIS (use EXATAMENTE um destes nomes,
   * Viagem — passagens, hospedagem, turismo, aluguel de carro
   * Impostos — tributos, taxas governamentais
   * Academia — academia, crossfit, natação, atividades físicas
-  * Outros — só quando realmente não der para identificar
+  * Outros — ÚLTIMO recurso, evite ao máximo
+REGRA: "Outros" atrapalha as estatísticas do usuário. Antes de usar, pergunte-se se cabe em
+"Compras online", "Serviços", "Pix no crédito" ou "Tarifas e juros" — quase sempre cabe.
+Nome de pessoa física = "Pix no crédito". Loja que você não reconhece = "Compras online".
+Plataforma ou site = "Serviços".
 IMPORTANTE: retorne a categoria com a acentuação e as maiúsculas exatamente como na lista.`;
 
 const INVOICE_PROMPT = `Você é um assistente especializado em ler faturas de cartão de crédito brasileiras (Nubank, Itaú, Bradesco, Santander, Inter, C6, BB, Caixa, XP) em PDF, print ou foto.
@@ -68,14 +82,28 @@ Extraia TODAS as compras listadas na fatura, linha por linha, de todas as págin
 
 ${NAME_RULES}
 
-Extraia SOMENTE da lista de transações/compras. NUNCA extraia estas linhas:
+A SOMA de tudo que você extrair precisa fechar com o "Total a pagar" impresso na fatura.
+Por isso existem três tipos de linha, e os três entram:
+
+1. COMPRAS — valor positivo, categoria pela lista abaixo.
+2. ENCARGOS realmente cobrados nesta fatura — juros de rotativo, multa de atraso, IOF, anuidade,
+   seguro. Valor positivo, categoria "Tarifas e juros". NÃO invente: só os que aparecem na fatura.
+3. ESTORNOS E DEVOLUÇÕES de compras — "Estorno de X", 'Crédito de "Loja X"', devolução, cancelamento.
+   Valor NEGATIVO (ex: -19.90), com a mesma categoria que a compra original teria.
+   Sem eles a conta do usuário não fecha.
+
+NUNCA extraia estas linhas (não são nem compra, nem encargo, nem estorno):
 - Pagamentos da fatura: "Pagamento em 14 AGO", "PAGAMENTO EFETUADO", "PAGAMENTO RECEBIDO", "PGTO DEBITO AUTOMATICO"
-- Saldos e rotativo: "Saldo em rotativo", "Saldo em atraso", "Saldo em aberto", "Saldo financiado", "Saldo anterior"
-- Créditos e devoluções: "Crédito de atraso", "Crédito de rotativo", 'Crédito de "Loja X"', "Estorno de ...", qualquer valor negativo
-- Resumo da fatura: "Fatura anterior", "Total de compras", "Total a pagar", "Outros lançamentos", "Juros de financiamento"
+- Saldos e seus créditos espelhados, que se anulam: "Saldo em rotativo" com "Crédito de rotativo",
+  "Saldo em atraso" com "Crédito de atraso", "Saldo em aberto", "Saldo financiado", "Saldo anterior",
+  "Encerramento de dívida" com "Juros de dívida encerrada"
+- Resumo da fatura: "Fatura anterior", "Total de compras", "Total a pagar", "Outros lançamentos",
+  "Juros de financiamento" (é o mesmo valor que já aparece como "Juros de rotativo" na lista)
 - Limites e cabeçalhos: "Limite total", "Limite disponível", "Pré-aprovado", "Valor máximo", "Pagamentos e Financiamentos"
 - Subtotais por portador: uma linha com só um nome de pessoa/empresa e um valor, sem data, logo acima de um bloco de compras
-Encargos realmente cobrados nesta fatura (anuidade, IOF de uma compra, multa, seguro) DEVEM ser extraídos, categoria "Outros".
+
+Retorne também "summary" com os valores IMPRESSOS na fatura, para o app conferir a conta:
+{ "total_a_pagar": número, "total_compras": número }
 
 Para cada compra retorne:
 - description: nome SIMPLIFICADO do estabelecimento (ver regras acima), sem a marcação de parcela
@@ -162,9 +190,26 @@ const KNOWN_CATEGORIES = [
   "Alimentação", "Supermercado", "Delivery", "Fast Food", "Cafeteria", "Bebidas",
   "Transporte", "Saúde", "Assinaturas", "Educação", "Moradia",
   "Conta de Luz", "Conta de Água", "Conta de Gás", "Lazer", "Vestuário",
-  "Tecnologia", "Beleza", "Pets", "Presentes", "Viagem", "Impostos", "Academia", "Outros",
+  "Tecnologia", "Beleza", "Pets", "Presentes", "Viagem", "Impostos", "Academia",
+  "Pix no crédito", "Tarifas e juros", "Compras online", "Telefone e Internet", "Serviços", "Outros",
   "Salário", "Freelance", "Investimentos", "Vendas", "Aluguéis", "Bônus", "Comissão", "Mesada",
 ];
+
+/** Last-resort routing so an unusable "Outros" does not poison the user's statistics. */
+const CATEGORY_HINTS: [RegExp, string][] = [
+  [/juros|multa|iof|anuidade|encargo|tarifa|seguro/, "Tarifas e juros"],
+  [/\bpix\b|transferencia|ted\b|doc\b/, "Pix no crédito"],
+  [/mercado\s?livre|mercadolivre|shopee|amazon|aliexpress|magalu|casas\s?bahia|shein|temu|americanas/, "Compras online"],
+  [/vivo|claro|tim\b|oi\b|telefonica|internet/, "Telefone e Internet"],
+  [/kiwify|hotmart|eduzz|saas|hospedagem|dominio/, "Serviços"],
+  [/uber|99app|99\s?pop|taxi|posto|combustivel/, "Transporte"],
+];
+
+function refineCategory(category: string, description: string): string {
+  if (category !== "Outros") return category;
+  const text = normalize(description);
+  return CATEGORY_HINTS.find(([re]) => re.test(text))?.[1] ?? "Outros";
+}
 
 const normalize = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
@@ -188,9 +233,9 @@ const NON_PURCHASE = [
   /^fatura\s+anterior/,
   /\blimite\s+(total|disponivel|transferido|garantido)/,
   /^pre-?aprovado/,
-  /^credito\s+de\b/,
-  /^estorno\b|^cancelamento\b/,
-  /^juros\s+(de\s+)?(financiamento|parcelamento|rotativo|divida)/,
+  // a refund of a purchase IS kept (as a negative item); only the rotativo mirrors are dropped
+  /^credito\s+de\s+(atraso|rotativo|divida|juros)/,
+  /^juros\s+(de\s+)?(financiamento|parcelamento|divida)/,
   /^encerramento\s+de\s+divida/,
   /^iof\s+de\s+compras/,
   /^outros\s+lancamentos/,
@@ -353,7 +398,7 @@ serve(async (req) => {
 
     const systemPrompt = context === "transaction" ? TRANSACTION_PROMPT : INVOICE_PROMPT;
 
-    const userTextInvoice = "Extraia todas as compras desta fatura de cartão de crédito, de todas as páginas e de todos os portadores. Identifique parcelamentos e ignore pagamentos, saldos e totais.";
+    const userTextInvoice = "Extraia todas as compras, encargos e estornos desta fatura, de todas as páginas e de todos os portadores. Estorno vai com valor negativo. Identifique parcelamentos, ignore pagamentos e saldos, e retorne o summary com os totais impressos.";
     const userTextTransaction = "Extraia todas as transações deste comprovante/recibo/extrato. Identifique o tipo (receita ou despesa), valor, data, destinatário e categoria.";
     const userText = context === "transaction" ? userTextTransaction : userTextInvoice;
 
@@ -408,7 +453,7 @@ ${csvText}` }];
 
     rawContent = rawContent.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
 
-    let parsed: { items: any[] };
+    let parsed: { items: any[]; summary?: { total_a_pagar?: number; total_compras?: number } };
     try {
       parsed = JSON.parse(rawContent);
     } catch {
@@ -421,20 +466,24 @@ ${csvText}` }];
     }
 
     const cleanedItems: ExtractedItem[] = parsed.items
-      .filter((item: any) => item.description && item.amount > 0)
+      .filter((item: any) => item.description && Number(item.amount) && Number.isFinite(Number(item.amount)))
       .filter((item: any) => !isNonPurchase(String(item.description)))
       .map((item: any) => {
         const total = item.installment_total ? Number(item.installment_total) : null;
         const current = item.installment_current ? Number(item.installment_current) : null;
         // "1/1" is not a real instalment plan, and a current above the total is a misread
         const isPlan = !!total && total > 1 && !!current && current >= 1 && current <= total;
+        const amount = Math.round(Number(item.amount) * 100) / 100;
+        const description = cleanDescription(item.description);
         return {
-          description: cleanDescription(item.description),
-          amount: Math.round(Number(item.amount) * 100) / 100,
+          description,
+          // refunds keep their negative sign so the imported total matches the statement
+          amount,
+          is_refund: amount < 0,
           date: item.date || null,
           installment_current: isPlan ? current : null,
           installment_total: isPlan ? total : null,
-          category: normalizeCategory(item.category),
+          category: refineCategory(normalizeCategory(item.category), description),
           type: item.type === "receita" ? "receita" : "despesa",
           confidence: typeof item.confidence === "number" ? Math.min(1, Math.max(0, item.confidence)) : 0.5,
           merchant: item.merchant || null,
@@ -463,6 +512,9 @@ ${csvText}` }];
       message += " ⚠️ Confiança baixa — revise os dados com atenção.";
     }
 
+    const extractedTotal = Math.round(cleanedItems.reduce((sum, i) => sum + i.amount, 0) * 100) / 100;
+    const declaredTotal = Number(parsed.summary?.total_a_pagar) || null;
+
     return new Response(
       JSON.stringify({
         items: cleanedItems,
@@ -470,6 +522,9 @@ ${csvText}` }];
         total_items: totalItems,
         installment_items: installmentItems.length,
         avg_confidence: Math.round(avgConfidence * 100) / 100,
+        extracted_total: extractedTotal,
+        declared_total: declaredTotal,
+        declared_purchases: Number(parsed.summary?.total_compras) || null,
       }),
       {
         status: 200,
