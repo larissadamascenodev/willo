@@ -11,6 +11,7 @@ import { useMonth } from "@/contexts/MonthContext";
 import { getRecurringForMonth } from "@/services/recurringService";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryUtils";
+import { dayOfMonth } from "@/lib/dateOnly";
 
 import { getCurrency } from "@/lib/currency";
 const fmt = (v: number) =>
@@ -74,7 +75,7 @@ const TransacoesAnalytics = () => {
       const baseTxs = (txRes.data ?? []) as TransactionRow[];
       const materializedRecurring = recurringTxs.map((t: any) => ({
         ...t,
-        date: `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(new Date(t.date).getDate()).padStart(2, "0")}`,
+        date: `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(dayOfMonth(t.date)).padStart(2, "0")}`,
       })) as TransactionRow[];
 
       setTransactions([...baseTxs, ...materializedRecurring]);

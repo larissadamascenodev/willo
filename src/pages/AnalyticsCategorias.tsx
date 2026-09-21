@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMonth } from "@/contexts/MonthContext";
 import { getRecurringForMonth } from "@/services/recurringService";
+import { dayOfMonth } from "@/lib/dateOnly";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { getCategoryIcon, getCategoryColor, getCategoryHexColor } from "@/lib/categoryUtils";
 import MonthSelector from "@/components/dashboard/MonthSelector";
@@ -1334,7 +1335,7 @@ const AnalyticsCategorias = () => {
       const baseTxs = (txRes.data ?? []) as TxRow[];
       const materializedRecurring = recurringTxs.map((t: any) => ({
         ...t,
-        date: `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(new Date(t.date).getDate()).padStart(2, "0")}`,
+        date: `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(dayOfMonth(t.date)).padStart(2, "0")}`,
       })) as TxRow[];
 
       // Build a set of transaction IDs that belong to this month's invoices
@@ -1363,7 +1364,7 @@ const AnalyticsCategorias = () => {
       const prevBaseTxs = (prevTxRes.data ?? []) as TxRow[];
       const prevMaterialized = prevRecurring.map((t: any) => ({
         ...t,
-        date: `${prevY}-${String(prevM + 1).padStart(2, "0")}-${String(new Date(t.date).getDate()).padStart(2, "0")}`,
+        date: `${prevY}-${String(prevM + 1).padStart(2, "0")}-${String(dayOfMonth(t.date)).padStart(2, "0")}`,
       })) as TxRow[];
 
       // Filter previous month credit card txs similarly

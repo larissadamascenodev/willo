@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Check, Loader2, Sparkles, ShieldCheck, ShieldAlert, AlertTriangle,
-  Edit3, ChevronRight, Clock, Wallet, Search, Plus, Settings, Tag, Store, Repeat,
+  Edit3, ChevronRight, Clock, Wallet, Search, Plus, Settings, Tag, Store, Repeat, Layers,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -46,7 +46,6 @@ interface Props {
   onConfirm: (items: ExtractedItem[]) => void;
   confirming: boolean;
   avgConfidence?: number;
-  onFallback?: (item: ExtractedItem) => void;
   accounts?: ReviewAccount[];
   showAccountSelector?: boolean;
 }
@@ -305,17 +304,148 @@ function SingleItemReview({ item, onUpdate, accounts = [], showAccountSelector =
   );
 }
 
-function MultiItemReview({ items, setItems, avgConfidence, message, onFallback }: {
+const shortDate = (date: string | null) => {
+  if (!date) return null;
+  const [, m, d] = date.split("-");
+  return m && d ? `${d}/${m}` : null;
+};
+
+/** Edit one extracted line before importing: name, category, amount, date and instalments. */
+function ItemEditSheet({ item, onClose, onChange }: {
+  item: { index: number; data: ExtractedItem } | null;
+  onClose: () => void;
+  onChange: (index: number, field: keyof ExtractedItem, value: unknown) => void;
+}) {
+  const { user } = useAuth();
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [showCategoryCreate, setShowCategoryCreate] = useState(false);
+  const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
+
+  useEffect(() => {
+    getCustomCategories("despesa").then(setCustomCategories).catch(() => {});
+  }, []);
+
+  const data = item?.data;
+  const update = (field: keyof ExtractedItem, value: unknown) => {
+    if (item) onChange(item.index, field, value);
+  };
+
+  const handleCreateCategory = async (payload: { name: string; icon: string; color: string }) => {
+    if (user) {
+      try {
+        const cat = await createCustomCategory(user.id, { ...payload, type: "despesa" });
+        setCustomCategories((prev) => [...prev, cat]);
+      } catch {
+        /* the category still applies to this item */
+      }
+    }
+    update("category", payload.name);
+    setShowCategoryCreate(false);
+  };
+
+  const { Icon: CatIcon, hex: catHex } = categoryVisual(data?.category ?? "", customCategories);
+  const isPlan = !!(data?.installment_total && data.installment_total > 1);
+
+  return (
+    <>
+      <BottomSheet open={!!item} onClose={onClose} zIndex={70}>
+        {data && (
+          <div className="px-5 pb-2">
+            <p className="text-[22px] font-extrabold tracking-tight text-white">Editar lançamento</p>
+
+            <label className="relative mt-5 flex items-baseline justify-center gap-2">
+              <span className="text-[22px] font-bold text-white/40">{currencySymbol()}</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={data.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, "");
+                  update("amount", digits ? Number(digits) / 100 : 0);
+                }}
+                className="w-[70%] bg-transparent text-center text-[44px] font-extrabold leading-none tracking-tight text-white tabular-nums focus:outline-none"
+              />
+            </label>
+            {isPlan && (
+              <p className="mt-2 text-center text-[12px] text-white/40">valor de cada parcela</p>
+            )}
+
+            <div className="mt-6 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.07] bg-[#141414]">
+              <Row icon={Edit3} label="Descrição">
+                <input value={data.description} onChange={(e) => update("description", e.target.value)} placeholder="Nome" className={inlineInput} />
+              </Row>
+              <Row icon={Tag} label="Categoria" onClick={() => setShowCategoryPicker(true)}>
+                <CatIcon className="h-4 w-4 shrink-0" style={{ color: catHex }} />
+                <span className="truncate text-[15px] text-white">{data.category || "Escolher"}</span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-white/25" />
+              </Row>
+              <Row icon={Clock} label="Data da compra">
+                <input
+                  type="date"
+                  value={data.date || ""}
+                  onChange={(e) => update("date", e.target.value)}
+                  className="bg-transparent text-right text-[15px] text-white [color-scheme:dark] focus:outline-none"
+                />
+              </Row>
+              {isPlan && (
+                <Row icon={Layers} label="Parcela">
+                  <input
+                    type="number"
+                    min={1}
+                    max={data.installment_total ?? 1}
+                    value={data.installment_current ?? 1}
+                    onChange={(e) => update("installment_current", Math.max(1, Math.min(data.installment_total ?? 1, Number(e.target.value))))}
+                    className="w-12 bg-transparent text-right text-[15px] text-white focus:outline-none"
+                  />
+                  <span className="text-[15px] text-white/45">de {data.installment_total}</span>
+                </Row>
+              )}
+            </div>
+
+            {isPlan && (
+              <p className="mt-3 px-1 text-center text-[12px] leading-snug text-white/35">
+                As parcelas anteriores não entram. A cobrança começa nesta fatura e segue até a {data.installment_total}ª.
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-5 flex h-14 w-full items-center justify-center rounded-full bg-white text-[15px] font-bold text-[#0B0B0B] active:scale-[0.99]"
+            >
+              Pronto
+            </button>
+          </div>
+        )}
+      </BottomSheet>
+
+      <CategoryPickerSheet
+        open={showCategoryPicker}
+        selected={data?.category ?? ""}
+        onSelect={(cat) => update("category", cat)}
+        onClose={() => setShowCategoryPicker(false)}
+        customCategories={customCategories}
+        onCreateCategory={() => { setShowCategoryPicker(false); setShowCategoryCreate(true); }}
+      />
+      <CategoryCreateModal open={showCategoryCreate} onClose={() => setShowCategoryCreate(false)} onSave={handleCreateCategory} title="Nova Categoria" />
+    </>
+  );
+}
+
+function MultiItemReview({ items, setItems, avgConfidence, message }: {
   items: ExtractedItem[];
   setItems: React.Dispatch<React.SetStateAction<ExtractedItem[]>>;
   avgConfidence?: number;
   message: string;
-  onFallback?: (item: ExtractedItem) => void;
 }) {
+  const [editing, setEditing] = useState<number | null>(null);
   const toggleItem = (idx: number) =>
     setItems((prev) => prev.map((item, i) => (i === idx ? { ...item, selected: !item.selected } : item)));
   const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
+  const updateItem = (idx: number, field: keyof ExtractedItem, value: unknown) =>
+    setItems((prev) => prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item)));
   const allSelected = items.every((i) => i.selected);
+  const plans = items.filter((i) => i.installment_total && i.installment_total > 1 && (i.installment_current ?? 1) > 1);
 
   return (
     <div>
@@ -327,6 +457,16 @@ function MultiItemReview({ items, setItems, avgConfidence, message, onFallback }
         <p className="mt-3 text-[26px] font-extrabold tracking-tight text-white">{items.length} lançamentos</p>
         <p className="text-[14px] text-white/45">{message}</p>
       </div>
+
+      {plans.length > 0 && (
+        <div className="mt-5 flex items-start gap-3 rounded-[22px] border border-willo-green/20 bg-willo-green/[0.06] px-4 py-3.5">
+          <Layers className="mt-0.5 h-4 w-4 shrink-0 text-willo-green" />
+          <p className="text-[13px] leading-snug text-white/70">
+            {plans.length === 1 ? "1 parcelamento já em andamento" : `${plans.length} parcelamentos já em andamento`}.
+            As parcelas pagas antes desta fatura não são lançadas — a cobrança continua daqui pra frente.
+          </p>
+        </div>
+      )}
 
       <div className="mt-6 flex items-center justify-between px-1">
         <p className="text-[13px] font-semibold text-white/45">Selecione o que importar</p>
@@ -343,6 +483,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, onFallback }
         {items.map((item, idx) => {
           const { Icon, hex } = categoryVisual(item.category, []);
           const isIn = item.type === "receita";
+          const day = shortDate(item.date);
           return (
             <motion.div
               key={idx}
@@ -365,10 +506,17 @@ function MultiItemReview({ items, setItems, avgConfidence, message, onFallback }
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: `${hex}1F` }}>
                 <Icon className="h-4 w-4" style={{ color: hex }} />
               </span>
-              <button type="button" onClick={() => onFallback?.(item)} className="min-w-0 flex-1 text-left">
+              <button type="button" onClick={() => setEditing(idx)} className="min-w-0 flex-1 text-left">
                 <p className="truncate text-[15px] text-white">{item.description}</p>
-                <p className="flex items-center gap-1.5 truncate text-[12px] capitalize text-white/40">
-                  {item.category}
+                <p className="flex items-center gap-1.5 truncate text-[12px] text-white/40">
+                  {day && <span className="tabular-nums">{day}</span>}
+                  {day && <span className="text-white/20">·</span>}
+                  <span className="truncate">{item.category}</span>
+                  {item.installment_total && item.installment_total > 1 && (
+                    <span className="shrink-0 rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[10.5px] font-semibold tabular-nums text-white/70">
+                      {item.installment_current ?? 1}/{item.installment_total}
+                    </span>
+                  )}
                   {item.confidence !== undefined && item.confidence < 0.8 && <ConfidenceBadge confidence={item.confidence} />}
                 </p>
               </button>
@@ -382,7 +530,13 @@ function MultiItemReview({ items, setItems, avgConfidence, message, onFallback }
           );
         })}
       </div>
-      {onFallback && <p className="mt-3 px-2 text-center text-[12px] text-white/35">Toque em um lançamento para editar os detalhes.</p>}
+      <p className="mt-3 px-2 text-center text-[12px] text-white/35">Toque em um lançamento para editar nome, categoria e data.</p>
+
+      <ItemEditSheet
+        item={editing !== null && items[editing] ? { index: editing, data: items[editing] } : null}
+        onClose={() => setEditing(null)}
+        onChange={updateItem}
+      />
     </div>
   );
 }
@@ -395,7 +549,6 @@ export default function InvoiceUploadReviewModal({
   onConfirm,
   confirming,
   avgConfidence,
-  onFallback,
   accounts = [],
   showAccountSelector = false,
 }: Props) {
@@ -455,7 +608,7 @@ export default function InvoiceUploadReviewModal({
                 avgConfidence={avgConfidence}
               />
             ) : (
-              <MultiItemReview items={items} setItems={setItems} avgConfidence={avgConfidence} message={message} onFallback={onFallback} />
+              <MultiItemReview items={items} setItems={setItems} avgConfidence={avgConfidence} message={message} />
             )}
           </div>
 

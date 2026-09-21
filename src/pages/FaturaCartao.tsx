@@ -23,7 +23,8 @@ import InvoiceCategoryBreakdown from "@/components/fatura/InvoiceCategoryBreakdo
 import InvoiceTransactionList from "@/components/fatura/InvoiceTransactionList";
 import InvoicePayModal from "@/components/fatura/InvoicePayModal";
 import InvoiceHistoryChart from "@/components/fatura/InvoiceHistoryChart";
-import InvoiceAddChooserModal from "@/components/fatura/InvoiceAddChooserModal";
+import InvoiceAddChooserModal, { type ScanMode } from "@/components/fatura/InvoiceAddChooserModal";
+import { anchorPurchaseDate } from "@/lib/installments";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
 import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
 import MonthSelector from "@/components/dashboard/MonthSelector";
@@ -76,6 +77,7 @@ export const MONTH_SHORT = [
 export function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 }
+
 
 const FaturaCartao = () => {
   const navigate = useNavigate();
@@ -337,17 +339,24 @@ const FaturaCartao = () => {
   const usedPct = limitTotal > 0 ? Math.min((usedLimit / limitTotal) * 100, 100) : 0;
   const isOverLimit = usedLimit > limitTotal;
 
-  // Handle file upload (image, PDF, CSV)
-  const handleFileUpload = async (file: File) => {
+  // Read a whole statement, or a single purchase, with the AI
+  const handleFileUpload = async (file: File, mode: ScanMode) => {
+    const isInvoice = mode === "invoice";
     setUploadProcessing(true);
-    toast.loading("Processando fatura com IA...", { id: "upload-processing" });
+    toast.loading(isInvoice ? "Lendo sua fatura..." : "Lendo a compra...", { id: "upload-processing" });
     try {
-      const data = await processScanFile(file);
+      const data = await processScanFile(file, isInvoice ? "invoice" : "transaction");
 
       const items: ExtractedItem[] = (data.items || []).map((item: any) => ({
         ...item,
         selected: true,
       }));
+
+      if (items.length === 0) {
+        toast.dismiss("upload-processing");
+        toast.error(isInvoice ? "Nenhuma compra encontrada nessa fatura." : "Nenhuma compra encontrada nessa imagem.");
+        return;
+      }
 
       setExtractedItems(items);
       setExtractedMessage(data.message || "Lançamentos encontrados!");
@@ -366,25 +375,24 @@ const FaturaCartao = () => {
     if (!user || !cardId || !card) return;
     setConfirmingImport(true);
     try {
+      const invoicePeriod = selectedYear * 12 + (selectedMonth - 1);
+
       for (const item of selectedItems) {
         const isParcelado = !!(item.installment_current && item.installment_total && item.installment_total > 1);
+        // "4/10" means three instalments were charged in earlier statements; the card
+        // triggers skip those, so this invoice is the first one billed here.
         const paidInstallments = isParcelado ? item.installment_current! - 1 : 0;
-
-        // The invoice being viewed shows this specific installment being charged —
-        // the original purchase happened (installment_current - 1) invoices earlier.
-        let purchaseDate = item.date || new Date().toISOString().split("T")[0];
-        if (isParcelado) {
-          const day = item.date ? new Date(`${item.date}T12:00:00`).getDate() : 1;
-          const anchor = new Date(selectedYear, selectedMonth - 1 - (item.installment_current! - 1), day);
-          purchaseDate = `${anchor.getFullYear()}-${String(anchor.getMonth() + 1).padStart(2, "0")}-${String(anchor.getDate()).padStart(2, "0")}`;
-        }
+        const purchaseDate = anchorPurchaseDate(item, invoicePeriod, paidInstallments, card.closing_day);
+        const purchaseNote = isParcelado && item.date && item.date !== purchaseDate
+          ? `compra em ${item.date}`
+          : "";
 
         await createTransaction(
           {
             name: item.description,
             type: "despesa",
             amount: item.amount,
-            category: item.category || "outros",
+            category: item.category || "Outros",
             date: purchaseDate,
             status: "pago",
             payment_method: "cartao",
@@ -392,7 +400,9 @@ const FaturaCartao = () => {
             recurrence_type: isParcelado ? "parcelado" : "unica",
             installments: item.installment_total || null,
             installment_current: item.installment_current || null,
-            observation: paidInstallments > 0 ? `paid_installments:${paidInstallments}` : null,
+            observation: paidInstallments > 0
+              ? `paid_installments:${paidInstallments}${purchaseNote ? ` | ${purchaseNote}` : ""}`
+              : null,
           },
           user.id
         );
@@ -690,9 +700,7 @@ const FaturaCartao = () => {
         open={showAddChooser}
         onClose={() => setShowAddChooser(false)}
         onManual={() => setShowManualAdd(true)}
-        onImage={(file) => handleFileUpload(file)}
-        onPdf={(file) => handleFileUpload(file)}
-        onCsv={(file) => handleFileUpload(file)}
+        onScan={handleFileUpload}
       />
 
       {/* Upload Review Modal */}

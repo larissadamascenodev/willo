@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getRecurringForMonth } from "@/services/recurringService";
+import { dayOfMonth } from "@/lib/dateOnly";
+import { chargeStartsAfterMonth } from "@/lib/installments";
 
 export interface FinancialSummary {
   income: number;
@@ -137,7 +139,7 @@ async function fetchMonthTransactions(month: number, year: number, opts?: { skip
   );
   baseTxs = baseTxs.filter((t) => {
     if (t.payment_method === "cartao" && t.credit_card_id) {
-      return cardsWithInvoice.has(t.credit_card_id);
+      return cardsWithInvoice.has(t.credit_card_id) && !chargeStartsAfterMonth(t, month, year);
     }
     return true;
   });
@@ -151,7 +153,7 @@ async function fetchMonthTransactions(month: number, year: number, opts?: { skip
   // Materialize recurring transactions with adjusted date for this month
   const materializedRecurring = recurringTxs.map((t: any) => ({
     ...t,
-    date: `${year}-${String(month + 1).padStart(2, "0")}-${String(new Date(t.date).getDate()).padStart(2, "0")}`,
+    date: `${year}-${String(month + 1).padStart(2, "0")}-${String(dayOfMonth(t.date)).padStart(2, "0")}`,
     status: "pendente",
     _isRecurringMaterialized: true,
   })) as RawTransaction[];

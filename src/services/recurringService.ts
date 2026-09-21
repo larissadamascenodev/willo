@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { clearFinanceQueryCache } from "@/services/transactionService";
+import { dayOfMonth, parseDateOnly } from "@/lib/dateOnly";
 
 function notifyRecurringChanged() {
   clearFinanceQueryCache();
@@ -108,8 +109,8 @@ export async function getRecurringForMonth(month: number, year: number) {
 
   return uniqueFixaTxs.filter((t) => {
     if (excludedIds.has(t.id)) return false;
-    const origDate = new Date(t.date);
-    if (origDate.getMonth() === month && origDate.getFullYear() === year) return false;
+    const origDate = parseDateOnly(t.date);
+    if (origDate.month === month && origDate.year === year) return false;
     return true;
   });
 }
@@ -182,7 +183,7 @@ export async function getRecurringTransactionsForMonth(
   const materializedRecurring = (recurringTxs as MonthlyRecurringTransaction[])
     .map((tx) => ({
       ...tx,
-      date: `${year}-${String(month + 1).padStart(2, "0")}-${String(new Date(tx.date).getDate()).padStart(2, "0")}`,
+      date: `${year}-${String(month + 1).padStart(2, "0")}-${String(dayOfMonth(tx.date)).padStart(2, "0")}`,
       status: "pendente",
       _isRecurringMaterialized: true,
     }))

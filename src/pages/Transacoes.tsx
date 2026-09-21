@@ -15,6 +15,8 @@ import { getCustomCategories, type CustomCategory } from "@/services/categorySer
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryUtils";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { getRecurringForMonth, excludeRecurringForMonth, excludeRecurringFromMonthOnward } from "@/services/recurringService";
+import { dayOfMonth } from "@/lib/dateOnly";
+import { chargeStartsAfterMonth } from "@/lib/installments";
 import MonthSelector from "@/components/dashboard/MonthSelector";
 import SaldoCard from "@/components/dashboard/SaldoCard";
 import ReceitasDespesasCards from "@/components/dashboard/ReceitasDespesasCards";
@@ -215,7 +217,7 @@ const Transacoes = () => {
 
     baseTxs = baseTxs.filter((t) => {
       if (t.payment_method === "cartao" && t.credit_card_id) {
-        return validInvoiceMap.has(t.credit_card_id);
+        return validInvoiceMap.has(t.credit_card_id) && !chargeStartsAfterMonth(t, selectedMonth, selectedYear);
       }
       return true;
     });
@@ -224,7 +226,7 @@ const Transacoes = () => {
     const isFutureMonth = selectedYear > now.getFullYear() || (selectedYear === now.getFullYear() && selectedMonth > now.getMonth());
     const materializedRecurring = recurringTxs.map((t: any) => ({
       ...t,
-      date: `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(new Date(t.date).getDate()).padStart(2, "0")}`,
+      date: `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(dayOfMonth(t.date)).padStart(2, "0")}`,
       status: isFutureMonth ? "pendente" : t.status,
       _isRecurringMaterialized: true,
     })) as TransactionRow[];

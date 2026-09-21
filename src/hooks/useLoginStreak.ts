@@ -25,9 +25,10 @@ export function useLoginStreak() {
       const today = new Date().toISOString().split("T")[0];
       await supabase
         .from("login_days" as any)
-        .insert({ user_id: user.id, login_date: today } as any)
-        .select()
-        .maybeSingle();
+        .upsert({ user_id: user.id, login_date: today } as any, {
+          onConflict: "user_id,login_date",
+          ignoreDuplicates: true,
+        });
 
       const { data } = await supabase
         .from("login_days" as any)
