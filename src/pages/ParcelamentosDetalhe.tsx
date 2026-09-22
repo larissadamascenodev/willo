@@ -517,13 +517,13 @@ const ParcelamentosDetalhe = () => {
       {/* List */}
       <div className="mt-7 flex items-center justify-between px-1">
         <p className="text-[18px] font-bold text-white">Compras</p>
-        <div className="flex rounded-full border border-white/[0.07] bg-[#141414] p-0.5">
+        <div className="flex isolate rounded-full border border-white/[0.07] bg-[#141414] p-0.5">
           {([["todos", "Todos"], ["cartao", "Cartão"], ["conta", "Conta"]] as const).map(([key, label]) => (
             <button key={key} onClick={() => setMethodFilter(key)} className="relative h-8 rounded-full px-3 text-[12px] font-semibold">
               {methodFilter === key && (
-                <motion.span layoutId="parcelas-filter" className="absolute inset-0 z-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
+                <motion.span layoutId="parcelas-filter" className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
               )}
-              <span className={`relative z-10 ${methodFilter === key ? "text-[#0B0B0B]" : "text-white/55"}`}>{label}</span>
+              <span className={`relative z-10 transform-gpu ${methodFilter === key ? "text-[#0B0B0B]" : "text-white/55"}`}>{label}</span>
             </button>
           ))}
         </div>

@@ -57,12 +57,12 @@ const MonthSelector = memo(({ selectedMonth, selectedYear, onMonthChange }: Prop
               {isActive && (
                 <motion.div
                   layoutId="month-active-bg"
-                  className="absolute inset-0 z-0 rounded-xl bg-primary/15 border border-primary/20 shadow-[0_0_10px_-3px_hsl(var(--primary)/0.25)]"
+                  className="pointer-events-none absolute inset-0 z-0 rounded-xl bg-primary/15 border border-primary/20 shadow-[0_0_10px_-3px_hsl(var(--primary)/0.25)]"
                   transition={{ type: "spring", stiffness: 400, damping: 28 }}
                   style={{ zIndex: 0 }}
                 />
               )}
-              <span className="relative z-10">
+              <span className="relative z-10 transform-gpu">
                 {monthShort[item.month]}
                 {item.year !== currentYear && (
                   <span className="text-[8px] ml-0.5 opacity-60">{String(item.year).slice(2)}</span>

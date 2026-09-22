@@ -179,7 +179,7 @@ export default function GerenciarCategorias() {
       />
 
       {/* Segmented control */}
-      <div className="mt-5 flex rounded-full border border-white/[0.07] bg-[#141414] p-1">
+      <div className="mt-5 flex isolate rounded-full border border-white/[0.07] bg-[#141414] p-1">
         {(["despesa", "receita"] as const).map((t) => (
           <button
             key={t}
@@ -192,7 +192,7 @@ export default function GerenciarCategorias() {
             {tab === t && (
               <motion.span
                 layoutId="cat-tab"
-                className="absolute inset-0 z-0 rounded-full bg-white"
+                className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white"
                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
               />
             )}

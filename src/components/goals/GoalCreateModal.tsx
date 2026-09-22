@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Camera, Loader2, Pencil, X } from "lucide-react";
+import { Camera, Loader2, Pencil, PiggyBank, X } from "lucide-react";
 import { toast } from "sonner";
 import BottomSheet from "@/components/shared/BottomSheet";
 import { cn } from "@/lib/utils";
@@ -40,6 +40,8 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
   const [presetId, setPresetId] = useState<string | null>(null);
   const [customName, setCustomName] = useState("");
   const [cents, setCents] = useState(5000000);
+  // A pot can just collect money, with no target to reach
+  const [openEnded, setOpenEnded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -52,6 +54,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
       setPresetId(initialPresetId && presets.some((p) => p.id === initialPresetId) ? initialPresetId : null);
       setCustomName("");
       setCents(5000000);
+      setOpenEnded(false);
       setSubmitting(false);
       setCoverImage(null);
       setUploadingCover(false);
@@ -62,7 +65,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
   const isCustom = presetId === "custom";
   const preset = presets.find((p) => p.id === presetId);
   const goalName = isCustom ? customName.trim() : (preset?.name ?? "");
-  const canSubmit = goalName.length > 0 && cents > 0;
+  const canSubmit = goalName.length > 0 && (openEnded || cents > 0);
 
   const handlePickCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -87,7 +90,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      await onSubmit({ name: goalName, target_amount: cents / 100, monthly_contribution: null, deadline: null, cover_image: coverImage });
+      await onSubmit({ name: goalName, target_amount: openEnded ? 0 : cents / 100, monthly_contribution: null, deadline: null, cover_image: coverImage });
     } finally {
       setSubmitting(false);
     }
@@ -97,7 +100,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
     <BottomSheet open={open} onClose={onClose} size="full">
       <div className="px-5 pb-4">
         <p className="text-[22px] font-bold tracking-tight text-white">Nova meta</p>
-        <p className="text-[14px] leading-snug text-white/45">Escolha um objetivo, dê um nome e defina quanto quer juntar.</p>
+        <p className="text-[14px] leading-snug text-white/45">Escolha um objetivo, dê um nome e, se quiser, defina quanto quer juntar.</p>
 
         <div className="mt-5 grid grid-cols-3 gap-2">
           {presets.map((p) => {
@@ -192,39 +195,60 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePickCover} className="hidden" />
             </div>
 
-            <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/45">Quanto quer juntar?</p>
-            <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-5">
-              <div className="flex flex-col items-center">
-                <label className="relative flex items-baseline gap-1.5">
-                  <span className="text-[22px] font-bold text-white/40">{currencySymbol()}</span>
-                  <span className={cn("text-[40px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "text-white/30" : "text-white")}>
-                    {(cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                  <input
-                    inputMode="numeric"
-                    value={cents === 0 ? "" : String(cents)}
-                    onChange={(e) => setCents(Math.min(Number(e.target.value.replace(/\D/g, "").slice(0, 9) || "0"), 999999999))}
-                    aria-label="Valor da meta"
-                    className="absolute inset-0 w-full opacity-0"
-                  />
-                </label>
-              </div>
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
-                {AMOUNT_CHIPS.map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => setCents(v * 100)}
-                    className={cn(
-                      "rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
-                      cents === v * 100 ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/60",
-                    )}
-                  >
-                    {fmtShort(v)}
-                  </button>
-                ))}
-              </div>
+            <div className="mb-2 mt-6 flex items-center justify-between px-1">
+              <p className="text-[13px] font-semibold text-white/45">Quanto quer juntar?</p>
+              <button
+                type="button"
+                onClick={() => setOpenEnded((v) => !v)}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                  openEnded ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/60",
+                )}
+              >
+                Sem valor definido
+              </button>
             </div>
+            {openEnded ? (
+              <div className="flex items-center gap-3 rounded-[22px] border border-white/[0.07] bg-[#141414] px-4 py-4">
+                <PiggyBank className="h-5 w-5 shrink-0 text-willo-green" />
+                <p className="text-[13px] leading-snug text-white/60">
+                  Você vai só guardando, sem um alvo. Dá para definir um valor depois, quando quiser.
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-5">
+                <div className="flex flex-col items-center">
+                  <label className="relative flex items-baseline gap-1.5">
+                    <span className="text-[22px] font-bold text-white/40">{currencySymbol()}</span>
+                    <span className={cn("text-[40px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "text-white/30" : "text-white")}>
+                      {(cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <input
+                      inputMode="numeric"
+                      value={cents === 0 ? "" : String(cents)}
+                      onChange={(e) => setCents(Math.min(Number(e.target.value.replace(/\D/g, "").slice(0, 9) || "0"), 999999999))}
+                      aria-label="Valor da meta"
+                      className="absolute inset-0 w-full opacity-0"
+                    />
+                  </label>
+                </div>
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {AMOUNT_CHIPS.map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setCents(v * 100)}
+                      className={cn(
+                        "rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
+                        cents === v * 100 ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/60",
+                      )}
+                    >
+                      {fmtShort(v)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
 

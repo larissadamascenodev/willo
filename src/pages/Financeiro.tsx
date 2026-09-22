@@ -38,7 +38,7 @@ export default function Financeiro({ initialTab = "atual" }: { initialTab?: Tool
     <div className="mx-auto max-w-lg pb-28">
       <PageHeader title="Financeiro" subtitle={active.subtitle} />
 
-      <div className="mt-5 flex rounded-full border border-white/[0.07] bg-[#141414] p-1">
+      <div className="mt-5 flex isolate rounded-full border border-white/[0.07] bg-[#141414] p-1">
         {TOOLS.map((t) => (
           <button
             key={t.key}
@@ -51,7 +51,7 @@ export default function Financeiro({ initialTab = "atual" }: { initialTab?: Tool
             {tool === t.key && (
               <motion.span
                 layoutId="financeiro-tool"
-                className="absolute inset-0 z-0 rounded-full bg-white"
+                className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white"
                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
               />
             )}
@@ -288,13 +288,13 @@ function RealizadoPanel() {
         <CashFlowChart buckets={buckets} subTab={subTab} period={period} onSelectKind={setSubTab} />
       </div>
 
-      <div className="mt-6 grid grid-cols-4 rounded-full border border-white/[0.07] bg-[#141414] p-1">
+      <div className="mt-6 grid grid-cols-4 isolate rounded-full border border-white/[0.07] bg-[#141414] p-1">
         {PERIODS.map((p) => (
           <button key={p.key} onClick={() => setPeriod(p.key)} className="relative h-10 rounded-full text-[13.5px] font-semibold">
             {period === p.key && (
-              <motion.span layoutId="cashflow-period" className="absolute inset-0 z-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
+              <motion.span layoutId="cashflow-period" className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
             )}
-            <span className={cn("relative z-10", period === p.key ? "text-[#0B0B0B]" : "text-white")}>{p.label}</span>
+            <span className={cn("relative z-10 transform-gpu transform-gpu", period === p.key ? "text-[#0B0B0B]" : "text-white")}>{p.label}</span>
           </button>
         ))}
       </div>

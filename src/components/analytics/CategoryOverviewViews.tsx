@@ -71,17 +71,17 @@ export function ViewToggle<T extends string>({ value, options, onChange }: {
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="grid grid-flow-col auto-cols-fr rounded-full border border-white/[0.07] bg-[#141414] p-1">
+    <div className="grid grid-flow-col auto-cols-fr isolate rounded-full border border-white/[0.07] bg-[#141414] p-1">
       {options.map((o) => (
         <button key={o.key} onClick={() => onChange(o.key)} className="relative h-11 rounded-full text-[15px] font-semibold">
           {value === o.key && (
             <motion.span
               layoutId="category-view-toggle"
-              className="absolute inset-0 z-0 rounded-full bg-white"
+              className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white"
               transition={{ type: "spring", stiffness: 420, damping: 34 }}
             />
           )}
-          <span className={cn("relative z-10 transition-colors", value === o.key ? "text-[#0B0B0B]" : "text-white")}>{o.label}</span>
+          <span className={cn("relative z-10 transform-gpu transition-colors", value === o.key ? "text-[#0B0B0B]" : "text-white")}>{o.label}</span>
         </button>
       ))}
     </div>

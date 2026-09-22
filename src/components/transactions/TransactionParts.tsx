@@ -84,7 +84,7 @@ export const TransactionsSummaryCard = ({ saldoAtual, saldoPrevisto, receitas, d
 
 /** Todas / Receitas / Despesas. */
 export const TransactionTabs = ({ value, onChange, layoutId = "tx-tab-pill" }: { value: TabFilter; onChange: (v: TabFilter) => void; layoutId?: string }) => (
-  <div className="grid flex-1 grid-cols-3 rounded-full border border-white/[0.07] bg-[#141414] p-1">
+  <div className="grid flex-1 grid-cols-3 isolate rounded-full border border-white/[0.07] bg-[#141414] p-1">
     {([
       { key: "todos" as TabFilter, label: "Todas" },
       { key: "receita" as TabFilter, label: "Receitas" },
@@ -98,7 +98,7 @@ export const TransactionTabs = ({ value, onChange, layoutId = "tx-tab-pill" }: {
         {value === tab.key && (
           <motion.span
             layoutId={layoutId}
-            className="absolute inset-0 z-0 rounded-full bg-white"
+            className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white"
             transition={{ type: "spring", stiffness: 420, damping: 34 }}
           />
         )}

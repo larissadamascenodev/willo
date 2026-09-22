@@ -334,7 +334,7 @@ const AssinaturasCard = memo(() => {
 
         {/* Tabs */}
         <div className="px-4 mt-3">
-          <div className="grid grid-cols-2 rounded-full bg-white/[0.06] p-1">
+          <div className="grid grid-cols-2 isolate rounded-full bg-white/[0.06] p-1">
             {(["despesa", "receita"] as const).map((tab) => (
               <button
                 key={tab}
@@ -344,7 +344,7 @@ const AssinaturasCard = memo(() => {
                 {activeTab === tab && (
                   <motion.span
                     layoutId="recorrentes-tab"
-                    className="absolute inset-0 z-0 rounded-full bg-white"
+                    className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white"
                     transition={{ type: "spring", stiffness: 420, damping: 34 }}
                   />
                 )}

@@ -304,17 +304,17 @@ function NotificationContent({
         </div>
 
         {/* Segmented control */}
-        <div className="mt-4 grid grid-cols-2 rounded-full bg-white/[0.07] p-1">
+        <div className="mt-4 grid grid-cols-2 isolate rounded-full bg-white/[0.07] p-1">
           {FILTERS.map(({ key, label }) => (
             <button key={key} onClick={() => setFilter(key)} className="relative h-9 rounded-full text-[13px] font-semibold">
               {filter === key && (
                 <motion.span
                   layoutId={`notif-seg-${variant}`}
-                  className="absolute inset-0 z-0 rounded-full bg-white shadow-[0_4px_14px_-6px_rgba(255,255,255,0.4)]"
+                  className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white shadow-[0_4px_14px_-6px_rgba(255,255,255,0.4)]"
                   transition={{ type: "spring", stiffness: 420, damping: 34 }}
                 />
               )}
-              <span className={cn("relative z-10 transition-colors", filter === key ? "text-[#0B0B0B]" : "text-white/55")}>
+              <span className={cn("relative z-10 transform-gpu transition-colors", filter === key ? "text-[#0B0B0B]" : "text-white/55")}>
                 {label}
               </span>
             </button>

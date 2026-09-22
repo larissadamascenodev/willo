@@ -147,11 +147,11 @@ function Segmented<T extends string>({
           {value === o.key && (
             <motion.span
               layoutId={`seg-${id}`}
-              className="absolute inset-0 z-0 rounded-full bg-white"
+              className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white"
               transition={{ type: "spring", stiffness: 420, damping: 34 }}
             />
           )}
-          <span className={cn("relative z-10 transition-colors", value === o.key ? "text-[#0B0B0B]" : "text-white/50")}>
+          <span className={cn("relative z-10 transform-gpu transition-colors", value === o.key ? "text-[#0B0B0B]" : "text-white/50")}>
             {o.label}
           </span>
         </button>
