@@ -89,7 +89,7 @@ export function Segmented<T extends string>({ value, options, onChange, layoutId
       {options.map((o) => (
         <button key={o.key} type="button" onClick={() => onChange(o.key)} className="relative h-9 flex-1 rounded-full px-3 text-[13px] font-semibold">
           {value === o.key && (
-            <motion.span layoutId={layoutId} className="absolute inset-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
+            <motion.span layoutId={layoutId} className="absolute inset-0 z-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
           )}
           <span className={cn("relative z-10 whitespace-nowrap transition-colors", value === o.key ? "text-[#0B0B0B]" : "text-white/60")}>{o.label}</span>
         </button>

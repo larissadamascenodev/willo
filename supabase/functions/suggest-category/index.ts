@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
-import Anthropic from "npm:@anthropic-ai/sdk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -82,25 +81,111 @@ const CATEGORY_ICON_MAP: Record<string, { icon: string; color: string }> = {
   "Prêmio": { icon: "award", color: "#ffc107" },
 };
 
-/** Calls Claude forcing a single tool call and returns the tool input (or null). */
-async function callClaudeTool<T>(
+// Same free-tier models the invoice reader uses: lite answers fastest, flash is the backup
+const GEMINI_MODELS = ["gemini-3.5-flash-lite", "gemini-3.6-flash"];
+const GEMINI_TIMEOUT_MS = 15_000;
+
+/** Asks Gemini for a single JSON object matching `schema`, or null if it can't. */
+async function callGeminiJson<T>(
   system: string,
   user: string,
-  tool: { name: string; description: string; input_schema: Record<string, unknown> },
+  schema: Record<string, unknown>,
 ): Promise<T | null> {
-  const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
-  const response = await anthropic.messages.create({
-    model: "claude-opus-5",
-    max_tokens: 16000,
-    thinking: { type: "disabled" },
-    output_config: { effort: "low" },
-    system,
-    messages: [{ role: "user", content: user }],
-    tools: [tool as Anthropic.Tool],
-    tool_choice: { type: "tool", name: tool.name },
-  });
-  const block = response.content.find((b) => b.type === "tool_use");
-  return block && block.type === "tool_use" ? (block.input as T) : null;
+  const apiKey = Deno.env.get("GEMINI_API_KEY");
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
+
+  for (const model of GEMINI_MODELS) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: "POST",
+          signal: controller.signal,
+          headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: system }] },
+            contents: [{ role: "user", parts: [{ text: user }] }],
+            generationConfig: {
+              temperature: 0.1,
+              responseMimeType: "application/json",
+              responseSchema: schema,
+            },
+          }),
+        },
+      );
+      if (!res.ok) {
+        console.error(`Gemini ${model} failed: ${res.status} ${(await res.text()).slice(0, 300)}`);
+        continue;
+      }
+      const data = await res.json();
+      const text = (data.candidates?.[0]?.content?.parts ?? [])
+        .map((p: { text?: string }) => p.text ?? "")
+        .join("")
+        .trim();
+      if (!text) continue;
+      return JSON.parse(text) as T;
+    } catch (err) {
+      console.error(`Gemini ${model} error:`, err instanceof Error ? err.message : err);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return null;
+}
+
+/** The icon names the app can actually render (ICON_OPTIONS in CategoryCreateModal). */
+const ICON_NAMES = [
+  "shopping-cart", "utensils", "car", "pill", "home", "book-open", "shirt", "paw-print",
+  "scissors", "gamepad-2", "gift", "plane", "smartphone", "dollar-sign", "briefcase", "music",
+  "coffee", "dumbbell", "clapperboard", "file-text", "wrench", "shopping-bag", "lightbulb", "target",
+  "heart", "repeat", "graduation-cap", "trending-up", "award", "users", "wallet", "piggy-bank",
+  "zap", "star", "globe", "camera", "headphones", "monitor", "tv", "bus", "landmark", "bike",
+  "fuel", "baby", "stethoscope", "palette", "utensils-crossed", "wine", "pizza", "hammer", "key",
+  "shield", "umbrella", "tent", "map", "truck", "leaf", "flame", "gem", "crown",
+  "badge-dollar-sign", "hand-coins", "receipt", "banknote", "droplets", "cup-soda", "package",
+  "popcorn", "salad", "ice-cream", "plug", "wifi", "phone", "building-2",
+];
+
+const PALETTE = [
+  "#00e676", "#f44336", "#ff9800", "#2196f3", "#9c27b0", "#e91e63", "#00bcd4", "#8bc34a",
+  "#ffc107", "#795548", "#607060", "#3f51b5", "#009688", "#ff5722", "#673ab7", "#cddc39",
+  "#4caf50", "#03a9f4", "#ff4081", "#7c4dff", "#18ffff", "#69f0ae", "#ffab40", "#ea80fc",
+];
+
+/** Dresses a brand new category: which icon and colour fit the name the user just typed. */
+async function suggestStyle(name: string, usedColors: string[]) {
+  const taken = new Set((usedColors ?? []).map((c) => String(c).toLowerCase()));
+  const free = PALETTE.filter((c) => !taken.has(c.toLowerCase()));
+  const palette = free.length > 0 ? free : PALETTE;
+
+  const args = await callGeminiJson<{ icon?: string; color?: string; type?: string }>(
+    `Você escolhe a aparência de uma categoria financeira em um app brasileiro.
+Dado o NOME da categoria, escolha:
+- icon: um destes nomes, o mais representativo: ${ICON_NAMES.join(", ")}
+- color: uma destas cores hex, que combine com o tema: ${palette.join(", ")}
+- type: "receita" se a categoria for dinheiro entrando (salário, vendas, cashback, aluguel recebido),
+  senão "despesa"
+Escolha o ícone mais literal possível. Ex: "Streaming" -> tv, "Uber" -> car, "Pizza" -> pizza,
+"Cachorro" -> paw-print, "Faculdade" -> graduation-cap, "Cerveja" -> wine, "Internet" -> wifi.`,
+    `Categoria: ${name}`,
+    {
+      type: "object",
+      properties: {
+        icon: { type: "string", enum: ICON_NAMES },
+        color: { type: "string", enum: palette },
+        type: { type: "string", enum: ["despesa", "receita"] },
+      },
+      required: ["icon", "color", "type"],
+    },
+  );
+
+  return {
+    icon: args?.icon && ICON_NAMES.includes(args.icon) ? args.icon : "file-text",
+    color: args?.color && palette.includes(args.color) ? args.color : palette[0],
+    type: args?.type === "receita" ? "receita" : "despesa",
+  };
 }
 
 serve(async (req) => {
@@ -128,8 +213,21 @@ serve(async (req) => {
       });
     }
 
-    const { description, type, customCategories } = await req.json();
-    if (!Deno.env.get("ANTHROPIC_API_KEY")) throw new Error("ANTHROPIC_API_KEY not configured");
+    const { description, type, customCategories, mode, name, usedColors } = await req.json();
+
+    // Dressing a category the user is creating by hand: pick its icon, colour and type
+    if (mode === "style") {
+      const trimmed = String(name ?? "").trim();
+      if (trimmed.length < 2) {
+        return new Response(JSON.stringify({ icon: null }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const style = await suggestStyle(trimmed, Array.isArray(usedColors) ? usedColors : []);
+      return new Response(JSON.stringify(style), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const baseCategories = type === "receita" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
     // Merge custom categories from client
@@ -141,25 +239,19 @@ serve(async (req) => {
     }
 
     let category: string | null = null;
-    const args = await callClaudeTool<{ category?: string }>(
-      `You categorize Brazilian financial transactions. Given a description, return the most likely category from this list: ${allCategories.join(", ")}. 
-IMPORTANT RULES:
-- NEVER return "Outros" as a category. Always pick a specific category.
-- If no existing category fits well, suggest a NEW descriptive category name in Portuguese (e.g., "Supermercado", "Farmácia", "Academia", "Streaming").
-- The category name should be a single word or short phrase, capitalized.
-- Return ONLY the category name.`,
+    const args = await callGeminiJson<{ category?: string }>(
+      `Você categoriza transações financeiras brasileiras. Dada uma descrição, retorne a categoria
+mais provável desta lista: ${allCategories.join(", ")}.
+REGRAS IMPORTANTES:
+- NUNCA retorne "Outros". Sempre escolha uma categoria específica.
+- Se nenhuma da lista servir, sugira um nome NOVO e descritivo em português
+  (ex.: "Supermercado", "Farmácia", "Academia", "Streaming").
+- O nome deve ser uma palavra ou expressão curta, com a primeira letra maiúscula.`,
       String(description ?? ""),
       {
-        name: "suggest_category",
-        description: "Suggest a category for the transaction",
-        input_schema: {
-          type: "object",
-          properties: {
-            category: { type: "string", description: "The category name. Must NOT be 'Outros'." },
-          },
-          required: ["category"],
-          additionalProperties: false,
-        },
+        type: "object",
+        properties: { category: { type: "string" } },
+        required: ["category"],
       },
     );
     if (args?.category && args.category !== "Outros") {
@@ -178,8 +270,10 @@ IMPORTANT RULES:
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("suggest-category error:", e);
-    return new Response(JSON.stringify({ category: null }), {
+    const detail = e instanceof Error ? e.message : String(e);
+    console.error("suggest-category error:", detail);
+    // A failed suggestion must never block the user — the form keeps its own defaults
+    return new Response(JSON.stringify({ category: null, icon: null, detail }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

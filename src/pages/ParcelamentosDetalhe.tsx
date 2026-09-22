@@ -521,7 +521,7 @@ const ParcelamentosDetalhe = () => {
           {([["todos", "Todos"], ["cartao", "Cartão"], ["conta", "Conta"]] as const).map(([key, label]) => (
             <button key={key} onClick={() => setMethodFilter(key)} className="relative h-8 rounded-full px-3 text-[12px] font-semibold">
               {methodFilter === key && (
-                <motion.span layoutId="parcelas-filter" className="absolute inset-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
+                <motion.span layoutId="parcelas-filter" className="absolute inset-0 z-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
               )}
               <span className={`relative z-10 ${methodFilter === key ? "text-[#0B0B0B]" : "text-white/55"}`}>{label}</span>
             </button>

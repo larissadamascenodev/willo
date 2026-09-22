@@ -136,7 +136,7 @@ export async function createGoalDeposit(deposit: {
 
     const goalName = goalData?.name ?? "Meta";
 
-    await supabase.from("transactions").insert({
+    const { error: debitError } = await supabase.from("transactions").insert({
       user_id: userId,
       name: `Aporte: ${goalName}`,
       category: "Meta",
@@ -149,6 +149,13 @@ export async function createGoalDeposit(deposit: {
       account_id: deposit.account_id,
       observation: `Reserva para meta "${goalName}"`,
     });
+
+    // Without the debit the money would sit in the goal AND in the balance at the
+    // same time, so the deposit is rolled back rather than left half-recorded.
+    if (debitError) {
+      await supabase.from("goal_transactions").delete().eq("id", (data as GoalTransaction).id);
+      throw debitError;
+    }
   }
 
   return data as GoalTransaction;

@@ -1,20 +1,21 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, Check, Plus,
+  X, Check, Plus, Sparkles,
   ShoppingCart, Utensils, Car, Pill, Home, BookOpen, Shirt, PawPrint,
   Scissors, Gamepad2, Gift, Plane, Smartphone, DollarSign, Briefcase, Music,
   Coffee, Dumbbell, Clapperboard, FileText, Wrench, ShoppingBag, Lightbulb, Target,
   Heart, Repeat, GraduationCap, TrendingUp, Award, Users, Wallet, Vault,
   Zap, Star, Globe, Camera, Headphones, Monitor, Tv, Bus,
   Landmark, Bike, Fuel, Baby, Stethoscope, Palette, UtensilsCrossed,
-  Cigarette, Wine, Pizza, Hammer, Key, Shield, Umbrella,
-  Tent, Map, Truck, Anchor, Cloudy, Leaf, Flame,
+  Wine, Pizza, Hammer, Key, Shield, Umbrella,
+  Tent, Map, Truck, Leaf, Flame,
   Gem, Crown, BadgeDollarSign, HandCoins, Receipt, Banknote,
   Droplets, CupSoda, Package, Popcorn, Salad, IceCream,
   Plug, Wifi, Phone, Building2,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import BottomSheet from "@/components/shared/BottomSheet";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -120,6 +121,9 @@ function getIconComponent(iconName: string) {
   return ICON_OPTIONS.find((i) => i.name === iconName)?.Icon || FileText;
 }
 
+const FORBIDDEN = ["outros", "outro", "diversos", "geral", "varios", "sem categoria"];
+const normalize = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+
 export default function CategoryCreateModal({
   open, onClose, onSave,
   initialName = "", initialIcon = "file-text", initialColor = "#00e676",
@@ -130,25 +134,51 @@ export default function CategoryCreateModal({
   const [name, setName] = useState(initialName);
   const [icon, setIcon] = useState(initialIcon);
   const [color, setColor] = useState(initialColor);
-  const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false);
-  const colorInputRef = useRef<HTMLInputElement>(null);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggested, setSuggested] = useState(false);
+  // Once the user picks an icon or colour themselves, the AI stops overriding it
+  const touched = useRef(false);
+
+  const takenColors = usedColors.map((c) => c.toLowerCase());
+  const freeColors = COLOR_OPTIONS.filter((c) => !takenColors.includes(c.toLowerCase()));
 
   useEffect(() => {
-    if (open) {
-      setName(initialName);
-      setIcon(initialIcon);
-      // Start on a color nobody else uses (edits pass usedColors without their own color)
-      const taken = new Set(usedColors.map((c) => c.toLowerCase()));
-      const free = COLOR_OPTIONS.find((c) => !taken.has(c.toLowerCase()));
-      setColor(taken.has(initialColor.toLowerCase()) && free ? free : initialColor);
-      setShowDuplicateConfirm(false);
-    }
+    if (!open) return;
+    setName(initialName);
+    setIcon(initialIcon);
+    const taken = new Set(usedColors.map((c) => c.toLowerCase()));
+    const free = COLOR_OPTIONS.find((c) => !taken.has(c.toLowerCase()));
+    setColor(taken.has(initialColor.toLowerCase()) && free ? free : initialColor);
+    setSuggested(false);
+    touched.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialName, initialIcon, initialColor]);
 
   const trimmed = name.trim();
-  const normalize = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
-  const FORBIDDEN = ["outros", "outro", "diversos", "geral", "varios", "sem categoria"];
+
+  // The AI dresses the category while the name is typed
+  useEffect(() => {
+    if (!open || touched.current || trimmed.length < 3) return;
+    let cancelled = false;
+    const id = setTimeout(async () => {
+      setSuggesting(true);
+      try {
+        const { data } = await supabase.functions.invoke("suggest-category", {
+          body: { mode: "style", name: trimmed, usedColors },
+        });
+        if (cancelled || touched.current || !data?.icon) return;
+        setIcon(data.icon);
+        if (data.color) setColor(data.color);
+        setSuggested(true);
+      } catch {
+        /* the defaults already work */
+      } finally {
+        if (!cancelled) setSuggesting(false);
+      }
+    }, 700);
+    return () => { cancelled = true; clearTimeout(id); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trimmed, open]);
 
   const nameError = !trimmed
     ? null
@@ -158,185 +188,158 @@ export default function CategoryCreateModal({
         ? `Já existe a categoria “${trimmed}”`
         : null;
 
-  const takenColors = usedColors.map((c) => c.toLowerCase());
   const colorError = takenColors.includes(color.toLowerCase()) ? "Essa cor já é de outra categoria" : null;
+  const canSave = !!trimmed && !nameError && !colorError;
 
-  const handleSave = () => {
-    if (!trimmed || nameError || colorError) return;
-    onSave({ name: trimmed, icon, color });
-    setShowDuplicateConfirm(false);
+  const pick = (apply: () => void) => {
+    touched.current = true;
+    setSuggested(false);
+    apply();
   };
-
-  if (!open) return null;
 
   const PreviewIcon = getIconComponent(icon);
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ type: "spring", damping: 25, stiffness: 350 }}
-          onClick={(e) => e.stopPropagation()}
-          className="w-[90%] max-w-sm max-h-[85vh] overflow-y-auto rounded-2xl bg-card border border-border/30 shadow-2xl"
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      size="full"
+      zIndex={95}
+      footer={
+        <button
+          type="button"
+          onClick={() => canSave && onSave({ name: trimmed, icon, color })}
+          disabled={!canSave}
+          className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-white text-[16px] font-bold text-[#0B0B0B] transition-opacity disabled:opacity-30"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 pt-5 pb-3">
-            <h3 className="text-base font-bold text-foreground">{title}</h3>
-            <button
-              onClick={onClose}
-              className="w-7 h-7 rounded-full bg-muted/40 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <Check className="h-4 w-4" strokeWidth={3} />
+          {title === "Nova Categoria" ? "Criar categoria" : "Salvar"}
+        </button>
+      }
+    >
+      <div className="px-5 pb-2">
+        <div className="flex items-center justify-between">
+          <p className="text-[22px] font-extrabold tracking-tight text-white">{title}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar"
+            className="-mr-1 flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-white/60 active:opacity-60"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
-          <div className="px-5 pb-5 space-y-4">
-            {/* Preview */}
-            <div className="flex items-center justify-center py-3">
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
-                style={{
-                  backgroundColor: `${color}20`,
-                  border: `2px solid ${color}40`,
-                  filter: `drop-shadow(0 0 10px ${color}80)`,
-                }}
+        {/* Live preview of the category being built */}
+        <div className="relative mt-6 flex flex-col items-center">
+          <span
+            className="pointer-events-none absolute top-2 h-24 w-40 rounded-full blur-[46px] transition-colors duration-300"
+            style={{ background: `${color}33` }}
+          />
+          <motion.span
+            key={icon}
+            initial={{ scale: 0.82, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 380, damping: 20 }}
+            className="relative flex h-[76px] w-[76px] items-center justify-center rounded-[26px] border"
+            style={{ background: `${color}1F`, borderColor: `${color}40` }}
+          >
+            <PreviewIcon className="h-8 w-8" style={{ color }} />
+          </motion.span>
+          <p className="relative mt-3 max-w-full truncate text-[17px] font-semibold tracking-tight text-white">
+            {trimmed || "Sua categoria"}
+          </p>
+          <AnimatePresence>
+            {(suggesting || suggested) && (
+              <motion.span
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="relative mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11.5px] text-white/60"
               >
-                <PreviewIcon className="w-6 h-6" style={{ color }} />
-              </div>
-            </div>
+                <Sparkles className="h-3 w-3" />
+                {suggesting ? "Escolhendo o visual…" : "Sugerido pela IA"}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </div>
 
-            {/* Name */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nome</label>
-              <Input
-                placeholder="Ex: Streaming"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="bg-muted/30 border-border/20 h-11 rounded-xl"
-                maxLength={30}
-                autoFocus
-              />
-            </div>
+        <div className="mt-7">
+          <p className="px-1 text-[12px] font-semibold uppercase tracking-wider text-white/35">Nome</p>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ex: Streaming"
+            maxLength={30}
+            autoFocus
+            className="mt-2 h-14 w-full rounded-[18px] border border-white/[0.07] bg-[#141414] px-4 text-[16px] text-white placeholder:text-white/25 focus:border-white/20 focus:outline-none"
+          />
+          <AnimatePresence>
+            {(nameError || colorError) && (
+              <motion.p
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-2 px-1 text-[12.5px] leading-snug text-red-400"
+              >
+                {nameError ?? colorError}
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </div>
 
-            {/* Why it can't be saved */}
-            <AnimatePresence>
-              {(nameError || colorError) && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="rounded-xl border border-destructive/20 bg-destructive/10 p-3"
-                >
-                  <p className="text-xs font-medium text-destructive">{nameError ?? colorError}</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Icon */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ícone</label>
-              <div className="grid grid-cols-8 gap-1.5 max-h-[200px] overflow-y-auto pr-1 scrollbar-none">
-                {ICON_OPTIONS.map(({ name: iconName, Icon: IconComp }) => (
-                  <button
-                    key={iconName}
-                    type="button"
-                    onClick={() => setIcon(iconName)}
-                    className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center transition-all",
-                      icon === iconName
-                        ? "bg-primary/15 ring-2 ring-primary/40 scale-110"
-                        : "bg-muted/20 hover:bg-muted/40"
-                    )}
-                    style={icon === iconName ? { filter: `drop-shadow(0 0 6px ${color}80)` } : undefined}
-                  >
-                    <IconComp
-                      className="w-4 h-4"
-                      style={{ color: icon === iconName ? color : "hsl(var(--muted-foreground))" }}
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Color */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Cor</label>
-              <div className="grid grid-cols-8 gap-1.5">
-                {COLOR_OPTIONS.filter((c) => !takenColors.includes(c.toLowerCase())).map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setColor(c)}
-                    className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center transition-all",
-                      color === c ? "ring-2 ring-offset-2 ring-offset-card scale-110" : "hover:scale-105"
-                    )}
-                    style={{ backgroundColor: c }}
-                  >
-                    {color === c && <Check className="w-4 h-4 text-white drop-shadow-md" />}
-                  </button>
-                ))}
-                {/* Custom color picker */}
-                <label
-                  className={cn(
-                    "w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer border-2 border-dashed",
-                    !COLOR_OPTIONS.includes(color)
-                      ? "ring-2 ring-offset-2 ring-offset-card scale-110 border-primary/40"
-                      : "border-border/30 hover:scale-105 hover:border-border/50"
-                  )}
-                  style={!COLOR_OPTIONS.includes(color) ? { backgroundColor: color } : undefined}
-                >
-                  {!COLOR_OPTIONS.includes(color)
-                    ? <Check className="w-4 h-4 text-white drop-shadow-md" />
-                    : <Plus className="w-3.5 h-3.5 text-muted-foreground" />
-                  }
-                  <input
-                    ref={colorInputRef}
-                    type="color"
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                    className="sr-only"
+        <div className="mt-6">
+          <p className="px-1 text-[12px] font-semibold uppercase tracking-wider text-white/35">Cor</p>
+          <div className="-mx-5 mt-2.5 flex gap-3 overflow-x-auto px-5 pb-1.5 pt-1 scrollbar-none">
+            {freeColors.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => pick(() => setColor(c))}
+                aria-label={`Cor ${c}`}
+                className="relative h-11 w-11 shrink-0 rounded-full transition-transform active:scale-95"
+                style={{ background: c }}
+              >
+                {color === c && (
+                  <motion.span
+                    layoutId="cat-color-ring"
+                    className="absolute -inset-1 rounded-full border-2 border-white"
+                    transition={{ type: "spring", stiffness: 420, damping: 32 }}
                   />
-                </label>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 h-11 rounded-xl text-xs font-bold border border-border/30 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={!trimmed || !!nameError || !!colorError}
-                className={cn(
-                  "flex-1 h-11 rounded-xl text-xs font-bold transition-all backdrop-blur-md",
-                  trimmed && !nameError && !colorError
-                    ? "bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 shadow-[0_0_12px_-3px_hsl(var(--primary)/0.4)]"
-                    : "bg-muted/20 text-muted-foreground border border-border/10 cursor-not-allowed"
                 )}
-              >
-                Salvar
               </button>
-            </div>
+            ))}
+            <label className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-white/20">
+              <Plus className="h-4 w-4 text-white/50" />
+              <input type="color" value={color} onChange={(e) => pick(() => setColor(e.target.value))} className="sr-only" />
+            </label>
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+        </div>
+
+        <div className="mt-6">
+          <p className="px-1 text-[12px] font-semibold uppercase tracking-wider text-white/35">Ícone</p>
+          <div className="mt-2.5 grid grid-cols-6 gap-2">
+            {ICON_OPTIONS.map(({ name: iconName, Icon: IconComp }) => {
+              const active = icon === iconName;
+              return (
+                <button
+                  key={iconName}
+                  type="button"
+                  onClick={() => pick(() => setIcon(iconName))}
+                  className={cn(
+                    "flex aspect-square items-center justify-center rounded-[16px] border transition-colors",
+                    active ? "border-transparent" : "border-white/[0.06] bg-[#161616] active:bg-white/[0.06]",
+                  )}
+                  style={active ? { background: `${color}22`, borderColor: `${color}55` } : undefined}
+                >
+                  <IconComp className="h-[18px] w-[18px]" style={{ color: active ? color : "rgba(255,255,255,0.5)" }} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </BottomSheet>
   );
 }
 

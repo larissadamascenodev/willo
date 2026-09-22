@@ -57,7 +57,7 @@ const MonthSelector = memo(({ selectedMonth, selectedYear, onMonthChange }: Prop
               {isActive && (
                 <motion.div
                   layoutId="month-active-bg"
-                  className="absolute inset-0 rounded-xl bg-primary/15 border border-primary/20 shadow-[0_0_10px_-3px_hsl(var(--primary)/0.25)]"
+                  className="absolute inset-0 z-0 rounded-xl bg-primary/15 border border-primary/20 shadow-[0_0_10px_-3px_hsl(var(--primary)/0.25)]"
                   transition={{ type: "spring", stiffness: 400, damping: 28 }}
                   style={{ zIndex: 0 }}
                 />

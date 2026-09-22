@@ -98,7 +98,7 @@ export const TransactionTabs = ({ value, onChange, layoutId = "tx-tab-pill" }: {
         {value === tab.key && (
           <motion.span
             layoutId={layoutId}
-            className="absolute inset-0 rounded-full bg-white"
+            className="absolute inset-0 z-0 rounded-full bg-white"
             transition={{ type: "spring", stiffness: 420, damping: 34 }}
           />
         )}

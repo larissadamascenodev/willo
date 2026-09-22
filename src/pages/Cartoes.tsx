@@ -132,7 +132,7 @@ const Cartoes = () => {
       <div className="mt-2 grid grid-cols-3 rounded-full border border-white/[0.07] bg-[#141414] p-1">
         {([["faturas", "Faturas"], ["parcelas", "Parcelas"], ["limites", "Limites"]] as const).map(([key, label]) => (
           <button key={key} onClick={() => { setTab(key); setSelectedKey(currentKey); }} className="relative h-11 rounded-full text-[15px] font-medium">
-            {tab === key && <motion.span layoutId="cards-tab" className="absolute inset-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+            {tab === key && <motion.span layoutId="cards-tab" className="absolute inset-0 z-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
             <span className={cn("relative z-10", tab === key ? "text-[#0B0B0B]" : "text-white")}>{label}</span>
           </button>
         ))}

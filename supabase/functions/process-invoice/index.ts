@@ -273,8 +273,9 @@ class GeminiError extends Error {
   }
 }
 
-// Free-tier models can hang under high demand; give up early and try the next one
-const GEMINI_TIMEOUT_MS = 25_000;
+// A full statement PDF regularly takes ~20s to read, and a long one more than that;
+// the old 25s ceiling turned those into "a leitura está demorando mais que o normal".
+const GEMINI_TIMEOUT_MS = 55_000;
 
 async function callGemini(apiKey: string, model: string, systemPrompt: string, parts: GeminiPart[]): Promise<string> {
   const controller = new AbortController();

@@ -77,7 +77,7 @@ export function ViewToggle<T extends string>({ value, options, onChange }: {
           {value === o.key && (
             <motion.span
               layoutId="category-view-toggle"
-              className="absolute inset-0 rounded-full bg-white"
+              className="absolute inset-0 z-0 rounded-full bg-white"
               transition={{ type: "spring", stiffness: 420, damping: 34 }}
             />
           )}

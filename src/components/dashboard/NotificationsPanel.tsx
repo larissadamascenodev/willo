@@ -310,7 +310,7 @@ function NotificationContent({
               {filter === key && (
                 <motion.span
                   layoutId={`notif-seg-${variant}`}
-                  className="absolute inset-0 rounded-full bg-white shadow-[0_4px_14px_-6px_rgba(255,255,255,0.4)]"
+                  className="absolute inset-0 z-0 rounded-full bg-white shadow-[0_4px_14px_-6px_rgba(255,255,255,0.4)]"
                   transition={{ type: "spring", stiffness: 420, damping: 34 }}
                 />
               )}

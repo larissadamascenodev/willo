@@ -2,8 +2,8 @@ import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 const MAX_SIDE = 2000;
-/** Covers the server trying two AI models (25s each) plus upload. */
-const SCAN_TIMEOUT_MS = 65_000;
+/** Covers the server trying two AI models (55s each) plus the upload of a full statement. */
+const SCAN_TIMEOUT_MS = 130_000;
 const PASSTHROUGH = /\.(pdf|csv|xls|xlsx)$/i;
 
 /**

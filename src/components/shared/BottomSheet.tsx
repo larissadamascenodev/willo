@@ -21,14 +21,22 @@ interface Props {
  * Native-style bottom sheet: dims the page, slides up from the bottom with a
  * grab handle, and closes on backdrop tap or by dragging the handle down.
  */
+/**
+ * Sheets stack (a picker on top of a form, a creator on top of the picker), so the scroll
+ * lock is counted: saving and restoring the previous value left the page stuck whenever
+ * one sheet closed while another was still open.
+ */
+let scrollLocks = 0;
+
 const BottomSheet = ({ open, onClose, children, size = "auto", footer, className, zIndex = 60, inline = false }: Props) => {
   const dragControls = useDragControls();
   useEffect(() => {
     if (!open || inline) return;
-    const prev = document.body.style.overflow;
+    scrollLocks += 1;
     document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = prev;
+      scrollLocks = Math.max(0, scrollLocks - 1);
+      if (scrollLocks === 0) document.body.style.overflow = "";
     };
   }, [open, inline]);
 

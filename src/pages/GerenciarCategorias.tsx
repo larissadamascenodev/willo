@@ -192,7 +192,7 @@ export default function GerenciarCategorias() {
             {tab === t && (
               <motion.span
                 layoutId="cat-tab"
-                className="absolute inset-0 rounded-full bg-white"
+                className="absolute inset-0 z-0 rounded-full bg-white"
                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
               />
             )}
