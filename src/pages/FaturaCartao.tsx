@@ -26,6 +26,7 @@ import InvoiceHistoryChart from "@/components/fatura/InvoiceHistoryChart";
 import InvoiceAddChooserModal, { type ScanMode } from "@/components/fatura/InvoiceAddChooserModal";
 import InvoiceScanScreen from "@/components/fatura/InvoiceScanScreen";
 import InstallmentPurchaseCard from "@/components/installments/InstallmentPurchaseCard";
+import SinglePurchaseCard from "@/components/fatura/SinglePurchaseCard";
 import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import { anchorPurchaseDate } from "@/lib/installments";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
@@ -765,21 +766,26 @@ const FaturaCartao = () => {
       )}
 
       {tab === "avista" && (
-        <div className="mt-4">
+        <div className="mt-4 space-y-2.5">
           {singleItems.length === 0 ? (
             <EmptyTab label="Nenhuma compra à vista nesta fatura." />
           ) : (
-            <InvoiceTransactionList
-              items={singleItems}
-              installmentCount={0}
-              cardName={card?.name}
-              invoiceMonth={selectedMonth}
-              invoiceYear={selectedYear}
-              payments={payments}
-              isPaid={currentInvoice?.is_paid}
-              onEditItem={handleEditItem}
-              onDeleteItem={handleDeleteItem}
-            />
+            singleItems.map((item, i) => (
+              <SinglePurchaseCard
+                key={item.id}
+                index={i}
+                customCats={[]}
+                card={card ? { name: card.name, color: card.color } : undefined}
+                onOpen={() => handleEditItem(item.transaction_id)}
+                item={{
+                  id: item.id,
+                  name: item.transaction_name,
+                  category: item.transaction_category,
+                  amount: Number(item.amount),
+                  date: item.transaction_date,
+                }}
+              />
+            ))
           )}
         </div>
       )}
