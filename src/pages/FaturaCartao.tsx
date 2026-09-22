@@ -25,6 +25,8 @@ import InvoicePayModal from "@/components/fatura/InvoicePayModal";
 import InvoiceHistoryChart from "@/components/fatura/InvoiceHistoryChart";
 import InvoiceAddChooserModal, { type ScanMode } from "@/components/fatura/InvoiceAddChooserModal";
 import InvoiceScanScreen from "@/components/fatura/InvoiceScanScreen";
+import InstallmentPurchaseCard from "@/components/installments/InstallmentPurchaseCard";
+import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import { anchorPurchaseDate } from "@/lib/installments";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
 import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
@@ -80,6 +82,12 @@ export function formatCurrency(value: number) {
 }
 
 
+const EmptyTab = ({ label }: { label: string }) => (
+  <div className="rounded-[22px] border border-dashed border-white/[0.08] px-4 py-10 text-center">
+    <p className="text-[14px] text-white/40">{label}</p>
+  </div>
+);
+
 const FaturaCartao = () => {
   const navigate = useNavigate();
   const { cardId } = useParams<{ cardId: string }>();
@@ -117,6 +125,7 @@ const FaturaCartao = () => {
   const [confirmingImport, setConfirmingImport] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<EditTransactionData | null>(null);
   const [showEditCard, setShowEditCard] = useState(false);
+  const [tab, setTab] = useState<"geral" | "parcelados" | "avista">("geral");
 
   const currentInvoice = useMemo(
     () => invoices.find((i) => i.month === selectedMonth && i.year === selectedYear),
@@ -334,6 +343,31 @@ const FaturaCartao = () => {
       }
     }
   };
+
+  // Newest purchase first, which is how the statement itself reads
+  const sortedItems = useMemo(
+    () => [...items].sort((a, b) => (b.transaction_date ?? "").localeCompare(a.transaction_date ?? "")),
+    [items],
+  );
+  const singleItems = useMemo(() => sortedItems.filter((i) => i.total_installments <= 1), [sortedItems]);
+  const installmentItems = useMemo<ActiveInstallmentItem[]>(
+    () => sortedItems
+      .filter((i) => i.total_installments > 1)
+      .map((i) => ({
+        id: i.transaction_id,
+        name: i.transaction_name,
+        category: i.transaction_category,
+        amount: Number(i.amount),
+        installment_current: i.installment_number,
+        installments: i.total_installments,
+        payment_method: "cartao",
+        date: i.transaction_date,
+        credit_card_id: cardId ?? null,
+        isOverdue: false,
+        dueDate: null,
+      })),
+    [sortedItems, cardId],
+  );
 
   const total = currentInvoice ? Number(currentInvoice.total_amount) : 0;
   const paidAmount = currentInvoice ? Number((currentInvoice as any).paid_amount ?? 0) : 0;
@@ -674,32 +708,81 @@ const FaturaCartao = () => {
         )}
       </motion.div>
 
-      {/* ===== HISTORY / PROJECTION CHART ===== */}
-      <InvoiceHistoryChart
-        invoices={invoices}
-        selectedMonth={selectedMonth}
-        selectedYear={selectedYear}
-        onSelect={(m, y) => { setSelectedMonth(m); setSelectedYear(y); }}
-        userStartDate={userStartDate}
-      />
+      {/* ===== Geral / Parcelados / À vista ===== */}
+      <div className="mt-6 isolate grid grid-cols-3 rounded-full border border-white/[0.07] bg-[#141414] p-1">
+        {([["geral", "Geral"], ["parcelados", "Parcelados"], ["avista", "À vista"]] as const).map(([key, label]) => (
+          <button key={key} type="button" onClick={() => setTab(key)} className="relative h-10 rounded-full text-[14px] font-medium">
+            {tab === key && (
+              <motion.span layoutId="fatura-tab" className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
+            )}
+            <span className={cn("relative z-10 transform-gpu", tab === key ? "text-[#0B0B0B]" : "text-white/70")}>{label}</span>
+          </button>
+        ))}
+      </div>
 
-      {/* ===== CATEGORIES — right after chart ===== */}
-      {categoryBreakdown.length > 0 && (
-        <InvoiceCategoryBreakdown categories={categoryBreakdown} total={total} />
+      {tab === "geral" && (
+        <>
+          <InvoiceHistoryChart
+            invoices={invoices}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            onSelect={(m, y) => { setSelectedMonth(m); setSelectedYear(y); }}
+            userStartDate={userStartDate}
+          />
+          {categoryBreakdown.length > 0 && (
+            <InvoiceCategoryBreakdown categories={categoryBreakdown} total={total} />
+          )}
+          <InvoiceTransactionList
+            items={sortedItems}
+            installmentCount={installmentItems.length}
+            cardName={card?.name}
+            invoiceMonth={selectedMonth}
+            invoiceYear={selectedYear}
+            payments={payments}
+            isPaid={currentInvoice?.is_paid}
+            onEditItem={handleEditItem}
+            onDeleteItem={handleDeleteItem}
+          />
+        </>
       )}
 
-      {/* ===== TRANSACTIONS ===== */}
-      <InvoiceTransactionList
-        items={items}
-        installmentCount={items.filter((i) => i.total_installments > 1).length}
-        cardName={card?.name}
-        invoiceMonth={selectedMonth}
-        invoiceYear={selectedYear}
-        payments={payments}
-        isPaid={currentInvoice?.is_paid}
-        onEditItem={handleEditItem}
-        onDeleteItem={handleDeleteItem}
-      />
+      {tab === "parcelados" && (
+        <div className="mt-4 space-y-2.5">
+          {installmentItems.length === 0 ? (
+            <EmptyTab label="Nenhuma compra parcelada nesta fatura." />
+          ) : (
+            installmentItems.map((item, i) => (
+              <InstallmentPurchaseCard
+                key={item.id}
+                item={item}
+                index={i}
+                customCats={[]}
+                card={card ? { name: card.name, color: card.color } : undefined}
+              />
+            ))
+          )}
+        </div>
+      )}
+
+      {tab === "avista" && (
+        <div className="mt-4">
+          {singleItems.length === 0 ? (
+            <EmptyTab label="Nenhuma compra à vista nesta fatura." />
+          ) : (
+            <InvoiceTransactionList
+              items={singleItems}
+              installmentCount={0}
+              cardName={card?.name}
+              invoiceMonth={selectedMonth}
+              invoiceYear={selectedYear}
+              payments={payments}
+              isPaid={currentInvoice?.is_paid}
+              onEditItem={handleEditItem}
+              onDeleteItem={handleDeleteItem}
+            />
+          )}
+        </div>
+      )}
 
 
       {/* Pay Modal */}
