@@ -27,6 +27,7 @@ import InvoiceAddChooserModal, { type ScanMode } from "@/components/fatura/Invoi
 import InvoiceScanScreen from "@/components/fatura/InvoiceScanScreen";
 import InstallmentPurchaseCard from "@/components/installments/InstallmentPurchaseCard";
 import SinglePurchaseCard from "@/components/fatura/SinglePurchaseCard";
+import TransactionDetailModal, { type TransactionRow as DetailTransaction } from "@/components/dashboard/TransactionDetailModal";
 import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import { anchorPurchaseDate, invoicePeriodIndex } from "@/lib/installments";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
@@ -126,6 +127,7 @@ const FaturaCartao = () => {
   const [editingTransaction, setEditingTransaction] = useState<EditTransactionData | null>(null);
   const [showEditCard, setShowEditCard] = useState(false);
   const [tab, setTab] = useState<"geral" | "parcelados" | "avista">("geral");
+  const [detailTx, setDetailTx] = useState<DetailTransaction | null>(null);
 
   const currentInvoice = useMemo(
     () => invoices.find((i) => i.month === selectedMonth && i.year === selectedYear),
@@ -409,6 +411,15 @@ const FaturaCartao = () => {
   const usedPct = limitTotal > 0 ? Math.min((usedLimit / limitTotal) * 100, 100) : 0;
   const isOverLimit = usedLimit > limitTotal;
 
+  const openDetail = async (transactionId: string) => {
+    try {
+      const tx = await getTransactionById(transactionId);
+      setDetailTx(tx as unknown as DetailTransaction);
+    } catch {
+      toast.error("Não foi possível abrir o lançamento");
+    }
+  };
+
   // Read a whole statement, or a single purchase, with the AI
   const handleFileUpload = async (file: File, mode: ScanMode) => {
     const isInvoice = mode === "invoice";
@@ -667,16 +678,17 @@ const FaturaCartao = () => {
         {/* Invoice total — always what the statement was worth, never the leftover */}
         <div className="relative mt-5">
           <p className="text-[12px] text-white/45">Fatura de {MONTH_NAMES[selectedMonth - 1]}</p>
+          {/* Money already paid has left the account, so the headline is what is still owed */}
           <p className="text-[36px] font-extrabold leading-tight tracking-tight text-white tabular-nums">
-            {formatCurrency(total)}
+            {formatCurrency(paidAmount > 0 && outstanding > 0 ? outstanding : total)}
           </p>
           {total > 0 && outstanding <= 0 ? (
             <p className="flex items-center gap-1.5 text-[13px] font-medium text-willo-green">
-              <Check className="h-3.5 w-3.5" strokeWidth={3} /> Paga por inteiro
+              <Check className="h-3.5 w-3.5" strokeWidth={3} /> Paga
             </p>
           ) : paidAmount > 0 ? (
             <p className="text-[13px] text-white/45">
-              {formatCurrency(paidAmount)} já pago · faltam <span className="font-semibold text-white">{formatCurrency(outstanding)}</span>
+              de {formatCurrency(total)} · <span className="font-semibold text-willo-green">{formatCurrency(paidAmount)} já pago</span>
             </p>
           ) : dueInfo && outstanding > 0 ? (
             <p className={cn("text-[13px]", dueInfo.overdue ? "text-red-400" : "text-white/45")}>{dueInfo.text}</p>
@@ -710,6 +722,39 @@ const FaturaCartao = () => {
           </span>
         </div>
 
+        {/* Limit */}
+        <div className="relative mt-5 border-t border-white/[0.06] pt-4">
+          <div className="flex items-baseline justify-between">
+            <span className="text-[12px] text-white/45">Limite usado</span>
+            <span className={cn("text-[12.5px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-white/70")}>
+              {usedPct.toFixed(0)}%
+            </span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.07]">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(usedPct, 100)}%` }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="h-full rounded-full"
+              style={{ background: isOverLimit ? "#F87171" : cardHex }}
+            />
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+            <div>
+              <p className="text-[11.5px] text-white/40">Usado</p>
+              <p className="text-[14px] font-semibold text-white tabular-nums">{formatCurrency(usedLimit)}</p>
+            </div>
+            <div className="border-x border-white/[0.06]">
+              <p className="text-[11.5px] text-white/40">Disponível</p>
+              <p className={cn("text-[14px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-willo-green")}>{formatCurrency(availableLimit)}</p>
+            </div>
+            <div>
+              <p className="text-[11.5px] text-white/40">Total</p>
+              <p className="text-[14px] font-semibold text-white tabular-nums">{formatCurrency(limitTotal)}</p>
+            </div>
+          </div>
+        </div>
+
         {/* Pay */}
         {currentInvoice && outstanding > 0 && (
           <button
@@ -723,46 +768,20 @@ const FaturaCartao = () => {
         )}
       </motion.div>
 
-      {/* ===== The card's limit is about the card, not this statement ===== */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="mt-3 rounded-[22px] border border-white/[0.07] bg-[#141414] p-5"
-      >
-        <div className="flex items-baseline justify-between">
-          <p className="text-[12px] font-semibold uppercase tracking-wider text-white/35">Limite do cartão</p>
-          <span className={cn("text-[12.5px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-white/70")}>
-            {usedPct.toFixed(0)}% usado
-          </span>
-        </div>
-        <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.07]">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${Math.min(usedPct, 100)}%` }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="h-full rounded-full"
-            style={{ background: isOverLimit ? "#F87171" : cardHex }}
-          />
-        </div>
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <div>
-            <p className="text-[11.5px] text-white/40">Usado</p>
-            <p className="mt-0.5 text-[14px] font-semibold text-white tabular-nums">{formatCurrency(usedLimit)}</p>
-          </div>
-          <div className="border-x border-white/[0.06]">
-            <p className="text-[11.5px] text-white/40">Disponível</p>
-            <p className={cn("mt-0.5 text-[14px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-willo-green")}>{formatCurrency(availableLimit)}</p>
-          </div>
-          <div>
-            <p className="text-[11.5px] text-white/40">Total</p>
-            <p className="mt-0.5 text-[14px] font-semibold text-white tabular-nums">{formatCurrency(limitTotal)}</p>
-          </div>
-        </div>
-      </motion.div>
+      <InvoiceHistoryChart
+        invoices={invoices}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        onSelect={(m, y) => { setSelectedMonth(m); setSelectedYear(y); }}
+        userStartDate={userStartDate}
+        closingDay={card?.closing_day}
+      />
+      {categoryBreakdown.length > 0 && (
+        <InvoiceCategoryBreakdown categories={categoryBreakdown} total={total} />
+      )}
 
       {/* ===== Geral / Parcelados / À vista ===== */}
-      <div className="mt-6 isolate grid grid-cols-3 rounded-full border border-white/[0.07] bg-[#141414] p-1">
+      <div className="mt-5 isolate grid grid-cols-3 rounded-full border border-white/[0.07] bg-[#141414] p-1">
         {([["geral", "Geral"], ["parcelados", "Parcelados"], ["avista", "À vista"]] as const).map(([key, label]) => (
           <button key={key} type="button" onClick={() => setTab(key)} className="relative h-10 rounded-full text-[14px] font-medium">
             {tab === key && (
@@ -774,30 +793,50 @@ const FaturaCartao = () => {
       </div>
 
       {tab === "geral" && (
-        <>
-          <InvoiceHistoryChart
-            invoices={invoices}
-            selectedMonth={selectedMonth}
-            selectedYear={selectedYear}
-            onSelect={(m, y) => { setSelectedMonth(m); setSelectedYear(y); }}
-            userStartDate={userStartDate}
-            closingDay={card?.closing_day}
-          />
-          {categoryBreakdown.length > 0 && (
-            <InvoiceCategoryBreakdown categories={categoryBreakdown} total={total} />
+        <div className="mt-4 space-y-2.5">
+          {sortedItems.length === 0 ? (
+            <EmptyTab label="Nenhum lançamento nesta fatura." />
+          ) : (
+            sortedItems.map((item, i) =>
+              item.total_installments > 1 ? (
+                <InstallmentPurchaseCard
+                  key={item.id}
+                  index={i}
+                  customCats={[]}
+                  card={card ? { name: card.name, color: card.color } : undefined}
+                  item={{
+                    id: item.transaction_id,
+                    name: item.transaction_name,
+                    category: item.transaction_category,
+                    amount: Number(item.amount),
+                    installment_current: item.installment_number,
+                    installments: item.total_installments,
+                    payment_method: "cartao",
+                    date: item.transaction_date,
+                    credit_card_id: cardId ?? null,
+                    isOverdue: false,
+                    dueDate: null,
+                  }}
+                />
+              ) : (
+                <SinglePurchaseCard
+                  key={item.id}
+                  index={i}
+                  customCats={[]}
+                  card={card ? { name: card.name, color: card.color } : undefined}
+                  onOpen={() => openDetail(item.transaction_id)}
+                  item={{
+                    id: item.id,
+                    name: item.transaction_name,
+                    category: item.transaction_category,
+                    amount: Number(item.amount),
+                    date: item.transaction_date,
+                  }}
+                />
+              ),
+            )
           )}
-          <InvoiceTransactionList
-            items={sortedItems}
-            installmentCount={installmentItems.length}
-            cardName={card?.name}
-            invoiceMonth={selectedMonth}
-            invoiceYear={selectedYear}
-            payments={payments}
-            isPaid={currentInvoice?.is_paid}
-            onEditItem={handleEditItem}
-            onDeleteItem={handleDeleteItem}
-          />
-        </>
+        </div>
       )}
 
       {tab === "parcelados" && (
@@ -862,6 +901,18 @@ const FaturaCartao = () => {
         onClose={() => setShowAddChooser(false)}
         onManual={() => setShowManualAdd(true)}
         onScan={handleFileUpload}
+      />
+
+      <TransactionDetailModal
+        open={!!detailTx}
+        tx={detailTx}
+        accountName={card?.name ?? "Cartão"}
+        onClose={() => setDetailTx(null)}
+        onRefresh={() => { setDetailTx(null); refreshItems(); }}
+        userId={user?.id}
+        selectedMonth={selectedMonth - 1}
+        selectedYear={selectedYear}
+        onEdit={(t) => { setDetailTx(null); handleEditItem(t.id); }}
       />
 
       {/* Reading the statement: scan animation, then every line found */}
