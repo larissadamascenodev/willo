@@ -190,18 +190,6 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
                       >
                         <Pencil className="h-4 w-4" /> Editar lançamento
                       </button>
-                      {entry.status && onToggleStatus && (
-                        <button
-                          type="button"
-                          onClick={() => onToggleStatus(entry.transactionId, entry.status === "pago" ? "pendente" : "pago")}
-                          className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] text-[14px] font-semibold text-white active:opacity-70"
-                        >
-                          {entry.status === "pago" ? <Clock className="h-4 w-4" /> : <Check className="h-4 w-4" strokeWidth={3} />}
-                          {entry.status === "pago"
-                            ? "Marcar como pendente"
-                            : entry.isReceita ? "Marcar como recebida" : "Marcar como paga"}
-                        </button>
-                      )}
                       <button
                         type="button"
                         onClick={() => setConfirmingDelete(true)}
@@ -241,7 +229,19 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
                 </motion.div>
               )}
             </AnimatePresence>
-            {!showActions && <div className="h-5" />}
+            {!showActions && entry.status === "pendente" && onToggleStatus && (
+              <div className="relative p-5">
+                <button
+                  type="button"
+                  onClick={() => onToggleStatus(entry.transactionId, "pago")}
+                  className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-white text-[15px] font-bold text-[#0B0B0B] active:opacity-80"
+                >
+                  <Check className="h-4 w-4" strokeWidth={3} />
+                  {entry.isReceita ? "Marcar como recebida" : "Marcar como paga"}
+                </button>
+              </div>
+            )}
+            {!showActions && entry.status !== "pendente" && <div className="h-5" />}
           </motion.div>
         </div>
       )}
