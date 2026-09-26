@@ -19,11 +19,13 @@ const CARD_HEX: Record<string, string> = {
 const monthLabel = (d: Date) => d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "").replace(" de ", "/");
 
 /** One installment purchase: segmented installment track, key numbers, and expandable schedule. */
-export default function InstallmentPurchaseCard({ item, index, customCats, card }: {
+export default function InstallmentPurchaseCard({ item, index, customCats, card, onOpen }: {
   item: ActiveInstallmentItem;
   index: number;
   customCats: CustomCategory[];
   card?: { name: string; color: string | null };
+  /** Tapping the card opens the purchase; the chevron still expands the schedule. */
+  onOpen?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -52,7 +54,11 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card 
       transition={{ delay: index * 0.03 }}
       className={`overflow-hidden rounded-[20px] border bg-[#141414] ${item.isOverdue ? "border-red-400/30" : "border-white/[0.07]"}`}
     >
-      <button type="button" onClick={() => setOpen((v) => !v)} className="block w-full px-3.5 py-3 text-left">
+      <button
+        type="button"
+        onClick={() => (onOpen ? onOpen() : setOpen((v) => !v))}
+        className="block w-full px-3.5 py-3 text-left"
+      >
         {/* Header */}
         <div className="flex items-center gap-3">
           {/* Icon wrapped by a ring that fills as installments are paid */}
@@ -120,7 +126,14 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card 
           <span>
             Falta {formatCurrency(item.amount * remaining)} · {next ? `próxima ${next.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}` : `até ${monthLabel(end)}`}
           </span>
-          <ChevronDown className={`h-4 w-4 text-white/40 transition-transform ${open ? "rotate-180" : ""}`} />
+          <span
+            role="button"
+            aria-label={open ? "Recolher parcelas" : "Ver parcelas"}
+            onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+            className="-m-2 flex h-8 w-8 items-center justify-center rounded-full active:bg-white/[0.06]"
+          >
+            <ChevronDown className={`h-4 w-4 text-white/40 transition-transform ${open ? "rotate-180" : ""}`} />
+          </span>
         </div>
       </button>
 

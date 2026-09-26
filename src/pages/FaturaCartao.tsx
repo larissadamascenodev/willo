@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { processScanFile } from "@/lib/scanUpload";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft,
   Plus, MoreVertical, CreditCard,
   CalendarClock, CalendarCheck, Wallet, Shield,
@@ -27,7 +27,7 @@ import InvoiceAddChooserModal, { type ScanMode } from "@/components/fatura/Invoi
 import InvoiceScanScreen from "@/components/fatura/InvoiceScanScreen";
 import InstallmentPurchaseCard from "@/components/installments/InstallmentPurchaseCard";
 import SinglePurchaseCard from "@/components/fatura/SinglePurchaseCard";
-import TransactionDetailModal, { type TransactionRow as DetailTransaction } from "@/components/dashboard/TransactionDetailModal";
+import CardEntryModal, { type CardEntry } from "@/components/fatura/CardEntryModal";
 import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import { anchorPurchaseDate, invoicePeriodIndex } from "@/lib/installments";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
@@ -127,7 +127,7 @@ const FaturaCartao = () => {
   const [editingTransaction, setEditingTransaction] = useState<EditTransactionData | null>(null);
   const [showEditCard, setShowEditCard] = useState(false);
   const [tab, setTab] = useState<"geral" | "parcelados" | "avista">("geral");
-  const [detailTx, setDetailTx] = useState<DetailTransaction | null>(null);
+  const [entry, setEntry] = useState<CardEntry | null>(null);
 
   const currentInvoice = useMemo(
     () => invoices.find((i) => i.month === selectedMonth && i.year === selectedYear),
@@ -411,14 +411,15 @@ const FaturaCartao = () => {
   const usedPct = limitTotal > 0 ? Math.min((usedLimit / limitTotal) * 100, 100) : 0;
   const isOverLimit = usedLimit > limitTotal;
 
-  const openDetail = async (transactionId: string) => {
-    try {
-      const tx = await getTransactionById(transactionId);
-      setDetailTx(tx as unknown as DetailTransaction);
-    } catch {
-      toast.error("Não foi possível abrir o lançamento");
-    }
-  };
+  const openEntry = (item: EnrichedItem) => setEntry({
+    transactionId: item.transaction_id,
+    name: item.transaction_name,
+    category: item.transaction_category,
+    amount: Number(item.amount),
+    date: item.transaction_date,
+    installmentNumber: item.installment_number,
+    totalInstallments: item.total_installments,
+  });
 
   // Read a whole statement, or a single purchase, with the AI
   const handleFileUpload = async (file: File, mode: ScanMode) => {
@@ -695,20 +696,6 @@ const FaturaCartao = () => {
           ) : null}
         </div>
 
-        {/* How much of this statement is already covered */}
-        {total > 0 && (
-          <div className="relative mt-4">
-            <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min((paidAmount / total) * 100, 100)}%` }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="h-full rounded-full bg-willo-green"
-              />
-            </div>
-          </div>
-        )}
-
         {/* Closing / due */}
         <div className="relative mt-4 flex items-center gap-4 border-t border-white/[0.06] pt-4">
           <span className="flex items-center gap-2 text-[12.5px] text-white/50">
@@ -792,6 +779,14 @@ const FaturaCartao = () => {
         ))}
       </div>
 
+      <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={tab}
+        initial={{ opacity: 0, x: 24 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -24 }}
+        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+      >
       {tab === "geral" && (
         <div className="mt-4 space-y-2.5">
           {sortedItems.length === 0 ? (
@@ -804,6 +799,7 @@ const FaturaCartao = () => {
                   index={i}
                   customCats={[]}
                   card={card ? { name: card.name, color: card.color } : undefined}
+                  onOpen={() => openEntry(item)}
                   item={{
                     id: item.transaction_id,
                     name: item.transaction_name,
@@ -824,7 +820,7 @@ const FaturaCartao = () => {
                   index={i}
                   customCats={[]}
                   card={card ? { name: card.name, color: card.color } : undefined}
-                  onOpen={() => openDetail(item.transaction_id)}
+                  onOpen={() => openEntry(item)}
                   item={{
                     id: item.id,
                     name: item.transaction_name,
@@ -844,15 +840,19 @@ const FaturaCartao = () => {
           {installmentItems.length === 0 ? (
             <EmptyTab label="Nenhuma compra parcelada nesta fatura." />
           ) : (
-            installmentItems.map((item, i) => (
-              <InstallmentPurchaseCard
-                key={item.id}
-                item={item}
-                index={i}
-                customCats={[]}
-                card={card ? { name: card.name, color: card.color } : undefined}
-              />
-            ))
+            installmentItems.map((item, i) => {
+              const source = sortedItems.find((s) => s.transaction_id === item.id);
+              return (
+                <InstallmentPurchaseCard
+                  key={item.id}
+                  item={item}
+                  index={i}
+                  customCats={[]}
+                  card={card ? { name: card.name, color: card.color } : undefined}
+                  onOpen={source ? () => openEntry(source) : undefined}
+                />
+              );
+            })
           )}
         </div>
       )}
@@ -868,7 +868,7 @@ const FaturaCartao = () => {
                 index={i}
                 customCats={[]}
                 card={card ? { name: card.name, color: card.color } : undefined}
-                onOpen={() => handleEditItem(item.transaction_id)}
+                onOpen={() => openEntry(item)}
                 item={{
                   id: item.id,
                   name: item.transaction_name,
@@ -881,7 +881,8 @@ const FaturaCartao = () => {
           )}
         </div>
       )}
-
+      </motion.div>
+      </AnimatePresence>
 
       {/* Pay Modal */}
       <InvoicePayModal
@@ -903,16 +904,12 @@ const FaturaCartao = () => {
         onScan={handleFileUpload}
       />
 
-      <TransactionDetailModal
-        open={!!detailTx}
-        tx={detailTx}
-        accountName={card?.name ?? "Cartão"}
-        onClose={() => setDetailTx(null)}
-        onRefresh={() => { setDetailTx(null); refreshItems(); }}
-        userId={user?.id}
-        selectedMonth={selectedMonth - 1}
-        selectedYear={selectedYear}
-        onEdit={(t) => { setDetailTx(null); handleEditItem(t.id); }}
+      <CardEntryModal
+        entry={entry}
+        cardName={card?.name}
+        onClose={() => setEntry(null)}
+        onEdit={(id) => { setEntry(null); handleEditItem(id); }}
+        onDelete={(id) => { setEntry(null); handleDeleteItem(id); }}
       />
 
       {/* Reading the statement: scan animation, then every line found */}
