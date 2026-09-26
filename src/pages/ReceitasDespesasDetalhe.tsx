@@ -14,6 +14,7 @@ import { getCategoryIcon, getCategoryColor } from "@/lib/categoryUtils";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { getTransactionById, getAccounts } from "@/services/transactionService";
 import TransactionDetailModal from "@/components/dashboard/TransactionDetailModal";
+import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
 import { PageHeader, SectionTitle, Surface } from "@/components/shared/MobilePage";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +58,7 @@ const ReceitasDespesasDetalhe = () => {
   const [showAll, setShowAll] = useState(false);
   const [detailTx, setDetailTx] = useState<any>(null);
   const [detailAccountName, setDetailAccountName] = useState("");
+  const [editingTx, setEditingTx] = useState<EditTransactionData | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
   useEffect(() => {
@@ -306,6 +308,30 @@ const ReceitasDespesasDetalhe = () => {
         onClose={() => { setShowDetail(false); setDetailTx(null); }}
         onRefresh={() => { setShowDetail(false); setDetailTx(null); refetch(); }}
         userId={user?.id} selectedMonth={selectedMonth} selectedYear={selectedYear}
+        onEdit={(t) => setEditingTx({
+          id: t.id,
+          name: t.name,
+          type: t.type as "receita" | "despesa",
+          amount: Number(t.amount),
+          category: t.category,
+          date: t.date,
+          status: t.status as "pago" | "pendente",
+          payment_method: t.payment_method as "conta" | "cartao",
+          account_id: t.account_id,
+          credit_card_id: t.credit_card_id,
+          recurrence_type: t.recurrence_type as "unica" | "parcelado" | "fixa",
+          installments: t.installments,
+          installment_current: t.installment_current,
+          observation: t.observation,
+        })}
+      />
+
+      <NovaTransacaoModal
+        open={!!editingTx}
+        onClose={() => setEditingTx(null)}
+        onSuccess={() => { setEditingTx(null); refetch(); }}
+        initialType={editingTx?.type ?? "despesa"}
+        editTransaction={editingTx}
       />
     </div>
   );

@@ -20,7 +20,7 @@ import { chargeStartsAfterMonth } from "@/lib/installments";
 import MonthSelector from "@/components/dashboard/MonthSelector";
 import SaldoCard from "@/components/dashboard/SaldoCard";
 import ReceitasDespesasCards from "@/components/dashboard/ReceitasDespesasCards";
-import NovaTransacaoModal from "@/components/dashboard/NovaTransacaoModal";
+import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
 import TransactionTypeChooser from "@/components/dashboard/TransactionTypeChooser";
 import TransactionDetailModal from "@/components/dashboard/TransactionDetailModal";
 import FaturaDetailModal from "@/components/fatura/FaturaDetailModal";
@@ -119,6 +119,7 @@ const Transacoes = () => {
   // Modals
   const [showTypeChooser, setShowTypeChooser] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
+  const [editingTx, setEditingTx] = useState<EditTransactionData | null>(null);
   const [newModalType, setNewModalType] = useState<"receita" | "despesa">("despesa");
   const [detailTx, setDetailTx] = useState<TransactionRow | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -726,6 +727,15 @@ const Transacoes = () => {
       )}
 
       {/* Detail Modal */}
+      {/* Editing reuses the very form that creates a transaction */}
+      <NovaTransacaoModal
+        open={!!editingTx}
+        onClose={() => setEditingTx(null)}
+        onSuccess={() => { setEditingTx(null); fetchData(); }}
+        initialType={editingTx?.type ?? "despesa"}
+        editTransaction={editingTx}
+      />
+
       <TransactionDetailModal
         open={showDetailModal}
         tx={detailTx}
@@ -735,6 +745,22 @@ const Transacoes = () => {
         userId={user?.id}
         selectedMonth={selectedMonth}
         selectedYear={selectedYear}
+        onEdit={(t) => setEditingTx({
+          id: t.id,
+          name: t.name,
+          type: t.type as "receita" | "despesa",
+          amount: Number(t.amount),
+          category: t.category,
+          date: t.date,
+          status: t.status as "pago" | "pendente",
+          payment_method: t.payment_method as "conta" | "cartao",
+          account_id: t.account_id,
+          credit_card_id: t.credit_card_id,
+          recurrence_type: t.recurrence_type as "unica" | "parcelado" | "fixa",
+          installments: t.installments,
+          installment_current: t.installment_current,
+          observation: t.observation,
+        })}
       />
 
       {/* Fatura Detail Modal */}
