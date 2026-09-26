@@ -12,6 +12,8 @@ import { useSwipeBack } from "@/hooks/useSwipeBack";
 import { supabase } from "@/integrations/supabase/client";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryUtils";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
+import { getRecurringForMonth } from "@/services/recurringService";
+import { dayOfMonth } from "@/lib/dateOnly";
 import { getTransactionById, getAccounts } from "@/services/transactionService";
 import TransactionDetailModal from "@/components/dashboard/TransactionDetailModal";
 import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
@@ -74,8 +76,28 @@ const ReceitasDespesasDetalhe = () => {
         .gte("date", start).lte("date", end)
         .order("date", { ascending: false }).order("created_at", { ascending: true });
       if (!isReceita) txQuery = txQuery.is("credit_card_id", null);
-      const [{ data: txs }, cats] = await Promise.all([txQuery, getCustomCategories()]);
-      setTransactions((txs as TxRow[]) ?? []);
+      const [{ data: txs }, cats, recurring] = await Promise.all([
+        txQuery,
+        getCustomCategories(),
+        getRecurringForMonth(selectedMonth, selectedYear),
+      ]);
+
+      // A fixed transaction repeats into this month without a row of its own. The totals
+      // already counted it, so the list has to show it too or the two disagree.
+      const base = (txs as TxRow[]) ?? [];
+      const seen = new Set(base.map((t) => t.id));
+      const materialised = (recurring as any[])
+        .filter((r) => r.type === typeFilter && !seen.has(r.id))
+        .filter((r) => (isReceita ? true : !r.credit_card_id))
+        .map((r) => ({
+          ...r,
+          date: `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(dayOfMonth(r.date)).padStart(2, "0")}`,
+          status: "pendente",
+        })) as TxRow[];
+
+      setTransactions(
+        [...base, ...materialised].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? "")),
+      );
       setCustomCats(cats);
       if (!isReceita) {
         const { data: invData } = await supabase.from("invoices")

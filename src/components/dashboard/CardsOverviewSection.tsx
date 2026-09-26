@@ -36,9 +36,13 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
   const summary = useMemo(() => {
     const limit = cards.reduce((s, c) => s + c.limit, 0);
     const used = cards.reduce((s, c) => s + c.used, 0);
-    const month = today.getMonth() + 1;
-    const year = today.getFullYear();
+    // The statement collecting purchases right now, per card: past its closing day the
+    // open one is already next month's, so the calendar month would show a settled one.
     const current = cards.map((card) => {
+      const rolls = today.getDate() > card.closingDay ? 1 : 0;
+      const index = today.getFullYear() * 12 + today.getMonth() + rolls;
+      const month = (index % 12) + 1;
+      const year = Math.floor(index / 12);
       const invoice = invoices.find((i) => i.cardId === card.id && i.month === month && i.year === year);
       return { card, invoice, due: invoiceDueDate(card, year, month) };
     });

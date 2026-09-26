@@ -81,8 +81,8 @@ const GastosPorCategoria = memo(({ categories, selectedMonth, onVerAnalise }: Pr
   const sorted = useMemo(() => [...categories].sort((a, b) => b.amount - a.amount), [categories]);
   const totalExpenses = useMemo(() => sorted.reduce((sum, c) => sum + c.amount, 0), [sorted]);
   const hasMore = sorted.length > INITIAL_COUNT;
-  const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? sorted : sorted.slice(0, INITIAL_COUNT);
+  // A summary card: the full list belongs to the categories page
+  const visible = sorted.slice(0, INITIAL_COUNT);
 
   const monthLabel = selectedMonth !== undefined ? MONTH_NAMES[selectedMonth] : MONTH_NAMES[new Date().getMonth()];
 
@@ -256,10 +256,11 @@ const GastosPorCategoria = memo(({ categories, selectedMonth, onVerAnalise }: Pr
       {hasMore && (
         <div className="px-4 pb-3">
           <button
-            onClick={() => setExpanded(!expanded)}
-            className="w-full flex items-center justify-center gap-1 pt-2 border-t border-border/10 text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors font-medium"
+            onClick={() => navigate("/analytics/categorias")}
+            className="flex w-full items-center justify-center gap-1.5 border-t border-white/[0.06] pt-3 text-[12.5px] font-medium text-white/55 active:opacity-70"
           >
-            {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            Ver as {sorted.length} categorias
+            <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
       )}

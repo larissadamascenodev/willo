@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMonth } from "@/contexts/MonthContext";
-import { deleteTransaction, getAccounts, updateTransaction, getCreditCards } from "@/services/transactionService";
+import { deleteTransaction, getAccounts, updateTransaction, updateTransactionStatus, getCreditCards } from "@/services/transactionService";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryUtils";
 import { useFinanceData } from "@/hooks/useFinanceData";
@@ -22,7 +22,7 @@ import SaldoCard from "@/components/dashboard/SaldoCard";
 import ReceitasDespesasCards from "@/components/dashboard/ReceitasDespesasCards";
 import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
 import TransactionTypeChooser from "@/components/dashboard/TransactionTypeChooser";
-import TransactionDetailModal from "@/components/dashboard/TransactionDetailModal";
+import CardEntryModal from "@/components/fatura/CardEntryModal";
 import FaturaDetailModal from "@/components/fatura/FaturaDetailModal";
 import { TransactionListItem, TransactionTabs, TransactionsSummaryCard, formatDateHeader, type TabFilter, type TransactionRow } from "@/components/transactions/TransactionParts";
 import type { DashboardData } from "@/types/finance";
@@ -736,31 +736,64 @@ const Transacoes = () => {
         editTransaction={editingTx}
       />
 
-      <TransactionDetailModal
-        open={showDetailModal}
-        tx={detailTx}
-        accountName={detailTx?.account_id ? (accountMap[detailTx.account_id] || "Conta") : detailTx?.payment_method === "cartao" ? "Cartão" : "Sem conta"}
+      <CardEntryModal
+        entry={detailTx && {
+          transactionId: detailTx.id,
+          name: detailTx.name,
+          category: detailTx.category,
+          amount: Number(detailTx.amount),
+          date: detailTx.date,
+          time: detailTx.time,
+          installmentNumber: detailTx.installment_current,
+          totalInstallments: detailTx.installments,
+          status: detailTx.status === "pago" ? "pago" : "pendente",
+          isReceita: detailTx.type === "receita",
+        }}
+        cardName={detailTx?.payment_method === "cartao" ? "Cartão" : accountMap[detailTx?.account_id ?? ""] ?? "Conta"}
         onClose={() => { setShowDetailModal(false); setDetailTx(null); }}
-        onRefresh={fetchData}
-        userId={user?.id}
-        selectedMonth={selectedMonth}
-        selectedYear={selectedYear}
-        onEdit={(t) => setEditingTx({
-          id: t.id,
-          name: t.name,
-          type: t.type as "receita" | "despesa",
-          amount: Number(t.amount),
-          category: t.category,
-          date: t.date,
-          status: t.status as "pago" | "pendente",
-          payment_method: t.payment_method as "conta" | "cartao",
-          account_id: t.account_id,
-          credit_card_id: t.credit_card_id,
-          recurrence_type: t.recurrence_type as "unica" | "parcelado" | "fixa",
-          installments: t.installments,
-          installment_current: t.installment_current,
-          observation: t.observation,
-        })}
+        onEdit={(id) => {
+          const t = detailTx;
+          setShowDetailModal(false);
+          setDetailTx(null);
+          if (t) setEditingTx({
+            id: t.id,
+            name: t.name,
+            type: t.type as "receita" | "despesa",
+            amount: Number(t.amount),
+            category: t.category,
+            date: t.date,
+            status: t.status as "pago" | "pendente",
+            payment_method: t.payment_method as "conta" | "cartao",
+            account_id: t.account_id,
+            credit_card_id: t.credit_card_id,
+            recurrence_type: t.recurrence_type as "unica" | "parcelado" | "fixa",
+            installments: t.installments,
+            installment_current: t.installment_current,
+            observation: t.observation,
+          });
+        }}
+        onDelete={async (id) => {
+          setShowDetailModal(false);
+          setDetailTx(null);
+          try {
+            await deleteTransaction(id);
+            toast.success("Lançamento excluído");
+            fetchData();
+          } catch {
+            toast.error("Não foi possível excluir");
+          }
+        }}
+        onToggleStatus={async (id, next) => {
+          setShowDetailModal(false);
+          setDetailTx(null);
+          try {
+            await updateTransactionStatus(id, next);
+            toast.success(next === "pago" ? "Marcado como pago" : "Marcado como pendente");
+            fetchData();
+          } catch {
+            toast.error("Não foi possível atualizar");
+          }
+        }}
       />
 
       {/* Fatura Detail Modal */}

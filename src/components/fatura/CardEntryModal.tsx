@@ -1,12 +1,13 @@
 import { useState, useEffect, type ComponentType } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
-import { X, Pencil, Trash2, Calendar, Clock, Tag, CreditCard, Layers, ChevronRight, AlertTriangle } from "lucide-react";
+import { X, Pencil, Trash2, Calendar, Clock, Tag, CreditCard, Layers, ChevronRight, AlertTriangle, Check } from "lucide-react";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { getCategoryHexColor } from "@/lib/categoryUtils";
 import { getDefaultCategoryIcon } from "@/lib/categoryIcons";
 import { getIconComponent } from "@/components/dashboard/CategoryCreateModal";
 import { getCurrency } from "@/lib/currency";
+import { cn } from "@/lib/utils";
 
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
@@ -30,26 +31,34 @@ export interface CardEntry {
   time?: string | null;
   installmentNumber?: number | null;
   totalInstallments?: number | null;
+  /** Only for money moving through an account — a card purchase is settled by the statement. */
+  status?: "pago" | "pendente";
+  isReceita?: boolean;
 }
 
 /**
  * A purchase on a card is settled by the statement, not on its own — so this has no
  * paid/pending switch. It shows what the purchase was and gets out of the way.
  */
-export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDelete }: {
+export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDelete, onToggleStatus }: {
   entry: CardEntry | null;
   cardName?: string;
   onClose: () => void;
   onEdit: (transactionId: string) => void;
   onDelete: (transactionId: string) => void;
+  /** Present when the entry can be settled on its own. */
+  onToggleStatus?: (transactionId: string, next: "pago" | "pendente") => void;
 }) {
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // The pencil reveals what you can do, so the actions are not repeated on the card
+  const [showActions, setShowActions] = useState(false);
 
   useEffect(() => {
     if (entry) {
       getCustomCategories().then(setCustomCats).catch(() => {});
       setConfirmingDelete(false);
+      setShowActions(false);
     }
   }, [entry]);
 
@@ -100,9 +109,12 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
                 <div className="flex shrink-0 items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => onEdit(entry.transactionId)}
-                    aria-label="Editar"
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-white/70 active:opacity-60"
+                    onClick={() => { setShowActions((v) => !v); setConfirmingDelete(false); }}
+                    aria-label="Opções"
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
+                      showActions ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/70",
+                    )}
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
@@ -124,6 +136,19 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
                 <p className="mt-2 text-center text-[12.5px] text-white/45">
                   parcela {entry.installmentNumber} de {entry.totalInstallments} · total {fmt(entry.amount * (entry.totalInstallments ?? 1))}
                 </p>
+              )}
+              {entry.status && (
+                <div className="mt-3 flex justify-center">
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold",
+                      entry.status === "pago" ? "bg-willo-green/12 text-willo-green" : "bg-amber-300/12 text-amber-300",
+                    )}
+                  >
+                    {entry.status === "pago" ? <Check className="h-3 w-3" strokeWidth={3} /> : <Clock className="h-3 w-3" />}
+                    {entry.status === "pago" ? (entry.isReceita ? "Recebido" : "Pago") : "Pendente"}
+                  </span>
+                </div>
               )}
             </div>
 
@@ -148,51 +173,75 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
               )}
             </div>
 
-            {!confirmingDelete ? (
-              <div className="relative grid grid-cols-2 gap-2.5 p-5">
-                <button
-                  type="button"
-                  onClick={() => onEdit(entry.transactionId)}
-                  className="flex h-12 items-center justify-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] text-[14px] font-semibold text-white active:opacity-70"
+            <AnimatePresence initial={false}>
+              {showActions && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="relative overflow-hidden"
                 >
-                  <Pencil className="h-4 w-4" /> Editar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmingDelete(true)}
-                  className="flex h-12 items-center justify-center gap-2 rounded-full border border-red-400/20 bg-red-400/[0.08] text-[14px] font-semibold text-red-400 active:opacity-70"
-                >
-                  <Trash2 className="h-4 w-4" /> Excluir
-                </button>
-              </div>
-            ) : (
-              <div className="relative p-5">
-                <div className="flex items-start gap-3 rounded-[18px] border border-red-400/20 bg-red-400/[0.06] px-4 py-3">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
-                  <p className="text-[13px] leading-snug text-white/70">
-                    {isPlan
-                      ? `Isso remove a compra inteira, com as ${entry.totalInstallments} parcelas.`
-                      : "Essa compra será removida da fatura."}
-                  </p>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingDelete(false)}
-                    className="h-12 rounded-full border border-white/[0.08] bg-white/[0.04] text-[14px] font-semibold text-white"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(entry.transactionId)}
-                    className="h-12 rounded-full bg-red-500 text-[14px] font-bold text-white"
-                  >
-                    Excluir
-                  </button>
-                </div>
-              </div>
-            )}
+                  {!confirmingDelete ? (
+                    <div className="space-y-2.5 p-5">
+                      <button
+                        type="button"
+                        onClick={() => onEdit(entry.transactionId)}
+                        className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white text-[14px] font-bold text-[#0B0B0B] active:opacity-80"
+                      >
+                        <Pencil className="h-4 w-4" /> Editar lançamento
+                      </button>
+                      {entry.status && onToggleStatus && (
+                        <button
+                          type="button"
+                          onClick={() => onToggleStatus(entry.transactionId, entry.status === "pago" ? "pendente" : "pago")}
+                          className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] text-[14px] font-semibold text-white active:opacity-70"
+                        >
+                          {entry.status === "pago" ? <Clock className="h-4 w-4" /> : <Check className="h-4 w-4" strokeWidth={3} />}
+                          {entry.status === "pago"
+                            ? "Marcar como pendente"
+                            : entry.isReceita ? "Marcar como recebida" : "Marcar como paga"}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingDelete(true)}
+                        className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-red-400/20 bg-red-400/[0.08] text-[14px] font-semibold text-red-400 active:opacity-70"
+                      >
+                        <Trash2 className="h-4 w-4" /> Excluir
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="p-5">
+                      <div className="flex items-start gap-3 rounded-[18px] border border-red-400/20 bg-red-400/[0.06] px-4 py-3">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+                        <p className="text-[13px] leading-snug text-white/70">
+                          {isPlan
+                            ? "Isso remove a compra inteira, com todas as parcelas."
+                            : "Esse lancamento sera removido."}
+                        </p>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingDelete(false)}
+                          className="h-12 rounded-full border border-white/[0.08] bg-white/[0.04] text-[14px] font-semibold text-white"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDelete(entry.transactionId)}
+                          className="h-12 rounded-full bg-red-500 text-[14px] font-bold text-white"
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+            {!showActions && <div className="h-5" />}
           </motion.div>
         </div>
       )}
