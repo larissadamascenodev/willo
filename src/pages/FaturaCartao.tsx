@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { processScanFile } from "@/lib/scanUpload";
 import { motion } from "framer-motion";
 import { ChevronLeft,
@@ -28,7 +28,7 @@ import InvoiceScanScreen from "@/components/fatura/InvoiceScanScreen";
 import InstallmentPurchaseCard from "@/components/installments/InstallmentPurchaseCard";
 import SinglePurchaseCard from "@/components/fatura/SinglePurchaseCard";
 import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
-import { anchorPurchaseDate } from "@/lib/installments";
+import { anchorPurchaseDate, invoicePeriodIndex } from "@/lib/installments";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
 import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
 import MonthSelector from "@/components/dashboard/MonthSelector";
@@ -132,6 +132,31 @@ const FaturaCartao = () => {
     () => invoices.find((i) => i.month === selectedMonth && i.year === selectedYear),
     [invoices, selectedMonth, selectedYear]
   );
+
+  /**
+   * Opening a card should land on the statement that still needs attention — the oldest
+   * one not yet settled, or the period currently collecting purchases when everything is
+   * paid. A settled month stays reachable through the history, not as the landing screen.
+   */
+  const pickedInitialMonth = useRef(false);
+  useEffect(() => {
+    if (pickedInitialMonth.current || !card) return;
+    pickedInitialMonth.current = true;
+    if (searchParams.get("month")) return;
+
+    const unpaid = invoices
+      .filter((inv) => !inv.is_paid && Number(inv.total_amount) > 0)
+      .sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month))[0];
+
+    if (unpaid) {
+      setSelectedMonth(unpaid.month);
+      setSelectedYear(unpaid.year);
+      return;
+    }
+    const period = invoicePeriodIndex(new Date().toISOString().slice(0, 10), card.closing_day);
+    setSelectedMonth((period % 12) + 1);
+    setSelectedYear(Math.floor(period / 12));
+  }, [card, invoices, searchParams]);
 
   useEffect(() => {
     if (!user || !cardId) return;
@@ -743,6 +768,7 @@ const FaturaCartao = () => {
             selectedYear={selectedYear}
             onSelect={(m, y) => { setSelectedMonth(m); setSelectedYear(y); }}
             userStartDate={userStartDate}
+            closingDay={card?.closing_day}
           />
           {categoryBreakdown.length > 0 && (
             <InvoiceCategoryBreakdown categories={categoryBreakdown} total={total} />

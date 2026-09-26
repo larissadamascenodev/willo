@@ -11,6 +11,8 @@ interface Props {
   selectedYear: number;
   onSelect: (month: number, year: number) => void;
   userStartDate?: Date | null;
+  /** Closing day of the card, so "open" follows the billing cycle and not the calendar. */
+  closingDay?: number | null;
 }
 
 type Status = "paga" | "aberta" | "futura";
@@ -21,7 +23,7 @@ const STATUS_LABEL: Record<Status, string> = {
   futura: "Projeção",
 };
 
-export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedYear, onSelect, userStartDate }: Props) {
+export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedYear, onSelect, userStartDate, closingDay }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragState = useRef({ startX: 0, scrollLeft: 0, moved: false });
@@ -52,6 +54,9 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
     );
     const endIndex = Math.max(lastWithData, currentYear * 12 + (currentMonth - 1) + 3);
 
+    const today = now.getDate();
+    const openPeriod = currentYear * 12 + (currentMonth - 1) + (closingDay && today > closingDay ? 1 : 0);
+
     const entries: { month: number; year: number; amount: number; status: Status; isSelected: boolean }[] = [];
     let m = rangeStartM;
     let y = rangeStartY;
@@ -61,7 +66,9 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
       const paidAmt = invoice ? Number((invoice as any).paid_amount ?? 0) : 0;
       const isPaid = invoice?.is_paid ?? false;
       const amount = (!isPaid && paidAmt > 0) ? Math.max(0, rawAmount - paidAmt) : rawAmount;
-      const isFuture = y > currentYear || (y === currentYear && m > currentMonth);
+      // The statement collecting purchases right now is open, not a projection —
+      // with a closing day of 6, October is already the open one on 26 September.
+      const isFuture = y * 12 + (m - 1) > openPeriod;
       entries.push({
         month: m,
         year: y,
@@ -73,7 +80,7 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
       if (m > 12) { m = 1; y++; }
     }
     return entries;
-  }, [invoices, selectedMonth, selectedYear, startMonth, startYear]);
+  }, [invoices, selectedMonth, selectedYear, startMonth, startYear, closingDay]);
 
   const maxAmount = useMemo(() => Math.max(...chartData.map((d) => d.amount), 1), [chartData]);
   const selected = chartData.find((d) => d.isSelected);
