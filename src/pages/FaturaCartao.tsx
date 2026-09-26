@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { ChevronLeft,
   Plus, MoreVertical, CreditCard,
   CalendarClock, CalendarCheck, Wallet, Shield,
-  Pencil, Trash2, Undo2,
+  Pencil, Trash2, Undo2, Check,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -200,6 +200,12 @@ const FaturaCartao = () => {
       const typedCards = cards as unknown as CreditCardInfo[];
       const foundCard = typedCards.find((c) => c.id === cardId);
       setCard(foundCard ?? null);
+      // Settled month is done with — move on to the one still collecting purchases
+      if (details.mode === "total") {
+        const today = new Date();
+        setSelectedMonth(today.getMonth() + 1);
+        setSelectedYear(today.getFullYear());
+      }
       window.dispatchEvent(new CustomEvent("finance-data-changed"));
     } catch (err: any) {
       toast.error(err?.message ?? "Erro ao pagar fatura");
@@ -640,15 +646,23 @@ const FaturaCartao = () => {
           )}
         </div>
 
-        {/* Invoice total */}
+        {/* Invoice total — always what the statement was worth, never the leftover */}
         <div className="relative mt-5">
           <p className="text-[12px] text-white/45">Fatura de {MONTH_NAMES[selectedMonth - 1]}</p>
           <p className="text-[36px] font-extrabold leading-tight tracking-tight text-white tabular-nums">
-            {formatCurrency(outstanding)}
+            {formatCurrency(total)}
           </p>
-          {dueInfo && invoiceStatus !== "paid" && outstanding > 0 && (
+          {total > 0 && outstanding <= 0 ? (
+            <p className="flex items-center gap-1.5 text-[13px] font-medium text-willo-green">
+              <Check className="h-3.5 w-3.5" strokeWidth={3} /> Paga por inteiro
+            </p>
+          ) : paidAmount > 0 ? (
+            <p className="text-[13px] text-white/45">
+              {formatCurrency(paidAmount)} já pago · faltam <span className="font-semibold text-white">{formatCurrency(outstanding)}</span>
+            </p>
+          ) : dueInfo && outstanding > 0 ? (
             <p className={cn("text-[13px]", dueInfo.overdue ? "text-red-400" : "text-white/45")}>{dueInfo.text}</p>
-          )}
+          ) : null}
         </div>
 
         {/* Closing / due */}

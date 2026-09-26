@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import { MONTH_SHORT, formatCurrency } from "@/pages/FaturaCartao";
 import type { Invoice } from "@/services/invoiceService";
 import { cn } from "@/lib/utils";
@@ -13,10 +13,18 @@ interface Props {
   userStartDate?: Date | null;
 }
 
+type Status = "paga" | "aberta" | "futura";
+
+const STATUS_LABEL: Record<Status, string> = {
+  paga: "Paga",
+  aberta: "Em aberto",
+  futura: "Projeção",
+};
+
 export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedYear, onSelect, userStartDate }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const dragState = useRef({ startX: 0, scrollLeft: 0 });
+  const dragState = useRef({ startX: 0, scrollLeft: 0, moved: false });
 
   const startMonth = userStartDate ? userStartDate.getMonth() + 1 : null;
   const startYear = userStartDate ? userStartDate.getFullYear() : null;
@@ -26,7 +34,6 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
 
-    // Determine start: user creation month or 6 months before current
     let rangeStartM: number, rangeStartY: number;
     if (startMonth && startYear) {
       rangeStartM = startMonth;
@@ -37,24 +44,31 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
       while (rangeStartM < 1) { rangeStartM += 12; rangeStartY--; }
     }
 
-    // End: December of the year after the current year
-    const rangeEndM = 12;
-    const rangeEndY = currentYear + 1;
+    // Only as far as there is something to say: the last month with an invoice, or
+    // three months ahead — a chart running to next December was mostly empty stubs.
+    const lastWithData = invoices.reduce(
+      (acc, inv) => Math.max(acc, inv.year * 12 + (inv.month - 1)),
+      currentYear * 12 + (currentMonth - 1),
+    );
+    const endIndex = Math.max(lastWithData, currentYear * 12 + (currentMonth - 1) + 3);
 
-    // Build entries from start to end
-    const entries: { month: number; year: number; amount: number; isPaid: boolean; isSelected: boolean; isFuture: boolean }[] = [];
+    const entries: { month: number; year: number; amount: number; status: Status; isSelected: boolean }[] = [];
     let m = rangeStartM;
     let y = rangeStartY;
-    while (y < rangeEndY || (y === rangeEndY && m <= rangeEndM)) {
+    while (y * 12 + (m - 1) <= endIndex) {
       const invoice = invoices.find((inv) => inv.month === m && inv.year === y);
       const rawAmount = invoice ? Number(invoice.total_amount) : 0;
       const paidAmt = invoice ? Number((invoice as any).paid_amount ?? 0) : 0;
       const isPaid = invoice?.is_paid ?? false;
-      // For open invoices with partial payment, show outstanding amount
       const amount = (!isPaid && paidAmt > 0) ? Math.max(0, rawAmount - paidAmt) : rawAmount;
-      const isSelected = m === selectedMonth && y === selectedYear;
       const isFuture = y > currentYear || (y === currentYear && m > currentMonth);
-      entries.push({ month: m, year: y, amount, isPaid, isSelected, isFuture });
+      entries.push({
+        month: m,
+        year: y,
+        amount,
+        status: isPaid ? "paga" : isFuture ? "futura" : "aberta",
+        isSelected: m === selectedMonth && y === selectedYear,
+      });
       m++;
       if (m > 12) { m = 1; y++; }
     }
@@ -62,23 +76,18 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
   }, [invoices, selectedMonth, selectedYear, startMonth, startYear]);
 
   const maxAmount = useMemo(() => Math.max(...chartData.map((d) => d.amount), 1), [chartData]);
+  const selected = chartData.find((d) => d.isSelected);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      const active = scrollRef.current.querySelector("[data-active='true']");
-      if (active) {
-        active.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-      }
-    }
+    const active = scrollRef.current?.querySelector("[data-active='true']");
+    active?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   }, [selectedMonth, selectedYear]);
 
-  // Mouse drag to scroll
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     const el = scrollRef.current;
     if (!el) return;
     setIsDragging(true);
-    dragState.current = { startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft };
-    el.style.cursor = "grabbing";
+    dragState.current = { startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft, moved: false };
   }, []);
 
   const onMouseMove = useCallback((e: React.MouseEvent) => {
@@ -86,103 +95,83 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
     e.preventDefault();
     const el = scrollRef.current;
     const x = e.pageX - el.offsetLeft;
+    if (Math.abs(x - dragState.current.startX) > 4) dragState.current.moved = true;
     el.scrollLeft = dragState.current.scrollLeft - (x - dragState.current.startX);
   }, [isDragging]);
 
-  const onMouseUp = useCallback(() => {
-    setIsDragging(false);
-    if (scrollRef.current) scrollRef.current.style.cursor = "grab";
-  }, []);
+  const onMouseUp = useCallback(() => setIsDragging(false), []);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.08 }}
-      className="glass-card p-5 space-y-4"
+      className="mt-4 rounded-[22px] border border-white/[0.07] bg-[#141414] p-5"
     >
-      {/* Header — title only, no legend here */}
-      <div className="flex items-center gap-2">
-        <TrendingUp className="w-4 h-4 text-willo-green" />
-        <h2 className="text-sm font-bold text-foreground">Histórico de Faturas</h2>
+      {/* The selected month, read as a sentence instead of a tooltip on a bar */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[12px] font-semibold uppercase tracking-wider text-white/35">Histórico de faturas</p>
+          <p className="mt-1.5 text-[26px] font-extrabold leading-none tracking-tight text-white tabular-nums">
+            {selected && selected.amount > 0 ? formatCurrency(selected.amount) : "—"}
+          </p>
+          <p className="mt-1.5 text-[13px] text-white/45">
+            {selected ? `${MONTH_SHORT[selected.month - 1]} ${selected.year}` : ""}
+          </p>
+        </div>
+        {selected && (
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-semibold",
+              selected.status === "paga" && "bg-willo-green/12 text-willo-green",
+              selected.status === "aberta" && "bg-white/[0.08] text-white",
+              selected.status === "futura" && "bg-white/[0.05] text-white/50",
+            )}
+          >
+            {selected.status === "paga" && <Check className="h-3 w-3" strokeWidth={3} />}
+            {STATUS_LABEL[selected.status]}
+          </span>
+        )}
       </div>
 
-      {/* Bar chart — draggable */}
       <div
         ref={scrollRef}
-        className="flex items-end gap-1.5 overflow-x-auto scrollbar-none pb-1 select-none"
-        style={{ minHeight: 120, cursor: "grab" }}
+        className="mt-5 flex select-none items-end gap-2 overflow-x-auto pb-1 scrollbar-none"
+        style={{ cursor: isDragging ? "grabbing" : "grab" }}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
       >
         {chartData.map((entry) => {
-          const barHeight = entry.amount > 0
-            ? Math.max(20, (entry.amount / maxAmount) * 90)
-            : 16;
-
+          const height = entry.amount > 0 ? Math.max(14, (entry.amount / maxAmount) * 92) : 6;
           return (
             <button
               key={`${entry.year}-${entry.month}`}
               data-active={entry.isSelected}
-              onClick={() => { if (!isDragging) onSelect(entry.month, entry.year); }}
-              className="flex flex-col items-center gap-1.5 min-w-[60px] flex-1 group"
+              onClick={() => { if (!dragState.current.moved) onSelect(entry.month, entry.year); }}
+              className="flex w-[38px] shrink-0 flex-col items-center gap-2"
             >
-              {/* Value tooltip */}
-              <div className={cn(
-                "text-[10px] font-bold transition-opacity duration-150",
-                entry.isSelected ? "opacity-100 text-primary" : "opacity-0 group-hover:opacity-100 text-muted-foreground"
-              )}>
-                {entry.amount > 0 ? formatCurrency(entry.amount) : "—"}
-              </div>
-
-              {/* Bar block */}
-              <div className="relative w-full">
-                <motion.div
+              <span className="flex h-[92px] w-full items-end">
+                <motion.span
                   initial={{ height: 0 }}
-                  animate={{ height: barHeight }}
-                  transition={{ duration: 0.5, ease: "easeOut", delay: 0.02 }}
+                  animate={{ height }}
+                  transition={{ duration: 0.45, ease: "easeOut" }}
                   className={cn(
-                    "w-full rounded-lg transition-all duration-200 cursor-pointer relative overflow-hidden",
-                    entry.isSelected
-                      ? "bg-primary/30 border-2 border-primary shadow-[0_0_12px_-2px_hsl(var(--primary)/0.4)]"
-                      : entry.isFuture
-                      ? "bg-primary/10 border border-primary/15 group-hover:bg-primary/15"
-                      : entry.isPaid
-                      ? "bg-gradient-to-t from-emerald-600/40 to-emerald-500/20 border border-emerald-500/30 group-hover:from-emerald-600/50 group-hover:to-emerald-500/30 shadow-[0_0_8px_-3px_rgba(16,185,129,0.3)]"
-                      : "bg-muted/50 border border-border/20 group-hover:bg-muted/70"
+                    "w-full rounded-[7px] transition-colors",
+                    entry.status === "paga" && "bg-willo-green/70",
+                    entry.status === "aberta" && "bg-white/85",
+                    entry.status === "futura" && "border border-dashed border-white/20 bg-white/[0.04]",
+                    entry.isSelected && "ring-2 ring-white ring-offset-2 ring-offset-[#141414]",
                   )}
-                >
-                  {/* Shimmer effect for paid past invoices */}
-                  {entry.isPaid && !entry.isSelected && (
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400/15 to-transparent"
-                      initial={{ x: "-100%" }}
-                      animate={{ x: "200%" }}
-                      transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 4, ease: "easeInOut" }}
-                    />
-                  )}
-                </motion.div>
-
-                {/* Check icon for paid past invoices */}
-                {entry.isPaid && !entry.isSelected && entry.amount > 0 && (
-                  <motion.div
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.5, type: "spring", stiffness: 300, damping: 20 }}
-                    className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center shadow-md"
-                  >
-                    <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
-                  </motion.div>
+                />
+              </span>
+              <span
+                className={cn(
+                  "text-[11px] tabular-nums transition-colors",
+                  entry.isSelected ? "font-bold text-white" : "text-white/35",
                 )}
-              </div>
-
-              {/* Month label */}
-              <span className={cn(
-                "text-[10px] font-semibold transition-colors",
-                entry.isSelected ? "text-primary" : "text-muted-foreground/60"
-              )}>
+              >
                 {MONTH_SHORT[entry.month - 1]}
               </span>
             </button>
@@ -190,20 +179,16 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
         })}
       </div>
 
-      {/* Legend — below the chart */}
-      <div className="flex items-center justify-center gap-4 text-[10px] text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500/50" />
-          <span>Paga</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-sm bg-muted-foreground/40" />
-          <span>Aberta</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-sm bg-primary/20 border border-primary/30" />
-          <span>Projeção</span>
-        </div>
+      <div className="mt-3 flex items-center justify-center gap-4 border-t border-white/[0.06] pt-3 text-[11px] text-white/40">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-[3px] bg-willo-green/70" /> Paga
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-[3px] bg-white/85" /> Em aberto
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-[3px] border border-dashed border-white/25" /> Projeção
+        </span>
       </div>
     </motion.div>
   );
