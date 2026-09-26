@@ -115,17 +115,9 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
       transition={{ delay: 0.08 }}
       className="mt-4 rounded-[22px] border border-white/[0.07] bg-[#141414] p-5"
     >
-      {/* The selected month, read as a sentence instead of a tooltip on a bar */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[12px] font-semibold uppercase tracking-wider text-white/35">Histórico de faturas</p>
-          <p className="mt-1.5 text-[26px] font-extrabold leading-none tracking-tight text-white tabular-nums">
-            {selected && selected.amount > 0 ? formatCurrency(selected.amount) : "—"}
-          </p>
-          <p className="mt-1.5 text-[13px] text-white/45">
-            {selected ? `${MONTH_SHORT[selected.month - 1]} ${selected.year}` : ""}
-          </p>
-        </div>
+      {/* The hero above already states the selected month's figures — this is the navigator */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[12px] font-semibold uppercase tracking-wider text-white/35">Histórico de faturas</p>
         {selected && (
           <span
             className={cn(
@@ -136,14 +128,14 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
             )}
           >
             {selected.status === "paga" && <Check className="h-3 w-3" strokeWidth={3} />}
-            {STATUS_LABEL[selected.status]}
+            {MONTH_SHORT[selected.month - 1]} · {STATUS_LABEL[selected.status]}
           </span>
         )}
       </div>
 
       <div
         ref={scrollRef}
-        className="mt-5 flex select-none items-end gap-2 overflow-x-auto pb-1 scrollbar-none"
+        className="mt-4 flex select-none items-end gap-2 overflow-x-auto pb-1 scrollbar-none"
         style={{ cursor: isDragging ? "grabbing" : "grab" }}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}

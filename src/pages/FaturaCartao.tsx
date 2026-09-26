@@ -584,6 +584,14 @@ const FaturaCartao = () => {
         >
           <ChevronLeft className="h-6 w-6" strokeWidth={2.25} />
         </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowAddChooser(true)}
+            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.08] bg-[#141414] px-3.5 text-[13px] font-semibold text-white active:scale-95"
+          >
+            <Plus className="h-3.5 w-3.5" /> Lançamento
+          </button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button aria-label="Opções do cartão" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-white/70 transition-colors hover:text-white">
@@ -620,19 +628,10 @@ const FaturaCartao = () => {
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
 
       {/* Month + add */}
-      <div className="flex items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={() => setShowAddChooser(true)}
-          className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.08] bg-[#141414] px-3.5 text-[13px] font-semibold text-white active:scale-95"
-        >
-          <Plus className="h-3.5 w-3.5" /> Lançamento
-        </button>
-      </div>
-
       {/* ===== Invoice + limit ===== */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -684,49 +683,31 @@ const FaturaCartao = () => {
           ) : null}
         </div>
 
-        {/* Closing / due */}
-        <div className="relative mt-4 grid grid-cols-2 gap-2">
-          <div className="flex items-center gap-2 rounded-[16px] bg-white/[0.04] px-3 py-2.5">
-            <CalendarClock className="h-4 w-4 shrink-0 text-white/40" />
-            <span className="text-[12.5px] text-white/55">Fecha dia <span className="font-semibold text-white">{card?.closing_day}</span></span>
+        {/* How much of this statement is already covered */}
+        {total > 0 && (
+          <div className="relative mt-4">
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min((paidAmount / total) * 100, 100)}%` }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="h-full rounded-full bg-willo-green"
+              />
+            </div>
           </div>
-          <div className="flex items-center gap-2 rounded-[16px] bg-white/[0.04] px-3 py-2.5">
-            <CalendarCheck className="h-4 w-4 shrink-0 text-white/40" />
-            <span className="text-[12.5px] text-white/55">Vence dia <span className="font-semibold text-white">{card?.due_day}</span></span>
-          </div>
-        </div>
+        )}
 
-        {/* Limit */}
-        <div className="relative mt-5 border-t border-white/[0.06] pt-4">
-          <div className="flex items-baseline justify-between">
-            <span className="text-[12px] text-white/45">Limite usado</span>
-            <span className={cn("text-[12.5px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-white/70")}>
-              {usedPct.toFixed(0)}%
-            </span>
-          </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.07]">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min(usedPct, 100)}%` }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="h-full rounded-full"
-              style={{ background: isOverLimit ? "#F87171" : cardHex }}
-            />
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-            <div>
-              <p className="text-[11.5px] text-white/40">Usado</p>
-              <p className="text-[14px] font-semibold text-white tabular-nums">{formatCurrency(usedLimit)}</p>
-            </div>
-            <div className="border-x border-white/[0.06]">
-              <p className="text-[11.5px] text-white/40">Disponível</p>
-              <p className={cn("text-[14px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-willo-green")}>{formatCurrency(availableLimit)}</p>
-            </div>
-            <div>
-              <p className="text-[11.5px] text-white/40">Total</p>
-              <p className="text-[14px] font-semibold text-white tabular-nums">{formatCurrency(limitTotal)}</p>
-            </div>
-          </div>
+        {/* Closing / due */}
+        <div className="relative mt-4 flex items-center gap-4 border-t border-white/[0.06] pt-4">
+          <span className="flex items-center gap-2 text-[12.5px] text-white/50">
+            <CalendarClock className="h-4 w-4 shrink-0 text-white/35" />
+            Fecha dia <span className="font-semibold text-white">{card?.closing_day}</span>
+          </span>
+          <span className="h-3 w-px bg-white/10" />
+          <span className="flex items-center gap-2 text-[12.5px] text-white/50">
+            <CalendarCheck className="h-4 w-4 shrink-0 text-white/35" />
+            Vence dia <span className="font-semibold text-white">{card?.due_day}</span>
+          </span>
         </div>
 
         {/* Pay */}
@@ -740,6 +721,44 @@ const FaturaCartao = () => {
             Pagar fatura · {formatCurrency(outstanding)}
           </button>
         )}
+      </motion.div>
+
+      {/* ===== The card's limit is about the card, not this statement ===== */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="mt-3 rounded-[22px] border border-white/[0.07] bg-[#141414] p-5"
+      >
+        <div className="flex items-baseline justify-between">
+          <p className="text-[12px] font-semibold uppercase tracking-wider text-white/35">Limite do cartão</p>
+          <span className={cn("text-[12.5px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-white/70")}>
+            {usedPct.toFixed(0)}% usado
+          </span>
+        </div>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.07]">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(usedPct, 100)}%` }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="h-full rounded-full"
+            style={{ background: isOverLimit ? "#F87171" : cardHex }}
+          />
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+          <div>
+            <p className="text-[11.5px] text-white/40">Usado</p>
+            <p className="mt-0.5 text-[14px] font-semibold text-white tabular-nums">{formatCurrency(usedLimit)}</p>
+          </div>
+          <div className="border-x border-white/[0.06]">
+            <p className="text-[11.5px] text-white/40">Disponível</p>
+            <p className={cn("mt-0.5 text-[14px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-willo-green")}>{formatCurrency(availableLimit)}</p>
+          </div>
+          <div>
+            <p className="text-[11.5px] text-white/40">Total</p>
+            <p className="mt-0.5 text-[14px] font-semibold text-white tabular-nums">{formatCurrency(limitTotal)}</p>
+          </div>
+        </div>
       </motion.div>
 
       {/* ===== Geral / Parcelados / À vista ===== */}
