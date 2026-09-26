@@ -1208,7 +1208,6 @@ const CategoryDetail = ({
       )}
 
       {/* Installment Impact */}
-      <CategoryInstallmentDetail impact={installmentImpact} />
 
 
 
@@ -1822,10 +1821,6 @@ const AnalyticsCategorias = () => {
                   />
                 )}
 
-                {/* General Installments Overview */}
-                {enrichedInstallmentImpacts.length > 0 && (
-                  <AllInstallmentsOverview impacts={enrichedInstallmentImpacts} />
-                )}
               </>
             ) : (
               <GlassCard className="p-8 text-center">

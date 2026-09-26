@@ -14,7 +14,6 @@ const ParcelamentosAtivosCard = () => {
   const navigate = useNavigate();
   const [items, setItems] = useState<ActiveInstallmentItem[]>([]);
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
-  const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -128,7 +127,8 @@ const ParcelamentosAtivosCard = () => {
     );
   }
 
-  const visibleItems = expanded ? items : items.slice(0, 3);
+  // The card is a summary: the rest lives on the Parcelamentos page
+  const visibleItems = items.slice(0, 5);
 
   const formatCurrency = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
@@ -213,13 +213,13 @@ const ParcelamentosAtivosCard = () => {
         </AnimatePresence>
       </div>
 
-      {items.length > 3 && (
+      {items.length > 5 && (
         <button
-          onClick={() => setExpanded(!expanded)}
+          onClick={() => navigate("/parcelamentos")}
           className="mt-1 flex w-full items-center justify-center gap-1 border-t border-white/[0.06] pt-3 text-[13px] font-medium text-white/60"
         >
-          {expanded ? "Mostrar menos" : `Ver todas (${items.length})`}
-          <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+          Ver os {items.length} parcelamentos
+          <ChevronRight className="h-4 w-4" />
         </button>
       )}
     </div>

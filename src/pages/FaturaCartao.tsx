@@ -31,7 +31,6 @@ import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import { anchorPurchaseDate, invoicePeriodIndex } from "@/lib/installments";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
 import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
-import MonthSelector from "@/components/dashboard/MonthSelector";
 import CreditCardEditModal from "@/components/fatura/CreditCardEditModal";
 
 import { getCurrency } from "@/lib/currency";
@@ -624,12 +623,7 @@ const FaturaCartao = () => {
       </div>
 
       {/* Month + add */}
-      <div className="flex items-center justify-between gap-2">
-        <MonthSelector
-          selectedMonth={selectedMonth - 1}
-          selectedYear={selectedYear}
-          onMonthChange={(m, y) => { setSelectedMonth(m + 1); setSelectedYear(y); }}
-        />
+      <div className="flex items-center justify-end gap-2">
         <button
           type="button"
           onClick={() => setShowAddChooser(true)}
