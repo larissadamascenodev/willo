@@ -16,23 +16,21 @@ const firstOfPeriod = (index: number) =>
   `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}-01`;
 
 /**
- * Where an imported purchase has to be dated so the card triggers bill this instalment in
- * the invoice being imported: the database anchors instalment #1 at the purchase and walks
- * forward, so a plan already in progress is anchored that many months back. The date printed
- * on the statement is kept whenever it already lands there — statements print "12/06" with
- * no year, so it can't be trusted blindly.
+ * When a purchase was made. The statement prints it, so that is what we keep — the database
+ * works out which invoice it belongs to from the date itself, and for a plan the purchase
+ * date is already instalment #1, which is exactly what the triggers anchor on.
+ *
+ * Only a line with no date at all needs one invented, and then it is anchored back from the
+ * invoice being imported by however many instalments were already paid.
  */
 export function anchorPurchaseDate(
   item: { date?: string | null; installment_current?: number | null },
   invoicePeriod: number,
   paidInstallments: number,
-  closingDay: number,
+  _closingDay: number,
 ): string {
-  const anchorPeriod = invoicePeriod - paidInstallments;
-  if (item.date && /^\d{4}-\d{2}-\d{2}$/.test(item.date) && invoicePeriodIndex(item.date, closingDay) === anchorPeriod) {
-    return item.date;
-  }
-  return firstOfPeriod(anchorPeriod);
+  if (item.date && /^\d{4}-\d{2}-\d{2}$/.test(item.date)) return item.date;
+  return firstOfPeriod(invoicePeriod - paidInstallments);
 }
 
 /**
