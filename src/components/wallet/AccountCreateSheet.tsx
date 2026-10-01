@@ -87,7 +87,7 @@ const AccountCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClo
         {/* Live preview */}
         <motion.div
           layout
-          className="relative mt-5 overflow-hidden rounded-[24px] border border-white/[0.08] bg-[#141414] p-4"
+          className="relative mt-5 overflow-hidden rounded-[24px] border border-white/[0.12] willo-glass p-4"
         >
           <motion.div
             className="pointer-events-none absolute -left-16 -top-20 h-48 w-48 rounded-full blur-[60px]"
@@ -139,7 +139,7 @@ const AccountCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClo
                 onClick={() => pickType(value)}
                 className={cn(
                   "flex flex-col items-center gap-2 rounded-[20px] border px-2 py-3.5 transition-colors",
-                  selected ? "border-white bg-white/[0.08]" : "border-white/[0.06] bg-[#1A1A1A]",
+                  selected ? "border-white bg-white/[0.08]" : "border-white/[0.06] willo-glass-inset",
                 )}
               >
                 <Icon className={cn("h-5 w-5", selected ? "text-white" : "text-white/50")} />

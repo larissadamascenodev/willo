@@ -36,7 +36,7 @@ export const inlineInput =
 
 /** The group the rows sit in. */
 export const RowGroup = ({ children, className }: { children: ReactNode; className?: string }) => (
-  <div className={cn("divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.07] bg-[#141414]", className)}>
+  <div className={cn("divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.12] willo-glass", className)}>
     {children}
   </div>
 );
@@ -46,7 +46,7 @@ export const TypeToggle = ({ value, onChange }: {
   value: "despesa" | "receita";
   onChange: (v: "despesa" | "receita") => void;
 }) => (
-  <div className="mx-auto grid w-[220px] isolate grid-cols-2 rounded-full bg-[#141414] p-1">
+  <div className="mx-auto grid w-[220px] isolate grid-cols-2 rounded-full willo-glass p-1">
     {(["despesa", "receita"] as const).map((t) => (
       <button
         key={t}

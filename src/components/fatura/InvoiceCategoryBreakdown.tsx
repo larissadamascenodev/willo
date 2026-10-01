@@ -29,7 +29,7 @@ export default function InvoiceCategoryBreakdown({ categories, total }: Props) {
   const biggest = sorted[0];
 
   return (
-    <div className="mt-4 rounded-[22px] border border-white/[0.07] bg-[#141414] p-5">
+    <div className="mt-4 rounded-[22px] border border-white/[0.12] willo-glass p-5">
       <div className="flex items-baseline justify-between">
         <p className="text-[12px] font-semibold uppercase tracking-wider text-white/35">Gastos por categoria</p>
         <p className="text-[13px] font-semibold text-white tabular-nums">{formatCurrency(total)}</p>

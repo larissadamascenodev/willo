@@ -95,7 +95,7 @@ function Sheet({ open, onClose, children }: { open: boolean; onClose?: () => voi
         <>
           <motion.div className="absolute inset-0 z-40 bg-black/70 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
           <motion.div
-            className="absolute inset-x-0 bottom-0 z-50 rounded-t-[32px] border-t border-white/[0.1] bg-[#111111] px-5 pt-3"
+            className="absolute inset-x-0 bottom-0 z-50 rounded-t-[32px] border-t border-white/[0.1] willo-glass-strong px-5 pt-3"
             style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
@@ -118,7 +118,7 @@ function PlanOption({ selected, onClick, title, price, sub, badge }: { selected:
       onClick={onClick}
       className={cn(
         "relative flex w-full items-center gap-4 rounded-[22px] border p-4 text-left transition-colors",
-        selected ? "border-white bg-white/[0.06]" : "border-white/[0.1] bg-[#171717]",
+        selected ? "border-white bg-white/[0.06]" : "border-white/[0.1] willo-glass-inset",
       )}
     >
       {badge && (
@@ -220,7 +220,7 @@ function DiscountWheel({ onAccept, onSkip }: { onAccept: () => void; onSkip: () 
           <div className="absolute -top-3 left-1/2 z-10 -translate-x-1/2">
             <div className="h-0 w-0 border-x-[12px] border-t-[20px] border-x-transparent border-t-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)]" />
           </div>
-          <div className="absolute -inset-2 rounded-full border border-white/[0.15] bg-[#161616] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]" />
+          <div className="absolute -inset-2 rounded-full border border-white/[0.15] willo-glass-inset shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]" />
           <motion.svg viewBox={`0 0 ${R * 2} ${R * 2}`} className="relative h-full w-full" style={{ rotate: rotation }}>
             {slices.map((s, i) => {
               const lit = won && s.label === "gift";
@@ -275,7 +275,7 @@ function DiscountWheel({ onAccept, onSkip }: { onAccept: () => void; onSkip: () 
             </div>
             <motion.div
               key="offer"
-              className="absolute inset-x-0 bottom-0 rounded-t-[32px] border-t border-white/[0.1] bg-[#111111] px-6 pt-6 text-center"
+              className="absolute inset-x-0 bottom-0 rounded-t-[32px] border-t border-white/[0.1] willo-glass-strong px-6 pt-6 text-center"
               style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
@@ -371,7 +371,7 @@ export default function Paywall({ name, onPurchase, onClose, offerDiscount = tru
       </motion.div>
 
       <div className="relative shrink-0 px-5 pt-4" style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}>
-        <motion.div {...rise(3)} className="rounded-[24px] border border-white/[0.1] bg-[#121212] px-5 py-4">
+        <motion.div {...rise(3)} className="rounded-[24px] border border-white/[0.1] willo-glass px-5 py-4">
           <p className="flex items-baseline gap-1">
             <span className="text-[30px] font-extrabold leading-none tracking-tight text-white">R$ {PRICES.anual.perMonth}</span>
             <span className="text-[14px] text-white/50">/mês</span>

@@ -82,7 +82,7 @@ function MonthBars({ slots, values, selected, onSelect }: {
 }
 
 const EmptyState = ({ text }: { text: string }) => (
-  <div className="flex items-center gap-3 rounded-[20px] bg-[#141414] px-4 py-4 text-[15px] text-white/45">
+  <div className="flex items-center gap-3 rounded-[20px] willo-glass px-4 py-4 text-[15px] text-white/45">
     <Clock className="h-5 w-5 shrink-0" />
     {text}
   </div>
@@ -129,7 +129,7 @@ const Cartoes = () => {
       </div>
 
       {/* Tabs */}
-      <div className="mt-2 grid grid-cols-3 isolate rounded-full border border-white/[0.07] bg-[#141414] p-1">
+      <div className="mt-2 grid grid-cols-3 isolate rounded-full border border-white/[0.12] willo-glass p-1">
         {([["faturas", "Faturas"], ["parcelas", "Parcelas"], ["limites", "Limites"]] as const).map(([key, label]) => (
           <button key={key} onClick={() => { setTab(key); setSelectedKey(currentKey); }} className="relative h-11 rounded-full text-[15px] font-medium">
             {tab === key && <motion.span layoutId="cards-tab" className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
@@ -150,7 +150,7 @@ const Cartoes = () => {
 
       <div className="mt-6">
         {loading ? (
-          <div className="h-64 animate-pulse rounded-[22px] bg-[#141414]" />
+          <div className="h-64 animate-pulse rounded-[22px] willo-glass" />
         ) : cards.length === 0 ? (
           <EmptyState text="Nenhum cartão cadastrado" />
         ) : tab === "limites" ? (
@@ -207,7 +207,7 @@ function InvoiceList({ invoices, cardById, onOpen }: {
   onOpen: (cardId: string) => void;
 }) {
   return (
-    <div className="divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.07] bg-[#141414] px-4">
+    <div className="divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.12] willo-glass px-4">
       {invoices.map((inv) => {
         const card = cardById.get(inv.cardId);
         if (!card) return null;
@@ -289,12 +289,12 @@ function InstallmentsOverview({ installments, cardById, currentKey }: {
         {purchases.length} {purchases.length === 1 ? "compra parcelada" : "compras parceladas"}
       </p>
 
-      <div className="mt-5 grid grid-cols-2 rounded-[22px] border border-white/[0.07] bg-[#141414] py-3.5">
+      <div className="mt-5 grid grid-cols-2 rounded-[22px] border border-white/[0.12] willo-glass py-3.5">
         <div className="px-4">
           <p className="text-[12px] text-white/45">Por mês</p>
           <p className="text-[18px] font-bold text-white tabular-nums">{fmt(monthly)}</p>
         </div>
-        <div className="border-l border-white/[0.08] px-4">
+        <div className="border-l border-white/[0.12] px-4">
           <p className="text-[12px] text-white/45">Livre das parcelas</p>
           <p className="text-[18px] font-bold text-white">{freeKey !== null ? keyLabel(freeKey + 1) : "—"}</p>
         </div>
@@ -312,7 +312,7 @@ function InstallmentsOverview({ installments, cardById, currentKey }: {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.03 }}
-              className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-4"
+              className="rounded-[22px] border border-white/[0.12] willo-glass p-4"
             >
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: `${hex}1F` }}>
@@ -366,7 +366,7 @@ function LimitsList({ cards }: { cards: OverviewCard[] }) {
           const pct = c.limit > 0 ? Math.min((c.used / c.limit) * 100, 100) : 0;
           const hex = cardHex(c.color);
           return (
-            <div key={c.id} className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-4">
+            <div key={c.id} className="rounded-[22px] border border-white/[0.12] willo-glass p-4">
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: `${hex}26` }}>
                   <CreditCard className="h-4 w-4" style={{ color: hex }} />

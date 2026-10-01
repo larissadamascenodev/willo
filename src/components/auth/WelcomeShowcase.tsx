@@ -275,13 +275,13 @@ const TransactionsScreen = ({ rows, spent }: { rows: TransactionRow[]; spent: nu
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <TransactionTabs value="todos" onChange={noop} layoutId="demo-tx-tabs" />
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/[0.07] bg-[#141414] text-white/70">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/[0.12] willo-glass text-white/70">
               <SlidersHorizontal className="h-4 w-4" />
             </span>
           </div>
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
-            <div className="flex h-11 w-full items-center rounded-full border border-white/[0.07] bg-[#141414] pl-11 text-[14px] text-white/30">Buscar transação...</div>
+            <div className="flex h-11 w-full items-center rounded-full border border-white/[0.12] willo-glass pl-11 text-[14px] text-white/30">Buscar transação...</div>
           </div>
         </div>
         <div>
@@ -296,7 +296,7 @@ const TransactionsScreen = ({ rows, spent }: { rows: TransactionRow[]; spent: nu
                     {net > 0 ? "+" : "−"}R$ {Math.abs(net).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
-                <div className="divide-y divide-white/[0.06] overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#141414]">
+                <div className="divide-y divide-white/[0.06] overflow-hidden rounded-[22px] border border-white/[0.12] willo-glass">
                   {txs.map((tx) => (
                     <motion.div key={tx.id} layout initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
                       <TransactionListItem tx={tx} accountName={ACCOUNT_NAME[tx.account_id ?? ""] ?? "Conta"} onDelete={noop} onEdit={noop} />
@@ -333,7 +333,7 @@ const WalletScreen = ({ to }: { to?: string }) => (
       <section data-section="cartoes">
         <div className="mb-3 flex items-center justify-between px-1">
           <h2 className="text-[18px] font-bold text-white">Cartões de crédito</h2>
-          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.08] bg-[#141414] text-white">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.12] willo-glass text-white">
             <Plus className="h-4 w-4" />
           </span>
         </div>
@@ -443,7 +443,7 @@ const NewExpenseDemo = () => {
           <span className="mt-3 h-1 w-10 rounded-full bg-[#F87171]" />
         </div>
 
-        <div className="divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.07] bg-[#141414]">
+        <div className="divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.12] willo-glass">
           <ModalRow icon={FileText} label="Descrição">
             <span className={cn("text-[15px]", desc ? "text-white" : "text-white/30")}>{desc || "Ex: Mercado"}</span>
             {desc && desc.length < 5 && <span className="h-5 w-[2px] animate-pulse bg-white" />}
@@ -463,7 +463,7 @@ const NewExpenseDemo = () => {
         </div>
 
         <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/45">Data</p>
-        <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-3">
+        <div className="rounded-[22px] border border-white/[0.12] willo-glass p-3">
           <div className="flex gap-2">
             <span className={chip(true)}>Hoje</span>
             <span className={chip(false)}>Ontem</span>
@@ -472,7 +472,7 @@ const NewExpenseDemo = () => {
         </div>
 
         <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/45">Como pagou</p>
-        <div className="rounded-[22px] border border-white/[0.07] bg-[#141414]">
+        <div className="rounded-[22px] border border-white/[0.12] willo-glass">
           <div className="grid grid-cols-2 gap-1 p-1.5">
             {([["Conta", Wallet, true], ["Cartão de crédito", CreditCard, false]] as const).map(([label, Icon, on]) => (
               <span key={label} className={cn("flex h-10 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold", on ? "bg-white text-[#0B0B0B]" : "text-white/55")}>
@@ -489,7 +489,7 @@ const NewExpenseDemo = () => {
                 <span className="h-2.5 w-2.5 rounded-full bg-[#0B0B0B]" /> Nubank
                 <span className="text-[11px] text-[#0B0B0B]/60">padrão</span>
               </span>
-              <span className="flex h-10 items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-3.5 text-[14px] font-medium text-white/80">
+              <span className="flex h-10 items-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.04] px-3.5 text-[14px] font-medium text-white/80">
                 <span className="h-2.5 w-2.5 rounded-full bg-[#F59E0B]" /> Itaú
               </span>
             </div>
@@ -533,7 +533,7 @@ const CameraDemo = () => (
 
 /** The sonner toast the app shows after saving a transaction. */
 const SavedTransactionToast = () => (
-  <div className="flex w-[calc(100%-24px)] items-start gap-2.5 rounded-[20px] border border-white/10 bg-[#1A1A1A]/95 px-4 py-3.5 text-[14px] font-medium text-white shadow-[0_18px_40px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+  <div className="flex w-[calc(100%-24px)] items-start gap-2.5 rounded-[20px] border border-white/10 willo-glass-inset/95 px-4 py-3.5 text-[14px] font-medium text-white shadow-[0_18px_40px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl">
     <CheckCircle2 className="mt-px h-5 w-5 shrink-0 fill-willo-green text-[#1A1A1A]" />
     <div>
       <p>Transação registrada 🎯</p>

@@ -166,7 +166,7 @@ const CategoryLimitSheet = ({ open, onClose, initialCategory, spentByCategory = 
                 onClick={() => pick(cat)}
                 className={cn(
                   "relative flex flex-col items-center gap-1.5 rounded-[18px] border px-2 py-3",
-                  selected ? "border-white bg-white/[0.08]" : "border-white/[0.06] bg-[#1A1A1A]",
+                  selected ? "border-white bg-white/[0.08]" : "border-white/[0.06] willo-glass-inset",
                 )}
               >
                 {hasLimit && <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-willo-green" />}

@@ -10,7 +10,7 @@ export function showWelcomeToast(name?: string | null) {
 
   toast.custom(
     () => (
-      <div className="flex w-[calc(100vw-24px)] max-w-[380px] items-center gap-3 rounded-[22px] border border-white/[0.1] bg-[#1A1A1A]/95 p-3.5 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+      <div className="flex w-[calc(100vw-24px)] max-w-[380px] items-center gap-3 rounded-[22px] border border-white/[0.1] willo-glass-inset/95 p-3.5 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl">
         <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-willo-green/15">
           <img src={wordmarkOnDark} alt="" className="h-3 w-auto" style={{ filter: "brightness(0) invert(1)" }} />
           <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#1A1A1A] bg-willo-green">

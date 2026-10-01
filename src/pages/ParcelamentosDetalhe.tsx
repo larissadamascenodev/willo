@@ -211,8 +211,8 @@ const ParcelamentosDetalhe = () => {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-28">
         {BackButton}
-        <div className="h-40 animate-pulse rounded-[24px] bg-[#141414]" />
-        <div className="h-56 animate-pulse rounded-[24px] bg-[#141414]" />
+        <div className="h-40 animate-pulse rounded-[24px] willo-glass" />
+        <div className="h-56 animate-pulse rounded-[24px] willo-glass" />
       </div>
     );
   }
@@ -223,7 +223,7 @@ const ParcelamentosDetalhe = () => {
         {BackButton}
         <h1 className="mt-2 text-[28px] font-extrabold tracking-tight text-white">Parcelamentos</h1>
         <div className="mt-8 flex flex-col items-center px-8 text-center">
-          <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.05]">
+          <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.05]">
             <CalendarClock className="h-8 w-8 text-white/40" />
           </span>
           <p className="mt-5 text-[18px] font-bold text-white">Nenhum parcelamento ativo</p>
@@ -260,7 +260,7 @@ const ParcelamentosDetalhe = () => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="mt-6 rounded-[24px] border border-white/[0.07] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-4"
+        className="mt-6 rounded-[24px] border border-white/[0.12] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-4"
       >
         <div className="flex items-baseline justify-between">
           <p className="text-[14px] text-white/60">Progresso geral</p>
@@ -274,12 +274,12 @@ const ParcelamentosDetalhe = () => {
             transition={{ duration: 0.8, ease: "easeOut" }}
           />
         </div>
-        <div className="mt-4 grid grid-cols-2 border-t border-white/[0.08] pt-3.5">
+        <div className="mt-4 grid grid-cols-2 border-t border-white/[0.12] pt-3.5">
           <div className="pr-3">
             <p className="text-[12px] text-white/45">Já pago</p>
             <p className="text-[17px] font-bold text-white tabular-nums">{formatCurrency(stats.totalJaPago)}</p>
           </div>
-          <div className="border-l border-white/[0.08] pl-4">
+          <div className="border-l border-white/[0.12] pl-4">
             <p className="text-[12px] text-white/45">Falta pagar</p>
             <p className="text-[17px] font-bold text-white tabular-nums">{formatCurrency(stats.totalRestante)}</p>
           </div>
@@ -288,7 +288,7 @@ const ParcelamentosDetalhe = () => {
 
       {/* Monthly commitment */}
       {projectionData.length > 1 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="mt-3 rounded-[24px] border border-white/[0.07] bg-[#141414] p-4">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="mt-3 rounded-[24px] border border-white/[0.12] willo-glass p-4">
           <p className="text-[16px] font-semibold text-white">Próximos meses</p>
           <p className="text-[12px] text-white/40">O valor cai conforme as parcelas terminam</p>
           <div className="-mx-4 mt-4 overflow-x-auto px-4 scrollbar-hide">
@@ -316,7 +316,7 @@ const ParcelamentosDetalhe = () => {
 
       {/* Category breakdown */}
       {categoryData.length > 1 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }} className="mt-3 rounded-[24px] border border-white/[0.07] bg-[#141414] p-4">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }} className="mt-3 rounded-[24px] border border-white/[0.12] willo-glass p-4">
           <p className="text-[16px] font-semibold text-white">Por categoria</p>
           <div className="mt-3 flex h-2.5 gap-1 overflow-hidden rounded-full">
             {categoryData.map((cat) => (
@@ -349,7 +349,7 @@ const ParcelamentosDetalhe = () => {
       {/* List */}
       <div className="mt-7 flex items-center justify-between px-1">
         <p className="text-[18px] font-bold text-white">Compras</p>
-        <div className="flex isolate rounded-full border border-white/[0.07] bg-[#141414] p-0.5">
+        <div className="flex isolate rounded-full border border-white/[0.12] willo-glass p-0.5">
           {([["todos", "Todos"], ["cartao", "Cartão"], ["conta", "Conta"]] as const).map(([key, label]) => (
             <button key={key} onClick={() => setMethodFilter(key)} className="relative h-8 rounded-full px-3 text-[12px] font-semibold">
               {methodFilter === key && (

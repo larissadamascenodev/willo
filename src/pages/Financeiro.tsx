@@ -38,7 +38,7 @@ export default function Financeiro({ initialTab = "atual" }: { initialTab?: Tool
     <div className="mx-auto max-w-lg pb-28">
       <PageHeader title="Financeiro" subtitle={active.subtitle} />
 
-      <div className="mt-5 flex isolate rounded-full border border-white/[0.07] bg-[#141414] p-1">
+      <div className="mt-5 flex isolate rounded-full border border-white/[0.12] willo-glass p-1">
         {TOOLS.map((t) => (
           <button
             key={t.key}
@@ -288,7 +288,7 @@ function RealizadoPanel() {
         <CashFlowChart buckets={buckets} subTab={subTab} period={period} onSelectKind={setSubTab} />
       </div>
 
-      <div className="mt-6 grid grid-cols-4 isolate rounded-full border border-white/[0.07] bg-[#141414] p-1">
+      <div className="mt-6 grid grid-cols-4 isolate rounded-full border border-white/[0.12] willo-glass p-1">
         {PERIODS.map((p) => (
           <button key={p.key} onClick={() => setPeriod(p.key)} className="relative h-10 rounded-full text-[13.5px] font-semibold">
             {period === p.key && (
@@ -313,7 +313,7 @@ function RealizadoPanel() {
       )}
       <button
         onClick={() => navigate("/transacoes")}
-        className="mt-4 h-14 w-full rounded-full bg-[#1A1A1A] text-[16px] font-medium text-white active:opacity-70"
+        className="mt-4 h-14 w-full rounded-full willo-glass-inset text-[16px] font-medium text-white active:opacity-70"
       >
         Ver todos os lançamentos
       </button>
@@ -351,8 +351,8 @@ function BalancoMensalSection() {
   if (loading || !current) {
     return (
       <div className="mt-6 space-y-3">
-        <div className="h-56 animate-pulse rounded-[26px] bg-[#141414]" />
-        <div className="h-40 animate-pulse rounded-[22px] bg-[#141414]" />
+        <div className="h-56 animate-pulse rounded-[26px] willo-glass" />
+        <div className="h-40 animate-pulse rounded-[22px] willo-glass" />
       </div>
     );
   }
@@ -364,7 +364,7 @@ function BalancoMensalSection() {
       <motion.section
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative mt-2 overflow-hidden rounded-[28px] border border-white/[0.08] p-5"
+        className="relative mt-2 overflow-hidden rounded-[28px] border border-white/[0.12] p-5"
         style={{
           background: `radial-gradient(120% 90% at 100% 0%, ${balance < 0 ? "#F8717120" : "#C8F36D1C"} 0%, rgba(20,20,20,0.96) 55%, #0E0E0E 100%)`,
         }}
@@ -398,7 +398,7 @@ function BalancoMensalSection() {
             </div>
           ))}
 
-          <div className="flex items-center justify-between border-t border-white/[0.08] pt-3">
+          <div className="flex items-center justify-between border-t border-white/[0.12] pt-3">
             <span className="flex items-center gap-1.5 text-[13px] text-white/60">
               <Equal className="h-4 w-4 text-white/50" strokeWidth={2.5} /> Balanço
             </span>
@@ -475,8 +475,8 @@ function FuturoPanel() {
   if (loading) {
     return (
       <div className="mt-6 space-y-3">
-        <div className="h-44 animate-pulse rounded-[26px] bg-[#141414]" />
-        <div className="h-64 animate-pulse rounded-[24px] bg-[#141414]" />
+        <div className="h-44 animate-pulse rounded-[26px] willo-glass" />
+        <div className="h-64 animate-pulse rounded-[24px] willo-glass" />
       </div>
     );
   }
@@ -484,7 +484,7 @@ function FuturoPanel() {
   if ((!data.transactions.length && !data.events.length) || !insights) {
     return (
       <div className="mt-10 flex flex-col items-center px-8 text-center">
-        <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.05]">
+        <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.05]">
           <CalendarDays className="h-8 w-8 text-white/40" />
         </span>
         <p className="mt-5 text-[18px] font-bold text-white">Ainda sem dados suficientes</p>
@@ -511,7 +511,7 @@ function FuturoPanel() {
       <motion.section
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative mt-6 overflow-hidden rounded-[28px] border border-white/[0.08] p-5"
+        className="relative mt-6 overflow-hidden rounded-[28px] border border-white/[0.12] p-5"
         style={{
           background: `radial-gradient(120% 90% at 100% 0%, ${insights.growth >= 0 ? "#C8F36D1C" : "#F8717120"} 0%, rgba(20,20,20,0.96) 55%, #0E0E0E 100%)`,
         }}

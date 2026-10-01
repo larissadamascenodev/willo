@@ -123,7 +123,7 @@ const CardCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClose:
         onClick={() => setEditing(active ? null : kind)}
         className={cn(
           "flex items-center gap-3 rounded-[20px] border p-3.5 text-left transition-colors",
-          active ? "border-white bg-white/[0.08]" : "border-white/[0.06] bg-[#1A1A1A]",
+          active ? "border-white bg-white/[0.08]" : "border-white/[0.06] willo-glass-inset",
         )}
       >
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.07]">
@@ -181,7 +181,7 @@ const CardCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClose:
         <AnimatePresence initial={false}>
           {editing && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <div className="mt-2 rounded-[22px] border border-white/[0.07] bg-[#141414] p-3">
+              <div className="mt-2 rounded-[22px] border border-white/[0.12] willo-glass p-3">
                 <p className="mb-2 px-1 text-[12px] text-white/45">{editing === "closing" ? "Dia em que a fatura fecha" : "Dia em que a fatura vence"}</p>
                 <DayGrid
                   value={editing === "closing" ? closing : due}

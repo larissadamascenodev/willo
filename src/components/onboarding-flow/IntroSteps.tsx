@@ -28,7 +28,7 @@ export function NameStep({ value, onChange, onBack, onNext }: StepProps & { valu
         onChange={(e) => onChange(e.target.value.slice(0, 30))}
         onKeyDown={(e) => e.key === "Enter" && ok && onNext()}
         placeholder="Seu nome ou apelido..."
-        className="mt-10 h-[58px] w-full rounded-full border border-white/[0.06] bg-[#141414] px-6 text-center text-[17px] text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none"
+        className="mt-10 h-[58px] w-full rounded-full border border-white/[0.06] willo-glass px-6 text-center text-[17px] text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none"
       />
     </FlowScreen>
   );

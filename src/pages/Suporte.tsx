@@ -61,7 +61,7 @@ const Suporte = () => {
             href={supportWhatsApp()}
             target="_blank"
             rel="noreferrer"
-            className="flex h-14 w-full items-center justify-center gap-2.5 rounded-full border border-white/[0.1] bg-[#141414] text-[15px] font-semibold text-white active:scale-[0.99]"
+            className="flex h-14 w-full items-center justify-center gap-2.5 rounded-full border border-white/[0.1] willo-glass text-[15px] font-semibold text-white active:scale-[0.99]"
           >
             <MessageCircle className="h-4 w-4" /> Falar no WhatsApp
             <ExternalLink className="h-3.5 w-3.5 opacity-60" />
@@ -74,7 +74,7 @@ const Suporte = () => {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.14 }}
-        className="divide-y divide-white/[0.06] overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#141414]"
+        className="divide-y divide-white/[0.06] overflow-hidden rounded-[22px] border border-white/[0.12] willo-glass"
       >
         <button type="button" onClick={() => navigate("/ajuda")} className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left active:bg-white/[0.04]">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-white/[0.06]">

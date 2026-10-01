@@ -71,7 +71,7 @@ export function ViewToggle<T extends string>({ value, options, onChange }: {
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="grid grid-flow-col auto-cols-fr isolate rounded-full border border-white/[0.07] bg-[#141414] p-1">
+    <div className="grid grid-flow-col auto-cols-fr isolate rounded-full border border-white/[0.12] willo-glass p-1">
       {options.map((o) => (
         <button key={o.key} onClick={() => onChange(o.key)} className="relative h-11 rounded-full text-[15px] font-semibold">
           {value === o.key && (
@@ -152,7 +152,7 @@ export function TopSpendRow({ category, monthLabel, onOpen }: {
   return (
     <button
       onClick={() => onOpen(category.name)}
-      className="flex w-full items-center gap-3.5 rounded-[22px] border border-white/[0.07] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-3.5 text-left active:scale-[0.99] transition-transform"
+      className="flex w-full items-center gap-3.5 rounded-[22px] border border-white/[0.12] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-3.5 text-left active:scale-[0.99] transition-transform"
     >
       <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full" style={{ background: `${category.hexColor}26` }}>
         <Icon className="h-5 w-5" style={{ color: category.hexColor }} />
@@ -187,7 +187,7 @@ export function CategoryRows({ categories, onOpen }: {
             onClick={() => onOpen(cat.name)}
             className="flex w-full items-center gap-3.5 rounded-2xl px-1 py-2.5 text-left transition-colors active:bg-white/[0.04]"
           >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#1A1A1A]">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full willo-glass-inset">
               <Icon className="h-5 w-5" style={{ color: cat.hexColor }} />
             </span>
             <span className="min-w-0 flex-1">
@@ -218,7 +218,7 @@ export function GroupCards({ groups }: { groups: CategoryGroup[] }) {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.03 }}
-            className="overflow-hidden rounded-[22px] bg-[#1A1A1A]"
+            className="overflow-hidden rounded-[22px] willo-glass-inset"
           >
             <button
               onClick={() => setOpen(isOpen ? null : g.def.name)}
@@ -243,7 +243,7 @@ export function GroupCards({ groups }: { groups: CategoryGroup[] }) {
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.25, ease: "easeOut" }}
                 >
-                  <div className="mx-4 border-t border-white/[0.08]" />
+                  <div className="mx-4 border-t border-white/[0.12]" />
                   <div className="px-4 pb-3 pt-1">
                     {g.categories.map((cat) => {
                       const CatIcon = cat.icon;

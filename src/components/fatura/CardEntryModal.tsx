@@ -86,7 +86,7 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ type: "spring", stiffness: 340, damping: 26 }}
-            className="relative w-full max-w-sm overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#141414] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]"
+            className="relative w-full max-w-sm overflow-hidden rounded-[28px] border border-white/[0.12] willo-glass shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]"
           >
             <span
               className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full blur-[60px]"
@@ -212,7 +212,7 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
                         <button
                           type="button"
                           onClick={() => setConfirmingDelete(false)}
-                          className="h-12 rounded-full border border-white/[0.08] bg-white/[0.04] text-[14px] font-semibold text-white"
+                          className="h-12 rounded-full border border-white/[0.12] bg-white/[0.04] text-[14px] font-semibold text-white"
                         >
                           Cancelar
                         </button>

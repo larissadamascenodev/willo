@@ -18,7 +18,7 @@ export function SavedToastCard({ items, onOpen }: { items: ScanResultItem[]; onO
   const otherMonth = date && (date.getMonth() !== new Date().getMonth() || date.getFullYear() !== new Date().getFullYear());
 
   return (
-    <div className="flex w-[calc(100vw-24px)] max-w-[380px] items-center gap-3 rounded-[22px] border border-white/[0.1] bg-[#1A1A1A]/95 p-3 pr-2 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+    <div className="flex w-[calc(100vw-24px)] max-w-[380px] items-center gap-3 rounded-[22px] border border-white/[0.1] willo-glass-inset/95 p-3 pr-2 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl">
       <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: `${hex}24` }}>
         <Icon className="h-5 w-5" style={{ color: hex }} />
         <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#1A1A1A] bg-willo-green">

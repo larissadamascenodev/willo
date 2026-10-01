@@ -74,7 +74,7 @@ export function PressureCalendar({ data }: { data: RaioXData }) {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
-            className="mt-2 rounded-[22px] border border-white/[0.07] bg-[#141414] p-4"
+            className="mt-2 rounded-[22px] border border-white/[0.12] willo-glass p-4"
           >
             <div className="flex items-start justify-between gap-3">
               <div>

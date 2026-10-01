@@ -199,7 +199,7 @@ const ReceitasDespesasDetalhe = () => {
       <motion.section
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative mt-5 overflow-hidden rounded-[28px] border border-white/[0.08] p-5"
+        className="relative mt-5 overflow-hidden rounded-[28px] border border-white/[0.12] p-5"
         style={{
           background: `radial-gradient(120% 90% at 100% 0%, ${accentHex}1C 0%, rgba(20,20,20,0.96) 55%, #0E0E0E 100%)`,
         }}

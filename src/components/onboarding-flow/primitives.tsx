@@ -74,7 +74,7 @@ export function OptionRow({ label, hint, selected, onClick, delay = 0, square = 
       className={cn(
         "flex w-full items-center gap-3 rounded-[22px] border px-5 text-left transition-colors",
         hint ? "py-4" : "py-[18px]",
-        selected ? "border-white bg-white" : "border-white/[0.06] bg-[#141414]",
+        selected ? "border-white bg-white" : "border-white/[0.06] willo-glass",
       )}
     >
       <span className="min-w-0 flex-1">
@@ -118,7 +118,7 @@ export function NumberWheel({ value, min, max, onChange, unit }: {
 
   return (
     <div className="relative mx-auto h-[340px] w-full">
-      <div className="pointer-events-none absolute inset-x-0 top-1/2 h-[68px] -translate-y-1/2 border-y border-white/[0.08]" />
+      <div className="pointer-events-none absolute inset-x-0 top-1/2 h-[68px] -translate-y-1/2 border-y border-white/[0.12]" />
       {unit && (
         <span className="pointer-events-none absolute left-[calc(50%+62px)] top-1/2 -translate-y-1/2 text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">
           {unit}

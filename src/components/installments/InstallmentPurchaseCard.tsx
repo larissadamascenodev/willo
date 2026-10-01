@@ -52,7 +52,7 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card,
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
-      className={`overflow-hidden rounded-[20px] border bg-[#141414] ${item.isOverdue ? "border-red-400/30" : "border-white/[0.07]"}`}
+      className={`overflow-hidden rounded-[20px] border willo-glass ${item.isOverdue ? "border-red-400/30" : "border-white/[0.12]"}`}
     >
       <button
         type="button"
@@ -72,7 +72,7 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card,
                 transition={{ duration: 0.8, ease: "easeOut" }}
               />
             </svg>
-            <span className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-[#1E1E1E]">
+            <span className="flex h-[38px] w-[38px] items-center justify-center rounded-full willo-glass-inset">
               {IconComp && <IconComp className="h-[18px] w-[18px]" style={{ color: `hsl(${catColor})` }} />}
             </span>
           </span>
@@ -162,7 +162,7 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card,
                     >
                       <span
                         className={`relative z-10 flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-full ${
-                          isPaid ? "bg-white text-[#0B0B0B]" : isCurrent ? (item.isOverdue ? "bg-red-400" : "bg-willo-green") : "border border-white/20 bg-[#141414]"
+                          isPaid ? "bg-white text-[#0B0B0B]" : isCurrent ? (item.isOverdue ? "bg-red-400" : "bg-willo-green") : "border border-white/20 willo-glass"
                         }`}
                       >
                         {isPaid && <Check className="h-3 w-3" strokeWidth={3} />}

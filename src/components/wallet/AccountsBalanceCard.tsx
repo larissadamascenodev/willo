@@ -37,7 +37,7 @@ const AccountsBalanceCard = ({ accounts, onOpen, onAdd, savedTotal = 0 }: {
   const positiveTotal = rows.reduce((sum, r) => sum + Math.max(r.balance, 0), 0);
 
   return (
-    <div className="rounded-[26px] border border-white/[0.07] bg-[#141414] p-4">
+    <div className="rounded-[26px] border border-white/[0.12] willo-glass p-4">
       <div className="flex items-center justify-between">
         <p className="text-[15px] text-white/50">Saldo em contas</p>
         <button

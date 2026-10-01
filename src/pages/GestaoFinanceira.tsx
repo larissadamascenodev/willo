@@ -202,7 +202,7 @@ const GestaoFinanceira = () => {
       <section>
         <div className={cn("flex items-center justify-between mb-3 px-1", bankAccounts.length > 0 && "hidden sm:flex")}>
           <h2 className="text-[18px] font-bold text-white">Contas</h2>
-          <button onClick={() => setShowAddAccount(true)} aria-label="Adicionar conta" className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.08] bg-[#141414] text-white active:scale-95 transition-transform">
+          <button onClick={() => setShowAddAccount(true)} aria-label="Adicionar conta" className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.12] willo-glass text-white active:scale-95 transition-transform">
             <Plus className="w-4 h-4" />
           </button>
         </div>
@@ -210,11 +210,11 @@ const GestaoFinanceira = () => {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {[1, 2].map((i) => (
-              <div key={i} className="h-44 rounded-[22px] bg-[#141414] animate-pulse" />
+              <div key={i} className="h-44 rounded-[22px] willo-glass animate-pulse" />
             ))}
           </div>
         ) : bankAccounts.length === 0 ? (
-          <div className="rounded-[22px] bg-[#141414] border border-white/[0.07] p-8 text-center">
+          <div className="rounded-[22px] willo-glass border border-white/[0.12] p-8 text-center">
             <Landmark className="w-8 h-8 text-white/30 mx-auto mb-3" />
             <p className="text-sm text-muted-foreground mb-1">Nenhuma conta cadastrada</p>
             <p className="text-xs text-muted-foreground/60 mb-4">Crie sua primeira conta para começar</p>
@@ -253,7 +253,7 @@ const GestaoFinanceira = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.06 }}
                     onClick={() => navigate(`/conta/${acc.id}`)}
-                    className="relative rounded-[22px] overflow-hidden cursor-pointer group border border-white/[0.07] bg-[#141414] hover:border-white/15 transition-all duration-300 active:scale-[0.98]"
+                    className="relative rounded-[22px] overflow-hidden cursor-pointer group border border-white/[0.12] willo-glass hover:border-white/15 transition-all duration-300 active:scale-[0.98]"
                   >
                     <div className="p-4 space-y-4">
                       <div className="flex items-center justify-between">
@@ -318,7 +318,7 @@ const GestaoFinanceira = () => {
       <section>
         <div className="flex items-center justify-between mb-3 px-1">
           <h2 className="text-[18px] font-bold text-white">Cartões de crédito</h2>
-          <button onClick={() => setShowAddCard(true)} aria-label="Adicionar cartão" className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.08] bg-[#141414] text-white active:scale-95 transition-transform">
+          <button onClick={() => setShowAddCard(true)} aria-label="Adicionar cartão" className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.12] willo-glass text-white active:scale-95 transition-transform">
             <Plus className="w-4 h-4" />
           </button>
         </div>
@@ -326,11 +326,11 @@ const GestaoFinanceira = () => {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {[1].map((i) => (
-              <div key={i} className="h-44 rounded-[22px] bg-[#141414] animate-pulse" />
+              <div key={i} className="h-44 rounded-[22px] willo-glass animate-pulse" />
             ))}
           </div>
         ) : creditCards.length === 0 ? (
-          <div className="rounded-[22px] bg-[#141414] border border-white/[0.07] p-8 text-center">
+          <div className="rounded-[22px] willo-glass border border-white/[0.12] p-8 text-center">
             <CreditCard className="w-8 h-8 text-white/30 mx-auto mb-3" />
             <p className="text-sm text-muted-foreground mb-1">Nenhum cartão cadastrado</p>
             <p className="text-xs text-muted-foreground/60 mb-4">Cadastre seu cartão de crédito</p>

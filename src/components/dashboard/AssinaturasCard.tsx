@@ -281,12 +281,12 @@ const AssinaturasCard = memo(() => {
   const receitaCount = useMemo(() => subscriptions.filter((s) => s.txType === "receita").length, [subscriptions]);
 
   if (loading) {
-    return <div className="h-[200px] animate-pulse rounded-[22px] border border-white/[0.07] bg-[#141414]" />;
+    return <div className="h-[200px] animate-pulse rounded-[22px] border border-white/[0.12] willo-glass" />;
   }
 
   if (subscriptions.length === 0) {
     return (
-      <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-4">
+      <div className="rounded-[22px] border border-white/[0.12] willo-glass p-4">
         <h2 className="text-[16px] font-semibold text-white">Recorrentes</h2>
         <p className="text-[12px] text-white/40">Contas fixas e assinaturas do mês</p>
         <div className="mt-4 flex items-center gap-3 rounded-[16px] bg-white/[0.04] px-3.5 py-3">
@@ -305,7 +305,7 @@ const AssinaturasCard = memo(() => {
 
   return (
     <>
-      <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] overflow-hidden">
+      <div className="rounded-[22px] border border-white/[0.12] willo-glass overflow-hidden">
         {/* Header with total */}
         <div className="flex items-start justify-between gap-3 px-4 pt-4">
           <div>
@@ -433,7 +433,7 @@ const AssinaturasCard = memo(() => {
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full sm:max-w-sm rounded-t-[28px] sm:rounded-[28px] bg-[#141414] border border-white/[0.08] shadow-2xl p-5 pb-24 sm:pb-5"
+              className="w-full sm:max-w-sm rounded-t-[28px] sm:rounded-[28px] willo-glass border border-white/[0.12] shadow-2xl p-5 pb-24 sm:pb-5"
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold text-foreground">{selectedSub.name}</h3>
@@ -492,7 +492,7 @@ const AssinaturasCard = memo(() => {
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-[28px] bg-[#141414] border border-white/[0.08] shadow-2xl p-5"
+              className="w-full max-w-sm rounded-[28px] willo-glass border border-white/[0.12] shadow-2xl p-5"
             >
               <h3 className="text-sm font-bold text-foreground mb-1">Cancelar recorrência</h3>
               <p className="text-[12px] text-muted-foreground mb-5">

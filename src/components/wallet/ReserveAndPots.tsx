@@ -61,7 +61,7 @@ const ReserveAndPots = ({ goals, essentialMonthly = 0, onCreated }: Props) => {
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={() => (reserve ? navigate(`/metas/${reserve.id}`) : openCreate("reserva"))}
-          className="flex min-h-[148px] flex-col rounded-[22px] border border-white/[0.07] bg-[#141414] p-4 text-left"
+          className="flex min-h-[148px] flex-col rounded-[22px] border border-white/[0.12] willo-glass p-4 text-left"
         >
           <div className="flex items-center justify-between">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-willo-green/15">
@@ -91,7 +91,7 @@ const ReserveAndPots = ({ goals, essentialMonthly = 0, onCreated }: Props) => {
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={() => (pots.length > 0 ? navigate("/metas") : openCreate())}
-          className="flex min-h-[148px] flex-col rounded-[22px] border border-white/[0.07] bg-[#141414] p-4 text-left"
+          className="flex min-h-[148px] flex-col rounded-[22px] border border-white/[0.12] willo-glass p-4 text-left"
         >
           <div className="flex items-center justify-between">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#7DD3FC]/15">

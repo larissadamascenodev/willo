@@ -212,28 +212,6 @@ const BalanceHeroCard = ({
       className="relative -mx-4 px-4 pb-2"
       style={{ paddingTop: `calc(env(safe-area-inset-top, 0px) + ${14 + topInset}px)` }}
     >
-      {/* Aurora behind the pills and the greeting. Masked to an ellipse so every edge
-          dies into the page instead of showing the gradient's own corners. */}
-      <div className="pointer-events-none absolute inset-x-0 top-[18px] -z-10 h-[320px]">
-        <div
-          className="absolute inset-x-4 inset-y-0"
-          style={{
-            WebkitMaskImage: "radial-gradient(ellipse 80% 70% at 50% 48%, #000 40%, transparent 84%)",
-            maskImage: "radial-gradient(ellipse 80% 70% at 50% 48%, #000 40%, transparent 84%)",
-          }}
-        >
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(180deg, #1E7BFF 0%, #3D62F0 18%, #7B3BD6 34%, #C32A66 52%, #D9452C 68%, #D9A62A 84%, #93D13C 100%)",
-              filter: "blur(46px)",
-              opacity: 0.95,
-            }}
-          />
-        </div>
-      </div>
-
       {/* Avatar alone on the left; hide-values, notifications and the assistant on the right */}
       <div className="relative flex items-center justify-between gap-2">
         <button
@@ -299,7 +277,7 @@ const BalanceHeroCard = ({
       </motion.h1>
 
       {/* The month's figures, one per page */}
-      <div className="relative mt-5 overflow-hidden rounded-[26px] border border-white/[0.08] bg-[#141416]">
+      <div className="relative mt-5 overflow-hidden rounded-[26px] border border-white/[0.12] willo-glass">
         <div className="absolute right-4 top-4 z-10">
           <MonthSelector selectedMonth={selectedMonth} selectedYear={selectedYear} onMonthChange={onMonthChange} />
         </div>

@@ -55,7 +55,7 @@ const OnboardingCard = ({ profile, onUpdateName, onGoToAccounts, onCreateTransac
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-[26px] bg-gradient-to-b from-white/[0.06] to-white/[0.02] border border-white/[0.07] p-4"
+        className="rounded-[26px] bg-gradient-to-b from-white/[0.06] to-white/[0.02] border border-white/[0.12] p-4"
       >
         {/* Header: progress ring + title */}
         <div className="flex items-center gap-3">
@@ -108,7 +108,7 @@ const OnboardingCard = ({ profile, onUpdateName, onGoToAccounts, onCreateTransac
                   "flex items-center gap-2 shrink-0 rounded-full border pl-1 pr-3 py-1 transition-colors",
                   s.done
                     ? "border-white/[0.05] bg-transparent cursor-default"
-                    : "border-white/[0.08] bg-white/[0.05] hover:bg-white/[0.08]"
+                    : "border-white/[0.12] bg-white/[0.05] hover:bg-white/[0.08]"
                 )}
               >
                 <span className={cn(

@@ -123,7 +123,7 @@ const RaioX = () => {
 function LoadingState() {
   return (
     <div className="mt-5 space-y-3">
-      <div className="relative h-[300px] overflow-hidden rounded-[30px] border border-white/[0.06] bg-[#141414]">
+      <div className="relative h-[300px] overflow-hidden rounded-[30px] border border-white/[0.06] willo-glass">
         <motion.div
           className="absolute inset-x-0 h-20 bg-gradient-to-b from-transparent to-white/[0.08]"
           animate={{ top: ["-20%", "100%"] }}
@@ -134,7 +134,7 @@ function LoadingState() {
           <p className="text-[14px]">Analisando suas finanças…</p>
         </div>
       </div>
-      <div className="h-48 animate-pulse rounded-[24px] bg-[#141414]" />
+      <div className="h-48 animate-pulse rounded-[24px] willo-glass" />
     </div>
   );
 }
@@ -143,7 +143,7 @@ function EmptyState() {
   const navigate = useNavigate();
   return (
     <div className="mt-12 flex flex-col items-center px-6 text-center">
-      <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04]">
+      <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.04]">
         <Sparkles className="h-8 w-8 text-white/50" />
       </span>
       <p className="mt-5 text-[19px] font-bold text-white">Nada pra analisar ainda</p>

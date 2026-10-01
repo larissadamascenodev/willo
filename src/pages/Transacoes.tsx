@@ -525,7 +525,7 @@ const Transacoes = () => {
             onClick={() => setShowFilters(!showFilters)}
             aria-label="Filtros"
             className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors ${
-              activeFiltersCount > 0 || showFilters ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.07] bg-[#141414] text-white/70"
+              activeFiltersCount > 0 || showFilters ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.12] willo-glass text-white/70"
             }`}
           >
             <SlidersHorizontal className="w-4 h-4" />
@@ -545,7 +545,7 @@ const Transacoes = () => {
             placeholder="Buscar transação..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-11 pl-11 pr-10 rounded-full bg-[#141414] border border-white/[0.07] text-[14px] text-white placeholder:text-white/30 focus:outline-none focus:border-white/25 transition-colors"
+            className="w-full h-11 pl-11 pr-10 rounded-full willo-glass border border-white/[0.12] text-[14px] text-white placeholder:text-white/30 focus:outline-none focus:border-white/25 transition-colors"
           />
           {search && (
             <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -565,7 +565,7 @@ const Transacoes = () => {
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
             className="overflow-hidden"
           >
-            <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-4 space-y-4">
+            <div className="rounded-[22px] border border-white/[0.12] willo-glass p-4 space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-[15px] font-semibold text-white">Filtros</span>
                 {activeFiltersCount > 0 && (
@@ -641,7 +641,7 @@ const Transacoes = () => {
           <div className="animate-pulse text-white/50 text-sm">Carregando...</div>
         </div>
       ) : filtered.length === 0 && !(selectedMonth === new Date().getMonth() && selectedYear === new Date().getFullYear()) ? (
-        <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-8 text-center">
+        <div className="rounded-[22px] border border-white/[0.12] willo-glass p-8 text-center">
           <Layers className="w-6 h-6 text-white/25 mx-auto mb-2" />
           <p className="text-[14px] text-white/50">Nenhuma transação encontrada</p>
           {activeFiltersCount > 0 && (
@@ -679,11 +679,11 @@ const Transacoes = () => {
 
                 {/* Transactions */}
                 {txs.length === 0 && (
-                  <div className="rounded-[22px] border border-dashed border-white/[0.08] py-4 text-center text-[13px] text-white/35">
+                  <div className="rounded-[22px] border border-dashed border-white/[0.12] py-4 text-center text-[13px] text-white/35">
                     Nada registrado hoje
                   </div>
                 )}
-                <div className={txs.length > 0 ? "overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#141414] divide-y divide-white/[0.06]" : ""}>
+                <div className={txs.length > 0 ? "overflow-hidden rounded-[22px] border border-white/[0.12] willo-glass divide-y divide-white/[0.06]" : ""}>
                   {txs.map((tx, i) => (
                     <motion.div
                       key={tx.id}

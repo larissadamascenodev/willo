@@ -102,7 +102,7 @@ export default function NotificationSettingsModal({ open, onOpenChange }: Props)
             <Loader2 className="h-5 w-5 animate-spin text-white/40" />
           </div>
         ) : (
-          <div className="mt-5 divide-y divide-white/[0.06] overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#141414]">
+          <div className="mt-5 divide-y divide-white/[0.06] overflow-hidden rounded-[22px] border border-white/[0.12] willo-glass">
             {items.map(({ key, icon: Icon, label, sub }) => {
               const on = !!settings[key];
               return (

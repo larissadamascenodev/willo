@@ -92,7 +92,7 @@ const GastosPorCategoria = memo(({ categories, selectedMonth, onVerAnalise }: Pr
 
   return (
     <div
-      className="rounded-[22px] border border-white/[0.07] bg-[#141414] overflow-hidden"
+      className="rounded-[22px] border border-white/[0.12] willo-glass overflow-hidden"
     >
       {/* Header */}
       <div className="flex items-start justify-between px-4 pt-4 pb-3">

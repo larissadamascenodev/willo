@@ -77,7 +77,7 @@ function Group({ title, children, delay = 0 }: { title: string; children: ReactN
   return (
     <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
       <p className="mb-2 px-1 text-[12px] font-semibold text-white/40">{title}</p>
-      <div className="divide-y divide-white/[0.06] overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#141414]">{children}</div>
+      <div className="divide-y divide-white/[0.06] overflow-hidden rounded-[22px] border border-white/[0.12] willo-glass">{children}</div>
     </motion.section>
   );
 }
@@ -348,7 +348,7 @@ const Configuracoes = () => {
       <motion.section
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative flex flex-col items-center overflow-hidden rounded-[28px] border border-white/[0.07] bg-[#111111] px-5 pb-6 pt-7 text-center"
+        className="relative flex flex-col items-center overflow-hidden rounded-[28px] border border-white/[0.12] willo-glass-strong px-5 pb-6 pt-7 text-center"
       >
         <div className="pointer-events-none absolute -top-24 left-1/2 h-56 w-56 -translate-x-1/2 rounded-full bg-white/[0.08] blur-[70px]" />
 
@@ -373,7 +373,7 @@ const Configuracoes = () => {
         {profile?.bio && <p className="relative mt-2.5 max-w-[290px] text-[14px] leading-snug text-white/65">{profile.bio}</p>}
 
         {/* At a glance — one strip inside the card, not three loose boxes */}
-        <div className="relative mt-5 grid w-full grid-cols-3 divide-x divide-white/[0.08] rounded-[20px] border border-white/[0.07] bg-white/[0.03] py-3.5">
+        <div className="relative mt-5 grid w-full grid-cols-3 divide-x divide-white/[0.08] rounded-[20px] border border-white/[0.12] bg-white/[0.03] py-3.5">
           <Stat icon={Flame} value={String(streak)} label={streak === 1 ? "dia seguido" : "dias seguidos"} />
           <Stat value={accountsCount === null ? "—" : String(accountsCount)} label={accountsCount === 1 ? "conta ativa" : "contas ativas"} />
           <Stat value={memberSince} label="membro desde" />
@@ -421,7 +421,7 @@ const Configuracoes = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.18 }}
         onClick={() => setSheet("logout")}
-        className="flex h-14 w-full items-center justify-center gap-2 rounded-full border border-white/[0.08] bg-[#141414] text-[15px] font-semibold text-white active:scale-[0.99]"
+        className="flex h-14 w-full items-center justify-center gap-2 rounded-full border border-white/[0.12] willo-glass text-[15px] font-semibold text-white active:scale-[0.99]"
       >
         <LogOut className="h-4 w-4" /> Sair da conta
       </motion.button>
@@ -532,7 +532,7 @@ const Configuracoes = () => {
         <div className="px-5 pb-4">
           <p className="text-[22px] font-bold tracking-tight text-white">Moeda</p>
           <p className="mt-1 text-[13.5px] text-white/45">Muda como os valores aparecem no app. Os números que você lançou continuam os mesmos.</p>
-          <div className="mt-4 max-h-[55vh] divide-y divide-white/[0.06] overflow-y-auto rounded-[22px] border border-white/[0.07] bg-[#141414]">
+          <div className="mt-4 max-h-[55vh] divide-y divide-white/[0.06] overflow-y-auto rounded-[22px] border border-white/[0.12] willo-glass">
             {CURRENCIES.map((c) => {
               const selected = c.code === getCurrency();
               return (
@@ -569,7 +569,7 @@ const Configuracoes = () => {
                 <p className="text-[22px] font-bold tracking-tight text-white">Apagar dados</p>
                 <p className="text-[14px] text-white/45">Escolha o que sai do app.</p>
 
-                <button type="button" onClick={() => setResetMode("transactions")} className="mt-5 w-full rounded-[22px] border border-white/[0.07] bg-[#1A1A1A] p-4 text-left active:scale-[0.99]">
+                <button type="button" onClick={() => setResetMode("transactions")} className="mt-5 w-full rounded-[22px] border border-white/[0.12] willo-glass-inset p-4 text-left active:scale-[0.99]">
                   <p className="text-[16px] font-semibold text-white">Só as transações</p>
                   <p className="mt-1 text-[13px] leading-snug text-white/50">Lançamentos, faturas e eventos somem e os saldos voltam ao valor inicial. Contas e cartões ficam.</p>
                 </button>
@@ -588,7 +588,7 @@ const Configuracoes = () => {
                 </p>
                 <p className="text-[14px] text-white/45">Isso não pode ser desfeito.</p>
 
-                <div className="mt-5 space-y-2 rounded-[20px] border border-white/[0.07] bg-[#1A1A1A] p-4 text-[13.5px]">
+                <div className="mt-5 space-y-2 rounded-[20px] border border-white/[0.12] willo-glass-inset p-4 text-[13.5px]">
                   {(resetMode === "all"
                     ? ["Todas as transações", "Contas e carteiras", "Cartões de crédito e faturas", "Eventos financeiros"]
                     : ["Todas as transações", "Faturas e limite usado dos cartões", "Eventos financeiros", "Saldos voltam ao valor inicial"]

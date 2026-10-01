@@ -255,7 +255,7 @@ export default function CategoryCreateModal({
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="relative mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11.5px] text-white/60"
+                className="relative mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] px-2.5 py-1 text-[11.5px] text-white/60"
               >
                 <Sparkles className="h-3 w-3" />
                 {suggesting ? "Escolhendo o visual…" : "Sugerido pela IA"}
@@ -272,7 +272,7 @@ export default function CategoryCreateModal({
             placeholder="Ex: Streaming"
             maxLength={30}
             autoFocus
-            className="mt-2 h-14 w-full rounded-[18px] border border-white/[0.07] bg-[#141414] px-4 text-[16px] text-white placeholder:text-white/25 focus:border-white/20 focus:outline-none"
+            className="mt-2 h-14 w-full rounded-[18px] border border-white/[0.12] willo-glass px-4 text-[16px] text-white placeholder:text-white/25 focus:border-white/20 focus:outline-none"
           />
           <AnimatePresence>
             {(nameError || colorError) && (
@@ -328,7 +328,7 @@ export default function CategoryCreateModal({
                   onClick={() => pick(() => setIcon(iconName))}
                   className={cn(
                     "flex aspect-square items-center justify-center rounded-[16px] border transition-colors",
-                    active ? "border-transparent" : "border-white/[0.06] bg-[#161616] active:bg-white/[0.06]",
+                    active ? "border-transparent" : "border-white/[0.06] willo-glass-inset active:bg-white/[0.06]",
                   )}
                   style={active ? { background: `${color}22`, borderColor: `${color}55` } : undefined}
                 >

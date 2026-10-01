@@ -616,7 +616,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 34, stiffness: 320 }}
-          className="willo-bg fixed inset-0 z-[60] flex flex-col md:inset-auto md:left-1/2 md:top-1/2 md:h-[88vh] md:w-[440px] md:-translate-x-1/2 md:-translate-y-1/2 md:overflow-hidden md:rounded-[32px] md:border md:border-white/[0.08]"
+          className="willo-bg fixed inset-0 z-[60] flex flex-col md:inset-auto md:left-1/2 md:top-1/2 md:h-[88vh] md:w-[440px] md:-translate-x-1/2 md:-translate-y-1/2 md:overflow-hidden md:rounded-[32px] md:border md:border-white/[0.12]"
         >
           {/* Nav */}
           <div className="shrink-0 px-4" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
@@ -666,7 +666,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
             </div>
 
             {/* Description + category */}
-            <div className="divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.07] bg-[#141414]">
+            <div className="divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.12] willo-glass">
               <Row icon={FileText} label="Descrição">
                 <input
                   placeholder={isReceita ? "Ex: Salário" : "Ex: Mercado"}
@@ -699,7 +699,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
 
             {/* Date */}
             <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/45">Data</p>
-            <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-3">
+            <div className="rounded-[22px] border border-white/[0.12] willo-glass p-3">
               <div className="flex gap-2">
                 {(["hoje", "ontem", "outros"] as const).map((mode) => (
                   <button key={mode} type="button" onClick={() => handleDateMode(mode)} className={chip(dateMode === mode)}>
@@ -739,7 +739,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
 
             {/* Where */}
             <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/45">{isReceita ? "Onde entrou" : "Como pagou"}</p>
-            <div className="rounded-[22px] border border-white/[0.07] bg-[#141414]">
+            <div className="rounded-[22px] border border-white/[0.12] willo-glass">
               {type === "despesa" && (
                 <div className="grid grid-cols-2 gap-1 p-1.5">
                   {([["conta", "Conta", Wallet], ["cartao", "Cartão de crédito", CreditCard]] as const).map(([key, label, Icon]) => (
@@ -795,7 +795,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                                 onClick={() => setAccountId(acc.id)}
                                 className={cn(
                                   "flex h-10 items-center gap-2 rounded-full border px-3.5 text-[14px] font-medium transition-colors",
-                                  on ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.08] bg-white/[0.04] text-white/80",
+                                  on ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.12] bg-white/[0.04] text-white/80",
                                 )}
                               >
                                 <span
@@ -897,7 +897,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
 
             {/* Repetition */}
             <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/45">Repetição</p>
-            <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-3">
+            <div className="rounded-[22px] border border-white/[0.12] willo-glass p-3">
               <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                 {(isReceita ? (["unica", "fixa"] as const) : (["unica", "parcelado", "fixa"] as const)).map((rt) => (
                   <button key={rt} type="button" onClick={() => setRecurrenceType(rt)} className={chip(recurrenceType === rt)}>
@@ -1020,7 +1020,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
 
             {/* Status + note */}
             <form id="nova-transacao-form" onSubmit={handleSubmit}>
-              <div className="mt-6 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.07] bg-[#141414]">
+              <div className="mt-6 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.12] willo-glass">
                 {!usingCard && (
                   <Row icon={status === "pago" ? Check : Clock} label={status === "pago" ? (isReceita ? "Recebido" : "Pago") : isReceita ? "A receber" : "Pendente"}>
                     <Switch
@@ -1098,7 +1098,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                       }}
                       className={cn(
                         "flex flex-col items-center gap-2 rounded-[20px] border px-2 py-3.5 text-center transition-colors",
-                        selected ? "border-white bg-white/[0.08]" : "border-white/[0.06] bg-[#1A1A1A]",
+                        selected ? "border-white bg-white/[0.08]" : "border-white/[0.06] willo-glass-inset",
                       )}
                     >
                       <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: `${hex}22` }}>

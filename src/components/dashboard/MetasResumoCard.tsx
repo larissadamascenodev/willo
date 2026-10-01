@@ -55,7 +55,7 @@ export function MetasResumoView({ goals, loading = false }: { goals: GoalRow[]; 
 
   if (loading) {
     return (
-      <div className="h-[220px] animate-pulse rounded-[22px] border border-white/[0.07] bg-[#141414]" />
+      <div className="h-[220px] animate-pulse rounded-[22px] border border-white/[0.12] willo-glass" />
     );
   }
 
@@ -71,7 +71,7 @@ export function MetasResumoView({ goals, loading = false }: { goals: GoalRow[]; 
   return (
     <button
       onClick={() => navigate("/metas")}
-      className="block w-full rounded-[22px] border border-white/[0.07] bg-[#141414] p-4 text-left active:scale-[0.99] transition-transform"
+      className="block w-full rounded-[22px] border border-white/[0.12] willo-glass p-4 text-left active:scale-[0.99] transition-transform"
     >
       <div className="flex items-center justify-between">
         <p className="text-[14px] text-white/50">Metas</p>

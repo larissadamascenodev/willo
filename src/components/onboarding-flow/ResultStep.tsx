@@ -47,7 +47,7 @@ function StartingScore({ plan }: { plan: OnboardingPlan }) {
 
   return (
     <div
-      className="relative overflow-hidden rounded-[28px] border border-white/[0.08] px-4 pb-5 pt-4"
+      className="relative overflow-hidden rounded-[28px] border border-white/[0.12] px-4 pb-5 pt-4"
       style={{ background: `radial-gradient(120% 80% at 50% 0%, ${level.hex}1F 0%, rgba(20,20,20,0.95) 55%, #0E0E0E 100%)` }}
     >
       <div className="relative mx-auto" style={{ width: W, maxWidth: "100%" }}>
@@ -119,7 +119,7 @@ function Trajectory({ answers, plan }: { answers: OnboardingAnswers; plan: Onboa
   const d = pts.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 
   return (
-    <div className="mt-2.5 rounded-[22px] bg-[#1A1A1A] p-4">
+    <div className="mt-2.5 rounded-[22px] willo-glass-inset p-4">
       <div className="flex items-end justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40">Hoje</p>
@@ -182,7 +182,7 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
         <StartingScore plan={plan} />
 
         {section("O que a gente viu")}
-        <div className="divide-y divide-white/[0.06] rounded-[24px] border border-white/[0.08] bg-[#111111] px-4">
+        <div className="divide-y divide-white/[0.06] rounded-[24px] border border-white/[0.12] willo-glass-strong px-4">
           {findings.map((f, i) => {
             const T = TONE[f.tone];
             return (
@@ -206,7 +206,7 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
         </div>
 
         {section("Seu objetivo")}
-        <div className="rounded-[24px] border border-white/[0.08] bg-[#111111] p-4">
+        <div className="rounded-[24px] border border-white/[0.12] willo-glass-strong p-4">
           <p className="text-[13px] text-white/45">{PURPOSE_LABEL[purpose]}</p>
           <p className="flex items-baseline gap-1.5">
             <span className="text-[26px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{brl0(plan.monthlySave)}</span>
@@ -220,13 +220,13 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
         </div>
 
         {section("Plano sugerido")}
-        <div className="rounded-[24px] border border-white/[0.08] bg-[#111111] p-4">
+        <div className="rounded-[24px] border border-white/[0.12] willo-glass-strong p-4">
           <p className="text-[22px] font-extrabold uppercase leading-none tracking-tight text-white">Método 50/30/20</p>
           <p className="mt-2 text-[13.5px] leading-snug text-white/50">
             Pelo seu perfil, a gente sugere dividir a renda em três partes. É uma sugestão: você segue no seu ritmo e ajusta no app.
           </p>
 
-          <div className="mt-4 rounded-[20px] bg-[#1A1A1A] p-4">
+          <div className="mt-4 rounded-[20px] willo-glass-inset p-4">
             <div className="flex h-2.5 overflow-hidden rounded-full">
               {BUCKETS.map((b, i) => (
                 <motion.span
@@ -252,7 +252,7 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
             </div>
           </div>
 
-          <div className="mt-2.5 flex items-center justify-between rounded-[18px] bg-[#1A1A1A] px-4 py-3.5 text-[14px]">
+          <div className="mt-2.5 flex items-center justify-between rounded-[18px] willo-glass-inset px-4 py-3.5 text-[14px]">
             <span className="text-white/55">Reserva de emergência ideal</span>
             <span className="font-semibold text-white tabular-nums">{brl0(plan.reserve)}</span>
           </div>
@@ -265,7 +265,7 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
         <AnimatePresence initial={false}>
           {how && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <div className="mt-3 space-y-2 rounded-[20px] border border-white/[0.07] bg-[#141414] p-4 text-[13px] leading-relaxed text-white/60">
+              <div className="mt-3 space-y-2 rounded-[20px] border border-white/[0.12] willo-glass p-4 text-[13px] leading-relaxed text-white/60">
                 <p><b className="text-white/85">Sobra do mês:</b> renda ({brl0(income)}) − gastos ({brl0(answers.spending)}) = {plan.surplus < 0 ? "−" : ""}{brl0(plan.surplus)}.</p>
                 <p><b className="text-white/85">Por mês pro objetivo:</b> {brl0(answers.target)} ÷ {plan.months} {plan.months === 1 ? "mês" : "meses"}, arredondado = {brl0(plan.monthlySave)}.</p>
                 <p><b className="text-white/85">Score:</b> estimativa pelas suas respostas sobre fim de mês, cartão, imprevistos e dívidas. Ele se ajusta sozinho quando você começar a lançar seus gastos.</p>

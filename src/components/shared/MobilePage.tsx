@@ -35,7 +35,7 @@ export function Surface({ children, className, delay = 0 }: { children: ReactNod
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className={cn("rounded-[22px] border border-white/[0.07] bg-[#141414]", className)}
+      className={cn("rounded-[22px] border border-white/[0.12] willo-glass", className)}
     >
       {children}
     </motion.div>

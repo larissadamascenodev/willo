@@ -58,21 +58,21 @@ export const TransactionsSummaryCard = ({ saldoAtual, saldoPrevisto, receitas, d
   <motion.div
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
-    className={cn("rounded-[24px] border border-white/[0.07] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-4", className)}
+    className={cn("rounded-[24px] border border-white/[0.12] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-4", className)}
   >
     <p className="text-[13px] text-white/45">Saldo disponível</p>
     <p className="text-[32px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{fmt(saldoAtual)}</p>
     {saldoPrevisto !== saldoAtual && (
       <p className="text-[12px] text-white/40 tabular-nums">Previsto no fim do mês: {fmt(saldoPrevisto)}</p>
     )}
-    <div className="mt-4 grid grid-cols-2 border-t border-white/[0.08] pt-3.5">
+    <div className="mt-4 grid grid-cols-2 border-t border-white/[0.12] pt-3.5">
       <div className="pr-3">
         <span className="flex items-center gap-1 text-[12px] text-white/45">
           <ArrowDownLeft className="h-3.5 w-3.5 text-willo-green" strokeWidth={2.5} /> Receitas
         </span>
         <p className="mt-0.5 text-[17px] font-bold text-white tabular-nums">{fmt(receitas)}</p>
       </div>
-      <div className="border-l border-white/[0.08] pl-4">
+      <div className="border-l border-white/[0.12] pl-4">
         <span className="flex items-center gap-1 text-[12px] text-white/45">
           <ArrowUpRight className="h-3.5 w-3.5 text-red-400" strokeWidth={2.5} /> Despesas
         </span>
@@ -84,7 +84,7 @@ export const TransactionsSummaryCard = ({ saldoAtual, saldoPrevisto, receitas, d
 
 /** Todas / Receitas / Despesas. */
 export const TransactionTabs = ({ value, onChange, layoutId = "tx-tab-pill" }: { value: TabFilter; onChange: (v: TabFilter) => void; layoutId?: string }) => (
-  <div className="grid flex-1 grid-cols-3 isolate rounded-full border border-white/[0.07] bg-[#141414] p-1">
+  <div className="grid flex-1 grid-cols-3 isolate rounded-full border border-white/[0.12] willo-glass p-1">
     {([
       { key: "todos" as TabFilter, label: "Todas" },
       { key: "receita" as TabFilter, label: "Receitas" },
@@ -199,7 +199,7 @@ export const TransactionListItem = ({
         dragElastic={0.3}
         onDragEnd={handleDragEnd}
         style={{ x }}
-        className="relative flex items-center gap-3 px-4 py-3 cursor-grab active:cursor-grabbing bg-[#141414]"
+        className="relative flex items-center gap-3 px-4 py-3 cursor-grab active:cursor-grabbing willo-glass"
         onClick={() => onEdit(tx)}
         whileTap={{ scale: 0.99 }}
       >

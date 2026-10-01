@@ -179,7 +179,7 @@ export default function GerenciarCategorias() {
       />
 
       {/* Segmented control */}
-      <div className="mt-5 flex isolate rounded-full border border-white/[0.07] bg-[#141414] p-1">
+      <div className="mt-5 flex isolate rounded-full border border-white/[0.12] willo-glass p-1">
         {(["despesa", "receita"] as const).map((t) => (
           <button
             key={t}
@@ -226,7 +226,7 @@ export default function GerenciarCategorias() {
           </button>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#141414]">
+        <div className="overflow-hidden rounded-[22px] border border-white/[0.12] willo-glass">
           <AnimatePresence initial={false}>
             {unifiedCategories.map((cat, i) => (
               <motion.button
@@ -284,7 +284,7 @@ export default function GerenciarCategorias() {
               className="w-full space-y-2 px-3"
               style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
             >
-              <div className="overflow-hidden rounded-[22px] bg-[#1A1A1A]">
+              <div className="overflow-hidden rounded-[22px] willo-glass-inset">
                 <div className="flex items-center gap-3 px-4 py-3.5">
                   <span
                     className="flex h-10 w-10 items-center justify-center rounded-full"
@@ -311,7 +311,7 @@ export default function GerenciarCategorias() {
               </div>
               <button
                 onClick={() => setMenuOpenId(null)}
-                className="w-full rounded-[22px] bg-[#1A1A1A] py-3.5 text-[15px] font-semibold text-white active:bg-[#222]"
+                className="w-full rounded-[22px] willo-glass-inset py-3.5 text-[15px] font-semibold text-white active:willo-glass-inset"
               >
                 Cancelar
               </button>
@@ -335,7 +335,7 @@ export default function GerenciarCategorias() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.94, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-[300px] rounded-[22px] border border-white/[0.08] bg-[#1A1A1A] p-5 text-center"
+              className="w-full max-w-[300px] rounded-[22px] border border-white/[0.12] willo-glass-inset p-5 text-center"
             >
               <p className="text-[16px] font-bold text-white">Excluir “{confirmDeleteCat.name}”?</p>
               <p className="mt-1.5 text-[13px] text-white/50">

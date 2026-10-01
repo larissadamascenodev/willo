@@ -53,7 +53,7 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
   }, [cards, invoices, today]);
 
   if (loading) {
-    return <div className="h-[168px] animate-pulse rounded-[22px] border border-white/[0.07] bg-[#141414]" />;
+    return <div className="h-[168px] animate-pulse rounded-[22px] border border-white/[0.12] willo-glass" />;
   }
 
   if (cards.length === 0) {
@@ -81,7 +81,7 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
   return (
     <button
       onClick={() => navigate("/cartoes?aba=faturas")}
-      className="block w-full rounded-[22px] border border-white/[0.07] bg-[#141414] p-4 text-left active:scale-[0.99] transition-transform"
+      className="block w-full rounded-[22px] border border-white/[0.12] willo-glass p-4 text-left active:scale-[0.99] transition-transform"
     >
       <div className="flex items-center justify-between">
         <p className="text-[14px] text-white/50">Cartões de crédito</p>
@@ -99,7 +99,7 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
         </div>
 
         {/* Limite disponível */}
-        <div className="flex shrink-0 items-center gap-2.5 border-l border-white/[0.08] pl-3">
+        <div className="flex shrink-0 items-center gap-2.5 border-l border-white/[0.12] pl-3">
           <div className="relative h-[52px] w-[52px]">
             <svg viewBox="0 0 76 76" className="h-full w-full -rotate-90">
               <circle cx="38" cy="38" r={R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="9" />

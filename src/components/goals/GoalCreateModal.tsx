@@ -113,7 +113,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
                 onClick={() => setPresetId(p.id)}
                 className={cn(
                   "flex flex-col items-center gap-2 rounded-[20px] border px-2 py-3.5 text-center transition-colors",
-                  selected ? "border-white bg-white/[0.08]" : "border-white/[0.06] bg-[#1A1A1A]",
+                  selected ? "border-white bg-white/[0.08]" : "border-white/[0.06] willo-glass-inset",
                 )}
               >
                 <span className="flex h-11 w-11 items-center justify-center rounded-full" style={{ background: `${p.hex}22` }}>
@@ -155,7 +155,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
         {presetId && (
           <>
             <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/45">Foto de capa (opcional)</p>
-            <div className="flex items-center gap-3 rounded-[22px] border border-white/[0.07] bg-[#141414] p-3">
+            <div className="flex items-center gap-3 rounded-[22px] border border-white/[0.12] willo-glass p-3">
               <span className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[16px]" style={{ background: preset ? `${preset.hex}22` : "rgba(255,255,255,0.06)" }}>
                 {coverImage ? (
                   <img src={coverImage} alt="" className="h-full w-full object-cover" />
@@ -209,14 +209,14 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
               </button>
             </div>
             {openEnded ? (
-              <div className="flex items-center gap-3 rounded-[22px] border border-white/[0.07] bg-[#141414] px-4 py-4">
+              <div className="flex items-center gap-3 rounded-[22px] border border-white/[0.12] willo-glass px-4 py-4">
                 <PiggyBank className="h-5 w-5 shrink-0 text-willo-green" />
                 <p className="text-[13px] leading-snug text-white/60">
                   Você vai só guardando, sem um alvo. Dá para definir um valor depois, quando quiser.
                 </p>
               </div>
             ) : (
-              <div className="rounded-[22px] border border-white/[0.07] bg-[#141414] p-5">
+              <div className="rounded-[22px] border border-white/[0.12] willo-glass p-5">
                 <div className="flex flex-col items-center">
                   <label className="relative flex items-baseline gap-1.5">
                     <span className="text-[22px] font-bold text-white/40">{currencySymbol()}</span>

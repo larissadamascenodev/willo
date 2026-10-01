@@ -42,7 +42,7 @@ export default function SinglePurchaseCard({ item, index, customCats, card, onOp
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
-      className="overflow-hidden rounded-[20px] border border-white/[0.07] bg-[#141414]"
+      className="overflow-hidden rounded-[20px] border border-white/[0.12] willo-glass"
     >
       <button type="button" onClick={onOpen} className="block w-full px-3.5 py-3 text-left">
         <div className="flex items-center gap-3">
@@ -51,7 +51,7 @@ export default function SinglePurchaseCard({ item, index, customCats, card, onOp
               <circle cx="24" cy="24" r="22" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="2.5" />
               <circle cx="24" cy="24" r="22" fill="none" stroke={`hsl(${catColor})`} strokeWidth="2.5" strokeLinecap="round" />
             </svg>
-            <span className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-[#1E1E1E]">
+            <span className="flex h-[38px] w-[38px] items-center justify-center rounded-full willo-glass-inset">
               {IconComp && <IconComp className="h-[18px] w-[18px]" style={{ color: `hsl(${catColor})` }} />}
             </span>
           </span>

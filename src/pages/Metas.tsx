@@ -136,7 +136,7 @@ const Metas = () => {
       {/* AI helper */}
       <button
         onClick={() => setShowAIWizard(true)}
-        className="mt-5 flex w-full items-center gap-3 rounded-[22px] border border-white/[0.07] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-3.5 text-left active:scale-[0.99] transition-transform"
+        className="mt-5 flex w-full items-center gap-3 rounded-[22px] border border-white/[0.12] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-3.5 text-left active:scale-[0.99] transition-transform"
       >
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.08]">
           <Sparkles className="h-4 w-4 text-white" />
@@ -153,12 +153,12 @@ const Metas = () => {
       {loading ? (
         <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
           {[1, 2].map((i) => (
-            <div key={i} className="h-56 animate-pulse rounded-[24px] bg-[#141414]" />
+            <div key={i} className="h-56 animate-pulse rounded-[24px] willo-glass" />
           ))}
         </div>
       ) : goals.length === 0 ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-12 flex flex-col items-center px-8 text-center">
-          <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.05]">
+          <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.05]">
             <Target className="h-8 w-8 text-white/40" />
           </span>
           <p className="mt-5 text-[18px] font-bold text-white">Nenhuma meta ainda</p>
@@ -192,7 +192,7 @@ const Metas = () => {
                   exit={{ opacity: 0, y: -12 }}
                   transition={{ delay: idx * 0.05 }}
                   onClick={() => navigate(`/metas/${goal.id}`)}
-                  className="cursor-pointer overflow-hidden rounded-[24px] border border-white/[0.07] bg-[#141414] p-4 active:scale-[0.99] transition-transform"
+                  className="cursor-pointer overflow-hidden rounded-[24px] border border-white/[0.12] willo-glass p-4 active:scale-[0.99] transition-transform"
                 >
                   {/* Header */}
                   <div className="flex items-start justify-between gap-2">
