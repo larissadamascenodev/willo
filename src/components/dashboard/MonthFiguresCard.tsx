@@ -7,9 +7,6 @@ import MonthSelector from "./MonthSelector";
 import { currencySymbol, getCurrency } from "@/lib/currency";
 
 interface Props {
-  saldoAtual: number;
-  changeAmount: number;
-  changePercent: number;
   receitas: number;
   despesas: number;
   selectedMonth: number;
@@ -27,49 +24,26 @@ const MONTH_NAMES = [
 ];
 
 /**
- * The month in four figures, one per page: what you have, what came in, what went
- * out, and what is left. Sits in the card stack rather than in the header, so the
- * top of the home screen stays the greeting.
+ * How the month moved, one figure per page: what came in, what went out, and what
+ * is left of it. The balance itself is the headline up in the header, so it is not
+ * repeated here.
  */
 const MonthFiguresCard = ({
-  saldoAtual, changeAmount, changePercent, receitas, despesas,
-  selectedMonth, selectedYear, onMonthChange,
+  receitas, despesas, selectedMonth, selectedYear, onMonthChange,
 }: Props) => {
   const navigate = useNavigate();
   const hidden = useHiddenValues();
   const trackRef = useRef<HTMLDivElement>(null);
   const [slide, setSlide] = useState(0);
 
-  const animatedSaldo = useFormattedCounter(saldoAtual);
   const animatedReceitas = useFormattedCounter(receitas);
   const animatedDespesas = useFormattedCounter(despesas);
-  const isPositive = changeAmount >= 0;
   const balanco = receitas - despesas;
   const monthLabel = MONTH_NAMES[selectedMonth];
 
   const mask = (v: string) => (hidden ? `${currencySymbol()} ••••` : v);
 
   const slides: { key: string; label: string; value: string; foot: JSX.Element; to: string | null }[] = [
-    {
-      key: "saldo",
-      label: "Saldo disponível",
-      value: hidden ? `${currencySymbol()} ••••••` : animatedSaldo,
-      foot: (
-        <span className="flex items-center gap-2">
-          <span className="text-[13px] font-medium text-white/60 tabular-nums">
-            {hidden ? "••••" : `${isPositive ? "+" : "-"}${formatCurrency(Math.abs(changeAmount))}`}
-          </span>
-          <span
-            className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
-              isPositive ? "bg-willo-green/20 text-willo-green" : "bg-red-500/20 text-red-400"
-            }`}
-          >
-            {isPositive ? "+" : "-"}{Math.abs(changePercent).toFixed(2)}%
-          </span>
-        </span>
-      ),
-      to: null,
-    },
     {
       key: "receitas",
       label: "Receitas",

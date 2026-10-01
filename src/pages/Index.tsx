@@ -182,18 +182,15 @@ const Index = () => {
             <BalanceHeroCard saldoAtual={saldoMes} receitas={receitas} despesas={despesas} />
           </motion.div>
 
-          {/* MicroInteracoesCard temporarily disabled */}
-          {isCurrentMonth && <FinanceChartCard />}
           <MonthFiguresCard
-            saldoAtual={saldoMes}
-            changeAmount={balanco}
-            changePercent={receitas > 0 ? (balanco / receitas) * 100 : 0}
             receitas={receitas}
             despesas={despesas}
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}
             onMonthChange={handleMonthChange}
           />
+          {/* MicroInteracoesCard temporarily disabled */}
+          {isCurrentMonth && <FinanceChartCard />}
           {profile && !isOnboardingComplete && (
             <OnboardingCard
               profile={profile}

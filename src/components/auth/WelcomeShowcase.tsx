@@ -234,9 +234,6 @@ export const HomeScreen = ({ to, extra = [], withIfood = false }: { to?: string;
       />
       <div className="mt-3 space-y-3">
         <MonthFiguresCard
-          saldoAtual={8420.5 - spent}
-          changeAmount={1034.2 - spent}
-          changePercent={14}
           receitas={6450}
           despesas={3215.8 + spent}
           selectedMonth={8}

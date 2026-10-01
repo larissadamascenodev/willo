@@ -165,15 +165,24 @@ const BalanceHeroCard = ({ saldoAtual, receitas, despesas, topInset = 0 }: Props
         <HomeSectionTabs />
       </div>
 
-      {/* The greeting carries the name, so the avatar needs no label beside it */}
-      <motion.h1
+      {/* The greeting sets the scene and the balance is the headline; the label under it
+          says what the number is, so the figure itself needs no prefix. */}
+      <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="mt-11 truncate text-[30px] font-normal leading-tight tracking-tight text-white"
+        className="mt-10 pb-7"
       >
-        {greeting}{firstName ? `, ${firstName}` : ""}
-      </motion.h1>
+        <p className="truncate text-[15px] font-medium tracking-tight text-white/65">
+          {greeting}{firstName ? `, ${firstName}` : ""}
+        </p>
+        <p className="mt-1.5 truncate text-[42px] font-extrabold leading-[1.05] tracking-[-0.035em] text-white tabular-nums">
+          {hidden ? `${currencySymbol()} ••••••` : animatedSaldo}
+        </p>
+        <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+          Saldo disponível
+        </p>
+      </motion.div>
     </div>
     </>
   );
