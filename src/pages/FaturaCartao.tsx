@@ -23,7 +23,6 @@ import InvoiceCategoryBreakdown from "@/components/fatura/InvoiceCategoryBreakdo
 import InvoiceTransactionList from "@/components/fatura/InvoiceTransactionList";
 import InvoicePayModal from "@/components/fatura/InvoicePayModal";
 import InvoiceHistoryChart from "@/components/fatura/InvoiceHistoryChart";
-import InvoiceAddChooserModal, { type ScanMode } from "@/components/fatura/InvoiceAddChooserModal";
 import InvoiceScanScreen from "@/components/fatura/InvoiceScanScreen";
 import InstallmentPurchaseCard from "@/components/installments/InstallmentPurchaseCard";
 import SinglePurchaseCard from "@/components/fatura/SinglePurchaseCard";
@@ -112,7 +111,7 @@ const FaturaCartao = () => {
   const [paying, setPaying] = useState(false);
   const [userStartDate, setUserStartDate] = useState<Date | null>(null);
   const [showPayModal, setShowPayModal] = useState(false);
-  const [showAddChooser, setShowAddChooser] = useState(false);
+  const uploadRef = useRef<HTMLInputElement>(null);
   const [showManualAdd, setShowManualAdd] = useState(false);
   const [payAccountId, setPayAccountId] = useState("");
   const [uploadProcessing, setUploadProcessing] = useState(false);
@@ -424,7 +423,7 @@ const FaturaCartao = () => {
   });
 
   // Read a whole statement, or a single purchase, with the AI
-  const handleFileUpload = async (file: File, mode: ScanMode) => {
+  const handleFileUpload = async (file: File, mode: "invoice" | "single") => {
     const isInvoice = mode === "invoice";
     setUploadProcessing(true);
     if (isInvoice) {
@@ -601,11 +600,22 @@ const FaturaCartao = () => {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setShowAddChooser(true)}
+            onClick={() => uploadRef.current?.click()}
             className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.08] bg-[#141414] px-3.5 text-[13px] font-semibold text-white active:scale-95"
           >
             <Plus className="h-3.5 w-3.5" /> Lançamento
           </button>
+          <input
+            ref={uploadRef}
+            type="file"
+            accept=".pdf,.csv,.xls,.xlsx,image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) handleFileUpload(file, "invoice");
+            }}
+          />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button aria-label="Opções do cartão" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-white/70 transition-colors hover:text-white">
@@ -688,10 +698,6 @@ const FaturaCartao = () => {
           {total > 0 && outstanding <= 0 ? (
             <p className="flex items-center gap-1.5 text-[13px] font-medium text-willo-green">
               <Check className="h-3.5 w-3.5" strokeWidth={3} /> Paga
-            </p>
-          ) : paidAmount > 0 ? (
-            <p className="text-[13px] text-white/45">
-              de {formatCurrency(total)} · <span className="font-semibold text-willo-green">{formatCurrency(paidAmount)} já pago</span>
             </p>
           ) : dueInfo && outstanding > 0 ? (
             <p className={cn("text-[13px]", dueInfo.overdue ? "text-red-400" : "text-white/45")}>{dueInfo.text}</p>
@@ -875,12 +881,6 @@ const FaturaCartao = () => {
       />
 
       {/* Add Chooser Modal */}
-      <InvoiceAddChooserModal
-        open={showAddChooser}
-        onClose={() => setShowAddChooser(false)}
-        onManual={() => setShowManualAdd(true)}
-        onScan={handleFileUpload}
-      />
 
       <CardEntryModal
         entry={entry}

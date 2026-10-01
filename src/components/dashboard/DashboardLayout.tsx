@@ -59,7 +59,6 @@ const DashboardLayout = () => {
   const [avgConfidence, setAvgConfidence] = useState<number>(0);
   const [scanAccountId, setScanAccountId] = useState<string | null>(null);
   const [confirmingImport, setConfirmingImport] = useState(false);
-  const [showScanChooser, setShowScanChooser] = useState(false);
   const [scanAccounts, setScanAccounts] = useState<ScanAccountOption[]>([]);
 
   // Fallback pre-fill for low confidence items
@@ -104,7 +103,8 @@ const DashboardLayout = () => {
       }
     };
     const handleScanner = () => {
-      setShowScanChooser(true);
+      // Straight to the camera — scanning a receipt almost always means photographing one
+      scanCameraRef.current?.click();
     };
     const handleEditTransaction = (e: Event) => {
       const detail = (e as CustomEvent).detail as EditTransactionData;
@@ -171,7 +171,6 @@ const DashboardLayout = () => {
 
   // OCR scan handler: show the photo while the AI reads it, then the confirm card
   const handleScanFile = useCallback(async (file: File) => {
-    setShowScanChooser(false);
     setExtractedItems([]);
     setScanResultReady(false);
     // Same capture screen for camera and gallery; some gallery files (HEIC) come without a MIME type
@@ -335,32 +334,6 @@ const DashboardLayout = () => {
           onClose={() => setShowTypeChooser(false)}
           onSelect={handleTypeSelected}
         />
-        {/* Scan chooser */}
-        <BottomSheet open={showScanChooser} onClose={() => setShowScanChooser(false)}>
-          <div className="px-5 pb-2">
-            <p className="text-[22px] font-bold tracking-tight text-white">Escanear comprovante</p>
-            <p className="text-[14px] text-white/45">A IA lê o documento e preenche tudo para você revisar.</p>
-            <div className="mt-5 grid grid-cols-2 gap-2.5">
-              {[
-                { label: "Tirar foto", hint: "Usar a câmera", Icon: Camera, onClick: () => scanCameraRef.current?.click() },
-                { label: "Galeria", hint: "Escolher uma imagem", Icon: ImageIcon, onClick: () => scanGalleryRef.current?.click() },
-              ].map(({ label, hint, Icon, onClick }) => (
-                <motion.button
-                  key={label}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => { setShowScanChooser(false); onClick(); }}
-                  className="flex flex-col items-start rounded-[24px] border border-white/[0.06] bg-[#1A1A1A] p-4 text-left"
-                >
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#0B0B0B]">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <span className="mt-6 block text-[16px] font-semibold text-white">{label}</span>
-                  <span className="block text-[12px] text-white/45">{hint}</span>
-                </motion.button>
-              ))}
-            </div>
-          </div>
-        </BottomSheet>
         <input ref={scanCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanFileInput} />
         <input ref={scanGalleryRef} type="file" accept="image/*" className="hidden" onChange={handleScanFileInput} />
         
