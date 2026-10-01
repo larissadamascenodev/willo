@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { User, Bell, Eye, EyeOff, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { User, Bell, Eye, EyeOff, ArrowDownLeft, ArrowUpRight, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useFormattedCounter } from "@/hooks/useAnimatedCounter";
 import NotificationsPanel, { useNotifications } from "./NotificationsPanel";
 import MonthSelector from "./MonthSelector";
 import HomeSectionTabs from "./HomeSectionTabs";
+import { useGreeting } from "./DashboardHeader";
 import { useProfile } from "@/hooks/useProfile";
 
 import { currencySymbol, getCurrency } from "@/lib/currency";
@@ -18,7 +20,7 @@ interface Props {
   selectedMonth: number;
   selectedYear: number;
   onMonthChange: (month: number, year: number) => void;
-  /** Extra space above the logo row (px), e.g. under a drawn status bar. */
+  /** Extra space above the top row (px), e.g. under a drawn status bar. */
   topInset?: number;
 }
 
@@ -26,12 +28,16 @@ function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 }
 
+const MONTH_NAMES = [
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+];
+
 /**
- * Full-bleed dark "hero" card spanning the top of the mobile dashboard —
- * logo + profile/notifications, big balance with a show/hide toggle, a
- * net-change pill, the month selector and a Receitas/Despesas breakdown,
- * all folded into one glassy translucent surface. Replaces the plain sticky mobile header on this
- * route (see DashboardHeader.tsx).
+ * Top of the mobile dashboard. The avatar stands alone on the left and the
+ * controls sit on the right; underneath, a wide aurora lights the section pills
+ * and the greeting, and the month's figures live in one swipeable card instead
+ * of being spread across the header.
  */
 const BalanceHeroCard = ({
   saldoAtual, changeAmount, changePercent, receitas, despesas,
@@ -42,13 +48,20 @@ const BalanceHeroCard = ({
   const [notifOpen, setNotifOpen] = useState(false);
   const { unreadCount, refresh } = useNotifications();
   const { profile } = useProfile();
+  const { greeting } = useGreeting();
+  const firstName = profile?.display_name?.trim().split(" ")[0] ?? "";
   const initial = profile?.display_name?.trim().charAt(0).toUpperCase();
   const animatedSaldo = useFormattedCounter(saldoAtual);
   const animatedReceitas = useFormattedCounter(receitas);
   const animatedDespesas = useFormattedCounter(despesas);
   const isPositive = changeAmount >= 0;
   const heroRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const [slide, setSlide] = useState(0);
+
+  const balanco = receitas - despesas;
+  const monthLabel = MONTH_NAMES[selectedMonth];
 
   // Once the hero starts scrolling away, show a compact translucent bar pinned to the top.
   useEffect(() => {
@@ -60,6 +73,80 @@ const BalanceHeroCard = ({
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const mask = (v: string) => (hidden ? `${currencySymbol()} ••••` : v);
+
+  const slides: { key: string; label: string; value: string; foot: JSX.Element; to: string | null }[] = [
+    {
+      key: "saldo",
+      label: "Saldo disponível",
+      value: hidden ? `${currencySymbol()} ••••••` : animatedSaldo,
+      foot: (
+        <span className="flex items-center gap-2">
+          <span className="text-[13px] font-medium text-white/60 tabular-nums">
+            {isPositive ? "+" : "-"}{formatCurrency(Math.abs(changeAmount))}
+          </span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+              isPositive ? "bg-willo-green/20 text-willo-green" : "bg-red-500/20 text-red-400"
+            }`}
+          >
+            {isPositive ? "+" : "-"}{Math.abs(changePercent).toFixed(2)}%
+          </span>
+        </span>
+      ),
+      to: null,
+    },
+    {
+      key: "receitas",
+      label: "Receitas",
+      value: mask(animatedReceitas),
+      foot: (
+        <span className="flex items-center gap-1.5 text-[13px] text-white/50">
+          <ArrowDownLeft className="h-3.5 w-3.5 text-willo-green" strokeWidth={2.5} />
+          o que entrou em {monthLabel}
+        </span>
+      ),
+      to: "/detalhe/receitas",
+    },
+    {
+      key: "despesas",
+      label: "Despesas",
+      value: mask(animatedDespesas),
+      foot: (
+        <span className="flex items-center gap-1.5 text-[13px] text-white/50">
+          <ArrowUpRight className="h-3.5 w-3.5 text-red-400" strokeWidth={2.5} />
+          o que saiu em {monthLabel}
+        </span>
+      ),
+      to: "/detalhe/despesas",
+    },
+    {
+      key: "balanco",
+      label: "Balanço do mês",
+      value: hidden
+        ? `${currencySymbol()} ••••`
+        : `${balanco >= 0 ? "+" : "-"}${formatCurrency(Math.abs(balanco))}`,
+      foot: (
+        <span className="text-[13px] text-white/50">
+          {balanco >= 0 ? "sobrou" : "faltou"} em {monthLabel}
+        </span>
+      ),
+      to: null,
+    },
+  ];
+
+  const onTrackScroll = () => {
+    const el = trackRef.current;
+    if (!el || !el.clientWidth) return;
+    const i = Math.round(el.scrollLeft / el.clientWidth);
+    setSlide(Math.max(0, Math.min(slides.length - 1, i)));
+  };
+
+  const goToSlide = (i: number) => {
+    const el = trackRef.current;
+    if (el) el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
+  };
 
   return (
     <>
@@ -119,135 +206,136 @@ const BalanceHeroCard = ({
         </motion.div>
       )}
     </AnimatePresence>
+
     <div
       ref={heroRef}
-      className="relative -mx-4 px-4 pb-7"
+      className="relative -mx-4 px-4 pb-2"
       style={{ paddingTop: `calc(env(safe-area-inset-top, 0px) + ${14 + topInset}px)` }}
     >
-      {/* The balance sits on the page itself, lit from behind. The glow runs past the bottom of
-          the hero so the first cards overlap it and read as floating in front of the backdrop,
-          instead of the balance being yet another card. Solid blobs + blur, not soft radials —
-          a gradient that already fades out loses almost all of its energy to the blur. */}
-      <div className="pointer-events-none absolute inset-x-0 -top-10 -z-10 h-[760px] overflow-hidden">
-        {/* Lit-from-above wash */}
+      {/* Aurora behind the pills and the greeting. Masked to an ellipse so every edge
+          dies into the page instead of showing the gradient's own corners. */}
+      <div className="pointer-events-none absolute inset-x-0 top-[18px] -z-10 h-[320px]">
         <div
-          className="absolute inset-0"
-          style={{ background: "linear-gradient(180deg, rgba(88,86,104,0.58) 0%, rgba(50,49,62,0.32) 30%, transparent 58%)" }}
-        />
-        {/* Main pool of light behind the balance */}
-        <div
-          className="absolute left-1/2 top-[90px] h-[330px] w-[440px] -translate-x-1/2 rounded-full blur-[95px]"
-          style={{ background: "rgba(112,110,132,0.62)" }}
-        />
-        {/* Cool accent, top right */}
-        <div
-          className="absolute right-[-18%] top-[-30px] h-[260px] w-[260px] rounded-full blur-[80px]"
-          style={{ background: "rgba(116,110,200,0.42)" }}
-        />
-        {/* Brand accent, lower left — close to where the cards begin */}
-        <div
-          className="absolute left-[-18%] top-[300px] h-[280px] w-[300px] rounded-full blur-[85px]"
-          style={{ background: "rgba(200,243,109,0.17)" }}
-        />
-        {/* Dies into the page so the cards below sit on true black */}
-        <div
-          className="absolute inset-x-0 bottom-0 h-[300px]"
-          style={{ background: "linear-gradient(180deg, transparent 0%, rgba(8,8,8,0.78) 58%, #070707 100%)" }}
-        />
-      </div>
-
-      {/* Who is signed in and the bell live in the page header now, above the pills */}
-      <div className="relative mb-4 flex items-center justify-between gap-3">
-        <button
-          onClick={() => navigate("/configuracoes")}
-          className="flex min-w-0 items-center gap-2.5 active:opacity-70"
-          aria-label="Perfil"
+          className="absolute inset-x-4 inset-y-0"
+          style={{
+            WebkitMaskImage: "radial-gradient(ellipse 80% 70% at 50% 48%, #000 40%, transparent 84%)",
+            maskImage: "radial-gradient(ellipse 80% 70% at 50% 48%, #000 40%, transparent 84%)",
+          }}
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[14px] font-bold text-white">
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
-            ) : initial ? (
-              initial
-            ) : (
-              <User className="h-4 w-4 text-white/80" />
-            )}
-          </span>
-          <motion.span
-            initial={{ opacity: 0, x: -6 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.12, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="min-w-0 truncate text-[16px] font-semibold tracking-tight text-white"
-          >
-            {profile?.display_name?.split(" ")[0] ?? ""}
-          </motion.span>
-        </button>
-        <div className="relative shrink-0">
-          <button
-            onClick={() => setNotifOpen((v) => !v)}
-            className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white/85 transition-colors active:opacity-70"
-            aria-label="Notificações"
-          >
-            <Bell className="h-[18px] w-[18px]" />
-            {unreadCount > 0 && <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-willo-green ring-2 ring-[#1c1c1c]" />}
-          </button>
-          <NotificationsPanel open={notifOpen} onClose={() => { setNotifOpen(false); refresh(); }} />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(180deg, #1E7BFF 0%, #3D62F0 18%, #7B3BD6 34%, #C32A66 52%, #D9452C 68%, #D9A62A 84%, #93D13C 100%)",
+              filter: "blur(46px)",
+              opacity: 0.95,
+            }}
+          />
         </div>
       </div>
 
-      <div className="relative mb-5">
+      {/* Avatar alone on the left; hide-values, notifications and the assistant on the right */}
+      <div className="relative flex items-center justify-between gap-2">
+        <button
+          onClick={() => navigate("/configuracoes")}
+          className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/10 text-[15px] font-bold text-white active:opacity-70"
+          aria-label="Perfil"
+        >
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+          ) : initial ? (
+            initial
+          ) : (
+            <User className="h-[18px] w-[18px] text-white/80" />
+          )}
+        </button>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            onClick={() => setHidden((v) => !v)}
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.10] bg-white/[0.07] text-white/85 backdrop-blur-xl active:opacity-70"
+            aria-label={hidden ? "Mostrar valores" : "Ocultar valores"}
+          >
+            {hidden ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
+          </button>
+
+          <div className="relative">
+            <button
+              onClick={() => setNotifOpen((v) => !v)}
+              className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.10] bg-white/[0.07] text-white/85 backdrop-blur-xl active:opacity-70"
+              aria-label="Notificações"
+            >
+              <Bell className="h-[18px] w-[18px]" />
+              {unreadCount > 0 && (
+                <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-willo-green ring-2 ring-black" />
+              )}
+            </button>
+            <NotificationsPanel open={notifOpen} onClose={() => { setNotifOpen(false); refresh(); }} />
+          </div>
+
+          <button
+            onClick={() => toast("O assistente da Willo chega em breve")}
+            className="flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-willo-green pl-3.5 pr-3 text-[14px] font-bold text-[#0B0B0B] active:opacity-80"
+          >
+            Willo IA
+            <Sparkles className="h-[17px] w-[17px]" strokeWidth={2.2} />
+          </button>
+        </div>
+      </div>
+
+      {/* Section pills, sitting on the aurora */}
+      <div className="relative mt-6">
         <HomeSectionTabs />
       </div>
 
-      <div className="relative flex items-center justify-between gap-3">
-        <p className="text-[12px] text-white/50">Saldo disponível</p>
-        <MonthSelector selectedMonth={selectedMonth} selectedYear={selectedYear} onMonthChange={onMonthChange} />
-      </div>
-      <div className="relative flex items-center justify-between mt-2 gap-3">
-        <p className="text-[34px] font-extrabold text-white tracking-tight tabular-nums leading-none truncate">
-          {hidden ? `${currencySymbol()} ••••••` : animatedSaldo}
-        </p>
-        <button
-          onClick={() => setHidden((v) => !v)}
-          className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-white/70 shrink-0"
-          aria-label={hidden ? "Mostrar saldo" : "Ocultar saldo"}
-        >
-          {hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-        </button>
-      </div>
+      {/* The greeting carries the name, so the avatar needs no label beside it */}
+      <motion.h1
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="relative mt-[88px] truncate text-[30px] font-normal leading-tight tracking-tight text-white"
+      >
+        {greeting}{firstName ? `, ${firstName}` : ""}
+      </motion.h1>
 
-      <div className="relative flex items-center gap-2 mt-2.5">
-        <span className="text-[13px] font-medium text-white/60">
-          {isPositive ? "+" : "-"}{formatCurrency(Math.abs(changeAmount))}
-        </span>
-        <span
-          className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-            isPositive ? "bg-willo-green/20 text-willo-green" : "bg-red-500/20 text-red-400"
-          }`}
-        >
-          {isPositive ? "+" : "-"}{Math.abs(changePercent).toFixed(2)}%
-        </span>
-      </div>
+      {/* The month's figures, one per page */}
+      <div className="relative mt-5 overflow-hidden rounded-[26px] border border-white/[0.08] bg-[#141416]">
+        <div className="absolute right-4 top-4 z-10">
+          <MonthSelector selectedMonth={selectedMonth} selectedYear={selectedYear} onMonthChange={onMonthChange} />
+        </div>
 
-      {/* Receitas / Despesas — inline with the balance, no separate cards */}
-      <div className="relative mt-4 pt-4 border-t border-white/[0.08] flex items-stretch">
-        {[
-          { label: "Receitas", value: animatedReceitas, to: "/detalhe/receitas", Icon: ArrowDownLeft, iconCls: "text-willo-green" },
-          { label: "Despesas", value: animatedDespesas, to: "/detalhe/despesas", Icon: ArrowUpRight, iconCls: "text-red-400" },
-        ].map(({ label, value, to, Icon, iconCls }, i) => (
-          <button
-            key={label}
-            onClick={() => navigate(to)}
-            className={`flex-1 min-w-0 text-left active:opacity-70 transition-opacity ${i === 1 ? "pl-4 border-l border-white/[0.08]" : "pr-4"}`}
-          >
-            <span className="flex items-center gap-1 text-[12px] text-white/45">
-              <Icon className={`w-3.5 h-3.5 ${iconCls}`} strokeWidth={2.5} />
-              {label}
-            </span>
-            <span className="block mt-1 text-[17px] font-bold text-white tracking-tight tabular-nums leading-tight truncate">
-              {hidden ? `${currencySymbol()} ••••` : value}
-            </span>
-          </button>
-        ))}
+        <div
+          ref={trackRef}
+          onScroll={onTrackScroll}
+          className="flex snap-x snap-mandatory overflow-x-auto scrollbar-none"
+        >
+          {slides.map((s) => (
+            <div
+              key={s.key}
+              onClick={() => s.to && navigate(s.to)}
+              className={`w-full shrink-0 snap-center px-5 pb-4 pt-5 ${s.to ? "cursor-pointer active:opacity-70" : ""}`}
+            >
+              <span className="block text-[12.5px] text-white/50">{s.label}</span>
+              <p className="mt-2 truncate text-[34px] font-extrabold leading-none tracking-tight text-white tabular-nums">
+                {s.value}
+              </p>
+              <div className="mt-2.5">{s.foot}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-center gap-1.5 pb-3.5">
+          {slides.map((s, i) => (
+            <button
+              key={s.key}
+              onClick={() => goToSlide(i)}
+              aria-label={s.label}
+              className={`h-1.5 rounded-full transition-all ${
+                i === slide ? "w-5 bg-white/85" : "w-1.5 bg-white/25"
+              }`}
+            />
+          ))}
+        </div>
       </div>
     </div>
     </>

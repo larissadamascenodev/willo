@@ -140,20 +140,7 @@
   .willo-bg {
     position: relative;
     isolation: isolate;
-    background: linear-gradient(180deg, #1c1c1c 0%, #0b0b0b 38%, #000000 100%);
-  }
-  .willo-bg::before {
-    content: "";
-    position: fixed;
-    top: -180px;
-    right: -220px;
-    width: 520px;
-    height: 520px;
-    z-index: -1;
-    pointer-events: none;
-    background: repeating-radial-gradient(circle at center, transparent 0 79px, rgba(255, 255, 255, 0.045) 79px 80px);
-    -webkit-mask-image: radial-gradient(circle at center, #000 30%, transparent 70%);
-    mask-image: radial-gradient(circle at center, #000 30%, transparent 70%);
+    background: #000000;
   }
 
   /* Primary pill button: white, black bold text, soft white glow. */

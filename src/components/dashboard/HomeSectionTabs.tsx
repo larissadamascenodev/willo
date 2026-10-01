@@ -28,10 +28,10 @@ export default function HomeSectionTabs({ activePath }: { activePath?: string })
             transition={{ delay: 0.05 + i * 0.04 }}
             onClick={() => navigate(tab.path)}
             className={cn(
-              "h-9 shrink-0 rounded-full border px-4 text-[14px] font-semibold transition-colors",
+              "h-10 shrink-0 rounded-full border px-5 text-[14.5px] font-semibold transition-colors",
               active
-                ? "border-white bg-white text-[#0B0B0B]"
-                : "border-white/[0.10] bg-white/[0.04] text-white/70 active:opacity-70",
+                ? "border-transparent bg-white text-[#0B0B0B] shadow-[0_6px_18px_-8px_rgba(0,0,0,0.9)]"
+                : "border-white/25 bg-white/[0.10] text-white backdrop-blur-xl active:opacity-70",
             )}
           >
             {tab.label}
