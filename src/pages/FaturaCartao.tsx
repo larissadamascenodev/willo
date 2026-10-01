@@ -126,7 +126,7 @@ const FaturaCartao = () => {
   const [confirmingImport, setConfirmingImport] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<EditTransactionData | null>(null);
   const [showEditCard, setShowEditCard] = useState(false);
-  const [tab, setTab] = useState<"geral" | "parcelados" | "avista">("geral");
+  const [tab, setTab] = useState<"geral" | "parcelados">("geral");
   const [entry, setEntry] = useState<CardEntry | null>(null);
 
   const currentInvoice = useMemo(
@@ -379,10 +379,12 @@ const FaturaCartao = () => {
 
   // Newest purchase first, which is how the statement itself reads
   const sortedItems = useMemo(
-    () => [...items].sort((a, b) => (b.transaction_date ?? "").localeCompare(a.transaction_date ?? "")),
+    () => [...items].sort((a, b) => {
+      const byDate = (b.transaction_date ?? "").localeCompare(a.transaction_date ?? "");
+      return byDate !== 0 ? byDate : (b.id ?? "").localeCompare(a.id ?? "");
+    }),
     [items],
   );
-  const singleItems = useMemo(() => sortedItems.filter((i) => i.total_installments <= 1), [sortedItems]);
   const installmentItems = useMemo<ActiveInstallmentItem[]>(
     () => sortedItems
       .filter((i) => i.total_installments > 1)
@@ -768,8 +770,8 @@ const FaturaCartao = () => {
       )}
 
       {/* ===== Geral / Parcelados / À vista ===== */}
-      <div className="mt-5 isolate grid grid-cols-3 rounded-full border border-white/[0.07] bg-[#141414] p-1">
-        {([["geral", "Geral"], ["parcelados", "Parcelados"], ["avista", "À vista"]] as const).map(([key, label]) => (
+      <div className="mt-5 isolate grid grid-cols-2 rounded-full border border-white/[0.07] bg-[#141414] p-1">
+        {([["geral", "Geral"], ["parcelados", "Compras parceladas"]] as const).map(([key, label]) => (
           <button key={key} type="button" onClick={() => setTab(key)} className="relative h-10 rounded-full text-[14px] font-medium">
             {tab === key && (
               <motion.span layoutId="fatura-tab" className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
@@ -857,30 +859,6 @@ const FaturaCartao = () => {
         </div>
       )}
 
-      {tab === "avista" && (
-        <div className="mt-4 space-y-2.5">
-          {singleItems.length === 0 ? (
-            <EmptyTab label="Nenhuma compra à vista nesta fatura." />
-          ) : (
-            singleItems.map((item, i) => (
-              <SinglePurchaseCard
-                key={item.id}
-                index={i}
-                customCats={[]}
-                card={card ? { name: card.name, color: card.color } : undefined}
-                onOpen={() => openEntry(item)}
-                item={{
-                  id: item.id,
-                  name: item.transaction_name,
-                  category: item.transaction_category,
-                  amount: Number(item.amount),
-                  date: item.transaction_date,
-                }}
-              />
-            ))
-          )}
-        </div>
-      )}
       </motion.div>
       </AnimatePresence>
 
