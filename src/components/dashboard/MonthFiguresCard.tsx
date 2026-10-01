@@ -1,10 +1,9 @@
-import { useRef, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useFormattedCounter } from "@/hooks/useAnimatedCounter";
 import { useHiddenValues } from "@/hooks/useHiddenValues";
 import MonthSelector from "./MonthSelector";
-import { currencySymbol, getCurrency } from "@/lib/currency";
+import { currencySymbol } from "@/lib/currency";
 
 interface Props {
   receitas: number;
@@ -14,123 +13,67 @@ interface Props {
   onMonthChange: (month: number, year: number) => void;
 }
 
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
-}
-
 const MONTH_NAMES = [
-  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
-  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
 /**
- * How the month moved, one figure per page: what came in, what went out, and what
- * is left of it. The balance itself is the headline up in the header, so it is not
- * repeated here.
+ * What came in and what went out, side by side with equal weight. Each half opens
+ * its own list. The balance between them is the headline of the Financeiro card,
+ * so it is not repeated here.
  */
-const MonthFiguresCard = ({
-  receitas, despesas, selectedMonth, selectedYear, onMonthChange,
-}: Props) => {
+const MonthFiguresCard = ({ receitas, despesas, selectedMonth, selectedYear, onMonthChange }: Props) => {
   const navigate = useNavigate();
   const hidden = useHiddenValues();
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [slide, setSlide] = useState(0);
-
   const animatedReceitas = useFormattedCounter(receitas);
   const animatedDespesas = useFormattedCounter(despesas);
-  const balanco = receitas - despesas;
-  const monthLabel = MONTH_NAMES[selectedMonth];
 
   const mask = (v: string) => (hidden ? `${currencySymbol()} ••••` : v);
 
-  const slides: { key: string; label: string; value: string; foot: JSX.Element; to: string | null }[] = [
+  const sides = [
     {
       key: "receitas",
       label: "Receitas",
       value: mask(animatedReceitas),
-      foot: (
-        <span className="flex items-center gap-1.5 text-[13px] text-white/50">
-          <ArrowDownLeft className="h-3.5 w-3.5 text-willo-green" strokeWidth={2.5} />
-          o que entrou em {monthLabel}
-        </span>
-      ),
       to: "/detalhe/receitas",
+      Icon: ArrowDownLeft,
+      iconCls: "text-willo-green",
     },
     {
       key: "despesas",
       label: "Despesas",
       value: mask(animatedDespesas),
-      foot: (
-        <span className="flex items-center gap-1.5 text-[13px] text-white/50">
-          <ArrowUpRight className="h-3.5 w-3.5 text-red-400" strokeWidth={2.5} />
-          o que saiu em {monthLabel}
-        </span>
-      ),
       to: "/detalhe/despesas",
-    },
-    {
-      key: "balanco",
-      label: "Balanço do mês",
-      value: hidden
-        ? `${currencySymbol()} ••••`
-        : `${balanco >= 0 ? "+" : "-"}${formatCurrency(Math.abs(balanco))}`,
-      foot: (
-        <span className="text-[13px] text-white/50">
-          {balanco >= 0 ? "sobrou" : "faltou"} em {monthLabel}
-        </span>
-      ),
-      to: null,
+      Icon: ArrowUpRight,
+      iconCls: "text-red-400",
     },
   ];
 
-  const onTrackScroll = () => {
-    const el = trackRef.current;
-    if (!el || !el.clientWidth) return;
-    const i = Math.round(el.scrollLeft / el.clientWidth);
-    setSlide(Math.max(0, Math.min(slides.length - 1, i)));
-  };
-
-  const goToSlide = (i: number) => {
-    const el = trackRef.current;
-    if (el) el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
-  };
-
   return (
-    <div className="relative overflow-hidden rounded-[26px] border border-white/[0.12] willo-glass">
-      <div className="absolute right-4 top-4 z-10">
+    <div className="rounded-[26px] border border-white/[0.12] willo-glass px-[18px] pb-[18px] pt-4">
+      <div className="mb-3.5 flex items-center justify-between gap-3">
+        <span className="text-[12.5px] text-white/50">{MONTH_NAMES[selectedMonth]}</span>
         <MonthSelector selectedMonth={selectedMonth} selectedYear={selectedYear} onMonthChange={onMonthChange} />
       </div>
 
-      <div
-        ref={trackRef}
-        onScroll={onTrackScroll}
-        className="flex snap-x snap-mandatory overflow-x-auto scrollbar-none"
-      >
-        {slides.map((s) => (
-          <div
-            key={s.key}
-            onClick={() => s.to && navigate(s.to)}
-            className={`w-full shrink-0 snap-center px-5 pb-4 pt-5 ${s.to ? "cursor-pointer active:opacity-70" : ""}`}
-          >
-            <span className="block text-[12.5px] text-white/50">{s.label}</span>
-            <p className="mt-2 truncate text-[34px] font-extrabold leading-none tracking-tight text-white tabular-nums">
-              {s.value}
-            </p>
-            <div className="mt-2.5">{s.foot}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-center gap-1.5 pb-3.5">
-        {slides.map((s, i) => (
+      <div className="flex items-stretch">
+        {sides.map(({ key, label, value, to, Icon, iconCls }, i) => (
           <button
-            key={s.key}
-            onClick={() => goToSlide(i)}
-            aria-label={s.label}
-            className={`h-1.5 rounded-full transition-all ${
-              i === slide ? "w-5 bg-white/85" : "w-1.5 bg-white/25"
+            key={key}
+            onClick={() => navigate(to)}
+            className={`min-w-0 flex-1 text-left active:opacity-70 ${
+              i === 0 ? "pr-4" : "border-l border-white/[0.10] pl-4"
             }`}
-          />
+          >
+            <span className="flex items-center gap-1.5 text-[12.5px] text-white/55">
+              <Icon className={`h-3.5 w-3.5 ${iconCls}`} strokeWidth={2.6} />
+              {label}
+            </span>
+            <span className="mt-1.5 block truncate text-[21px] font-extrabold leading-none tracking-tight text-white tabular-nums">
+              {value}
+            </span>
+          </button>
         ))}
       </div>
     </div>
