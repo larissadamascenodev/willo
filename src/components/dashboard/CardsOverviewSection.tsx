@@ -63,13 +63,13 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
         className="flex w-full items-center gap-3.5 rounded-[22px] border border-dashed border-white/[0.12] p-4 text-left active:opacity-70"
       >
         <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06]">
-          <CreditCard className="h-5 w-5 text-white/70" />
+          <CreditCard className="h-5 w-5 text-white/82" />
         </span>
         <span className="flex-1">
           <span className="block text-[15px] font-semibold text-white">Adicione um cartão de crédito</span>
-          <span className="block text-[12px] text-white/45">Acompanhe limite, faturas e parcelas</span>
+          <span className="block text-[12px] text-white/62">Acompanhe limite, faturas e parcelas</span>
         </span>
-        <Plus className="h-5 w-5 text-white/50" />
+        <Plus className="h-5 w-5 text-white/66" />
       </button>
     );
   }
@@ -84,16 +84,16 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
       className="block w-full rounded-[22px] border border-white/[0.12] willo-glass p-4 text-left active:scale-[0.99] transition-transform"
     >
       <div className="flex items-center justify-between">
-        <p className="text-[14px] text-white/50">Cartões de crédito</p>
-        <ChevronRight className="h-4 w-4 text-white/30" />
+        <p className="text-[14px] text-white/66">Cartões de crédito</p>
+        <ChevronRight className="h-4 w-4 text-white/45" />
       </div>
 
       <div className="mt-3 flex items-center gap-4">
         {/* Fatura atual */}
         <div className="min-w-0 flex-1">
-          <p className="whitespace-nowrap text-[11px] text-white/45">Fatura atual</p>
+          <p className="whitespace-nowrap text-[11px] text-white/62">Fatura atual</p>
           <p className="truncate whitespace-nowrap text-[22px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{fmt(summary.invoiceTotal)}</p>
-          <p className={`truncate whitespace-nowrap text-[11px] ${summary.allPaid ? "text-white/40" : "text-amber-300/90"}`}>
+          <p className={`truncate whitespace-nowrap text-[11px] ${summary.allPaid ? "text-white/56" : "text-amber-300/90"}`}>
             {summary.invoiceTotal === 0 ? "Sem fatura este mês" : summary.allPaid ? "Tudo pago" : summary.nextDue ? dueText(summary.nextDue, today) : ""}
           </p>
         </div>
@@ -115,9 +115,9 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
             </span>
           </div>
           <div>
-            <p className="whitespace-nowrap text-[11px] text-white/45">Limite livre</p>
+            <p className="whitespace-nowrap text-[11px] text-white/62">Limite livre</p>
             <p className="whitespace-nowrap text-[14px] font-bold text-white tabular-nums">{fmt(summary.available)}</p>
-            <p className="whitespace-nowrap text-[10px] text-white/35 tabular-nums">de {fmt(summary.limit)}</p>
+            <p className="whitespace-nowrap text-[10px] text-white/50 tabular-nums">de {fmt(summary.limit)}</p>
           </div>
         </div>
       </div>
@@ -131,11 +131,11 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
               <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: cardHex(card.color) }} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[14px] text-white">{card.name}</span>
-                <span className="block truncate whitespace-nowrap text-[11px] text-white/40 tabular-nums">
+                <span className="block truncate whitespace-nowrap text-[11px] text-white/56 tabular-nums">
                   {invoice?.isPaid ? "Fatura paga" : `Vence ${due.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`} · {fmt(available)} livre
                 </span>
               </span>
-              <span className={`shrink-0 whitespace-nowrap text-[14px] tabular-nums ${invoice?.isPaid ? "text-white/40 line-through" : "text-white"}`}>
+              <span className={`shrink-0 whitespace-nowrap text-[14px] tabular-nums ${invoice?.isPaid ? "text-white/56 line-through" : "text-white"}`}>
                 {fmt(invoice?.total ?? 0)}
               </span>
             </div>

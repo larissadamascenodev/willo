@@ -72,7 +72,7 @@ function MonthBars({ slots, values, selected, onSelect }: {
                   <span className={cn("block h-8 w-8 rounded-full border border-dashed", isSelected ? "border-white/70" : "border-white/25")} />
                 )}
               </div>
-              <span className={cn("mt-3 text-[12px] tabular-nums", isSelected ? "font-semibold text-white" : "text-white/45")}>{slot.label}</span>
+              <span className={cn("mt-3 text-[12px] tabular-nums", isSelected ? "font-semibold text-white" : "text-white/62")}>{slot.label}</span>
             </button>
           );
         })}
@@ -82,7 +82,7 @@ function MonthBars({ slots, values, selected, onSelect }: {
 }
 
 const EmptyState = ({ text }: { text: string }) => (
-  <div className="flex items-center gap-3 rounded-[20px] willo-glass px-4 py-4 text-[15px] text-white/45">
+  <div className="flex items-center gap-3 rounded-[20px] willo-glass px-4 py-4 text-[15px] text-white/62">
     <Clock className="h-5 w-5 shrink-0" />
     {text}
   </div>
@@ -123,7 +123,7 @@ const Cartoes = () => {
     <div className="mx-auto max-w-lg pb-28">
       {/* Nav */}
       <div className="flex h-11 items-center">
-        <button onClick={() => navigate(-1)} aria-label="Voltar" className="-ml-2 flex h-10 items-center text-white/70 active:opacity-60">
+        <button onClick={() => navigate(-1)} aria-label="Voltar" className="-ml-2 flex h-10 items-center text-white/82 active:opacity-60">
           <ChevronLeft className="h-7 w-7" strokeWidth={2.25} />
         </button>
       </div>
@@ -159,7 +159,7 @@ const Cartoes = () => {
           <InstallmentsOverview installments={filteredInstallments} cardById={cardById} currentKey={currentKey} />
         ) : (
           <>
-            <p className="text-[15px] text-white/50">Total em faturas em {MONTHS[selectedSlot.month - 1]}</p>
+            <p className="text-[15px] text-white/66">Total em faturas em {MONTHS[selectedSlot.month - 1]}</p>
             <p className="text-[38px] font-extrabold leading-tight tracking-tight text-white tabular-nums">
               {fmt(invoiceValues[invoiceSlots.findIndex((s) => s.key === selectedSlot.key)] ?? 0)}
             </p>
@@ -219,11 +219,11 @@ function InvoiceList({ invoices, cardById, onOpen }: {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[15px] font-medium text-white">{card.name}</span>
-              <span className={cn("block text-[12px]", inv.isPaid ? "text-white/40" : "text-amber-300/90")}>
+              <span className={cn("block text-[12px]", inv.isPaid ? "text-white/56" : "text-amber-300/90")}>
                 {inv.isPaid ? "Paga" : `Vence ${due.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`}
               </span>
             </span>
-            <span className={cn("text-[15px] font-semibold tabular-nums", inv.isPaid ? "text-white/45" : "text-white")}>{fmt(inv.total)}</span>
+            <span className={cn("text-[15px] font-semibold tabular-nums", inv.isPaid ? "text-white/62" : "text-white")}>{fmt(inv.total)}</span>
           </button>
         );
       })}
@@ -283,19 +283,19 @@ function InstallmentsOverview({ installments, cardById, currentKey }: {
 
   return (
     <div>
-      <p className="text-[15px] text-white/50">Parcelado no cartão a pagar</p>
+      <p className="text-[15px] text-white/66">Parcelado no cartão a pagar</p>
       <p className="text-[38px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{fmt(remainingTotal)}</p>
-      <p className="text-[15px] text-white/50">
+      <p className="text-[15px] text-white/66">
         {purchases.length} {purchases.length === 1 ? "compra parcelada" : "compras parceladas"}
       </p>
 
       <div className="mt-5 grid grid-cols-2 rounded-[22px] border border-white/[0.12] willo-glass py-3.5">
         <div className="px-4">
-          <p className="text-[12px] text-white/45">Por mês</p>
+          <p className="text-[12px] text-white/62">Por mês</p>
           <p className="text-[18px] font-bold text-white tabular-nums">{fmt(monthly)}</p>
         </div>
         <div className="border-l border-white/[0.12] px-4">
-          <p className="text-[12px] text-white/45">Livre das parcelas</p>
+          <p className="text-[12px] text-white/62">Livre das parcelas</p>
           <p className="text-[18px] font-bold text-white">{freeKey !== null ? keyLabel(freeKey + 1) : "—"}</p>
         </div>
       </div>
@@ -320,14 +320,14 @@ function InstallmentsOverview({ installments, cardById, currentKey }: {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-medium text-white">{p.name}</p>
-                  <p className="flex items-center gap-1.5 truncate text-[12px] text-white/40">
+                  <p className="flex items-center gap-1.5 truncate text-[12px] text-white/56">
                     {card && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: cardHex(card.color) }} />}
                     {card?.name ?? "Cartão"}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-[15px] font-semibold text-white tabular-nums">{fmt(p.amount)}</p>
-                  <p className="text-[11px] text-white/40">por mês</p>
+                  <p className="text-[11px] text-white/56">por mês</p>
                 </div>
               </div>
               <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
@@ -338,7 +338,7 @@ function InstallmentsOverview({ installments, cardById, currentKey }: {
                   transition={{ duration: 0.6, ease: "easeOut" }}
                 />
               </div>
-              <div className="mt-1.5 flex justify-between text-[12px] text-white/45 tabular-nums">
+              <div className="mt-1.5 flex justify-between text-[12px] text-white/62 tabular-nums">
                 <span>Parcela {p.current} de {p.total}</span>
                 <span>Faltam {fmt(p.amount * p.remaining)} · até {keyLabel(p.lastKey)}</span>
               </div>
@@ -357,9 +357,9 @@ function LimitsList({ cards }: { cards: OverviewCard[] }) {
 
   return (
     <div>
-      <p className="text-[15px] text-white/50">Limite disponível</p>
+      <p className="text-[15px] text-white/66">Limite disponível</p>
       <p className="text-[38px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{fmt(Math.max(totalLimit - totalUsed, 0))}</p>
-      <p className="text-[15px] text-white/50 tabular-nums">de {fmt(totalLimit)}</p>
+      <p className="text-[15px] text-white/66 tabular-nums">de {fmt(totalLimit)}</p>
 
       <div className="mt-6 space-y-2.5">
         {cards.map((c) => {
@@ -373,11 +373,11 @@ function LimitsList({ cards }: { cards: OverviewCard[] }) {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-medium text-white">{c.name}</p>
-                  {c.lastFour && <p className="text-[12px] text-white/40 tabular-nums">•••• {c.lastFour}</p>}
+                  {c.lastFour && <p className="text-[12px] text-white/56 tabular-nums">•••• {c.lastFour}</p>}
                 </div>
                 <p className="text-right">
                   <span className="block text-[15px] font-semibold text-white tabular-nums">{fmt(Math.max(c.limit - c.used, 0))}</span>
-                  <span className="block text-[11px] text-white/40">disponível</span>
+                  <span className="block text-[11px] text-white/56">disponível</span>
                 </p>
               </div>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.08]">
@@ -388,11 +388,11 @@ function LimitsList({ cards }: { cards: OverviewCard[] }) {
                   transition={{ duration: 0.6, ease: "easeOut" }}
                 />
               </div>
-              <div className="mt-1.5 flex justify-between text-[12px] text-white/45 tabular-nums">
+              <div className="mt-1.5 flex justify-between text-[12px] text-white/62 tabular-nums">
                 <span>{fmt(c.used)} usado</span>
                 <span>Limite {fmt(c.limit)}</span>
               </div>
-              <p className="mt-2 text-[12px] text-white/35">Fecha dia {c.closingDay} · vence dia {c.dueDay}</p>
+              <p className="mt-2 text-[12px] text-white/50">Fecha dia {c.closingDay} · vence dia {c.dueDay}</p>
             </div>
           );
         })}

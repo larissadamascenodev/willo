@@ -59,7 +59,7 @@ const SetupFixedExpenseStep = ({ onDone, onSkip }: Props) => {
         <h1 className="font-display font-extrabold text-[24px] leading-[1.2] text-white tracking-tight">
           Cadastre um gasto fixo
         </h1>
-        <p className="text-[14px] text-white/55 mt-2">
+        <p className="text-[14px] text-white/70 mt-2">
           Aluguel, assinaturas, contas... o Willo já conta com eles todo mês.
         </p>
       </motion.div>
@@ -76,14 +76,14 @@ const SetupFixedExpenseStep = ({ onDone, onSkip }: Props) => {
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoFocus
-          className="h-14 willo-glass border-white/[0.12] rounded-2xl text-[15px] text-white placeholder:text-white/40 px-5"
+          className="h-14 willo-glass border-white/[0.12] rounded-2xl text-[15px] text-white placeholder:text-white/56 px-5"
         />
         <Input
           placeholder="Valor mensal"
           type="number"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="h-14 willo-glass border-white/[0.12] rounded-2xl text-[15px] text-white placeholder:text-white/40 px-5"
+          className="h-14 willo-glass border-white/[0.12] rounded-2xl text-[15px] text-white placeholder:text-white/56 px-5"
         />
 
         <div className="flex flex-wrap gap-2">
@@ -115,7 +115,7 @@ const SetupFixedExpenseStep = ({ onDone, onSkip }: Props) => {
         <button
           type="button"
           onClick={onSkip}
-          className="w-full text-center text-[14px] text-white/55 transition-colors active:text-white"
+          className="w-full text-center text-[14px] text-white/70 transition-colors active:text-white"
         >
           Pular esta etapa
         </button>

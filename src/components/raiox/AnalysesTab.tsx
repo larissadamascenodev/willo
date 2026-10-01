@@ -68,7 +68,7 @@ function CategoriesAndLeaks({ data }: { data: RaioXData }) {
           {escaping > 0 ? "Escapando por mês" : "Tudo sob controle"}
         </p>
         <p className="mt-1 truncate text-[34px] font-extrabold leading-none tracking-tight text-white tabular-nums">{brl(escaping)}</p>
-        <p className="mt-1.5 text-[12.5px] leading-snug text-white/60">
+        <p className="mt-1.5 text-[12.5px] leading-snug text-white/74">
           {escaping > 0
             ? `${brl(excessTotal)} em gastos acima da sua média e ${brl(monthlyDrains)} em cobranças recorrentes`
             : "Nenhum gasto acima da média nem cobrança esquecida neste mês"}
@@ -85,19 +85,19 @@ function CategoriesAndLeaks({ data }: { data: RaioXData }) {
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-red-400">Vilã do mês 😈</p>
               <p className="truncate text-[18px] font-bold text-white">{villain.name}</p>
-              <p className="truncate text-[12px] text-white/55 tabular-nums">
+              <p className="truncate text-[12px] text-white/70 tabular-nums">
                 {brl(villain.spent)} · {Math.round((villain.spent / (totalSpent || 1)) * 100)}% de tudo que você gastou
               </p>
             </div>
           </div>
-          <p className="mt-3 text-[13px] leading-snug text-white/70">{villain.diagnosis}</p>
+          <p className="mt-3 text-[13px] leading-snug text-white/82">{villain.diagnosis}</p>
         </Card>
       )}
 
       {/* Categories running above the usual */}
       {overspending.length > 0 && (
         <Card className="mb-2 p-4">
-          <p className="mb-3 text-[12px] text-white/45">Gastando acima do seu normal</p>
+          <p className="mb-3 text-[12px] text-white/62">Gastando acima do seu normal</p>
           <div className="space-y-4">
             {overspending.map((c) => {
               const Icon = getCategoryIcon(c.name);
@@ -111,7 +111,7 @@ function CategoriesAndLeaks({ data }: { data: RaioXData }) {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[14.5px] text-white">{c.name}</p>
-                      <p className="truncate text-[11.5px] text-white/45 tabular-nums">{brl(c.spent)} este mês · média {brl(c.average)}</p>
+                      <p className="truncate text-[11.5px] text-white/62 tabular-nums">{brl(c.spent)} este mês · média {brl(c.average)}</p>
                     </div>
                     <span className="shrink-0 rounded-full bg-red-400/15 px-2.5 py-1 text-[12px] font-bold text-red-400 tabular-nums">
                       +{brl(c.excess)}
@@ -119,13 +119,13 @@ function CategoriesAndLeaks({ data }: { data: RaioXData }) {
                   </div>
                   <div className="ml-12 mt-2 space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="w-10 shrink-0 text-[10px] text-white/35">média</span>
+                      <span className="w-10 shrink-0 text-[10px] text-white/50">média</span>
                       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
                         <div className="h-full rounded-full bg-white/30" style={{ width: `${(c.average / scale) * 100}%` }} />
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="w-10 shrink-0 text-[10px] text-white/55">agora</span>
+                      <span className="w-10 shrink-0 text-[10px] text-white/70">agora</span>
                       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
                         <motion.div
                           className="h-full rounded-full"
@@ -148,7 +148,7 @@ function CategoriesAndLeaks({ data }: { data: RaioXData }) {
       {/* Recurring drains */}
       {drains.length > 0 && (
         <Card className="mb-2 p-4">
-          <p className="mb-2.5 text-[12px] text-white/45">Cobranças que passam despercebidas</p>
+          <p className="mb-2.5 text-[12px] text-white/62">Cobranças que passam despercebidas</p>
           <div className="space-y-3">
             {drains.slice(0, 5).map((d) => (
               <div key={d.id} className="flex items-start gap-3">
@@ -157,7 +157,7 @@ function CategoriesAndLeaks({ data }: { data: RaioXData }) {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14px] text-white">{d.title}</p>
-                  <p className="text-[12px] leading-snug text-white/45">{d.detail}</p>
+                  <p className="text-[12px] leading-snug text-white/62">{d.detail}</p>
                 </div>
               </div>
             ))}
@@ -215,12 +215,12 @@ function CashFlowReading({ data }: { data: RaioXData }) {
       <Card className="p-5">
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[12px] text-white/45">Comprometido do que entrou</p>
+            <p className="text-[12px] text-white/62">Comprometido do que entrou</p>
             <p className={cn("truncate text-[32px] font-extrabold leading-tight tracking-tight tabular-nums", burn >= 1 ? "text-red-400" : burn >= 0.85 ? "text-amber-300" : "text-white")}>
               {Math.round(Math.min(burn, 9.99) * 100)}%
             </p>
           </div>
-          <div className="shrink-0 text-right text-[12px] text-white/45">
+          <div className="shrink-0 text-right text-[12px] text-white/62">
             Resultado do mês
             <span className={cn("block text-[16px] font-bold tabular-nums", f.net < 0 ? "text-red-400" : "text-willo-green")}>{brl(f.net)}</span>
           </div>
@@ -235,14 +235,14 @@ function CashFlowReading({ data }: { data: RaioXData }) {
             transition={{ duration: 0.6 }}
           />
         </div>
-        <div className="mt-2 flex justify-between text-[11.5px] text-white/45 tabular-nums">
+        <div className="mt-2 flex justify-between text-[11.5px] text-white/62 tabular-nums">
           <span>Entrou {brl(f.income)}</span>
           <span>Saiu {brl(f.expense)}</span>
         </div>
 
         <div className="mt-4 space-y-1.5 border-t border-white/[0.06] pt-3">
           {readings.map((r, i) => (
-            <p key={i} className="flex gap-2 text-[13px] leading-snug text-white/70">
+            <p key={i} className="flex gap-2 text-[13px] leading-snug text-white/82">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-white/35" />
               {r}
             </p>
@@ -271,7 +271,7 @@ function Lessons({ data }: { data: RaioXData }) {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ delay: i * 0.05 }}
-            className="flex gap-2.5 text-[13.5px] leading-snug text-white/75"
+            className="flex gap-2.5 text-[13.5px] leading-snug text-white/85"
           >
             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-white/40" />
             {l}

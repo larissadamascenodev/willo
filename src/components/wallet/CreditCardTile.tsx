@@ -118,25 +118,25 @@ export const CreditCardTile = ({ card, idx, invoiceInfo, navigate, extraClass }:
           <div className="min-w-0 flex-1">
             <p className="text-[15px] font-semibold text-white leading-tight truncate">{card.name}</p>
             {card.last_four_digits && (
-              <p className="text-[12px] text-white/40 tabular-nums mt-0.5">•••• {card.last_four_digits}</p>
+              <p className="text-[12px] text-white/56 tabular-nums mt-0.5">•••• {card.last_four_digits}</p>
             )}
           </div>
-          <ChevronRight className="w-4 h-4 text-white/25 shrink-0" />
+          <ChevronRight className="w-4 h-4 text-white/38 shrink-0" />
         </div>
 
         {/* Invoice highlight */}
         <div className="flex items-baseline justify-between mb-3">
           <div>
-            <p className="text-[12px] text-white/45 leading-none mb-1.5">Fatura em aberto</p>
+            <p className="text-[12px] text-white/62 leading-none mb-1.5">Fatura em aberto</p>
             <p className={cn(
               "text-[24px] font-extrabold tabular-nums leading-none tracking-tight",
-              invoiceAmount > 0 ? "text-white" : "text-white/30"
+              invoiceAmount > 0 ? "text-white" : "text-white/45"
             )}>
               {formatCurrency(invoiceAmount)}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[12px] text-white/45 leading-none mb-1.5">Disponível</p>
+            <p className="text-[12px] text-white/62 leading-none mb-1.5">Disponível</p>
             <p className={cn("text-sm font-bold tabular-nums leading-none", available > 0 ? "text-willo-green" : "text-destructive")}>
               {formatCurrency(available)}
             </p>
@@ -154,10 +154,10 @@ export const CreditCardTile = ({ card, idx, invoiceInfo, navigate, extraClass }:
             />
           </div>
           <div className="flex items-center justify-between mt-1">
-            <span className="text-[11px] text-white/40 tabular-nums">
+            <span className="text-[11px] text-white/56 tabular-nums">
               {formatCurrency(usedValue)} / {formatCurrency(limitValue)}
             </span>
-            <span className="text-[11px] font-semibold tabular-nums text-white/50">
+            <span className="text-[11px] font-semibold tabular-nums text-white/66">
               {usedPct.toFixed(0)}%
             </span>
           </div>
@@ -165,8 +165,8 @@ export const CreditCardTile = ({ card, idx, invoiceInfo, navigate, extraClass }:
 
         {/* Footer: contextual date */}
         <div className="flex items-center gap-2 pt-2.5 border-t border-white/[0.06]">
-          <CalendarClock className="w-3.5 h-3.5 text-white/35 shrink-0" />
-          <span className={cn("text-[12px] tabular-nums", status.isClosed ? "text-amber-300 font-semibold" : "text-white/50")}>
+          <CalendarClock className="w-3.5 h-3.5 text-white/50 shrink-0" />
+          <span className={cn("text-[12px] tabular-nums", status.isClosed ? "text-amber-300 font-semibold" : "text-white/66")}>
             {status.label}
           </span>
         </div>

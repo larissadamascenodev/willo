@@ -78,7 +78,7 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card,
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[15px] font-semibold text-white">{item.name}</p>
-            <p className={`flex items-center gap-1.5 truncate text-[12px] ${item.isOverdue ? "text-red-400" : "text-white/45"}`}>
+            <p className={`flex items-center gap-1.5 truncate text-[12px] ${item.isOverdue ? "text-red-400" : "text-white/62"}`}>
               {item.isOverdue ? (
                 <AlertTriangle className="h-3 w-3 shrink-0" />
               ) : isCard ? (
@@ -92,16 +92,16 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card,
           </div>
           <div className="shrink-0 text-right">
             <p className="text-[15px] font-bold text-white tabular-nums">{formatCurrency(item.amount)}</p>
-            <p className="text-[11px] text-white/40 tabular-nums">de {formatCurrency(total)}</p>
+            <p className="text-[11px] text-white/56 tabular-nums">de {formatCurrency(total)}</p>
           </div>
         </div>
 
         {/* Installment track */}
         <div className="mt-2.5 flex items-baseline justify-between">
-          <p className="text-[12px] text-white/55">
+          <p className="text-[12px] text-white/70">
             Parcela <span className="font-semibold text-white">{item.installment_current}</span> de {item.installments}
           </p>
-          <p className="text-[11px] text-white/40">
+          <p className="text-[11px] text-white/56">
             {remaining} {remaining === 1 ? "restante" : "restantes"}
           </p>
         </div>
@@ -122,7 +122,7 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card,
           </div>
         )}
 
-        <div className="mt-2 flex items-center justify-between text-[11px] text-white/45 tabular-nums">
+        <div className="mt-2 flex items-center justify-between text-[11px] text-white/62 tabular-nums">
           <span>
             Falta {formatCurrency(item.amount * remaining)} · {next ? `próxima ${next.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}` : `até ${monthLabel(end)}`}
           </span>
@@ -132,7 +132,7 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card,
             onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
             className="-m-2 flex h-8 w-8 items-center justify-center rounded-full active:bg-white/[0.06]"
           >
-            <ChevronDown className={`h-4 w-4 text-white/40 transition-transform ${open ? "rotate-180" : ""}`} />
+            <ChevronDown className={`h-4 w-4 text-white/56 transition-transform ${open ? "rotate-180" : ""}`} />
           </span>
         </div>
       </button>
@@ -167,8 +167,8 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card,
                       >
                         {isPaid && <Check className="h-3 w-3" strokeWidth={3} />}
                       </span>
-                      <span className={`w-9 shrink-0 text-[12px] tabular-nums ${isPaid ? "text-white/35" : "text-white/55"}`}>{s.n}ª</span>
-                      <span className={`min-w-0 flex-1 truncate whitespace-nowrap text-[14px] capitalize ${isPaid ? "text-white/40" : "text-white"}`}>
+                      <span className={`w-9 shrink-0 text-[12px] tabular-nums ${isPaid ? "text-white/50" : "text-white/70"}`}>{s.n}ª</span>
+                      <span className={`min-w-0 flex-1 truncate whitespace-nowrap text-[14px] capitalize ${isPaid ? "text-white/56" : "text-white"}`}>
                         {month} {s.date.getFullYear()}
                       </span>
                       {isCurrent && (
@@ -176,7 +176,7 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card,
                           {item.isOverdue ? "Em atraso" : "Este mês"}
                         </span>
                       )}
-                      <span className={`shrink-0 text-right text-[14px] tabular-nums ${isPaid ? "text-white/35 line-through" : "font-medium text-white"}`}>
+                      <span className={`shrink-0 text-right text-[14px] tabular-nums ${isPaid ? "text-white/50 line-through" : "font-medium text-white"}`}>
                         {formatCurrency(item.amount)}
                       </span>
                     </div>
@@ -187,7 +187,7 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card,
                 <button
                   type="button"
                   onClick={() => setShowAll((v) => !v)}
-                  className="mt-2 flex h-9 w-full items-center justify-center gap-1 rounded-full bg-white/[0.05] text-[12px] font-medium text-white/70 active:opacity-70"
+                  className="mt-2 flex h-9 w-full items-center justify-center gap-1 rounded-full bg-white/[0.05] text-[12px] font-medium text-white/82 active:opacity-70"
                 >
                   {showAll ? "Mostrar menos" : `Ver todas as ${schedule.length} parcelas`}
                   <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAll ? "rotate-180" : ""}`} />

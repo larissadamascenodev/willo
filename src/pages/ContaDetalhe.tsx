@@ -186,7 +186,7 @@ const ContaDetalhe = () => {
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate("/gestao")}
-          className="-ml-2 flex h-9 items-center gap-0.5 text-sm text-white/70 hover:text-white active:opacity-60 transition-colors"
+          className="-ml-2 flex h-9 items-center gap-0.5 text-sm text-white/82 hover:text-white active:opacity-60 transition-colors"
         >
           <ChevronLeft className="w-6 h-6" strokeWidth={2.25} />
           Voltar

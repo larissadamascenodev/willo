@@ -764,7 +764,7 @@ const PageNav = ({ onBack, children }: { onBack: () => void; children: React.Rea
   <div className="flex items-center justify-between gap-3">
     <button
       onClick={onBack}
-      className="-ml-2 flex h-10 items-center text-white/70 hover:text-white active:opacity-60 transition-colors"
+      className="-ml-2 flex h-10 items-center text-white/82 hover:text-white active:opacity-60 transition-colors"
       aria-label="Voltar"
     >
       <ChevronLeft className="h-7 w-7" strokeWidth={2.25} />
@@ -984,10 +984,10 @@ const CategoryDetail = ({
           </div>
           <div className="min-w-0">
             <h2 className="text-[20px] font-bold tracking-tight text-white truncate">{category.name}</h2>
-            <p className="text-[13px] text-white/45">{category.percentage}% dos gastos de {monthLabel}</p>
+            <p className="text-[13px] text-white/62">{category.percentage}% dos gastos de {monthLabel}</p>
           </div>
         </div>
-        <p className="mt-5 text-[13px] text-white/45">Total em {monthLabel}</p>
+        <p className="mt-5 text-[13px] text-white/62">Total em {monthLabel}</p>
         <p className="text-[36px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{money(category.amount)}</p>
         <div className="mt-2 flex flex-wrap gap-2">
           <span className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1.5 text-[12px] text-white/80 tabular-nums">
@@ -1007,7 +1007,7 @@ const CategoryDetail = ({
           { label: "Por dia", value: money(dailyCost) },
         ].map((stat) => (
           <div key={stat.label} className="px-3 text-center">
-            <p className="text-[11px] text-white/45">{stat.label}</p>
+            <p className="text-[11px] text-white/62">{stat.label}</p>
             <p className="mt-0.5 text-[15px] font-semibold text-white tabular-nums truncate">{stat.value}</p>
           </div>
         ))}
@@ -1020,13 +1020,13 @@ const CategoryDetail = ({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[14px] font-semibold text-white">Limite mensal</p>
-                <p className="text-[12px] text-white/45 tabular-nums">{money(category.amount)} de {money(limit)}</p>
+                <p className="text-[12px] text-white/62 tabular-nums">{money(category.amount)} de {money(limit)}</p>
               </div>
               <div className="text-right">
                 <p className={`text-[17px] font-bold tabular-nums ${category.amount > limit ? "text-red-400" : "text-white"}`}>
                   {money(Math.abs(limit - category.amount))}
                 </p>
-                <p className="text-[11px] text-white/45">{category.amount > limit ? "acima do limite" : "ainda pode gastar"}</p>
+                <p className="text-[11px] text-white/62">{category.amount > limit ? "acima do limite" : "ainda pode gastar"}</p>
               </div>
             </div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.08]">
@@ -1037,7 +1037,7 @@ const CategoryDetail = ({
                 transition={{ duration: 0.6, ease: "easeOut" }}
               />
             </div>
-            <button onClick={onEditLimit} className="mt-3 text-[13px] font-medium text-white/60 active:opacity-60">
+            <button onClick={onEditLimit} className="mt-3 text-[13px] font-medium text-white/74 active:opacity-60">
               Editar limite
             </button>
           </>
@@ -1048,7 +1048,7 @@ const CategoryDetail = ({
             </span>
             <span className="flex-1">
               <span className="block text-[15px] font-medium text-white">Definir limite para {category.name}</span>
-              <span className="block text-[12px] text-white/45">Acompanhe quanto ainda pode gastar no mês</span>
+              <span className="block text-[12px] text-white/62">Acompanhe quanto ainda pode gastar no mês</span>
             </span>
           </button>
         )}
@@ -1060,12 +1060,12 @@ const CategoryDetail = ({
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[14px] font-semibold text-white">Despesa fixa</p>
-              <p className="text-[12px] text-white/45">{fixedItems.map((f) => f.name).join(", ")}</p>
+              <p className="text-[12px] text-white/62">{fixedItems.map((f) => f.name).join(", ")}</p>
             </div>
             <div className="text-right">
-              <p className="text-[11px] text-white/45">Até dezembro</p>
+              <p className="text-[11px] text-white/62">Até dezembro</p>
               <p className="text-[15px] font-semibold text-white tabular-nums">{money(fixedMonthly * remainingMonths.length)}</p>
-              <p className="text-[11px] text-white/35 tabular-nums">{money(fixedMonthly * 12)}/ano</p>
+              <p className="text-[11px] text-white/50 tabular-nums">{money(fixedMonthly * 12)}/ano</p>
             </div>
           </div>
           <div className="mt-3 divide-y divide-white/[0.06]">
@@ -1079,12 +1079,12 @@ const CategoryDetail = ({
                   {m.status === "pago" && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className={`text-[14px] ${m.status === "pago" ? "text-white/55" : "text-white"}`}>{m.label}</p>
-                  <p className="text-[12px] text-white/40">
+                  <p className={`text-[14px] ${m.status === "pago" ? "text-white/70" : "text-white"}`}>{m.label}</p>
+                  <p className="text-[12px] text-white/56">
                     {m.status === "pago" ? "Pago" : m.status === "pendente" ? "Pendente este mês" : "Previsto"}
                   </p>
                 </div>
-                <p className={`text-[14px] font-semibold tabular-nums ${m.status === "pago" ? "text-white/55 line-through decoration-white/30" : "text-white"}`}>
+                <p className={`text-[14px] font-semibold tabular-nums ${m.status === "pago" ? "text-white/70 line-through decoration-white/30" : "text-white"}`}>
                   {money(fixedMonthly)}
                 </p>
               </div>
@@ -1093,7 +1093,7 @@ const CategoryDetail = ({
           {remainingMonths.length > 3 && (
             <button
               onClick={() => setShowAllMonths((v) => !v)}
-              className="mt-1 flex w-full items-center justify-center gap-1 pt-2 text-[13px] font-medium text-white/70 active:opacity-60"
+              className="mt-1 flex w-full items-center justify-center gap-1 pt-2 text-[13px] font-medium text-white/82 active:opacity-60"
             >
               {showAllMonths ? "Mostrar menos" : `Ver até dezembro (${remainingMonths.length - 3} meses)`}
               {showAllMonths ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -1111,7 +1111,7 @@ const CategoryDetail = ({
               <div key={`${t.id}-${t.date}`} className="flex items-center gap-3 py-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14px] text-white">{t.name}</p>
-                  <p className="text-[12px] text-white/40">
+                  <p className="text-[12px] text-white/56">
                     {new Date(t.date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
                     {" · "}
                     {t.status === "pago" ? "Pago" : "Pendente"}
@@ -1765,7 +1765,7 @@ const AnalyticsCategorias = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-[16px] font-semibold text-white">Limites por categoria</p>
-                      <p className="text-[12px] text-white/45">Quanto você ainda pode gastar em cada uma</p>
+                      <p className="text-[12px] text-white/62">Quanto você ainda pode gastar em cada uma</p>
                     </div>
                     <button
                       onClick={() => setLimitSheet({ open: true, category: null })}
@@ -1775,7 +1775,7 @@ const AnalyticsCategorias = () => {
                     </button>
                   </div>
                   {activeLimits.length === 0 ? (
-                    <p className="mt-4 rounded-[16px] bg-white/[0.04] px-3.5 py-3 text-[13px] text-white/50">
+                    <p className="mt-4 rounded-[16px] bg-white/[0.04] px-3.5 py-3 text-[13px] text-white/66">
                       Nenhum limite ainda. Crie um para acompanhar quanto falta em cada categoria.
                     </p>
                   ) : (
@@ -1786,7 +1786,7 @@ const AnalyticsCategorias = () => {
                         const left = lim.limit_amount - spent;
                         const Icon = getCategoryIcon(lim.category, customCats);
                         const hex = getCategoryHexColor(lim.category, customCats);
-                        const tone = left < 0 ? "text-red-400" : ratio >= 0.8 ? "text-amber-300" : "text-white/60";
+                        const tone = left < 0 ? "text-red-400" : ratio >= 0.8 ? "text-amber-300" : "text-white/74";
                         const bar = left < 0 ? "bg-red-400" : ratio >= 0.8 ? "bg-amber-300" : "bg-white";
                         return (
                           <button key={lim.id} onClick={() => setLimitSheet({ open: true, category: lim.category })} className="block w-full text-left active:opacity-70">
@@ -1796,7 +1796,7 @@ const AnalyticsCategorias = () => {
                               </span>
                               <span className="min-w-0 flex-1">
                                 <span className="block truncate text-[14px] text-white">{lim.category}</span>
-                                <span className="block text-[11px] text-white/40 tabular-nums">{fmt(spent)} de {fmt(lim.limit_amount)}</span>
+                                <span className="block text-[11px] text-white/56 tabular-nums">{fmt(spent)} de {fmt(lim.limit_amount)}</span>
                               </span>
                               <span className={`text-right text-[13px] font-semibold tabular-nums ${tone}`}>
                                 {left < 0 ? `${fmt(-left)} acima` : `${fmt(left)} livre`}

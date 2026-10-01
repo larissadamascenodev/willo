@@ -90,7 +90,7 @@ const ProximosEventos = memo(({ events, selectedMonth, selectedYear, onVerTodos,
 
         {/* Content */}
         <div className="min-w-0 flex-1">
-          <p className={`truncate text-[15px] font-medium ${isPaid ? "text-white/45" : "text-white"}`}>{ev.name}</p>
+          <p className={`truncate text-[15px] font-medium ${isPaid ? "text-white/62" : "text-white"}`}>{ev.name}</p>
           <p className="text-[12px]" style={{ color: `hsl(${a} / 0.85)` }}>
             {getStatusLabel(ev.status, ev.type)}
           </p>
@@ -98,8 +98,8 @@ const ProximosEventos = memo(({ events, selectedMonth, selectedYear, onVerTodos,
 
         {/* Amount + date */}
         <div className="shrink-0 text-right">
-          <p className={`text-[15px] font-semibold tabular-nums ${isPaid ? "text-white/45" : "text-white"}`}>{fmt(ev.amount)}</p>
-          <p className="text-[12px] text-white/40">{fmtDate(ev._date)}</p>
+          <p className={`text-[15px] font-semibold tabular-nums ${isPaid ? "text-white/62" : "text-white"}`}>{fmt(ev.amount)}</p>
+          <p className="text-[12px] text-white/56">{fmtDate(ev._date)}</p>
         </div>
       </motion.div>
     );
@@ -109,7 +109,7 @@ const ProximosEventos = memo(({ events, selectedMonth, selectedYear, onVerTodos,
     <div className="rounded-[22px] border border-white/[0.12] willo-glass overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 pt-4">
-        <CalendarDays className="h-4 w-4 text-white/60" />
+        <CalendarDays className="h-4 w-4 text-white/74" />
         <h2 className="text-[16px] font-semibold text-white">Próximos eventos</h2>
       </div>
 
@@ -119,7 +119,7 @@ const ProximosEventos = memo(({ events, selectedMonth, selectedYear, onVerTodos,
           {displayEvents.length > 0 ? (
             displayEvents.map((ev, idx) => renderEvent(ev, idx))
           ) : (
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-5 text-center text-[13px] text-white/40">
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-5 text-center text-[13px] text-white/56">
               Nenhum evento este mês
             </motion.p>
           )}
@@ -130,7 +130,7 @@ const ProximosEventos = memo(({ events, selectedMonth, selectedYear, onVerTodos,
       {hasMore ? (
         <button
           onClick={() => setExpanded((v) => !v)}
-          className="flex w-full items-center justify-center gap-1 border-t border-white/[0.06] py-3 text-[13px] font-medium text-white/60 active:opacity-60"
+          className="flex w-full items-center justify-center gap-1 border-t border-white/[0.06] py-3 text-[13px] font-medium text-white/74 active:opacity-60"
         >
           {expanded ? (
             <>Recolher <ChevronUp className="h-4 w-4" /></>

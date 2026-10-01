@@ -136,7 +136,7 @@ export function SpendRing({ segments, total, caption }: { segments: RingSegment[
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-[30px] font-extrabold tracking-tight text-white tabular-nums">{formatCompactBRL(total)}</span>
-        <span className="text-[14px] text-white/50">{caption}</span>
+        <span className="text-[14px] text-white/66">{caption}</span>
       </div>
     </div>
   );
@@ -158,12 +158,12 @@ export function TopSpendRow({ category, monthLabel, onOpen }: {
         <Icon className="h-5 w-5" style={{ color: category.hexColor }} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[12px] text-white/45">Maior gasto em {monthLabel}</span>
+        <span className="block text-[12px] text-white/62">Maior gasto em {monthLabel}</span>
         <span className="block truncate text-[16px] font-semibold text-white">{category.name}</span>
       </span>
       <span className="text-right">
         <span className="block text-[16px] font-semibold text-white tabular-nums">{fmt(category.amount)}</span>
-        <span className="block text-[12px] text-white/45 tabular-nums">{category.percentage}% do total</span>
+        <span className="block text-[12px] text-white/62 tabular-nums">{category.percentage}% do total</span>
       </span>
     </button>
   );
@@ -192,10 +192,10 @@ export function CategoryRows({ categories, onOpen }: {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[16px] font-medium text-white">{cat.name}</span>
-              <span className="block text-[15px] text-white/45 tabular-nums">{cat.percentage}%</span>
+              <span className="block text-[15px] text-white/62 tabular-nums">{cat.percentage}%</span>
             </span>
             <span className="text-[16px] font-medium text-white tabular-nums">{fmt(cat.amount)}</span>
-            <ChevronRight className="h-4 w-4 shrink-0 text-white/25" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />
           </motion.button>
         );
       })}
@@ -229,10 +229,10 @@ export function GroupCards({ groups }: { groups: CategoryGroup[] }) {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[16px] font-medium text-white">{g.def.name}</span>
-                <span className="block text-[15px] text-white/45 tabular-nums">{g.percentage}%</span>
+                <span className="block text-[15px] text-white/62 tabular-nums">{g.percentage}%</span>
               </span>
               <span className="text-[16px] font-medium text-white tabular-nums">{fmt(g.amount)}</span>
-              <ChevronDown className={cn("h-4 w-4 shrink-0 text-white/60 transition-transform", isOpen && "rotate-180")} />
+              <ChevronDown className={cn("h-4 w-4 shrink-0 text-white/74 transition-transform", isOpen && "rotate-180")} />
             </button>
 
             <AnimatePresence initial={false}>
@@ -255,7 +255,7 @@ export function GroupCards({ groups }: { groups: CategoryGroup[] }) {
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-[15px] text-white">{cat.name}</span>
-                            {g.categories.length > 1 && <span className="block text-[13px] text-white/40 tabular-nums">{share}% do grupo</span>}
+                            {g.categories.length > 1 && <span className="block text-[13px] text-white/56 tabular-nums">{share}% do grupo</span>}
                           </span>
                           <span className="text-[15px] text-white tabular-nums">{fmt(cat.amount)}</span>
                         </div>

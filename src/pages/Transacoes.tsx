@@ -525,7 +525,7 @@ const Transacoes = () => {
             onClick={() => setShowFilters(!showFilters)}
             aria-label="Filtros"
             className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors ${
-              activeFiltersCount > 0 || showFilters ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.12] willo-glass text-white/70"
+              activeFiltersCount > 0 || showFilters ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.12] willo-glass text-white/82"
             }`}
           >
             <SlidersHorizontal className="w-4 h-4" />
@@ -539,17 +539,17 @@ const Transacoes = () => {
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/35" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
           <input
             type="text"
             placeholder="Buscar transação..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-11 pl-11 pr-10 rounded-full willo-glass border border-white/[0.12] text-[14px] text-white placeholder:text-white/30 focus:outline-none focus:border-white/25 transition-colors"
+            className="w-full h-11 pl-11 pr-10 rounded-full willo-glass border border-white/[0.12] text-[14px] text-white placeholder:text-white/45 focus:outline-none focus:border-white/25 transition-colors"
           />
           {search && (
             <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2">
-              <X className="w-4 h-4 text-white/40" />
+              <X className="w-4 h-4 text-white/56" />
             </button>
           )}
         </div>
@@ -569,18 +569,18 @@ const Transacoes = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[15px] font-semibold text-white">Filtros</span>
                 {activeFiltersCount > 0 && (
-                  <button onClick={clearFilters} className="text-[13px] text-white/60">Limpar</button>
+                  <button onClick={clearFilters} className="text-[13px] text-white/74">Limpar</button>
                 )}
               </div>
 
               {/* Status */}
               <div>
-                <p className="text-[12px] text-white/45 mb-2">Status</p>
+                <p className="text-[12px] text-white/62 mb-2">Status</p>
                 <div className="flex gap-1.5">
                   {["todos", "pago", "pendente"].map((s) => (
                     <button key={s} onClick={() => setFilterStatus(s)}
                       className={`px-3.5 py-1.5 rounded-full text-[12px] font-medium transition-all ${
-                        filterStatus === s ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/70 border border-white/[0.06]"
+                        filterStatus === s ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/82 border border-white/[0.06]"
                       }`}
                     >
                       {s === "todos" ? "Todos" : s === "pago" ? "Pago" : "Pendente"}
@@ -592,17 +592,17 @@ const Transacoes = () => {
               {/* Account */}
               {accounts.length > 0 && (
                 <div>
-                  <p className="text-[12px] text-white/45 mb-2">Conta</p>
+                  <p className="text-[12px] text-white/62 mb-2">Conta</p>
                   <div className="flex flex-wrap gap-1.5">
                     <button onClick={() => setFilterAccount("todos")}
                       className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
-                        filterAccount === "todos" ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/70 border border-white/[0.06]"
+                        filterAccount === "todos" ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/82 border border-white/[0.06]"
                       }`}
                     >Todas</button>
                     {accounts.map((a) => (
                       <button key={a.id} onClick={() => setFilterAccount(a.id)}
                         className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
-                          filterAccount === a.id ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/70 border border-white/[0.06]"
+                          filterAccount === a.id ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/82 border border-white/[0.06]"
                         }`}
                       >{a.name}</button>
                     ))}
@@ -613,17 +613,17 @@ const Transacoes = () => {
               {/* Category */}
               {categories.length > 0 && (
                 <div>
-                  <p className="text-[12px] text-white/45 mb-2">Categoria</p>
+                  <p className="text-[12px] text-white/62 mb-2">Categoria</p>
                   <div className="flex flex-wrap gap-1.5">
                     <button onClick={() => setFilterCategory("todos")}
                       className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
-                        filterCategory === "todos" ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/70 border border-white/[0.06]"
+                        filterCategory === "todos" ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/82 border border-white/[0.06]"
                       }`}
                     >Todas</button>
                     {categories.map((c) => (
                       <button key={c} onClick={() => setFilterCategory(c)}
                         className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
-                          filterCategory === c ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/70 border border-white/[0.06]"
+                          filterCategory === c ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/82 border border-white/[0.06]"
                         }`}
                       >{c}</button>
                     ))}
@@ -638,12 +638,12 @@ const Transacoes = () => {
       {/* Timeline list */}
       {loading && filtered.length === 0 ? (
         <div className="flex items-center justify-center py-16">
-          <div className="animate-pulse text-white/50 text-sm">Carregando...</div>
+          <div className="animate-pulse text-white/66 text-sm">Carregando...</div>
         </div>
       ) : filtered.length === 0 && !(selectedMonth === new Date().getMonth() && selectedYear === new Date().getFullYear()) ? (
         <div className="rounded-[22px] border border-white/[0.12] willo-glass p-8 text-center">
-          <Layers className="w-6 h-6 text-white/25 mx-auto mb-2" />
-          <p className="text-[14px] text-white/50">Nenhuma transação encontrada</p>
+          <Layers className="w-6 h-6 text-white/38 mx-auto mb-2" />
+          <p className="text-[14px] text-white/66">Nenhuma transação encontrada</p>
           {activeFiltersCount > 0 && (
             <button onClick={clearFilters} className="text-[13px] text-white mt-2 underline underline-offset-4">Limpar filtros</button>
           )}
@@ -667,11 +667,11 @@ const Transacoes = () => {
               <div key={date} className={gi > 0 ? "mt-5" : ""}>
                 {/* Date header */}
                 <div className="mb-2 flex items-center justify-between px-1">
-                  <span className={`text-[13px] font-semibold ${isToday ? "text-white" : "text-white/50"}`}>
+                  <span className={`text-[13px] font-semibold ${isToday ? "text-white" : "text-white/66"}`}>
                     {isToday ? `Hoje, ${label}` : label}
                   </span>
                   {txs.length > 0 && dayTotal.net !== 0 && (
-                    <span className={`text-[12px] tabular-nums ${dayTotal.net > 0 ? "text-willo-green" : "text-white/45"}`}>
+                    <span className={`text-[12px] tabular-nums ${dayTotal.net > 0 ? "text-willo-green" : "text-white/62"}`}>
                       {dayTotal.net > 0 ? "+" : "−"}{fmt(Math.abs(dayTotal.net))}
                     </span>
                   )}
@@ -679,7 +679,7 @@ const Transacoes = () => {
 
                 {/* Transactions */}
                 {txs.length === 0 && (
-                  <div className="rounded-[22px] border border-dashed border-white/[0.12] py-4 text-center text-[13px] text-white/35">
+                  <div className="rounded-[22px] border border-dashed border-white/[0.12] py-4 text-center text-[13px] text-white/50">
                     Nada registrado hoje
                   </div>
                 )}
@@ -721,7 +721,7 @@ const Transacoes = () => {
 
       {/* Count */}
       {!loading && filtered.length > 0 && (
-        <p className="text-center text-[12px] text-white/30 pt-2 pb-4">
+        <p className="text-center text-[12px] text-white/45 pt-2 pb-4">
           {filtered.length} transaç{filtered.length === 1 ? "ão" : "ões"} · {grouped.length} dia{grouped.length !== 1 && "s"}
         </p>
       )}

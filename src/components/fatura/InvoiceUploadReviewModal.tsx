@@ -90,14 +90,14 @@ const Row = ({ icon: Icon, label, children, onClick }: {
     className={cn("flex min-h-[56px] items-center gap-3 px-4 py-2.5", onClick && "cursor-pointer active:bg-white/[0.03]")}
   >
     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
-      <Icon className="h-4 w-4 text-white/70" />
+      <Icon className="h-4 w-4 text-white/82" />
     </span>
     <span className="shrink-0 text-[15px] text-white">{label}</span>
     <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 text-right">{children}</div>
   </div>
 );
 
-const inlineInput = "w-full min-w-0 bg-transparent text-right text-[15px] text-white placeholder:text-white/30 focus:outline-none";
+const inlineInput = "w-full min-w-0 bg-transparent text-right text-[15px] text-white placeholder:text-white/45 focus:outline-none";
 
 function CategoryPickerSheet({ open, selected, onSelect, onClose, customCategories, onCreateCategory }: {
   open: boolean;
@@ -121,17 +121,17 @@ function CategoryPickerSheet({ open, selected, onSelect, onClose, customCategori
       <div className="px-5">
         <div className="flex items-center justify-between">
           <p className="text-[22px] font-bold text-white">Categoria</p>
-          <button type="button" onClick={() => { onClose(); navigate("/categorias"); }} className="flex items-center gap-1 text-[13px] text-white/55">
+          <button type="button" onClick={() => { onClose(); navigate("/categorias"); }} className="flex items-center gap-1 text-[13px] text-white/70">
             <Settings className="h-4 w-4" /> Gerenciar
           </button>
         </div>
         <div className="relative mt-4">
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
           <input
             placeholder="Buscar categoria"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-11 w-full rounded-full bg-white/[0.06] pl-11 pr-4 text-[15px] text-white placeholder:text-white/30 focus:outline-none"
+            className="h-11 w-full rounded-full bg-white/[0.06] pl-11 pr-4 text-[15px] text-white placeholder:text-white/45 focus:outline-none"
           />
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2 pb-4">
@@ -159,7 +159,7 @@ function CategoryPickerSheet({ open, selected, onSelect, onClose, customCategori
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06]">
               <Plus className="h-5 w-5 text-white" />
             </span>
-            <span className="text-[12px] text-white/70">Nova</span>
+            <span className="text-[12px] text-white/82">Nova</span>
           </button>
         </div>
       </div>
@@ -204,7 +204,7 @@ function SingleItemReview({ item, onUpdate, accounts = [], showAccountSelector =
     <div>
       {/* AI banner */}
       <div className="flex items-center justify-center gap-2 pt-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1 text-[12px] text-white/70">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1 text-[12px] text-white/82">
           <Sparkles className="h-3.5 w-3.5" /> Lido pela IA
         </span>
         <ConfidenceBadge confidence={conf} />
@@ -217,7 +217,7 @@ function SingleItemReview({ item, onUpdate, accounts = [], showAccountSelector =
             key={t}
             type="button"
             onClick={() => onUpdate("type", t)}
-            className={cn("h-9 rounded-full text-[13px] font-semibold transition-colors", (isExpense ? "despesa" : "receita") === t ? "bg-white text-[#0B0B0B]" : "text-white/55")}
+            className={cn("h-9 rounded-full text-[13px] font-semibold transition-colors", (isExpense ? "despesa" : "receita") === t ? "bg-white text-[#0B0B0B]" : "text-white/70")}
           >
             {t === "despesa" ? "Despesa" : "Receita"}
           </button>
@@ -226,7 +226,7 @@ function SingleItemReview({ item, onUpdate, accounts = [], showAccountSelector =
 
       {/* Amount */}
       <label className="relative mt-5 flex items-baseline justify-center gap-2">
-        <span className="text-[24px] font-bold text-white/40">{currencySymbol()}</span>
+        <span className="text-[24px] font-bold text-white/56">{currencySymbol()}</span>
         <input
           type="text"
           inputMode="numeric"
@@ -253,7 +253,7 @@ function SingleItemReview({ item, onUpdate, accounts = [], showAccountSelector =
         <Row icon={Tag} label="Categoria" onClick={() => setShowCategoryPicker(true)}>
           <CatIcon className="h-4 w-4 shrink-0" style={{ color: catHex }} />
           <span className="truncate text-[15px] capitalize text-white">{item.category || "Escolher"}</span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-white/25" />
+          <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />
         </Row>
         <Row icon={Clock} label="Data">
           <input
@@ -262,7 +262,7 @@ function SingleItemReview({ item, onUpdate, accounts = [], showAccountSelector =
             onChange={(e) => onUpdate("date", e.target.value)}
             className="bg-transparent text-right text-[15px] text-white [color-scheme:dark] focus:outline-none"
           />
-          {item.time && <span className="text-[13px] text-white/40">{item.time}</span>}
+          {item.time && <span className="text-[13px] text-white/56">{item.time}</span>}
         </Row>
         {showAccountSelector && (
           <Row icon={Wallet} label="Conta">
@@ -280,7 +280,7 @@ function SingleItemReview({ item, onUpdate, accounts = [], showAccountSelector =
                 </SelectContent>
               </Select>
             ) : (
-              <span className="text-[13px] text-white/40">Cadastre uma conta</span>
+              <span className="text-[13px] text-white/56">Cadastre uma conta</span>
             )}
           </Row>
         )}
@@ -293,7 +293,7 @@ function SingleItemReview({ item, onUpdate, accounts = [], showAccountSelector =
         </Row>
       </div>
 
-      <p className="mt-4 px-2 text-center text-[12px] text-white/35">Confira os dados antes de confirmar. Você pode editar tudo aqui.</p>
+      <p className="mt-4 px-2 text-center text-[12px] text-white/50">Confira os dados antes de confirmar. Você pode editar tudo aqui.</p>
 
       <CategoryPickerSheet
         open={showCategoryPicker}
@@ -358,7 +358,7 @@ function ItemEditSheet({ item, onClose, onChange }: {
             <p className="text-[22px] font-extrabold tracking-tight text-white">Editar lançamento</p>
 
             <label className="relative mt-5 flex items-baseline justify-center gap-2">
-              <span className="text-[22px] font-bold text-white/40">{currencySymbol()}</span>
+              <span className="text-[22px] font-bold text-white/56">{currencySymbol()}</span>
               <input
                 type="text"
                 inputMode="numeric"
@@ -371,7 +371,7 @@ function ItemEditSheet({ item, onClose, onChange }: {
               />
             </label>
             {isPlan && (
-              <p className="mt-2 text-center text-[12px] text-white/40">valor de cada parcela</p>
+              <p className="mt-2 text-center text-[12px] text-white/56">valor de cada parcela</p>
             )}
 
             <div className="mt-6 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.12] willo-glass">
@@ -381,7 +381,7 @@ function ItemEditSheet({ item, onClose, onChange }: {
               <Row icon={Tag} label="Categoria" onClick={() => setShowCategoryPicker(true)}>
                 <CatIcon className="h-4 w-4 shrink-0" style={{ color: catHex }} />
                 <span className="truncate text-[15px] text-white">{data.category || "Escolher"}</span>
-                <ChevronRight className="h-4 w-4 shrink-0 text-white/25" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />
               </Row>
               <Row icon={Clock} label="Data da compra">
                 <input
@@ -401,13 +401,13 @@ function ItemEditSheet({ item, onClose, onChange }: {
                     onChange={(e) => update("installment_current", Math.max(1, Math.min(data.installment_total ?? 1, Number(e.target.value))))}
                     className="w-12 bg-transparent text-right text-[15px] text-white focus:outline-none"
                   />
-                  <span className="text-[15px] text-white/45">de {data.installment_total}</span>
+                  <span className="text-[15px] text-white/62">de {data.installment_total}</span>
                 </Row>
               )}
             </div>
 
             {isPlan && (
-              <p className="mt-3 px-1 text-center text-[12px] leading-snug text-white/35">
+              <p className="mt-3 px-1 text-center text-[12px] leading-snug text-white/50">
                 As parcelas anteriores não entram. A cobrança começa nesta fatura e segue até a {data.installment_total}ª.
               </p>
             )}
@@ -466,7 +466,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
           <span className="pointer-events-none absolute -top-16 left-1/2 h-40 w-56 -translate-x-1/2 rounded-full bg-willo-green/[0.10] blur-[60px]" />
         )}
         <div className="relative flex items-center justify-between">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] px-2.5 py-1 text-[11.5px] text-white/65">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] px-2.5 py-1 text-[11.5px] text-white/78">
             <Sparkles className="h-3 w-3" /> Lido pela IA
           </span>
           {avgConfidence !== undefined && <ConfidenceBadge confidence={avgConfidence} />}
@@ -475,14 +475,14 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
         <p className="relative mt-4 text-[38px] font-extrabold leading-none tracking-tighter text-white tabular-nums">
           {fmtMoney(selectedTotal)}
         </p>
-        <p className="relative mt-1.5 text-[13.5px] text-white/45">
+        <p className="relative mt-1.5 text-[13.5px] text-white/62">
           {items.length} lançamento{items.length === 1 ? "" : "s"} nesta fatura
         </p>
 
         {declaredTotal != null && (
           <div className="relative mt-4 border-t border-white/[0.12] pt-3">
             <div className="flex items-center justify-between text-[13px]">
-              <span className="text-white/45">Total impresso na fatura</span>
+              <span className="text-white/62">Total impresso na fatura</span>
               <span className="font-semibold text-white tabular-nums">{fmtMoney(declaredTotal)}</span>
             </div>
             <div className="mt-2.5 flex items-center gap-2">
@@ -496,7 +496,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
               ) : (
                 <>
                   <AlertTriangle className="h-4 w-4 shrink-0 text-amber-300" />
-                  <span className="text-[12.5px] leading-snug text-white/65">
+                  <span className="text-[12.5px] leading-snug text-white/78">
                     {fmtMoney(Math.abs(gap!))} de diferença — {gap! < 0 ? "algo pode não ter sido lido" : "algo pode ter entrado duas vezes"}
                   </span>
                 </>
@@ -510,34 +510,34 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
         <div className="mt-2.5 grid grid-cols-2 gap-2.5">
           {allPlans.length > 0 && (
             <div className="rounded-[20px] border border-white/[0.12] willo-glass px-4 py-3">
-              <Layers className="h-4 w-4 text-white/45" />
+              <Layers className="h-4 w-4 text-white/62" />
               <p className="mt-2 text-[19px] font-bold leading-none text-white tabular-nums">{allPlans.length}</p>
-              <p className="mt-1 text-[11.5px] text-white/40">parcelamentos</p>
+              <p className="mt-1 text-[11.5px] text-white/56">parcelamentos</p>
             </div>
           )}
           {refunds.length > 0 && (
             <div className="rounded-[20px] border border-willo-green/15 bg-willo-green/[0.05] px-4 py-3">
               <RotateCcw className="h-4 w-4 text-willo-green" />
               <p className="mt-2 text-[19px] font-bold leading-none text-white tabular-nums">{refunds.length}</p>
-              <p className="mt-1 text-[11.5px] text-white/40">estornos, viram crédito</p>
+              <p className="mt-1 text-[11.5px] text-white/56">estornos, viram crédito</p>
             </div>
           )}
         </div>
       )}
 
       {plans.length > 0 && (
-        <p className="mt-3 px-1 text-[12.5px] leading-snug text-white/40">
-          <span className="text-white/65">{plans.length} {plans.length === 1 ? "parcelamento já vinha de antes" : "parcelamentos já vinham de antes"}.</span>{" "}
+        <p className="mt-3 px-1 text-[12.5px] leading-snug text-white/56">
+          <span className="text-white/78">{plans.length} {plans.length === 1 ? "parcelamento já vinha de antes" : "parcelamentos já vinham de antes"}.</span>{" "}
           As parcelas pagas antes desta fatura não são lançadas — a cobrança continua daqui pra frente.
         </p>
       )}
 
       <div className="mt-6 flex items-center justify-between px-1">
-        <p className="text-[13px] font-semibold text-white/45">Selecione o que importar</p>
+        <p className="text-[13px] font-semibold text-white/62">Selecione o que importar</p>
         <button
           type="button"
           onClick={() => setItems((prev) => prev.map((i) => ({ ...i, selected: !allSelected })))}
-          className="text-[13px] text-white/70"
+          className="text-[13px] text-white/82"
         >
           {allSelected ? "Desmarcar todos" : "Marcar todos"}
         </button>
@@ -575,7 +575,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
                 <span className="flex items-center gap-1.5">
                   <span className="min-w-0 flex-1 truncate text-[15px] text-white">{item.description}</span>
                   {item.installment_total && item.installment_total > 1 && (
-                    <span className="shrink-0 rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[10.5px] font-semibold tabular-nums text-white/70">
+                    <span className="shrink-0 rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[10.5px] font-semibold tabular-nums text-white/82">
                       {item.installment_current ?? 1}/{item.installment_total}
                     </span>
                   )}
@@ -585,7 +585,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
                     </span>
                   )}
                 </span>
-                <span className="mt-0.5 flex items-center gap-1 text-[11.5px] text-white/40">
+                <span className="mt-0.5 flex items-center gap-1 text-[11.5px] text-white/56">
                   {day && <span className="shrink-0 tabular-nums">{day}</span>}
                   <span className="min-w-0 flex-1 truncate">{item.category}</span>
                   {item.confidence !== undefined && item.confidence < 0.8 && <ConfidenceBadge confidence={item.confidence} />}
@@ -594,14 +594,14 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
               <p className={cn("shrink-0 text-[14px] font-semibold tabular-nums", isIn || isRefund ? "text-willo-green" : "text-white")}>
                 {isIn || isRefund ? "+" : "−"}{fmtMoney(Math.abs(item.amount))}
               </p>
-              <button type="button" onClick={() => removeItem(idx)} aria-label="Remover" className="-mr-1 shrink-0 p-1 text-white/25">
+              <button type="button" onClick={() => removeItem(idx)} aria-label="Remover" className="-mr-1 shrink-0 p-1 text-white/38">
                 <X className="h-3.5 w-3.5" />
               </button>
             </motion.div>
           );
         })}
       </div>
-      <p className="mt-3 px-2 text-center text-[12px] text-white/35">Toque em um lançamento para editar nome, categoria e data.</p>
+      <p className="mt-3 px-2 text-center text-[12px] text-white/50">Toque em um lançamento para editar nome, categoria e data.</p>
 
       <ItemEditSheet
         item={editing !== null && items[editing] ? { index: editing, data: items[editing] } : null}
@@ -662,7 +662,7 @@ export default function InvoiceUploadReviewModal({
           {/* Nav */}
           <div className="shrink-0 px-4" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
             <div className="flex h-11 items-center justify-between">
-              <button onClick={onClose} aria-label="Fechar" className="-ml-1 flex h-10 w-10 items-center justify-center rounded-full text-white/70 active:opacity-60">
+              <button onClick={onClose} aria-label="Fechar" className="-ml-1 flex h-10 w-10 items-center justify-center rounded-full text-white/82 active:opacity-60">
                 <X className="h-6 w-6" />
               </button>
               <span className="text-[16px] font-semibold text-white">{isSingleItem ? "Revisar lançamento" : "Revisar lançamentos"}</span>
@@ -688,7 +688,7 @@ export default function InvoiceUploadReviewModal({
           <div className="shrink-0 border-t border-white/[0.06] px-4 pt-3" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}>
             {!isSingleItem && (
               <div className="mb-2.5 flex items-center justify-between px-1 text-[13px]">
-                <span className="text-white/45">{selectedItems.length} de {items.length} selecionados</span>
+                <span className="text-white/62">{selectedItems.length} de {items.length} selecionados</span>
                 <span className="font-semibold text-white tabular-nums">{fmtMoney(totalSelected)}</span>
               </div>
             )}

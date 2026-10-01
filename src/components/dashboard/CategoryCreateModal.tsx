@@ -224,7 +224,7 @@ export default function CategoryCreateModal({
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="-mr-1 flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-white/60 active:opacity-60"
+            className="-mr-1 flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-white/74 active:opacity-60"
           >
             <X className="h-4 w-4" />
           </button>
@@ -255,7 +255,7 @@ export default function CategoryCreateModal({
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="relative mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] px-2.5 py-1 text-[11.5px] text-white/60"
+                className="relative mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] px-2.5 py-1 text-[11.5px] text-white/74"
               >
                 <Sparkles className="h-3 w-3" />
                 {suggesting ? "Escolhendo o visual…" : "Sugerido pela IA"}
@@ -265,14 +265,14 @@ export default function CategoryCreateModal({
         </div>
 
         <div className="mt-7">
-          <p className="px-1 text-[12px] font-semibold uppercase tracking-wider text-white/35">Nome</p>
+          <p className="px-1 text-[12px] font-semibold uppercase tracking-wider text-white/50">Nome</p>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ex: Streaming"
             maxLength={30}
             autoFocus
-            className="mt-2 h-14 w-full rounded-[18px] border border-white/[0.12] willo-glass px-4 text-[16px] text-white placeholder:text-white/25 focus:border-white/20 focus:outline-none"
+            className="mt-2 h-14 w-full rounded-[18px] border border-white/[0.12] willo-glass px-4 text-[16px] text-white placeholder:text-white/38 focus:border-white/20 focus:outline-none"
           />
           <AnimatePresence>
             {(nameError || colorError) && (
@@ -289,7 +289,7 @@ export default function CategoryCreateModal({
         </div>
 
         <div className="mt-6">
-          <p className="px-1 text-[12px] font-semibold uppercase tracking-wider text-white/35">Cor</p>
+          <p className="px-1 text-[12px] font-semibold uppercase tracking-wider text-white/50">Cor</p>
           <div className="-mx-5 mt-2.5 flex gap-3 overflow-x-auto px-5 pb-1.5 pt-1 scrollbar-none">
             {freeColors.map((c) => (
               <button
@@ -310,14 +310,14 @@ export default function CategoryCreateModal({
               </button>
             ))}
             <label className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-white/20">
-              <Plus className="h-4 w-4 text-white/50" />
+              <Plus className="h-4 w-4 text-white/66" />
               <input type="color" value={color} onChange={(e) => pick(() => setColor(e.target.value))} className="sr-only" />
             </label>
           </div>
         </div>
 
         <div className="mt-6">
-          <p className="px-1 text-[12px] font-semibold uppercase tracking-wider text-white/35">Ícone</p>
+          <p className="px-1 text-[12px] font-semibold uppercase tracking-wider text-white/50">Ícone</p>
           <div className="mt-2.5 grid grid-cols-6 gap-2">
             {ICON_OPTIONS.map(({ name: iconName, Icon: IconComp }) => {
               const active = icon === iconName;

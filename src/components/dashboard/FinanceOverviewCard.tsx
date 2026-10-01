@@ -36,9 +36,9 @@ const FinanceOverviewCard = ({ receitas, despesas, saldoPrevisto, nextMonthBalan
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#60A5FA]/15">
             <Scale className="h-[18px] w-[18px] text-[#60A5FA]" />
           </span>
-          <span className="text-[13px] font-medium text-white/60">Financeiro</span>
+          <span className="text-[13px] font-medium text-white/74">Financeiro</span>
         </span>
-        <ChevronRight className="h-4 w-4 text-white/25" />
+        <ChevronRight className="h-4 w-4 text-white/38" />
       </div>
 
       <p className={cn("mt-3 truncate text-[26px] font-extrabold leading-tight tracking-tight tabular-nums", balanco < 0 ? "text-red-400" : "text-willo-green")}>
@@ -52,7 +52,7 @@ const FinanceOverviewCard = ({ receitas, despesas, saldoPrevisto, nextMonthBalan
         ].map(({ label, value, hex, Icon }, i) => (
           <div key={label}>
             <div className="flex items-center justify-between gap-1">
-              <span className="flex items-center gap-1 text-[11px] text-white/45">
+              <span className="flex items-center gap-1 text-[11px] text-white/62">
                 <Icon className="h-3 w-3" style={{ color: hex }} strokeWidth={2.5} /> {label}
               </span>
               <span className="truncate text-[12px] font-semibold text-white tabular-nums">{compact(value)}</span>
@@ -79,7 +79,7 @@ const FinanceOverviewCard = ({ receitas, despesas, saldoPrevisto, nextMonthBalan
         }}
         className="mt-3.5 flex items-center justify-between gap-2 rounded-[16px] bg-white/[0.05] px-3 py-2.5"
       >
-        <span className="flex min-w-0 items-center gap-1.5 truncate text-[12px] text-white/55">
+        <span className="flex min-w-0 items-center gap-1.5 truncate text-[12px] text-white/70">
           <TrendingUp className="h-3.5 w-3.5 shrink-0 text-[#C084FC]" /> Fim do mês{" "}
           <span className="truncate font-semibold text-white">{compact(saldoPrevisto)}</span>
         </span>

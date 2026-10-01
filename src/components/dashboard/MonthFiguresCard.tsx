@@ -53,7 +53,7 @@ const MonthFiguresCard = ({ receitas, despesas, selectedMonth, selectedYear, onM
   return (
     <div className="rounded-[26px] border border-white/[0.12] willo-glass px-[18px] pb-[18px] pt-4">
       <div className="mb-3.5 flex items-center justify-between gap-3">
-        <span className="text-[12.5px] text-white/50">{MONTH_NAMES[selectedMonth]}</span>
+        <span className="text-[12.5px] text-white/66">{MONTH_NAMES[selectedMonth]}</span>
         <MonthSelector selectedMonth={selectedMonth} selectedYear={selectedYear} onMonthChange={onMonthChange} />
       </div>
 
@@ -66,7 +66,7 @@ const MonthFiguresCard = ({ receitas, despesas, selectedMonth, selectedYear, onM
               i === 0 ? "pr-4" : "border-l border-white/[0.10] pl-4"
             }`}
           >
-            <span className="flex items-center gap-1.5 text-[12.5px] text-white/55">
+            <span className="flex items-center gap-1.5 text-[12.5px] text-white/70">
               <Icon className={`h-3.5 w-3.5 ${iconCls}`} strokeWidth={2.6} />
               {label}
             </span>

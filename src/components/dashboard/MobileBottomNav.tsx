@@ -100,7 +100,7 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
                 <Icon
                   className={cn(
                     "w-5 h-5",
-                    isActive ? "text-white" : item.soon ? "text-white/25" : "text-white/45",
+                    isActive ? "text-white" : item.soon ? "text-white/38" : "text-white/62",
                   )}
                   strokeWidth={isActive ? 2.25 : 2}
                 />
@@ -197,7 +197,7 @@ export function AddActionsMenu({ open, onClose, onSelect, inline = false, bottom
               exit={{ opacity: 0, y: 8 }}
               transition={{ delay: 0.14 }}
             >
-              <p className="text-[15px] font-medium tracking-tight text-white/70">O que você quer registrar?</p>
+              <p className="text-[15px] font-medium tracking-tight text-white/82">O que você quer registrar?</p>
             </motion.div>
 
             {ADD_ACTIONS.map((action, i) => {

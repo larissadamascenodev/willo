@@ -14,7 +14,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         classNames: {
           toast:
             "group toast group-[.toaster]:!rounded-[20px] group-[.toaster]:!border group-[.toaster]:!border-white/10 group-[.toaster]:!willo-glass-inset/95 group-[.toaster]:!px-4 group-[.toaster]:!py-3.5 group-[.toaster]:!text-[14px] group-[.toaster]:!font-medium group-[.toaster]:!text-white group-[.toaster]:!shadow-[0_18px_40px_-12px_rgba(0,0,0,0.8)] group-[.toaster]:backdrop-blur-xl",
-          description: "group-[.toast]:!text-white/55",
+          description: "group-[.toast]:!text-white/70",
           success: "[&_[data-icon]]:!text-willo-green",
           error: "[&_[data-icon]]:!text-red-400",
           warning: "[&_[data-icon]]:!text-amber-300",

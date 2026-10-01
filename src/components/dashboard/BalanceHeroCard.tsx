@@ -123,13 +123,13 @@ const BalanceHeroCard = ({ saldoAtual, topInset = 0 }: Props) => {
         ref={greetingRef}
         className="mt-10 pb-7"
       >
-        <p className="truncate text-[15px] font-medium tracking-tight text-white/65">
+        <p className="truncate text-[15px] font-medium tracking-tight text-white/78">
           {greeting}{firstName ? `, ${firstName}` : ""}
         </p>
         <p className="mt-1.5 truncate text-[42px] font-extrabold leading-[1.05] tracking-[-0.035em] text-white tabular-nums">
           {hidden ? `${currencySymbol()} ••••••` : animatedSaldo}
         </p>
-        <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
+        <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/56">
           Saldo disponível
         </p>
       </motion.div>

@@ -61,7 +61,7 @@ export function CategoriesStep({ onBack, onNext }: StepProps) {
               <Icon className="h-11 w-11" style={{ color: hex }} />
             </span>
             <p className="mt-4 text-[20px] font-bold text-white">{cat.name}</p>
-            <p className="text-[14px] text-white/50 tabular-nums">{brl0(cat.amount)} este mês</p>
+            <p className="text-[14px] text-white/66 tabular-nums">{brl0(cat.amount)} este mês</p>
           </motion.div>
         </AnimatePresence>
       </div>
@@ -81,7 +81,7 @@ export function CategoriesStep({ onBack, onNext }: StepProps) {
       </div>
       <div className="mt-8 text-center">
         <p className="text-[52px] font-extrabold leading-none tracking-tight text-white tabular-nums">{total}</p>
-        <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-white/45">Categorias prontas no Willo</p>
+        <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-white/62">Categorias prontas no Willo</p>
       </div>
     </FlowScreen>
   );
@@ -99,7 +99,7 @@ export function InsightStep({ surplus, monthlySave, cut, onBack, onNext }: StepP
             {brl0(surplus)}
           </span>
         </p>
-        <p className="mt-4 text-[16px] leading-snug text-white/55">
+        <p className="mt-4 text-[16px] leading-snug text-white/70">
           {positive ? "Isso é o que dá pra direcionar pra sua meta." : "Esse é o buraco que vamos fechar juntos."}
         </p>
       </motion.div>
@@ -109,11 +109,11 @@ export function InsightStep({ surplus, monthlySave, cut, onBack, onNext }: StepP
         transition={{ delay: 0.35 }}
         className="mt-8 rounded-[24px] border border-white/[0.12] willo-glass p-5"
       >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/45">Pra chegar na meta, guarde</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/62">Pra chegar na meta, guarde</p>
         <div className="mt-2 flex items-end justify-between gap-3">
           <p className="flex items-baseline gap-2">
             <span className="text-[40px] font-extrabold leading-none tracking-tight text-white tabular-nums">{brl0(monthlySave)}</span>
-            <span className="text-[12px] font-semibold uppercase tracking-[0.15em] text-white/45">/mês</span>
+            <span className="text-[12px] font-semibold uppercase tracking-[0.15em] text-white/62">/mês</span>
           </p>
           <span className={cn("shrink-0 rounded-full px-3 py-1 text-[12px] font-semibold", cut > 0 ? "bg-[#F87171]/15 text-[#F87171]" : "bg-willo-green/15 text-willo-green")}>
             {cut > 0 ? `−${brl0(cut)} nos gastos` : "Cabe na sua sobra"}
@@ -155,7 +155,7 @@ export function ScanDemoStep({ onBack, onNext }: StepProps) {
           <motion.div exit={{ opacity: 0 }} className="absolute inset-x-0 bottom-0 flex flex-col items-center px-5 pb-6">
             <div className="w-full rounded-[22px] border border-white/10 bg-black/80 p-4 text-center backdrop-blur-xl">
               <p className="text-[17px] font-bold text-white">Essa fatura é nossa.</p>
-              <p className="mt-1 text-[13.5px] leading-snug text-white/55">Toque e veja o que o Willo lê numa foto de fatura ou comprovante.</p>
+              <p className="mt-1 text-[13.5px] leading-snug text-white/70">Toque e veja o que o Willo lê numa foto de fatura ou comprovante.</p>
             </div>
             <motion.button
               type="button"
@@ -168,7 +168,7 @@ export function ScanDemoStep({ onBack, onNext }: StepProps) {
               <span className="absolute inset-0 rounded-full border-[4px] border-white" />
               <span className="h-[58px] w-[58px] rounded-full bg-white" />
             </motion.button>
-            <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.25em] text-white/70">Ver o que o app lê</p>
+            <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.25em] text-white/82">Ver o que o app lê</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -251,7 +251,7 @@ export function CommitmentStep({ onBack, onNext }: StepProps) {
           <span className="font-light">Você topa cuidar do seu dinheiro</span>{" "}
           <span className="font-extrabold">um pouco todo dia?</span>
         </h1>
-        <p className="mt-2 text-center text-[14px] leading-snug text-white/45">Um minuto por dia já muda o mês. É um combinado com você.</p>
+        <p className="mt-2 text-center text-[14px] leading-snug text-white/62">Um minuto por dia já muda o mês. É um combinado com você.</p>
         <div className="relative mt-8 h-[250px] overflow-hidden rounded-[26px] border border-white/[0.12] willo-glass">
           {length === 0 && (
             <svg viewBox="0 0 100 100" className="pointer-events-none absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round">
@@ -274,8 +274,8 @@ export function CommitmentStep({ onBack, onNext }: StepProps) {
             )}
           </AnimatePresence>
         </div>
-        <p className="mt-4 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40">Desenhe um ✓ na caixa para confirmar</p>
-        <button type="button" onClick={clear} className="mx-auto mt-2 text-[13px] text-white/35">Limpar</button>
+        <p className="mt-4 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-white/56">Desenhe um ✓ na caixa para confirmar</p>
+        <button type="button" onClick={clear} className="mx-auto mt-2 text-[13px] text-white/50">Limpar</button>
       </div>
     </FlowScreen>
   );
@@ -314,7 +314,7 @@ export function NotificationStep({ onBack, onNext }: StepProps) {
       footer={
         <div className="space-y-3">
           <GlowButton onClick={enable} disabled={asking}>Ativar lembretes</GlowButton>
-          <button type="button" onClick={onNext} className="w-full text-center text-[14px] text-white/45">Agora não</button>
+          <button type="button" onClick={onNext} className="w-full text-center text-[14px] text-white/62">Agora não</button>
         </div>
       }
     >
@@ -333,7 +333,7 @@ export function NotificationStep({ onBack, onNext }: StepProps) {
           <div className="h-full w-full rounded-[43px] bg-black p-[7px]">
             <div className="relative h-full w-full overflow-hidden rounded-[37px] bg-[radial-gradient(120%_80%_at_30%_10%,#2b2b2e_0%,#121213_55%,#050505_100%)]">
               <span className="absolute left-1/2 top-[10px] h-[26px] w-[92px] -translate-x-1/2 rounded-full bg-black" />
-              <p className="mt-14 text-center text-[13px] font-medium capitalize text-white/70">{today}</p>
+              <p className="mt-14 text-center text-[13px] font-medium capitalize text-white/82">{today}</p>
               <p className="text-center text-[64px] font-semibold leading-none tracking-tight text-white/90">9:41</p>
               <div className="mt-5 space-y-2 px-3">
                 {NOTIFS.map((n, i) => (
@@ -350,9 +350,9 @@ export function NotificationStep({ onBack, onNext }: StepProps) {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2">
                         <p className="truncate text-[12px] font-semibold text-white">{n.title}</p>
-                        <span className="shrink-0 text-[10px] text-white/50">{n.when}</span>
+                        <span className="shrink-0 text-[10px] text-white/66">{n.when}</span>
                       </div>
-                      <p className="text-[11.5px] leading-snug text-white/75">{n.body}</p>
+                      <p className="text-[11.5px] leading-snug text-white/85">{n.body}</p>
                     </div>
                   </motion.div>
                 ))}
@@ -416,7 +416,7 @@ export function CalculatingStep({ onDone }: { onDone: () => void }) {
       <AnimatePresence mode="wait">
         <motion.div key={stage.title} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="mt-10 text-center">
           <p className="text-[20px] font-extrabold uppercase tracking-tight text-white">{stage.title}…</p>
-          <p className="mt-1 text-[14px] text-white/50">{stage.text}</p>
+          <p className="mt-1 text-[14px] text-white/66">{stage.text}</p>
         </motion.div>
       </AnimatePresence>
     </div>

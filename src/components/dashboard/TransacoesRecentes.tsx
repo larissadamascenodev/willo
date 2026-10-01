@@ -42,13 +42,13 @@ const TxRow = ({ tx, customCategories }: { tx: Transaction; customCategories: Cu
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-medium text-white">{tx.name}</p>
-        <p className="truncate text-[12px] text-white/40">{subtitle}</p>
+        <p className="truncate text-[12px] text-white/56">{subtitle}</p>
       </div>
       <div className="shrink-0 text-right">
         <p className={`text-[15px] font-semibold tabular-nums ${isReceita ? "text-willo-green" : "text-white"}`}>
           {isReceita ? "+" : "−"}{fmt(tx.amount)}
         </p>
-        <p className={`text-[11px] ${isPending ? "text-amber-300/90" : "text-white/35"}`}>{statusLabel(tx)}</p>
+        <p className={`text-[11px] ${isPending ? "text-amber-300/90" : "text-white/50"}`}>{statusLabel(tx)}</p>
       </div>
     </div>
   );
@@ -70,7 +70,7 @@ const TransacoesRecentes = memo(({ transactions, onVerTodas }: Props) => {
       <div className="flex items-center justify-between">
         <h3 className="text-[16px] font-semibold text-white">Transações recentes</h3>
         {transactions.length > 0 && (
-          <button onClick={openAll} className="flex items-center gap-0.5 text-[13px] text-white/50 active:opacity-60">
+          <button onClick={openAll} className="flex items-center gap-0.5 text-[13px] text-white/66 active:opacity-60">
             Ver todas <ChevronRight className="h-4 w-4" />
           </button>
         )}
@@ -79,9 +79,9 @@ const TransacoesRecentes = memo(({ transactions, onVerTodas }: Props) => {
       {visible.length === 0 ? (
         <div className="flex flex-col items-center py-8 text-center">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.06]">
-            <Receipt className="h-5 w-5 text-white/40" />
+            <Receipt className="h-5 w-5 text-white/56" />
           </span>
-          <p className="mt-3 text-[14px] text-white/50">Nenhuma transação neste mês</p>
+          <p className="mt-3 text-[14px] text-white/66">Nenhuma transação neste mês</p>
         </div>
       ) : (
         <div className="mt-1 divide-y divide-white/[0.06]">

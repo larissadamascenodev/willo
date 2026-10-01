@@ -39,7 +39,7 @@ const AccountsBalanceCard = ({ accounts, onOpen, onAdd, savedTotal = 0 }: {
   return (
     <div className="rounded-[26px] border border-white/[0.12] willo-glass p-4">
       <div className="flex items-center justify-between">
-        <p className="text-[15px] text-white/50">Saldo em contas</p>
+        <p className="text-[15px] text-white/66">Saldo em contas</p>
         <button
           onClick={onAdd}
           aria-label="Adicionar conta"
@@ -52,9 +52,9 @@ const AccountsBalanceCard = ({ accounts, onOpen, onAdd, savedTotal = 0 }: {
         {fmt(total)}
       </p>
       {savedTotal > 0 && (
-        <p className="mt-1 text-[13px] text-white/45">
+        <p className="mt-1 text-[13px] text-white/62">
           Patrimônio <span className="font-semibold text-white tabular-nums">{fmt(total + savedTotal)}</span>
-          <span className="text-white/35"> · {fmt(savedTotal)} guardados</span>
+          <span className="text-white/50"> · {fmt(savedTotal)} guardados</span>
         </p>
       )}
 
@@ -92,14 +92,14 @@ const AccountsBalanceCard = ({ accounts, onOpen, onAdd, savedTotal = 0 }: {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[17px] font-semibold text-white">{acc.name}</span>
-                <span className="block text-[13px] text-white/45">
+                <span className="block text-[13px] text-white/62">
                   {TYPE_LABEL[acc.type] ?? "Conta"}
                   {acc.is_default ? " · Principal" : ""}
                 </span>
               </span>
               <span className="text-right">
                 <span className={`block text-[16px] tabular-nums ${balance < 0 ? "text-red-400" : "text-white"}`}>{fmt(balance)}</span>
-                <span className="block text-[13px] text-white/45 tabular-nums">{pct}%</span>
+                <span className="block text-[13px] text-white/62 tabular-nums">{pct}%</span>
               </span>
             </button>
           );

@@ -65,7 +65,7 @@ function isOtherMonth(date?: string | null) {
   return d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear();
 }
 
-const inputCls = "w-full min-w-0 bg-transparent text-right text-[16px] font-medium text-white placeholder:text-white/30 focus:outline-none";
+const inputCls = "w-full min-w-0 bg-transparent text-right text-[16px] font-medium text-white placeholder:text-white/45 focus:outline-none";
 
 /**
  * Bottom card shown over the captured receipt photo: what the AI read, item
@@ -168,7 +168,7 @@ function ScanResultCard<T extends ScanResultItem>({
           {single
             ? rows.map((row) => (
                 <div key={row.label} className="flex items-center justify-between gap-4 py-3.5 text-[16px]">
-                  <span className="truncate text-white/60">{row.label}</span>
+                  <span className="truncate text-white/74">{row.label}</span>
                   <span className="flex shrink-0 items-center gap-1.5 font-medium text-white">
                     {row.hex && <span className="h-2 w-2 rounded-full" style={{ background: row.hex }} />}
                     {row.value}
@@ -177,11 +177,11 @@ function ScanResultCard<T extends ScanResultItem>({
               ))
             : items.slice(0, 5).map((item, i) => (
                 <div key={i} className={cn("flex items-center justify-between gap-4 py-3.5 text-[16px]", item.selected === false && "opacity-40")}>
-                  <span className="truncate text-white/60">{item.description}</span>
+                  <span className="truncate text-white/74">{item.description}</span>
                   <span className="shrink-0 font-medium tabular-nums text-white">{fmt(item.amount)}</span>
                 </div>
               ))}
-          {!single && items.length > 5 && <p className="py-2.5 text-[13px] text-white/40">+{items.length - 5} itens</p>}
+          {!single && items.length > 5 && <p className="py-2.5 text-[13px] text-white/56">+{items.length - 5} itens</p>}
           {single && isOtherMonth(single.date) && (
             <p className="mt-2.5 flex items-start gap-1.5 rounded-[14px] bg-amber-300/10 px-3 py-2 text-[12px] leading-snug text-amber-200">
               <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
@@ -192,14 +192,14 @@ function ScanResultCard<T extends ScanResultItem>({
       ) : single ? (
         <div className="mt-2 divide-y divide-white/[0.06]">
           <div className="flex items-center justify-between py-2.5">
-            <span className="text-[16px] text-white/60">Tipo</span>
+            <span className="text-[16px] text-white/74">Tipo</span>
             <div className="flex rounded-full bg-white/[0.06] p-0.5">
               {(["despesa", "receita"] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => update(0, { type: t })}
-                  className={cn("h-8 rounded-full px-3.5 text-[13px] font-semibold", (isIncome ? "receita" : "despesa") === t ? "bg-white text-[#0B0B0B]" : "text-white/55")}
+                  className={cn("h-8 rounded-full px-3.5 text-[13px] font-semibold", (isIncome ? "receita" : "despesa") === t ? "bg-white text-[#0B0B0B]" : "text-white/70")}
                 >
                   {t === "despesa" ? "Despesa" : "Receita"}
                 </button>
@@ -208,17 +208,17 @@ function ScanResultCard<T extends ScanResultItem>({
           </div>
           {single.merchant && (
             <label className="flex items-center justify-between gap-4 py-2.5">
-              <span className="shrink-0 text-[16px] text-white/60">Descrição</span>
+              <span className="shrink-0 text-[16px] text-white/74">Descrição</span>
               <input value={single.description} onChange={(e) => update(0, { description: e.target.value })} className={inputCls} />
             </label>
           )}
           <div className="py-2.5">
             <button type="button" onClick={() => setPickingCategory((v) => !v)} className="flex w-full items-center justify-between">
-              <span className="text-[16px] text-white/60">Categoria</span>
+              <span className="text-[16px] text-white/74">Categoria</span>
               <span className="flex items-center gap-1.5 text-[16px] font-medium text-white">
                 <span className="h-2 w-2 rounded-full" style={{ background: getCategoryHexColor(single.category || "Outros") }} />
                 {single.category || "Escolher"}
-                <ChevronDown className={cn("h-4 w-4 text-white/40 transition-transform", pickingCategory && "rotate-180")} />
+                <ChevronDown className={cn("h-4 w-4 text-white/56 transition-transform", pickingCategory && "rotate-180")} />
               </span>
             </button>
             <AnimatePresence initial={false}>
@@ -249,12 +249,12 @@ function ScanResultCard<T extends ScanResultItem>({
             </AnimatePresence>
           </div>
           <label className="flex items-center justify-between gap-4 py-2.5">
-            <span className="shrink-0 text-[16px] text-white/60">Data</span>
+            <span className="shrink-0 text-[16px] text-white/74">Data</span>
             <input type="date" value={single.date ?? ""} onChange={(e) => update(0, { date: e.target.value })} className={cn(inputCls, "[color-scheme:dark]")} />
           </label>
           {accounts.length > 0 && (
             <div className="py-2.5">
-              <span className="text-[16px] text-white/60">Conta</span>
+              <span className="text-[16px] text-white/74">Conta</span>
               <div className="mt-2 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                 {accounts.map((a) => (
                   <button
@@ -310,12 +310,12 @@ function ScanResultCard<T extends ScanResultItem>({
       {/* ── Total ── */}
       <div className="mt-5 flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[12px] font-bold uppercase tracking-[0.22em] text-white/45">
+          <p className="text-[12px] font-bold uppercase tracking-[0.22em] text-white/62">
             {single ? (isIncome ? "Receita" : "Despesa") : "Total"}
           </p>
           {editing && single ? (
             <label className="mt-1 flex items-baseline gap-1.5">
-              <span className="text-[15px] font-bold uppercase tracking-[0.1em] text-white/50">{currencySymbol()}</span>
+              <span className="text-[15px] font-bold uppercase tracking-[0.1em] text-white/66">{currencySymbol()}</span>
               <input
                 inputMode="numeric"
                 value={plain(single.amount)}
@@ -329,7 +329,7 @@ function ScanResultCard<T extends ScanResultItem>({
             </label>
           ) : (
             <p className="mt-1 flex items-baseline gap-1.5">
-              <span className="text-[15px] font-bold uppercase tracking-[0.1em] text-white/50">{currencySymbol()}</span>
+              <span className="text-[15px] font-bold uppercase tracking-[0.1em] text-white/66">{currencySymbol()}</span>
               <span className="truncate font-extrabold leading-none tracking-tight text-white tabular-nums" style={{ fontSize: totalSize }}>{plain(total)}</span>
             </p>
           )}

@@ -162,7 +162,7 @@ const TransactionDetailModal = ({
             </span>
             <div className="min-w-0">
               <p className="truncate text-[18px] font-bold tracking-tight text-white">{tx.name}</p>
-              <p className="flex items-center gap-1.5 truncate text-[12.5px] text-white/45">
+              <p className="flex items-center gap-1.5 truncate text-[12.5px] text-white/62">
                 {isCard ? <CreditCard className="h-3.5 w-3.5 shrink-0" /> : <Wallet className="h-3.5 w-3.5 shrink-0" />}
                 {accountName}
               </p>
@@ -172,7 +172,7 @@ const TransactionDetailModal = ({
             type="button"
             onClick={close}
             aria-label="Fechar"
-            className="-mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/60 active:opacity-60"
+            className="-mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/74 active:opacity-60"
           >
             <X className="h-4 w-4" />
           </button>
@@ -254,7 +254,7 @@ const TransactionDetailModal = ({
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
             <div className="flex items-start gap-3 rounded-[22px] border border-red-400/20 bg-red-400/[0.06] px-4 py-3.5">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
-              <p className="text-[13px] leading-snug text-white/70">
+              <p className="text-[13px] leading-snug text-white/82">
                 {isRecurring
                   ? "Essa transação se repete todo mês. Quer tirar só deste mês ou dela em diante?"
                   : isInstallment
@@ -284,7 +284,7 @@ const TransactionDetailModal = ({
               <button
                 type="button"
                 onClick={() => setConfirmingDelete(false)}
-                className="h-11 w-full rounded-full text-[14px] text-white/55"
+                className="h-11 w-full rounded-full text-[14px] text-white/70"
               >
                 Cancelar
               </button>

@@ -56,7 +56,7 @@ const GlowButton = forwardRef<HTMLButtonElement, Props>(({ variant = "dark", chi
           className={cn(
             "relative flex h-14 w-full items-center justify-center gap-2 rounded-full text-[14px] font-semibold uppercase tracking-[0.22em] transition-transform duration-150 active:scale-[0.98] disabled:cursor-not-allowed",
             light ? "bg-white text-[#0B0B0B]" : "bg-[#0B0B0B] text-white",
-            disabled && (light ? "bg-white/40 text-[#0B0B0B]/60" : "text-white/30"),
+            disabled && (light ? "bg-white/40 text-[#0B0B0B]/60" : "text-white/45"),
           )}
           {...rest}
         >

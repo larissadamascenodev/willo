@@ -15,7 +15,7 @@ export function Why({ reasons, label = "Por quê?" }: { reasons: Reason[]; label
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-[12px] font-medium text-white/50 active:opacity-60"
+        className="flex items-center gap-1.5 text-[12px] font-medium text-white/66 active:opacity-60"
       >
         <HelpCircle className="h-3.5 w-3.5" /> {label}
         <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
@@ -26,7 +26,7 @@ export function Why({ reasons, label = "Por quê?" }: { reasons: Reason[]; label
             <div className="mt-2 space-y-1.5 rounded-[16px] bg-black/25 p-3">
               {reasons.map((r) => (
                 <div key={r.label} className="flex items-center justify-between gap-3 text-[12.5px]">
-                  <span className="min-w-0 truncate text-white/60">{r.label}</span>
+                  <span className="min-w-0 truncate text-white/74">{r.label}</span>
                   <span className={cn("shrink-0 font-semibold tabular-nums", r.amount < 0 ? "text-red-400" : "text-willo-green")}>
                     {r.amount < 0 ? "−" : "+"}{brl(Math.abs(r.amount))}
                   </span>
@@ -69,11 +69,11 @@ export function CurrentScenario({ data }: { data: RaioXData }) {
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[12px] text-white/50">Saldo na conta</p>
+            <p className="text-[12px] text-white/66">Saldo na conta</p>
             <p className="truncate text-[30px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{brl(current.saldoAtual)}</p>
           </div>
           <div className="shrink-0 text-right">
-            <p className="text-[12px] text-white/50">Deve sobrar</p>
+            <p className="text-[12px] text-white/66">Deve sobrar</p>
             <p className={cn("truncate text-[22px] font-extrabold leading-tight tracking-tight tabular-nums", negative ? "text-red-400" : "text-willo-green")}>
               {brl(forecast.endBalance)}
             </p>
@@ -82,7 +82,7 @@ export function CurrentScenario({ data }: { data: RaioXData }) {
 
         {/* Expenses of the month: paid vs still to pay */}
         <div className="mt-4">
-          <div className="flex items-center justify-between text-[12px] text-white/45">
+          <div className="flex items-center justify-between text-[12px] text-white/62">
             <span>Despesas do mês <b className="font-semibold text-white tabular-nums">{brl(current.despesas)}</b></span>
             <span className="tabular-nums">{Math.round(paidShare * 100)}% pago</span>
           </div>
@@ -109,7 +109,7 @@ export function CurrentScenario({ data }: { data: RaioXData }) {
               { label: "Entra no mês", value: current.receitas, dot: "#C8F36D" },
             ].map((s) => (
               <div key={s.label}>
-                <p className="flex items-center gap-1 truncate text-[10.5px] text-white/45">
+                <p className="flex items-center gap-1 truncate text-[10.5px] text-white/62">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: s.dot }} /> {s.label}
                 </p>
                 <p className="truncate text-[13.5px] font-semibold text-white tabular-nums">{brl(s.value)}</p>
@@ -120,9 +120,9 @@ export function CurrentScenario({ data }: { data: RaioXData }) {
 
         {/* Room left before closing the month in the red */}
         <div className="mt-4 rounded-[18px] bg-black/30 p-3.5">
-          <p className="text-[12px] text-white/55">Você ainda pode gastar</p>
+          <p className="text-[12px] text-white/70">Você ainda pode gastar</p>
           <p className="truncate text-[24px] font-extrabold leading-tight text-white tabular-nums">{brl(spendable)}</p>
-          <p className="text-[12px] leading-snug text-white/45">
+          <p className="text-[12px] leading-snug text-white/62">
             sem fechar o mês no vermelho · cerca de {brl(forecast.dailyAllowance)} por dia
           </p>
         </div>
@@ -130,7 +130,7 @@ export function CurrentScenario({ data }: { data: RaioXData }) {
         {/* Where the income is already committed */}
         {commitment.income > 0 && (
           <div className="mt-4 border-t border-white/[0.12] pt-3.5">
-            <div className="flex items-center justify-between text-[12px] text-white/45">
+            <div className="flex items-center justify-between text-[12px] text-white/62">
               <span>Renda comprometida</span>
               <span className={cn("font-bold tabular-nums", commitment.committedPct >= 0.6 ? "text-red-400" : commitment.committedPct >= 0.4 ? "text-amber-300" : "text-white")}>
                 {Math.round(commitment.committedPct * 100)}%
@@ -159,7 +159,7 @@ export function CurrentScenario({ data }: { data: RaioXData }) {
                 { label: "Dia a dia", value: commitment.variable, hex: "#FCD34D" },
               ].filter((p) => p.value > 0).map((p) => (
                 <div key={p.label} className="flex items-center justify-between gap-2">
-                  <span className="flex min-w-0 items-center gap-1.5 truncate text-[11.5px] text-white/50">
+                  <span className="flex min-w-0 items-center gap-1.5 truncate text-[11.5px] text-white/66">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: p.hex }} /> {p.label}
                   </span>
                   <span className="shrink-0 text-[12.5px] font-semibold text-white tabular-nums">{brl(p.value)}</span>
@@ -177,7 +177,7 @@ export function CurrentScenario({ data }: { data: RaioXData }) {
             { label: "Otimista", value: forecast.optimistic },
           ].map((s, i) => (
             <div key={s.label} className={cn("rounded-[14px] px-2.5 py-2", i === 1 ? "bg-white/[0.08]" : "bg-black/25")}>
-              <p className="truncate text-[10px] text-white/45">{s.label}</p>
+              <p className="truncate text-[10px] text-white/62">{s.label}</p>
               <p className={cn("truncate text-[13px] font-bold tabular-nums", s.value < 0 ? "text-red-400" : "text-white")}>{brl(s.value)}</p>
             </div>
           ))}
@@ -212,12 +212,12 @@ export function MonthComparison({ data }: { data: RaioXData }) {
             const good = r.goodWhenUp ? diff >= 0 : diff <= 0;
             return (
               <div key={r.label} className="flex items-center justify-between gap-3">
-                <span className="min-w-0 text-[13.5px] text-white/60">{r.label}</span>
+                <span className="min-w-0 text-[13.5px] text-white/74">{r.label}</span>
                 <span className="flex shrink-0 items-center gap-2">
                   {c.hasBefore && (
                     <>
-                      <span className="text-[12px] text-white/35 tabular-nums">{brl(r.before)}</span>
-                      <ArrowUpRight className="h-3.5 w-3.5 rotate-45 text-white/25" />
+                      <span className="text-[12px] text-white/50 tabular-nums">{brl(r.before)}</span>
+                      <ArrowUpRight className="h-3.5 w-3.5 rotate-45 text-white/38" />
                     </>
                   )}
                   <span className="text-[15px] font-bold text-white tabular-nums">{brl(r.now)}</span>
@@ -235,11 +235,11 @@ export function MonthComparison({ data }: { data: RaioXData }) {
 
         {c.categories.length > 0 && (
           <div className="mt-4 border-t border-white/[0.06] pt-3">
-            <p className="mb-2 text-[12px] text-white/45">Maiores mudanças por categoria</p>
+            <p className="mb-2 text-[12px] text-white/62">Maiores mudanças por categoria</p>
             <div className="space-y-1.5">
               {c.categories.map((cat) => (
                 <div key={cat.name} className="flex items-center justify-between gap-3 text-[13px]">
-                  <span className="min-w-0 truncate text-white/75">{cat.name}</span>
+                  <span className="min-w-0 truncate text-white/85">{cat.name}</span>
                   <span className={cn("shrink-0 font-semibold tabular-nums", cat.diff > 0 ? "text-red-400" : "text-willo-green")}>
                     {cat.diff > 0 ? "+" : "−"}{brl(Math.abs(cat.diff))}
                   </span>

@@ -119,9 +119,9 @@ const Metas = () => {
       {/* Summary */}
       {goals.length > 0 && (
         <div className="mt-6">
-          <p className="text-[15px] text-white/50">Total guardado</p>
+          <p className="text-[15px] text-white/66">Total guardado</p>
           <p className="text-[40px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{fmt(totalGuardado)}</p>
-          <p className="text-[14px] text-white/45 tabular-nums">de {fmt(totalObjetivo)} · {Math.round(overallPct * 100)}%</p>
+          <p className="text-[14px] text-white/62 tabular-nums">de {fmt(totalObjetivo)} · {Math.round(overallPct * 100)}%</p>
           <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-white/[0.08]">
             <motion.div
               className="h-full rounded-full bg-white"
@@ -143,9 +143,9 @@ const Metas = () => {
         </span>
         <span className="flex-1">
           <span className="block text-[15px] font-medium text-white">Planejar com IA</span>
-          <span className="block text-[12px] text-white/45">Diga seu objetivo e montamos o plano</span>
+          <span className="block text-[12px] text-white/62">Diga seu objetivo e montamos o plano</span>
         </span>
-        <ChevronRight className="h-4 w-4 text-white/30" />
+        <ChevronRight className="h-4 w-4 text-white/45" />
       </button>
 
       {goals.length > 0 && <SectionTitle>Suas metas</SectionTitle>}
@@ -159,10 +159,10 @@ const Metas = () => {
       ) : goals.length === 0 ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-12 flex flex-col items-center px-8 text-center">
           <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.05]">
-            <Target className="h-8 w-8 text-white/40" />
+            <Target className="h-8 w-8 text-white/56" />
           </span>
           <p className="mt-5 text-[18px] font-bold text-white">Nenhuma meta ainda</p>
-          <p className="mt-1 text-[14px] text-white/45">Crie sua primeira meta e acompanhe quanto falta para chegar lá.</p>
+          <p className="mt-1 text-[14px] text-white/62">Crie sua primeira meta e acompanhe quanto falta para chegar lá.</p>
           <button onClick={() => setShowCreateModal(true)} className="mt-5 h-12 rounded-full bg-white px-6 text-[15px] font-semibold text-[#0B0B0B]">
             Criar meta
           </button>
@@ -213,7 +213,7 @@ const Metas = () => {
                     <button
                       onClick={(e) => { e.stopPropagation(); setMenuGoalId(goal.id); }}
                       aria-label="Opções"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/60"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/74"
                     >
                       <MoreVertical className="h-4 w-4" />
                     </button>
@@ -225,7 +225,7 @@ const Metas = () => {
                     <div className="mt-1 flex items-baseline justify-between gap-2">
                       <p className="text-[15px] tabular-nums">
                         <span className="font-bold text-white">{fmt(goal.current_amount)}</span>
-                        <span className="text-white/40"> de {fmt(goal.target_amount)}</span>
+                        <span className="text-white/56"> de {fmt(goal.target_amount)}</span>
                       </p>
                       <span className={`text-[13px] font-semibold tabular-nums ${isComplete ? "text-willo-green" : "text-white"}`}>{Math.round(progress * 100)}%</span>
                     </div>
@@ -237,7 +237,7 @@ const Metas = () => {
                         transition={{ duration: 0.8, ease: "easeOut", delay: idx * 0.06 }}
                       />
                     </div>
-                    <p className="mt-2 truncate text-[12px] text-white/45">{isComplete ? "Meta alcançada" : details}</p>
+                    <p className="mt-2 truncate text-[12px] text-white/62">{isComplete ? "Meta alcançada" : details}</p>
 
                     {!isComplete && (
                       <div className="mt-3 flex gap-2">
@@ -250,7 +250,7 @@ const Metas = () => {
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate(`/metas/${goal.id}`); }}
                           aria-label="Histórico"
-                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-white/70"
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-white/82"
                         >
                           <Clock className="h-4 w-4" />
                         </button>

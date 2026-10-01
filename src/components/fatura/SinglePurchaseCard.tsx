@@ -58,7 +58,7 @@ export default function SinglePurchaseCard({ item, index, customCats, card, onOp
 
           <div className="min-w-0 flex-1">
             <p className="truncate text-[15px] font-semibold text-white">{item.name}</p>
-            <p className="flex items-center gap-1.5 truncate text-[12px] text-white/45">
+            <p className="flex items-center gap-1.5 truncate text-[12px] text-white/62">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: CARD_HEX[card?.color ?? ""] ?? "#8B5CF6" }} />
               {card?.name ?? "Cartão"}
             </p>
@@ -66,12 +66,12 @@ export default function SinglePurchaseCard({ item, index, customCats, card, onOp
 
           <div className="shrink-0 text-right">
             <p className="text-[15px] font-bold text-white tabular-nums">{formatCurrency(item.amount)}</p>
-            <p className="text-[11px] text-white/40">à vista</p>
+            <p className="text-[11px] text-white/56">à vista</p>
           </div>
         </div>
 
         <div className="mt-2.5 flex items-center justify-between border-t border-white/[0.06] pt-2.5">
-          <span className="flex min-w-0 items-center gap-2 text-[12px] text-white/55">
+          <span className="flex min-w-0 items-center gap-2 text-[12px] text-white/70">
             <span className="truncate capitalize">{item.category}</span>
             {day && (
               <>
@@ -80,7 +80,7 @@ export default function SinglePurchaseCard({ item, index, customCats, card, onOp
               </>
             )}
           </span>
-          {onOpen && <ChevronRight className="h-4 w-4 shrink-0 text-white/25" />}
+          {onOpen && <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />}
         </div>
       </button>
     </motion.div>

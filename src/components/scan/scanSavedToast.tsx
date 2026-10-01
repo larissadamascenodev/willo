@@ -29,7 +29,7 @@ export function SavedToastCard({ items, onOpen }: { items: ScanResultItem[]; onO
         <p className="text-[14px] font-semibold text-white">
           {single ? (isIncome ? "Receita adicionada" : "Gasto adicionado") : `${items.length} lançamentos adicionados`}
         </p>
-        <p className="truncate text-[12px] text-white/50">
+        <p className="truncate text-[12px] text-white/66">
           {single ? `${single.merchant || single.description} · ` : ""}
           <span className={isIncome ? "text-willo-green" : "text-white/80"}>{isIncome ? "+" : "−"}{fmt(total)}</span>
           {otherMonth && date ? ` · em ${date.toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(".", "")}` : ""}

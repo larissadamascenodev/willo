@@ -19,7 +19,7 @@ const Auth = () => {
       <div className="flex h-[100dvh] items-center justify-center bg-black">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-3">
           <Logo size="sm" className="animate-pulse" />
-          <span className="text-sm text-white/40">Carregando...</span>
+          <span className="text-sm text-white/56">Carregando...</span>
         </motion.div>
       </div>
     );

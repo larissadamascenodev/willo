@@ -21,7 +21,7 @@ export function showWelcomeToast(name?: string | null) {
           <p className="truncate text-[15px] font-semibold text-white">
             {greeting}{first ? `, ${first}` : ""}!
           </p>
-          <p className="truncate text-[12.5px] text-white/50">Seu painel está pronto</p>
+          <p className="truncate text-[12.5px] text-white/66">Seu painel está pronto</p>
         </div>
       </div>
     ),

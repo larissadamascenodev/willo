@@ -35,7 +35,7 @@ const WelcomeToAppModal = ({ open, onConfigure, onSkip }: Props) => (
           <h2 className="font-display font-extrabold text-[20px] leading-[1.25] text-white tracking-tight">
             Vamos deixar tudo pronto?
           </h2>
-          <p className="text-[14px] text-white/55 leading-relaxed mt-2">
+          <p className="text-[14px] text-white/70 leading-relaxed mt-2">
             Cadastre sua conta, cartão e gastos fixos pra ter uma visão completa do seu dinheiro.
           </p>
           <div className="mt-6 space-y-3">
@@ -49,7 +49,7 @@ const WelcomeToAppModal = ({ open, onConfigure, onSkip }: Props) => (
             <button
               type="button"
               onClick={onSkip}
-              className="w-full text-center text-[14px] text-white/55 transition-colors active:text-white"
+              className="w-full text-center text-[14px] text-white/70 transition-colors active:text-white"
             >
               Pular por agora
             </button>

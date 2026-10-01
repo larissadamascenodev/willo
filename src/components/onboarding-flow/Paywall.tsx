@@ -73,7 +73,7 @@ function PhoneCarousel() {
       </motion.div>
       <div className="mt-3 h-5 text-center">
         <AnimatePresence mode="wait">
-          <motion.p key={index} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="text-[13px] text-white/60">
+          <motion.p key={index} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="text-[13px] text-white/74">
             {SLIDES[index].caption}
           </motion.p>
         </AnimatePresence>
@@ -128,9 +128,9 @@ function PlanOption({ selected, onClick, title, price, sub, badge }: { selected:
         {selected && <Check className="h-3.5 w-3.5 text-black" strokeWidth={3.5} />}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[12px] font-semibold uppercase tracking-[0.2em] text-white/50">{title}</span>
+        <span className="block text-[12px] font-semibold uppercase tracking-[0.2em] text-white/66">{title}</span>
         <span className="block text-[20px] font-extrabold tracking-tight text-white">{price}</span>
-        <span className="block text-[12.5px] text-white/45">{sub}</span>
+        <span className="block text-[12.5px] text-white/62">{sub}</span>
       </span>
     </button>
   );
@@ -199,7 +199,7 @@ function DiscountWheel({ onAccept, onSkip }: { onAccept: () => void; onSkip: () 
       <div className="pointer-events-none absolute left-1/2 top-1/3 h-80 w-80 -translate-x-1/2 rounded-full bg-white/[0.08] blur-[110px]" />
       <div className="relative text-center">
         <h2 className="text-[28px] font-bold leading-tight tracking-tight text-white">Você ganhou um prêmio.</h2>
-        <p className="mt-2 text-[15px] text-white/50">Gire a roleta e ganhe até 75% de desconto.</p>
+        <p className="mt-2 text-[15px] text-white/66">Gire a roleta e ganhe até 75% de desconto.</p>
       </div>
 
       {/* Wheel — centered while spinning; slides up only when the offer card arrives */}
@@ -254,7 +254,7 @@ function DiscountWheel({ onAccept, onSkip }: { onAccept: () => void; onSkip: () 
       {/* Stays in the layout (just fades) so the wheel doesn't jump when it goes */}
       <motion.div animate={{ opacity: won ? 0 : 1 }} className={cn("relative space-y-3", won && "pointer-events-none")}>
         <GlowButton variant="light" onClick={spin} disabled={stage === "spinning"}>{stage === "spinning" ? "Girando…" : "Girar"}</GlowButton>
-        <button type="button" onClick={onSkip} disabled={stage === "spinning"} className="w-full py-2 text-[14px] text-white/45 disabled:opacity-0">Não quero desconto</button>
+        <button type="button" onClick={onSkip} disabled={stage === "spinning"} className="w-full py-2 text-[14px] text-white/62 disabled:opacity-0">Não quero desconto</button>
       </motion.div>
 
       {/* The offer */}
@@ -291,14 +291,14 @@ function DiscountWheel({ onAccept, onSkip }: { onAccept: () => void; onSkip: () 
                 {PRICES.desconto.off}% OFF
               </motion.p>
               <div className="mt-3 flex items-baseline justify-center gap-2.5">
-                <span className="text-[16px] font-semibold text-white/35 line-through">R$ {PRICES.mensal.total}/mês</span>
+                <span className="text-[16px] font-semibold text-white/50 line-through">R$ {PRICES.mensal.total}/mês</span>
                 <span className="text-[34px] font-extrabold tracking-tight" style={{ color: ACCENT }}>R$ {PRICES.desconto.perMonth}</span>
-                <span className="text-[15px] text-white/55">/mês</span>
+                <span className="text-[15px] text-white/70">/mês</span>
               </div>
-              <p className="mt-1 text-[13.5px] text-white/50">R$ {PRICES.desconto.total} cobrado por ano, cancele quando quiser</p>
+              <p className="mt-1 text-[13.5px] text-white/66">R$ {PRICES.desconto.total} cobrado por ano, cancele quando quiser</p>
               <div className="mt-5 space-y-1">
                 <GlowButton variant="dark" onClick={onAccept}>Quero meu desconto</GlowButton>
-                <button type="button" onClick={onSkip} className="w-full py-3 text-[14px] text-white/45">Não, prefiro pagar o preço cheio</button>
+                <button type="button" onClick={onSkip} className="w-full py-3 text-[14px] text-white/62">Não, prefiro pagar o preço cheio</button>
               </div>
             </motion.div>
           </>
@@ -374,19 +374,19 @@ export default function Paywall({ name, onPurchase, onClose, offerDiscount = tru
         <motion.div {...rise(3)} className="rounded-[24px] border border-white/[0.1] willo-glass px-5 py-4">
           <p className="flex items-baseline gap-1">
             <span className="text-[30px] font-extrabold leading-none tracking-tight text-white">R$ {PRICES.anual.perMonth}</span>
-            <span className="text-[14px] text-white/50">/mês</span>
+            <span className="text-[14px] text-white/66">/mês</span>
           </p>
-          <p className="mt-1.5 text-[12.5px] leading-snug text-white/45">R$ {PRICES.anual.total} cobrado por ano, cancele quando quiser</p>
+          <p className="mt-1.5 text-[12.5px] leading-snug text-white/62">R$ {PRICES.anual.total} cobrado por ano, cancele quando quiser</p>
         </motion.div>
 
         <motion.div {...rise(4)} className="mt-4">
           <GlowButton variant="light" onClick={() => onPurchase("anual")}>Quero meu plano agora</GlowButton>
         </motion.div>
         <motion.div {...rise(5)}>
-          <button type="button" onClick={() => setPlansOpen(true)} className="mt-1 w-full py-3 text-[13px] font-semibold uppercase tracking-[0.2em] text-white/70">
+          <button type="button" onClick={() => setPlansOpen(true)} className="mt-1 w-full py-3 text-[13px] font-semibold uppercase tracking-[0.2em] text-white/82">
             Ver todos os planos
           </button>
-          <p className="text-center text-[11px] text-white/30">Renova automaticamente. Cancele quando quiser.</p>
+          <p className="text-center text-[11px] text-white/45">Renova automaticamente. Cancele quando quiser.</p>
         </motion.div>
       </div>
 
@@ -399,8 +399,8 @@ export default function Paywall({ name, onPurchase, onClose, offerDiscount = tru
         <div className="mt-5">
           <GlowButton variant="light" onClick={() => onPurchase(plan)}>Continuar</GlowButton>
         </div>
-        <p className="mt-3 text-center text-[11px] text-white/30">Renova automaticamente. Cancele quando quiser.</p>
-        <div className="mt-3 flex items-center justify-center gap-2 text-[12.5px] text-white/50">
+        <p className="mt-3 text-center text-[11px] text-white/45">Renova automaticamente. Cancele quando quiser.</p>
+        <div className="mt-3 flex items-center justify-center gap-2 text-[12.5px] text-white/66">
           <button type="button" onClick={onRestore ?? (() => toast("Nenhuma compra encontrada para restaurar."))} className="py-1">Restaurar</button>
           <span className="text-white/20">·</span>
           <button type="button" onClick={() => setLegal("terms")} className="py-1">Termos</button>

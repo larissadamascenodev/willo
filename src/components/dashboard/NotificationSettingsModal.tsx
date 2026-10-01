@@ -95,11 +95,11 @@ export default function NotificationSettingsModal({ open, onOpenChange }: Props)
     >
       <div className="px-5 pb-4">
         <p className="text-[22px] font-bold tracking-tight text-white">Lembretes e alertas</p>
-        <p className="text-[14px] text-white/45">Escolha o que o Willo te avisa.</p>
+        <p className="text-[14px] text-white/62">Escolha o que o Willo te avisa.</p>
 
         {loading || !settings ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="h-5 w-5 animate-spin text-white/40" />
+            <Loader2 className="h-5 w-5 animate-spin text-white/56" />
           </div>
         ) : (
           <div className="mt-5 divide-y divide-white/[0.06] overflow-hidden rounded-[22px] border border-white/[0.12] willo-glass">
@@ -113,7 +113,7 @@ export default function NotificationSettingsModal({ open, onOpenChange }: Props)
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[15px] font-medium text-white">{label}</span>
-                      <span className="block truncate text-[12.5px] text-white/45">{sub}</span>
+                      <span className="block truncate text-[12.5px] text-white/62">{sub}</span>
                     </span>
                     <Toggle on={on} onChange={() => toggle(key)} label={label} />
                   </div>
@@ -128,7 +128,7 @@ export default function NotificationSettingsModal({ open, onOpenChange }: Props)
                                 key={opt.value}
                                 type="button"
                                 onClick={() => setSettings({ ...settings, bill_due_days_before: opt.value })}
-                                className={cn("h-9 rounded-full text-[12.5px] font-semibold transition-colors", selected ? "bg-white text-[#0B0B0B]" : "text-white/55")}
+                                className={cn("h-9 rounded-full text-[12.5px] font-semibold transition-colors", selected ? "bg-white text-[#0B0B0B]" : "text-white/70")}
                               >
                                 {opt.label}
                               </button>

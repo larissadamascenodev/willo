@@ -28,7 +28,7 @@ const Welcome = () => {
           className="flex flex-col items-center gap-3"
         >
           <img src={wordmarkOnDark} alt="Willo" className="h-6 w-auto animate-pulse" style={{ filter: "brightness(0) invert(1)" }} />
-          <span className="text-white/40 text-sm">Carregando...</span>
+          <span className="text-white/56 text-sm">Carregando...</span>
         </motion.div>
       </div>
     );
@@ -101,7 +101,7 @@ const Welcome = () => {
                 <h1 className="font-display text-[25px] font-extrabold leading-tight tracking-tight text-white">
                   Gaste melhor, guarde mais.
                 </h1>
-                <p className="mt-1 text-[15px] text-white/50">Tudo calculado pro seu bolso.</p>
+                <p className="mt-1 text-[15px] text-white/66">Tudo calculado pro seu bolso.</p>
               </motion.div>
 
               {/* White pill with a beam of light circling it */}
@@ -119,7 +119,7 @@ const Welcome = () => {
               <button
                 type="button"
                 onClick={() => navigate("/auth", { state: { mode: "login" } })}
-                className="mt-4 w-full text-center text-[14px] text-white/50 transition-colors active:text-white"
+                className="mt-4 w-full text-center text-[14px] text-white/66 transition-colors active:text-white"
               >
                 Já tenho conta
               </button>

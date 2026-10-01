@@ -24,15 +24,15 @@ export const Row = ({ icon: Icon, label, children, onClick, muted }: {
     )}
   >
     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
-      <Icon className="h-4 w-4 text-white/70" />
+      <Icon className="h-4 w-4 text-white/82" />
     </span>
-    <span className={cn("shrink-0 text-[15px]", muted ? "text-white/45" : "text-white")}>{label}</span>
+    <span className={cn("shrink-0 text-[15px]", muted ? "text-white/62" : "text-white")}>{label}</span>
     <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 text-right">{children}</div>
   </div>
 );
 
 export const inlineInput =
-  "w-full min-w-0 bg-transparent text-right text-[15px] text-white placeholder:text-white/30 focus:outline-none";
+  "w-full min-w-0 bg-transparent text-right text-[15px] text-white placeholder:text-white/45 focus:outline-none";
 
 /** The group the rows sit in. */
 export const RowGroup = ({ children, className }: { children: ReactNode; className?: string }) => (
@@ -54,7 +54,7 @@ export const TypeToggle = ({ value, onChange }: {
         onClick={() => onChange(t)}
         className={cn(
           "h-9 rounded-full text-[13px] font-semibold transition-colors",
-          value === t ? "bg-white text-[#0B0B0B]" : "text-white/55",
+          value === t ? "bg-white text-[#0B0B0B]" : "text-white/70",
         )}
       >
         {t === "despesa" ? "Despesa" : "Receita"}
@@ -75,7 +75,7 @@ export const AmountHero = ({ cents, onChange, isExpense, hint }: {
 }) => (
   <div>
     <label className="relative mt-5 flex items-baseline justify-center gap-2">
-      <span className="text-[24px] font-bold text-white/40">{currencySymbol()}</span>
+      <span className="text-[24px] font-bold text-white/56">{currencySymbol()}</span>
       {onChange ? (
         <input
           type="text"
@@ -96,6 +96,6 @@ export const AmountHero = ({ cents, onChange, isExpense, hint }: {
     <div className="mt-3 flex justify-center">
       <span className="h-1 w-10 rounded-full" style={{ background: isExpense ? "#F87171" : "#C8F36D" }} />
     </div>
-    {hint && <p className="mt-2 text-center text-[12px] text-white/35">{hint}</p>}
+    {hint && <p className="mt-2 text-center text-[12px] text-white/50">{hint}</p>}
   </div>
 );

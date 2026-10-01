@@ -273,13 +273,13 @@ const TransactionsScreen = ({ rows, spent }: { rows: TransactionRow[]; spent: nu
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <TransactionTabs value="todos" onChange={noop} layoutId="demo-tx-tabs" />
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/[0.12] willo-glass text-white/70">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/[0.12] willo-glass text-white/82">
               <SlidersHorizontal className="h-4 w-4" />
             </span>
           </div>
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
-            <div className="flex h-11 w-full items-center rounded-full border border-white/[0.12] willo-glass pl-11 text-[14px] text-white/30">Buscar transação...</div>
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
+            <div className="flex h-11 w-full items-center rounded-full border border-white/[0.12] willo-glass pl-11 text-[14px] text-white/45">Buscar transação...</div>
           </div>
         </div>
         <div>
@@ -289,8 +289,8 @@ const TransactionsScreen = ({ rows, spent }: { rows: TransactionRow[]; spent: nu
             return (
               <div key={date} className={gi > 0 ? "mt-5" : ""}>
                 <div className="mb-2 flex items-center justify-between px-1">
-                  <span className={`text-[13px] font-semibold ${isToday ? "text-white" : "text-white/50"}`}>{isToday ? `Hoje, ${label}` : label}</span>
-                  <span className={`text-[12px] tabular-nums ${net > 0 ? "text-willo-green" : "text-white/45"}`}>
+                  <span className={`text-[13px] font-semibold ${isToday ? "text-white" : "text-white/66"}`}>{isToday ? `Hoje, ${label}` : label}</span>
+                  <span className={`text-[12px] tabular-nums ${net > 0 ? "text-willo-green" : "text-white/62"}`}>
                     {net > 0 ? "+" : "−"}R$ {Math.abs(net).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -318,13 +318,13 @@ const WalletScreen = ({ to }: { to?: string }) => (
     <div className="space-y-6">
       <div className="pt-1">
         <h1 className="text-[28px] font-extrabold tracking-tight text-white">Carteira</h1>
-        <p className="text-[14px] text-white/45">Suas contas e cartões em um só lugar</p>
+        <p className="text-[14px] text-white/62">Suas contas e cartões em um só lugar</p>
       </div>
       <AccountsBalanceCard accounts={ACCOUNTS} onOpen={noop} onAdd={noop} savedTotal={16600} />
       <section data-section="guardado">
         <div className="mb-3 flex items-center justify-between px-1">
           <h2 className="text-[18px] font-bold text-white">Guardado</h2>
-          <p className="text-[13px] text-white/45 tabular-nums">R$ 16.600</p>
+          <p className="text-[13px] text-white/62 tabular-nums">R$ 16.600</p>
         </div>
         <ReserveAndPots goals={WALLET_GOALS} onCreated={noop} />
       </section>
@@ -357,7 +357,7 @@ export const RaioXScreen = () => (
   <div className="absolute inset-0 overflow-hidden px-4">
     <AppHeader />
     <header className="px-1 pt-1">
-      <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/40">
+      <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/56">
         <span className="relative flex h-2 w-2">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-willo-green opacity-60" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-willo-green" />
@@ -368,7 +368,7 @@ export const RaioXScreen = () => (
         Raio-X
         <BrainCircuit className="h-6 w-6 text-willo-green" />
       </h1>
-      <p className="mt-1.5 text-[14px] text-white/45">O cérebro do seu dinheiro: o que você faz certo, o que dá pra melhorar.</p>
+      <p className="mt-1.5 text-[14px] text-white/62">O cérebro do seu dinheiro: o que você faz certo, o que dá pra melhorar.</p>
     </header>
     <DailyLightCard data={RAIOX_MOCK} />
     <div className="mt-4">
@@ -381,7 +381,7 @@ export const RaioXScreen = () => (
 const ModalRow = ({ icon: Icon, label, children }: { icon: typeof FileText; label: string; children?: ReactNode }) => (
   <div className="flex min-h-[56px] items-center gap-3 px-4 py-2.5">
     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
-      <Icon className="h-4 w-4 text-white/70" />
+      <Icon className="h-4 w-4 text-white/82" />
     </span>
     <span className="shrink-0 text-[15px] text-white">{label}</span>
     <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 text-right">{children}</div>
@@ -403,7 +403,7 @@ const NewExpenseDemo = () => {
     return () => timers.forEach(clearTimeout);
   }, []);
 
-  const chip = (active: boolean) => cn("flex h-9 shrink-0 items-center rounded-full px-4 text-[13px] font-semibold", active ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/60");
+  const chip = (active: boolean) => cn("flex h-9 shrink-0 items-center rounded-full px-4 text-[13px] font-semibold", active ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/74");
   const CatIcon = category ? getDefaultCategoryIcon(category) : null;
 
   return (
@@ -416,7 +416,7 @@ const NewExpenseDemo = () => {
     >
       <div className="shrink-0 px-4" style={{ paddingTop: STATUS_H + 10 }}>
         <div className="flex h-11 items-center justify-between">
-          <span className="-ml-1 flex h-10 w-10 items-center justify-center text-white/70"><X className="h-6 w-6" /></span>
+          <span className="-ml-1 flex h-10 w-10 items-center justify-center text-white/82"><X className="h-6 w-6" /></span>
           <span className="text-[16px] font-semibold text-white">Nova despesa</span>
           <span className="w-10" />
         </div>
@@ -424,16 +424,16 @@ const NewExpenseDemo = () => {
 
       <div className="min-h-0 flex-1 overflow-hidden px-4">
         <div className="flex flex-col items-center pb-7 pt-6">
-          <span className="flex items-center gap-1.5 text-[14px] text-white/50">
+          <span className="flex items-center gap-1.5 text-[14px] text-white/66">
             <TrendingDown className="h-4 w-4" style={{ color: "#F87171" }} /> Valor da despesa
           </span>
           <div className="relative mt-2 flex items-baseline gap-2">
-            <span className="text-[24px] font-bold text-white/40">R$</span>
+            <span className="text-[24px] font-bold text-white/56">R$</span>
             <motion.span
               key={cents}
               initial={{ scale: 1.06 }}
               animate={{ scale: 1 }}
-              className={cn("text-[52px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "text-white/30" : "text-white")}
+              className={cn("text-[52px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "text-white/45" : "text-white")}
             >
               {(cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </motion.span>
@@ -443,7 +443,7 @@ const NewExpenseDemo = () => {
 
         <div className="divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.12] willo-glass">
           <ModalRow icon={FileText} label="Descrição">
-            <span className={cn("text-[15px]", desc ? "text-white" : "text-white/30")}>{desc || "Ex: Mercado"}</span>
+            <span className={cn("text-[15px]", desc ? "text-white" : "text-white/45")}>{desc || "Ex: Mercado"}</span>
             {desc && desc.length < 5 && <span className="h-5 w-[2px] animate-pulse bg-white" />}
           </ModalRow>
           <ModalRow icon={Tag} label="Categoria">
@@ -451,16 +451,16 @@ const NewExpenseDemo = () => {
               <motion.span initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="flex min-w-0 items-center gap-2">
                 <CatIcon className="h-4 w-4 shrink-0" style={{ color: getCategoryHexColor(category) }} />
                 <span className="truncate text-[15px] text-white">{category}</span>
-                <span className="rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[10px] text-white/60">IA</span>
+                <span className="rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[10px] text-white/74">IA</span>
               </motion.span>
             ) : (
-              <span className="text-[15px] text-white/35">Escolher</span>
+              <span className="text-[15px] text-white/50">Escolher</span>
             )}
-            <ChevronRight className="h-4 w-4 shrink-0 text-white/25" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />
           </ModalRow>
         </div>
 
-        <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/45">Data</p>
+        <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/62">Data</p>
         <div className="rounded-[22px] border border-white/[0.12] willo-glass p-3">
           <div className="flex gap-2">
             <span className={chip(true)}>Hoje</span>
@@ -469,18 +469,18 @@ const NewExpenseDemo = () => {
           </div>
         </div>
 
-        <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/45">Como pagou</p>
+        <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/62">Como pagou</p>
         <div className="rounded-[22px] border border-white/[0.12] willo-glass">
           <div className="grid grid-cols-2 gap-1 p-1.5">
             {([["Conta", Wallet, true], ["Cartão de crédito", CreditCard, false]] as const).map(([label, Icon, on]) => (
-              <span key={label} className={cn("flex h-10 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold", on ? "bg-white text-[#0B0B0B]" : "text-white/55")}>
+              <span key={label} className={cn("flex h-10 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold", on ? "bg-white text-[#0B0B0B]" : "text-white/70")}>
                 <Icon className="h-4 w-4" /> {label}
               </span>
             ))}
           </div>
           <div className="border-t border-white/[0.06] px-4 py-3.5">
-            <span className="flex items-center gap-2.5 text-[15px] text-white/60">
-              <Wallet className="h-[18px] w-[18px] text-white/45" /> Conta
+            <span className="flex items-center gap-2.5 text-[15px] text-white/74">
+              <Wallet className="h-[18px] w-[18px] text-white/62" /> Conta
             </span>
             <div className="mt-2.5 flex flex-wrap gap-2">
               <span className="flex h-10 items-center gap-2 rounded-full border border-white bg-white px-3.5 text-[14px] font-medium text-[#0B0B0B]">
@@ -535,7 +535,7 @@ const SavedTransactionToast = () => (
     <CheckCircle2 className="mt-px h-5 w-5 shrink-0 fill-willo-green text-[#1A1A1A]" />
     <div>
       <p>Transação registrada 🎯</p>
-      <p className="text-[13px] font-normal text-white/55">Despesa de R$ 45,90</p>
+      <p className="text-[13px] font-normal text-white/70">Despesa de R$ 45,90</p>
     </div>
   </div>
 );

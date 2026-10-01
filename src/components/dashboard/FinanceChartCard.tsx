@@ -151,7 +151,7 @@ function Segmented<T extends string>({
               transition={{ type: "spring", stiffness: 420, damping: 34 }}
             />
           )}
-          <span className={cn("relative z-10 transform-gpu transition-colors", value === o.key ? "text-[#0B0B0B]" : "text-white/50")}>
+          <span className={cn("relative z-10 transform-gpu transition-colors", value === o.key ? "text-[#0B0B0B]" : "text-white/66")}>
             {o.label}
           </span>
         </button>
@@ -231,7 +231,7 @@ function WeekBars({ data }: { data: Point[] }) {
       </div>
       <div className="mt-1.5 flex justify-between gap-2">
         {data.map((d, i) => (
-          <span key={d.label} className={cn("flex-1 text-center text-[10px]", i === todayIdx ? "font-semibold text-white" : "text-white/40")}>
+          <span key={d.label} className={cn("flex-1 text-center text-[10px]", i === todayIdx ? "font-semibold text-white" : "text-white/56")}>
             {d.label}
           </span>
         ))}
@@ -316,7 +316,7 @@ const FinanceChartCard = memo(() => {
       </div>
 
       <div className="mt-2.5">
-        <p className="text-[12px] text-white/50">{summary.title}</p>
+        <p className="text-[12px] text-white/66">{summary.title}</p>
         <div className="flex items-baseline gap-2">
           <p className="text-[20px] font-extrabold leading-tight tracking-tight tabular-nums text-white">{fmt(summary.value)}</p>
           {summary.delta !== null && (
@@ -326,7 +326,7 @@ const FinanceChartCard = memo(() => {
             </span>
           )}
         </div>
-        <p className="text-[11px] text-white/35">{summary.caption}</p>
+        <p className="text-[11px] text-white/50">{summary.caption}</p>
       </div>
 
       <div className="mt-2">

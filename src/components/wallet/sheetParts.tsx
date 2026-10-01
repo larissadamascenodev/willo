@@ -7,7 +7,7 @@ import { BANKS, PALETTE, type Bank } from "@/lib/banks";
 /** Small gray label above each block of a sheet. */
 export const SectionLabel = ({ children, right }: { children: ReactNode; right?: ReactNode }) => (
   <div className="mb-2 mt-6 flex items-center justify-between px-1">
-    <p className="text-[13px] font-semibold text-white/45">{children}</p>
+    <p className="text-[13px] font-semibold text-white/62">{children}</p>
     {right}
   </div>
 );
@@ -18,7 +18,7 @@ export const PillInput = forwardRef<HTMLInputElement, React.InputHTMLAttributes<
     ref={ref}
     {...props}
     className={cn(
-      "h-12 w-full rounded-full border border-white/[0.06] willo-glass-inset px-4 text-[15px] text-white placeholder:text-white/30 focus:border-white/25 focus:outline-none",
+      "h-12 w-full rounded-full border border-white/[0.06] willo-glass-inset px-4 text-[15px] text-white placeholder:text-white/45 focus:border-white/25 focus:outline-none",
       props.className,
     )}
   />
@@ -38,7 +38,7 @@ export function BankChips({ selectedId, onPick, onOther }: { selectedId: string 
             onClick={() => onPick(b)}
             className={cn(
               "flex shrink-0 items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3.5 text-[13px] font-medium transition-colors",
-              selected ? "border-white bg-white/[0.1] text-white" : "border-white/[0.12] willo-glass-inset text-white/70",
+              selected ? "border-white bg-white/[0.1] text-white" : "border-white/[0.12] willo-glass-inset text-white/82",
             )}
           >
             <span className="h-6 w-6 rounded-full" style={{ background: b.hex, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.15)" }} />
@@ -49,7 +49,7 @@ export function BankChips({ selectedId, onPick, onOther }: { selectedId: string 
       <button
         type="button"
         onClick={onOther}
-        className="flex shrink-0 items-center gap-1.5 rounded-full border border-dashed border-white/15 px-3.5 py-1.5 text-[13px] text-white/60"
+        className="flex shrink-0 items-center gap-1.5 rounded-full border border-dashed border-white/15 px-3.5 py-1.5 text-[13px] text-white/74"
       >
         <Pencil className="h-3.5 w-3.5" /> Outro
       </button>
@@ -93,8 +93,8 @@ export function MoneyField({ cents, onChange, chips, negative = false, children 
   return (
     <div className="rounded-[22px] border border-white/[0.12] willo-glass p-5">
       <label className="relative mx-auto flex w-fit items-baseline gap-1.5">
-        <span className="text-[20px] font-bold text-white/40">{negative ? `−${currencySymbol()}` : currencySymbol()}</span>
-        <span className={cn("text-[40px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "text-white/30" : negative ? "text-red-400" : "text-white")}>
+        <span className="text-[20px] font-bold text-white/56">{negative ? `−${currencySymbol()}` : currencySymbol()}</span>
+        <span className={cn("text-[40px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "text-white/45" : negative ? "text-red-400" : "text-white")}>
           {(cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
         <input
@@ -114,7 +114,7 @@ export function MoneyField({ cents, onChange, chips, negative = false, children 
               onClick={() => onChange(v * 100)}
               className={cn(
                 "rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
-                cents === v * 100 ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/60",
+                cents === v * 100 ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/74",
               )}
             >
               {fmtShort(v)}
@@ -140,7 +140,7 @@ export function DayGrid({ value, onChange, mark }: { value: number; onChange: (d
             onClick={() => onChange(d)}
             className={cn(
               "relative flex h-10 items-center justify-center rounded-full text-[14px] font-semibold tabular-nums transition-colors",
-              selected ? "bg-white text-[#0B0B0B]" : "text-white/70 active:bg-white/10",
+              selected ? "bg-white text-[#0B0B0B]" : "text-white/82 active:bg-white/10",
             )}
           >
             {d}

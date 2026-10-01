@@ -113,15 +113,15 @@ const ParcelamentosAtivosCard = () => {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-[16px] font-semibold text-white">Parcelamentos</h3>
-            <p className="text-[12px] text-white/40">Compras parceladas no cartão e na conta</p>
+            <p className="text-[12px] text-white/56">Compras parceladas no cartão e na conta</p>
           </div>
-          <ChevronRight className="h-4 w-4 text-white/30" />
+          <ChevronRight className="h-4 w-4 text-white/45" />
         </div>
         <div className="mt-4 flex items-center gap-3 rounded-[16px] bg-white/[0.04] px-3.5 py-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
-            <CreditCard className="h-4 w-4 text-white/50" />
+            <CreditCard className="h-4 w-4 text-white/66" />
           </span>
-          <p className="flex-1 text-[13px] text-white/50">Nenhum parcelamento ativo.</p>
+          <p className="flex-1 text-[13px] text-white/66">Nenhum parcelamento ativo.</p>
         </div>
       </button>
     );
@@ -142,29 +142,29 @@ const ParcelamentosAtivosCard = () => {
       <button onClick={() => navigate("/parcelamentos")} className="flex w-full items-center justify-between">
         <div className="text-left">
           <h3 className="text-[16px] font-semibold text-white">Parcelamentos</h3>
-          <p className="text-[12px] text-white/40">
+          <p className="text-[12px] text-white/56">
             {items.length} {items.length === 1 ? "compra parcelada" : "compras parceladas"}
           </p>
         </div>
-        <ChevronRight className="h-4 w-4 text-white/30" />
+        <ChevronRight className="h-4 w-4 text-white/45" />
       </button>
 
       {/* Summary */}
       {stats && (
         <div className="mt-3 grid grid-cols-2 rounded-[18px] bg-white/[0.04] py-3">
           <div className="px-3.5">
-            <p className="text-[11px] text-white/45">Por mês</p>
+            <p className="text-[11px] text-white/62">Por mês</p>
             <p className="text-[17px] font-bold text-white tabular-nums">{formatCurrency(stats.totalMensal)}</p>
           </div>
           <div className="border-l border-white/[0.12] px-3.5">
-            <p className="text-[11px] text-white/45">Restante</p>
+            <p className="text-[11px] text-white/62">Restante</p>
             <p className="text-[17px] font-bold text-white tabular-nums">{formatCurrency(stats.totalRestante)}</p>
           </div>
         </div>
       )}
 
       {stats && stats.monthsUntilFree > 0 && (
-        <p className="mt-2.5 px-1 text-[12px] text-white/45">
+        <p className="mt-2.5 px-1 text-[12px] text-white/62">
           Livre das parcelas em <span className="font-semibold text-white">{stats.monthsUntilFree} {stats.monthsUntilFree === 1 ? "mês" : "meses"}</span>
           {" "}· {formatMonth(stats.lastEndDate)}
         </p>
@@ -201,7 +201,7 @@ const ParcelamentosAtivosCard = () => {
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.08]">
                       <div className={`h-full rounded-full ${item.isOverdue ? "bg-red-400" : "bg-white"}`} style={{ width: `${progress}%` }} />
                     </div>
-                    <span className={`flex shrink-0 items-center gap-1 text-[11px] tabular-nums ${item.isOverdue ? "text-red-400" : "text-white/45"}`}>
+                    <span className={`flex shrink-0 items-center gap-1 text-[11px] tabular-nums ${item.isOverdue ? "text-red-400" : "text-white/62"}`}>
                       {item.isOverdue ? <AlertTriangle className="h-3 w-3" /> : isCard ? <CreditCard className="h-3 w-3" /> : <Wallet className="h-3 w-3" />}
                       {currentInst}/{item.installments}
                     </span>
@@ -216,7 +216,7 @@ const ParcelamentosAtivosCard = () => {
       {items.length > 5 && (
         <button
           onClick={() => navigate("/parcelamentos")}
-          className="mt-1 flex w-full items-center justify-center gap-1 border-t border-white/[0.06] pt-3 text-[13px] font-medium text-white/60"
+          className="mt-1 flex w-full items-center justify-center gap-1 border-t border-white/[0.06] pt-3 text-[13px] font-medium text-white/74"
         >
           Ver os {items.length} parcelamentos
           <ChevronRight className="h-4 w-4" />

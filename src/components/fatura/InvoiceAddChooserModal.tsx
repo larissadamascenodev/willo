@@ -38,9 +38,9 @@ const OptionRow = ({ option, index }: { option: Option; index: number }) => (
     </span>
     <span className="min-w-0 flex-1">
       <span className="block text-[15px] font-semibold text-white">{option.label}</span>
-      <span className="block text-[12.5px] leading-snug text-white/45">{option.description}</span>
+      <span className="block text-[12.5px] leading-snug text-white/62">{option.description}</span>
     </span>
-    <ChevronRight className="h-4 w-4 shrink-0 text-white/25" />
+    <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />
   </motion.button>
 );
 
@@ -132,14 +132,14 @@ export default function InvoiceAddChooserModal({ open, onClose, onManual, onScan
               type="button"
               onClick={() => setScanMode(null)}
               aria-label="Voltar"
-              className="-ml-1.5 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/60 active:opacity-60"
+              className="-ml-1.5 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/74 active:opacity-60"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
           )}
           <div className="min-w-0 flex-1">
             <h2 className="text-[22px] font-extrabold tracking-tight text-white">{title}</h2>
-            <p className="mt-1 text-[13px] leading-snug text-white/45">{subtitle}</p>
+            <p className="mt-1 text-[13px] leading-snug text-white/62">{subtitle}</p>
           </div>
         </div>
 
@@ -159,7 +159,7 @@ export default function InvoiceAddChooserModal({ open, onClose, onManual, onScan
         </AnimatePresence>
 
         {inScanStep && (
-          <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-[12px] text-white/30">
+          <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-[12px] text-white/45">
             <Sparkles className="h-3.5 w-3.5" /> Você confere tudo antes de importar
           </p>
         )}

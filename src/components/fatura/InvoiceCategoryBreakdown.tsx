@@ -31,7 +31,7 @@ export default function InvoiceCategoryBreakdown({ categories, total }: Props) {
   return (
     <div className="mt-4 rounded-[22px] border border-white/[0.12] willo-glass p-5">
       <div className="flex items-baseline justify-between">
-        <p className="text-[12px] font-semibold uppercase tracking-wider text-white/35">Gastos por categoria</p>
+        <p className="text-[12px] font-semibold uppercase tracking-wider text-white/50">Gastos por categoria</p>
         <p className="text-[13px] font-semibold text-white tabular-nums">{formatCurrency(total)}</p>
       </div>
 
@@ -47,7 +47,7 @@ export default function InvoiceCategoryBreakdown({ categories, total }: Props) {
       </div>
 
       {biggest && (
-        <p className="mt-2.5 text-[12.5px] text-white/45">
+        <p className="mt-2.5 text-[12.5px] text-white/62">
           <span className="font-semibold text-white">{biggest.category}</span> lidera com {biggest.percentage.toFixed(0)}% do total
         </p>
       )}
@@ -88,7 +88,7 @@ export default function InvoiceCategoryBreakdown({ categories, total }: Props) {
                         style={{ background: `hsl(${color})` }}
                       />
                     </span>
-                    <span className="shrink-0 text-[11px] tabular-nums text-white/35">
+                    <span className="shrink-0 text-[11px] tabular-nums text-white/50">
                       {cat.percentage.toFixed(0)}% · {cat.count} {cat.count === 1 ? "compra" : "compras"}
                     </span>
                   </div>
@@ -103,7 +103,7 @@ export default function InvoiceCategoryBreakdown({ categories, total }: Props) {
         <button
           type="button"
           onClick={() => setShowAll((v) => !v)}
-          className="mt-4 flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-white/[0.05] text-[13px] font-medium text-white/70 active:opacity-70"
+          className="mt-4 flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-white/[0.05] text-[13px] font-medium text-white/82 active:opacity-70"
         >
           {showAll ? "Mostrar menos" : `Ver todas as ${sorted.length} categorias`}
           <ChevronDown className={`h-4 w-4 transition-transform ${showAll ? "rotate-180" : ""}`} />

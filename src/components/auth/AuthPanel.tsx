@@ -159,7 +159,7 @@ const AuthPanel = ({ mode, onBack, pendingProfile }: Props) => {
             <span className="block text-[40px] font-light">{isLogin ? "Bem-vindo" : "Crie sua"}</span>
             <span className="block text-[44px] font-extrabold">{isLogin ? "de volta." : "conta."}</span>
           </h1>
-          {!isLogin && <p className="mt-3 text-[15px] text-white/50">Pra salvar seu plano e seus dados.</p>}
+          {!isLogin && <p className="mt-3 text-[15px] text-white/66">Pra salvar seu plano e seus dados.</p>}
         </motion.div>
 
         <motion.div layout className="mt-9 space-y-3">
@@ -181,7 +181,7 @@ const AuthPanel = ({ mode, onBack, pendingProfile }: Props) => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setEmailOpen(true)}
-              className="mx-auto mt-6 text-[15px] font-bold text-white/60 active:text-white"
+              className="mx-auto mt-6 text-[15px] font-bold text-white/74 active:text-white"
             >
               {isLogin ? "Entrar com e-mail" : "Criar com e-mail"}
             </motion.button>
@@ -197,9 +197,9 @@ const AuthPanel = ({ mode, onBack, pendingProfile }: Props) => {
               className="mt-3 space-y-3"
             >
               <label className="block rounded-[22px] border border-white/[0.1] bg-[#0B0B0B] px-5 py-3.5">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">E-mail</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/66">E-mail</span>
                 <span className="mt-1.5 flex items-center gap-3">
-                  <Mail className="h-5 w-5 shrink-0 text-white/40" />
+                  <Mail className="h-5 w-5 shrink-0 text-white/56" />
                   <input
                     type="email"
                     autoFocus
@@ -207,23 +207,23 @@ const AuthPanel = ({ mode, onBack, pendingProfile }: Props) => {
                     placeholder="seu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="min-w-0 flex-1 bg-transparent text-[17px] text-white placeholder:text-white/35 focus:outline-none"
+                    className="min-w-0 flex-1 bg-transparent text-[17px] text-white placeholder:text-white/50 focus:outline-none"
                   />
                 </span>
               </label>
               <label className="block rounded-[22px] border border-white/[0.1] bg-[#0B0B0B] px-5 py-3.5">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Senha</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/66">Senha</span>
                 <span className="mt-1.5 flex items-center gap-3">
-                  <Lock className="h-5 w-5 shrink-0 text-white/40" />
+                  <Lock className="h-5 w-5 shrink-0 text-white/56" />
                   <input
                     type={showPassword ? "text" : "password"}
                     autoComplete={isLogin ? "current-password" : "new-password"}
                     placeholder={isLogin ? "••••••••" : "Crie uma senha"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="min-w-0 flex-1 bg-transparent text-[17px] text-white placeholder:text-white/35 focus:outline-none"
+                    className="min-w-0 flex-1 bg-transparent text-[17px] text-white placeholder:text-white/50 focus:outline-none"
                   />
-                  <button type="button" onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} className="text-white/40">
+                  <button type="button" onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} className="text-white/56">
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </span>
@@ -234,7 +234,7 @@ const AuthPanel = ({ mode, onBack, pendingProfile }: Props) => {
               </GlowButton>
 
               {isLogin && (
-                <button type="button" onClick={handleForgot} className="mx-auto block pt-2 text-[15px] font-medium text-white/40 active:text-white">
+                <button type="button" onClick={handleForgot} className="mx-auto block pt-2 text-[15px] font-medium text-white/56 active:text-white">
                   Esqueci minha senha
                 </button>
               )}
@@ -242,13 +242,13 @@ const AuthPanel = ({ mode, onBack, pendingProfile }: Props) => {
           )}
         </AnimatePresence>
 
-        <motion.p layout className="mx-auto mt-8 max-w-[320px] text-center text-[14px] leading-relaxed text-white/40">
+        <motion.p layout className="mx-auto mt-8 max-w-[320px] text-center text-[14px] leading-relaxed text-white/56">
           Ao continuar, você concorda com os{" "}
-          <button type="button" onClick={() => setLegal("terms")} className="font-bold text-white/60 underline underline-offset-2">
+          <button type="button" onClick={() => setLegal("terms")} className="font-bold text-white/74 underline underline-offset-2">
             Termos de Uso
           </button>{" "}
           e{" "}
-          <button type="button" onClick={() => setLegal("privacy")} className="font-bold text-white/60 underline underline-offset-2">
+          <button type="button" onClick={() => setLegal("privacy")} className="font-bold text-white/74 underline underline-offset-2">
             Política de Privacidade
           </button>
           .

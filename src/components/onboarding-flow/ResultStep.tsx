@@ -70,7 +70,7 @@ function StartingScore({ plan }: { plan: OnboardingPlan }) {
         </svg>
         <div className="absolute inset-x-0 bottom-0 flex flex-col items-center">
           <motion.span className="text-[52px] font-extrabold leading-none tracking-tighter text-white tabular-nums">{shown}</motion.span>
-          <span className="mt-1 text-[11px] text-white/40">de 1000 pontos</span>
+          <span className="mt-1 text-[11px] text-white/56">de 1000 pontos</span>
         </div>
       </div>
       <div className="mt-3 flex justify-center">
@@ -85,7 +85,7 @@ function StartingScore({ plan }: { plan: OnboardingPlan }) {
             <div key={f.label}>
               <div className="flex items-baseline justify-between gap-3">
                 <span className="text-[13px] font-medium text-white">{FACTOR_LABEL[f.label] ?? f.label}</span>
-                <span className="text-[12px] tabular-nums text-white/45">{Math.round(f.value)}%</span>
+                <span className="text-[12px] tabular-nums text-white/62">{Math.round(f.value)}%</span>
               </div>
               <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/[0.07]">
                 <motion.div
@@ -96,7 +96,7 @@ function StartingScore({ plan }: { plan: OnboardingPlan }) {
                   transition={{ delay: 0.6 + i * 0.1, duration: 0.7, ease: "easeOut" }}
                 />
               </div>
-              <p className="mt-1 text-[11.5px] text-white/40">{f.description}</p>
+              <p className="mt-1 text-[11.5px] text-white/56">{f.description}</p>
             </div>
           );
         })}
@@ -122,7 +122,7 @@ function Trajectory({ answers, plan }: { answers: OnboardingAnswers; plan: Onboa
     <div className="mt-2.5 rounded-[22px] willo-glass-inset p-4">
       <div className="flex items-end justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40">Hoje</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/56">Hoje</p>
           <p className="text-[20px] font-extrabold text-white">R$ 0</p>
         </div>
         <div className="text-right">
@@ -136,7 +136,7 @@ function Trajectory({ answers, plan }: { answers: OnboardingAnswers; plan: Onboa
           <motion.circle key={i} cx={p.x} cy={p.y} r={i === 2 ? 6 : 4} fill={i === 2 ? "#C8F36D" : "#0B0B0B"} stroke={i === 2 ? "#C8F36D" : "#FFFFFF"} strokeWidth="2.5" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.4 + i * 0.4 }} />
         ))}
       </svg>
-      <div className="mt-1 flex justify-between text-[11px] text-white/40">
+      <div className="mt-1 flex justify-between text-[11px] text-white/56">
         <span>Agora</span>
         <span>em {months} {months === 1 ? "mês" : "meses"}</span>
       </div>
@@ -159,7 +159,7 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
   const V = TONE[verdict.tone];
 
   const section = (label: string) => (
-    <p className="mb-3 mt-8 px-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-white/40">{label}</p>
+    <p className="mb-3 mt-8 px-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-white/56">{label}</p>
   );
 
   return (
@@ -169,7 +169,7 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
         <motion.p
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mx-auto flex w-fit items-center gap-2 rounded-full border border-white/[0.1] bg-white/[0.05] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/60"
+          className="mx-auto flex w-fit items-center gap-2 rounded-full border border-white/[0.1] bg-white/[0.05] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/74"
         >
           <Check className="h-3.5 w-3.5 text-willo-green" strokeWidth={3} /> Análise concluída
         </motion.p>
@@ -198,7 +198,7 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
                 </span>
                 <div className="min-w-0">
                   <p className="text-[15px] font-semibold text-white">{f.title}</p>
-                  <p className="text-[13px] leading-snug text-white/50">{f.detail}</p>
+                  <p className="text-[13px] leading-snug text-white/66">{f.detail}</p>
                 </div>
               </motion.div>
             );
@@ -207,10 +207,10 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
 
         {section("Seu objetivo")}
         <div className="rounded-[24px] border border-white/[0.12] willo-glass-strong p-4">
-          <p className="text-[13px] text-white/45">{PURPOSE_LABEL[purpose]}</p>
+          <p className="text-[13px] text-white/62">{PURPOSE_LABEL[purpose]}</p>
           <p className="flex items-baseline gap-1.5">
             <span className="text-[26px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{brl0(plan.monthlySave)}</span>
-            <span className="text-[13px] text-white/45">por mês, em {plan.months} {plan.months === 1 ? "mês" : "meses"}</span>
+            <span className="text-[13px] text-white/62">por mês, em {plan.months} {plan.months === 1 ? "mês" : "meses"}</span>
           </p>
           <div className="mt-3 flex gap-2.5 rounded-[18px] p-3" style={{ background: `${V.hex}14` }}>
             <V.Icon className="mt-0.5 h-4 w-4 shrink-0" style={{ color: V.hex }} strokeWidth={2.6} />
@@ -222,7 +222,7 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
         {section("Plano sugerido")}
         <div className="rounded-[24px] border border-white/[0.12] willo-glass-strong p-4">
           <p className="text-[22px] font-extrabold uppercase leading-none tracking-tight text-white">Método 50/30/20</p>
-          <p className="mt-2 text-[13.5px] leading-snug text-white/50">
+          <p className="mt-2 text-[13.5px] leading-snug text-white/66">
             Pelo seu perfil, a gente sugere dividir a renda em três partes. É uma sugestão: você segue no seu ritmo e ajusta no app.
           </p>
 
@@ -242,9 +242,9 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
             <div className="mt-3.5 space-y-2.5">
               {BUCKETS.map((b) => (
                 <div key={b.key} className="flex items-center justify-between text-[14px]">
-                  <span className="flex items-center gap-2 text-white/60">
+                  <span className="flex items-center gap-2 text-white/74">
                     <span className="h-2 w-2 rounded-full" style={{ background: b.hex }} />
-                    {b.label} <span className="text-white/30">{b.share}%</span>
+                    {b.label} <span className="text-white/45">{b.share}%</span>
                   </span>
                   <span className="font-semibold tabular-nums" style={{ color: b.key === "savings" ? b.hex : "#FFFFFF" }}>{brl0(plan[b.key])}</span>
                 </div>
@@ -253,19 +253,19 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
           </div>
 
           <div className="mt-2.5 flex items-center justify-between rounded-[18px] willo-glass-inset px-4 py-3.5 text-[14px]">
-            <span className="text-white/55">Reserva de emergência ideal</span>
+            <span className="text-white/70">Reserva de emergência ideal</span>
             <span className="font-semibold text-white tabular-nums">{brl0(plan.reserve)}</span>
           </div>
         </div>
 
-        <button type="button" onClick={() => setHow((v) => !v)} className="mx-auto mt-6 flex items-center gap-2 text-[14px] text-white/60">
+        <button type="button" onClick={() => setHow((v) => !v)} className="mx-auto mt-6 flex items-center gap-2 text-[14px] text-white/74">
           <FileText className="h-4 w-4" /> De onde vêm os seus números
           <ChevronDown className={cn("h-4 w-4 transition-transform", how && "rotate-180")} />
         </button>
         <AnimatePresence initial={false}>
           {how && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <div className="mt-3 space-y-2 rounded-[20px] border border-white/[0.12] willo-glass p-4 text-[13px] leading-relaxed text-white/60">
+              <div className="mt-3 space-y-2 rounded-[20px] border border-white/[0.12] willo-glass p-4 text-[13px] leading-relaxed text-white/74">
                 <p><b className="text-white/85">Sobra do mês:</b> renda ({brl0(income)}) − gastos ({brl0(answers.spending)}) = {plan.surplus < 0 ? "−" : ""}{brl0(plan.surplus)}.</p>
                 <p><b className="text-white/85">Por mês pro objetivo:</b> {brl0(answers.target)} ÷ {plan.months} {plan.months === 1 ? "mês" : "meses"}, arredondado = {brl0(plan.monthlySave)}.</p>
                 <p><b className="text-white/85">Score:</b> estimativa pelas suas respostas sobre fim de mês, cartão, imprevistos e dívidas. Ele se ajusta sozinho quando você começar a lançar seus gastos.</p>
@@ -276,7 +276,7 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
           )}
         </AnimatePresence>
 
-        <p className="mx-auto mt-6 max-w-[330px] text-center text-[11.5px] leading-relaxed text-white/30">
+        <p className="mx-auto mt-6 max-w-[330px] text-center text-[11.5px] leading-relaxed text-white/45">
           Essa análise usa só as suas respostas e serve pra organização e educação financeira. Não é recomendação de investimento.
         </p>
       </div>

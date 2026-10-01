@@ -288,12 +288,12 @@ const AssinaturasCard = memo(() => {
     return (
       <div className="rounded-[22px] border border-white/[0.12] willo-glass p-4">
         <h2 className="text-[16px] font-semibold text-white">Recorrentes</h2>
-        <p className="text-[12px] text-white/40">Contas fixas e assinaturas do mês</p>
+        <p className="text-[12px] text-white/56">Contas fixas e assinaturas do mês</p>
         <div className="mt-4 flex items-center gap-3 rounded-[16px] bg-white/[0.04] px-3.5 py-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
-            <Repeat className="h-4 w-4 text-white/50" />
+            <Repeat className="h-4 w-4 text-white/66" />
           </span>
-          <p className="flex-1 text-[13px] text-white/50">Nenhuma despesa ou receita recorrente ainda.</p>
+          <p className="flex-1 text-[13px] text-white/66">Nenhuma despesa ou receita recorrente ainda.</p>
         </div>
       </div>
     );
@@ -310,12 +310,12 @@ const AssinaturasCard = memo(() => {
         <div className="flex items-start justify-between gap-3 px-4 pt-4">
           <div>
             <h2 className="text-[16px] font-semibold text-white">Recorrentes</h2>
-            <p className="text-[12px] text-white/40">
+            <p className="text-[12px] text-white/56">
               {paidCount} de {filtered.length} {activeTab === "receita" ? "recebidas" : "pagas"} este mês
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[11px] text-white/40">Total/mês</p>
+            <p className="text-[11px] text-white/56">Total/mês</p>
             <p className={`text-[17px] font-bold tabular-nums ${activeTab === "receita" ? "text-willo-green" : "text-white"}`}>{fmt(total)}</p>
           </div>
         </div>
@@ -348,7 +348,7 @@ const AssinaturasCard = memo(() => {
                     transition={{ type: "spring", stiffness: 420, damping: 34 }}
                   />
                 )}
-                <span className={`relative z-10 transition-colors ${activeTab === tab ? "text-[#0B0B0B]" : "text-white/55"}`}>
+                <span className={`relative z-10 transition-colors ${activeTab === tab ? "text-[#0B0B0B]" : "text-white/70"}`}>
                   {tab === "despesa" ? "Despesas" : "Receitas"} ({tab === "despesa" ? despesaCount : receitaCount})
                 </span>
               </button>
@@ -377,15 +377,15 @@ const AssinaturasCard = memo(() => {
                 >
                   <BrandIcon name={sub.name} category={sub.category} brand={brand} customCategories={customCats} />
                   <div className="min-w-0 flex-1">
-                    <p className={`truncate text-[15px] font-medium ${sub.isPaidThisMonth ? "text-white/55" : "text-white"}`}>{sub.name}</p>
-                    <p className={`text-[12px] ${dueSoon ? "text-amber-300/90" : "text-white/40"}`}>
+                    <p className={`truncate text-[15px] font-medium ${sub.isPaidThisMonth ? "text-white/70" : "text-white"}`}>{sub.name}</p>
+                    <p className={`text-[12px] ${dueSoon ? "text-amber-300/90" : "text-white/56"}`}>
                       {sub.isPaidThisMonth
                         ? activeTab === "receita" ? "Recebido este mês" : "Pago este mês"
                         : `Dia ${sub.dueDay} · ${days === 0 ? "hoje" : days === 1 ? "amanhã" : `em ${days} dias`}`}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <p className={`text-[15px] font-semibold tabular-nums ${sub.isPaidThisMonth ? "text-white/55" : "text-white"}`}>{fmt(sub.amount)}</p>
+                    <p className={`text-[15px] font-semibold tabular-nums ${sub.isPaidThisMonth ? "text-white/70" : "text-white"}`}>{fmt(sub.amount)}</p>
                     <span
                       className={`flex h-5 w-5 items-center justify-center rounded-full ${
                         sub.isPaidThisMonth ? "bg-willo-green text-[#0B0B0B]" : "border border-white/15"
@@ -397,7 +397,7 @@ const AssinaturasCard = memo(() => {
                 </motion.button>
               );
             }) : (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-6 text-center text-[13px] text-white/40">
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-6 text-center text-[13px] text-white/56">
                 Nenhuma {activeTab === "receita" ? "receita recorrente" : "despesa recorrente"}
               </motion.p>
             )}
@@ -408,7 +408,7 @@ const AssinaturasCard = memo(() => {
         {hasMore ? (
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="flex w-full items-center justify-center gap-1 border-t border-white/[0.06] py-3 text-[13px] font-medium text-white/60 active:opacity-60"
+            className="flex w-full items-center justify-center gap-1 border-t border-white/[0.06] py-3 text-[13px] font-medium text-white/74 active:opacity-60"
           >
             {expanded ? <>Mostrar menos <ChevronUp className="h-4 w-4" /></> : <>Ver todas ({filtered.length}) <ChevronDown className="h-4 w-4" /></>}
           </button>

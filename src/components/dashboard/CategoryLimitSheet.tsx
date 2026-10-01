@@ -122,14 +122,14 @@ const CategoryLimitSheet = ({ open, onClose, initialCategory, spentByCategory = 
     >
       <div className="px-5 pb-4">
         <p className="text-[22px] font-bold text-white">Limite por categoria</p>
-        <p className="text-[14px] text-white/45">Defina quanto quer gastar por mês e acompanhe quanto ainda pode usar.</p>
+        <p className="text-[14px] text-white/62">Defina quanto quer gastar por mês e acompanhe quanto ainda pode usar.</p>
 
         {/* Amount */}
         <div className="mt-6 flex flex-col items-center">
-          <span className="text-[13px] text-white/45">{category ? `Limite mensal para ${category}` : "Escolha uma categoria"}</span>
+          <span className="text-[13px] text-white/62">{category ? `Limite mensal para ${category}` : "Escolha uma categoria"}</span>
           <label className="relative mt-1 flex items-baseline gap-1.5">
-            <span className="text-[22px] font-bold text-white/40">{currencySymbol()}</span>
-            <span className={cn("text-[44px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "text-white/30" : "text-white")}>
+            <span className="text-[22px] font-bold text-white/56">{currencySymbol()}</span>
+            <span className={cn("text-[44px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "text-white/45" : "text-white")}>
               {amount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
             <input
@@ -141,7 +141,7 @@ const CategoryLimitSheet = ({ open, onClose, initialCategory, spentByCategory = 
             />
           </label>
           {category && (
-            <span className="mt-2 text-[12px] text-white/45 tabular-nums">
+            <span className="mt-2 text-[12px] text-white/62 tabular-nums">
               Gasto este mês: {fmt(spent)}
               {amount > 0 && (
                 <span className={spent > amount ? "text-red-400" : "text-willo-green"}>
@@ -153,7 +153,7 @@ const CategoryLimitSheet = ({ open, onClose, initialCategory, spentByCategory = 
         </div>
 
         {/* Category picker */}
-        <p className="mb-2 mt-7 px-1 text-[13px] font-semibold text-white/45">Categoria</p>
+        <p className="mb-2 mt-7 px-1 text-[13px] font-semibold text-white/62">Categoria</p>
         <div className="grid grid-cols-3 gap-2">
           {options.map((cat) => {
             const Icon = getCategoryIcon(cat);

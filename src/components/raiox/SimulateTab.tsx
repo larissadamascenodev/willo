@@ -74,9 +74,9 @@ function PurchaseCopilot({ data }: { data: RaioXData }) {
   return (
     <Section icon={ShoppingBag} title="Posso comprar?" hint="Veja o impacto antes de decidir">
       <Card className="p-4">
-        <p className="text-[12px] text-white/45">Quanto custa o que você quer comprar?</p>
+        <p className="text-[12px] text-white/62">Quanto custa o que você quer comprar?</p>
         <label className="mt-1 flex items-baseline gap-1.5">
-          <span className="text-[20px] font-bold text-white/40">{currencySymbol()}</span>
+          <span className="text-[20px] font-bold text-white/56">{currencySymbol()}</span>
           <input
             inputMode="numeric"
             value={value ? value.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : ""}
@@ -86,7 +86,7 @@ function PurchaseCopilot({ data }: { data: RaioXData }) {
           />
         </label>
 
-        <p className="mt-4 text-[12px] text-white/45">Como vai pagar?</p>
+        <p className="mt-4 text-[12px] text-white/62">Como vai pagar?</p>
         <div className="mt-2 grid grid-cols-8 gap-1.5">
           {TIMES.map((n) => (
             <button
@@ -96,7 +96,7 @@ function PurchaseCopilot({ data }: { data: RaioXData }) {
               className={cn(
                 "h-9 rounded-full text-[12px] font-semibold transition-colors",
                 n === 1 && "col-span-2",
-                times === n ? "bg-white text-[#0B0B0B]" : "border border-white/[0.12] bg-white/[0.04] text-white/70",
+                times === n ? "bg-white text-[#0B0B0B]" : "border border-white/[0.12] bg-white/[0.04] text-white/82",
               )}
             >
               {n === 1 ? "À vista" : `${n}x`}
@@ -108,7 +108,7 @@ function PurchaseCopilot({ data }: { data: RaioXData }) {
             aria-label="Outro número de parcelas"
             className={cn(
               "flex h-9 items-center justify-center gap-0.5 rounded-full text-[12px] font-semibold transition-colors",
-              times > 6 ? "bg-white text-[#0B0B0B]" : "border border-white/[0.12] bg-white/[0.04] text-white/70",
+              times > 6 ? "bg-white text-[#0B0B0B]" : "border border-white/[0.12] bg-white/[0.04] text-white/82",
             )}
           >
             {times > 6 ? `${times}x` : <Plus className="h-4 w-4" />}
@@ -126,7 +126,7 @@ function PurchaseCopilot({ data }: { data: RaioXData }) {
                   onChange={(e) => setCustom(e.target.value.replace(/\D/g, "").slice(0, 2))}
                   onKeyDown={(e) => e.key === "Enter" && applyCustom()}
                   placeholder="Ex.: 18"
-                  className="h-10 min-w-0 flex-1 rounded-full border border-white/[0.12] bg-white/[0.04] px-4 text-[14px] text-white placeholder:text-white/30 focus:outline-none"
+                  className="h-10 min-w-0 flex-1 rounded-full border border-white/[0.12] bg-white/[0.04] px-4 text-[14px] text-white placeholder:text-white/45 focus:outline-none"
                 />
                 <button type="button" onClick={applyCustom} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#0B0B0B]">
                   <Check className="h-4 w-4" strokeWidth={3} />
@@ -146,37 +146,37 @@ function PurchaseCopilot({ data }: { data: RaioXData }) {
 
               <div className="mt-2.5 grid grid-cols-2 gap-2">
                 <div className="rounded-[16px] bg-white/[0.04] p-3">
-                  <p className="truncate text-[11px] text-white/45">{times === 1 ? "Sai este mês" : "Por mês"}</p>
+                  <p className="truncate text-[11px] text-white/62">{times === 1 ? "Sai este mês" : "Por mês"}</p>
                   <p className="truncate text-[17px] font-bold text-white tabular-nums">{brlCents(sim.monthly)}</p>
-                  {sim.share !== null && <p className="text-[11px] text-white/40">{Math.round(sim.share * 100)}% da renda</p>}
+                  {sim.share !== null && <p className="text-[11px] text-white/56">{Math.round(sim.share * 100)}% da renda</p>}
                 </div>
                 <div className="rounded-[16px] bg-white/[0.04] p-3">
-                  <p className="truncate text-[11px] text-white/45">Sobra depois</p>
+                  <p className="truncate text-[11px] text-white/62">Sobra depois</p>
                   <p className={cn("truncate text-[17px] font-bold tabular-nums", sim.months[0].after < 0 ? "text-red-400" : "text-white")}>{brl(sim.months[0].after)}</p>
-                  <p className="truncate text-[11px] text-white/40 tabular-nums">antes: {brl(sim.months[0].before)}</p>
+                  <p className="truncate text-[11px] text-white/56 tabular-nums">antes: {brl(sim.months[0].before)}</p>
                 </div>
               </div>
 
               {times > 1 && (
                 <div className="mt-2.5 rounded-[18px] bg-black/25 p-3">
-                  <p className="mb-2 text-[11px] text-white/45">Sobra de cada mês com a parcela</p>
+                  <p className="mb-2 text-[11px] text-white/62">Sobra de cada mês com a parcela</p>
                   <div className="grid grid-cols-4 gap-1.5">
                     {sim.months.slice(0, 12).map((m) => {
                       const hex = m.after < 0 ? "#F87171" : m.after < income * 0.1 ? "#FCD34D" : "#C8F36D";
                       return (
                         <div key={m.label} className="rounded-[12px] bg-white/[0.04] px-1.5 py-2 text-center">
-                          <p className="truncate text-[10px] text-white/45">{m.label}</p>
+                          <p className="truncate text-[10px] text-white/62">{m.label}</p>
                           <p className="truncate text-[11px] font-bold tabular-nums" style={{ color: hex }}>{brl(m.after)}</p>
                         </div>
                       );
                     })}
                   </div>
-                  {sim.months.length > 12 && <p className="mt-2 text-[11px] text-white/40">+{sim.months.length - 12} meses no mesmo ritmo</p>}
+                  {sim.months.length > 12 && <p className="mt-2 text-[11px] text-white/56">+{sim.months.length - 12} meses no mesmo ritmo</p>}
                 </div>
               )}
 
               {sim.goal && sim.goalDelay !== null && (
-                <p className="mt-2.5 text-[12px] leading-snug text-white/60">
+                <p className="mt-2.5 text-[12px] leading-snug text-white/74">
                   🎯 Equivale a <b className="text-white">{sim.goalDelay} {sim.goalDelay === 1 ? "mês" : "meses"}</b> de depósitos na meta “{sim.goal.goal.name}”.
                 </p>
               )}
@@ -220,13 +220,13 @@ function CutSimulator({ data }: { data: RaioXData }) {
             <SelectedIcon className="h-[18px] w-[18px]" style={{ color: getCategoryHexColor(selected.name) }} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[11px] text-white/45">Categoria</span>
+            <span className="block text-[11px] text-white/62">Categoria</span>
             <span className="block truncate text-[15px] font-semibold text-white">{selected.name}</span>
           </span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-white/40" />
+          <ChevronDown className="h-4 w-4 shrink-0 text-white/56" />
         </button>
 
-        <p className="mt-3.5 text-[12px] leading-snug text-white/50">
+        <p className="mt-3.5 text-[12px] leading-snug text-white/66">
           Você gasta cerca de <b className="text-white">{brl(base)}</b> por mês aqui. Quanto quer cortar?
         </p>
         <div className="mt-2 grid grid-cols-5 gap-1.5">
@@ -238,7 +238,7 @@ function CutSimulator({ data }: { data: RaioXData }) {
               onClick={() => setCut(s)}
               className={cn(
                 "h-9 rounded-full text-[12px] font-semibold transition-colors disabled:opacity-30",
-                cut === s ? "bg-willo-green text-[#0B0B0B]" : "border border-white/[0.12] bg-white/[0.04] text-white/70",
+                cut === s ? "bg-willo-green text-[#0B0B0B]" : "border border-white/[0.12] bg-white/[0.04] text-white/82",
               )}
             >
               {s}
@@ -249,7 +249,7 @@ function CutSimulator({ data }: { data: RaioXData }) {
         <div className="mt-4 grid grid-cols-3 gap-1.5">
           {[3, 6, 12].map((m) => (
             <div key={m} className="rounded-[16px] bg-willo-green/[0.08] px-2 py-2.5 text-center">
-              <p className="text-[10px] text-white/50">{m === 12 ? "1 ano" : `${m} meses`}</p>
+              <p className="text-[10px] text-white/66">{m === 12 ? "1 ano" : `${m} meses`}</p>
               <p className="truncate text-[15px] font-extrabold text-willo-green tabular-nums">+{brl(effectiveCut * m)}</p>
             </div>
           ))}
@@ -258,11 +258,11 @@ function CutSimulator({ data }: { data: RaioXData }) {
         <p className="mb-2 mt-4 text-[12px] font-semibold text-white">Seu saldo daqui a 1 ano</p>
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-[16px] bg-white/[0.04] p-3">
-            <p className="truncate text-[11px] text-white/50">Se continuar assim</p>
+            <p className="truncate text-[11px] text-white/66">Se continuar assim</p>
             <p className={cn("truncate text-[17px] font-bold tabular-nums", keep12 < 0 ? "text-red-400" : "text-white")}>{brl(keep12)}</p>
           </div>
           <div className="rounded-[16px] border border-willo-green/25 bg-willo-green/[0.08] p-3">
-            <p className="truncate text-[11px] text-white/60">Se ajustar</p>
+            <p className="truncate text-[11px] text-white/74">Se ajustar</p>
             <p className={cn("truncate text-[17px] font-bold tabular-nums", adjust12 < 0 ? "text-red-400" : "text-willo-green")}>{brl(adjust12)}</p>
           </div>
         </div>
@@ -293,7 +293,7 @@ function CutSimulator({ data }: { data: RaioXData }) {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[15px] text-white">{c.name}</span>
-                    <span className="block text-[12px] text-white/45 tabular-nums">{brl(Math.max(c.average, c.spent))} por mês</span>
+                    <span className="block text-[12px] text-white/62 tabular-nums">{brl(Math.max(c.average, c.spent))} por mês</span>
                   </span>
                   {c.name === selected.name && <Check className="h-5 w-5 shrink-0 text-white" />}
                 </button>

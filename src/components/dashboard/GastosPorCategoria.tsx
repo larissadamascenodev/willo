@@ -115,7 +115,7 @@ const GastosPorCategoria = memo(({ categories, selectedMonth, onVerAnalise }: Pr
       {sorted.length === 0 && (
         <div className="px-4 pb-4">
           <div className="h-2.5 rounded-full bg-white/[0.06]" />
-          <p className="mt-3 text-[13px] text-white/40">Nenhum gasto registrado em {monthLabel}.</p>
+          <p className="mt-3 text-[13px] text-white/56">Nenhum gasto registrado em {monthLabel}.</p>
         </div>
       )}
 
@@ -257,7 +257,7 @@ const GastosPorCategoria = memo(({ categories, selectedMonth, onVerAnalise }: Pr
         <div className="px-4 pb-3">
           <button
             onClick={() => navigate("/analytics/categorias")}
-            className="flex w-full items-center justify-center gap-1.5 border-t border-white/[0.06] pt-3 text-[12.5px] font-medium text-white/55 active:opacity-70"
+            className="flex w-full items-center justify-center gap-1.5 border-t border-white/[0.06] pt-3 text-[12.5px] font-medium text-white/70 active:opacity-70"
           >
             Ver as {sorted.length} categorias
             <ChevronRight className="h-3.5 w-3.5" />

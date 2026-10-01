@@ -117,14 +117,14 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
     >
       {/* The hero above already states the selected month's figures — this is the navigator */}
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[12px] font-semibold uppercase tracking-wider text-white/35">Histórico de faturas</p>
+        <p className="text-[12px] font-semibold uppercase tracking-wider text-white/50">Histórico de faturas</p>
         {selected && (
           <span
             className={cn(
               "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-semibold",
               selected.status === "paga" && "bg-willo-green/12 text-willo-green",
               selected.status === "aberta" && "bg-white/[0.08] text-white",
-              selected.status === "futura" && "bg-white/[0.05] text-white/50",
+              selected.status === "futura" && "bg-white/[0.05] text-white/66",
             )}
           >
             {selected.status === "paga" && <Check className="h-3 w-3" strokeWidth={3} />}
@@ -170,7 +170,7 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
                 <span
                   className={cn(
                     "text-[11px] tabular-nums transition-colors",
-                    entry.isSelected ? "font-bold text-white" : "text-white/35",
+                    entry.isSelected ? "font-bold text-white" : "text-white/50",
                   )}
                 >
                   {MONTH_SHORT[entry.month - 1]}
@@ -182,7 +182,7 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
         })}
       </div>
 
-      <div className="mt-3 flex items-center justify-center gap-4 border-t border-white/[0.06] pt-3 text-[11px] text-white/40">
+      <div className="mt-3 flex items-center justify-center gap-4 border-t border-white/[0.06] pt-3 text-[11px] text-white/56">
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-[3px] bg-willo-green/70" /> Paga
         </span>

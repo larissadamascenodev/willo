@@ -67,9 +67,9 @@ const ReserveAndPots = ({ goals, essentialMonthly = 0, onCreated }: Props) => {
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-willo-green/15">
               <ShieldCheck className="h-[18px] w-[18px] text-willo-green" />
             </span>
-            {reserve ? <ChevronRight className="h-4 w-4 text-white/25" /> : <Plus className="h-4 w-4 text-white/40" />}
+            {reserve ? <ChevronRight className="h-4 w-4 text-white/38" /> : <Plus className="h-4 w-4 text-white/56" />}
           </div>
-          <p className="mt-auto text-[13px] text-white/50">Reserva de emergência</p>
+          <p className="mt-auto text-[13px] text-white/66">Reserva de emergência</p>
           {reserve ? (
             <>
               <p className="truncate text-[20px] font-extrabold leading-tight tracking-tight text-white tabular-nums">
@@ -78,12 +78,12 @@ const ReserveAndPots = ({ goals, essentialMonthly = 0, onCreated }: Props) => {
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
                 <div className="h-full rounded-full bg-willo-green" style={{ width: `${Math.min(reserveProgress, 1) * 100}%` }} />
               </div>
-              <p className="mt-1.5 truncate text-[11px] text-white/40 tabular-nums">
+              <p className="mt-1.5 truncate text-[11px] text-white/56 tabular-nums">
                 {Math.round(Math.min(reserveProgress, 1) * 100)}% de {fmt(reserve.target_amount)}
               </p>
             </>
           ) : (
-            <p className="mt-1 text-[12.5px] leading-snug text-white/45">Guarde uma parte para imprevistos</p>
+            <p className="mt-1 text-[12.5px] leading-snug text-white/62">Guarde uma parte para imprevistos</p>
           )}
         </motion.button>
 
@@ -97,18 +97,18 @@ const ReserveAndPots = ({ goals, essentialMonthly = 0, onCreated }: Props) => {
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#7DD3FC]/15">
               <PiggyBank className="h-[18px] w-[18px] text-[#7DD3FC]" />
             </span>
-            {pots.length > 0 ? <ChevronRight className="h-4 w-4 text-white/25" /> : <Plus className="h-4 w-4 text-white/40" />}
+            {pots.length > 0 ? <ChevronRight className="h-4 w-4 text-white/38" /> : <Plus className="h-4 w-4 text-white/56" />}
           </div>
-          <p className="mt-auto text-[13px] text-white/50">Cofrinhos</p>
+          <p className="mt-auto text-[13px] text-white/66">Cofrinhos</p>
           {pots.length > 0 ? (
             <>
               <p className="truncate text-[20px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{fmt(potsTotal)}</p>
-              <p className="mt-2 truncate text-[11px] text-white/40">
+              <p className="mt-2 truncate text-[11px] text-white/56">
                 {pots.length} {pots.length === 1 ? "cofrinho" : "cofrinhos"} · {pots[0].name}
               </p>
             </>
           ) : (
-            <p className="mt-1 text-[12.5px] leading-snug text-white/45">Crie um cofrinho para cada objetivo</p>
+            <p className="mt-1 text-[12.5px] leading-snug text-white/62">Crie um cofrinho para cada objetivo</p>
           )}
         </motion.button>
       </div>

@@ -40,11 +40,11 @@ export function Section({ icon: Icon, title, hint, aside, children, id }: {
         <div className="min-w-0">
           <h2 className="flex items-center gap-2 text-[18px] font-bold tracking-tight text-white">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/[0.06]">
-              <Icon className="h-[15px] w-[15px] text-white/70" strokeWidth={2.2} />
+              <Icon className="h-[15px] w-[15px] text-white/82" strokeWidth={2.2} />
             </span>
             {title}
           </h2>
-          {hint && <p className="mt-0.5 pl-9 text-[12px] text-white/40">{hint}</p>}
+          {hint && <p className="mt-0.5 pl-9 text-[12px] text-white/56">{hint}</p>}
         </div>
         {aside}
       </div>
@@ -56,7 +56,7 @@ export function Section({ icon: Icon, title, hint, aside, children, id }: {
 /** Friendly one-liner that sits on top of an analysis, with a tinted rail. */
 export function Verdict({ children, hex = "#FFFFFF" }: { children: React.ReactNode; hex?: string }) {
   return (
-    <p className="relative rounded-[16px] bg-white/[0.04] py-2.5 pl-4 pr-3 text-[13px] leading-snug text-white/75">
+    <p className="relative rounded-[16px] bg-white/[0.04] py-2.5 pl-4 pr-3 text-[13px] leading-snug text-white/85">
       <span className="absolute inset-y-2.5 left-0 w-[3px] rounded-r-full" style={{ background: hex }} />
       {children}
     </p>
@@ -91,7 +91,7 @@ export function Segmented<T extends string>({ value, options, onChange, layoutId
           {value === o.key && (
             <motion.span layoutId={layoutId} className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
           )}
-          <span className={cn("relative z-10 transform-gpu whitespace-nowrap transition-colors", value === o.key ? "text-[#0B0B0B]" : "text-white/60")}>{o.label}</span>
+          <span className={cn("relative z-10 transform-gpu whitespace-nowrap transition-colors", value === o.key ? "text-[#0B0B0B]" : "text-white/74")}>{o.label}</span>
         </button>
       ))}
     </div>

@@ -45,7 +45,7 @@ export default function Financeiro({ initialTab = "atual" }: { initialTab?: Tool
             onClick={() => setTool(t.key)}
             className={cn(
               "relative flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors",
-              tool === t.key ? "text-[#0B0B0B]" : "text-white/55",
+              tool === t.key ? "text-[#0B0B0B]" : "text-white/70",
             )}
           >
             {tool === t.key && (
@@ -176,7 +176,7 @@ function CashFlowChart({
               {subTab !== "saidas" && bar(b.entradas, GREEN, single ? 44 : 20, i * 0.02, "entradas")}
               {subTab !== "entradas" && bar(b.saidas, RED, single ? 44 : 20, i * 0.02 + 0.03, "saidas")}
             </div>
-            <span className={cn("mt-3 text-[13px] tabular-nums", b.isCurrent ? "font-semibold text-white" : "text-white/45")}>{b.label}</span>
+            <span className={cn("mt-3 text-[13px] tabular-nums", b.isCurrent ? "font-semibold text-white" : "text-white/62")}>{b.label}</span>
           </div>
         ))}
       </div>
@@ -197,7 +197,7 @@ function CashFlowEntryRow({ entry, hidden }: { entry: CashFlowEntry; hidden: boo
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[16px] font-semibold text-white">{entry.name}</p>
-        <p className="truncate text-[13px] text-white/45">
+        <p className="truncate text-[13px] text-white/62">
           {date} · {entry.category}
           {entry.accountName ? ` · ${entry.accountName}` : ""}
         </p>
@@ -248,7 +248,7 @@ function RealizadoPanel() {
               onClick={() => setSubTab(key)}
               className={cn(
                 "h-9 rounded-full border px-3.5 text-[13.5px] font-medium transition-colors",
-                subTab === key ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.1] text-white/60",
+                subTab === key ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.1] text-white/74",
               )}
             >
               {label}
@@ -258,28 +258,28 @@ function RealizadoPanel() {
         <button
           onClick={() => setHidden((v) => !v)}
           aria-label={hidden ? "Mostrar valores" : "Ocultar valores"}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/60 active:opacity-60"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/74 active:opacity-60"
         >
           {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </button>
       </div>
 
       <div className="mt-5">
-        <p className="text-[14px] text-white/50">{cashFlowTitle(subTab, period)}</p>
+        <p className="text-[14px] text-white/66">{cashFlowTitle(subTab, period)}</p>
         <p className="mt-0.5 truncate text-[34px] font-extrabold leading-tight tracking-tight tabular-nums text-white">
           {loading ? "…" : headlineText}
         </p>
         {subTab === "geral" && (
           <div className="mt-2 space-y-1">
-            <p className="flex items-center gap-2 text-[14px] text-white/60 tabular-nums">
+            <p className="flex items-center gap-2 text-[14px] text-white/74 tabular-nums">
               <span className="h-2.5 w-2.5 rounded-full bg-[#C8F36D]" /> Entradas {hidden ? `${currencySymbol()} ••••` : fmt(totals.entradas)}
             </p>
-            <p className="flex items-center gap-2 text-[14px] text-white/60 tabular-nums">
+            <p className="flex items-center gap-2 text-[14px] text-white/74 tabular-nums">
               <span className="h-2.5 w-2.5 rounded-full bg-[#EF4444]" /> Saídas {hidden ? `${currencySymbol()} ••••` : fmt(totals.saidas)}
             </p>
           </div>
         )}
-        <p className="mt-3 text-[12px] leading-snug text-white/40">
+        <p className="mt-3 text-[12px] leading-snug text-white/56">
           Considera só o dinheiro que entrou e saiu das contas. Compras no cartão entram quando a fatura é paga.
         </p>
       </div>
@@ -303,7 +303,7 @@ function RealizadoPanel() {
         {subTab === "geral" ? "Últimos lançamentos" : subTab === "entradas" ? "Últimas entradas" : "Últimas saídas"}
       </SectionTitle>
       {latest.length === 0 ? (
-        <p className="py-8 text-center text-[14px] text-white/40">Nada por aqui neste período</p>
+        <p className="py-8 text-center text-[14px] text-white/56">Nada por aqui neste período</p>
       ) : (
         <div>
           {latest.map((e) => (
@@ -359,7 +359,7 @@ function BalancoMensalSection() {
 
   return (
     <div>
-      <p className="mt-6 text-[13px] text-white/45">{statusLabel} de {MONTH_NAMES[selectedMonth]}</p>
+      <p className="mt-6 text-[13px] text-white/62">{statusLabel} de {MONTH_NAMES[selectedMonth]}</p>
 
       <motion.section
         initial={{ opacity: 0, y: 10 }}
@@ -369,7 +369,7 @@ function BalancoMensalSection() {
           background: `radial-gradient(120% 90% at 100% 0%, ${balance < 0 ? "#F8717120" : "#C8F36D1C"} 0%, rgba(20,20,20,0.96) 55%, #0E0E0E 100%)`,
         }}
       >
-        <p className="text-[13px] text-white/55">{balance < 0 ? "Faltou no mês" : "Sobrou no mês"}</p>
+        <p className="text-[13px] text-white/70">{balance < 0 ? "Faltou no mês" : "Sobrou no mês"}</p>
         <p className={cn("truncate text-[42px] font-extrabold leading-tight tracking-tight tabular-nums", balance < 0 ? "text-red-400" : "text-white")}>
           {fmt(Math.abs(balance))}
         </p>
@@ -381,7 +381,7 @@ function BalancoMensalSection() {
           ].map(({ label, value, hex, Icon }, i) => (
             <div key={label}>
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-[13px] text-white/60">
+                <span className="flex items-center gap-1.5 text-[13px] text-white/74">
                   <Icon className="h-4 w-4" style={{ color: hex }} strokeWidth={2.5} /> {label}
                 </span>
                 <span className="text-[16px] font-bold text-white tabular-nums">{fmt(value)}</span>
@@ -399,8 +399,8 @@ function BalancoMensalSection() {
           ))}
 
           <div className="flex items-center justify-between border-t border-white/[0.12] pt-3">
-            <span className="flex items-center gap-1.5 text-[13px] text-white/60">
-              <Equal className="h-4 w-4 text-white/50" strokeWidth={2.5} /> Balanço
+            <span className="flex items-center gap-1.5 text-[13px] text-white/74">
+              <Equal className="h-4 w-4 text-white/66" strokeWidth={2.5} /> Balanço
             </span>
             <span className={cn("text-[18px] font-extrabold tabular-nums", balance < 0 ? "text-red-400" : "text-willo-green")}>
               {balance > 0 ? "+" : ""}{fmt(balance)}
@@ -408,16 +408,16 @@ function BalancoMensalSection() {
           </div>
         </div>
 
-        <p className="mt-4 rounded-[16px] bg-black/25 px-3.5 py-2.5 text-[13px] leading-snug text-white/75">{verdict}</p>
+        <p className="mt-4 rounded-[16px] bg-black/25 px-3.5 py-2.5 text-[13px] leading-snug text-white/85">{verdict}</p>
       </motion.section>
 
       {isCurrentMonth && (
         <Surface className="mt-3 p-5">
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-[13px] text-white/60">
-              <CalendarDays className="h-4 w-4 text-white/45" /> Mês em andamento
+            <span className="flex items-center gap-2 text-[13px] text-white/74">
+              <CalendarDays className="h-4 w-4 text-white/62" /> Mês em andamento
             </span>
-            <span className="text-[12px] text-white/45 tabular-nums">
+            <span className="text-[12px] text-white/62 tabular-nums">
               {daysInMonth - dayOfMonth} {daysInMonth - dayOfMonth === 1 ? "dia restante" : "dias restantes"}
             </span>
           </div>
@@ -485,10 +485,10 @@ function FuturoPanel() {
     return (
       <div className="mt-10 flex flex-col items-center px-8 text-center">
         <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.05]">
-          <CalendarDays className="h-8 w-8 text-white/40" />
+          <CalendarDays className="h-8 w-8 text-white/56" />
         </span>
         <p className="mt-5 text-[18px] font-bold text-white">Ainda sem dados suficientes</p>
-        <p className="mt-1 text-[14px] text-white/45">Adicione transações para ver suas projeções.</p>
+        <p className="mt-1 text-[14px] text-white/62">Adicione transações para ver suas projeções.</p>
         <button onClick={() => navigate("/transacoes")} className="mt-5 h-11 rounded-full bg-white px-6 text-[14px] font-semibold text-[#0B0B0B]">
           Ver transações
         </button>
@@ -518,12 +518,12 @@ function FuturoPanel() {
       >
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[12px] text-white/45">Hoje</p>
+            <p className="text-[12px] text-white/62">Hoje</p>
             <p className="truncate text-[20px] font-bold text-white tabular-nums">{compact(insights.first.prevBalance)}</p>
           </div>
-          <ArrowRight className="mb-1.5 h-5 w-5 shrink-0 text-white/30" />
+          <ArrowRight className="mb-1.5 h-5 w-5 shrink-0 text-white/45" />
           <div className="min-w-0 text-right">
-            <p className="truncate text-[12px] text-white/45">
+            <p className="truncate text-[12px] text-white/62">
               {MONTH_NAMES[insights.last.month]}{insights.last.yearTag ? `/${insights.last.yearTag}` : ""}
             </p>
             <p className={cn("truncate text-[30px] font-extrabold leading-tight tracking-tight tabular-nums", insights.last.balance < 0 ? "text-red-400" : "text-white")}>
@@ -537,10 +537,10 @@ function FuturoPanel() {
           <span className={cn("text-[13px] font-semibold tabular-nums", insights.growth >= 0 ? "text-willo-green" : "text-red-400")}>
             {insights.growth >= 0 ? "+" : "−"}{compact(Math.abs(insights.growth))}
           </span>
-          <span className="text-[12px] text-white/50">em {rows.length} meses</span>
+          <span className="text-[12px] text-white/66">em {rows.length} meses</span>
         </div>
 
-        <p className="mt-3 rounded-[16px] bg-black/25 px-3.5 py-2.5 text-[13px] leading-snug text-white/75">{headline}</p>
+        <p className="mt-3 rounded-[16px] bg-black/25 px-3.5 py-2.5 text-[13px] leading-snug text-white/85">{headline}</p>
       </motion.section>
 
       <SectionTitle>Como seu saldo evolui</SectionTitle>
@@ -556,9 +556,9 @@ function FuturoPanel() {
           ].map(({ Icon, label, value, tone }) => (
             <div key={label} className="flex items-center gap-2.5">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
-                {Icon && <Icon className="h-3 w-3 text-white/60" />}
+                {Icon && <Icon className="h-3 w-3 text-white/74" />}
               </span>
-              <span className="min-w-0 flex-1 truncate text-[13.5px] text-white/60">{label}</span>
+              <span className="min-w-0 flex-1 truncate text-[13.5px] text-white/74">{label}</span>
               <span className={cn("shrink-0 text-[14px] font-medium tabular-nums", tone)}>{fmt(value)}</span>
             </div>
           ))}
@@ -599,7 +599,7 @@ function FuturoPanel() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[15px] text-white">{MONTH_NAMES[r.month]} {r.year}</span>
-                  <span className="block text-[12px] text-white/45">saldo previsto</span>
+                  <span className="block text-[12px] text-white/62">saldo previsto</span>
                 </span>
                 <span className="shrink-0 text-[15px] font-semibold text-red-400 tabular-nums">{fmt(r.balance)}</span>
               </button>
@@ -608,7 +608,7 @@ function FuturoPanel() {
         </>
       )}
 
-      <p className="mt-5 flex items-start gap-2 px-1 text-[12px] leading-snug text-white/35">
+      <p className="mt-5 flex items-start gap-2 px-1 text-[12px] leading-snug text-white/50">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         A projeção usa suas contas fixas, parcelas já lançadas e a média dos seus gastos. Novos lançamentos ajustam o cálculo na hora.
       </p>
@@ -687,7 +687,7 @@ function ProjectionHistoryChart({
               onClick={() => { if (!isDragging) onSelect(i); }}
               className="group flex min-w-[52px] flex-1 shrink-0 flex-col items-center gap-1.5"
             >
-              <span className={cn("whitespace-nowrap text-[10.5px] font-bold tabular-nums transition-opacity", on ? "text-white" : "text-white/40")}>
+              <span className={cn("whitespace-nowrap text-[10.5px] font-bold tabular-nums transition-opacity", on ? "text-white" : "text-white/56")}>
                 {compact(r.balance)}
               </span>
 
@@ -701,8 +701,8 @@ function ProjectionHistoryChart({
                 />
               </div>
 
-              <span className={cn("whitespace-nowrap text-[11px] font-semibold transition-colors", on ? "text-white" : "text-white/40")}>
-                {r.short}{r.yearTag && <span className="text-white/25">/{r.yearTag}</span>}
+              <span className={cn("whitespace-nowrap text-[11px] font-semibold transition-colors", on ? "text-white" : "text-white/56")}>
+                {r.short}{r.yearTag && <span className="text-white/38">/{r.yearTag}</span>}
               </span>
             </button>
           );
@@ -710,7 +710,7 @@ function ProjectionHistoryChart({
       </div>
 
       {/* Legend */}
-      <div className="mt-4 flex items-center justify-center gap-4 border-t border-white/[0.06] pt-3.5 text-[11px] text-white/45">
+      <div className="mt-4 flex items-center justify-center gap-4 border-t border-white/[0.06] pt-3.5 text-[11px] text-white/62">
         <div className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: RISK.positivo.hex }} />
           <span>Tranquilo</span>

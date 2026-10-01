@@ -82,7 +82,7 @@ const AccountCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClo
     >
       <div className="px-5 pb-4">
         <p className="text-[22px] font-bold tracking-tight text-white">Nova conta</p>
-        <p className="text-[14px] leading-snug text-white/45">Onde seu dinheiro fica. Dá pra editar depois.</p>
+        <p className="text-[14px] leading-snug text-white/62">Onde seu dinheiro fica. Dá pra editar depois.</p>
 
         {/* Live preview */}
         <motion.div
@@ -103,11 +103,11 @@ const AccountCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClo
               {name.trim() ? initials(name) : <TypeIcon className="h-5 w-5" />}
             </motion.span>
             <div className="min-w-0 flex-1">
-              <p className={cn("truncate text-[17px] font-semibold", name.trim() ? "text-white" : "text-white/30")}>{name.trim() || "Nome da conta"}</p>
-              <p className="text-[13px] text-white/45">{TYPES.find((t) => t.value === type)!.label}</p>
+              <p className={cn("truncate text-[17px] font-semibold", name.trim() ? "text-white" : "text-white/45")}>{name.trim() || "Nome da conta"}</p>
+              <p className="text-[13px] text-white/62">{TYPES.find((t) => t.value === type)!.label}</p>
             </div>
           </div>
-          <p className="relative mt-4 text-[12px] text-white/40">Saldo de hoje</p>
+          <p className="relative mt-4 text-[12px] text-white/56">Saldo de hoje</p>
           <p className={cn("relative text-[28px] font-extrabold leading-tight tracking-tight tabular-nums", negative && cents > 0 ? "text-red-400" : "text-white")}>
             {negative && cents > 0 ? "−" : ""}{currencySymbol()} {plain(cents)}
           </p>
@@ -142,8 +142,8 @@ const AccountCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClo
                   selected ? "border-white bg-white/[0.08]" : "border-white/[0.06] willo-glass-inset",
                 )}
               >
-                <Icon className={cn("h-5 w-5", selected ? "text-white" : "text-white/50")} />
-                <span className={cn("text-[12.5px]", selected ? "text-white" : "text-white/60")}>{label}</span>
+                <Icon className={cn("h-5 w-5", selected ? "text-white" : "text-white/66")} />
+                <span className={cn("text-[12.5px]", selected ? "text-white" : "text-white/74")}>{label}</span>
               </button>
             );
           })}
@@ -152,7 +152,7 @@ const AccountCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClo
         <SectionLabel>Quanto tem nela hoje?</SectionLabel>
         <MoneyField cents={cents} onChange={setCents} negative={negative}>
           <div className="mt-4 flex items-center justify-between border-t border-white/[0.06] pt-3.5">
-            <span className="text-[13px] text-white/50">Está no negativo</span>
+            <span className="text-[13px] text-white/66">Está no negativo</span>
             <button
               type="button"
               role="switch"
@@ -164,10 +164,10 @@ const AccountCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClo
             </button>
           </div>
         </MoneyField>
-        <p className="mt-2 px-1 text-[12px] text-white/35">Use o saldo que aparece no app do banco agora. A partir daqui, o Willo acompanha.</p>
+        <p className="mt-2 px-1 text-[12px] text-white/50">Use o saldo que aparece no app do banco agora. A partir daqui, o Willo acompanha.</p>
 
         {bank ? (
-          <p className="mt-6 flex items-center gap-2 px-1 text-[13px] text-white/45">
+          <p className="mt-6 flex items-center gap-2 px-1 text-[13px] text-white/62">
             <span className="h-3 w-3 rounded-full" style={{ background: bank.hex }} /> Cor do banco aplicada automaticamente
           </p>
         ) : (

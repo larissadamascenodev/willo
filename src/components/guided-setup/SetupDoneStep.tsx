@@ -62,7 +62,7 @@ const SetupDoneStep = ({ onDone }: Props) => {
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="mt-7">
         <p className="text-[26px] font-extrabold leading-tight tracking-tight text-white">Tudo pronto!</p>
-        <p className="mt-2 text-[14.5px] leading-snug text-white/50">
+        <p className="mt-2 text-[14.5px] leading-snug text-white/66">
           Seu Willo já está de pé. A partir de agora é só registrar e acompanhar.
         </p>
       </motion.div>
@@ -80,7 +80,7 @@ const SetupDoneStep = ({ onDone }: Props) => {
           transition={{ duration: (DONE_MS - 900) / 1000, ease: "linear" }}
         />
       </motion.div>
-      <p className="mt-2 text-[12px] text-white/30">Abrindo seu painel…</p>
+      <p className="mt-2 text-[12px] text-white/45">Abrindo seu painel…</p>
     </div>
   );
 };

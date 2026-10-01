@@ -186,7 +186,7 @@ export default function GerenciarCategorias() {
             onClick={() => setTab(t)}
             className={cn(
               "relative flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors",
-              tab === t ? "text-[#0B0B0B]" : "text-white/55",
+              tab === t ? "text-[#0B0B0B]" : "text-white/70",
             )}
           >
             {tab === t && (
@@ -205,7 +205,7 @@ export default function GerenciarCategorias() {
         <h2 className="text-[18px] font-bold text-white">
           {tab === "despesa" ? "De despesa" : "De receita"}
         </h2>
-        <span className="text-[13px] text-white/40">{unifiedCategories.length} categorias</span>
+        <span className="text-[13px] text-white/56">{unifiedCategories.length} categorias</span>
       </div>
 
       {loading ? (
@@ -216,8 +216,8 @@ export default function GerenciarCategorias() {
         </div>
       ) : unifiedCategories.length === 0 ? (
         <div className="rounded-[22px] border border-dashed border-white/[0.1] px-6 py-10 text-center">
-          <Tag className="mx-auto mb-2 h-7 w-7 text-white/25" />
-          <p className="text-[14px] text-white/55">Nenhuma categoria por aqui</p>
+          <Tag className="mx-auto mb-2 h-7 w-7 text-white/38" />
+          <p className="text-[14px] text-white/70">Nenhuma categoria por aqui</p>
           <button
             onClick={() => setShowCreateModal(true)}
             className="mt-4 rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-[#0B0B0B]"
@@ -249,19 +249,19 @@ export default function GerenciarCategorias() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[15px] font-semibold text-white">{cat.name}</span>
-                  <span className="block text-[12px] text-white/40">
+                  <span className="block text-[12px] text-white/56">
                     {cat.isDefault ? "Padrão do Willo" : "Criada por você"}
                   </span>
                 </span>
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: cat.color }} />
-                <MoreHorizontal className="h-5 w-5 shrink-0 text-white/30" />
+                <MoreHorizontal className="h-5 w-5 shrink-0 text-white/45" />
               </motion.button>
             ))}
           </AnimatePresence>
         </div>
       )}
 
-      <p className="mt-3 px-1 text-[12px] leading-relaxed text-white/35">
+      <p className="mt-3 px-1 text-[12px] leading-relaxed text-white/50">
         Cada categoria tem nome e cor únicos, para que seus gráficos fiquem fáceis de ler. Toque em uma categoria para editar ou excluir.
       </p>
 
@@ -298,7 +298,7 @@ export default function GerenciarCategorias() {
                   onClick={() => { setMenuOpenId(null); setEditingCat(actionCat); }}
                   className="flex w-full items-center gap-3 border-t border-white/[0.06] px-4 py-3.5 text-[15px] text-white active:bg-white/[0.05]"
                 >
-                  <Pencil className="h-[18px] w-[18px] text-white/60" />
+                  <Pencil className="h-[18px] w-[18px] text-white/74" />
                   Editar nome, ícone e cor
                 </button>
                 <button
@@ -338,7 +338,7 @@ export default function GerenciarCategorias() {
               className="w-full max-w-[300px] rounded-[22px] border border-white/[0.12] willo-glass-inset p-5 text-center"
             >
               <p className="text-[16px] font-bold text-white">Excluir “{confirmDeleteCat.name}”?</p>
-              <p className="mt-1.5 text-[13px] text-white/50">
+              <p className="mt-1.5 text-[13px] text-white/66">
                 Transações antigas continuam salvas, mas essa categoria deixa de aparecer nas opções.
               </p>
               <div className="mt-5 flex gap-2">

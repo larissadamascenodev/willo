@@ -209,7 +209,7 @@ const ReceitasDespesasDetalhe = () => {
             <HeroIcon className="h-[18px] w-[18px]" style={{ color: accentHex }} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] text-white/55">Total {isReceita ? "de receitas" : "de despesas"}</p>
+            <p className="text-[13px] text-white/70">Total {isReceita ? "de receitas" : "de despesas"}</p>
             <p className="truncate text-[30px] font-extrabold leading-tight tracking-tight tabular-nums text-white">{fmt(total)}</p>
           </div>
           {trend !== 0 && (
@@ -231,11 +231,11 @@ const ReceitasDespesasDetalhe = () => {
         </div>
 
         <div className="mt-3 flex items-center gap-4">
-          <span className="flex items-center gap-1.5 text-[13px] text-white/60">
+          <span className="flex items-center gap-1.5 text-[13px] text-white/74">
             <CheckCircle2 className="h-3.5 w-3.5" style={{ color: accentHex }} />
             {isReceita ? "Recebido" : "Pago"} <span className="font-semibold text-white tabular-nums">{fmt(paid)}</span>
           </span>
-          <span className="flex items-center gap-1.5 text-[13px] text-white/60">
+          <span className="flex items-center gap-1.5 text-[13px] text-white/74">
             <Clock className="h-3.5 w-3.5 text-amber-300" />
             Pendente <span className="font-semibold text-white tabular-nums">{fmt(pending)}</span>
           </span>
@@ -253,7 +253,7 @@ const ReceitasDespesasDetalhe = () => {
                 const barH = Math.max((h.value / maxHistory) * 84, 6);
                 return (
                   <div key={h.month} className="flex flex-1 flex-col items-center gap-1.5">
-                    <span className={cn("whitespace-nowrap text-[10px] font-bold tabular-nums", isCurrent ? "text-white" : "text-white/40")}>
+                    <span className={cn("whitespace-nowrap text-[10px] font-bold tabular-nums", isCurrent ? "text-white" : "text-white/56")}>
                       {h.value > 0 ? compact(h.value) : "—"}
                     </span>
                     <motion.div
@@ -263,7 +263,7 @@ const ReceitasDespesasDetalhe = () => {
                       animate={{ height: barH }}
                       transition={{ delay: i * 0.03, duration: 0.5, ease: "easeOut" }}
                     />
-                    <span className={cn("text-[11px]", isCurrent ? "font-semibold text-white" : "text-white/40")}>{h.month}</span>
+                    <span className={cn("text-[11px]", isCurrent ? "font-semibold text-white" : "text-white/56")}>{h.month}</span>
                   </div>
                 );
               })}
@@ -321,7 +321,7 @@ const ReceitasDespesasDetalhe = () => {
 
       {loading && transactions.length === 0 && (
         <div className="flex items-center justify-center py-16">
-          <span className="animate-pulse text-[14px] font-medium text-white/50">Carregando...</span>
+          <span className="animate-pulse text-[14px] font-medium text-white/66">Carregando...</span>
         </div>
       )}
 
@@ -384,7 +384,7 @@ const TxRowItem = ({
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[14.5px] font-semibold text-white">{tx.name}</p>
-        <p className="truncate text-[12px] text-white/40">{tx.category} · {dateFormatted}</p>
+        <p className="truncate text-[12px] text-white/56">{tx.category} · {dateFormatted}</p>
       </div>
       <div className="shrink-0 text-right">
         <p className="text-[14px] font-bold tabular-nums" style={{ color: statusColor }}>
@@ -418,7 +418,7 @@ const InvoiceRowItem = ({
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[14.5px] font-semibold text-white">Fatura {inv.card_name}</p>
-        <p className="truncate text-[12px] text-white/40">{MONTH_SHORT[inv.month - 1]}/{inv.year}</p>
+        <p className="truncate text-[12px] text-white/56">{MONTH_SHORT[inv.month - 1]}/{inv.year}</p>
       </div>
       <div className="shrink-0 text-right">
         <p className="text-[14px] font-bold tabular-nums" style={{ color: statusColor }}>−{fmt(inv.total_amount)}</p>

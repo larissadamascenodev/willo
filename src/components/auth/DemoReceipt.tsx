@@ -23,7 +23,7 @@ const DemoReceipt = ({ className = "" }: { className?: string }) => (
     {/* A card and a coffee cup at the edges, like a real snapshot */}
     <div className="absolute -right-10 top-[8%] h-[120px] w-[190px] rotate-[18deg] rounded-[14px] bg-gradient-to-br from-[#2b2b2e] to-[#141416] shadow-[0_20px_40px_rgba(0,0,0,0.6)]">
       <span className="absolute left-5 top-6 h-6 w-8 rounded-[5px] bg-gradient-to-br from-[#d8c38a] to-[#a8894a]" />
-      <span className="absolute bottom-5 left-5 text-[11px] tracking-[0.25em] text-white/50">•••• 4821</span>
+      <span className="absolute bottom-5 left-5 text-[11px] tracking-[0.25em] text-white/66">•••• 4821</span>
     </div>
     <div className="absolute -left-14 bottom-[10%] h-[150px] w-[150px] rounded-full bg-[radial-gradient(circle,#1a120c_0%,#3b2a1f_55%,#e9e4da_58%,#cfc9be_70%,transparent_71%)] shadow-[0_24px_50px_rgba(0,0,0,0.7)]" />
 

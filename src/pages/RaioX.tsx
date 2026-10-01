@@ -36,7 +36,7 @@ const RaioX = () => {
   return (
     <div className="mx-auto max-w-lg pb-28">
       <header className="px-1 pt-1">
-        <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/40">
+        <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/56">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-willo-green opacity-60" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-willo-green" />
@@ -47,7 +47,7 @@ const RaioX = () => {
           Raio-X
           <BrainCircuit className="h-6 w-6 text-willo-green" />
         </h1>
-        <p className="mt-1.5 text-[14px] text-white/45">O cérebro do seu dinheiro: o que você faz certo, o que dá pra melhorar.</p>
+        <p className="mt-1.5 text-[14px] text-white/62">O cérebro do seu dinheiro: o que você faz certo, o que dá pra melhorar.</p>
       </header>
 
       {!data ? (
@@ -71,7 +71,7 @@ const RaioX = () => {
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15 text-[22px]">✨</span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-bold text-white">Retrospectiva de {data.wrap.monthLabel}</span>
-                <span className="block text-[12px] text-white/75">Vilã, dia mais caro e sua maior conquista</span>
+                <span className="block text-[12px] text-white/85">Vilã, dia mais caro e sua maior conquista</span>
               </span>
               <ChevronRight className="h-5 w-5 text-white/80" />
             </motion.button>
@@ -129,7 +129,7 @@ function LoadingState() {
           animate={{ top: ["-20%", "100%"] }}
           transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
         />
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/50">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/66">
           <BrainCircuit className="h-7 w-7" />
           <p className="text-[14px]">Analisando suas finanças…</p>
         </div>
@@ -144,10 +144,10 @@ function EmptyState() {
   return (
     <div className="mt-12 flex flex-col items-center px-6 text-center">
       <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.04]">
-        <Sparkles className="h-8 w-8 text-white/50" />
+        <Sparkles className="h-8 w-8 text-white/66" />
       </span>
       <p className="mt-5 text-[19px] font-bold text-white">Nada pra analisar ainda</p>
-      <p className="mt-1 text-[14px] text-white/45">Adicione suas receitas e despesas e o Raio-X começa a trabalhar.</p>
+      <p className="mt-1 text-[14px] text-white/62">Adicione suas receitas e despesas e o Raio-X começa a trabalhar.</p>
       <button type="button" onClick={() => navigate("/transacoes")} className="mt-6 h-12 rounded-full bg-white px-6 text-[15px] font-semibold text-[#0B0B0B]">
         Adicionar transações
       </button>

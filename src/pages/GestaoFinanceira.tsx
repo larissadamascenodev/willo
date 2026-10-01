@@ -195,7 +195,7 @@ const GestaoFinanceira = () => {
       {/* ═══════ Page Header ═══════ */}
       <div className="pt-1">
         <h1 className="text-[28px] font-extrabold tracking-tight text-white">Carteira</h1>
-        <p className="text-[14px] text-white/45">Suas contas e cartões em um só lugar</p>
+        <p className="text-[14px] text-white/62">Suas contas e cartões em um só lugar</p>
       </div>
 
       {/* ═══════ Contas ═══════ */}
@@ -215,7 +215,7 @@ const GestaoFinanceira = () => {
           </div>
         ) : bankAccounts.length === 0 ? (
           <div className="rounded-[22px] willo-glass border border-white/[0.12] p-8 text-center">
-            <Landmark className="w-8 h-8 text-white/30 mx-auto mb-3" />
+            <Landmark className="w-8 h-8 text-white/45 mx-auto mb-3" />
             <p className="text-sm text-muted-foreground mb-1">Nenhuma conta cadastrada</p>
             <p className="text-xs text-muted-foreground/60 mb-4">Crie sua primeira conta para começar</p>
             <Button
@@ -298,7 +298,7 @@ const GestaoFinanceira = () => {
                 <div className="w-10 h-10 rounded-full bg-white/[0.08] flex items-center justify-center">
                   <Plus className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xs text-white/60 font-medium">Adicionar conta</span>
+                <span className="text-xs text-white/74 font-medium">Adicionar conta</span>
               </motion.button>
             </div>
           </>
@@ -309,7 +309,7 @@ const GestaoFinanceira = () => {
       <section>
         <div className="mb-3 flex items-center justify-between px-1">
           <h2 className="text-[18px] font-bold text-white">Guardado</h2>
-          <p className="text-[13px] text-white/45 tabular-nums">{totalMetas.toLocaleString("pt-BR", { style: "currency", currency: getCurrency(), maximumFractionDigits: 0 })}</p>
+          <p className="text-[13px] text-white/62 tabular-nums">{totalMetas.toLocaleString("pt-BR", { style: "currency", currency: getCurrency(), maximumFractionDigits: 0 })}</p>
         </div>
         <ReserveAndPots goals={goals} onCreated={fetchData} />
       </section>
@@ -331,7 +331,7 @@ const GestaoFinanceira = () => {
           </div>
         ) : creditCards.length === 0 ? (
           <div className="rounded-[22px] willo-glass border border-white/[0.12] p-8 text-center">
-            <CreditCard className="w-8 h-8 text-white/30 mx-auto mb-3" />
+            <CreditCard className="w-8 h-8 text-white/45 mx-auto mb-3" />
             <p className="text-sm text-muted-foreground mb-1">Nenhum cartão cadastrado</p>
             <p className="text-xs text-muted-foreground/60 mb-4">Cadastre seu cartão de crédito</p>
             <Button
@@ -366,7 +366,7 @@ const GestaoFinanceira = () => {
                 <div className="w-10 h-10 rounded-full bg-white/[0.08] flex items-center justify-center">
                   <Plus className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xs text-white/60 font-medium">Adicionar cartão</span>
+                <span className="text-xs text-white/74 font-medium">Adicionar cartão</span>
               </motion.button>
             </div>
           </>
@@ -381,7 +381,7 @@ const GestaoFinanceira = () => {
         transition={{ delay: 0.4 }}
         className="px-6 text-center"
       >
-        <p className="text-[12px] text-white/30">
+        <p className="text-[12px] text-white/45">
           "Separe o que é gasto do que é construção de patrimônio"
         </p>
       </motion.div>

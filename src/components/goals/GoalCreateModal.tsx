@@ -100,7 +100,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
     <BottomSheet open={open} onClose={onClose} size="full">
       <div className="px-5 pb-4">
         <p className="text-[22px] font-bold tracking-tight text-white">Nova meta</p>
-        <p className="text-[14px] leading-snug text-white/45">Escolha um objetivo, dê um nome e, se quiser, defina quanto quer juntar.</p>
+        <p className="text-[14px] leading-snug text-white/62">Escolha um objetivo, dê um nome e, se quiser, defina quanto quer juntar.</p>
 
         <div className="mt-5 grid grid-cols-3 gap-2">
           {presets.map((p) => {
@@ -134,7 +134,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06]">
               <Pencil className="h-5 w-5 text-white" />
             </span>
-            <span className="text-[12px] text-white/70">Outro</span>
+            <span className="text-[12px] text-white/82">Outro</span>
           </button>
         </div>
 
@@ -146,7 +146,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
                 onChange={(e) => setCustomName(e.target.value)}
                 placeholder="Nome da meta"
                 autoFocus
-                className="mt-3 h-12 w-full rounded-full bg-white/[0.06] px-4 text-[15px] text-white placeholder:text-white/30 focus:outline-none"
+                className="mt-3 h-12 w-full rounded-full bg-white/[0.06] px-4 text-[15px] text-white placeholder:text-white/45 focus:outline-none"
               />
             </motion.div>
           )}
@@ -154,7 +154,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
 
         {presetId && (
           <>
-            <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/45">Foto de capa (opcional)</p>
+            <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/62">Foto de capa (opcional)</p>
             <div className="flex items-center gap-3 rounded-[22px] border border-white/[0.12] willo-glass p-3">
               <span className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[16px]" style={{ background: preset ? `${preset.hex}22` : "rgba(255,255,255,0.06)" }}>
                 {coverImage ? (
@@ -162,7 +162,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
                 ) : preset ? (
                   <preset.icon className="h-7 w-7" style={{ color: preset.hex }} />
                 ) : (
-                  <Camera className="h-6 w-6 text-white/40" />
+                  <Camera className="h-6 w-6 text-white/56" />
                 )}
                 {uploadingCover && (
                   <span className="absolute inset-0 flex items-center justify-center bg-black/50">
@@ -171,7 +171,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
                 )}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] text-white/55">Suba uma foto para essa meta, ou deixe o ícone padrão.</p>
+                <p className="text-[13px] text-white/70">Suba uma foto para essa meta, ou deixe o ícone padrão.</p>
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"
@@ -185,7 +185,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
                     <button
                       type="button"
                       onClick={() => setCoverImage(null)}
-                      className="flex items-center gap-1 rounded-full bg-white/[0.06] px-3 py-1.5 text-[12.5px] text-white/60 active:opacity-70"
+                      className="flex items-center gap-1 rounded-full bg-white/[0.06] px-3 py-1.5 text-[12.5px] text-white/74 active:opacity-70"
                     >
                       <X className="h-3.5 w-3.5" /> Remover
                     </button>
@@ -196,13 +196,13 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
             </div>
 
             <div className="mb-2 mt-6 flex items-center justify-between px-1">
-              <p className="text-[13px] font-semibold text-white/45">Quanto quer juntar?</p>
+              <p className="text-[13px] font-semibold text-white/62">Quanto quer juntar?</p>
               <button
                 type="button"
                 onClick={() => setOpenEnded((v) => !v)}
                 className={cn(
                   "rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors",
-                  openEnded ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/60",
+                  openEnded ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/74",
                 )}
               >
                 Sem valor definido
@@ -211,7 +211,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
             {openEnded ? (
               <div className="flex items-center gap-3 rounded-[22px] border border-white/[0.12] willo-glass px-4 py-4">
                 <PiggyBank className="h-5 w-5 shrink-0 text-willo-green" />
-                <p className="text-[13px] leading-snug text-white/60">
+                <p className="text-[13px] leading-snug text-white/74">
                   Você vai só guardando, sem um alvo. Dá para definir um valor depois, quando quiser.
                 </p>
               </div>
@@ -219,8 +219,8 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
               <div className="rounded-[22px] border border-white/[0.12] willo-glass p-5">
                 <div className="flex flex-col items-center">
                   <label className="relative flex items-baseline gap-1.5">
-                    <span className="text-[22px] font-bold text-white/40">{currencySymbol()}</span>
-                    <span className={cn("text-[40px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "text-white/30" : "text-white")}>
+                    <span className="text-[22px] font-bold text-white/56">{currencySymbol()}</span>
+                    <span className={cn("text-[40px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "text-white/45" : "text-white")}>
                       {(cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                     <input
@@ -240,7 +240,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
                       onClick={() => setCents(v * 100)}
                       className={cn(
                         "rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
-                        cents === v * 100 ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/60",
+                        cents === v * 100 ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/74",
                       )}
                     >
                       {fmtShort(v)}

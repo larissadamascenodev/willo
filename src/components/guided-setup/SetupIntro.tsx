@@ -33,7 +33,7 @@ const SetupIntro = ({ icon: Icon, title, text, bullets, action, onAction, onSkip
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
-      className="mt-2 text-[14.5px] leading-snug text-white/50"
+      className="mt-2 text-[14.5px] leading-snug text-white/66"
     >
       {text}
     </motion.p>
@@ -50,7 +50,7 @@ const SetupIntro = ({ icon: Icon, title, text, bullets, action, onAction, onSkip
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-willo-green/15">
             <Check className="h-3.5 w-3.5 text-willo-green" strokeWidth={3} />
           </span>
-          <span className="text-[14px] text-white/70">{b}</span>
+          <span className="text-[14px] text-white/82">{b}</span>
         </motion.div>
       ))}
     </div>
@@ -63,7 +63,7 @@ const SetupIntro = ({ icon: Icon, title, text, bullets, action, onAction, onSkip
       >
         {action}
       </button>
-      <button type="button" onClick={onSkip} className="mt-2 w-full py-3 text-center text-[14px] text-white/45 active:text-white">
+      <button type="button" onClick={onSkip} className="mt-2 w-full py-3 text-center text-[14px] text-white/62 active:text-white">
         Pular esta etapa
       </button>
     </motion.div>

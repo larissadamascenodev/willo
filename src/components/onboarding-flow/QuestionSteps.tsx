@@ -46,7 +46,7 @@ export function ChoiceStep<T extends string>({ section, light, bold, sub, option
             <OptionRow key={o.value} label={o.label} hint={o.hint} selected={selected(o.value)} onClick={() => pick(o.value)} delay={0.05 + i * 0.04} square={multi} />
           ))}
         </div>
-        {note && <p className="pb-4 text-center text-[12px] text-white/35">{note}</p>}
+        {note && <p className="pb-4 text-center text-[12px] text-white/50">{note}</p>}
       </div>
     </FlowScreen>
   );

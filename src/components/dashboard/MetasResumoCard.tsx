@@ -74,15 +74,15 @@ export function MetasResumoView({ goals, loading = false }: { goals: GoalRow[]; 
       className="block w-full rounded-[22px] border border-white/[0.12] willo-glass p-4 text-left active:scale-[0.99] transition-transform"
     >
       <div className="flex items-center justify-between">
-        <p className="text-[14px] text-white/50">Metas</p>
-        <span className="flex items-center gap-0.5 text-[13px] text-white/50">
+        <p className="text-[14px] text-white/66">Metas</p>
+        <span className="flex items-center gap-0.5 text-[13px] text-white/66">
           {goals.length} {goals.length === 1 ? "meta" : "metas"} <ChevronRight className="h-4 w-4" />
         </span>
       </div>
 
       <div className="mt-1 flex items-baseline justify-between gap-3">
         <p className="text-[26px] font-extrabold tracking-tight text-white tabular-nums">{fmt(totalGuardado)}</p>
-        <p className="text-[13px] text-white/45 tabular-nums">de {fmt(totalObjetivo)}</p>
+        <p className="text-[13px] text-white/62 tabular-nums">de {fmt(totalObjetivo)}</p>
       </div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.08]">
         <motion.div
@@ -92,7 +92,7 @@ export function MetasResumoView({ goals, loading = false }: { goals: GoalRow[]; 
           transition={{ duration: 0.8, ease: "easeOut" }}
         />
       </div>
-      <p className="mt-1.5 text-[12px] text-white/40 tabular-nums">{Math.round(overall * 100)}% do total guardado</p>
+      <p className="mt-1.5 text-[12px] text-white/56 tabular-nums">{Math.round(overall * 100)}% do total guardado</p>
 
       <div className="mt-4 space-y-3 border-t border-white/[0.06] pt-3.5">
         {visible.map((goal, idx) => {
@@ -118,7 +118,7 @@ export function MetasResumoView({ goals, loading = false }: { goals: GoalRow[]; 
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <p className="truncate text-[14px] font-medium text-white">{goal.name}</p>
-                  <span className={`shrink-0 text-[12px] font-semibold tabular-nums ${done ? "text-willo-green" : "text-white/70"}`}>
+                  <span className={`shrink-0 text-[12px] font-semibold tabular-nums ${done ? "text-willo-green" : "text-white/82"}`}>
                     {Math.round(progress * 100)}%
                   </span>
                 </div>
@@ -130,7 +130,7 @@ export function MetasResumoView({ goals, loading = false }: { goals: GoalRow[]; 
                     transition={{ delay: 0.1 + idx * 0.05, duration: 0.6, ease: "easeOut" }}
                   />
                 </div>
-                <p className="mt-1 truncate text-[11px] text-white/40 tabular-nums">
+                <p className="mt-1 truncate text-[11px] text-white/56 tabular-nums">
                   {done ? "Meta alcançada" : `${fmt(goal.current_amount)} de ${fmt(goal.target_amount)}`}
                 </p>
               </div>
@@ -138,7 +138,7 @@ export function MetasResumoView({ goals, loading = false }: { goals: GoalRow[]; 
           );
         })}
         {goals.length > visible.length && (
-          <p className="text-center text-[12px] text-white/45">+{goals.length - visible.length} {goals.length - visible.length === 1 ? "meta" : "metas"}</p>
+          <p className="text-center text-[12px] text-white/62">+{goals.length - visible.length} {goals.length - visible.length === 1 ? "meta" : "metas"}</p>
         )}
       </div>
     </button>

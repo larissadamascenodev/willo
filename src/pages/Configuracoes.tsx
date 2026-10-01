@@ -67,8 +67,8 @@ function Row({ icon: Icon, label, value, danger = false, onClick }: {
         <Icon className={cn("h-[18px] w-[18px]", danger ? "text-red-400" : "text-white/80")} strokeWidth={2} />
       </span>
       <span className={cn("min-w-0 flex-1 truncate text-[15px] font-medium", danger ? "text-red-400" : "text-white")}>{label}</span>
-      {value && <span className="shrink-0 text-[13.5px] text-white/40">{value}</span>}
-      {!danger && <ChevronRight className="h-4 w-4 shrink-0 text-white/25" />}
+      {value && <span className="shrink-0 text-[13.5px] text-white/56">{value}</span>}
+      {!danger && <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />}
     </button>
   );
 }
@@ -76,7 +76,7 @@ function Row({ icon: Icon, label, value, danger = false, onClick }: {
 function Group({ title, children, delay = 0 }: { title: string; children: ReactNode; delay?: number }) {
   return (
     <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
-      <p className="mb-2 px-1 text-[12px] font-semibold text-white/40">{title}</p>
+      <p className="mb-2 px-1 text-[12px] font-semibold text-white/56">{title}</p>
       <div className="divide-y divide-white/[0.06] overflow-hidden rounded-[22px] border border-white/[0.12] willo-glass">{children}</div>
     </motion.section>
   );
@@ -89,7 +89,7 @@ function Stat({ icon: Icon, value, label }: { icon?: typeof User; value: string;
         {Icon && <Icon className="h-4 w-4 shrink-0 text-amber-300" strokeWidth={2.2} />}
         <span className="truncate text-[17px] font-bold leading-none tracking-tight text-white tabular-nums">{value}</span>
       </span>
-      <span className="mt-1.5 truncate text-[11.5px] text-white/45">{label}</span>
+      <span className="mt-1.5 truncate text-[11.5px] text-white/62">{label}</span>
     </div>
   );
 }
@@ -103,7 +103,7 @@ function PasswordField({ value, onChange, placeholder, label }: { value: string;
         type="button"
         onClick={() => setShow((v) => !v)}
         aria-label={show ? "Esconder senha" : "Mostrar senha"}
-        className="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-white/45 active:bg-white/[0.06]"
+        className="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-white/62 active:bg-white/[0.06]"
       >
         {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </button>
@@ -358,7 +358,7 @@ const Configuracoes = () => {
               {avatar ? (
                 <img src={avatar} alt="" className="h-full w-full object-cover" />
               ) : (
-                <span className="text-[30px] font-bold text-white/80">{initials(displayName) || <User className="h-9 w-9 text-white/50" />}</span>
+                <span className="text-[30px] font-bold text-white/80">{initials(displayName) || <User className="h-9 w-9 text-white/66" />}</span>
               )}
             </span>
           </span>
@@ -369,8 +369,8 @@ const Configuracoes = () => {
         <input ref={avatarInput} type="file" accept="image/*" onChange={handleAvatar} className="hidden" />
 
         <h1 className="relative mt-4 max-w-full truncate text-[22px] font-bold tracking-tight text-white">{displayName}</h1>
-        <p className="relative max-w-full truncate text-[13px] text-white/45">{email}</p>
-        {profile?.bio && <p className="relative mt-2.5 max-w-[290px] text-[14px] leading-snug text-white/65">{profile.bio}</p>}
+        <p className="relative max-w-full truncate text-[13px] text-white/62">{email}</p>
+        {profile?.bio && <p className="relative mt-2.5 max-w-[290px] text-[14px] leading-snug text-white/78">{profile.bio}</p>}
 
         {/* At a glance — one strip inside the card, not three loose boxes */}
         <div className="relative mt-5 grid w-full grid-cols-3 divide-x divide-white/[0.08] rounded-[20px] border border-white/[0.12] bg-white/[0.03] py-3.5">
@@ -426,7 +426,7 @@ const Configuracoes = () => {
         <LogOut className="h-4 w-4" /> Sair da conta
       </motion.button>
 
-      <p className="text-center text-[11.5px] text-white/25">Willo · seu dinheiro, organizado</p>
+      <p className="text-center text-[11.5px] text-white/38">Willo · seu dinheiro, organizado</p>
 
       {/* ═══ Edit profile ═══ */}
       <BottomSheet
@@ -456,11 +456,11 @@ const Configuracoes = () => {
           <PillInput value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Seu nome" maxLength={40} />
 
           <SectionLabel>E-mail</SectionLabel>
-          <PillInput value={email} disabled className="text-white/45" />
+          <PillInput value={email} disabled className="text-white/62" />
 
           <SectionLabel
             right={
-              <button type="button" onClick={shuffleBio} className="flex items-center gap-1 text-[12px] font-semibold text-white/60 active:opacity-70">
+              <button type="button" onClick={shuffleBio} className="flex items-center gap-1 text-[12px] font-semibold text-white/74 active:opacity-70">
                 <Shuffle className="h-3.5 w-3.5" /> Sugerir
               </button>
             }
@@ -488,9 +488,9 @@ const Configuracoes = () => {
       >
         <div className="px-5 pb-4">
           <p className="text-[22px] font-bold tracking-tight text-white">Senha e segurança</p>
-          <p className="text-[14px] text-white/45">Troque a senha que você usa para entrar.</p>
+          <p className="text-[14px] text-white/62">Troque a senha que você usa para entrar.</p>
 
-          <SectionLabel right={<button type="button" onClick={forgotPassword} className="text-[12px] font-semibold text-white/60 active:opacity-70">Esqueci</button>}>
+          <SectionLabel right={<button type="button" onClick={forgotPassword} className="text-[12px] font-semibold text-white/74 active:opacity-70">Esqueci</button>}>
             Senha atual
           </SectionLabel>
           <PasswordField value={currentPassword} onChange={setCurrentPassword} placeholder="Digite sua senha atual" label="Senha atual" />
@@ -515,7 +515,7 @@ const Configuracoes = () => {
                 </div>
                 <p className="mt-1.5 text-[12px]">
                   <span className="font-semibold" style={{ color: strength.hex }}>{strength.label}</span>
-                  <span className="text-white/40"> · {strength.hint}</span>
+                  <span className="text-white/56"> · {strength.hint}</span>
                 </p>
               </motion.div>
             )}
@@ -531,7 +531,7 @@ const Configuracoes = () => {
       <BottomSheet open={sheet === "currency"} onClose={close}>
         <div className="px-5 pb-4">
           <p className="text-[22px] font-bold tracking-tight text-white">Moeda</p>
-          <p className="mt-1 text-[13.5px] text-white/45">Muda como os valores aparecem no app. Os números que você lançou continuam os mesmos.</p>
+          <p className="mt-1 text-[13.5px] text-white/62">Muda como os valores aparecem no app. Os números que você lançou continuam os mesmos.</p>
           <div className="mt-4 max-h-[55vh] divide-y divide-white/[0.06] overflow-y-auto rounded-[22px] border border-white/[0.12] willo-glass">
             {CURRENCIES.map((c) => {
               const selected = c.code === getCurrency();
@@ -550,7 +550,7 @@ const Configuracoes = () => {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[15px] font-medium text-white">{c.name}</span>
-                    <span className="block text-[12px] text-white/40">{c.code}</span>
+                    <span className="block text-[12px] text-white/56">{c.code}</span>
                   </span>
                   {selected && <Check className="h-5 w-5 shrink-0 text-willo-green" strokeWidth={2.5} />}
                 </button>
@@ -567,15 +567,15 @@ const Configuracoes = () => {
             {resetMode === "choose" ? (
               <motion.div key="choose" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
                 <p className="text-[22px] font-bold tracking-tight text-white">Apagar dados</p>
-                <p className="text-[14px] text-white/45">Escolha o que sai do app.</p>
+                <p className="text-[14px] text-white/62">Escolha o que sai do app.</p>
 
                 <button type="button" onClick={() => setResetMode("transactions")} className="mt-5 w-full rounded-[22px] border border-white/[0.12] willo-glass-inset p-4 text-left active:scale-[0.99]">
                   <p className="text-[16px] font-semibold text-white">Só as transações</p>
-                  <p className="mt-1 text-[13px] leading-snug text-white/50">Lançamentos, faturas e eventos somem e os saldos voltam ao valor inicial. Contas e cartões ficam.</p>
+                  <p className="mt-1 text-[13px] leading-snug text-white/66">Lançamentos, faturas e eventos somem e os saldos voltam ao valor inicial. Contas e cartões ficam.</p>
                 </button>
                 <button type="button" onClick={() => setResetMode("all")} className="mt-2.5 w-full rounded-[22px] border border-red-400/20 bg-red-400/[0.06] p-4 text-left active:scale-[0.99]">
                   <p className="text-[16px] font-semibold text-red-400">Tudo</p>
-                  <p className="mt-1 text-[13px] leading-snug text-white/50">Transações, contas, cartões e faturas. O app volta como se fosse novo.</p>
+                  <p className="mt-1 text-[13px] leading-snug text-white/66">Transações, contas, cartões e faturas. O app volta como se fosse novo.</p>
                 </button>
               </motion.div>
             ) : (
@@ -586,17 +586,17 @@ const Configuracoes = () => {
                 <p className="mt-4 text-[22px] font-bold tracking-tight text-white">
                   {resetMode === "all" ? "Apagar tudo?" : "Apagar as transações?"}
                 </p>
-                <p className="text-[14px] text-white/45">Isso não pode ser desfeito.</p>
+                <p className="text-[14px] text-white/62">Isso não pode ser desfeito.</p>
 
                 <div className="mt-5 space-y-2 rounded-[20px] border border-white/[0.12] willo-glass-inset p-4 text-[13.5px]">
                   {(resetMode === "all"
                     ? ["Todas as transações", "Contas e carteiras", "Cartões de crédito e faturas", "Eventos financeiros"]
                     : ["Todas as transações", "Faturas e limite usado dos cartões", "Eventos financeiros", "Saldos voltam ao valor inicial"]
                   ).map((t) => (
-                    <p key={t} className="flex items-center gap-2 text-white/70"><span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" /> {t}</p>
+                    <p key={t} className="flex items-center gap-2 text-white/82"><span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" /> {t}</p>
                   ))}
                   {resetMode === "transactions" && (
-                    <p className="flex items-center gap-2 pt-1 text-white/70"><Check className="h-3.5 w-3.5 shrink-0 text-willo-green" strokeWidth={3} /> Contas, cartões e perfil ficam</p>
+                    <p className="flex items-center gap-2 pt-1 text-white/82"><Check className="h-3.5 w-3.5 shrink-0 text-willo-green" strokeWidth={3} /> Contas, cartões e perfil ficam</p>
                   )}
                 </div>
 
@@ -624,7 +624,7 @@ const Configuracoes = () => {
       <BottomSheet open={sheet === "demo"} onClose={() => { if (seedProgress === null) close(); }}>
         <div className="px-5 pb-4">
           <p className="text-[22px] font-bold tracking-tight text-white">Dados de exemplo</p>
-          <p className="mt-1 text-[14px] leading-snug text-white/50">
+          <p className="mt-1 text-[14px] leading-snug text-white/66">
             Preenche esta conta com 3 meses de dados fictícios para testar o app: contas, cartões, salário, gastos fixos e do dia a dia, uma compra parcelada e metas.
           </p>
           {accountsCount ? (
@@ -637,7 +637,7 @@ const Configuracoes = () => {
               <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]">
                 <motion.div className="h-full rounded-full bg-willo-green" animate={{ width: `${seedProgress}%` }} />
               </div>
-              <p className="mt-2 text-center text-[12.5px] text-white/45">Criando os dados… {seedProgress}%</p>
+              <p className="mt-2 text-center text-[12.5px] text-white/62">Criando os dados… {seedProgress}%</p>
             </div>
           )}
           <div className="mt-6">
@@ -672,7 +672,7 @@ const Configuracoes = () => {
             <UserX className="h-5 w-5 text-red-400" />
           </span>
           <p className="mt-4 text-[22px] font-bold tracking-tight text-white">Excluir minha conta</p>
-          <p className="mt-1 text-[14px] leading-snug text-white/50">
+          <p className="mt-1 text-[14px] leading-snug text-white/66">
             Apaga para sempre sua conta {email ? `(${email})` : ""} e tudo que está nela: transações, contas, cartões, faturas, metas e fotos. Não dá para desfazer nem recuperar depois.
           </p>
 
@@ -695,7 +695,7 @@ const Configuracoes = () => {
               {deletingAccount && <Loader2 className="h-4 w-4 animate-spin" />}
               {deletingAccount ? "Excluindo…" : "Excluir minha conta"}
             </button>
-            <button type="button" onClick={close} disabled={deletingAccount} className="w-full py-3 text-[14px] text-white/50">Cancelar</button>
+            <button type="button" onClick={close} disabled={deletingAccount} className="w-full py-3 text-[14px] text-white/66">Cancelar</button>
           </div>
         </div>
       </BottomSheet>
@@ -707,10 +707,10 @@ const Configuracoes = () => {
             <LogOut className="h-5 w-5 text-white" />
           </span>
           <p className="mt-4 text-[22px] font-bold tracking-tight text-white">Sair da conta?</p>
-          <p className="mt-1 text-[14px] text-white/45">Seus dados continuam salvos. É só entrar de novo com {email || "seu e-mail"}.</p>
+          <p className="mt-1 text-[14px] text-white/62">Seus dados continuam salvos. É só entrar de novo com {email || "seu e-mail"}.</p>
           <div className="mt-6 space-y-2">
             <SheetAction onClick={logout}>Sair</SheetAction>
-            <button type="button" onClick={close} className="w-full py-3 text-[14px] text-white/50">Cancelar</button>
+            <button type="button" onClick={close} className="w-full py-3 text-[14px] text-white/66">Cancelar</button>
           </div>
         </div>
       </BottomSheet>

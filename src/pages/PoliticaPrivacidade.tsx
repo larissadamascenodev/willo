@@ -183,7 +183,7 @@ const PoliticaPrivacidade = () => {
         initial={{ opacity: 0, x: -8 }}
         animate={{ opacity: 1, x: 0 }}
         onClick={() => navigate(-1)}
-        className="-ml-2 flex h-9 items-center gap-0.5 text-sm text-white/70 hover:text-white active:opacity-60 transition-colors"
+        className="-ml-2 flex h-9 items-center gap-0.5 text-sm text-white/82 hover:text-white active:opacity-60 transition-colors"
       >
         <ChevronLeft className="w-6 h-6" strokeWidth={2.25} />
       </motion.button>

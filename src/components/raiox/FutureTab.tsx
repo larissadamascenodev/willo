@@ -26,7 +26,7 @@ export function PressureCalendar({ data }: { data: RaioXData }) {
   return (
     <Section icon={CalendarDays} title="O que vem pela frente" hint="Toque num dia para ver o que acontece nele">
       <Card className="p-4">
-        <div className="mb-2 grid grid-cols-7 gap-1.5 text-center text-[10px] text-white/35">
+        <div className="mb-2 grid grid-cols-7 gap-1.5 text-center text-[10px] text-white/50">
           {["D", "S", "T", "Q", "Q", "S", "S"].map((d, i) => <span key={i}>{d}</span>)}
         </div>
         <div className="grid grid-cols-7 gap-1.5">
@@ -38,7 +38,7 @@ export function PressureCalendar({ data }: { data: RaioXData }) {
               onClick={() => setSelected(d)}
               className={cn(
                 "relative flex aspect-square items-center justify-center rounded-[12px] text-[12px] font-medium transition-colors",
-                d.isPast ? "bg-white/[0.03] text-white/25" : "text-white",
+                d.isPast ? "bg-white/[0.03] text-white/38" : "text-white",
                 d.isToday && "ring-2 ring-white",
               )}
               style={!d.isPast ? { background: d.pressure === "tranquilo" ? "rgba(255,255,255,0.05)" : `${PRESSURE_HEX[d.pressure]}2E` } : undefined}
@@ -51,7 +51,7 @@ export function PressureCalendar({ data }: { data: RaioXData }) {
             </button>
           ))}
         </div>
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-white/45">
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-white/62">
           {[
             { label: "Tranquilo", hex: "rgba(255,255,255,0.2)" },
             { label: "Atenção", hex: PRESSURE_HEX.atencao },
@@ -82,12 +82,12 @@ export function PressureCalendar({ data }: { data: RaioXData }) {
                   {selected.day} de {today.toLocaleDateString("pt-BR", { month: "long" })}
                 </p>
                 {!selected.isPast && (
-                  <p className={cn("text-[13px] tabular-nums", selected.balance < 0 ? "text-red-400" : "text-white/55")}>
+                  <p className={cn("text-[13px] tabular-nums", selected.balance < 0 ? "text-red-400" : "text-white/70")}>
                     Saldo previsto: {brl(selected.balance)}
                   </p>
                 )}
               </div>
-              <button type="button" onClick={() => setSelected(null)} aria-label="Fechar" className="text-white/40">
+              <button type="button" onClick={() => setSelected(null)} aria-label="Fechar" className="text-white/56">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -96,7 +96,7 @@ export function PressureCalendar({ data }: { data: RaioXData }) {
               <div className="mt-3 space-y-1.5">
                 {selected.items.map((i, k) => (
                   <div key={k} className="flex items-center justify-between gap-3 text-[13px]">
-                    <span className="min-w-0 truncate text-white/70">{i.name}</span>
+                    <span className="min-w-0 truncate text-white/82">{i.name}</span>
                     <span className={cn("shrink-0 font-semibold tabular-nums", i.type === "receita" ? "text-willo-green" : "text-white")}>
                       {i.type === "receita" ? "+" : "−"}{brlCents(i.amount)}
                     </span>
@@ -104,10 +104,10 @@ export function PressureCalendar({ data }: { data: RaioXData }) {
                 ))}
               </div>
             ) : (
-              <p className="mt-3 text-[13px] text-white/45">Nenhum compromisso agendado neste dia.</p>
+              <p className="mt-3 text-[13px] text-white/62">Nenhum compromisso agendado neste dia.</p>
             )}
             {selected.estimated > 0 && (
-              <p className="mt-2 text-[12px] text-white/40">+ {brl(selected.estimated)} estimados de gastos do dia a dia.</p>
+              <p className="mt-2 text-[12px] text-white/56">+ {brl(selected.estimated)} estimados de gastos do dia a dia.</p>
             )}
             {!selected.isPast && selected.pressure !== "tranquilo" && (
               <p className="mt-2.5 text-[12.5px]" style={{ color: PRESSURE_HEX[selected.pressure] }}>
@@ -149,22 +149,22 @@ export function SmartInvoice({ data }: { data: RaioXData }) {
       <Card className="p-5">
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-[16px] bg-white/[0.04] px-3 py-2.5">
-            <p className="truncate text-[11px] text-white/45">Fatura atual</p>
+            <p className="truncate text-[11px] text-white/62">Fatura atual</p>
             <p className="truncate text-[17px] font-bold text-white tabular-nums">{brl(inv.current)}</p>
           </div>
           <div className="rounded-[16px] bg-white/[0.04] px-3 py-2.5">
-            <p className="truncate text-[11px] text-white/45">Previsão ao fechar</p>
+            <p className="truncate text-[11px] text-white/62">Previsão ao fechar</p>
             <p className="truncate text-[17px] font-bold text-white tabular-nums">{brl(inv.projectedClose)}</p>
           </div>
         </div>
 
         <div className="mt-2 grid grid-cols-2 gap-2">
           <div className="rounded-[16px] bg-willo-green/[0.08] px-3 py-2.5">
-            <p className="truncate text-[11px] text-white/55">Limite seguro</p>
+            <p className="truncate text-[11px] text-white/70">Limite seguro</p>
             <p className="truncate text-[17px] font-bold text-willo-green tabular-nums">{brl(inv.safeForNewPurchases)}</p>
           </div>
           <div className="rounded-[16px] bg-white/[0.04] px-3 py-2.5">
-            <p className="truncate text-[11px] text-white/45">% da renda</p>
+            <p className="truncate text-[11px] text-white/62">% da renda</p>
             <p className={cn("truncate text-[17px] font-bold tabular-nums", share >= 0.5 ? "text-red-400" : share >= 0.3 ? "text-amber-300" : "text-white")}>
               {Math.round(share * 100)}%
             </p>
@@ -172,7 +172,7 @@ export function SmartInvoice({ data }: { data: RaioXData }) {
         </div>
 
         {inv.futureInstallments > 0 && (
-          <p className="mt-3 text-[13px] leading-snug text-white/60">
+          <p className="mt-3 text-[13px] leading-snug text-white/74">
             <b className="text-white">{brl(inv.futureInstallments)}</b> das próximas faturas já estão comprometidos com parcelas.
           </p>
         )}
@@ -180,7 +180,7 @@ export function SmartInvoice({ data }: { data: RaioXData }) {
         {readings.length > 0 && (
           <div className="mt-3 space-y-1.5 border-t border-white/[0.06] pt-3">
             {readings.map((r, i) => (
-              <p key={i} className="flex gap-2 text-[13px] leading-snug text-white/70">
+              <p key={i} className="flex gap-2 text-[13px] leading-snug text-white/82">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-white/35" />
                 {r}
               </p>
@@ -238,9 +238,9 @@ export function Surplus({ data }: { data: RaioXData }) {
   return (
     <Section icon={Sparkles} title="Sobra inteligente">
       <Card className="p-5">
-        <p className="text-[13px] text-white/50">Você deve terminar o mês com</p>
+        <p className="text-[13px] text-white/66">Você deve terminar o mês com</p>
         <p className="truncate text-[30px] font-extrabold leading-tight tracking-tight text-willo-green tabular-nums">{brl(s.surplus)} livres</p>
-        <p className="mt-1 text-[13px] text-white/55">Sugestão de destino para essa sobra:</p>
+        <p className="mt-1 text-[13px] text-white/70">Sugestão de destino para essa sobra:</p>
 
         <div className="mt-3 space-y-2">
           {rows.map((r) => (
@@ -251,7 +251,7 @@ export function Surplus({ data }: { data: RaioXData }) {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14px] font-semibold text-white">{r.label}</p>
-                  <p className="truncate text-[12px] text-white/45">{r.note}</p>
+                  <p className="truncate text-[12px] text-white/62">{r.note}</p>
                 </div>
                 <p className="shrink-0 text-[16px] font-bold text-white tabular-nums">{brl(r.value)}</p>
               </div>

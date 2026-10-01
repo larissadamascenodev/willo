@@ -101,7 +101,7 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-[17px] font-bold tracking-tight text-white">{entry.name}</p>
-                    <p className="flex items-center gap-1.5 truncate text-[12px] text-white/45">
+                    <p className="flex items-center gap-1.5 truncate text-[12px] text-white/62">
                       <CreditCard className="h-3.5 w-3.5 shrink-0" /> {cardName ?? "Cartão"}
                     </p>
                   </div>
@@ -113,7 +113,7 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
                     aria-label="Opções"
                     className={cn(
                       "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
-                      showActions ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/70",
+                      showActions ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/82",
                     )}
                   >
                     <Pencil className="h-3.5 w-3.5" />
@@ -122,7 +122,7 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
                     type="button"
                     onClick={onClose}
                     aria-label="Fechar"
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-white/60 active:opacity-60"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-white/74 active:opacity-60"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -133,7 +133,7 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
                 {fmt(entry.amount)}
               </p>
               {isPlan && (
-                <p className="mt-2 text-center text-[12.5px] text-white/45">
+                <p className="mt-2 text-center text-[12.5px] text-white/62">
                   parcela {entry.installmentNumber} de {entry.totalInstallments} · total {fmt(entry.amount * (entry.totalInstallments ?? 1))}
                 </p>
               )}
@@ -160,12 +160,12 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
                 onClick={() => onEdit(entry.transactionId)}
                 className="flex w-full items-center gap-3 px-5 py-3.5 text-left active:bg-white/[0.03]"
               >
-                <Tag className="h-4 w-4 shrink-0 text-white/40" />
-                <span className="shrink-0 text-[14px] text-white/55">Categoria</span>
+                <Tag className="h-4 w-4 shrink-0 text-white/56" />
+                <span className="shrink-0 text-[14px] text-white/70">Categoria</span>
                 <span className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
                   <CatIcon className="h-4 w-4 shrink-0" style={{ color: catHex }} />
                   <span className="truncate text-[14px] text-white">{entry.category}</span>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-white/25" />
+                  <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />
                 </span>
               </button>
               {isPlan && (
@@ -202,7 +202,7 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
                     <div className="p-5">
                       <div className="flex items-start gap-3 rounded-[18px] border border-red-400/20 bg-red-400/[0.06] px-4 py-3">
                         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
-                        <p className="text-[13px] leading-snug text-white/70">
+                        <p className="text-[13px] leading-snug text-white/82">
                           {isPlan
                             ? "Isso remove a compra inteira, com todas as parcelas."
                             : "Esse lancamento sera removido."}
@@ -253,8 +253,8 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
 
 const Line = ({ icon: Icon, label, value }: { icon: ComponentType<{ className?: string }>; label: string; value: string }) => (
   <div className="flex items-center gap-3 px-5 py-3.5">
-    <Icon className="h-4 w-4 shrink-0 text-white/40" />
-    <span className="shrink-0 text-[14px] text-white/55">{label}</span>
+    <Icon className="h-4 w-4 shrink-0 text-white/56" />
+    <span className="shrink-0 text-[14px] text-white/70">{label}</span>
     <span className="min-w-0 flex-1 truncate text-right text-[14px] text-white">{value}</span>
   </div>
 );

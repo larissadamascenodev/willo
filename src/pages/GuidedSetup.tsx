@@ -40,7 +40,7 @@ const GuidedSetup = () => {
         <button
           type="button"
           onClick={goBack}
-          className="w-9 h-9 rounded-full flex items-center justify-center text-white/40 hover:text-white transition-colors shrink-0"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-white/56 hover:text-white transition-colors shrink-0"
           aria-label="Voltar"
         >
           <ArrowLeft className="w-5 h-5" />

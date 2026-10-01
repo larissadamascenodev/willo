@@ -18,10 +18,10 @@ const Big = ({ children }: { children: React.ReactNode }) => (
   <p className="text-[48px] font-extrabold leading-[1.02] tracking-tight text-white">{children}</p>
 );
 const Kicker = ({ children }: { children: React.ReactNode }) => (
-  <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-white/60">{children}</p>
+  <p className="text-[13px] font-bold uppercase tracking-[0.18em] text-white/74">{children}</p>
 );
 const Sub = ({ children }: { children: React.ReactNode }) => (
-  <p className="mt-4 text-[17px] leading-snug text-white/75">{children}</p>
+  <p className="mt-4 text-[17px] leading-snug text-white/85">{children}</p>
 );
 
 function buildSlides(w: MonthWrap): Slide[] {
@@ -43,10 +43,10 @@ function buildSlides(w: MonthWrap): Slide[] {
         <>
           <Kicker>O mês em resumo</Kicker>
           <div className="mt-4 space-y-4">
-            <div><p className="text-[15px] text-white/60">Entrou</p><p className="text-[40px] font-extrabold leading-none text-[#C8F36D] tabular-nums">{brl(w.income)}</p></div>
-            <div><p className="text-[15px] text-white/60">Saiu</p><p className="text-[40px] font-extrabold leading-none text-white tabular-nums">{brl(w.expense)}</p></div>
+            <div><p className="text-[15px] text-white/74">Entrou</p><p className="text-[40px] font-extrabold leading-none text-[#C8F36D] tabular-nums">{brl(w.income)}</p></div>
+            <div><p className="text-[15px] text-white/74">Saiu</p><p className="text-[40px] font-extrabold leading-none text-white tabular-nums">{brl(w.expense)}</p></div>
             <div>
-              <p className="text-[15px] text-white/60">{w.saved >= 0 ? "Sobrou" : "Faltou"}</p>
+              <p className="text-[15px] text-white/74">{w.saved >= 0 ? "Sobrou" : "Faltou"}</p>
               <p className={`text-[40px] font-extrabold leading-none tabular-nums ${w.saved >= 0 ? "text-[#C8F36D]" : "text-[#F87171]"}`}>{brl(Math.abs(w.saved))}</p>
             </div>
           </div>
@@ -113,7 +113,7 @@ function buildSlides(w: MonthWrap): Slide[] {
         {w.score !== null && (
           <div className="mt-6 inline-flex items-center gap-3 rounded-[20px] bg-white/10 px-4 py-3">
             <span className="text-[34px] font-extrabold text-white tabular-nums">{w.score}</span>
-            <span className="text-[14px] leading-tight text-white/70">
+            <span className="text-[14px] leading-tight text-white/82">
               pontos de saúde financeira
               {w.scoreDelta !== null && w.scoreDelta !== 0 && (
                 <span className={`block font-bold ${w.scoreDelta > 0 ? "text-[#C8F36D]" : "text-[#F87171]"}`}>

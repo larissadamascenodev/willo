@@ -31,7 +31,7 @@ function CardPreview({ name, digits, limitCents, closing, due, hex }: { name: st
 
       <div className="relative flex h-full flex-col">
         <div className="flex items-start justify-between gap-3">
-          <p className={cn("truncate text-[17px] font-bold tracking-tight", !name.trim() && "text-white/45")}>{name.trim() || "Seu cartão"}</p>
+          <p className={cn("truncate text-[17px] font-bold tracking-tight", !name.trim() && "text-white/62")}>{name.trim() || "Seu cartão"}</p>
           <Nfc className="h-6 w-6 shrink-0 text-white/80" />
         </div>
         <span className="mt-3 h-8 w-11 rounded-[7px] bg-gradient-to-br from-[#e6d4a0] via-[#c9ab62] to-[#9c7c3c] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.2)]" />
@@ -39,9 +39,9 @@ function CardPreview({ name, digits, limitCents, closing, due, hex }: { name: st
           •••• •••• •••• {digits.padEnd(4, "•")}
         </p>
         <div className="mt-2 flex items-end justify-between text-[11px]">
-          <span className="text-white/60">Fecha {closing} · Vence {due}</span>
+          <span className="text-white/74">Fecha {closing} · Vence {due}</span>
           <span className="text-right">
-            <span className="block text-white/50">Limite</span>
+            <span className="block text-white/66">Limite</span>
             <span className="text-[14px] font-bold tabular-nums">
               {currencySymbol()} {(limitCents / 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
             </span>
@@ -130,7 +130,7 @@ const CardCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClose:
           <Icon className="h-[18px] w-[18px] text-white/80" />
         </span>
         <span>
-          <span className="block text-[12px] text-white/45">{label}</span>
+          <span className="block text-[12px] text-white/62">{label}</span>
           <span className="block text-[17px] font-bold text-white">Dia {day}</span>
         </span>
       </button>
@@ -146,7 +146,7 @@ const CardCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClose:
     >
       <div className="px-5 pb-4">
         <p className="text-[22px] font-bold tracking-tight text-white">Novo cartão</p>
-        <p className="text-[14px] leading-snug text-white/45">Com o fechamento e o vencimento, o Willo monta cada fatura sozinho.</p>
+        <p className="text-[14px] leading-snug text-white/62">Com o fechamento e o vencimento, o Willo monta cada fatura sozinho.</p>
 
         <div className="mt-5">
           <CardPreview name={name} digits={digits} limitCents={limitCents} closing={closing} due={due} hex={hex} />
@@ -182,7 +182,7 @@ const CardCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClose:
           {editing && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
               <div className="mt-2 rounded-[22px] border border-white/[0.12] willo-glass p-3">
-                <p className="mb-2 px-1 text-[12px] text-white/45">{editing === "closing" ? "Dia em que a fatura fecha" : "Dia em que a fatura vence"}</p>
+                <p className="mb-2 px-1 text-[12px] text-white/62">{editing === "closing" ? "Dia em que a fatura fecha" : "Dia em que a fatura vence"}</p>
                 <DayGrid
                   value={editing === "closing" ? closing : due}
                   mark={editing === "closing" ? due : closing}
@@ -196,12 +196,12 @@ const CardCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClose:
             </motion.div>
           )}
         </AnimatePresence>
-        <p className="mt-2 px-1 text-[12px] leading-snug text-white/35">
+        <p className="mt-2 px-1 text-[12px] leading-snug text-white/50">
           Compras feitas depois do dia {closing} entram na fatura seguinte. Confira as datas no app do seu banco.
         </p>
 
         {bank ? (
-          <p className="mt-6 flex items-center gap-2 px-1 text-[13px] text-white/45">
+          <p className="mt-6 flex items-center gap-2 px-1 text-[13px] text-white/62">
             <span className="h-3 w-3 rounded-full" style={{ background: bank.hex }} /> Cor do banco aplicada automaticamente
           </p>
         ) : (

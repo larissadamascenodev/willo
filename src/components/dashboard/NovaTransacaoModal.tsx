@@ -83,7 +83,7 @@ const Row = ({ icon: Icon, label, children, onClick }: {
     className={cn("flex min-h-[56px] items-center gap-3 px-4 py-2.5", onClick && "cursor-pointer active:bg-white/[0.03]")}
   >
     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
-      <Icon className="h-4 w-4 text-white/70" />
+      <Icon className="h-4 w-4 text-white/82" />
     </span>
     <span className="shrink-0 text-[15px] text-white">{label}</span>
     <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 text-right">{children}</div>
@@ -603,7 +603,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
   const chip = (active: boolean) =>
     cn(
       "h-9 shrink-0 rounded-full px-4 text-[13px] font-semibold transition-colors",
-      active ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/60",
+      active ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/74",
     );
 
   const selectTrigger = "h-9 w-auto max-w-[190px] gap-1.5 rounded-full border-0 bg-white/[0.06] px-3.5 text-[13px] text-white focus:ring-0";
@@ -621,7 +621,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
           {/* Nav */}
           <div className="shrink-0 px-4" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
             <div className="flex h-11 items-center justify-between">
-              <button onClick={onClose} aria-label="Fechar" className="-ml-1 flex h-10 w-10 items-center justify-center rounded-full text-white/70 active:opacity-60">
+              <button onClick={onClose} aria-label="Fechar" className="-ml-1 flex h-10 w-10 items-center justify-center rounded-full text-white/82 active:opacity-60">
                 <X className="h-6 w-6" />
               </button>
               <span className="text-[16px] font-semibold text-white">
@@ -634,17 +634,17 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
             {/* Amount */}
             <div className="flex flex-col items-center pb-7 pt-6" onClick={() => amountInputRef.current?.focus()}>
-              <span className="flex items-center gap-1.5 text-[14px] text-white/50">
+              <span className="flex items-center gap-1.5 text-[14px] text-white/66">
                 {isReceita ? <TrendingUp className="h-4 w-4" style={{ color: accent }} /> : <TrendingDown className="h-4 w-4" style={{ color: accent }} />}
                 {isReceita ? "Valor da receita" : "Valor da despesa"}
               </span>
               <div className="relative mt-2 flex items-baseline gap-2">
-                <span className="text-[24px] font-bold text-white/40">{currencySymbol()}</span>
+                <span className="text-[24px] font-bold text-white/56">{currencySymbol()}</span>
                 <motion.span
                   key={amountCents}
                   initial={{ scale: 1.04 }}
                   animate={{ scale: 1 }}
-                  className={cn("text-[52px] font-extrabold leading-none tracking-tight tabular-nums", amountCents === 0 ? "text-white/30" : "text-white")}
+                  className={cn("text-[52px] font-extrabold leading-none tracking-tight tabular-nums", amountCents === 0 ? "text-white/45" : "text-white")}
                 >
                   {formatCurrency(amountCents)}
                 </motion.span>
@@ -673,11 +673,11 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                   value={description}
                   onChange={(e) => handleDescriptionChange(e.target.value)}
                   maxLength={100}
-                  className="w-full min-w-0 bg-transparent text-right text-[15px] text-white placeholder:text-white/30 focus:outline-none"
+                  className="w-full min-w-0 bg-transparent text-right text-[15px] text-white placeholder:text-white/45 focus:outline-none"
                 />
               </Row>
               <Row icon={Tag} label="Categoria" onClick={() => setShowCategoryModal(true)}>
-                {suggestingCategory && <Sparkles className="h-3.5 w-3.5 animate-pulse text-white/50" />}
+                {suggestingCategory && <Sparkles className="h-3.5 w-3.5 animate-pulse text-white/66" />}
                 {category ? (
                   <span className="flex min-w-0 items-center gap-2">
                     {(() => {
@@ -688,17 +688,17 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                     <span className="truncate text-[15px] text-white">{category}</span>
                   </span>
                 ) : (
-                  <span className="text-[15px] text-white/35">Escolher</span>
+                  <span className="text-[15px] text-white/50">Escolher</span>
                 )}
                 {suggestedCategory && !suggestingCategory && category === suggestedCategory && (
-                  <span className="rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[10px] text-white/60">IA</span>
+                  <span className="rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[10px] text-white/74">IA</span>
                 )}
-                <ChevronRight className="h-4 w-4 shrink-0 text-white/25" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />
               </Row>
             </div>
 
             {/* Date */}
-            <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/45">Data</p>
+            <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/62">Data</p>
             <div className="rounded-[22px] border border-white/[0.12] willo-glass p-3">
               <div className="flex gap-2">
                 {(["hoje", "ontem", "outros"] as const).map((mode) => (
@@ -714,7 +714,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                     onClick={() => setShowCalendar((prev) => !prev)}
                     className="flex h-11 w-full items-center gap-2 rounded-full bg-white/[0.06] px-4 text-[15px] text-white"
                   >
-                    <CalendarDays className="h-4 w-4 text-white/50" />
+                    <CalendarDays className="h-4 w-4 text-white/66" />
                     {format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                   </button>
                   {showCalendar && (
@@ -738,7 +738,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
             </div>
 
             {/* Where */}
-            <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/45">{isReceita ? "Onde entrou" : "Como pagou"}</p>
+            <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/62">{isReceita ? "Onde entrou" : "Como pagou"}</p>
             <div className="rounded-[22px] border border-white/[0.12] willo-glass">
               {type === "despesa" && (
                 <div className="grid grid-cols-2 gap-1 p-1.5">
@@ -752,7 +752,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                       }}
                       className={cn(
                         "flex h-10 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold transition-colors",
-                        paymentMethod === key ? "bg-white text-[#0B0B0B]" : "text-white/55",
+                        paymentMethod === key ? "bg-white text-[#0B0B0B]" : "text-white/70",
                       )}
                     >
                       <Icon className="h-4 w-4" />
@@ -765,12 +765,12 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
               <div className={cn(type === "despesa" && "border-t border-white/[0.06]")}>
                 {!usingCard ? (
                   loadingAccounts ? (
-                    <div className="flex items-center justify-center gap-2 p-4 text-[13px] text-white/45">
+                    <div className="flex items-center justify-center gap-2 p-4 text-[13px] text-white/62">
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" /> Carregando contas...
                     </div>
                   ) : accounts.length === 0 ? (
                     <div className="space-y-3 p-4 text-center">
-                      <p className="text-[14px] text-white/60">Você precisa adicionar uma conta antes</p>
+                      <p className="text-[14px] text-white/74">Você precisa adicionar uma conta antes</p>
                       <button
                         type="button"
                         onClick={() => { onClose(); navigate("/gestao"); }}
@@ -782,8 +782,8 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                   ) : (
                     <>
                       <div className="px-4 py-3.5">
-                        <span className="flex items-center gap-2.5 text-[15px] text-white/60">
-                          <Wallet className="h-[18px] w-[18px] text-white/45" /> Conta
+                        <span className="flex items-center gap-2.5 text-[15px] text-white/74">
+                          <Wallet className="h-[18px] w-[18px] text-white/62" /> Conta
                         </span>
                         <div className="mt-2.5 flex flex-wrap gap-2">
                           {accounts.map((acc, idx) => {
@@ -803,7 +803,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                                   style={{ backgroundColor: on ? "#0B0B0B" : accountColors[idx % accountColors.length] }}
                                 />
                                 {acc.name}
-                                {acc.is_default && <span className={cn("text-[11px]", on ? "text-[#0B0B0B]/60" : "text-white/40")}>padrão</span>}
+                                {acc.is_default && <span className={cn("text-[11px]", on ? "text-[#0B0B0B]/60" : "text-white/56")}>padrão</span>}
                               </button>
                             );
                           })}
@@ -813,7 +813,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                         <button
                           type="button"
                           onClick={() => setShowNewAccount(true)}
-                          className="flex w-full items-center gap-1.5 border-t border-white/[0.06] px-4 py-3 text-[13px] text-white/55"
+                          className="flex w-full items-center gap-1.5 border-t border-white/[0.06] px-4 py-3 text-[13px] text-white/70"
                         >
                           <Plus className="h-3.5 w-3.5" /> Criar nova conta
                         </button>
@@ -828,7 +828,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                           <button type="button" onClick={handleCreateAccount} disabled={!newAccountName.trim()} className="h-10 rounded-full bg-white px-4 text-[13px] font-semibold text-[#0B0B0B] disabled:opacity-40">
                             Criar
                           </button>
-                          <button type="button" onClick={() => { setShowNewAccount(false); setNewAccountName(""); }} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white/60">
+                          <button type="button" onClick={() => { setShowNewAccount(false); setNewAccountName(""); }} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white/74">
                             <X className="h-4 w-4" />
                           </button>
                         </div>
@@ -856,13 +856,13 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                         </Select>
                       </Row>
                     ) : (
-                      <p className="p-4 text-center text-[14px] text-white/45">Nenhum cartão cadastrado</p>
+                      <p className="p-4 text-center text-[14px] text-white/62">Nenhum cartão cadastrado</p>
                     )}
                     {!showNewCard ? (
                       <button
                         type="button"
                         onClick={() => setShowNewCard(true)}
-                        className="flex w-full items-center gap-1.5 border-t border-white/[0.06] px-4 py-3 text-[13px] text-white/55"
+                        className="flex w-full items-center gap-1.5 border-t border-white/[0.06] px-4 py-3 text-[13px] text-white/70"
                       >
                         <Plus className="h-3.5 w-3.5" /> Cadastrar cartão
                       </button>
@@ -872,11 +872,11 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                         <Input placeholder="Limite (ex: 5000)" type="number" value={newCardLimit} onChange={(e) => setNewCardLimit(e.target.value)} className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]" />
                         <div className="flex gap-2">
                           <div className="flex-1">
-                            <Label className="px-2 text-[11px] text-white/45">Fecha dia</Label>
+                            <Label className="px-2 text-[11px] text-white/62">Fecha dia</Label>
                             <Input type="number" min={1} max={31} value={newCardClosingDay} onChange={(e) => setNewCardClosingDay(e.target.value)} className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]" />
                           </div>
                           <div className="flex-1">
-                            <Label className="px-2 text-[11px] text-white/45">Vence dia</Label>
+                            <Label className="px-2 text-[11px] text-white/62">Vence dia</Label>
                             <Input type="number" min={1} max={31} value={newCardDueDay} onChange={(e) => setNewCardDueDay(e.target.value)} className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]" />
                           </div>
                         </div>
@@ -884,7 +884,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                           <button type="button" onClick={handleCreateCreditCard} disabled={!newCardName.trim() || !newCardLimit} className="h-10 flex-1 rounded-full bg-white text-[13px] font-semibold text-[#0B0B0B] disabled:opacity-40">
                             Cadastrar
                           </button>
-                          <button type="button" onClick={() => { setShowNewCard(false); setNewCardName(""); setNewCardLimit(""); }} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white/60">
+                          <button type="button" onClick={() => { setShowNewCard(false); setNewCardName(""); setNewCardLimit(""); }} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white/74">
                             <X className="h-4 w-4" />
                           </button>
                         </div>
@@ -896,7 +896,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
             </div>
 
             {/* Repetition */}
-            <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/45">Repetição</p>
+            <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/62">Repetição</p>
             <div className="rounded-[22px] border border-white/[0.12] willo-glass p-3">
               <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                 {(isReceita ? (["unica", "fixa"] as const) : (["unica", "parcelado", "fixa"] as const)).map((rt) => (
@@ -948,7 +948,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
 
                     {paymentMethod === "cartao" && installmentMonths.length > 0 ? (
                       <div className="space-y-2">
-                        <p className="px-1 text-[12px] text-white/45">Parcelas já pagas</p>
+                        <p className="px-1 text-[12px] text-white/62">Parcelas já pagas</p>
                         <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
                           {installmentMonths.map((im, idx) => {
                             const isSelected = paidMonthFlags[idx] ?? false;
@@ -968,7 +968,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                                 }}
                                 className={cn(
                                   "flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-3 text-[12px] font-semibold transition-colors",
-                                  isSelected ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/60",
+                                  isSelected ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/74",
                                   (isLast || (!canToggle && !isSelected)) && "opacity-35",
                                 )}
                               >
@@ -1008,7 +1008,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                     )}
 
                     {amountCents > 0 && installments > 0 && (
-                      <p className="px-1 text-[13px] text-white/55">
+                      <p className="px-1 text-[13px] text-white/70">
                         {installments}x de {currencySymbol()} {formatCurrency(Math.round(amountCents / installments))}
                         {paidInstallments > 0 && ` · ${paidInstallments} já pagas`}
                       </p>
@@ -1036,7 +1036,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                     value={observation}
                     onChange={(e) => setObservation(e.target.value)}
                     maxLength={200}
-                    className="w-full min-w-0 bg-transparent text-right text-[15px] text-white placeholder:text-white/30 focus:outline-none"
+                    className="w-full min-w-0 bg-transparent text-right text-[15px] text-white placeholder:text-white/45 focus:outline-none"
                   />
                 </Row>
               </div>
@@ -1067,18 +1067,18 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                     onClose();
                     navigate("/categorias");
                   }}
-                  className="flex items-center gap-1 text-[13px] text-white/55"
+                  className="flex items-center gap-1 text-[13px] text-white/70"
                 >
                   <Settings className="h-4 w-4" /> Gerenciar
                 </button>
               </div>
               <div className="relative mt-4">
-                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
                 <input
                   placeholder="Buscar categoria"
                   value={categorySearch}
                   onChange={(e) => setCategorySearch(e.target.value)}
-                  className="h-11 w-full rounded-full bg-white/[0.06] pl-11 pr-4 text-[15px] text-white placeholder:text-white/30 focus:outline-none"
+                  className="h-11 w-full rounded-full bg-white/[0.06] pl-11 pr-4 text-[15px] text-white placeholder:text-white/45 focus:outline-none"
                 />
               </div>
 
@@ -1116,12 +1116,12 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                   <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06]">
                     <Plus className="h-5 w-5 text-white" />
                   </span>
-                  <span className="text-[12px] text-white/70">Nova</span>
+                  <span className="text-[12px] text-white/82">Nova</span>
                 </button>
               </div>
               {filteredCategories.length === 0 && (
                 <div className="pb-6 text-center">
-                  <p className="text-[14px] text-white/40">Nenhuma categoria encontrada</p>
+                  <p className="text-[14px] text-white/56">Nenhuma categoria encontrada</p>
                   {categorySearch.trim() && (
                     <button
                       type="button"

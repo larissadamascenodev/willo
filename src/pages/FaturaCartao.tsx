@@ -84,7 +84,7 @@ export function formatCurrency(value: number) {
 
 const EmptyTab = ({ label }: { label: string }) => (
   <div className="rounded-[22px] border border-dashed border-white/[0.12] px-4 py-10 text-center">
-    <p className="text-[14px] text-white/40">{label}</p>
+    <p className="text-[14px] text-white/56">{label}</p>
   </div>
 );
 
@@ -593,7 +593,7 @@ const FaturaCartao = () => {
         <button
           onClick={() => navigate("/gestao")}
           aria-label="Voltar"
-          className="-ml-2 flex h-9 w-9 items-center justify-center text-white/70 transition-colors hover:text-white active:opacity-60"
+          className="-ml-2 flex h-9 w-9 items-center justify-center text-white/82 transition-colors hover:text-white active:opacity-60"
         >
           <ChevronLeft className="h-6 w-6" strokeWidth={2.25} />
         </button>
@@ -618,7 +618,7 @@ const FaturaCartao = () => {
           />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button aria-label="Opções do cartão" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-white/70 transition-colors hover:text-white">
+            <button aria-label="Opções do cartão" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-white/82 transition-colors hover:text-white">
               <MoreVertical className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
@@ -674,7 +674,7 @@ const FaturaCartao = () => {
             <div className="min-w-0">
               <p className="truncate text-[16px] font-bold text-white">{card?.name}</p>
               {card?.last_four_digits && (
-                <p className="text-[12px] tabular-nums text-white/40">•••• {card.last_four_digits}</p>
+                <p className="text-[12px] tabular-nums text-white/56">•••• {card.last_four_digits}</p>
               )}
             </div>
           </div>
@@ -690,7 +690,7 @@ const FaturaCartao = () => {
 
         {/* Invoice total — always what the statement was worth, never the leftover */}
         <div className="relative mt-5">
-          <p className="text-[12px] text-white/45">Fatura de {MONTH_NAMES[selectedMonth - 1]}</p>
+          <p className="text-[12px] text-white/62">Fatura de {MONTH_NAMES[selectedMonth - 1]}</p>
           {/* Money already paid has left the account, so the headline is what is still owed */}
           <p className="text-[36px] font-extrabold leading-tight tracking-tight text-white tabular-nums">
             {formatCurrency(paidAmount > 0 && outstanding > 0 ? outstanding : total)}
@@ -700,19 +700,19 @@ const FaturaCartao = () => {
               <Check className="h-3.5 w-3.5" strokeWidth={3} /> Paga
             </p>
           ) : dueInfo && outstanding > 0 ? (
-            <p className={cn("text-[13px]", dueInfo.overdue ? "text-red-400" : "text-white/45")}>{dueInfo.text}</p>
+            <p className={cn("text-[13px]", dueInfo.overdue ? "text-red-400" : "text-white/62")}>{dueInfo.text}</p>
           ) : null}
         </div>
 
         {/* Closing / due */}
         <div className="relative mt-4 flex items-center gap-4 border-t border-white/[0.06] pt-4">
-          <span className="flex items-center gap-2 text-[12.5px] text-white/50">
-            <CalendarClock className="h-4 w-4 shrink-0 text-white/35" />
+          <span className="flex items-center gap-2 text-[12.5px] text-white/66">
+            <CalendarClock className="h-4 w-4 shrink-0 text-white/50" />
             Fecha dia <span className="font-semibold text-white">{card?.closing_day}</span>
           </span>
           <span className="h-3 w-px bg-white/10" />
-          <span className="flex items-center gap-2 text-[12.5px] text-white/50">
-            <CalendarCheck className="h-4 w-4 shrink-0 text-white/35" />
+          <span className="flex items-center gap-2 text-[12.5px] text-white/66">
+            <CalendarCheck className="h-4 w-4 shrink-0 text-white/50" />
             Vence dia <span className="font-semibold text-white">{card?.due_day}</span>
           </span>
         </div>
@@ -720,8 +720,8 @@ const FaturaCartao = () => {
         {/* Limit */}
         <div className="relative mt-5 border-t border-white/[0.06] pt-4">
           <div className="flex items-baseline justify-between">
-            <span className="text-[12px] text-white/45">Limite usado</span>
-            <span className={cn("text-[12.5px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-white/70")}>
+            <span className="text-[12px] text-white/62">Limite usado</span>
+            <span className={cn("text-[12.5px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-white/82")}>
               {usedPct.toFixed(0)}%
             </span>
           </div>
@@ -736,15 +736,15 @@ const FaturaCartao = () => {
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
             <div>
-              <p className="text-[11.5px] text-white/40">Usado</p>
+              <p className="text-[11.5px] text-white/56">Usado</p>
               <p className="text-[14px] font-semibold text-white tabular-nums">{formatCurrency(usedLimit)}</p>
             </div>
             <div className="border-x border-white/[0.06]">
-              <p className="text-[11.5px] text-white/40">Disponível</p>
+              <p className="text-[11.5px] text-white/56">Disponível</p>
               <p className={cn("text-[14px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-willo-green")}>{formatCurrency(availableLimit)}</p>
             </div>
             <div>
-              <p className="text-[11.5px] text-white/40">Total</p>
+              <p className="text-[11.5px] text-white/56">Total</p>
               <p className="text-[14px] font-semibold text-white tabular-nums">{formatCurrency(limitTotal)}</p>
             </div>
           </div>
@@ -782,7 +782,7 @@ const FaturaCartao = () => {
             {tab === key && (
               <motion.span layoutId="fatura-tab" className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
             )}
-            <span className={cn("relative z-10 transform-gpu", tab === key ? "text-[#0B0B0B]" : "text-white/70")}>{label}</span>
+            <span className={cn("relative z-10 transform-gpu", tab === key ? "text-[#0B0B0B]" : "text-white/82")}>{label}</span>
           </button>
         ))}
       </div>

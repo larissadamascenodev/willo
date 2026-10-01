@@ -75,7 +75,7 @@ const OnboardingCard = ({ profile, onUpdateName, onGoToAccounts, onCreateTransac
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="text-[15px] font-bold text-white leading-tight">Complete sua conta</h3>
-            <p className="text-[12px] text-white/45 leading-tight mt-0.5">
+            <p className="text-[12px] text-white/62 leading-tight mt-0.5">
               Faltam {sortedSteps.length - completedCount} {sortedSteps.length - completedCount === 1 ? "etapa" : "etapas"} para aproveitar tudo
             </p>
           </div>
@@ -113,11 +113,11 @@ const OnboardingCard = ({ profile, onUpdateName, onGoToAccounts, onCreateTransac
               >
                 <span className={cn(
                   "w-6 h-6 rounded-full flex items-center justify-center",
-                  s.done ? "bg-willo-green/15 text-willo-green" : "bg-white/[0.08] text-white/70"
+                  s.done ? "bg-willo-green/15 text-willo-green" : "bg-white/[0.08] text-white/82"
                 )}>
                   {s.done ? <Check className="w-3 h-3" strokeWidth={3} /> : <StepIcon className="w-3 h-3" />}
                 </span>
-                <span className={cn("text-[12px] font-medium whitespace-nowrap", s.done ? "text-white/35 line-through" : "text-white/80")}>
+                <span className={cn("text-[12px] font-medium whitespace-nowrap", s.done ? "text-white/50 line-through" : "text-white/80")}>
                   {s.label}
                 </span>
               </button>

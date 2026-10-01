@@ -60,20 +60,20 @@ export const TransactionsSummaryCard = ({ saldoAtual, saldoPrevisto, receitas, d
     animate={{ opacity: 1, y: 0 }}
     className={cn("rounded-[24px] border border-white/[0.12] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-4", className)}
   >
-    <p className="text-[13px] text-white/45">Saldo disponível</p>
+    <p className="text-[13px] text-white/62">Saldo disponível</p>
     <p className="text-[32px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{fmt(saldoAtual)}</p>
     {saldoPrevisto !== saldoAtual && (
-      <p className="text-[12px] text-white/40 tabular-nums">Previsto no fim do mês: {fmt(saldoPrevisto)}</p>
+      <p className="text-[12px] text-white/56 tabular-nums">Previsto no fim do mês: {fmt(saldoPrevisto)}</p>
     )}
     <div className="mt-4 grid grid-cols-2 border-t border-white/[0.12] pt-3.5">
       <div className="pr-3">
-        <span className="flex items-center gap-1 text-[12px] text-white/45">
+        <span className="flex items-center gap-1 text-[12px] text-white/62">
           <ArrowDownLeft className="h-3.5 w-3.5 text-willo-green" strokeWidth={2.5} /> Receitas
         </span>
         <p className="mt-0.5 text-[17px] font-bold text-white tabular-nums">{fmt(receitas)}</p>
       </div>
       <div className="border-l border-white/[0.12] pl-4">
-        <span className="flex items-center gap-1 text-[12px] text-white/45">
+        <span className="flex items-center gap-1 text-[12px] text-white/62">
           <ArrowUpRight className="h-3.5 w-3.5 text-red-400" strokeWidth={2.5} /> Despesas
         </span>
         <p className="mt-0.5 text-[17px] font-bold text-white tabular-nums">{fmt(despesas)}</p>
@@ -102,7 +102,7 @@ export const TransactionTabs = ({ value, onChange, layoutId = "tx-tab-pill" }: {
             transition={{ type: "spring", stiffness: 420, damping: 34 }}
           />
         )}
-        <span className={`relative z-10 transition-colors ${value === tab.key ? "text-[#0B0B0B]" : "text-white/55"}`}>{tab.label}</span>
+        <span className={`relative z-10 transition-colors ${value === tab.key ? "text-[#0B0B0B]" : "text-white/70"}`}>{tab.label}</span>
       </button>
     ))}
   </div>
@@ -216,9 +216,9 @@ export const TransactionListItem = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <p className="text-[15px] font-medium text-white truncate">{tx.name}</p>
-            {isRecurring && <RefreshCw className="w-3 h-3 text-white/30 shrink-0" />}
+            {isRecurring && <RefreshCw className="w-3 h-3 text-white/45 shrink-0" />}
           </div>
-          <p className="text-[12px] text-white/40 truncate">
+          <p className="text-[12px] text-white/56 truncate">
             {tx.category}
             {tx.installments && tx.installment_current ? ` · ${tx.installment_current}/${tx.installments}x` : ""}
             {accountName ? ` · ${accountName}` : ""}
@@ -231,7 +231,7 @@ export const TransactionListItem = ({
           <p className={`text-[15px] font-semibold tabular-nums ${isReceita ? "text-willo-green" : "text-white"}`}>
             {isReceita ? "+" : "−"}{fmt(tx.amount)}
           </p>
-          <span className={`block text-[11px] ${isPending ? "text-amber-300/90" : "text-white/35"}`}>
+          <span className={`block text-[11px] ${isPending ? "text-amber-300/90" : "text-white/50"}`}>
             {isPending ? (isReceita ? "A receber" : "Pendente") : (isReceita ? "Recebido" : "Pago")}
           </span>
         </div>

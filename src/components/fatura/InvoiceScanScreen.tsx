@@ -98,7 +98,7 @@ function ReadingState() {
           </motion.p>
         </AnimatePresence>
       </div>
-      <p className="relative mt-2 text-center text-[13px] text-white/35">Costuma levar uns 20 segundos</p>
+      <p className="relative mt-2 text-center text-[13px] text-white/50">Costuma levar uns 20 segundos</p>
 
       <div className="relative mt-8 h-[3px] w-44 overflow-hidden rounded-full bg-white/[0.08]">
         <motion.span
@@ -144,7 +144,7 @@ function FoundList({ items, onDone }: { items: ExtractedItem[]; onDone: () => vo
         >
           {shown}
         </motion.p>
-        <p className="relative mt-2 text-[13.5px] tracking-tight text-white/45">
+        <p className="relative mt-2 text-[13.5px] tracking-tight text-white/62">
           {done ? "lançamentos encontrados" : "lendo os lançamentos…"}
         </p>
 
@@ -155,7 +155,7 @@ function FoundList({ items, onDone }: { items: ExtractedItem[]; onDone: () => vo
           {plans > 0 && (
             <motion.span
               layout
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1.5 text-[12px] text-white/70"
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1.5 text-[12px] text-white/82"
             >
               <Layers className="h-3 w-3" /> {plans}
             </motion.span>
@@ -196,7 +196,7 @@ function FoundList({ items, onDone }: { items: ExtractedItem[]; onDone: () => vo
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[14px] tracking-tight text-white">{item.description}</span>
-                    <span className="block truncate text-[11.5px] text-white/40">
+                    <span className="block truncate text-[11.5px] text-white/56">
                       {item.category}
                       {item.installment_total && item.installment_total > 1 && ` · ${item.installment_current ?? 1}/${item.installment_total}`}
                       {isRefund && " · estorno"}
@@ -246,7 +246,7 @@ export default function InvoiceScanScreen({ open, items, onClose, onDone }: {
         >
           <div className="shrink-0 px-4" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
             <div className="flex h-11 items-center justify-between">
-              <button onClick={onClose} aria-label="Cancelar" className="-ml-1 flex h-10 w-10 items-center justify-center rounded-full text-white/70 active:opacity-60">
+              <button onClick={onClose} aria-label="Cancelar" className="-ml-1 flex h-10 w-10 items-center justify-center rounded-full text-white/82 active:opacity-60">
                 <X className="h-6 w-6" />
               </button>
               <span className="text-[16px] font-semibold text-white">Lendo a fatura</span>
