@@ -6,6 +6,7 @@ import { useFormattedCounter } from "@/hooks/useAnimatedCounter";
 import NotificationsPanel, { useNotifications } from "./NotificationsPanel";
 import MonthSelector from "./MonthSelector";
 import HomeSectionTabs from "./HomeSectionTabs";
+import { useGreeting } from "./DashboardHeader";
 import { useProfile } from "@/hooks/useProfile";
 
 import { currencySymbol, getCurrency } from "@/lib/currency";
@@ -46,6 +47,7 @@ const BalanceHeroCard = ({
   const animatedSaldo = useFormattedCounter(saldoAtual);
   const animatedReceitas = useFormattedCounter(receitas);
   const animatedDespesas = useFormattedCounter(despesas);
+  const { greeting } = useGreeting();
   const isPositive = changeAmount >= 0;
   const heroRef = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -128,31 +130,29 @@ const BalanceHeroCard = ({
           the hero so the first cards overlap it and read as floating in front of the backdrop,
           instead of the balance being yet another card. Solid blobs + blur, not soft radials —
           a gradient that already fades out loses almost all of its energy to the blur. */}
-      <div className="pointer-events-none absolute inset-x-0 -top-10 -z-10 h-[760px] overflow-hidden">
-        {/* Lit-from-above wash */}
+      <div className="pointer-events-none absolute inset-x-0 -top-10 -z-10 h-[540px] overflow-hidden">
+        {/* Blue over the pills, warm through the middle, green where the cards start —
+            the bands stay apart so the glass above them picks up a colour instead of grey mud. */}
         <div
-          className="absolute inset-0"
-          style={{ background: "linear-gradient(180deg, rgba(88,86,104,0.58) 0%, rgba(50,49,62,0.32) 30%, transparent 58%)" }}
+          className="absolute right-[-12%] top-[-80px] h-[250px] w-[300px] rounded-full blur-[65px]"
+          style={{ background: "rgba(42,116,255,0.58)" }}
         />
-        {/* Main pool of light behind the balance */}
         <div
-          className="absolute left-1/2 top-[90px] h-[330px] w-[440px] -translate-x-1/2 rounded-full blur-[95px]"
-          style={{ background: "rgba(112,110,132,0.62)" }}
+          className="absolute left-[-24%] top-[-60px] h-[240px] w-[240px] rounded-full blur-[65px]"
+          style={{ background: "rgba(226,38,58,0.46)" }}
         />
-        {/* Cool accent, top right */}
         <div
-          className="absolute right-[-18%] top-[-30px] h-[260px] w-[260px] rounded-full blur-[80px]"
-          style={{ background: "rgba(116,110,200,0.42)" }}
+          className="absolute left-1/2 top-[70px] h-[210px] w-[420px] -translate-x-1/2 rounded-full blur-[80px]"
+          style={{ background: "rgba(214,106,38,0.40)" }}
         />
-        {/* Brand accent, lower left — close to where the cards begin */}
         <div
-          className="absolute left-[-18%] top-[300px] h-[280px] w-[300px] rounded-full blur-[85px]"
-          style={{ background: "rgba(200,243,109,0.17)" }}
+          className="absolute left-1/2 top-[170px] h-[180px] w-[360px] -translate-x-1/2 rounded-full blur-[80px]"
+          style={{ background: "rgba(150,196,52,0.20)" }}
         />
-        {/* Dies into the page so the cards below sit on true black */}
+        {/* Dies into the page well before the first card, so the cards sit on true black */}
         <div
-          className="absolute inset-x-0 bottom-0 h-[300px]"
-          style={{ background: "linear-gradient(180deg, transparent 0%, rgba(8,8,8,0.78) 58%, #070707 100%)" }}
+          className="absolute inset-x-0 bottom-0 h-[360px]"
+          style={{ background: "linear-gradient(180deg, transparent 0%, rgba(7,7,7,0.72) 42%, #070707 78%)" }}
         />
       </div>
 
@@ -199,10 +199,12 @@ const BalanceHeroCard = ({
       </div>
 
       <div className="relative flex items-center justify-between gap-3">
-        <p className="text-[12px] text-white/50">Saldo disponível</p>
+        <p className="min-w-0 truncate text-[15px] font-semibold tracking-tight text-white/90">
+          {greeting}{profile?.display_name ? `, ${profile.display_name.split(" ")[0]}` : ""}
+        </p>
         <MonthSelector selectedMonth={selectedMonth} selectedYear={selectedYear} onMonthChange={onMonthChange} />
       </div>
-      <div className="relative flex items-center justify-between mt-2 gap-3">
+      <div className="relative flex items-center justify-between mt-2.5 gap-3">
         <p className="text-[34px] font-extrabold text-white tracking-tight tabular-nums leading-none truncate">
           {hidden ? `${currencySymbol()} ••••••` : animatedSaldo}
         </p>
@@ -214,6 +216,10 @@ const BalanceHeroCard = ({
           {hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
         </button>
       </div>
+
+      <p className="relative mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
+        Saldo disponível
+      </p>
 
       <div className="relative flex items-center gap-2 mt-2.5">
         <span className="text-[13px] font-medium text-white/60">
@@ -228,27 +234,7 @@ const BalanceHeroCard = ({
         </span>
       </div>
 
-      {/* Receitas / Despesas — inline with the balance, no separate cards */}
-      <div className="relative mt-4 pt-4 border-t border-white/[0.08] flex items-stretch">
-        {[
-          { label: "Receitas", value: animatedReceitas, to: "/detalhe/receitas", Icon: ArrowDownLeft, iconCls: "text-willo-green" },
-          { label: "Despesas", value: animatedDespesas, to: "/detalhe/despesas", Icon: ArrowUpRight, iconCls: "text-red-400" },
-        ].map(({ label, value, to, Icon, iconCls }, i) => (
-          <button
-            key={label}
-            onClick={() => navigate(to)}
-            className={`flex-1 min-w-0 text-left active:opacity-70 transition-opacity ${i === 1 ? "pl-4 border-l border-white/[0.08]" : "pr-4"}`}
-          >
-            <span className="flex items-center gap-1 text-[12px] text-white/45">
-              <Icon className={`w-3.5 h-3.5 ${iconCls}`} strokeWidth={2.5} />
-              {label}
-            </span>
-            <span className="block mt-1 text-[17px] font-bold text-white tracking-tight tabular-nums leading-tight truncate">
-              {hidden ? `${currencySymbol()} ••••` : value}
-            </span>
-          </button>
-        ))}
-      </div>
+      {/* Receitas e despesas descem para o primeiro card, logo abaixo do brilho */}
     </div>
     </>
   );

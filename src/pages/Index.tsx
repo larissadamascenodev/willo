@@ -190,6 +190,17 @@ const Index = () => {
             />
           </motion.div>
 
+          {/* Opção 3: o saldo fica na faixa iluminada e o par entra no primeiro card */}
+          <ReceitasDespesasCards
+            receitas={receitas}
+            receitasRecebidas={data.receitasRecebidas}
+            receitasPendentes={data.receitasPendentes}
+            despesas={despesas}
+            despesasPagas={data.despesasPagas}
+            despesasPendentes={data.despesasPendentes}
+            compact
+          />
+
           {/* MicroInteracoesCard temporarily disabled */}
           {isCurrentMonth && <FinanceChartCard />}
           {profile && !isOnboardingComplete && (

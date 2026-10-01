@@ -19,12 +19,14 @@ export const navItems: {
   { icon: Camera, label: "Escanear", scan: true },
 ];
 
-/** Same dark, translucent "droplet-glass" surface as BalanceHeroCard. */
+/** Clear glass, like the floating bar in iOS 26: the page has to show through it,
+ *  so the fill is nearly nothing and the lit top edge draws the shape. */
 export const GLASS_BG = {
-  background: "linear-gradient(165deg, rgba(34,34,34,0.88) 0%, rgba(20,20,20,0.92) 100%)",
-  backdropFilter: "blur(24px) saturate(160%)",
-  WebkitBackdropFilter: "blur(24px) saturate(160%)",
-  boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.14), 0 12px 32px -12px rgba(0,0,0,0.6)",
+  background: "linear-gradient(160deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.055) 48%, rgba(255,255,255,0.028) 100%)",
+  backdropFilter: "blur(30px) saturate(190%)",
+  WebkitBackdropFilter: "blur(30px) saturate(190%)",
+  boxShadow:
+    "inset 0 1px 0 0 rgba(255,255,255,0.30), inset 0 -1px 0 0 rgba(255,255,255,0.07), 0 18px 42px -16px rgba(0,0,0,0.9)",
 } as const;
 
 const MobileBottomNav = memo(() => {
@@ -78,7 +80,7 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
 }) {
   return (
     <>
-      <nav className="flex-1 max-w-[280px] rounded-full border border-white/10" style={GLASS_BG}>
+      <nav className="flex-1 max-w-[280px] rounded-full border border-white/25" style={GLASS_BG}>
         <div className="flex items-center justify-around h-[58px] px-1.5">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -118,7 +120,7 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
         aria-label="Adicionar transação"
         className={cn(
           "relative w-[58px] h-[58px] rounded-full flex items-center justify-center border shrink-0 transition-colors",
-          plusOpen ? "bg-white border-white" : "border-white/10"
+          plusOpen ? "bg-white border-white" : "border-white/25"
         )}
         style={plusOpen ? undefined : GLASS_BG}
       >
