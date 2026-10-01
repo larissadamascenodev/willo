@@ -121,18 +121,41 @@ const BalanceHeroCard = ({
     </AnimatePresence>
     <div
       ref={heroRef}
-      className="relative overflow-hidden -mx-4 rounded-b-[32px] px-4 pb-6 border-b border-white/[0.09]"
-      style={{
-        paddingTop: `calc(env(safe-area-inset-top, 0px) + ${14 + topInset}px)`,
-        background: "linear-gradient(165deg, rgba(34,34,34,0.95) 0%, rgba(18,18,18,0.97) 55%, rgba(10,10,10,0.98) 100%)",
-        backdropFilter: "blur(24px) saturate(160%)",
-        WebkitBackdropFilter: "blur(24px) saturate(160%)",
-        boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.14), inset 0 -1px 0 0 rgba(255,255,255,0.04), 0 18px 40px -16px rgba(0,0,0,0.85)",
-      }}
+      className="relative -mx-4 px-4 pb-7"
+      style={{ paddingTop: `calc(env(safe-area-inset-top, 0px) + ${14 + topInset}px)` }}
     >
-      {/* Droplet-style glossy highlight */}
-      <div className="pointer-events-none absolute -top-24 -left-16 w-64 h-64 rounded-full bg-white/[0.05] blur-3xl" />
-      
+      {/* The balance sits on the page itself, lit from behind. The glow runs past the bottom of
+          the hero so the first cards overlap it and read as floating in front of the backdrop,
+          instead of the balance being yet another card. Solid blobs + blur, not soft radials —
+          a gradient that already fades out loses almost all of its energy to the blur. */}
+      <div className="pointer-events-none absolute inset-x-0 -top-10 -z-10 h-[760px] overflow-hidden">
+        {/* Lit-from-above wash */}
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(180deg, rgba(88,86,104,0.58) 0%, rgba(50,49,62,0.32) 30%, transparent 58%)" }}
+        />
+        {/* Main pool of light behind the balance */}
+        <div
+          className="absolute left-1/2 top-[90px] h-[330px] w-[440px] -translate-x-1/2 rounded-full blur-[95px]"
+          style={{ background: "rgba(112,110,132,0.62)" }}
+        />
+        {/* Cool accent, top right */}
+        <div
+          className="absolute right-[-18%] top-[-30px] h-[260px] w-[260px] rounded-full blur-[80px]"
+          style={{ background: "rgba(116,110,200,0.42)" }}
+        />
+        {/* Brand accent, lower left — close to where the cards begin */}
+        <div
+          className="absolute left-[-18%] top-[300px] h-[280px] w-[300px] rounded-full blur-[85px]"
+          style={{ background: "rgba(200,243,109,0.17)" }}
+        />
+        {/* Dies into the page so the cards below sit on true black */}
+        <div
+          className="absolute inset-x-0 bottom-0 h-[300px]"
+          style={{ background: "linear-gradient(180deg, transparent 0%, rgba(8,8,8,0.78) 58%, #070707 100%)" }}
+        />
+      </div>
+
       {/* Who is signed in and the bell live in the page header now, above the pills */}
       <div className="relative mb-4 flex items-center justify-between gap-3">
         <button
