@@ -15,6 +15,7 @@ import TransferModal from "@/components/dashboard/TransferModal";
 import type { ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
 import { showScanSavedToast } from "@/components/scan/scanSavedToast";
 import BottomSheet from "@/components/shared/BottomSheet";
+import SilkBackdrop from "@/components/shared/SilkBackdrop";
 import ScanCaptureScreen from "@/components/scan/ScanCaptureScreen";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 import WelcomeToAppModal from "@/components/dashboard/WelcomeToAppModal";
@@ -323,6 +324,7 @@ const DashboardLayout = () => {
         <OnboardingFlow onComplete={handleOnboardingComplete} onRefetch={refetchProfile} />
       )}
       <div className="willo-bg min-h-screen text-foreground" style={showOnboarding ? { display: "none" } : undefined}>
+        <SilkBackdrop />
         <div className="w-full mx-auto px-4 md:px-6 lg:px-8 xl:px-12 pt-0 pb-24 md:pb-8">
           <DashboardHeader profile={profile} streak={streak} streakDates={streakDates} />
           <Outlet context={profileState} />

@@ -25,7 +25,8 @@
     --background: 0 0% 3%;
     --foreground: 0 0% 98%;
 
-    --card: 0 0% 8%;
+    /* Translucent, so the silk shows through the card instead of sitting under it */
+    --card: 0 0% 100% / 0.055;
     --card-foreground: 0 0% 98%;
 
     --popover: 0 0% 10%;
@@ -137,23 +138,11 @@
 
   /* Screen background: graphite-to-black fade with faint concentric rings in
      the top-right corner. Children paint above the ::before (isolation). */
+  /* The silk backdrop paints the page now; this only has to stay out of its way. */
   .willo-bg {
     position: relative;
     isolation: isolate;
-    background: linear-gradient(180deg, #1c1c1c 0%, #0b0b0b 38%, #000000 100%);
-  }
-  .willo-bg::before {
-    content: "";
-    position: fixed;
-    top: -180px;
-    right: -220px;
-    width: 520px;
-    height: 520px;
-    z-index: -1;
-    pointer-events: none;
-    background: repeating-radial-gradient(circle at center, transparent 0 79px, rgba(255, 255, 255, 0.045) 79px 80px);
-    -webkit-mask-image: radial-gradient(circle at center, #000 30%, transparent 70%);
-    mask-image: radial-gradient(circle at center, #000 30%, transparent 70%);
+    background: #06080c;
   }
 
   /* Primary pill button: white, black bold text, soft white glow. */
@@ -219,4 +208,16 @@
   input[type="number"] {
     -moz-appearance: textfield;
   }
+}
+
+/* Cards read like the notifications on an iOS lock screen: a sheet of dark glass
+   over the silk, held by a lit top edge instead of a drawn border. Written after
+   Tailwind's utilities so it layers onto every `bg-card` without touching the
+   hundred places that use it. The background-color still comes from --card. */
+.bg-card {
+  backdrop-filter: blur(26px) saturate(165%);
+  -webkit-backdrop-filter: blur(26px) saturate(165%);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.09),
+    0 14px 34px -18px rgba(0, 0, 0, 0.85);
 }

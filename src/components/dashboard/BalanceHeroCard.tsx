@@ -133,26 +133,15 @@ const BalanceHeroCard = ({
       <div className="pointer-events-none absolute inset-x-0 -top-10 -z-10 h-[540px] overflow-hidden">
         {/* Blue over the pills, warm through the middle, green where the cards start —
             the bands stay apart so the glass above them picks up a colour instead of grey mud. */}
+        {/* Just enough cool light over the pills for the glass to have something to
+            catch; the silk backdrop carries the rest. */}
         <div
-          className="absolute right-[-12%] top-[-80px] h-[250px] w-[300px] rounded-full blur-[65px]"
-          style={{ background: "rgba(42,116,255,0.58)" }}
+          className="absolute right-[-14%] top-[-90px] h-[260px] w-[300px] rounded-full blur-[70px]"
+          style={{ background: "rgba(96,132,186,0.30)" }}
         />
         <div
-          className="absolute left-[-24%] top-[-60px] h-[240px] w-[240px] rounded-full blur-[65px]"
-          style={{ background: "rgba(226,38,58,0.46)" }}
-        />
-        <div
-          className="absolute left-1/2 top-[70px] h-[210px] w-[420px] -translate-x-1/2 rounded-full blur-[80px]"
-          style={{ background: "rgba(214,106,38,0.40)" }}
-        />
-        <div
-          className="absolute left-1/2 top-[170px] h-[180px] w-[360px] -translate-x-1/2 rounded-full blur-[80px]"
-          style={{ background: "rgba(150,196,52,0.20)" }}
-        />
-        {/* Dies into the page well before the first card, so the cards sit on true black */}
-        <div
-          className="absolute inset-x-0 bottom-0 h-[360px]"
-          style={{ background: "linear-gradient(180deg, transparent 0%, rgba(7,7,7,0.72) 42%, #070707 78%)" }}
+          className="absolute left-[-20%] top-[-40px] h-[220px] w-[240px] rounded-full blur-[70px]"
+          style={{ background: "rgba(72,98,142,0.24)" }}
         />
       </div>
 
