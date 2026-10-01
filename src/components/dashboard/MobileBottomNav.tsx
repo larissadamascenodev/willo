@@ -1,14 +1,22 @@
 import { memo, useCallback, useEffect, useState } from "react";
-import { Home, ArrowLeftRight, Wallet, BrainCircuit, Plus, TrendingUp, TrendingDown, Camera } from "lucide-react";
+import { Home, ArrowLeftRight, Plus, TrendingUp, TrendingDown, Camera, Sparkles } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
-export const navItems = [
+export const navItems: {
+  icon: typeof Home;
+  label: string;
+  path?: string;
+  /** Fires the same scanner the add menu uses, instead of navigating. */
+  scan?: boolean;
+  /** Shown but not reachable yet. */
+  soon?: boolean;
+}[] = [
   { icon: Home, label: "Início", path: "/" },
   { icon: ArrowLeftRight, label: "Transações", path: "/transacoes" },
-  { icon: Wallet, label: "Carteira", path: "/gestao" },
-  { icon: BrainCircuit, label: "Raio-X", path: "/bot-finance" },
+  { icon: Sparkles, label: "Assistente", soon: true },
+  { icon: Camera, label: "Escanear", scan: true },
 ];
 
 /** Same dark, translucent "droplet-glass" surface as BalanceHeroCard. */
@@ -39,7 +47,7 @@ const MobileBottomNav = memo(() => {
       {/* Add menu: actions fly out of the + into an arch */}
       <AddActionsMenu open={isOpen} onClose={close} onSelect={handleOption} />
 
-      {/* Bottom Nav Bar — pill (Início/Transações/Carteira/IA) + separate add button */}
+      {/* Bottom Nav Bar — pill (Início/Transações/Assistente/Escanear) + separate add button */}
       <div
         className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-center gap-3 px-5 md:hidden"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}
@@ -74,21 +82,31 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
         <div className="flex items-center justify-around h-[58px] px-1.5">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activePath === item.path;
+            const isActive = !!item.path && activePath === item.path;
             return (
               <button
                 key={item.label}
-                onClick={() => onNavigate?.(item.path)}
-                aria-label={item.label}
+                onClick={() => {
+                  if (item.soon) return;
+                  if (item.scan) window.dispatchEvent(new CustomEvent("open-scanner"));
+                  else if (item.path) onNavigate?.(item.path);
+                }}
+                aria-label={item.soon ? `${item.label} — em breve` : item.label}
                 className={cn(
-                  "flex items-center justify-center h-11 flex-1 mx-0.5 rounded-full transition-colors",
-                  isActive ? "bg-white/12" : "hover:bg-white/5"
+                  "relative flex items-center justify-center h-11 flex-1 mx-0.5 rounded-full transition-colors",
+                  isActive ? "bg-white/12" : item.soon ? "" : "hover:bg-white/5",
                 )}
               >
                 <Icon
-                  className={cn("w-5 h-5", isActive ? "text-white" : "text-white/45")}
+                  className={cn(
+                    "w-5 h-5",
+                    isActive ? "text-white" : item.soon ? "text-white/25" : "text-white/45",
+                  )}
                   strokeWidth={isActive ? 2.25 : 2}
                 />
+                {item.soon && (
+                  <span className="absolute -top-0.5 right-1.5 h-1.5 w-1.5 rounded-full bg-willo-green" />
+                )}
               </button>
             );
           })}

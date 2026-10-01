@@ -320,33 +320,40 @@ const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profi
         className={cn("md:hidden -mx-4 px-4 pb-4", !MAIN_TABS.includes(location.pathname) && "hidden")}
         style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
       >
-        <div className="flex items-center justify-between">
-          <button onClick={() => navigate("/")} aria-label="Início">
-            <img src={wordmarkOnDark} alt="Willo" className="h-5 w-auto" style={{ filter: "brightness(0) invert(1)" }} />
-          </button>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <div className="relative" ref={notifRef}>
-              <button
-                onClick={handleOpenNotif}
-                className="relative w-9 h-9 flex items-center justify-center text-white/85 hover:text-white transition-colors"
-                aria-label="Notificações"
-              >
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-willo-green ring-2 ring-[#0B0B0B]" />}
-              </button>
-              {isMobile && <NotificationsPanel open={notifOpen} onClose={handleCloseNotif} />}
-            </div>
-            <button
-              onClick={() => navigate("/configuracoes")}
-              className="w-9 h-9 rounded-full overflow-hidden bg-white/10 flex items-center justify-center text-[13px] font-bold text-white active:scale-95 transition-transform"
-              aria-label="Perfil"
-            >
+        <div className="flex items-center justify-between gap-3">
+          {/* Who is signed in, rather than the app's own name */}
+          <button
+            onClick={() => navigate("/configuracoes")}
+            className="flex min-w-0 items-center gap-2.5 active:opacity-70"
+            aria-label="Perfil"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[14px] font-bold text-white">
               {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
               ) : (
                 initial
               )}
+            </span>
+            <motion.span
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.12, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="min-w-0 truncate text-[16px] font-semibold tracking-tight text-white"
+            >
+              {profile?.display_name?.split(" ")[0] ?? ""}
+            </motion.span>
+          </button>
+
+          <div className="relative shrink-0" ref={notifRef}>
+            <button
+              onClick={handleOpenNotif}
+              className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white/85 transition-colors active:opacity-70"
+              aria-label="Notificações"
+            >
+              <Bell className="h-[18px] w-[18px]" />
+              {unreadCount > 0 && <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-willo-green ring-2 ring-[#0B0B0B]" />}
             </button>
+            {isMobile && <NotificationsPanel open={notifOpen} onClose={handleCloseNotif} />}
           </div>
         </div>
       </header>

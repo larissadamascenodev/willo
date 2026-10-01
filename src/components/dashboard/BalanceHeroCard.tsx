@@ -5,8 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { useFormattedCounter } from "@/hooks/useAnimatedCounter";
 import NotificationsPanel, { useNotifications } from "./NotificationsPanel";
 import MonthSelector from "./MonthSelector";
+import HomeSectionTabs from "./HomeSectionTabs";
 import { useProfile } from "@/hooks/useProfile";
-import wordmarkOnDark from "@/assets/logo/willo-wordmark-light.png";
 
 import { currencySymbol, getCurrency } from "@/lib/currency";
 interface Props {
@@ -133,35 +133,46 @@ const BalanceHeroCard = ({
       {/* Droplet-style glossy highlight */}
       <div className="pointer-events-none absolute -top-24 -left-16 w-64 h-64 rounded-full bg-white/[0.05] blur-3xl" />
       
-      {/* Top row: logo + notifications/profile */}
-      <div className="relative flex items-center justify-between mb-5">
-        <img src={wordmarkOnDark} alt="Willo" className="h-5 w-auto" style={{ filter: "brightness(0) invert(1)" }} />
-        <div className="flex items-center gap-1.5 shrink-0">
-          <div className="relative">
-            <button
-              onClick={() => setNotifOpen((v) => !v)}
-              className="relative w-9 h-9 flex items-center justify-center text-white/85 hover:text-white transition-colors"
-              aria-label="Notificações"
-            >
-              <Bell className="w-5 h-5" />
-              {unreadCount > 0 && <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-willo-green ring-2 ring-[#1c1c1c]" />}
-            </button>
-            <NotificationsPanel open={notifOpen} onClose={() => { setNotifOpen(false); refresh(); }} />
-          </div>
-          <button
-            onClick={() => navigate("/configuracoes")}
-            className="w-9 h-9 rounded-full overflow-hidden bg-white/10 flex items-center justify-center text-[13px] font-bold text-white active:scale-95 transition-transform"
-            aria-label="Perfil"
-          >
+      {/* Who is signed in and the bell live in the page header now, above the pills */}
+      <div className="relative mb-4 flex items-center justify-between gap-3">
+        <button
+          onClick={() => navigate("/configuracoes")}
+          className="flex min-w-0 items-center gap-2.5 active:opacity-70"
+          aria-label="Perfil"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[14px] font-bold text-white">
             {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
             ) : initial ? (
               initial
             ) : (
-              <User className="w-4 h-4 text-white/80" />
+              <User className="h-4 w-4 text-white/80" />
             )}
+          </span>
+          <motion.span
+            initial={{ opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.12, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="min-w-0 truncate text-[16px] font-semibold tracking-tight text-white"
+          >
+            {profile?.display_name?.split(" ")[0] ?? ""}
+          </motion.span>
+        </button>
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setNotifOpen((v) => !v)}
+            className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white/85 transition-colors active:opacity-70"
+            aria-label="Notificações"
+          >
+            <Bell className="h-[18px] w-[18px]" />
+            {unreadCount > 0 && <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-willo-green ring-2 ring-[#1c1c1c]" />}
           </button>
+          <NotificationsPanel open={notifOpen} onClose={() => { setNotifOpen(false); refresh(); }} />
         </div>
+      </div>
+
+      <div className="relative mb-5">
+        <HomeSectionTabs />
       </div>
 
       <div className="relative flex items-center justify-between gap-3">
