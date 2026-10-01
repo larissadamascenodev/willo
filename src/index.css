@@ -142,9 +142,10 @@
     isolation: isolate;
     background: #000000;
   }
-  /* One colour field for the whole app, pinned to the viewport: the aurora across the
-     top, then colour kept alive further down so a card anywhere on the page has
-     something to refract. Without it the glass surfaces below read as flat grey. */
+  /* The wallpaper the whole app sits on, pinned to the viewport: near black with a
+     cool bias, lit by two soft sweeps across the upper half and settling to black at
+     the bottom. It is deliberately quiet — the glass surfaces read as glass because
+     there is gentle variation behind them, not because the backdrop is loud. */
   .willo-bg::before {
     content: "";
     position: fixed;
@@ -152,16 +153,13 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(ellipse 92% 15% at 50% 7%,  rgba(30, 123, 255, 0.70) 0%, transparent 70%),
-      radial-gradient(ellipse 88% 14% at 50% 15%, rgba(88, 74, 232, 0.62) 0%, transparent 72%),
-      radial-gradient(ellipse 86% 13% at 50% 22%, rgba(140, 55, 214, 0.58) 0%, transparent 72%),
-      radial-gradient(ellipse 84% 13% at 50% 29%, rgba(195, 42, 95, 0.54) 0%, transparent 72%),
-      radial-gradient(ellipse 80% 11% at 50% 34%, rgba(217, 69, 44, 0.42) 0%, transparent 72%),
-      radial-gradient(ellipse 72% 10% at 50% 39%, rgba(217, 166, 42, 0.26) 0%, transparent 72%),
-      radial-gradient(ellipse 62% 9%  at 50% 43%, rgba(147, 209, 60, 0.18) 0%, transparent 72%),
-      radial-gradient(ellipse 70% 20% at 4% 66%,  rgba(78, 116, 232, 0.13) 0%, transparent 72%),
-      radial-gradient(ellipse 62% 18% at 99% 83%, rgba(168, 60, 190, 0.12) 0%, transparent 72%),
-      radial-gradient(ellipse 56% 16% at 30% 99%, rgba(147, 209, 60, 0.08) 0%, transparent 72%);
+      radial-gradient(ellipse 125% 52% at 16% 0%,    rgba(46, 63, 84, 0.60) 0%, transparent 62%),
+      radial-gradient(ellipse 78% 40% at 98% 7%,     rgba(37, 54, 76, 0.52) 0%, transparent 66%),
+      radial-gradient(ellipse 100% 36% at 64% 31%,   rgba(5, 8, 13, 0.82) 0%, transparent 70%),
+      radial-gradient(ellipse 92% 42% at 4% 50%,     rgba(28, 41, 58, 0.44) 0%, transparent 68%),
+      radial-gradient(ellipse 88% 46% at 92% 70%,    rgba(21, 32, 47, 0.36) 0%, transparent 70%),
+      radial-gradient(ellipse 130% 42% at 50% 105%,  rgba(2, 4, 7, 0.92) 0%, transparent 72%),
+      #06090F;
   }
 
   /* Card surface, the way an iOS notification sits on the wallpaper: translucent,
