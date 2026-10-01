@@ -110,22 +110,6 @@
 }
 
 @layer components {
-  /* Floating graphite card: hairline border, soft blur where supported. */
-  .willo-glass {
-    position: relative;
-    border-radius: 28px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(20, 20, 20, 0.96);
-    box-shadow: 0 16px 40px -16px rgba(0, 0, 0, 0.7);
-  }
-  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .willo-glass {
-      background: rgba(22, 22, 22, 0.78);
-      backdrop-filter: blur(20px) saturate(140%);
-      -webkit-backdrop-filter: blur(20px) saturate(140%);
-    }
-  }
-
   /* Smaller nested glass surface (chips, sub-cards inside a .willo-glass
      card) — same treatment, lighter tint, tighter radius. */
   .willo-glass-chip {
@@ -135,16 +119,15 @@
     background: rgba(255, 255, 255, 0.04);
   }
 
-  /* Screen background: graphite-to-black fade with faint concentric rings in
-     the top-right corner. Children paint above the ::before (isolation). */
+  /* Screen background: the wallpaper everything sits on. */
   .willo-bg {
     position: relative;
     isolation: isolate;
     background: #000000;
   }
-  /* The wallpaper the whole app sits on, pinned to the viewport so cards slide over
-     it rather than carrying it with them. A scrim rides on top: the photo has bright
-     amber in it, and white text on near-clear glass needs the range pulled back. */
+  /* Pinned to the viewport, so cards slide over the wallpaper rather than carrying
+     it with them. The scrim is light: it only has to keep white text safe, and any
+     more flattens the contrast the glass needs to pick up. */
   .willo-bg::before {
     content: "";
     position: fixed;
@@ -153,37 +136,36 @@
     pointer-events: none;
     background:
       linear-gradient(180deg,
-        rgba(2, 4, 8, 0.26) 0%,
-        rgba(2, 4, 8, 0.12) 34%,
-        rgba(2, 4, 8, 0.30) 70%,
-        rgba(2, 4, 8, 0.58) 100%),
+        rgba(2, 4, 8, 0.16) 0%,
+        rgba(2, 4, 8, 0.04) 34%,
+        rgba(2, 4, 8, 0.18) 70%,
+        rgba(2, 4, 8, 0.44) 100%),
       url("./assets/bg/night-silk.jpg") center / cover no-repeat;
   }
 
-  /* Card surface, the way an iOS notification sits on the wallpaper: translucent,
-     blurred, and tinted by whatever colour is behind it. */
+  /* Floating graphite card: hairline border, soft blur where supported. */
   .willo-glass {
-    /* Glass, not frost. A milky fill plus a heavy blur reads as etched plastic; real
-       glass is mostly see-through and gets its presence from the lit rim and a sheen
-       raking across it. So the fill is almost nothing, the blur is short enough to
-       keep the wallpaper legible through it, and brightness does the lifting the
-       white fill used to do. */
-    background-color: rgba(255, 255, 255, 0.03);
+    /* The floating bar's glass: a lit rim on all four sides is what sells it. The
+       fill only has to carry enough body for the rim to sit on; the edge does the
+       rest, which is why this reads as glass at low opacity. */
+    background-color: rgba(255, 255, 255, 0.02);
     background-image: linear-gradient(
       152deg,
-      rgba(255, 255, 255, 0.17) 0%,
-      rgba(255, 255, 255, 0.05) 36%,
-      rgba(255, 255, 255, 0.028) 63%,
-      rgba(255, 255, 255, 0.11) 100%
+      rgba(255, 255, 255, 0.15) 0%,
+      rgba(255, 255, 255, 0.03) 38%,
+      rgba(255, 255, 255, 0.015) 64%,
+      rgba(255, 255, 255, 0.09) 100%
     );
-    backdrop-filter: blur(11px) saturate(170%) brightness(1.24);
-    -webkit-backdrop-filter: blur(11px) saturate(170%) brightness(1.24);
+    backdrop-filter: blur(16px) saturate(145%) brightness(1.16);
+    -webkit-backdrop-filter: blur(16px) saturate(145%) brightness(1.16);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.34),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.09),
-      inset 1px 0 0 rgba(255, 255, 255, 0.09),
-      inset -1px 0 0 rgba(255, 255, 255, 0.09);
+      inset 0 1.6px 0 rgba(255, 255, 255, 0.55),
+      inset 0 -1.6px 0 rgba(255, 255, 255, 0.28),
+      inset 1.6px 0 0 rgba(255, 255, 255, 0.22),
+      inset -1.6px 0 0 rgba(255, 255, 255, 0.22),
+      0 16px 34px -14px rgba(0, 0, 0, 0.7);
   }
+
   /* Sheets and modals: the same glass, darkened, because arbitrary page content
      sits behind them and the text on top still has to be readable. */
   .willo-glass-strong {
@@ -217,11 +199,17 @@
   /* Pills and round buttons: the same glass as a card, but thinner and brighter at
      the rim, so a control reads as a control and not as a panel. */
   .willo-glass-control {
-    background-color: rgba(255, 255, 255, 0.04);
-    background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.19) 0%, rgba(255, 255, 255, 0.05) 55%, rgba(255, 255, 255, 0.12) 100%);
-    backdrop-filter: blur(9px) saturate(170%) brightness(1.26);
-    -webkit-backdrop-filter: blur(9px) saturate(170%) brightness(1.26);
+    background-color: rgba(255, 255, 255, 0.03);
+    background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.04) 58%, rgba(255, 255, 255, 0.09) 100%);
+    backdrop-filter: blur(15px) saturate(145%) brightness(1.18);
+    -webkit-backdrop-filter: blur(15px) saturate(145%) brightness(1.18);
+    box-shadow:
+      inset 0 1.4px 0 rgba(255, 255, 255, 0.55),
+      inset 0 -1.4px 0 rgba(255, 255, 255, 0.26),
+      inset 1.4px 0 0 rgba(255, 255, 255, 0.20),
+      inset -1.4px 0 0 rgba(255, 255, 255, 0.20);
   }
+
   /* A surface nested inside glass: tint only. A second blur samples the already
      blurred parent and just turns the whole stack to mud — and costs a layer. */
   .willo-glass-inset {

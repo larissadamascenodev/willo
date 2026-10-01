@@ -19,14 +19,6 @@ export const navItems: {
   { icon: Camera, label: "Escanear", scan: true },
 ];
 
-/** Same dark, translucent "droplet-glass" surface as BalanceHeroCard. */
-export const GLASS_BG = {
-  background: "linear-gradient(165deg, rgba(34,34,34,0.88) 0%, rgba(20,20,20,0.92) 100%)",
-  backdropFilter: "blur(24px) saturate(160%)",
-  WebkitBackdropFilter: "blur(24px) saturate(160%)",
-  boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.14), 0 12px 32px -12px rgba(0,0,0,0.6)",
-} as const;
-
 const MobileBottomNav = memo(() => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
@@ -78,7 +70,7 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
 }) {
   return (
     <>
-      <nav className="flex-1 max-w-[280px] rounded-full border border-white/10" style={GLASS_BG}>
+      <nav className="willo-glass flex-1 max-w-[280px] rounded-full">
         <div className="flex items-center justify-around h-[58px] px-1.5">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -93,8 +85,8 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
                 }}
                 aria-label={item.soon ? `${item.label} — em breve` : item.label}
                 className={cn(
-                  "relative flex items-center justify-center h-11 flex-1 mx-0.5 rounded-full transition-colors",
-                  isActive ? "bg-white/12" : item.soon ? "" : "hover:bg-white/5",
+                  "relative flex items-center justify-center h-11 flex-1 mx-0.5 rounded-[15px] transition-colors",
+                  isActive ? "bg-white/[0.17]" : item.soon ? "" : "hover:bg-white/[0.07]",
                 )}
               >
                 <Icon
@@ -117,10 +109,9 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
         onClick={onPlus}
         aria-label="Adicionar transação"
         className={cn(
-          "relative w-[58px] h-[58px] rounded-full flex items-center justify-center border shrink-0 transition-colors",
-          plusOpen ? "bg-white border-white" : "border-white/10"
+          "relative w-[58px] h-[58px] rounded-full flex items-center justify-center shrink-0 transition-colors",
+          plusOpen ? "bg-white" : "willo-glass"
         )}
-        style={plusOpen ? undefined : GLASS_BG}
       >
         <motion.div animate={{ rotate: plusOpen ? 135 : 0 }} transition={{ type: "spring", stiffness: 380, damping: 24 }}>
           <Plus className={cn("w-6 h-6", plusOpen ? "text-[#0B0B0B]" : "text-white")} strokeWidth={2.25} />
