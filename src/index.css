@@ -176,6 +176,28 @@
     -webkit-backdrop-filter: blur(34px) saturate(180%);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
   }
+  /* iOS's scroll edge: a band at the top of the viewport that blurs and dims whatever
+     passes under the pinned header, so a card dissolves instead of being cut off by a
+     hard line. Sits above the content and below the header, and only shows once there
+     is something scrolled under it. */
+  .willo-scroll-edge {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(env(safe-area-inset-top, 0px) + 96px);
+    z-index: 25;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.22s ease;
+    backdrop-filter: blur(13px);
+    -webkit-backdrop-filter: blur(13px);
+    background: linear-gradient(to bottom, rgba(3, 5, 9, 0.82) 0%, rgba(3, 5, 9, 0.34) 58%, rgba(3, 5, 9, 0) 100%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 46%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 46%, transparent 100%);
+  }
+  .willo-scroll-edge[data-on="true"] { opacity: 1; }
+
   /* Pills and round buttons: the same glass as a card, but thinner and brighter at
      the rim, so a control reads as a control and not as a panel. */
   .willo-glass-control {

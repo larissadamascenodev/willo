@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { User, Bell, Eye, EyeOff, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { User, Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useFormattedCounter } from "@/hooks/useAnimatedCounter";
 import { useHiddenValues, setHiddenValues } from "@/hooks/useHiddenValues";
@@ -13,8 +13,6 @@ import { currencySymbol } from "@/lib/currency";
 
 interface Props {
   saldoAtual: number;
-  receitas: number;
-  despesas: number;
   /** Extra space above the top row (px), e.g. under a drawn status bar. */
   topInset?: number;
 }
@@ -24,7 +22,7 @@ interface Props {
  * greeting. The month's figures are a card further down the stack — the top of
  * the screen is for orientation, not for numbers.
  */
-const BalanceHeroCard = ({ saldoAtual, receitas, despesas, topInset = 0 }: Props) => {
+const BalanceHeroCard = ({ saldoAtual, topInset = 0 }: Props) => {
   const navigate = useNavigate();
   const hidden = useHiddenValues();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -34,16 +32,15 @@ const BalanceHeroCard = ({ saldoAtual, receitas, despesas, topInset = 0 }: Props
   const firstName = profile?.display_name?.trim().split(" ")[0] ?? "";
   const initial = profile?.display_name?.trim().charAt(0).toUpperCase();
   const animatedSaldo = useFormattedCounter(saldoAtual);
-  const animatedReceitas = useFormattedCounter(receitas);
-  const animatedDespesas = useFormattedCounter(despesas);
   const heroRef = useRef<HTMLDivElement>(null);
+  const greetingRef = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState(false);
 
-  // Once the header scrolls away, show a compact translucent bar pinned to the top.
+  // The name appears in the header once the greeting it duplicates has scrolled off.
   useEffect(() => {
     const onScroll = () => {
-      const el = heroRef.current;
-      if (el) setCollapsed(el.getBoundingClientRect().bottom < 10);
+      const el = greetingRef.current;
+      if (el) setCollapsed(el.getBoundingClientRect().bottom < 96);
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -56,63 +53,17 @@ const BalanceHeroCard = ({ saldoAtual, receitas, despesas, topInset = 0 }: Props
 
   return (
     <>
-    <AnimatePresence>
-      {collapsed && (
-        <motion.div
-          initial={{ y: -80, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -80, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 380, damping: 34 }}
-          className="md:hidden fixed top-0 inset-x-0 z-40 px-3"
-          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
-        >
-          <div className={`flex items-center gap-3 rounded-full pl-1.5 pr-2 py-1.5 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.8)] ${control}`}>
-            <button
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="flex items-center gap-2.5 min-w-0 flex-1 text-left"
-              aria-label="Voltar ao topo"
-            >
-              <span className="w-9 h-9 rounded-full overflow-hidden bg-white/10 flex items-center justify-center text-[13px] font-bold text-white shrink-0">
-                {profile?.avatar_url ? (
-                  <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                ) : initial ? initial : <User className="w-4 h-4 text-white/80" />}
-              </span>
-              <span className="min-w-0 leading-tight">
-                <span className="block text-[10px] text-white/45">Saldo</span>
-                <span className="block text-[15px] font-bold text-white tabular-nums truncate">
-                  {hidden ? `${currencySymbol()} ••••` : animatedSaldo}
-                </span>
-              </span>
-            </button>
-            <div className="flex flex-col items-end leading-tight shrink-0">
-              <span className="flex items-center gap-0.5 text-[11px] font-semibold text-white/85 tabular-nums">
-                <ArrowDownLeft className="w-3 h-3 text-willo-green" strokeWidth={2.5} />
-                {hidden ? "••••" : animatedReceitas}
-              </span>
-              <span className="flex items-center gap-0.5 text-[11px] font-semibold text-white/85 tabular-nums">
-                <ArrowUpRight className="w-3 h-3 text-red-400" strokeWidth={2.5} />
-                {hidden ? "••••" : animatedDespesas}
-              </span>
-            </div>
-            <button
-              onClick={() => setHiddenValues(!hidden)}
-              className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 shrink-0"
-              aria-label={hidden ? "Mostrar saldo" : "Ocultar saldo"}
-            >
-              {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            </button>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-
     <div
       ref={heroRef}
       className="relative -mx-4 px-4 pb-1"
-      style={{ paddingTop: `calc(env(safe-area-inset-top, 0px) + ${14 + topInset}px)` }}
+      style={{ paddingTop: `calc(env(safe-area-inset-top, 0px) + ${68 + topInset}px)` }}
     >
-      {/* Avatar alone on the left; hide-values, notifications and the assistant on the right */}
-      <div className="flex items-center justify-between gap-2">
+      {/* The header stays put while everything else scrolls under it. Fixed rather than
+          sticky: sticky would unpin the moment this block scrolls past. */}
+      <div
+        className="fixed inset-x-0 top-0 z-30 flex items-center justify-between gap-2 px-4 pb-2.5"
+        style={{ paddingTop: `calc(env(safe-area-inset-top, 0px) + ${14 + topInset}px)` }}
+      >
         <button
           onClick={() => navigate("/configuracoes")}
           className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/[0.34] bg-white/10 text-[15px] font-bold text-white active:opacity-70"
@@ -127,7 +78,21 @@ const BalanceHeroCard = ({ saldoAtual, receitas, despesas, topInset = 0 }: Props
           )}
         </button>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <AnimatePresence>
+          {collapsed && firstName && (
+            <motion.span
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="min-w-0 flex-1 truncate text-[19px] font-bold tracking-tight text-white"
+            >
+              {firstName}
+            </motion.span>
+          )}
+        </AnimatePresence>
+
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           <div className="relative">
             <button
               onClick={() => setNotifOpen((v) => !v)}
@@ -145,7 +110,7 @@ const BalanceHeroCard = ({ saldoAtual, receitas, despesas, topInset = 0 }: Props
         </div>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-3.5">
         <HomeSectionTabs />
       </div>
 
@@ -155,6 +120,7 @@ const BalanceHeroCard = ({ saldoAtual, receitas, despesas, topInset = 0 }: Props
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        ref={greetingRef}
         className="mt-10 pb-7"
       >
         <p className="truncate text-[15px] font-medium tracking-tight text-white/65">

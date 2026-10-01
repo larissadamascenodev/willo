@@ -317,12 +317,22 @@ const DashboardLayout = () => {
     window.dispatchEvent(new CustomEvent("transaction-created"));
   }, [refetchProfile]);
 
+  // Drives the scroll edge: nothing is under the header until the page has moved.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <MonthProvider>
       {showOnboarding && (
         <OnboardingFlow onComplete={handleOnboardingComplete} onRefetch={refetchProfile} />
       )}
       <div className="willo-bg min-h-screen text-foreground" style={showOnboarding ? { display: "none" } : undefined}>
+        <div className="willo-scroll-edge md:hidden" data-on={scrolled} aria-hidden="true" />
         <div className="w-full mx-auto px-4 md:px-6 lg:px-8 xl:px-12 pt-0 pb-24 md:pb-8">
           <DashboardHeader profile={profile} streak={streak} streakDates={streakDates} />
           <Outlet context={profileState} />

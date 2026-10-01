@@ -178,9 +178,7 @@ const Index = () => {
 
         {/* MOBILE LAYOUT */}
         <div className="md:hidden space-y-3">
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <BalanceHeroCard saldoAtual={saldoMes} receitas={receitas} despesas={despesas} />
-          </motion.div>
+          <BalanceHeroCard saldoAtual={saldoMes} />
 
           <MonthFiguresCard
             receitas={receitas}

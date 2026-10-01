@@ -226,12 +226,7 @@ export const HomeScreen = ({ to, extra = [], withIfood = false }: { to?: string;
   const spent = withIfood ? 45.9 : 0;
   return (
     <ScrollPage to={to}>
-      <BalanceHeroCard
-        saldoAtual={8420.5 - spent}
-        receitas={6450}
-        despesas={3215.8 + spent}
-        topInset={STATUS_H}
-      />
+      <BalanceHeroCard saldoAtual={8420.5 - spent} topInset={STATUS_H} />
       <div className="mt-3 space-y-3">
         <MonthFiguresCard
           receitas={6450}
