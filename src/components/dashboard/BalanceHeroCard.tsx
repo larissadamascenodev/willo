@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { User, Bell, Eye, EyeOff, ArrowDownLeft, ArrowUpRight, Sparkles } from "lucide-react";
+import { User, Bell, Eye, EyeOff, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 import { useFormattedCounter } from "@/hooks/useAnimatedCounter";
 import { useHiddenValues, setHiddenValues } from "@/hooks/useHiddenValues";
 import NotificationsPanel, { useNotifications } from "./NotificationsPanel";
@@ -129,14 +128,6 @@ const BalanceHeroCard = ({ saldoAtual, receitas, despesas, topInset = 0 }: Props
         </button>
 
         <div className="flex shrink-0 items-center gap-2">
-          <button
-            onClick={() => setHiddenValues(!hidden)}
-            className={`flex h-11 w-11 items-center justify-center rounded-full text-white/90 active:opacity-70 ${control}`}
-            aria-label={hidden ? "Mostrar valores" : "Ocultar valores"}
-          >
-            {hidden ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
-          </button>
-
           <div className="relative">
             <button
               onClick={() => setNotifOpen((v) => !v)}
@@ -151,13 +142,6 @@ const BalanceHeroCard = ({ saldoAtual, receitas, despesas, topInset = 0 }: Props
             <NotificationsPanel open={notifOpen} onClose={() => { setNotifOpen(false); refresh(); }} />
           </div>
 
-          <button
-            onClick={() => toast("O assistente da Willo chega em breve")}
-            className="flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-willo-green pl-3.5 pr-3 text-[14px] font-bold text-[#0B0B0B] shadow-[0_8px_24px_-10px_rgba(200,243,109,0.7)] active:opacity-80"
-          >
-            Willo IA
-            <Sparkles className="h-[17px] w-[17px]" strokeWidth={2.2} />
-          </button>
         </div>
       </div>
 
