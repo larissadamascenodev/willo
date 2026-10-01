@@ -22,6 +22,12 @@ interface GoalDepositModalProps {
 
 const QUICK_AMOUNTS = [50, 100, 200, 500, 1000];
 
+/** Where the money came from: one of the user's accounts, or somewhere outside the app. */
+type Origin = "conta" | "externa";
+
+/** Common answers to "de onde veio?", so the usual case is one tap. */
+const EXTERNAL_SOURCES = ["Dinheiro vivo", "Outro banco", "Presente", "Venda"];
+
 const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
@@ -34,6 +40,8 @@ const GoalDepositModal = ({ open, onClose, onSubmit, goalName }: GoalDepositModa
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [origin, setOrigin] = useState<Origin>("conta");
+  const [externalSource, setExternalSource] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -41,6 +49,8 @@ const GoalDepositModal = ({ open, onClose, onSubmit, goalName }: GoalDepositModa
     setObservation("");
     setDateMode("hoje");
     setCustomDate("");
+    setOrigin("conta");
+    setExternalSource("");
     (async () => {
       const { data } = await supabase
         .from("accounts")
@@ -68,17 +78,22 @@ const GoalDepositModal = ({ open, onClose, onSubmit, goalName }: GoalDepositModa
 
   const handleSubmit = async () => {
     const val = parseFloat(amount.replace(",", "."));
-    if (!val || val <= 0 || !selectedAccountId) return;
+    if (!val || val <= 0 || !canSubmit) return;
     setSubmitting(true);
     try {
       await onSubmit({
         amount: val,
         date: getDate(),
-        source: observation.trim() || undefined,
-        account_id: selectedAccountId,
+        // An external deposit carries no account, so the source is what the history
+        // shows instead; for an account deposit it stays the optional note.
+        source: isExternal
+          ? externalSource.trim()
+          : observation.trim() || undefined,
+        account_id: isExternal ? undefined : selectedAccountId,
       });
       setAmount("");
       setObservation("");
+      setExternalSource("");
       setDateMode("hoje");
       setCustomDate("");
     } finally {
@@ -91,7 +106,11 @@ const GoalDepositModal = ({ open, onClose, onSubmit, goalName }: GoalDepositModa
   };
 
   const parsedAmount = parseFloat(amount.replace(",", ".")) || 0;
-  const insufficientFunds = selectedAccount ? parsedAmount > selectedAccount.current_balance : false;
+  const isExternal = origin === "externa";
+  // Money from outside never leaves an account here, so there is no balance to outrun.
+  const insufficientFunds =
+    !isExternal && selectedAccount ? parsedAmount > selectedAccount.current_balance : false;
+  const canSubmit = isExternal ? externalSource.trim().length > 0 : Boolean(selectedAccountId);
 
   return (
     <AnimatePresence>
@@ -130,7 +149,61 @@ const GoalDepositModal = ({ open, onClose, onSubmit, goalName }: GoalDepositModa
               </button>
             </div>
 
-            {/* Account selector */}
+            {/* Where the money comes from */}
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-2">De onde vem o dinheiro</p>
+              <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-muted/10 border border-border/15">
+                {([
+                  ["conta", "Minhas contas"],
+                  ["externa", "Fora do app"],
+                ] as const).map(([value, label]) => (
+                  <motion.button
+                    key={value}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setOrigin(value)}
+                    className={`py-2 rounded-lg text-xs font-semibold transition-colors ${
+                      origin === value
+                        ? "bg-primary/15 border border-primary/30 text-primary"
+                        : "border border-transparent text-muted-foreground hover:bg-muted/15"
+                    }`}
+                  >
+                    {label}
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+
+            {isExternal ? (
+              /* External money: it joins the goal without ever touching the balance */
+              <div>
+                <p className="text-[10px] text-muted-foreground mb-2">De onde veio?</p>
+                <input
+                  value={externalSource}
+                  onChange={(e) => setExternalSource(e.target.value)}
+                  placeholder="Ex: poupança do outro banco"
+                  className="w-full bg-muted/10 border border-border/15 rounded-xl px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground/40"
+                />
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  {EXTERNAL_SOURCES.map((s) => (
+                    <motion.button
+                      key={s}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setExternalSource(s)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                        externalSource === s
+                          ? "bg-primary/15 border-primary/30 text-primary"
+                          : "bg-muted/10 border-border/15 text-muted-foreground hover:bg-muted/20"
+                      }`}
+                    >
+                      {s}
+                    </motion.button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground/70 mt-2 leading-relaxed">
+                  Entra no seu patrimônio, mas não sai do seu saldo — o dinheiro já estava fora do app.
+                </p>
+              </div>
+            ) : (
             <div>
               <p className="text-[10px] text-muted-foreground mb-2">Saindo da conta</p>
               <div className="relative">
@@ -168,6 +241,7 @@ const GoalDepositModal = ({ open, onClose, onSubmit, goalName }: GoalDepositModa
                 </AnimatePresence>
               </div>
             </div>
+            )}
 
             {/* Amount input */}
             <div>
@@ -203,14 +277,16 @@ const GoalDepositModal = ({ open, onClose, onSubmit, goalName }: GoalDepositModa
               </motion.div>
             )}
 
-            {/* Observation */}
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
-              <input value={observation} onChange={(e) => setObservation(e.target.value)} placeholder="Observação (opcional)" className="bg-transparent text-sm text-foreground outline-none w-full placeholder:text-muted-foreground/40" />
-            </div>
+            {/* Observation — an external deposit already says where it came from */}
+            {!isExternal && (
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
+                <input value={observation} onChange={(e) => setObservation(e.target.value)} placeholder="Observação (opcional)" className="bg-transparent text-sm text-foreground outline-none w-full placeholder:text-muted-foreground/40" />
+              </div>
+            )}
 
             {/* Submit */}
-            <motion.button whileTap={{ scale: 0.97 }} disabled={!amount || !selectedAccountId || submitting || insufficientFunds} onClick={handleSubmit} className="w-full py-3.5 rounded-xl text-sm font-bold bg-primary/15 border border-primary/20 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <motion.button whileTap={{ scale: 0.97 }} disabled={!amount || !canSubmit || submitting || insufficientFunds} onClick={handleSubmit} className="w-full py-3.5 rounded-xl text-sm font-bold bg-primary/15 border border-primary/20 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               {submitting ? "Depositando..." : "Confirmar Aporte"}
             </motion.button>
           </motion.div>
