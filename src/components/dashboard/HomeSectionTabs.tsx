@@ -30,8 +30,8 @@ export default function HomeSectionTabs({ activePath }: { activePath?: string })
             className={cn(
               "h-10 shrink-0 rounded-full border px-5 text-[14.5px] font-semibold transition-colors",
               active
-                ? "border-transparent bg-white text-[#0B0B0B] shadow-[0_6px_18px_-8px_rgba(0,0,0,0.9)]"
-                : "border-white/25 bg-white/[0.10] text-white backdrop-blur-xl active:opacity-70",
+                ? "border-transparent bg-white text-[#0B0B0B] shadow-[0_8px_22px_-10px_rgba(0,0,0,0.95)]"
+                : "border-white/[0.34] willo-glass-control text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.26)] active:opacity-70",
             )}
           >
             {tab.label}

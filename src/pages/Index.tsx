@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import FinanceOverviewCard from "@/components/dashboard/FinanceOverviewCard";
 import WalletSummaryCard from "@/components/dashboard/WalletSummaryCard";
 import BalanceHeroCard from "@/components/dashboard/BalanceHeroCard";
+import MonthFiguresCard from "@/components/dashboard/MonthFiguresCard";
 import { useGreeting } from "@/components/dashboard/DashboardHeader";
 import SaldoCard from "@/components/dashboard/SaldoCard";
 import ReceitasDespesasCards from "@/components/dashboard/ReceitasDespesasCards";
@@ -178,20 +179,21 @@ const Index = () => {
         {/* MOBILE LAYOUT */}
         <div className="md:hidden space-y-3">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <BalanceHeroCard
-              saldoAtual={saldoMes}
-              changeAmount={balanco}
-              changePercent={receitas > 0 ? (balanco / receitas) * 100 : 0}
-              receitas={receitas}
-              despesas={despesas}
-              selectedMonth={selectedMonth}
-              selectedYear={selectedYear}
-              onMonthChange={handleMonthChange}
-            />
+            <BalanceHeroCard saldoAtual={saldoMes} receitas={receitas} despesas={despesas} />
           </motion.div>
 
           {/* MicroInteracoesCard temporarily disabled */}
           {isCurrentMonth && <FinanceChartCard />}
+          <MonthFiguresCard
+            saldoAtual={saldoMes}
+            changeAmount={balanco}
+            changePercent={receitas > 0 ? (balanco / receitas) * 100 : 0}
+            receitas={receitas}
+            despesas={despesas}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            onMonthChange={handleMonthChange}
+          />
           {profile && !isOnboardingComplete && (
             <OnboardingCard
               profile={profile}
