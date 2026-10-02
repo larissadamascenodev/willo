@@ -13,6 +13,7 @@ import { currencySymbol } from "@/lib/currency";
 
 interface Props {
   saldoAtual: number;
+  saldoPrevisto: number;
   receitas: number;
   despesas: number;
   /** Extra space above the top row (px), e.g. under a drawn status bar. */
@@ -24,7 +25,7 @@ interface Props {
  * greeting. The month's figures are a card further down the stack — the top of
  * the screen is for orientation, not for numbers.
  */
-const BalanceHeroCard = ({ saldoAtual, receitas, despesas, topInset = 0 }: Props) => {
+const BalanceHeroCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, topInset = 0 }: Props) => {
   const navigate = useNavigate();
   const hidden = useHiddenValues();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -34,12 +35,9 @@ const BalanceHeroCard = ({ saldoAtual, receitas, despesas, topInset = 0 }: Props
   const firstName = profile?.display_name?.trim().split(" ")[0] ?? "";
   const initial = profile?.display_name?.trim().charAt(0).toUpperCase();
   const animatedSaldo = useFormattedCounter(saldoAtual);
-  const sobra = receitas - despesas;
-  const animatedEntradas = useFormattedCounter(receitas);
-  const animatedSaidas = useFormattedCounter(despesas);
-  // How much of what came in is still here. A full bar is a month you kept; an empty
-  // one is a month you spent, which is the thing the two figures alone never say.
-  const kept = receitas > 0 ? Math.max(0, Math.min(100, (sobra / receitas) * 100)) : 0;
+  const animatedReceitas = useFormattedCounter(receitas);
+  const animatedDespesas = useFormattedCounter(despesas);
+  const animatedPrevisto = useFormattedCounter(saldoPrevisto);
 
   // Two taps anywhere on the hero start a new entry, the way the + button does.
   const lastTap = useRef(0);
@@ -172,37 +170,33 @@ const BalanceHeroCard = ({ saldoAtual, receitas, despesas, topInset = 0 }: Props
             {hidden ? `${currencySymbol()} ••••••` : animatedSaldo}
           </p>
 
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.14]">
-            <div
-              className={`h-full rounded-full transition-[width] duration-700 ease-out ${
-                sobra >= 0 ? "bg-willo-green" : "bg-red-400"
-              }`}
-              style={{ width: `${sobra >= 0 ? Math.max(kept, 2) : 100}%` }}
-            />
-          </div>
+          <p className="mt-2.5 truncate text-[13px] text-white/60">
+            Previsto no fim do mês:{" "}
+            <span className="font-semibold text-white/80 tabular-nums">
+              {hidden ? `${currencySymbol()} ••••` : animatedPrevisto}
+            </span>
+          </p>
 
-          <div className="mt-4 flex items-stretch">
+          <div className="mt-4 flex items-stretch border-t border-white/[0.12] pt-4">
             {[
-              { key: "in", label: "Entradas", value: animatedEntradas, to: "/detalhe/receitas",
-                Icon: ArrowDownLeft, ring: "bg-willo-green/20 text-willo-green" },
-              { key: "out", label: "Saídas", value: animatedSaidas, to: "/detalhe/despesas",
-                Icon: ArrowUpRight, ring: "bg-red-500/20 text-red-400" },
-            ].map(({ key, label, value, to, Icon, ring }, i) => (
+              { key: "in", label: "Receitas", value: animatedReceitas, to: "/detalhe/receitas",
+                Icon: ArrowDownLeft, iconCls: "text-willo-green" },
+              { key: "out", label: "Despesas", value: animatedDespesas, to: "/detalhe/despesas",
+                Icon: ArrowUpRight, iconCls: "text-red-400" },
+            ].map(({ key, label, value, to, Icon, iconCls }, i) => (
               <button
                 key={key}
                 onClick={(e) => { e.stopPropagation(); navigate(to); }}
-                className={`flex min-w-0 flex-1 items-center gap-2.5 text-left active:opacity-70 ${
-                  i === 0 ? "pr-3" : "pl-3"
+                className={`min-w-0 flex-1 text-left active:opacity-70 ${
+                  i === 0 ? "pr-4" : "border-l border-white/[0.12] pl-4"
                 }`}
               >
-                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${ring}`}>
-                  <Icon className="h-[15px] w-[15px]" strokeWidth={2.8} />
+                <span className="flex items-center gap-1.5 text-[13px] text-white/66">
+                  <Icon className={`h-3.5 w-3.5 ${iconCls}`} strokeWidth={2.6} />
+                  {label}
                 </span>
-                <span className="min-w-0">
-                  <span className="block text-[12px] text-white/66">{label}</span>
-                  <span className="block truncate text-[14.5px] font-bold tracking-tight text-white tabular-nums">
-                    {hidden ? `${currencySymbol()} ••••` : value}
-                  </span>
+                <span className="mt-1.5 block truncate text-[19px] font-extrabold tracking-tight text-white tabular-nums">
+                  {hidden ? `${currencySymbol()} ••••` : value}
                 </span>
               </button>
             ))}

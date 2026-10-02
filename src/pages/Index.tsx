@@ -177,7 +177,7 @@ const Index = () => {
 
         {/* MOBILE LAYOUT */}
         <div className="md:hidden space-y-3">
-          <BalanceHeroCard saldoAtual={saldoMes} receitas={receitas} despesas={despesas} />
+          <BalanceHeroCard saldoAtual={saldoMes} saldoPrevisto={saldoPrevisto} receitas={receitas} despesas={despesas} />
 
           {/* MicroInteracoesCard temporarily disabled */}
           {isCurrentMonth && <FinanceChartCard />}
