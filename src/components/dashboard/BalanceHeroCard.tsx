@@ -73,24 +73,9 @@ const BalanceHeroCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, topIns
     <>
     <div
       ref={heroRef}
-      className="relative -mx-4 overflow-hidden px-4"
+      className="relative -mx-4 px-4"
       style={{ paddingTop: `calc(env(safe-area-inset-top, 0px) + ${68 + topInset}px)` }}
     >
-      {/* Colour pooled behind the hero only: green low-left into blue high-right, over
-          the wallpaper rather than instead of it. Positive z-index on the content above
-          it, because a negative one would sink beneath the wallpaper layer. */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[420px]"
-        style={{
-          background:
-            "radial-gradient(120% 78% at 8% 96%, rgba(34,186,124,0.52) 0%, transparent 62%)," +
-            "radial-gradient(110% 76% at 96% 6%, rgba(44,104,224,0.50) 0%, transparent 64%)," +
-            "radial-gradient(90% 60% at 52% 46%, rgba(72,150,170,0.26) 0%, transparent 70%)",
-          maskImage: "linear-gradient(180deg, #000 0%, #000 62%, transparent 100%)",
-          WebkitMaskImage: "linear-gradient(180deg, #000 0%, #000 62%, transparent 100%)",
-        }}
-      />
-
       {/* The header stays put while everything else scrolls under it. Fixed rather than
           sticky: sticky would unpin the moment this block scrolls past. */}
       <div
