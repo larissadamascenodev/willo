@@ -1,10 +1,11 @@
 import { Pressable, View } from "react-native";
 import type { ComponentProps } from "react";
-import { useRouter, type Tabs } from "expo-router";
+import type { Tabs } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeftRight, Home, ScanLine, Sparkles } from "lucide-react-native";
 import { Glass, white } from "~/ui";
+import { addMenu } from "./addMenu";
 
 /** As propriedades que o navegador de abas entrega à barra. */
 type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>["tabBar"]>>[0];
@@ -21,7 +22,6 @@ const ITEMS = [
  */
 export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const activeRoute = state.routes[state.index]?.name;
 
   return (
@@ -54,7 +54,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
         </View>
       </Glass>
 
-      <Pressable accessibilityLabel="Escanear" onPress={() => router.push("/nova")} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
+      <Pressable accessibilityLabel="Escanear" onPress={() => { Haptics.selectionAsync().catch(() => {}); addMenu.show(); }} style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}>
         <Glass radius={29} style={{ width: 58, height: 58, alignItems: "center", justifyContent: "center" }}>
           <ScanLine size={25} color="#fff" strokeWidth={2} />
         </Glass>

@@ -1,5 +1,7 @@
 import { useCallback, useState } from "react";
 import { View } from "react-native";
+import { useRouter } from "expo-router";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { useMonth } from "@/contexts/MonthContext";
 import { BalanceHero } from "~/features/home/BalanceHero";
@@ -13,7 +15,12 @@ import { Screen } from "~/ui";
 export default function Home() {
   const { selectedMonth, selectedYear } = useMonth();
   const { data, refetch } = useFinanceData(selectedMonth, selectedYear, { includeHistorical: false });
+  const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+  // "Toque duas vezes na tela para lançar": abre uma nova despesa direto
+  const doubleTap = Gesture.Tap().numberOfTaps(2).maxDelay(280).runOnJS(true).onEnd((_, success) => {
+    if (success) router.push({ pathname: "/nova", params: { type: "despesa" } });
+  });
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -25,6 +32,7 @@ export default function Home() {
   }, [refetch]);
 
   return (
+    <GestureDetector gesture={doubleTap}>
     <Screen tabBar onRefresh={onRefresh} refreshing={refreshing}>
       <BalanceHero saldoAtual={data.saldoAtual} saldoPrevisto={data.saldoPrevisto} receitas={data.receitas} despesas={data.despesas} />
       <View style={{ marginTop: 12, gap: 12 }}>
@@ -35,5 +43,6 @@ export default function Home() {
         <GoalsSummary />
       </View>
     </Screen>
+    </GestureDetector>
   );
 }
