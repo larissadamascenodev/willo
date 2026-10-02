@@ -22,6 +22,9 @@ interface Props {
   onClose: () => void;
   onSave: (data: { name: string; icon: string; color: string }) => void;
   initialName?: string;
+  /** Para editar uma categoria que já existe: ela mantém o ícone e a cor e a IA não mexe. */
+  initialIcon?: string;
+  initialColor?: string;
   title?: string;
   existingNames?: string[];
   /** Cores que outras categorias já usam: cada categoria tem a sua. */
@@ -32,7 +35,7 @@ interface Props {
  * Cria uma categoria: o nome, e a IA escolhe o ícone e a cor enquanto você digita (até você
  * mexer num deles). Mostra uma prévia viva do resultado.
  */
-export function CategoryCreateSheet({ open, onClose, onSave, initialName = "", title = "Nova categoria", existingNames = [], usedColors = [] }: Props) {
+export function CategoryCreateSheet({ open, onClose, onSave, initialName = "", initialIcon, initialColor, title = "Nova categoria", existingNames = [], usedColors = [] }: Props) {
   const [name, setName] = useState(initialName);
   const [icon, setIcon] = useState("file-text");
   const [color, setColor] = useState(COLOR_OPTIONS[0]);
@@ -47,12 +50,12 @@ export function CategoryCreateSheet({ open, onClose, onSave, initialName = "", t
   useEffect(() => {
     if (!open) return;
     setName(initialName);
-    setIcon("file-text");
-    setColor(COLOR_OPTIONS.find((c) => !taken.includes(c.toLowerCase())) ?? COLOR_OPTIONS[0]);
+    setIcon(initialIcon ?? "file-text");
+    setColor(initialColor ?? COLOR_OPTIONS.find((c) => !taken.includes(c.toLowerCase())) ?? COLOR_OPTIONS[0]);
     setSuggested(false);
-    touched.current = false;
+    touched.current = !!initialIcon;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initialName]);
+  }, [open, initialName, initialIcon, initialColor]);
 
   const trimmed = name.trim();
 
