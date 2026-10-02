@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence, PanInfo } from "framer-motion";
+import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from "framer-motion";
 import { Bell, CheckCheck, AlertTriangle, Info, Target, CreditCard, Wallet, X, Check, ChevronLeft, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -181,23 +181,32 @@ function NotificationRow({
     else if (info.offset.x > 70 && canMarkRead) onMarkRead(n.id);
   };
 
+  // The row used to be opaque, so the actions parked underneath it were hidden at
+  // rest. Now that it is glass they showed straight through, which is what made
+  // these cards look broken: a white band on one side and a red one on the other.
+  // They fade in with the drag instead, and the row takes a solid backing while it
+  // moves so it still occludes what it slides over.
+  const x = useMotionValue(0);
+  const readOpacity = useTransform(x, [0, 26], [0, 1]);
+  const deleteOpacity = useTransform(x, [-26, 0], [1, 0]);
+  const [dragging, setDragging] = useState(false);
+
   return (
     <div className="relative overflow-hidden">
-      {/* iOS-style swipe actions revealed underneath — drag right to mark as read, left to delete */}
       {canMarkRead && (
-        <div className="absolute inset-y-0 left-0 flex w-24 items-center justify-center bg-white">
+        <motion.div style={{ opacity: readOpacity }} className="absolute inset-y-0 left-0 flex w-24 items-center justify-center bg-white">
           <div className="flex flex-col items-center gap-0.5 text-[#0B0B0B]">
             <Check className="h-4 w-4" strokeWidth={3} />
             <span className="text-[10px] font-bold">Lida</span>
           </div>
-        </div>
+        </motion.div>
       )}
-      <div className="absolute inset-y-0 right-0 flex w-24 items-center justify-center bg-[#F87171]">
+      <motion.div style={{ opacity: deleteOpacity }} className="absolute inset-y-0 right-0 flex w-24 items-center justify-center bg-[#F87171]">
         <div className="flex flex-col items-center gap-0.5 text-white">
           <Trash2 className="h-4 w-4" strokeWidth={2.5} />
           <span className="text-[10px] font-bold">Excluir</span>
         </div>
-      </div>
+      </motion.div>
 
       <motion.div
         drag="x"
@@ -205,10 +214,17 @@ function NotificationRow({
         dragConstraints={{ left: -96, right: canMarkRead ? 96 : 0 }}
         dragElastic={0.1}
         dragSnapToOrigin
+        style={{ x }}
         transition={{ type: "spring", stiffness: 420, damping: 42, mass: 0.6 }}
-        onDragEnd={handleDragEnd}
+        onDragStart={() => setDragging(true)}
+        onDragEnd={(e, info) => { setDragging(false); handleDragEnd(e, info); }}
         onClick={() => canMarkRead && onMarkRead(n.id)}
-        className="relative flex select-none items-start gap-3 willo-glass pl-3 pr-4 pt-3.5"
+        className={cn(
+          "relative flex select-none items-start gap-3 pl-3 pr-4 pt-3.5",
+          // The group around these rows already carries the glass; a second one here
+          // would blur an already blurred parent and turn the stack to mud.
+          dragging ? "bg-[#121A2B]" : "bg-transparent",
+        )}
       >
         <span className={cn("mt-4 h-2 w-2 shrink-0 rounded-full", n.is_read ? "bg-transparent" : "bg-willo-green")} />
         <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", config.bg)}>

@@ -192,9 +192,9 @@ const Index = () => {
             />
           )}
           <GastosPorCategoria categories={data.categories} selectedMonth={selectedMonth} onVerAnalise={() => navigate("/transacoes")} />
+          <TransacoesRecentes transactions={data.transactions} onDelete={refetch} />
           <FinanceOverviewCard receitas={receitas} despesas={despesas} saldoPrevisto={saldoPrevisto} nextMonthBalance={data.projection.nextMonthBalance} />
           <CardsOverviewSection />
-          <TransacoesRecentes transactions={data.transactions} onDelete={refetch} />
           <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
           <AssinaturasCard />
           <ParcelamentosAtivosCard />

@@ -51,19 +51,21 @@ const BalanceHeroCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, topIns
     }
   };
   const heroRef = useRef<HTMLDivElement>(null);
-  const greetingRef = useRef<HTMLDivElement>(null);
+  const greetingRef = useRef<HTMLParagraphElement>(null);
   const [collapsed, setCollapsed] = useState(false);
 
   // The name appears in the header once the greeting it duplicates has scrolled off.
   useEffect(() => {
     const onScroll = () => {
       const el = greetingRef.current;
-      if (el) setCollapsed(el.getBoundingClientRect().bottom < 96);
+      // Measured against the header's own bottom edge, so the name takes over at the
+      // exact moment the greeting it repeats slides out of sight.
+      if (el) setCollapsed(el.getBoundingClientRect().bottom < 62 + topInset);
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [topInset]);
 
   /** The translucent control surface the pills and the round buttons share. */
   const control =
@@ -114,7 +116,7 @@ const BalanceHeroCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, topIns
           <div className="relative">
             <button
               onClick={() => setNotifOpen((v) => !v)}
-              className={`relative flex h-11 w-11 items-center justify-center rounded-full text-white/90 active:opacity-70 ${control}`}
+              className="relative flex h-11 w-11 items-center justify-center rounded-full text-white active:opacity-70"
               aria-label="Notificações"
             >
               <Bell className="h-[18px] w-[18px]" />
@@ -128,18 +130,15 @@ const BalanceHeroCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, topIns
         </div>
       </div>
 
-      <div className="relative z-10 mt-3.5">
+      <div className="relative z-10 mt-5">
         <HomeSectionTabs />
       </div>
 
       {/* Greeting, then the one number that answers "can I spend?" — what is left of
           the month rather than what is in the account today. */}
-      <div
-        ref={greetingRef}
-        onClick={onHeroTap}
-        className="relative z-10 mt-9"
-      >
+      <div onClick={onHeroTap} className="relative z-10 mt-12">
         <motion.p
+          ref={greetingRef}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
