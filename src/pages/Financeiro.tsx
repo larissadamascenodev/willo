@@ -55,7 +55,7 @@ export default function Financeiro({ initialTab = "atual" }: { initialTab?: Tool
                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
               />
             )}
-            <span className="relative">{t.label}</span>
+            <span className="relative z-10 transform-gpu">{t.label}</span>
           </button>
         ))}
       </div>

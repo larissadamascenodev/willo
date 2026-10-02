@@ -196,7 +196,7 @@ export default function GerenciarCategorias() {
                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
               />
             )}
-            <span className="relative">{t === "despesa" ? "Despesas" : "Receitas"}</span>
+            <span className="relative z-10 transform-gpu">{t === "despesa" ? "Despesas" : "Receitas"}</span>
           </button>
         ))}
       </div>

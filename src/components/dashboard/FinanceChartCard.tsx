@@ -137,7 +137,7 @@ function Segmented<T extends string>({
   size?: "sm" | "md";
 }) {
   return (
-    <div className="flex rounded-full bg-white/[0.07] p-0.5">
+    <div className="flex isolate rounded-full bg-white/[0.07] p-0.5">
       {options.map((o) => (
         <button
           key={o.key}
