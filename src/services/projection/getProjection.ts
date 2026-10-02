@@ -59,6 +59,7 @@ export function getMonthlyProjection(
 
     let income: number;
     let expense: number;
+    let estimated = false;
 
     const monthData = monthDataMap?.get(key);
     if (monthData && (monthData.receitas > 0 || monthData.despesas > 0)) {
@@ -69,6 +70,7 @@ export function getMonthlyProjection(
       // Fallback to historical average
       income = avgIncome + params.incomeBoost;
       expense = avgExpense - params.savingsBoost;
+      estimated = true;
     }
 
     const delta = income - expense;
@@ -77,7 +79,7 @@ export function getMonthlyProjection(
     const risk: MonthProjection["risk"] =
       delta > 0 ? "positivo" : delta > -200 ? "atencao" : "risco";
 
-    result.push({ month: m, year: y, balance, delta, income, expense, risk });
+    result.push({ month: m, year: y, balance, delta, income, expense, risk, estimated });
     prevBalance = balance;
   }
 

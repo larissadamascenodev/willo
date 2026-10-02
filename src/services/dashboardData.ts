@@ -1,4 +1,5 @@
 import { getFinancialSummary, computeDailyBehavior, fetchHistoricalAverages } from "@/lib/financeEngine";
+import { EMPTY_COMPOSITION, buildMonthComposition } from "@/lib/monthComposition";
 import type { DashboardData, FinanceEvent, Transaction } from "@/types/finance";
 
 export type FinanceDataOptions = {
@@ -28,6 +29,7 @@ export const EMPTY_DASHBOARD_DATA: DashboardData = {
   categories: [],
   events: [],
   pendingTransactions: [],
+  composition: EMPTY_COMPOSITION,
 };
 
 const CAT_COLORS = [
@@ -306,6 +308,15 @@ export async function buildDashboardData(
       })),
       ...faturasPending,
     ],
+    composition: buildMonthComposition(rawTxs, {
+      income: summary.income,
+      expense: summary.expense,
+      // Same rule the month's expense total uses: a statement counts when it has a positive total
+      cardExpense: (invoicesForMonth as any[]).reduce((sum, inv) => {
+        const total = Number(inv.total_amount);
+        return total > 0 ? sum + total : sum;
+      }, 0),
+    }),
   };
 }
 

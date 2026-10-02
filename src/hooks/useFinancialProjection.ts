@@ -17,8 +17,11 @@ import {
  * React hook that wires the financial projection engine to live data.
  * Loads real financial data for each future month (recurring/scheduled transactions).
  */
-export function useFinancialProjection() {
-  const { selectedMonth, selectedYear } = useMonth();
+export function useFinancialProjection(anchor?: { month: number; year: number }) {
+  const ctx = useMonth();
+  // A screen that always speaks about "now" passes its own month instead of following the picker
+  const selectedMonth = anchor?.month ?? ctx.selectedMonth;
+  const selectedYear = anchor?.year ?? ctx.selectedYear;
   const { user } = useAuth();
   const { data, loading, refetch } = useFinanceData(selectedMonth, selectedYear, { includeHistorical: true });
 
@@ -28,6 +31,8 @@ export function useFinancialProjection() {
 
   // Per-month data for future months — streamed progressively
   const [monthDataMap, setMonthDataMap] = useState<Map<string, DashboardData>>(new Map());
+  // True once every future month has answered (or failed), so a screen can stop showing placeholders
+  const [futureReady, setFutureReady] = useState(false);
   const loadingRef = useRef(false);
   const batchKeyRef = useRef("");
 
@@ -41,6 +46,7 @@ export function useFinancialProjection() {
 
     // Reset map for new month selection
     setMonthDataMap(new Map());
+    setFutureReady(false);
 
     const months: { m: number; y: number }[] = [];
     for (let i = 1; i < 12; i++) {
@@ -48,8 +54,8 @@ export function useFinancialProjection() {
       months.push({ m: d.getMonth(), y: d.getFullYear() });
     }
 
-    // Stream results as they arrive — each month updates the map immediately
-    for (const { m, y } of months) {
+    // One request per month: each result lands in the map as soon as it arrives
+    const requests = months.map(({ m, y }) =>
       buildDashboardData(m, y, { includeHistorical: false, userId: user.id })
         .then((result) => {
           if (batchKeyRef.current !== batchKey) return;
@@ -59,16 +65,13 @@ export function useFinancialProjection() {
             return next;
           });
         })
-        .catch(() => {});
-    }
+        .catch(() => {})
+    );
 
-    // Mark loading done after all settle
-    Promise.allSettled(
-      months.map(({ m, y }) =>
-        buildDashboardData(m, y, { includeHistorical: false, userId: user.id })
-      )
-    ).then(() => {
-      if (batchKeyRef.current === batchKey) loadingRef.current = false;
+    Promise.allSettled(requests).then(() => {
+      if (batchKeyRef.current !== batchKey) return;
+      loadingRef.current = false;
+      setFutureReady(true);
     });
   }, [user, loading, selectedMonth, selectedYear]);
 
@@ -116,6 +119,8 @@ export function useFinancialProjection() {
   return {
     data,
     loading,
+    monthDataMap,
+    futureReady,
     projections,
     dailyLimit,
     simulation,

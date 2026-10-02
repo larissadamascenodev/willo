@@ -10,6 +10,8 @@ export interface MonthProjection {
   income: number;
   expense: number;
   risk: "positivo" | "atencao" | "risco";
+  /** True when the month has nothing launched yet and the figures are the 3-month average. */
+  estimated?: boolean;
 }
 
 export interface DailyLimitResult {

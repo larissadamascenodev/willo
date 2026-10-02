@@ -1,3 +1,5 @@
+import { EMPTY_COMPOSITION, type MonthComposition } from "@/lib/monthComposition";
+
 export interface Transaction {
   id: string;
   name: string;
@@ -68,6 +70,8 @@ export interface DashboardData {
   categories: CategoryExpense[];
   events: FinanceEvent[];
   pendingTransactions: Transaction[];
+  /** What the month is made of: fixed bills, instalments, card statements, one-offs. */
+  composition: MonthComposition;
 }
 
 export const SAMPLE_DATA: DashboardData = {
@@ -96,4 +100,5 @@ export const SAMPLE_DATA: DashboardData = {
   categories: [],
   events: [],
   pendingTransactions: [],
+  composition: EMPTY_COMPOSITION,
 };
