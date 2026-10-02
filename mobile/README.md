@@ -57,6 +57,29 @@ Para voltar ao normal, feche o terminal e use `npx expo start`.
 | Câmera, galeria | sim | sim |
 | Notificações locais | limitado | sim |
 
+## O que já está no app
+
+Início (com “complete sua conta”, cartões, parcelamentos e metas), Transações, Projeções, Raio-X
+(score, previsão do mês, calendário de pressão, fatura inteligente, simuladores e retrospectiva),
+Carteira (contas, reserva e cofrinhos), Cartões e Faturas (pagar, importar fatura por foto ou PDF),
+Parcelamentos, Metas, Receitas/Despesas do mês, Fluxo de caixa, Categorias e limites, e Ajustes
+(perfil, senha, moeda, apagar dados e **excluir a conta**). Lançar por foto de comprovante e
+transferir entre contas ficam no “+”.
+
+Ainda não portado: o assistente (em espera), as assinaturas no início, o gráfico “Financeiro” do
+início, o quiz de entrada do site (o app vai direto para o login) e o login com Google.
+
+## Antes de enviar para a App Store
+
+1. **Publicar a função `delete-account` no Supabase.** O botão “Excluir minha conta” chama essa
+   função (a Apple exige a exclusão dentro do app). Ela está em `supabase/functions/delete-account`
+   e ainda não está no projeto.
+2. **Cobrança.** `BILLING_ENABLED` está falso em `src/lib/billing.ts`. Assinatura dentro do app
+   precisa ser compra do próprio iOS (StoreKit/RevenueCat), não o Stripe do site.
+3. **Privacidade.** Os textos de câmera e fotos já estão no `app.config.ts`. Na ficha da loja,
+   declare que o app envia comprovantes e faturas a um provedor de IA para leitura.
+4. **Entrar com a Apple** só funciona no app instalado (TestFlight ou loja), não no Expo Go.
+
 ## Publicar na App Store
 
 Precisa de conta Apple Developer (US$ 99/ano). O build é feito na nuvem pelo EAS, sem Mac:
