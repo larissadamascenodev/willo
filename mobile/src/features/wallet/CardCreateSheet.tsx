@@ -5,7 +5,7 @@ import { CalendarCheck, CalendarClock, Nfc, type LucideIcon } from "lucide-react
 import { useAuth } from "@/contexts/AuthContext";
 import { bankFor, colorFor } from "@/lib/banks";
 import { currencySymbol } from "@/lib/currency";
-import { createCreditCard } from "@/services/transactionService";
+import { createCreditCard, updateCreditCard } from "@/services/transactionService";
 import { BottomSheet, Button, Glass, Text, toast, white } from "~/ui";
 import { BankChips, ColorPicker, DayGrid, MoneyField, PillInput, SectionLabel } from "./sheetParts";
 
@@ -53,7 +53,9 @@ function DayButton({ label, day, Icon, active, onPress }: { label: string; day: 
 }
 
 /** "Novo cartão": o cartão desenhado ao vivo, bancos a um toque, o limite e os dias de fechar e vencer. */
-export function CardCreateSheet({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated?: () => void }) {
+export interface EditableCard { id: string; name: string; limit: number; closing_day: number; due_day: number; color: string | null; last_four_digits: string | null }
+
+export function CardCreateSheet({ open, onClose, onCreated, card }: { open: boolean; onClose: () => void; onCreated?: () => void; /** Quando vem, a folha edita este cartão em vez de criar um novo. */ card?: EditableCard | null }) {
   const { user } = useAuth();
   const nameRef = useRef<TextInput>(null);
   const [name, setName] = useState("");
@@ -68,7 +70,9 @@ export function CardCreateSheet({ open, onClose, onCreated }: { open: boolean; o
 
   useEffect(() => {
     if (!open) return;
-    setName(""); setDigits(""); setLimitCents(0); setClosing(10); setDue(17); setDueTouched(false); setEditing(null); setColor("violet"); setSaving(false);
+    setName(card?.name ?? ""); setDigits(card?.last_four_digits ?? ""); setLimitCents(Math.round((card?.limit ?? 0) * 100));
+    setClosing(card?.closing_day ?? 10); setDue(card?.due_day ?? 17); setDueTouched(!!card); setEditing(null); setColor(card?.color ?? "violet"); setSaving(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const bank = bankFor(name);
@@ -79,8 +83,10 @@ export function CardCreateSheet({ open, onClose, onCreated }: { open: boolean; o
     if (!user || !canSave) return;
     setSaving(true);
     try {
-      await createCreditCard({ name: name.trim(), limit: limitCents / 100, closing_day: closing, due_day: due, color: bank?.accent ?? color, last_four_digits: digits.length === 4 ? digits : null }, user.id);
-      toast.success("Cartão cadastrado!");
+      const fields = { name: name.trim(), limit: limitCents / 100, closing_day: closing, due_day: due, color: bank?.accent ?? color, last_four_digits: digits.length === 4 ? digits : null };
+      if (card) await updateCreditCard(card.id, fields);
+      else await createCreditCard(fields, user.id);
+      toast.success(card ? "Cartão atualizado!" : "Cartão cadastrado!");
       onCreated?.();
       onClose();
     } catch {
@@ -90,9 +96,9 @@ export function CardCreateSheet({ open, onClose, onCreated }: { open: boolean; o
   };
 
   return (
-    <BottomSheet open={open} onClose={onClose} size="full" footer={<Button label={saving ? "Cadastrando…" : "Cadastrar cartão"} disabled={!canSave} loading={saving} onPress={save} />}>
+    <BottomSheet open={open} onClose={onClose} size="full" footer={<Button label={saving ? "Salvando…" : card ? "Salvar alterações" : "Cadastrar cartão"} disabled={!canSave} loading={saving} onPress={save} />}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16 }}>
-        <Text display weight="bold" size={22}>Novo cartão</Text>
+        <Text display weight="bold" size={22}>{card ? "Editar cartão" : "Novo cartão"}</Text>
         <Text size={14} color={white(0.62)} style={{ lineHeight: 20 }}>Com o fechamento e o vencimento, o Willo monta cada fatura sozinho.</Text>
 
         <View style={{ marginTop: 20 }}>

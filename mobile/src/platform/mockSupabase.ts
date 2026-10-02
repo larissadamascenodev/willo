@@ -147,7 +147,7 @@ function seed(): Record<string, Row[]> {
       { id: "acc-save", user_id: USER_ID, name: "Caixinha", type: "savings", color: "#34D399", initial_balance: 0, current_balance: 1800, is_active: true, is_default: false, created_at: iso(Y, M - 4, 1), updated_at: iso(Y, M, 1) },
     ],
     credit_cards: [
-      { id: "card-1", user_id: USER_ID, name: "Nubank Roxinho", color: "#8B5CF6", credit_limit: 8000, used_limit: 1200, due_day: 10, closing_day: 3, is_active: true, last_four: "4821", created_at: iso(Y, M - 4, 1), updated_at: iso(Y, M, 1) },
+      { id: "card-1", user_id: USER_ID, name: "Nubank Roxinho", color: "#8B5CF6", limit: 8000, used_limit: 1200, due_day: 10, closing_day: 3, is_active: true, last_four_digits: "4821", created_at: iso(Y, M - 4, 1), updated_at: iso(Y, M, 1) },
     ],
     transactions,
     invoices,
