@@ -16,29 +16,14 @@ export const navItems: {
   { icon: Home, label: "Início", path: "/" },
   { icon: ArrowLeftRight, label: "Transações", path: "/transacoes" },
   { icon: Sparkles, label: "Assistente", soon: true },
-  { icon: Camera, label: "Escanear", scan: true },
 ];
 
 const MobileBottomNav = memo(() => {
-  const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const close = useCallback(() => setIsOpen(false), []);
-  const handleOption = (type: AddActionType) => {
-    setIsOpen(false);
-    if (type === "scanner") {
-      window.dispatchEvent(new CustomEvent("open-scanner"));
-    } else {
-      window.dispatchEvent(new CustomEvent("open-nova-transacao-direct", { detail: { type } }));
-    }
-  };
-
   return (
     <>
-      {/* Add menu: actions fly out of the + into an arch */}
-      <AddActionsMenu open={isOpen} onClose={close} onSelect={handleOption} />
-
       {/* Bottom Nav Bar — pill (Início/Transações/Assistente/Escanear) + separate add button */}
       <div
         className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-center gap-3 px-5 md:hidden"
@@ -46,9 +31,8 @@ const MobileBottomNav = memo(() => {
       >
         <BottomNavBar
           activePath={location.pathname}
-          plusOpen={isOpen}
           onNavigate={(path) => navigate(path)}
-          onPlus={() => setIsOpen((v) => !v)}
+          onPlus={() => window.dispatchEvent(new CustomEvent("open-scanner"))}
         />
       </div>
     </>
@@ -70,7 +54,10 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
 }) {
   return (
     <>
-      <nav className="willo-glass flex-1 max-w-[280px] rounded-full">
+      {/* isolate keeps the sliding pill from compositing above the icons: WebKit
+          promotes a layoutId element to its own layer and paints it over
+          non-composited siblings whatever the z-index says. */}
+      <nav className="willo-glass flex-1 max-w-[250px] rounded-full [isolation:isolate]">
         <div className="flex items-center justify-around h-[58px] px-1.5">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -84,14 +71,19 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
                   else if (item.path) onNavigate?.(item.path);
                 }}
                 aria-label={item.soon ? `${item.label} — em breve` : item.label}
-                className={cn(
-                  "relative flex items-center justify-center h-11 flex-1 mx-0.5 rounded-[15px] transition-colors",
-                  isActive ? "bg-white/[0.17]" : item.soon ? "" : "hover:bg-white/[0.07]",
-                )}
+                aria-current={isActive ? "page" : undefined}
+                className="relative flex items-center justify-center h-11 flex-1 mx-0.5 rounded-full"
               >
+                {isActive && (
+                  <motion.span
+                    layoutId="willo-nav-active"
+                    transition={{ type: "spring", stiffness: 420, damping: 36 }}
+                    className="absolute inset-0 rounded-full bg-white/[0.18]"
+                  />
+                )}
                 <Icon
                   className={cn(
-                    "w-5 h-5",
+                    "relative w-5 h-5 transform-gpu transition-colors",
                     isActive ? "text-white" : item.soon ? "text-white/38" : "text-white/62",
                   )}
                   strokeWidth={isActive ? 2.25 : 2}
@@ -107,15 +99,13 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
 
       <button
         onClick={onPlus}
-        aria-label="Adicionar transação"
+        aria-label="Escanear"
         className={cn(
           "relative w-[58px] h-[58px] rounded-full flex items-center justify-center shrink-0 transition-colors",
-          plusOpen ? "bg-white" : "willo-glass"
+          plusOpen ? "bg-white" : "willo-glass",
         )}
       >
-        <motion.div animate={{ rotate: plusOpen ? 135 : 0 }} transition={{ type: "spring", stiffness: 380, damping: 24 }}>
-          <Plus className={cn("w-6 h-6", plusOpen ? "text-[#0B0B0B]" : "text-white")} strokeWidth={2.25} />
-        </motion.div>
+        <Camera className={cn("w-[25px] h-[25px]", plusOpen ? "text-[#0B0B0B]" : "text-white")} strokeWidth={2} />
       </button>
     </>
   );
