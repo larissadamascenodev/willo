@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useState } from "react";
-import { Home, ArrowLeftRight, Plus, TrendingUp, TrendingDown, Camera, Sparkles } from "lucide-react";
+import { Home, ArrowLeftRight, Plus, TrendingUp, TrendingDown, Camera, ScanLine, Sparkles } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -105,7 +105,7 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
           plusOpen ? "bg-white" : "willo-glass",
         )}
       >
-        <Camera className={cn("w-[25px] h-[25px]", plusOpen ? "text-[#0B0B0B]" : "text-white")} strokeWidth={2} />
+        <ScanLine className={cn("w-[25px] h-[25px]", plusOpen ? "text-[#0B0B0B]" : "text-white")} strokeWidth={2} />
       </button>
     </>
   );

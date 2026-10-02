@@ -121,17 +121,43 @@ const DashboardLayout = () => {
       setShowWelcomeModal(true);
       refetchProfile();
     };
+    const handleTypeChooser = () => setShowTypeChooser(true);
+    window.addEventListener("open-type-chooser", handleTypeChooser);
     window.addEventListener("open-nova-transacao-direct", handleDirect);
     window.addEventListener("open-scanner", handleScanner);
     window.addEventListener("edit-transaction", handleEditTransaction);
     window.addEventListener("show-welcome-modal", handleShowWelcome);
     return () => {
+      window.removeEventListener("open-type-chooser", handleTypeChooser);
       window.removeEventListener("open-nova-transacao-direct", handleDirect);
       window.removeEventListener("open-scanner", handleScanner);
       window.removeEventListener("edit-transaction", handleEditTransaction);
       window.removeEventListener("show-welcome-modal", handleShowWelcome);
     };
   }, [refetchProfile]);
+
+  // Two taps on any empty part of any screen start an entry. Controls and anything
+  // inside an open sheet are left alone, or the gesture would fire while you are
+  // using them — and a double tap that lands on text should not count either.
+  useEffect(() => {
+    let last = 0;
+    const onPointerUp = (e: PointerEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el?.closest('button, a, input, textarea, select, [role="dialog"], [role="button"], [contenteditable]')) {
+        last = 0;
+        return;
+      }
+      const now = Date.now();
+      if (now - last < 320) {
+        last = 0;
+        window.dispatchEvent(new CustomEvent("open-type-chooser"));
+      } else {
+        last = now;
+      }
+    };
+    document.addEventListener("pointerup", onPointerUp);
+    return () => document.removeEventListener("pointerup", onPointerUp);
+  }, []);
 
   const handleTypeSelected = useCallback((type: "receita" | "despesa" | "transferencia") => {
     setShowTypeChooser(false);

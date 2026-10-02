@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 const TABS = [
   { label: "Contas", path: "/gestao" },
   { label: "Cartões", path: "/cartoes" },
+  { label: "Parcelamentos", path: "/parcelamentos" },
+  { label: "Projeções", path: "/bot-finance/projecoes" },
   { label: "Raio-X", path: "/bot-finance" },
 ] as const;
 

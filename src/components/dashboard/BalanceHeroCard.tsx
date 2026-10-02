@@ -39,17 +39,6 @@ const BalanceHeroCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, topIns
   const animatedDespesas = useFormattedCounter(despesas);
   const animatedPrevisto = useFormattedCounter(saldoPrevisto);
 
-  // Two taps anywhere on the hero start a new entry, the way the + button does.
-  const lastTap = useRef(0);
-  const onHeroTap = () => {
-    const now = Date.now();
-    if (now - lastTap.current < 320) {
-      lastTap.current = 0;
-      window.dispatchEvent(new CustomEvent("open-nova-transacao-direct", { detail: { type: "despesa" } }));
-    } else {
-      lastTap.current = now;
-    }
-  };
   const heroRef = useRef<HTMLDivElement>(null);
   const greetingRef = useRef<HTMLParagraphElement>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -136,7 +125,7 @@ const BalanceHeroCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, topIns
 
       {/* Greeting, then the one number that answers "can I spend?" — what is left of
           the month rather than what is in the account today. */}
-      <div onClick={onHeroTap} className="relative z-10 mt-12">
+      <div className="relative z-10 mt-12">
         <motion.p
           ref={greetingRef}
           initial={{ opacity: 0, y: 8 }}
@@ -146,7 +135,7 @@ const BalanceHeroCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, topIns
         >
           {greeting}{firstName ? `, ${firstName}` : ""}
         </motion.p>
-        <p className="mt-1 text-[13px] text-white/56">Toque duas vezes aqui para lançar</p>
+        <p className="mt-1 text-[13px] text-white/56">Toque duas vezes na tela para lançar</p>
 
         <div className="willo-glass mt-4 rounded-[24px] border border-white/[0.12] p-[18px]">
           <p className="text-[13px] text-white/66">Saldo disponível</p>

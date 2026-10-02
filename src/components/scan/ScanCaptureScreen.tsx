@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Keyboard } from "lucide-react";
 import ScanResultCard, { type ScanAccount, type ScanResultItem } from "./ScanResultCard";
 
 interface Props<T extends ScanResultItem> {
@@ -125,6 +125,22 @@ function ScanCaptureScreen<T extends ScanResultItem>({
               </div>
             )}
           </AnimatePresence>
+
+          {/* A way out when the receipt will not read, or there is no receipt at all. */}
+          {!reading && !items && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                window.dispatchEvent(new CustomEvent("open-type-chooser"));
+              }}
+              className="absolute inset-x-0 z-10 mx-auto flex h-12 w-[216px] items-center justify-center gap-2 rounded-full border border-white/[0.22] willo-glass-control text-[15px] font-semibold text-white active:opacity-70"
+              style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 28px)" }}
+            >
+              <Keyboard className="h-[18px] w-[18px]" strokeWidth={2} />
+              Digitar manualmente
+            </button>
+          )}
 
           <AnimatePresence>
             {items && (
