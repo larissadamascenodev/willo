@@ -39,7 +39,12 @@ export interface TransactionFilters {
   category?: string;
 }
 
-function notifyFinanceDataChanged() {
+/**
+ * Drops every finance cache and tells the screens to reload. Anything that writes
+ * to `transactions` outside this module (goal deposits, for one) has to call it,
+ * or the dashboard keeps serving the balance from before the write.
+ */
+export function notifyFinanceDataChanged() {
   clearFinanceQueryCache();
   // Import dynamically to avoid circular deps
   import("@/services/dashboardData").then(({ clearDashboardCache }) => {

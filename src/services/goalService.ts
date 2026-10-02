@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { notifyFinanceDataChanged } from "@/services/transactionService";
 
 import { currencySymbol } from "@/lib/currency";
 
@@ -156,6 +157,9 @@ export async function createGoalDeposit(deposit: {
       await supabase.from("goal_transactions").delete().eq("id", (data as GoalTransaction).id);
       throw debitError;
     }
+
+    // The debit left the account, so the cached balance is stale until we say so.
+    notifyFinanceDataChanged();
   }
 
   return data as GoalTransaction;
@@ -214,6 +218,8 @@ export async function createGoalWithdraw(withdraw: {
       account_id: withdraw.account_id,
       observation: `Saque da meta "${goalName}"`,
     });
+
+    notifyFinanceDataChanged();
   }
 
   return data as GoalTransaction;
@@ -246,6 +252,8 @@ export async function deleteGoalDepositWithRefund(
       account_id: deposit.account_id,
       observation: `Estorno de depósito da meta "${goalName}"`,
     });
+
+    notifyFinanceDataChanged();
   }
 }
 
