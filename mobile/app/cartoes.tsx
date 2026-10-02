@@ -81,12 +81,14 @@ const EmptyState = ({ text }: { text: string }) => (
 export default function Cartoes() {
   const router = useRouter();
   const { fmt } = useMoney();
-  const { aba } = useLocalSearchParams<{ aba?: string }>();
+  const { aba, novo } = useLocalSearchParams<{ aba?: string; novo?: string }>();
   const [tab, setTab] = useState<Tab>(aba === "faturas" || aba === "parcelas" ? aba : "cartoes");
   const { cards, invoices, installments, loading, refresh } = useCardsOverview();
   const [cardFilter, setCardFilter] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [showAddCard, setShowAddCard] = useState(false);
+  // atalho do início ("Adicionar cartão"): /cartoes?novo=1 abre o cadastro
+  useEffect(() => { if (novo) setShowAddCard(true); }, [novo]);
 
   const now = new Date();
   const currentKey = monthKey(now.getFullYear(), now.getMonth() + 1);
