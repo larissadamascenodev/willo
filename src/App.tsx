@@ -24,6 +24,7 @@ const Transacoes = lazy(() => import("./pages/Transacoes.tsx"));
 const ContaDetalhe = lazy(() => import("./pages/ContaDetalhe.tsx"));
 const RaioX = lazy(() => import("./pages/RaioX.tsx"));
 const Financeiro = lazy(() => import("./pages/Financeiro.tsx"));
+const Projecoes = lazy(() => import("./pages/Projecoes.tsx"));
 const GerenciarCategorias = lazy(() => import("./pages/GerenciarCategorias.tsx"));
 const Metas = lazy(() => import("./pages/Metas.tsx"));
 const MetaDetalhe = lazy(() => import("./pages/MetaDetalhe.tsx"));
@@ -86,9 +87,9 @@ const App = () => (
               <Route path="/conta/:accountId" element={<ContaDetalhe />} />
               
               <Route path="/bot-finance" element={<RaioX />} />
-              <Route path="/bot-finance/projecoes" element={<Financeiro initialTab="projecoes" />} />
+              <Route path="/bot-finance/projecoes" element={<Projecoes />} />
               <Route path="/bot-finance/saude" element={<Navigate to="/bot-finance" replace />} />
-              <Route path="/bot-finance/balanco" element={<Financeiro initialTab="atual" />} />
+              <Route path="/bot-finance/balanco" element={<Navigate to="/bot-finance/projecoes" replace />} />
               <Route path="/bot-finance/radar" element={<Navigate to="/bot-finance#radar" replace />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
               <Route path="/categorias" element={<GerenciarCategorias />} />
@@ -96,7 +97,7 @@ const App = () => (
               <Route path="/metas/:goalId" element={<MetaDetalhe />} />
               <Route path="/analytics/categorias" element={<AnalyticsCategorias />} />
               <Route path="/parcelamentos" element={<ParcelamentosDetalhe />} />
-              <Route path="/fluxo-de-caixa" element={<Financeiro initialTab="atual" />} />
+              <Route path="/fluxo-de-caixa" element={<Financeiro />} />
               <Route path="/cartoes" element={<Cartoes />} />
             </Route>
             <Route path="*" element={<NotFound />} />
