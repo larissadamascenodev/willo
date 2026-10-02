@@ -8,9 +8,13 @@
  *  - document.visibilityState / "visibilitychange"          (o app foi para segundo plano)
  *  - window.location.reload                                  (trocar a moeda recarrega a tela)
  */
-import "react-native-url-polyfill/auto";
-import "expo-sqlite/localStorage/install";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
+
+// No navegador (só usado para conferir telas) tudo isso já existe.
+if (Platform.OS !== "web") {
+  require("react-native-url-polyfill/auto");
+  require("expo-sqlite/localStorage/install");
+}
 
 const g = globalThis as any;
 

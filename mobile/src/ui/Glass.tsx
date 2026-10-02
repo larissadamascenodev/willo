@@ -23,6 +23,8 @@ export function Glass({ children, radius = 22, strong, flat, style }: GlassProps
     <View
       style={[
         {
+          // zIndex 0 isola as camadas abaixo: elas ficam atrás do conteúdo em qualquer plataforma
+          zIndex: 0,
           borderRadius: radius,
           overflow: "hidden",
           borderWidth: StyleSheet.hairlineWidth,
@@ -31,22 +33,20 @@ export function Glass({ children, radius = 22, strong, flat, style }: GlassProps
         style,
       ]}
     >
-      {!flat && <BlurView intensity={strong ? 60 : 32} tint="dark" style={StyleSheet.absoluteFill} />}
-      <View
-        pointerEvents="none"
-        style={[StyleSheet.absoluteFill, { backgroundColor: strong ? "rgba(16,24,40,0.74)" : white(flat ? 0.1 : 0.105) }]}
-      />
-      {!strong && (
-        <LinearGradient
-          pointerEvents="none"
-          colors={[white(0.08), white(0.015), "rgba(255,255,255,0)"]}
-          locations={[0, 0.44, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      )}
-      <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: white(strong ? 0.14 : 0.24) }} />
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, { zIndex: -1 }]}>
+        {!flat && <BlurView intensity={strong ? 60 : 32} tint="dark" style={StyleSheet.absoluteFill} />}
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: strong ? "rgba(16,24,40,0.74)" : white(flat ? 0.1 : 0.105) }]} />
+        {!strong && (
+          <LinearGradient
+            colors={[white(0.08), white(0.015), "rgba(255,255,255,0)"]}
+            locations={[0, 0.44, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        )}
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: white(strong ? 0.14 : 0.24) }} />
+      </View>
       {children}
     </View>
   );

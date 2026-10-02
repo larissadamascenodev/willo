@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import { RefreshControl, ScrollView, View, type StyleProp, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Background } from "./Background";
@@ -15,10 +15,12 @@ interface ScreenProps {
   onRefresh?: () => Promise<void> | void;
   refreshing?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
+  /** Para rolar a tela por código (ir até um cartão). */
+  scrollRef?: Ref<ScrollView>;
 }
 
 /** A moldura de toda tela: fundo, área segura do iPhone, margens laterais e rolagem. */
-export function Screen({ children, scroll = true, tabBar = false, onRefresh, refreshing = false, contentStyle }: ScreenProps) {
+export function Screen({ children, scroll = true, tabBar = false, onRefresh, refreshing = false, contentStyle, scrollRef }: ScreenProps) {
   const insets = useSafeAreaInsets();
   const padding = { paddingTop: insets.top + 6, paddingBottom: insets.bottom + (tabBar ? TAB_BAR_SPACE : 28), paddingHorizontal: 16 };
 
@@ -27,6 +29,7 @@ export function Screen({ children, scroll = true, tabBar = false, onRefresh, ref
       <Background />
       {scroll ? (
         <ScrollView
+          ref={scrollRef}
           contentInsetAdjustmentBehavior="never"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}

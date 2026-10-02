@@ -1,5 +1,5 @@
 import { getDefaultCategoryIcon, getDefaultCategoryColor, getDefaultCategoryHex } from "@/lib/categoryIcons";
-import { getIconComponent } from "@/components/dashboard/CategoryCreateModal";
+import { getIconComponent } from "@/lib/categoryIconOptions";
 import type { CustomCategory } from "@/services/categoryService";
 
 /**

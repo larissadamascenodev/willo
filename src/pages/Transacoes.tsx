@@ -7,16 +7,14 @@ import { ArrowUpRight, ArrowDownLeft,
   Sparkles, Calendar as CalendarIcon, Clock,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMonth } from "@/contexts/MonthContext";
-import { deleteTransaction, getAccounts, updateTransaction, updateTransactionStatus, getCreditCards } from "@/services/transactionService";
-import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
+import { deleteTransaction, updateTransactionStatus } from "@/services/transactionService";
+import { loadMonthTransactions, type AccountRow } from "@/services/monthTransactions";
+import type { CustomCategory } from "@/services/categoryService";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryUtils";
 import { useFinanceData } from "@/hooks/useFinanceData";
-import { getRecurringForMonth, excludeRecurringForMonth, excludeRecurringFromMonthOnward } from "@/services/recurringService";
-import { dayOfMonth } from "@/lib/dateOnly";
-import { chargeStartsAfterMonth } from "@/lib/installments";
+import { removeRecurringFromMonthOnward, removeRecurringThisMonth } from "@/services/recurringDelete";
 import MonthSelector from "@/components/dashboard/MonthSelector";
 import SaldoCard from "@/components/dashboard/SaldoCard";
 import ReceitasDespesasCards from "@/components/dashboard/ReceitasDespesasCards";
@@ -29,8 +27,6 @@ import type { DashboardData } from "@/types/finance";
 
 import { getCurrency } from "@/lib/currency";
 // ── Types ──────────────────────────────────────────────
-type AccountRow = { id: string; name: string; type: string; is_default: boolean; color: string | null; created_at?: string; initial_balance?: number; };
-
 type TransactionsPageSnapshot = {
   transactions: TransactionRow[];
   accounts: AccountRow[];
@@ -165,184 +161,24 @@ const Transacoes = () => {
       setLoading(true);
     }
 
-    const start = new Date(selectedYear, selectedMonth, 1).toISOString().split("T")[0];
-    const end = new Date(selectedYear, selectedMonth + 1, 0).toISOString().split("T")[0];
+    try {
+      const result = await loadMonthTransactions(selectedMonth, selectedYear);
 
-    const [txRes, accRes, recurringTxs, creditCardsRes, invoicesRes, customCats] = await Promise.all([
-      supabase
-        .from("transactions")
-        .select("*")
-        .gte("date", start)
-        .lte("date", end)
-        .order("date", { ascending: false })
-        .order("created_at", { ascending: true }),
-      getAccounts(),
-      getRecurringForMonth(selectedMonth, selectedYear),
-      getCreditCards(),
-      supabase
-        .from("invoices")
-        .select("credit_card_id, total_amount, is_paid, paid_amount")
-        .eq("month", selectedMonth + 1)
-        .eq("year", selectedYear),
-      getCustomCategories(),
-    ]);
+      transactionsPageCache.set(cacheKey, {
+        transactions: result.transactions,
+        accounts: result.accounts,
+        creditCards: result.creditCards,
+      });
 
-    if (txRes.error || invoicesRes.error) {
+      setTransactions(result.transactions);
+      setAccounts(result.accounts);
+      setCreditCards(result.creditCards);
+      setCustomCategories(result.customCategories);
+      setLoading(false);
+    } catch {
       toast.error("Erro ao carregar transações");
       setLoading(false);
-      return;
     }
-
-    let baseTxs = (txRes.data as TransactionRow[]) ?? [];
-    const invoices = invoicesRes.data ?? [];
-    const validInvoiceMap = new Map(
-      invoices
-        .filter((invoice) => Number(invoice.total_amount) > 0)
-        .map((invoice) => [invoice.credit_card_id, invoice])
-    );
-
-    const fixaIds = baseTxs.filter((t) => t.recurrence_type === "fixa").map((t) => t.id);
-    if (fixaIds.length > 0) {
-      const { data: exclusions } = await supabase
-        .from("recurring_exclusions")
-        .select("transaction_id")
-        .eq("month", selectedMonth)
-        .eq("year", selectedYear)
-        .in("transaction_id", fixaIds);
-
-      if (exclusions && exclusions.length > 0) {
-        const excludedIds = new Set(exclusions.map((e: any) => e.transaction_id));
-        baseTxs = baseTxs.filter((t) => !excludedIds.has(t.id));
-      }
-    }
-
-    baseTxs = baseTxs.filter((t) => {
-      if (t.payment_method === "cartao" && t.credit_card_id) {
-        return validInvoiceMap.has(t.credit_card_id) && !chargeStartsAfterMonth(t, selectedMonth, selectedYear);
-      }
-      return true;
-    });
-
-    const now = new Date();
-    const isFutureMonth = selectedYear > now.getFullYear() || (selectedYear === now.getFullYear() && selectedMonth > now.getMonth());
-    const materializedRecurring = recurringTxs.map((t: any) => ({
-      ...t,
-      date: `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(dayOfMonth(t.date)).padStart(2, "0")}`,
-      status: isFutureMonth ? "pendente" : t.status,
-      _isRecurringMaterialized: true,
-    })) as TransactionRow[];
-
-    const regularTxs = baseTxs.filter((t) => t.payment_method !== "cartao");
-    const ccTxs = baseTxs.filter((t) => t.payment_method === "cartao" && t.credit_card_id);
-    const recurringCcTxs = materializedRecurring.filter((t) => t.payment_method === "cartao" && t.credit_card_id);
-    const allCcTxs = [...ccTxs, ...recurringCcTxs];
-
-    const cardMap = new Map((creditCardsRes as any[]).map((c: any) => [c.id, c]));
-    const faturaGroups = new Map<string, { total: number; count: number; card: any }>();
-
-    for (const t of allCcTxs) {
-      const cardId = t.credit_card_id!;
-      const existing = faturaGroups.get(cardId) || { total: 0, count: 0, card: cardMap.get(cardId) };
-      existing.total += Number(t.amount);
-      existing.count += 1;
-      faturaGroups.set(cardId, existing);
-    }
-
-    const faturaEntries: TransactionRow[] = [];
-    for (const [cardId, info] of faturaGroups.entries()) {
-      const invoice = validInvoiceMap.get(cardId);
-      if (!invoice) continue;
-
-      const cardName = info.card?.name || "Cartão";
-      const dueDay = info.card?.due_day || 1;
-      const invoiceTotal = Number(invoice.total_amount);
-      const invoicePaid = Number((invoice as any).paid_amount ?? 0);
-      const outstanding = Math.max(0, invoiceTotal - invoicePaid);
-
-      faturaEntries.push({
-        id: `fatura-${cardId}-${selectedMonth}-${selectedYear}`,
-        name: `Fatura ${cardName}`,
-        category: "Cartão de Crédito",
-        date: `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(dueDay).padStart(2, "0")}`,
-        amount: outstanding > 0 ? outstanding : invoiceTotal,
-        type: "despesa",
-        status: invoice.is_paid ? "pago" : "pendente",
-        payment_method: "cartao",
-        recurrence_type: "unica",
-        installment_current: null,
-        installments: null,
-        observation: null,
-        account_id: null,
-        credit_card_id: cardId,
-      });
-    }
-
-    for (const card of creditCardsRes as any[]) {
-      if (faturaGroups.has(card.id)) continue;
-      const invoice = validInvoiceMap.get(card.id);
-      if (!invoice || Number(invoice.total_amount) <= 0) continue;
-
-      faturaEntries.push({
-        id: `fatura-${card.id}-${selectedMonth}-${selectedYear}`,
-        name: `Fatura ${card.name}`,
-        category: "Cartão de Crédito",
-        date: `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(card.due_day || 1).padStart(2, "0")}`,
-        amount: Math.max(0, Number(invoice.total_amount) - Number((invoice as any).paid_amount ?? 0)) || Number(invoice.total_amount),
-        type: "despesa",
-        status: invoice.is_paid ? "pago" : "pendente",
-        payment_method: "cartao",
-        recurrence_type: "unica",
-        installment_current: null,
-        installments: null,
-        observation: null,
-        account_id: null,
-        credit_card_id: card.id,
-      });
-    }
-
-    const regularRecurring = materializedRecurring.filter((t) => t.payment_method !== "cartao");
-
-    const initialBalanceEntries: TransactionRow[] = (accRes as any[])
-      .filter((account: any) => {
-        const initialBalance = Number(account.initial_balance ?? 0);
-        return Number.isFinite(initialBalance) && initialBalance !== 0;
-      })
-      .filter((account: any) => {
-        const createdAt = new Date(account.created_at);
-        return createdAt.getFullYear() === selectedYear && createdAt.getMonth() === selectedMonth;
-      })
-      .map((account: any) => ({
-        id: `initial-balance-${account.id}`,
-        name: `Conta adicionada · ${account.name}`,
-        category: "Saldo inicial",
-        date: new Date(account.created_at).toISOString().split("T")[0],
-        amount: Number(account.initial_balance),
-        type: "receita",
-        status: "pago",
-        payment_method: "conta",
-        recurrence_type: "unica",
-        installment_current: null,
-        installments: null,
-        observation: `Saldo inicial da conta ${account.name}`,
-        account_id: account.id,
-        credit_card_id: null,
-      }));
-
-    const nextTransactions = [...initialBalanceEntries, ...regularTxs, ...faturaEntries, ...regularRecurring];
-    const nextAccounts = accRes as AccountRow[];
-    const nextCreditCards = creditCardsRes as any[];
-
-    transactionsPageCache.set(cacheKey, {
-      transactions: nextTransactions,
-      accounts: nextAccounts,
-      creditCards: nextCreditCards,
-    });
-
-    setTransactions(nextTransactions);
-    setAccounts(nextAccounts);
-    setCreditCards(nextCreditCards);
-    setCustomCategories(customCats);
-    setLoading(false);
   }, [user, selectedMonth, selectedYear, cacheKey, seedTransactions.length]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -429,18 +265,7 @@ const Transacoes = () => {
   const handleDeleteFixaThisMonth = async () => {
     if (!deleteTarget || !user) return;
     try {
-      const [origY, origM] = deleteTarget.date.split("-").map(Number);
-      const isOriginalMonth = (origM - 1 === selectedMonth && origY === selectedYear);
-
-      if (isOriginalMonth) {
-        // Move the base transaction to next month so the balance trigger reverses impact
-        const origDate = new Date(deleteTarget.date + "T12:00:00");
-        const nextMonth = new Date(origDate.getFullYear(), origDate.getMonth() + 1, Math.min(origDate.getDate(), 28));
-        const newDateStr = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, "0")}-${String(nextMonth.getDate()).padStart(2, "0")}`;
-        await updateTransaction(deleteTarget.id, { date: newDateStr, status: "pendente" });
-      } else {
-        await excludeRecurringForMonth(deleteTarget.id, selectedMonth, selectedYear, user.id);
-      }
+      await removeRecurringThisMonth(deleteTarget, selectedMonth, selectedYear, user.id);
       toast.success("Receita fixa removida deste mês");
       setShowDeleteDialog(false);
       setDeleteTarget(null);
@@ -453,16 +278,7 @@ const Transacoes = () => {
   const handleDeleteFixaAllFuture = async () => {
     if (!deleteTarget || !user) return;
     try {
-      const [origY, origM] = deleteTarget.date.split("-").map(Number);
-      const origMonthIndex = origY * 12 + (origM - 1);
-      const selectedMonthIndex = selectedYear * 12 + selectedMonth;
-
-      if (origMonthIndex >= selectedMonthIndex) {
-        // Original transaction is in or after selected month - delete it entirely
-        await deleteTransaction(deleteTarget.id);
-      } else {
-        await excludeRecurringFromMonthOnward(deleteTarget.id, selectedMonth, selectedYear, user.id);
-      }
+      await removeRecurringFromMonthOnward(deleteTarget, selectedMonth, selectedYear, user.id);
       toast.success("Receita fixa removida deste mês e de todos os futuros");
       setShowDeleteDialog(false);
       setDeleteTarget(null);

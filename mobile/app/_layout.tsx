@@ -64,6 +64,7 @@ export default function RootLayout() {
               <Stack.Screen name="welcome" options={{ animation: "fade" }} />
               <Stack.Screen name="auth" />
               <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
+              <Stack.Screen name="nova" options={{ presentation: "modal", animation: "slide_from_bottom", gestureEnabled: false }} />
             </Stack>
             <SessionGate fontsReady={fontsReady} />
             <ToastHost />

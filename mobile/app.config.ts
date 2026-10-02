@@ -48,6 +48,8 @@ const config: ExpoConfig = {
     "expo-sqlite",
     ["expo-splash-screen", { backgroundColor: "#0B0B0B", image: "./assets/splash-icon.png", imageWidth: 200 }],
   ],
+  // Só para conferir as telas num navegador durante o desenvolvimento; o app é o iOS.
+  web: { bundler: "metro", output: "single" },
   experiments: { typedRoutes: false },
   extra: {
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? web.VITE_SUPABASE_URL ?? "",

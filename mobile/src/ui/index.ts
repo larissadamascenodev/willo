@@ -11,3 +11,5 @@ export { toast, ToastHost } from "./toast";
 export { Logo } from "./Logo";
 export { Mascot, type MascotVariant } from "./Mascot";
 export { Field } from "./Field";
+export { ProgressBar } from "./ProgressBar";
+export { FormRow, Chip } from "./FormRow";

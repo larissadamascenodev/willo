@@ -10,24 +10,8 @@ import { cn } from "@/lib/utils";
  * so the welcome showcase can draw the real page with sample data.
  */
 
-export type TransactionRow = {
-  id: string;
-  name: string;
-  category: string;
-  date: string;
-  time?: string | null;
-  amount: number;
-  type: string;
-  status: string;
-  payment_method: string;
-  recurrence_type: string;
-  installment_current: number | null;
-  installments: number | null;
-  observation: string | null;
-  account_id: string | null;
-  credit_card_id: string | null;
-  created_at?: string;
-};
+export type { TransactionRow } from "@/services/monthTransactions";
+import type { TransactionRow } from "@/services/monthTransactions";
 
 export type TabFilter = "todos" | "receita" | "despesa";
 

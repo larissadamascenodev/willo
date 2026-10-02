@@ -1,20 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  X, Check, Plus, Sparkles,
-  ShoppingCart, Utensils, Car, Pill, Home, BookOpen, Shirt, PawPrint,
-  Scissors, Gamepad2, Gift, Plane, Smartphone, DollarSign, Briefcase, Music,
-  Coffee, Dumbbell, Clapperboard, FileText, Wrench, ShoppingBag, Lightbulb, Target,
-  Heart, Repeat, GraduationCap, TrendingUp, Award, Users, Wallet, Vault,
-  Zap, Star, Globe, Camera, Headphones, Monitor, Tv, Bus,
-  Landmark, Bike, Fuel, Baby, Stethoscope, Palette, UtensilsCrossed,
-  Wine, Pizza, Hammer, Key, Shield, Umbrella,
-  Tent, Map, Truck, Leaf, Flame,
-  Gem, Crown, BadgeDollarSign, HandCoins, Receipt, Banknote,
-  Droplets, CupSoda, Package, Popcorn, Salad, IceCream,
-  Plug, Wifi, Phone, Building2,
-} from "lucide-react";
+import { X, Check, Plus, Sparkles } from "lucide-react";
 import BottomSheet from "@/components/shared/BottomSheet";
+import { ICON_OPTIONS, getIconComponent } from "@/lib/categoryIconOptions";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -31,83 +19,6 @@ interface Props {
   usedColors?: string[];
 }
 
-const ICON_OPTIONS: { name: string; Icon: any }[] = [
-  { name: "shopping-cart", Icon: ShoppingCart },
-  { name: "utensils", Icon: Utensils },
-  { name: "car", Icon: Car },
-  { name: "pill", Icon: Pill },
-  { name: "home", Icon: Home },
-  { name: "book-open", Icon: BookOpen },
-  { name: "shirt", Icon: Shirt },
-  { name: "paw-print", Icon: PawPrint },
-  { name: "scissors", Icon: Scissors },
-  { name: "gamepad-2", Icon: Gamepad2 },
-  { name: "gift", Icon: Gift },
-  { name: "plane", Icon: Plane },
-  { name: "smartphone", Icon: Smartphone },
-  { name: "dollar-sign", Icon: DollarSign },
-  { name: "briefcase", Icon: Briefcase },
-  { name: "music", Icon: Music },
-  { name: "coffee", Icon: Coffee },
-  { name: "dumbbell", Icon: Dumbbell },
-  { name: "clapperboard", Icon: Clapperboard },
-  { name: "file-text", Icon: FileText },
-  { name: "wrench", Icon: Wrench },
-  { name: "shopping-bag", Icon: ShoppingBag },
-  { name: "lightbulb", Icon: Lightbulb },
-  { name: "target", Icon: Target },
-  { name: "heart", Icon: Heart },
-  { name: "repeat", Icon: Repeat },
-  { name: "graduation-cap", Icon: GraduationCap },
-  { name: "trending-up", Icon: TrendingUp },
-  { name: "award", Icon: Award },
-  { name: "users", Icon: Users },
-  { name: "wallet", Icon: Wallet },
-  { name: "piggy-bank", Icon: Vault },
-  { name: "zap", Icon: Zap },
-  { name: "star", Icon: Star },
-  { name: "globe", Icon: Globe },
-  { name: "camera", Icon: Camera },
-  { name: "headphones", Icon: Headphones },
-  { name: "monitor", Icon: Monitor },
-  { name: "tv", Icon: Tv },
-  { name: "bus", Icon: Bus },
-  { name: "landmark", Icon: Landmark },
-  { name: "bike", Icon: Bike },
-  { name: "fuel", Icon: Fuel },
-  { name: "baby", Icon: Baby },
-  { name: "stethoscope", Icon: Stethoscope },
-  { name: "palette", Icon: Palette },
-  { name: "utensils-crossed", Icon: UtensilsCrossed },
-  { name: "wine", Icon: Wine },
-  { name: "pizza", Icon: Pizza },
-  { name: "hammer", Icon: Hammer },
-  { name: "key", Icon: Key },
-  { name: "shield", Icon: Shield },
-  { name: "umbrella", Icon: Umbrella },
-  { name: "tent", Icon: Tent },
-  { name: "map", Icon: Map },
-  { name: "truck", Icon: Truck },
-  { name: "leaf", Icon: Leaf },
-  { name: "flame", Icon: Flame },
-  { name: "gem", Icon: Gem },
-  { name: "crown", Icon: Crown },
-  { name: "badge-dollar-sign", Icon: BadgeDollarSign },
-  { name: "hand-coins", Icon: HandCoins },
-  { name: "receipt", Icon: Receipt },
-  { name: "banknote", Icon: Banknote },
-  { name: "droplets", Icon: Droplets },
-  { name: "cup-soda", Icon: CupSoda },
-  { name: "package", Icon: Package },
-  { name: "popcorn", Icon: Popcorn },
-  { name: "salad", Icon: Salad },
-  { name: "ice-cream", Icon: IceCream },
-  { name: "plug", Icon: Plug },
-  { name: "wifi", Icon: Wifi },
-  { name: "phone", Icon: Phone },
-  { name: "building-2", Icon: Building2 },
-];
-
 const COLOR_OPTIONS = [
   "#00e676", "#f44336", "#ff9800", "#2196f3", "#9c27b0",
   "#e91e63", "#00bcd4", "#8bc34a", "#ffc107", "#795548",
@@ -115,11 +26,6 @@ const COLOR_OPTIONS = [
   "#cddc39", "#4caf50", "#03a9f4", "#ff4081", "#7c4dff",
   "#18ffff", "#69f0ae", "#ffab40", "#ea80fc",
 ];
-
-// Find the Icon component by name
-function getIconComponent(iconName: string) {
-  return ICON_OPTIONS.find((i) => i.name === iconName)?.Icon || FileText;
-}
 
 const FORBIDDEN = ["outros", "outro", "diversos", "geral", "varios", "sem categoria"];
 const normalize = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
