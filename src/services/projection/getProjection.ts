@@ -15,14 +15,18 @@ const projectionCache = new Map<string, MonthProjection[]>();
  * @param selectedYear - current year
  * @param params - simulation adjustments (savingsBoost, incomeBoost)
  * @param monthDataMap - Map of "month-year" => DashboardData for future months
+ * @param options.averageForEmptyMonths - when a future month has nothing registered, fill it with
+ *   the 3-month average (default) or leave it at zero so the figures are only what is registered
  */
 export function getMonthlyProjection(
   currentData: DashboardData,
   selectedMonth: number,
   selectedYear: number,
   params: SimulationParams = { savingsBoost: 0, incomeBoost: 0 },
-  monthDataMap?: Map<string, DashboardData>
+  monthDataMap?: Map<string, DashboardData>,
+  options: { averageForEmptyMonths?: boolean } = {}
 ): MonthProjection[] {
+  const averageForEmptyMonths = options.averageForEmptyMonths ?? true;
   const result: MonthProjection[] = [];
 
   // Month 0 = current month
@@ -59,18 +63,20 @@ export function getMonthlyProjection(
 
     let income: number;
     let expense: number;
-    let estimated = false;
 
     const monthData = monthDataMap?.get(key);
     if (monthData && (monthData.receitas > 0 || monthData.despesas > 0)) {
       // Use real data from recurring/scheduled transactions
       income = monthData.receitas + params.incomeBoost;
       expense = monthData.despesas - params.savingsBoost;
-    } else {
+    } else if (averageForEmptyMonths) {
       // Fallback to historical average
       income = avgIncome + params.incomeBoost;
       expense = avgExpense - params.savingsBoost;
-      estimated = true;
+    } else {
+      // Nothing registered for this month: it stays empty rather than guessed
+      income = 0;
+      expense = 0;
     }
 
     const delta = income - expense;
@@ -79,7 +85,7 @@ export function getMonthlyProjection(
     const risk: MonthProjection["risk"] =
       delta > 0 ? "positivo" : delta > -200 ? "atencao" : "risco";
 
-    result.push({ month: m, year: y, balance, delta, income, expense, risk, estimated });
+    result.push({ month: m, year: y, balance, delta, income, expense, risk });
     prevBalance = balance;
   }
 

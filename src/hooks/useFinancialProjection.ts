@@ -81,7 +81,8 @@ export function useFinancialProjection(anchor?: { month: number; year: number })
   );
 
   const projections = useMemo(
-    () => getMonthlyProjection(data, selectedMonth, selectedYear, params, monthDataMap),
+    // Only what is registered counts: a month with nothing launched stays at zero, never an average
+    () => getMonthlyProjection(data, selectedMonth, selectedYear, params, monthDataMap, { averageForEmptyMonths: false }),
     [data, selectedMonth, selectedYear, params, monthDataMap]
   );
 

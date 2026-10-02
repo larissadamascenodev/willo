@@ -13,8 +13,8 @@ export interface ProjectionRow {
   balance: number;
   prevBalance: number;
   risk: string;
-  /** Nothing is launched for this month yet, so the figures are the recent average. */
-  estimated: boolean;
+  /** Nothing is registered for this month yet. */
+  empty: boolean;
   short: string;
   yearTag: string;
 }
@@ -67,14 +67,15 @@ export default function FutureMonthCard({ row, composition, loading, expanded, o
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
             <span className="truncate text-[16px] font-semibold text-white">{title}</span>
-            <span
-              className="shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold"
-              style={{ background: `${risk.hex}1F`, color: risk.hex }}
-            >
-              {row.balance < 0 ? "Negativo" : risk.label}
-            </span>
-            {row.estimated && (
-              <span className="shrink-0 rounded-full bg-white/[0.08] px-2 py-0.5 text-[10.5px] font-semibold text-white/66">Estimado</span>
+            {row.empty ? (
+              <span className="shrink-0 rounded-full bg-white/[0.08] px-2 py-0.5 text-[10.5px] font-semibold text-white/66">Sem lançamentos</span>
+            ) : (
+              <span
+                className="shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold"
+                style={{ background: `${risk.hex}1F`, color: risk.hex }}
+              >
+                {row.balance < 0 ? "Negativo" : risk.label}
+              </span>
             )}
           </span>
           <span className="mt-1 block truncate text-[12.5px] text-white/58 tabular-nums">
@@ -101,10 +102,10 @@ export default function FutureMonthCard({ row, composition, loading, expanded, o
             className="overflow-hidden"
           >
             <div className="border-t border-white/[0.08] px-4 pb-4 pt-3">
-              {row.estimated || !composition ? (
+              {row.empty || !composition ? (
                 <p className="flex items-start gap-2 rounded-[14px] bg-white/[0.05] px-3 py-2.5 text-[12.5px] leading-snug text-white/72">
                   <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  Ainda não há lançamentos neste mês. Os valores são a média dos seus últimos 3 meses e passam a ser os reais conforme você lança contas fixas e parcelas.
+                  Nada cadastrado para este mês ainda. Receitas, contas fixas, parcelas e faturas que você lançar para ele aparecem aqui.
                 </p>
               ) : (
                 <>
@@ -145,10 +146,10 @@ export default function FutureMonthCard({ row, composition, loading, expanded, o
                 </span>
               </div>
 
-              {!row.estimated && composition && (
+              {!row.empty && composition && (
                 <p className="mt-3 flex items-start gap-2 text-[12px] leading-snug text-white/50">
                   <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  Conta o que já está lançado. Gastos do dia a dia que você ainda não registrou não entram.
+                  Soma só o que está cadastrado para este mês.
                 </p>
               )}
             </div>

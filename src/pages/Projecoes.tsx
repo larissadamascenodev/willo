@@ -38,7 +38,8 @@ export default function Projecoes() {
         balance: p.balance,
         prevBalance: i > 0 ? projections[i - 1].balance : data.previousMonthEndingBalance,
         risk: p.risk,
-        estimated: !!p.estimated,
+        // the month in progress always has its own figures; a later one is empty when nothing is registered
+        empty: i > 0 && p.income === 0 && p.expense === 0,
         short: MONTH_SHORT[p.month],
         yearTag: p.year !== today.getFullYear() ? String(p.year).slice(2) : "",
       })),
@@ -95,10 +96,10 @@ export default function Projecoes() {
   const selectedIdx = expanded ? rows.findIndex((r) => keyOf(r) === expanded) : null;
 
   const headline = firstNegative
-    ? `Seu saldo fica negativo a partir de ${MONTH_NAMES[firstNegative.month].toLowerCase()}. Dá tempo de mudar isso.`
+    ? `Com o que já está cadastrado, seu saldo fica negativo a partir de ${MONTH_NAMES[firstNegative.month].toLowerCase()}. Dá tempo de mudar isso.`
     : growth >= 0
-      ? `Mantendo o ritmo, você termina com ${compact(last.balance)} em ${MONTH_NAMES[last.month].toLowerCase()}.`
-      : `Mantendo o ritmo, seu saldo encolhe ${compact(Math.abs(growth))} até ${MONTH_NAMES[last.month].toLowerCase()}.`;
+      ? `Com o que já está cadastrado, você termina com ${compact(last.balance)} em ${MONTH_NAMES[last.month].toLowerCase()}.`
+      : `Com o que já está cadastrado, seu saldo encolhe ${compact(Math.abs(growth))} até ${MONTH_NAMES[last.month].toLowerCase()}.`;
 
   return (
     <div className="mx-auto max-w-lg pb-28">
@@ -109,44 +110,54 @@ export default function Projecoes() {
       </div>
 
       <SectionTitle>Para onde seu saldo vai</SectionTitle>
-      <motion.section
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-[28px] border border-white/[0.12] p-5"
-        style={{
-          background: `radial-gradient(120% 90% at 100% 0%, ${growth >= 0 && !firstNegative ? "#C8F36D1C" : "#F8717120"} 0%, rgba(20,20,20,0.96) 55%, #0E0E0E 100%)`,
-        }}
-      >
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[12px] text-white/62">Hoje</p>
-            <p className="truncate text-[20px] font-bold text-white tabular-nums">{compact(data.saldoAtual)}</p>
-          </div>
-          <ArrowRight className="mb-1.5 h-5 w-5 shrink-0 text-white/45" />
-          <div className="min-w-0 text-right">
-            <p className="truncate text-[12px] text-white/62">
-              {MONTH_NAMES[last.month]}{last.yearTag ? `/${last.yearTag}` : ""}
-            </p>
-            <p className={cn("truncate text-[30px] font-extrabold leading-tight tracking-tight tabular-nums", last.balance < 0 ? "text-red-400" : "text-white")}>
-              {compact(last.balance)}
-            </p>
-          </div>
+      {/* The end balance chains through every month, so it waits until all of them have answered */}
+      {!futureReady ? (
+        <div className="space-y-3">
+          <div className="h-44 animate-pulse rounded-[28px] willo-glass" />
+          <div className="h-52 animate-pulse rounded-[22px] willo-glass" />
         </div>
+      ) : (
+        <>
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative overflow-hidden rounded-[28px] border border-white/[0.12] p-5"
+            style={{
+              background: `radial-gradient(120% 90% at 100% 0%, ${growth >= 0 && !firstNegative ? "#C8F36D1C" : "#F8717120"} 0%, rgba(20,20,20,0.96) 55%, #0E0E0E 100%)`,
+            }}
+          >
+            <div className="flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[12px] text-white/62">Hoje</p>
+                <p className="truncate text-[20px] font-bold text-white tabular-nums">{compact(data.saldoAtual)}</p>
+              </div>
+              <ArrowRight className="mb-1.5 h-5 w-5 shrink-0 text-white/45" />
+              <div className="min-w-0 text-right">
+                <p className="truncate text-[12px] text-white/62">
+                  {MONTH_NAMES[last.month]}{last.yearTag ? `/${last.yearTag}` : ""}
+                </p>
+                <p className={cn("truncate text-[30px] font-extrabold leading-tight tracking-tight tabular-nums", last.balance < 0 ? "text-red-400" : "text-white")}>
+                  {compact(last.balance)}
+                </p>
+              </div>
+            </div>
 
-        <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3 py-1.5">
-          {growth >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-willo-green" /> : <TrendingDown className="h-3.5 w-3.5 text-red-400" />}
-          <span className={cn("text-[13px] font-semibold tabular-nums", growth >= 0 ? "text-willo-green" : "text-red-400")}>
-            {growth >= 0 ? "+" : "−"}{compact(Math.abs(growth))}
-          </span>
-          <span className="text-[12px] text-white/66">até {MONTH_SHORT[last.month]}</span>
-        </div>
+            <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3 py-1.5">
+              {growth >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-willo-green" /> : <TrendingDown className="h-3.5 w-3.5 text-red-400" />}
+              <span className={cn("text-[13px] font-semibold tabular-nums", growth >= 0 ? "text-willo-green" : "text-red-400")}>
+                {growth >= 0 ? "+" : "−"}{compact(Math.abs(growth))}
+              </span>
+              <span className="text-[12px] text-white/66">até {MONTH_SHORT[last.month]}</span>
+            </div>
 
-        <p className="mt-3 rounded-[16px] bg-black/25 px-3.5 py-2.5 text-[13px] leading-snug text-white/85">{headline}</p>
-      </motion.section>
+            <p className="mt-3 rounded-[16px] bg-black/25 px-3.5 py-2.5 text-[13px] leading-snug text-white/85">{headline}</p>
+          </motion.section>
 
-      <div className="mt-3">
-        <BalanceTrendChart rows={rows} selectedIdx={selectedIdx} onSelect={pickMonth} maxAbs={maxAbs} />
-      </div>
+          <div className="mt-3">
+            <BalanceTrendChart rows={rows} selectedIdx={selectedIdx} onSelect={pickMonth} maxAbs={maxAbs} />
+          </div>
+        </>
+      )}
 
       <SectionTitle>Próximos meses</SectionTitle>
       <div className="space-y-2.5">
@@ -178,7 +189,7 @@ export default function Projecoes() {
 
       <p className="mt-5 flex items-start gap-2 px-1 text-[12px] leading-snug text-white/50">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        A projeção usa suas contas fixas, parcelas e faturas já lançadas. Meses sem lançamentos usam a média dos últimos 3 meses. Novos lançamentos ajustam o cálculo na hora.
+        A projeção soma só o que está cadastrado nas suas transações: receitas e despesas futuras, contas fixas, parcelas e faturas. Mês sem nada cadastrado fica zerado, sem valor estimado. Novos lançamentos ajustam o cálculo na hora.
       </p>
     </div>
   );

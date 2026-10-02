@@ -9,10 +9,13 @@ export interface TrendRow {
   year: number;
   balance: number;
   risk: string;
-  estimated: boolean;
+  /** Nothing registered for this month. */
+  empty: boolean;
   short: string;
   yearTag: string;
 }
+
+const EMPTY_HEX = "#94A3B8";
 
 /** The balance at the end of each month, one bar per month; tap a bar to open that month below. */
 export default function BalanceTrendChart({
@@ -64,7 +67,7 @@ export default function BalanceTrendChart({
         {rows.map((r, i) => {
           const risk = riskOf(r.risk);
           const on = i === selectedIdx;
-          const barColor = r.balance < 0 ? "#F87171" : risk.hex;
+          const barColor = r.empty ? EMPTY_HEX : r.balance < 0 ? "#F87171" : risk.hex;
           const barHeight = Math.max((Math.abs(r.balance) / maxAbs) * 84, 18);
 
           return (
@@ -84,13 +87,7 @@ export default function BalanceTrendChart({
                   animate={{ height: barHeight }}
                   transition={{ delay: i * 0.02, duration: 0.5, ease: "easeOut" }}
                   className={cn("w-full rounded-[9px] transition-all", on ? "ring-2 ring-white" : "ring-1 ring-white/[0.06]")}
-                  style={{
-                    background: on ? barColor : `${barColor}33`,
-                    // A month with no launches yet is a guess, so it is drawn as one
-                    backgroundImage: r.estimated
-                      ? "repeating-linear-gradient(135deg, transparent 0 4px, rgba(255,255,255,0.14) 4px 6px)"
-                      : undefined,
-                  }}
+                  style={{ background: on ? barColor : `${barColor}33` }}
                 />
               </div>
 
@@ -116,11 +113,8 @@ export default function BalanceTrendChart({
           <span>Negativo</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span
-            className="h-2.5 w-2.5 rounded-[3px] bg-white/25"
-            style={{ backgroundImage: "repeating-linear-gradient(135deg, transparent 0 2px, rgba(255,255,255,0.35) 2px 3px)" }}
-          />
-          <span>Estimado</span>
+          <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: EMPTY_HEX }} />
+          <span>Sem lançamentos</span>
         </div>
       </div>
     </Surface>
