@@ -6,14 +6,13 @@ import { Button } from "@/components/ui/button";
 import { getCachedDashboardData, buildDashboardCacheKey } from "@/services/dashboardData";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { getAccounts, getCreditCards } from "@/services/transactionService";
+import { getAccounts } from "@/services/transactionService";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import AccountsBalanceCard from "@/components/wallet/AccountsBalanceCard";
 import AccountCreateSheet from "@/components/wallet/AccountCreateSheet";
-import CardCreateSheet from "@/components/wallet/CardCreateSheet";
 import ReserveAndPots from "@/components/wallet/ReserveAndPots";
-import { CreditCardTile, getAccent, type CreditCardItem, type OpenInvoiceInfo } from "@/components/wallet/CreditCardTile";
+import { getAccent } from "@/components/wallet/CreditCardTile";
 import { fetchGoals, type Goal } from "@/services/goalService";
 import AIFinancialWizardModal from "@/components/shared/AIFinancialWizardModal";
 
@@ -61,8 +60,6 @@ const GestaoFinanceira = () => {
   const { user } = useAuth();
   const warmDashboardData = getCachedDashboardData(buildDashboardCacheKey(user?.id, new Date().getMonth(), new Date().getFullYear()));
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [creditCards, setCreditCards] = useState<CreditCardItem[]>([]);
-  const [openInvoices, setOpenInvoices] = useState<Record<string, OpenInvoiceInfo>>({});
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(() => !warmDashboardData);
 
@@ -70,15 +67,15 @@ const GestaoFinanceira = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [showAddAccount, setShowAddAccount] = useState(false);
-  const [showAddCard, setShowAddCard] = useState(false);
 
   // Opened as a shortcut from the dashboard's "Complete sua conta" card —
-  // /gestao?abrir=conta|cartao opens the matching modal right away.
+  // /gestao?abrir=conta opens the account modal right away.
   useEffect(() => {
     const abrir = searchParams.get("abrir");
     if (!abrir) return;
     if (abrir === "conta") setShowAddAccount(true);
-    if (abrir === "cartao") setShowAddCard(true);
+    // Cards moved to their own section, so an old link to add one goes there.
+    if (abrir === "cartao") navigate("/cartoes?aba=cartoes", { replace: true });
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.delete("abrir");
@@ -94,67 +91,14 @@ const GestaoFinanceira = () => {
   const fetchData = async () => {
     if (!user) return;
     try {
-      const [accs, cards, goalsData] = await Promise.all([
+      const [accs, goalsData] = await Promise.all([
         getAccounts(),
-        getCreditCards(),
         fetchGoals(),
       ]);
       setAccounts(accs as unknown as Account[]);
-      setCreditCards(cards as unknown as CreditCardItem[]);
       setGoals(goalsData);
       setLoading(false);
 
-      // Fetch invoices for current and next month to show next when current is paid
-      const now = new Date();
-      const curMonth = now.getMonth() + 1;
-      const curYear = now.getFullYear();
-      const nextMonth = curMonth === 12 ? 1 : curMonth + 1;
-      const nextYear = curMonth === 12 ? curYear + 1 : curYear;
-
-      const { data: invoices } = await supabase
-        .from("invoices")
-        .select("credit_card_id, total_amount, paid_amount, is_paid, month, year")
-        .or(`and(month.eq.${curMonth},year.eq.${curYear}),and(month.eq.${nextMonth},year.eq.${nextYear})`);
-
-      const invoiceMap: Record<string, OpenInvoiceInfo> = {};
-      if (invoices) {
-        // Group by card, prefer current month unpaid; if paid, show next month
-        const byCard = new Map<string, InvoiceData[]>();
-        for (const inv of invoices as unknown as InvoiceData[]) {
-          const arr = byCard.get(inv.credit_card_id) || [];
-          arr.push(inv);
-          byCard.set(inv.credit_card_id, arr);
-        }
-        for (const [cardId, invs] of byCard.entries()) {
-          const currentInv = invs.find(i => i.month === curMonth && i.year === curYear);
-          const nextInv = invs.find(i => i.month === nextMonth && i.year === nextYear);
-
-          if (currentInv && !currentInv.is_paid) {
-            invoiceMap[cardId] = {
-              amount: Math.max(0, Number(currentInv.total_amount) - Number(currentInv.paid_amount ?? 0)),
-              month: curMonth,
-              year: curYear,
-              isPaid: false,
-            };
-          } else if (nextInv) {
-            invoiceMap[cardId] = {
-              amount: Math.max(0, Number(nextInv.total_amount) - Number(nextInv.paid_amount ?? 0)),
-              month: nextMonth,
-              year: nextYear,
-              isPaid: nextInv.is_paid,
-            };
-          } else {
-            // Current is paid and no next invoice yet — show next month with 0
-            invoiceMap[cardId] = {
-              amount: 0,
-              month: nextMonth,
-              year: nextYear,
-              isPaid: false,
-            };
-          }
-        }
-      }
-      setOpenInvoices(invoiceMap);
     } catch {
       toast.error("Erro ao carregar dados");
     } finally {
@@ -195,7 +139,7 @@ const GestaoFinanceira = () => {
       {/* ═══════ Page Header ═══════ */}
       <div className="pt-1">
         <h1 className="text-[28px] font-extrabold tracking-tight text-white">Carteira</h1>
-        <p className="text-[14px] text-white/62">Suas contas e cartões em um só lugar</p>
+        <p className="text-[14px] text-white/62">Suas contas, a reserva e os cofrinhos</p>
       </div>
 
       {/* ═══════ Contas ═══════ */}
@@ -314,81 +258,6 @@ const GestaoFinanceira = () => {
         <ReserveAndPots goals={goals} onCreated={fetchData} />
       </section>
 
-      {/* ═══════ Cartões de Crédito ═══════ */}
-      <section>
-        <div className="flex items-center justify-between mb-3 px-1">
-          <h2 className="text-[18px] font-bold text-white">Cartões de crédito</h2>
-          <button onClick={() => setShowAddCard(true)} aria-label="Adicionar cartão" className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.12] willo-glass text-white active:scale-95 transition-transform">
-            <Plus className="w-4 h-4" />
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {[1].map((i) => (
-              <div key={i} className="h-44 rounded-[22px] willo-glass animate-pulse" />
-            ))}
-          </div>
-        ) : creditCards.length === 0 ? (
-          <div className="rounded-[22px] willo-glass border border-white/[0.12] p-8 text-center">
-            <CreditCard className="w-8 h-8 text-white/45 mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground mb-1">Nenhum cartão cadastrado</p>
-            <p className="text-xs text-muted-foreground/60 mb-4">Cadastre seu cartão de crédito</p>
-            <Button
-              onClick={() => setShowAddCard(true)}
-              size="sm"
-              className="h-10 px-5 willo-pill"
-            >
-              <Plus className="w-4 h-4 mr-1" /> Cadastrar Cartão
-            </Button>
-          </div>
-        ) : (
-          <>
-            {/* Mobile stack */}
-            <div className="sm:hidden space-y-2.5">
-              {creditCards.map((card, idx) => (
-                <CreditCardTile key={card.id} card={card} idx={idx} invoiceInfo={openInvoices[card.id]} navigate={navigate} />
-              ))}
-            </div>
-
-            {/* Desktop grid */}
-            <div className="hidden sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {creditCards.map((card, idx) => (
-                <CreditCardTile key={card.id} card={card} idx={idx} invoiceInfo={openInvoices[card.id]} navigate={navigate} />
-              ))}
-              <motion.button
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: creditCards.length * 0.05 }}
-                onClick={() => setShowAddCard(true)}
-                className="rounded-[22px] p-4 min-h-[148px] flex flex-col items-center justify-center gap-2 border border-dashed border-white/15 hover:border-white/30 bg-transparent transition-all duration-300 cursor-pointer"
-              >
-                <div className="w-10 h-10 rounded-full bg-white/[0.08] flex items-center justify-center">
-                  <Plus className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xs text-white/74 font-medium">Adicionar cartão</span>
-              </motion.button>
-            </div>
-          </>
-        )}
-      </section>
-
-
-      {/* ═══════ Microcopy educativo ═══════ */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="px-6 text-center"
-      >
-        <p className="text-[12px] text-white/45">
-          "Separe o que é gasto do que é construção de patrimônio"
-        </p>
-      </motion.div>
-
-      {/* ═══════ MODALS ═══════ */}
-      <AccountCreateSheet open={showAddAccount} onClose={() => setShowAddAccount(false)} onCreated={fetchData} />
-      <CardCreateSheet open={showAddCard} onClose={() => setShowAddCard(false)} onCreated={fetchData} />
 
       {/* AI Financial Wizard */}
       <AIFinancialWizardModal

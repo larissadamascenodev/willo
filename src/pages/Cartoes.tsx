@@ -4,6 +4,9 @@ import { motion } from "framer-motion";
 import { Check, ChevronLeft, Clock, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import BottomSheet from "@/components/shared/BottomSheet";
+import CardCreateSheet from "@/components/wallet/CardCreateSheet";
+import { CreditCardTile, type CreditCardItem, type OpenInvoiceInfo } from "@/components/wallet/CreditCardTile";
+import { Plus } from "lucide-react";
 import { getCategoryIcon, getCategoryHexColor } from "@/lib/categoryUtils";
 import {
   useCardsOverview, cardHex, invoiceDueDate, monthKey,
@@ -11,7 +14,7 @@ import {
 } from "@/hooks/useCardsOverview";
 
 import { getCurrency } from "@/lib/currency";
-type Tab = "faturas" | "parcelas" | "limites";
+type Tab = "cartoes" | "faturas" | "parcelas";
 
 const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const SHORT = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
@@ -92,12 +95,13 @@ const EmptyState = ({ text }: { text: string }) => (
 const Cartoes = () => {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const tab = (params.get("aba") as Tab) || "faturas";
+  const tab = (params.get("aba") as Tab) || "cartoes";
   const setTab = (t: Tab) => setParams({ aba: t }, { replace: true });
 
-  const { cards, invoices, installments, loading } = useCardsOverview();
+  const { cards, invoices, installments, loading, refresh } = useCardsOverview();
   const [cardFilter, setCardFilter] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [showAddCard, setShowAddCard] = useState(false);
 
   const now = new Date();
   const currentKey = monthKey(now.getFullYear(), now.getMonth() + 1);
@@ -130,13 +134,15 @@ const Cartoes = () => {
 
       {/* Tabs */}
       <div className="mt-2 grid grid-cols-3 isolate rounded-full border border-white/[0.12] willo-glass p-1">
-        {([["faturas", "Faturas"], ["parcelas", "Parcelas"], ["limites", "Limites"]] as const).map(([key, label]) => (
+        {([["cartoes", "Cartões"], ["faturas", "Faturas"], ["parcelas", "Parcelas"]] as const).map(([key, label]) => (
           <button key={key} onClick={() => { setTab(key); setSelectedKey(currentKey); }} className="relative h-11 rounded-full text-[15px] font-medium">
             {tab === key && <motion.span layoutId="cards-tab" className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
             <span className={cn("relative z-10 transform-gpu transform-gpu", tab === key ? "text-[#0B0B0B]" : "text-white")}>{label}</span>
           </button>
         ))}
       </div>
+
+      <CardCreateSheet open={showAddCard} onClose={() => setShowAddCard(false)} onCreated={refresh} />
 
       {/* Card filter */}
       {cards.length > 1 && (
@@ -153,8 +159,8 @@ const Cartoes = () => {
           <div className="h-64 animate-pulse rounded-[22px] willo-glass" />
         ) : cards.length === 0 ? (
           <EmptyState text="Nenhum cartão cadastrado" />
-        ) : tab === "limites" ? (
-          <LimitsList cards={visibleCards} />
+        ) : tab === "cartoes" ? (
+          <CardsList cards={visibleCards} invoices={filteredInvoices} onAdd={() => setShowAddCard(true)} navigate={navigate} />
         ) : tab === "parcelas" ? (
           <InstallmentsOverview installments={filteredInstallments} cardById={cardById} currentKey={currentKey} />
         ) : (
@@ -346,6 +352,52 @@ function InstallmentsOverview({ installments, cardById, currentKey }: {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Every card, one under the other. The tile is the one the wallet used to show —
+ * name, open invoice, and the limit bar with both sides of it — so moving the cards
+ * here changes where they live, not how they look.
+ */
+function CardsList({ cards, invoices, onAdd, navigate }: {
+  cards: OverviewCard[];
+  invoices: OverviewInvoice[];
+  onAdd: () => void;
+  navigate: (to: string) => void;
+}) {
+  const now = new Date();
+  const openByCard = new Map<string, OpenInvoiceInfo>();
+  for (const inv of invoices) {
+    if (inv.isPaid || inv.total <= 0) continue;
+    const prev = openByCard.get(inv.cardId);
+    const isEarlier = !prev || inv.year < prev.year || (inv.year === prev.year && inv.month < prev.month);
+    if (isEarlier) openByCard.set(inv.cardId, { amount: inv.total - inv.paid, month: inv.month, year: inv.year, isPaid: false });
+  }
+
+  return (
+    <div className="space-y-2.5">
+      {cards.map((c, idx) => {
+        const item: CreditCardItem = {
+          id: c.id,
+          name: c.name,
+          limit: c.limit,
+          used_limit: c.used,
+          closing_day: c.closingDay,
+          due_day: c.dueDay,
+          color: c.color,
+          last_four_digits: c.lastFour,
+        };
+        return <CreditCardTile key={c.id} card={item} idx={idx} invoiceInfo={openByCard.get(c.id)} navigate={navigate} />;
+      })}
+
+      <button
+        onClick={onAdd}
+        className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[20px] border border-dashed border-white/20 text-[15px] font-medium text-white/82 active:opacity-70"
+      >
+        <Plus className="h-[18px] w-[18px]" /> Adicionar cartão
+      </button>
     </div>
   );
 }

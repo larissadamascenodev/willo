@@ -123,7 +123,13 @@ export function useCardsOverview() {
     };
   }, [user, load]);
 
-  return { cards, invoices, installments, loading };
+  /** Drops the shared cache and refetches — for after a card is created or removed. */
+  const refresh = useCallback(async () => {
+    cache = null;
+    await load();
+  }, [load]);
+
+  return { cards, invoices, installments, loading, refresh };
 }
 
 export const CARD_HEX: Record<string, string> = {
