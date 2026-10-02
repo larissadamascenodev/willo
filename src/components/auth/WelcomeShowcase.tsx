@@ -6,7 +6,6 @@ import {
   Bell, BrainCircuit, CheckCircle2, ChevronRight, CreditCard, FileText, Plus, Search, SlidersHorizontal, Tag, TrendingDown, Wallet, X, Zap,
 } from "lucide-react";
 import BalanceHeroCard from "@/components/dashboard/BalanceHeroCard";
-import MonthFiguresCard from "@/components/dashboard/MonthFiguresCard";
 import GastosPorCategoria from "@/components/dashboard/GastosPorCategoria";
 import FinanceOverviewCard from "@/components/dashboard/FinanceOverviewCard";
 import TransacoesRecentes from "@/components/dashboard/TransacoesRecentes";
@@ -226,15 +225,8 @@ export const HomeScreen = ({ to, extra = [], withIfood = false }: { to?: string;
   const spent = withIfood ? 45.9 : 0;
   return (
     <ScrollPage to={to}>
-      <BalanceHeroCard saldoAtual={8420.5 - spent} topInset={STATUS_H} />
+      <BalanceHeroCard saldoAtual={8420.5 - spent} receitas={6450} despesas={3215.8 + spent} topInset={STATUS_H} />
       <div className="mt-3 space-y-3">
-        <MonthFiguresCard
-          receitas={6450}
-          despesas={3215.8 + spent}
-          selectedMonth={8}
-          selectedYear={2026}
-          onMonthChange={noop}
-        />
         <div data-section="categorias">
           <GastosPorCategoria categories={categoriesFor(withIfood)} selectedMonth={8} onVerAnalise={noop} />
         </div>

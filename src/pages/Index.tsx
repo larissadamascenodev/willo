@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import FinanceOverviewCard from "@/components/dashboard/FinanceOverviewCard";
 import WalletSummaryCard from "@/components/dashboard/WalletSummaryCard";
 import BalanceHeroCard from "@/components/dashboard/BalanceHeroCard";
-import MonthFiguresCard from "@/components/dashboard/MonthFiguresCard";
 import { useGreeting } from "@/components/dashboard/DashboardHeader";
 import SaldoCard from "@/components/dashboard/SaldoCard";
 import ReceitasDespesasCards from "@/components/dashboard/ReceitasDespesasCards";
@@ -178,15 +177,8 @@ const Index = () => {
 
         {/* MOBILE LAYOUT */}
         <div className="md:hidden space-y-3">
-          <BalanceHeroCard saldoAtual={saldoMes} />
+          <BalanceHeroCard saldoAtual={saldoMes} receitas={receitas} despesas={despesas} />
 
-          <MonthFiguresCard
-            receitas={receitas}
-            despesas={despesas}
-            selectedMonth={selectedMonth}
-            selectedYear={selectedYear}
-            onMonthChange={handleMonthChange}
-          />
           {/* MicroInteracoesCard temporarily disabled */}
           {isCurrentMonth && <FinanceChartCard />}
           {profile && !isOnboardingComplete && (

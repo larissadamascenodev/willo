@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { User, Bell } from "lucide-react";
+import { User, Bell, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useFormattedCounter } from "@/hooks/useAnimatedCounter";
 import { useHiddenValues, setHiddenValues } from "@/hooks/useHiddenValues";
@@ -13,6 +13,8 @@ import { currencySymbol } from "@/lib/currency";
 
 interface Props {
   saldoAtual: number;
+  receitas: number;
+  despesas: number;
   /** Extra space above the top row (px), e.g. under a drawn status bar. */
   topInset?: number;
 }
@@ -22,7 +24,7 @@ interface Props {
  * greeting. The month's figures are a card further down the stack — the top of
  * the screen is for orientation, not for numbers.
  */
-const BalanceHeroCard = ({ saldoAtual, topInset = 0 }: Props) => {
+const BalanceHeroCard = ({ saldoAtual, receitas, despesas, topInset = 0 }: Props) => {
   const navigate = useNavigate();
   const hidden = useHiddenValues();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -32,6 +34,24 @@ const BalanceHeroCard = ({ saldoAtual, topInset = 0 }: Props) => {
   const firstName = profile?.display_name?.trim().split(" ")[0] ?? "";
   const initial = profile?.display_name?.trim().charAt(0).toUpperCase();
   const animatedSaldo = useFormattedCounter(saldoAtual);
+  const sobra = receitas - despesas;
+  const animatedEntradas = useFormattedCounter(receitas);
+  const animatedSaidas = useFormattedCounter(despesas);
+  // How much of what came in is still here. A full bar is a month you kept; an empty
+  // one is a month you spent, which is the thing the two figures alone never say.
+  const kept = receitas > 0 ? Math.max(0, Math.min(100, (sobra / receitas) * 100)) : 0;
+
+  // Two taps anywhere on the hero start a new entry, the way the + button does.
+  const lastTap = useRef(0);
+  const onHeroTap = () => {
+    const now = Date.now();
+    if (now - lastTap.current < 320) {
+      lastTap.current = 0;
+      window.dispatchEvent(new CustomEvent("open-nova-transacao-direct", { detail: { type: "despesa" } }));
+    } else {
+      lastTap.current = now;
+    }
+  };
   const heroRef = useRef<HTMLDivElement>(null);
   const greetingRef = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -55,9 +75,24 @@ const BalanceHeroCard = ({ saldoAtual, topInset = 0 }: Props) => {
     <>
     <div
       ref={heroRef}
-      className="relative -mx-4 px-4 pb-1"
+      className="relative -mx-4 overflow-hidden px-4"
       style={{ paddingTop: `calc(env(safe-area-inset-top, 0px) + ${68 + topInset}px)` }}
     >
+      {/* Colour pooled behind the hero only: green low-left into blue high-right, over
+          the wallpaper rather than instead of it. Positive z-index on the content above
+          it, because a negative one would sink beneath the wallpaper layer. */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[420px]"
+        style={{
+          background:
+            "radial-gradient(120% 78% at 8% 96%, rgba(34,186,124,0.52) 0%, transparent 62%)," +
+            "radial-gradient(110% 76% at 96% 6%, rgba(44,104,224,0.50) 0%, transparent 64%)," +
+            "radial-gradient(90% 60% at 52% 46%, rgba(72,150,170,0.26) 0%, transparent 70%)",
+          maskImage: "linear-gradient(180deg, #000 0%, #000 62%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(180deg, #000 0%, #000 62%, transparent 100%)",
+        }}
+      />
+
       {/* The header stays put while everything else scrolls under it. Fixed rather than
           sticky: sticky would unpin the moment this block scrolls past. */}
       <div
@@ -110,29 +145,70 @@ const BalanceHeroCard = ({ saldoAtual, topInset = 0 }: Props) => {
         </div>
       </div>
 
-      <div className="mt-3.5">
+      <div className="relative z-10 mt-3.5">
         <HomeSectionTabs />
       </div>
 
-      {/* The greeting sets the scene and the balance is the headline; the label under it
-          says what the number is, so the figure itself needs no prefix. */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      {/* Greeting, then the one number that answers "can I spend?" — what is left of
+          the month rather than what is in the account today. */}
+      <div
         ref={greetingRef}
-        className="mt-10 pb-7"
+        onClick={onHeroTap}
+        className="relative z-10 mt-9"
       >
-        <p className="truncate text-[15px] font-medium tracking-tight text-white/78">
+        <motion.p
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="truncate text-[28px] font-normal leading-tight tracking-tight text-white"
+        >
           {greeting}{firstName ? `, ${firstName}` : ""}
-        </p>
-        <p className="mt-1.5 truncate text-[42px] font-extrabold leading-[1.05] tracking-[-0.035em] text-white tabular-nums">
-          {hidden ? `${currencySymbol()} ••••••` : animatedSaldo}
-        </p>
-        <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/56">
-          Saldo disponível
-        </p>
-      </motion.div>
+        </motion.p>
+        <p className="mt-1 text-[13px] text-white/56">Toque duas vezes aqui para lançar</p>
+
+        <div className="willo-glass mt-4 rounded-[24px] border border-white/[0.12] p-[18px]">
+          <p className="text-[13px] text-white/66">Saldo disponível</p>
+          <p className="mt-2 truncate text-[34px] font-extrabold leading-none tracking-[-0.035em] text-white tabular-nums">
+            {hidden ? `${currencySymbol()} ••••••` : animatedSaldo}
+          </p>
+
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.14]">
+            <div
+              className={`h-full rounded-full transition-[width] duration-700 ease-out ${
+                sobra >= 0 ? "bg-willo-green" : "bg-red-400"
+              }`}
+              style={{ width: `${sobra >= 0 ? Math.max(kept, 2) : 100}%` }}
+            />
+          </div>
+
+          <div className="mt-4 flex items-stretch">
+            {[
+              { key: "in", label: "Entradas", value: animatedEntradas, to: "/detalhe/receitas",
+                Icon: ArrowDownLeft, ring: "bg-willo-green/20 text-willo-green" },
+              { key: "out", label: "Saídas", value: animatedSaidas, to: "/detalhe/despesas",
+                Icon: ArrowUpRight, ring: "bg-red-500/20 text-red-400" },
+            ].map(({ key, label, value, to, Icon, ring }, i) => (
+              <button
+                key={key}
+                onClick={(e) => { e.stopPropagation(); navigate(to); }}
+                className={`flex min-w-0 flex-1 items-center gap-2.5 text-left active:opacity-70 ${
+                  i === 0 ? "pr-3" : "pl-3"
+                }`}
+              >
+                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${ring}`}>
+                  <Icon className="h-[15px] w-[15px]" strokeWidth={2.8} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[12px] text-white/66">{label}</span>
+                  <span className="block truncate text-[14.5px] font-bold tracking-tight text-white tabular-nums">
+                    {hidden ? `${currencySymbol()} ••••` : value}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
     </>
   );
