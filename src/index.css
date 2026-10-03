@@ -123,10 +123,11 @@
   .willo-bg {
     position: relative;
     isolation: isolate;
-    background: #0A1220;
+    background: #050706;
   }
-  /* The ground: navy with the blue and the violet low inside it, continuous across
-     the whole viewport. */
+  /* Near black, lit only along the top edge by a desaturated green — the brand lime
+     taken almost all the way down, so it reads as a cast rather than a colour. One
+     light source, nothing else; the screen is black again by a third of the way down. */
   .willo-bg::before {
     content: "";
     position: fixed;
@@ -134,29 +135,11 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(118% 44% at 4% 60%, rgba(46, 92, 158, 0.22) 0%, transparent 64%),
-      radial-gradient(112% 42% at 99% 95%, rgba(96, 74, 152, 0.20) 0%, transparent 66%),
-      #0A1220;
-  }
-  /* The photo sits above the ground and is *masked* out rather than covered by an
-     opaque gradient. Covering it left a seam where the cover went solid and the
-     ground's colour reappeared underneath; masking lets the ground show through
-     continuously, so there is no edge to see. Sized by height, so the sky keeps its
-     proportions and crops at the sides. */
-  .willo-bg::after {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 470px;
-    z-index: -1;
-    pointer-events: none;
-    background:
-      linear-gradient(180deg, rgba(10, 18, 32, 0.10) 0%, rgba(10, 18, 32, 0.30) 52%, rgba(10, 18, 32, 0.50) 100%),
-      url("./assets/bg/dusk-sky.jpg") center top / auto 470px no-repeat;
-    -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 34%, rgba(0,0,0,0.72) 58%, rgba(0,0,0,0.28) 80%, transparent 100%);
-    mask-image: linear-gradient(180deg, #000 0%, #000 34%, rgba(0,0,0,0.72) 58%, rgba(0,0,0,0.28) 80%, transparent 100%);
+      radial-gradient(124% 34% at 50% -8%, rgba(96, 136, 104, 0.40) 0%, transparent 62%),
+      radial-gradient(76% 24% at 4% -6%,  rgba(74, 112, 84, 0.34) 0%, transparent 66%),
+      radial-gradient(76% 24% at 97% -4%, rgba(84, 124, 92, 0.30) 0%, transparent 66%),
+      radial-gradient(130% 42% at 50% 104%, rgba(40, 60, 46, 0.14) 0%, transparent 70%),
+      #050706;
   }
 
   /* Floating graphite card: hairline border, soft blur where supported. */
@@ -204,7 +187,7 @@
     transition: opacity 0.22s ease;
     backdrop-filter: blur(13px);
     -webkit-backdrop-filter: blur(13px);
-    background: linear-gradient(to bottom, rgba(10, 18, 32, 0.80) 0%, rgba(10, 18, 32, 0.32) 58%, rgba(10, 18, 32, 0) 100%);
+    background: linear-gradient(to bottom, rgba(5, 7, 6, 0.82) 0%, rgba(5, 7, 6, 0.34) 58%, rgba(5, 7, 6, 0) 100%);
     -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 46%, transparent 100%);
     mask-image: linear-gradient(to bottom, #000 0%, #000 46%, transparent 100%);
   }
