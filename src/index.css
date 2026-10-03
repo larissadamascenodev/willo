@@ -123,11 +123,10 @@
   .willo-bg {
     position: relative;
     isolation: isolate;
-    background: #050706;
+    background: #070A14;
   }
-  /* Near black, lit only along the top edge by a desaturated green — the brand lime
-     taken almost all the way down, so it reads as a cast rather than a colour. One
-     light source, nothing else; the screen is black again by a third of the way down. */
+  /* The ground: deep navy with the blue and the violet low inside it, continuous
+     across the whole viewport. */
   .willo-bg::before {
     content: "";
     position: fixed;
@@ -135,11 +134,34 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(124% 34% at 50% -8%, rgba(96, 136, 104, 0.40) 0%, transparent 62%),
-      radial-gradient(76% 24% at 4% -6%,  rgba(74, 112, 84, 0.34) 0%, transparent 66%),
-      radial-gradient(76% 24% at 97% -4%, rgba(84, 124, 92, 0.30) 0%, transparent 66%),
-      radial-gradient(130% 42% at 50% 104%, rgba(40, 60, 46, 0.14) 0%, transparent 70%),
-      #050706;
+      /* Listed first so it paints over the glows: one fall from the lit top into a
+         near-black floor, so the screen keeps darkening the further you scroll. */
+      linear-gradient(180deg,
+        transparent 0%,
+        rgba(3, 4, 10, 0.30) 44%,
+        rgba(2, 3, 7, 0.72) 72%,
+        #020308 100%),
+      radial-gradient(118% 40% at 4% 46%, rgba(46, 92, 158, 0.20) 0%, transparent 64%),
+      radial-gradient(112% 38% at 99% 72%, rgba(96, 74, 152, 0.16) 0%, transparent 66%),
+      #070A14;
+  }
+  /* The image is pinned to the viewport, not to the page, so it holds the top while
+     the cards travel over it — which is the whole effect: a card crossing it picks up
+     the colour inside itself as it goes. Masked out at the bottom rather than covered,
+     so the ground shows through continuously and there is no seam. Sized by height, so
+     it keeps its proportions and crops at the sides. */
+  .willo-bg::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 500px;
+    z-index: -1;
+    pointer-events: none;
+    background: url("./assets/bg/aurora-top.jpg") center top / auto 500px no-repeat;
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 38%, rgba(0,0,0,0.70) 62%, rgba(0,0,0,0.26) 82%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 0%, #000 38%, rgba(0,0,0,0.70) 62%, rgba(0,0,0,0.26) 82%, transparent 100%);
   }
 
   /* Floating graphite card: hairline border, soft blur where supported. */
@@ -187,7 +209,7 @@
     transition: opacity 0.22s ease;
     backdrop-filter: blur(13px);
     -webkit-backdrop-filter: blur(13px);
-    background: linear-gradient(to bottom, rgba(5, 7, 6, 0.82) 0%, rgba(5, 7, 6, 0.34) 58%, rgba(5, 7, 6, 0) 100%);
+    background: linear-gradient(to bottom, rgba(7, 10, 20, 0.78) 0%, rgba(7, 10, 20, 0.30) 58%, rgba(7, 10, 20, 0) 100%);
     -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 46%, transparent 100%);
     mask-image: linear-gradient(to bottom, #000 0%, #000 46%, transparent 100%);
   }
