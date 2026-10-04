@@ -1,6 +1,7 @@
 import { memo, useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
 import type { CategoryExpense } from "@/types/finance";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryUtils";
@@ -80,7 +81,6 @@ const GastosPorCategoria = memo(({ categories, selectedMonth, onVerAnalise }: Pr
 
   const sorted = useMemo(() => [...categories].sort((a, b) => b.amount - a.amount), [categories]);
   const totalExpenses = useMemo(() => sorted.reduce((sum, c) => sum + c.amount, 0), [sorted]);
-  const hasMore = sorted.length > INITIAL_COUNT;
   // A summary card: the full list belongs to the categories page
   const visible = sorted.slice(0, INITIAL_COUNT);
 
@@ -95,20 +95,18 @@ const GastosPorCategoria = memo(({ categories, selectedMonth, onVerAnalise }: Pr
       className="rounded-[22px] border border-white/[0.08] willo-glass overflow-hidden"
     >
       {/* Header */}
-      <div className="flex items-start justify-between px-4 pt-4 pb-3">
-        <div>
-          <p className="text-[11px] text-muted-foreground/60 font-medium">
-            Gastos por categoria · {monthLabel}
-          </p>
-          <p className="text-xl font-bold text-foreground tabular-nums mt-0.5">
+      <div className="flex items-start justify-between gap-3 px-[14px] pb-3.5 pt-3.5">
+        <div className="min-w-0">
+          <p className="text-[12px] text-white/50">Gastos por categoria · {monthLabel}</p>
+          <p className="mt-1.5 truncate text-[26px] font-extrabold leading-none tracking-[-0.035em] tabular-nums text-white">
             {fmt(totalExpenses)}
           </p>
         </div>
         <button
           onClick={() => navigate("/analytics/categorias")}
-          className="text-[10px] text-primary/70 hover:text-primary transition-colors font-medium flex items-center gap-0.5 mt-1"
+          className="mt-0.5 flex shrink-0 items-center gap-0.5 text-[12px] font-semibold text-white/55 active:opacity-70"
         >
-          Análise completa <ChevronRight className="w-3 h-3" />
+          Análise <ChevronRight className="h-3.5 w-3.5" />
         </button>
       </div>
 
@@ -120,8 +118,8 @@ const GastosPorCategoria = memo(({ categories, selectedMonth, onVerAnalise }: Pr
       )}
 
       {/* Stacked color bar */}
-      <div className="px-4">
-        <div className="flex h-2.5 gap-[3px]">
+      <div className="px-[14px]">
+        <div className="flex h-2 gap-[3px]">
           {visible.map((cat) => {
             const idx = sorted.indexOf(cat);
             const visibleTotal = visible.reduce((s, c) => s + c.amount, 0);
@@ -171,7 +169,7 @@ const GastosPorCategoria = memo(({ categories, selectedMonth, onVerAnalise }: Pr
       </div>
 
       {/* Category list */}
-      <div className="px-4 pb-3 pt-3 space-y-2.5">
+      <div className="mt-3.5 px-[14px] pb-[14px]">
         {visible.map((cat, index) => {
           const pct = totalExpenses > 0 ? Math.round((cat.amount / totalExpenses) * 100) : 0;
           const color = getCatColor(cat.name, sorted.indexOf(cat), customCats);
@@ -204,66 +202,56 @@ const GastosPorCategoria = memo(({ categories, selectedMonth, onVerAnalise }: Pr
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: index * 0.03 }}
-              className="flex items-center gap-3 cursor-pointer transition-opacity duration-200"
+              className={cn(
+                "flex cursor-pointer items-center gap-3 py-2.5 transition-opacity duration-200",
+                index > 0 && "border-t border-white/[0.06]",
+              )}
               style={{ opacity: hasSel && !isSelected ? 0.35 : 1 }}
               onClick={() => handleBarClick(cat.name)}
             >
-              <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                <IconComponent className="w-4 h-4" style={{ color: `hsl(${color})` }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-foreground truncate">{cat.name}</p>
+              <IconComponent className="h-[17px] w-[17px] shrink-0" style={{ color: `hsl(${color})` }} />
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-2">
+                  <p className="truncate text-[13.5px] font-semibold text-white">{cat.name}</p>
                   {hasLimit && limitLabel && (
-                    <p className={`text-[8px] font-medium ${limitRatio > 1 ? "text-destructive" : "text-warning"}`}>
+                    <span className={cn("shrink-0 text-[10px] font-semibold", limitRatio > 1 ? "text-red-400" : "text-amber-400")}>
                       {limitLabel}
-                    </p>
+                    </span>
                   )}
                 </div>
-                <div className="relative w-full h-1.5 bg-border/20 rounded-full mt-1 overflow-visible">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${barPct}%` }}
-                    transition={{ delay: 0.1 + index * 0.04, duration: 0.5, ease: "easeOut" }}
-                    className="h-full rounded-full absolute top-0 left-0"
-                    style={{ backgroundColor: barColor }}
-                  />
-                  {/* Limit marker */}
-                  {hasLimit && (
+                {/* Only drawn for a category with a limit, where it carries the marker.
+                    Without one it would be a third drawing of a share the stacked bar
+                    and the percentage already give. */}
+                {hasLimit && (
+                  <div className="relative mt-1.5 h-1 w-full overflow-visible rounded-full bg-white/[0.08]">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${barPct}%` }}
+                      transition={{ delay: 0.1 + index * 0.04, duration: 0.5, ease: "easeOut" }}
+                      className="absolute left-0 top-0 h-full rounded-full"
+                      style={{ backgroundColor: barColor }}
+                    />
                     <div
-                      className="absolute top-[-2px] w-[2px] h-[calc(100%+4px)] rounded-full bg-foreground/50"
+                      className="absolute top-[-2px] h-[calc(100%+4px)] w-[2px] rounded-full bg-white/60"
                       style={{ left: `${markerPct}%` }}
                       title={`Limite: ${fmt(limit)}`}
                     />
-                  )}
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="text-xs font-bold text-foreground tabular-nums">{fmt(cat.amount)}</p>
-                {hasLimit ? (
-                  <p className="text-[9px] text-muted-foreground/50 tabular-nums">
-                    / {fmt(limit)}
-                  </p>
-                ) : (
-                  <p className="text-[9px] text-muted-foreground/50">{pct}%</p>
+                  </div>
                 )}
+              </div>
+
+              <div className="shrink-0 text-right">
+                <p className="text-[13.5px] font-bold tabular-nums text-white">{fmt(cat.amount)}</p>
+                <p className="text-[10.5px] tabular-nums text-white/40">
+                  {hasLimit ? `de ${fmt(limit)}` : `${pct}%`}
+                </p>
               </div>
             </motion.div>
           );
         })}
       </div>
 
-      {hasMore && (
-        <div className="px-4 pb-3">
-          <button
-            onClick={() => navigate("/analytics/categorias")}
-            className="flex w-full items-center justify-center gap-1.5 border-t border-white/[0.06] pt-3 text-[12.5px] font-medium text-white/70 active:opacity-70"
-          >
-            Ver as {sorted.length} categorias
-            <ChevronRight className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
     </div>
   );
 });

@@ -168,13 +168,13 @@ function LineChart({ data, id }: { data: Point[]; id: string }) {
   const pad = (max - min) * 0.15 || Math.abs(max) * 0.1 || 10;
 
   return (
-    <div className="h-[84px] -mx-1">
+    <div className="h-[104px] -mx-[14px] -mb-[13px]">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 4 }}>
+        <AreaChart data={data} margin={{ top: 10, right: 7, bottom: 0, left: 0 }}>
           <defs>
             <linearGradient id={`fill-${id}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={GREEN} stopOpacity={0.32} />
-              <stop offset="100%" stopColor={GREEN} stopOpacity={0} />
+              <stop offset="0%" stopColor={GREEN} stopOpacity={0.26} />
+              <stop offset="100%" stopColor={GREEN} stopOpacity={0.02} />
             </linearGradient>
           </defs>
           <XAxis dataKey="label" hide />
@@ -210,10 +210,10 @@ function WeekBars({ data }: { data: Point[] }) {
   const todayIdx = (new Date().getDay() + 6) % 7;
 
   return (
-    <div className="pt-1">
-      <div className="flex h-[64px] items-end justify-between gap-2">
+    <div className="-mx-[14px] -mb-[13px] px-[14px] pb-3 pt-1">
+      <div className="flex h-[78px] items-end justify-between gap-[7px]">
         {data.map((d, i) => {
-          const h = d.value > 0 ? Math.max((d.value / max) * 64, 5) : 5;
+          const h = d.value > 0 ? Math.max((d.value / max) * 78, 4) : 4;
           return (
             <div key={d.label} className="flex flex-1 flex-col items-center justify-end" title={`${d.label}: ${fmt(d.value)}`}>
               <motion.div
@@ -221,17 +221,17 @@ function WeekBars({ data }: { data: Point[] }) {
                 animate={{ height: h }}
                 transition={{ delay: i * 0.05, duration: 0.45, ease: "easeOut" }}
                 className={cn(
-                  "w-full max-w-[18px] rounded-full",
-                  d.value === 0 ? "bg-white/[0.08]" : i === todayIdx ? "bg-[#C8F36D]" : "bg-white/80"
+                  "w-full rounded-[3px]",
+                  d.value === 0 ? "bg-white/[0.07]" : i === todayIdx ? "bg-[#C8F36D]" : "bg-white/[0.34]"
                 )}
               />
             </div>
           );
         })}
       </div>
-      <div className="mt-1.5 flex justify-between gap-2">
+      <div className="mt-2 flex justify-between gap-[7px]">
         {data.map((d, i) => (
-          <span key={d.label} className={cn("flex-1 text-center text-[10px]", i === todayIdx ? "font-semibold text-white" : "text-white/56")}>
+          <span key={d.label} className={cn("flex-1 text-center text-[9.5px] uppercase tracking-[0.08em]", i === todayIdx ? "font-bold text-white" : "text-white/40")}>
             {d.label}
           </span>
         ))}
@@ -246,7 +246,7 @@ function WeekBars({ data }: { data: Point[] }) {
  */
 const FinanceChartCard = memo(() => {
   const { user } = useAuth();
-  const [view, setView] = useState<View>("gastos");
+  const [view, setView] = useState<View>("saldo");
   const [period, setPeriod] = useState<Period>("semana");
   const [data, setData] = useState<ChartData | null>(() =>
     cache && user && cache.userId === user.id ? cache.data : null
@@ -274,7 +274,7 @@ const FinanceChartCard = memo(() => {
     if (view === "saldo") {
       const first = data.balance[0]?.value ?? 0;
       const last = data.balance[data.balance.length - 1]?.value ?? 0;
-      return { title: "Evolução do saldo", caption: "Últimos 30 dias", value: last, delta: last - first };
+      return { title: "Evolução do saldo", caption: "Evolução do saldo", value: last, delta: last - first };
     }
     if (period === "semana") {
       const total = data.week.reduce((s, d) => s + d.value, 0);
@@ -290,18 +290,32 @@ const FinanceChartCard = memo(() => {
   }
 
   return (
-    <div className="rounded-[22px] border border-white/[0.08] willo-glass px-3.5 py-3">
-      <div className="flex items-center justify-between gap-2">
-        <Segmented<View>
-          id="finance-view"
-          value={view}
-          onChange={setView}
-          options={[
-            { key: "gastos", label: "Gastos" },
-            { key: "saldo", label: "Saldo" },
-          ]}
-        />
-        {view === "gastos" && (
+    <div className="overflow-hidden rounded-[22px] border border-white/[0.08] willo-glass px-[14px] pb-[13px] pt-3.5">
+      {/* Text tabs with a rule under the live one. Pills here were two controls
+          competing with the figure; this reads as a heading that happens to switch. */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex gap-4">
+          {([["saldo", "Saldo"], ["gastos", "Gastos"]] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setView(key)}
+              className={cn(
+                "relative pb-1.5 text-[13px] font-semibold tracking-tight transition-colors",
+                view === key ? "text-white" : "text-white/40",
+              )}
+            >
+              {label}
+              {view === key && (
+                <motion.span
+                  layoutId="finance-lens"
+                  transition={{ type: "spring", stiffness: 420, damping: 36 }}
+                  className="absolute inset-x-0 -bottom-px h-[2px] rounded-full bg-white"
+                />
+              )}
+            </button>
+          ))}
+        </div>
+        {view === "gastos" ? (
           <Segmented<Period>
             id="finance-period"
             size="sm"
@@ -312,24 +326,31 @@ const FinanceChartCard = memo(() => {
               { key: "mes", label: "Mês" },
             ]}
           />
+        ) : (
+          <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/40">30 dias</span>
         )}
       </div>
 
-      <div className="mt-2.5">
-        <p className="text-[12px] text-white/66">{summary.title}</p>
-        <div className="flex items-baseline gap-2">
-          <p className="text-[20px] font-extrabold leading-tight tracking-tight tabular-nums text-white">{fmt(summary.value)}</p>
-          {summary.delta !== null && (
-            <span className={cn("text-[11px] font-bold tabular-nums", summary.delta >= 0 ? "text-willo-green" : "text-red-400")}>
-              {summary.delta >= 0 ? "+" : "-"}
-              {fmt(Math.abs(summary.delta))}
-            </span>
-          )}
+      <div className="mt-4 flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-[32px] font-extrabold leading-none tracking-[-0.035em] tabular-nums text-white">
+            {fmt(summary.value)}
+          </p>
+          <p className="mt-2 text-[12px] text-white/50">{summary.caption}</p>
         </div>
-        <p className="text-[11px] text-white/50">{summary.caption}</p>
+        {summary.delta !== null && (
+          <span
+            className={cn(
+              "shrink-0 rounded-full px-2.5 py-1 text-[11.5px] font-bold tabular-nums",
+              summary.delta >= 0 ? "bg-willo-green/15 text-willo-green" : "bg-red-500/15 text-red-400",
+            )}
+          >
+            {summary.delta >= 0 ? "+" : "−"}{fmt(Math.abs(summary.delta))}
+          </span>
+        )}
       </div>
 
-      <div className="mt-2">
+      <div className="mt-3">
         {view === "saldo" ? (
           <LineChart data={data.balance} id="saldo" />
         ) : period === "semana" ? (
