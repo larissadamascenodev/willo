@@ -123,22 +123,24 @@
   .willo-bg {
     position: relative;
     isolation: isolate;
-    background: #0E0E0F;
+    background: #0D0E10;
   }
-  /* Sky across the top, pinned to the viewport so the panels travel over it while it
-     holds still. Its scrim is baked into the image and lands on the app's own black,
-     so the band dissolves into the ground with nothing to mask. */
+  /* Charcoal, lifted softly across the upper middle and closed down at the corners.
+     No image: the whole effect is one broad light and a vignette, which is why it
+     reads as a room rather than as a gradient. Pinned, so panels travel over it. */
   .willo-bg::after {
     content: "";
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 420px;
+    inset: 0;
     z-index: -1;
     pointer-events: none;
-    background: url("./assets/bg/sky-top.jpg") center top / auto 420px no-repeat;
+    background:
+      radial-gradient(124% 56% at 50% 2%,  rgba(156, 165, 184, 0.10) 0%, transparent 64%),
+      radial-gradient(96% 44% at 50% 30%,  rgba(132, 142, 164, 0.055) 0%, transparent 68%),
+      radial-gradient(84% 38% at 50% 62%,  rgba(120, 130, 152, 0.03) 0%, transparent 70%),
+      radial-gradient(132% 86% at 50% 44%, transparent 32%, rgba(0, 0, 0, 0.50) 78%, rgba(0, 0, 0, 0.72) 100%);
   }
+
   /* Floating graphite card: hairline border, soft blur where supported. */
   .willo-glass {
     /* A flat panel one step up from the ground. The blur goes: over a flat ground it
