@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { getCategoryIcon, getCategoryHexColor } from "@/lib/categoryUtils";
 import { useCashFlow, periodStart, sumFlow, toDateKey, type CashFlowEntry, type CashFlowPeriod } from "@/hooks/useCashFlow";
 import { useFinancialProjection } from "@/hooks/useFinancialProjection";
+import type { MonthProjection } from "@/services/projection/types";
 import { PageHeader, SectionTitle, Surface } from "@/components/shared/MobilePage";
 import { currencySymbol, getCurrency } from "@/lib/currency";
 
@@ -64,7 +65,7 @@ export default function Financeiro({ initialTab = "fluxo" }: { initialTab?: Tool
       <AnimatePresence mode="wait">
         <motion.div key={tool} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
           {tool === "fluxo" && <RealizadoPanel />}
-          {tool === "balanco" && <BalancoMensalSection />}
+          {tool === "balanco" && <BalancoMensalSection onOpenProjecoes={() => setTool("projecoes")} />}
           {tool === "projecoes" && <FuturoPanel />}
         </motion.div>
       </AnimatePresence>
@@ -313,120 +314,142 @@ function RealizadoPanel() {
 
 /* ═══════════════════ Balanço do mês — o que está previsto fechar ═══════════════════ */
 
-function BalancoMensalSection() {
-  const { projections, loading, selectedMonth, selectedYear } = useFinancialProjection();
-  const now = new Date();
-  const current = projections[0];
+/**
+ * The month taken apart. The dashboard card already states the verdict in a sentence,
+ * so repeating it here would waste the screen: this one shows how the month is built,
+ * how far through it you are, and where the months after it land.
+ */
+function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void }) {
+  const { projections, data, loading, selectedMonth, selectedYear } = useFinancialProjection();
+  const rows = useMemo(
+    () => buildRows(projections, data.previousMonthEndingBalance),
+    [projections, data.previousMonthEndingBalance],
+  );
 
-  const income = current?.income ?? 0;
-  const expense = current?.expense ?? 0;
-  const balance = current?.delta ?? 0;
-  const base = Math.max(income, expense, 1);
-  const savedShare = income > 0 ? balance / income : 0;
-
-  const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-  const isCurrentMonth = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
-  const isPastMonth = selectedYear < now.getFullYear() || (selectedYear === now.getFullYear() && selectedMonth < now.getMonth());
-  const dayOfMonth = isCurrentMonth ? now.getDate() : daysInMonth;
-  const statusLabel = isPastMonth ? "Balanço final" : isCurrentMonth ? "Balanço parcial" : "Balanço previsto";
-
-  const verdict = balance < 0
-    ? `Você gastou ${fmt(-balance)} a mais do que ganhou neste mês.`
-    : savedShare >= 0.2
-      ? `Sobraram ${Math.round(savedShare * 100)}% da sua renda. Mês redondo 👏`
-      : balance === 0
-        ? "Entradas e saídas empataram no mês."
-        : `Sobrou ${Math.round(savedShare * 100)}% da renda. Dá pra abrir mais folga segurando os gastos variáveis.`;
-
-  if (loading || !current) {
+  if (loading || rows.length === 0) {
     return (
       <div className="mt-6 space-y-3">
-        <div className="h-56 animate-pulse rounded-[26px] willo-glass" />
-        <div className="h-40 animate-pulse rounded-[22px] willo-glass" />
+        <div className="h-64 animate-pulse rounded-[26px] willo-glass" />
+        <div className="h-32 animate-pulse rounded-[22px] willo-glass" />
       </div>
     );
   }
 
-  return (
-    <div>
-      <p className="mt-6 text-[13px] text-white/62">{statusLabel} de {MONTH_NAMES[selectedMonth]}</p>
+  const [current, ...ahead] = rows;
+  const now = new Date();
+  const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+  const isCurrentMonth = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
+  const isPast = selectedYear < now.getFullYear() || (selectedYear === now.getFullYear() && selectedMonth < now.getMonth());
+  const dayOfMonth = isCurrentMonth ? now.getDate() : daysInMonth;
+  const daysLeft = daysInMonth - dayOfMonth;
+  const spent = current.income > 0 ? Math.min((current.expense / current.income) * 100, 100) : current.expense > 0 ? 100 : 0;
+  const perDay = daysLeft > 0 ? current.fecha / daysLeft : 0;
 
-      <motion.section
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative mt-2 overflow-hidden rounded-[28px] border border-white/[0.08] p-5"
-        style={{
-          background: `radial-gradient(120% 90% at 100% 0%, ${balance < 0 ? "#F8717120" : "#C8F36D1C"} 0%, rgba(20,20,20,0.96) 55%, #0E0E0E 100%)`,
-        }}
-      >
-        <p className="text-[13px] text-white/70">{balance < 0 ? "Faltou no mês" : "Sobrou no mês"}</p>
-        <p className={cn("truncate text-[42px] font-extrabold leading-tight tracking-tight tabular-nums", balance < 0 ? "text-red-400" : "text-white")}>
-          {fmt(Math.abs(balance))}
+  return (
+    <div className="mt-5">
+      <section className="rounded-[26px] border border-white/[0.08] willo-glass px-5 pb-5 pt-[18px]">
+        <p className="text-[11.5px] font-semibold uppercase tracking-[0.13em] text-white/50">
+          {isPast ? "Balanço final" : isCurrentMonth ? "Balanço parcial" : "Balanço previsto"} · {current.name}
         </p>
 
-        <div className="mt-5 space-y-3.5">
-          {[
-            { label: "Receitas", value: income, hex: "#C8F36D", Icon: ArrowDownLeft },
-            { label: "Despesas", value: expense, hex: "#F87171", Icon: ArrowUpRight },
-          ].map(({ label, value, hex, Icon }, i) => (
-            <div key={label}>
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-[13px] text-white/74">
-                  <Icon className="h-4 w-4" style={{ color: hex }} strokeWidth={2.5} /> {label}
-                </span>
-                <span className="text-[16px] font-bold text-white tabular-nums">{fmt(value)}</span>
-              </div>
-              <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-white/[0.06]">
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{ background: hex }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(value / base) * 100}%` }}
-                  transition={{ delay: 0.15 + i * 0.12, duration: 0.7, ease: "easeOut" }}
-                />
-              </div>
-            </div>
-          ))}
+        <p className={cn(
+          "mt-3.5 truncate text-[42px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
+          current.fecha < 0 ? "text-red-400" : "text-willo-green",
+        )}>
+          {current.fecha > 0 ? "+" : ""}{compact(current.fecha)}
+        </p>
+        <p className="mt-2 text-[12.5px] text-white/50">
+          {current.fecha < 0 ? "faltando no mês" : "sobrando no mês"}
+          {isCurrentMonth && daysLeft > 0 ? ` · ${compact(perDay)} por dia até o fim` : ""}
+        </p>
 
-          <div className="flex items-center justify-between border-t border-white/[0.08] pt-3">
-            <span className="flex items-center gap-1.5 text-[13px] text-white/74">
-              <Equal className="h-4 w-4 text-white/66" strokeWidth={2.5} /> Balanço
-            </span>
-            <span className={cn("text-[18px] font-extrabold tabular-nums", balance < 0 ? "text-red-400" : "text-willo-green")}>
-              {balance > 0 ? "+" : ""}{fmt(balance)}
-            </span>
-          </div>
+        <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-willo-green/25">
+          <motion.div
+            className="h-full rounded-full bg-red-400/80"
+            initial={{ width: 0 }}
+            animate={{ width: `${spent}%` }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+          />
         </div>
 
-        <p className="mt-4 rounded-[16px] bg-black/25 px-3.5 py-2.5 text-[13px] leading-snug text-white/85">{verdict}</p>
-      </motion.section>
+        <MonthBreakdown row={current} prevName={MONTH_NAMES[(current.month + 11) % 12]} />
+      </section>
 
       {isCurrentMonth && (
-        <Surface className="mt-3 p-5">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-[13px] text-white/74">
-              <CalendarDays className="h-4 w-4 text-white/62" /> Mês em andamento
-            </span>
-            <span className="text-[12px] text-white/62 tabular-nums">
-              {daysInMonth - dayOfMonth} {daysInMonth - dayOfMonth === 1 ? "dia restante" : "dias restantes"}
+        <section className="mt-2.5 rounded-[22px] border border-white/[0.08] willo-glass px-5 pb-4 pt-4">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11.5px] font-semibold uppercase tracking-[0.13em] text-white/50">Mês em andamento</span>
+            <span className="text-[12px] tabular-nums text-white/50">
+              {daysLeft} {daysLeft === 1 ? "dia restante" : "dias restantes"}
             </span>
           </div>
-          <div className="mt-2.5 flex gap-[2px]">
+          <div className="mt-3 flex gap-[2px]">
             {Array.from({ length: daysInMonth }, (_, d) => (
               <span
                 key={d}
                 className={cn(
-                  "h-4 flex-1 rounded-[3px]",
-                  d + 1 < dayOfMonth ? "bg-white/55" : d + 1 === dayOfMonth ? "bg-white" : "bg-white/[0.08]",
+                  "h-[14px] flex-1 rounded-[2px]",
+                  d + 1 < dayOfMonth ? "bg-white/45" : d + 1 === dayOfMonth ? "bg-white" : "bg-white/[0.07]",
                 )}
               />
             ))}
           </div>
-        </Surface>
+        </section>
+      )}
+
+      {ahead.length > 0 && (
+        <>
+          <div className="mt-6 flex items-baseline justify-between gap-3 px-1">
+            <h2 className="text-[15px] font-bold tracking-tight text-white">Pelos próximos meses</h2>
+            <button onClick={onOpenProjecoes} className="shrink-0 text-[12.5px] font-semibold text-white/55 active:opacity-70">
+              Ver tudo
+            </button>
+          </div>
+
+          {/* A strip rather than a stack: the question here is the direction, and the
+              month-by-month arithmetic has its own section. */}
+          <div className="mt-3 -mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 scrollbar-none">
+            {ahead.slice(0, 6).map((r) => {
+              const s = r.income > 0 ? Math.min((r.expense / r.income) * 100, 100) : r.expense > 0 ? 100 : 0;
+              return (
+                <button
+                  key={`${r.year}-${r.month}`}
+                  onClick={onOpenProjecoes}
+                  className="w-[132px] shrink-0 rounded-[18px] border border-white/[0.08] willo-glass px-3.5 pb-3.5 pt-3 text-left active:opacity-80"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span className={cn(
+                      "h-1.5 w-1.5 shrink-0 rounded-full",
+                      r.fecha < 0 ? "bg-red-400" : r.risk === "atencao" ? "bg-amber-300" : "bg-willo-green",
+                    )} />
+                    <span className="truncate text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white/50">
+                      {r.short}{r.yearTag ? `/${r.yearTag}` : ""}
+                    </span>
+                  </span>
+                  <span className={cn(
+                    "mt-2.5 block truncate text-[19px] font-extrabold leading-none tracking-[-0.03em] tabular-nums",
+                    r.fecha < 0 ? "text-red-400" : "text-white",
+                  )}>
+                    {r.fecha > 0 ? "+" : ""}{compact(r.fecha)}
+                  </span>
+                  <span className="mt-3 block h-[4px] overflow-hidden rounded-full bg-willo-green/25">
+                    <span className="block h-full rounded-full bg-red-400/80" style={{ width: `${s}%` }} />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="mt-4 flex items-start gap-2 px-1 text-[12px] leading-snug text-white/45">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            Os meses à frente contam só o que já está previsto. Novos gastos ajustam os valores.
+          </p>
+        </>
       )}
     </div>
   );
 }
+
 
 /* ═══════════════════ Futuro — pra onde o saldo vai ═══════════════════ */
 
@@ -436,6 +459,32 @@ const RISK = {
   risco: { label: "Risco", hex: "#F87171" },
 } as const;
 const riskOf = (r: string) => RISK[r as keyof typeof RISK] ?? RISK.risco;
+
+/**
+ * Every figure rounded once, and the rest derived from those rounded parts — four
+ * independently rounded numbers do not add up to the fifth. Each month chains off the
+ * close shown for the one before it, so a column of them always sums.
+ */
+function buildRows(projections: MonthProjection[], previousMonthEndingBalance: number): ProjectionRowView[] {
+  return projections.reduce<ProjectionRowView[]>((acc, p, i) => {
+    const income = Math.round(p.income);
+    const expense = Math.round(p.expense);
+    const sobra = income - expense;
+    const prevBalance = i > 0 ? acc[i - 1].fecha : Math.round(previousMonthEndingBalance);
+    acc.push({
+      ...p,
+      income,
+      expense,
+      sobra,
+      prevBalance,
+      fecha: prevBalance + sobra,
+      short: MONTH_SHORT[p.month],
+      name: MONTH_NAMES[p.month],
+      yearTag: p.year !== new Date().getFullYear() ? String(p.year).slice(2) : "",
+    });
+    return acc;
+  }, []);
+}
 
 interface ProjectionRowView {
   month: number;
@@ -458,28 +507,7 @@ function FuturoPanel() {
   const [openMonth, setOpenMonth] = useState<ProjectionRowView | null>(null);
 
   const rows = useMemo(
-    () =>
-      projections.reduce<ProjectionRowView[]>((acc, p, i) => {
-        // Rounded once, here, and every figure derived from those rounded parts — the
-        // card shows whole reais, and four independently rounded numbers do not add
-        // up to the fifth. Each is within a real of the exact value.
-        const income = Math.round(p.income);
-        const expense = Math.round(p.expense);
-        const sobra = income - expense;
-        const prevBalance = i > 0 ? acc[i - 1].fecha : Math.round(data.previousMonthEndingBalance);
-        acc.push({
-          ...p,
-          income,
-          expense,
-          sobra,
-          prevBalance,
-          fecha: prevBalance + sobra,
-          short: MONTH_SHORT[p.month],
-          name: MONTH_NAMES[p.month],
-          yearTag: p.year !== new Date().getFullYear() ? String(p.year).slice(2) : "",
-        });
-        return acc;
-      }, []),
+    () => buildRows(projections, data.previousMonthEndingBalance),
     [projections, data.previousMonthEndingBalance],
   );
 
