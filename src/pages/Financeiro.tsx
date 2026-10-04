@@ -12,7 +12,7 @@ import { useFinancialProjection } from "@/hooks/useFinancialProjection";
 import { PageHeader, SectionTitle, Surface } from "@/components/shared/MobilePage";
 import { currencySymbol, getCurrency } from "@/lib/currency";
 
-type Tool = "atual" | "projecoes";
+type Tool = "fluxo" | "balanco" | "projecoes";
 
 const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const MONTH_SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
@@ -22,15 +22,16 @@ const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curren
 const compact = (v: number) => `${v < 0 ? "−" : ""}${currencySymbol()} ${Math.abs(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
 
 const TOOLS: { key: Tool; label: string; subtitle: string }[] = [
-  { key: "atual", label: "Balanço", subtitle: "O balanço do mês e o fluxo de caixa" },
+  { key: "fluxo", label: "Fluxo de caixa", subtitle: "O que entrou e saiu, dia a dia" },
+  { key: "balanco", label: "Balanço", subtitle: "Como o mês está fechando" },
   { key: "projecoes", label: "Projeções", subtitle: "Para onde seu saldo está indo" },
 ];
 
 /**
- * Uma ferramenta, duas visões: o Atual (balanço do mês + fluxo de caixa, tudo
- * junto) e as Projeções (os meses seguintes).
+ * Three views, one per question: what moved (fluxo), where the month lands
+ * (balanço), and where the months after it land (projeções).
  */
-export default function Financeiro({ initialTab = "atual" }: { initialTab?: Tool }) {
+export default function Financeiro({ initialTab = "fluxo" }: { initialTab?: Tool }) {
   const [tool, setTool] = useState<Tool>(initialTab);
   const active = TOOLS.find((t) => t.key === tool)!;
 
@@ -44,7 +45,7 @@ export default function Financeiro({ initialTab = "atual" }: { initialTab?: Tool
             key={t.key}
             onClick={() => setTool(t.key)}
             className={cn(
-              "relative flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors",
+              "relative min-w-0 flex-1 rounded-full px-1 py-2 text-[12.5px] font-semibold tracking-tight transition-colors",
               tool === t.key ? "text-[#0B0B0B]" : "text-white/70",
             )}
           >
@@ -55,29 +56,18 @@ export default function Financeiro({ initialTab = "atual" }: { initialTab?: Tool
                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
               />
             )}
-            <span className="relative">{t.label}</span>
+            <span className="relative block truncate">{t.label}</span>
           </button>
         ))}
       </div>
 
       <AnimatePresence mode="wait">
         <motion.div key={tool} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-          {tool === "atual" && <AtualPanel />}
+          {tool === "fluxo" && <RealizadoPanel />}
+          {tool === "balanco" && <BalancoMensalSection />}
           {tool === "projecoes" && <FuturoPanel />}
         </motion.div>
       </AnimatePresence>
-    </div>
-  );
-}
-
-/* ═══════════════════ Atual — balanço do mês + fluxo de caixa ═══════════════════ */
-
-function AtualPanel() {
-  return (
-    <div>
-      <BalancoMensalSection />
-      <SectionTitle>Fluxo de caixa</SectionTitle>
-      <RealizadoPanel />
     </div>
   );
 }

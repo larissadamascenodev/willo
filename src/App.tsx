@@ -88,7 +88,7 @@ const App = () => (
               <Route path="/bot-finance" element={<RaioX />} />
               <Route path="/bot-finance/projecoes" element={<Financeiro initialTab="projecoes" />} />
               <Route path="/bot-finance/saude" element={<Navigate to="/bot-finance" replace />} />
-              <Route path="/bot-finance/balanco" element={<Financeiro initialTab="atual" />} />
+              <Route path="/bot-finance/balanco" element={<Financeiro initialTab="balanco" />} />
               <Route path="/bot-finance/radar" element={<Navigate to="/bot-finance#radar" replace />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
               <Route path="/categorias" element={<GerenciarCategorias />} />
@@ -96,7 +96,7 @@ const App = () => (
               <Route path="/metas/:goalId" element={<MetaDetalhe />} />
               <Route path="/analytics/categorias" element={<AnalyticsCategorias />} />
               <Route path="/parcelamentos" element={<ParcelamentosDetalhe />} />
-              <Route path="/fluxo-de-caixa" element={<Financeiro initialTab="atual" />} />
+              <Route path="/fluxo-de-caixa" element={<Financeiro initialTab="fluxo" />} />
               <Route path="/cartoes" element={<Cartoes />} />
             </Route>
             <Route path="*" element={<NotFound />} />
