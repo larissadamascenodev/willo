@@ -19,7 +19,7 @@ export function Card({ children, className, onClick }: { children: React.ReactNo
       viewport={{ once: true, margin: "-30px" }}
       transition={{ duration: 0.35, ease: "easeOut" }}
       onClick={onClick}
-      className={cn("rounded-[24px] border border-white/[0.12] willo-glass", onClick && "cursor-pointer active:scale-[0.99] transition-transform", className)}
+      className={cn("rounded-[24px] border border-white/[0.08] willo-glass", onClick && "cursor-pointer active:scale-[0.99] transition-transform", className)}
     >
       {children}
     </motion.div>
@@ -85,7 +85,7 @@ export function Segmented<T extends string>({ value, options, onChange, layoutId
   layoutId: string;
 }) {
   return (
-    <div className="flex isolate rounded-full border border-white/[0.12] willo-glass p-1">
+    <div className="flex isolate rounded-full border border-white/[0.08] willo-glass p-1">
       {options.map((o) => (
         <button key={o.key} type="button" onClick={() => onChange(o.key)} className="relative h-9 flex-1 rounded-full px-3 text-[13px] font-semibold">
           {value === o.key && (

@@ -53,14 +53,14 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
   }, [cards, invoices, today]);
 
   if (loading) {
-    return <div className="h-[168px] animate-pulse rounded-[22px] border border-white/[0.12] willo-glass" />;
+    return <div className="h-[168px] animate-pulse rounded-[22px] border border-white/[0.08] willo-glass" />;
   }
 
   if (cards.length === 0) {
     return (
       <button
         onClick={() => navigate("/gestao")}
-        className="flex w-full items-center gap-3.5 rounded-[22px] border border-dashed border-white/[0.12] p-4 text-left active:opacity-70"
+        className="flex w-full items-center gap-3.5 rounded-[22px] border border-dashed border-white/[0.08] p-4 text-left active:opacity-70"
       >
         <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06]">
           <CreditCard className="h-5 w-5 text-white/82" />
@@ -81,7 +81,7 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
   return (
     <button
       onClick={() => navigate("/cartoes?aba=faturas")}
-      className="block w-full rounded-[22px] border border-white/[0.12] willo-glass p-4 text-left active:scale-[0.99] transition-transform"
+      className="block w-full rounded-[22px] border border-white/[0.08] willo-glass p-4 text-left active:scale-[0.99] transition-transform"
     >
       <div className="flex items-center justify-between">
         <p className="text-[14px] text-white/66">Cartões de crédito</p>
@@ -99,7 +99,7 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
         </div>
 
         {/* Limite disponível */}
-        <div className="flex shrink-0 items-center gap-2.5 border-l border-white/[0.12] pl-3">
+        <div className="flex shrink-0 items-center gap-2.5 border-l border-white/[0.08] pl-3">
           <div className="relative h-[52px] w-[52px]">
             <svg viewBox="0 0 76 76" className="h-full w-full -rotate-90">
               <circle cx="38" cy="38" r={R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="9" />

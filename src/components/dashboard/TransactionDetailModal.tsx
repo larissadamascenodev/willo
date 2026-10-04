@@ -237,7 +237,7 @@ const TransactionDetailModal = ({
               <button
                 type="button"
                 onClick={() => { onEdit?.(tx); close(); }}
-                className="flex h-12 items-center justify-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.04] text-[14px] font-semibold text-white active:opacity-70"
+                className="flex h-12 items-center justify-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] text-[14px] font-semibold text-white active:opacity-70"
               >
                 <Pencil className="h-4 w-4" /> Editar
               </button>
@@ -268,7 +268,7 @@ const TransactionDetailModal = ({
                   type="button"
                   disabled={loading}
                   onClick={deleteThisMonth}
-                  className="h-12 w-full rounded-full border border-white/[0.12] bg-white/[0.04] text-[14px] font-semibold text-white disabled:opacity-40"
+                  className="h-12 w-full rounded-full border border-white/[0.08] bg-white/[0.04] text-[14px] font-semibold text-white disabled:opacity-40"
                 >
                   Só deste mês
                 </button>

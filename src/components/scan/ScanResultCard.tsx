@@ -235,7 +235,7 @@ function ScanResultCard<T extends ScanResultItem>({
                           onClick={() => { update(0, { category: cat }); setPickingCategory(false); }}
                           className={cn(
                             "flex h-9 items-center gap-1.5 rounded-full border px-3 text-[13px]",
-                            selected ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.12] bg-white/[0.04] text-white/80",
+                            selected ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.08] bg-white/[0.04] text-white/80",
                           )}
                         >
                           <Icon className="h-3.5 w-3.5" style={{ color: selected ? "#0B0B0B" : getCategoryHexColor(cat) }} />
@@ -263,7 +263,7 @@ function ScanResultCard<T extends ScanResultItem>({
                     onClick={() => onAccountChange?.(a.id)}
                     className={cn(
                       "h-9 shrink-0 rounded-full border px-3.5 text-[13px] font-medium",
-                      a.id === accountId ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.12] bg-white/[0.04] text-white/80",
+                      a.id === accountId ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.08] bg-white/[0.04] text-white/80",
                     )}
                   >
                     {a.name}

@@ -57,7 +57,7 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
       {/* isolate keeps the sliding pill from compositing above the icons: WebKit
           promotes a layoutId element to its own layer and paints it over
           non-composited siblings whatever the z-index says. */}
-      <nav className="willo-glass flex-1 max-w-[250px] rounded-full [isolation:isolate]">
+      <nav className="willo-float flex-1 max-w-[250px] rounded-full [isolation:isolate]">
         <div className="flex items-center justify-around h-[58px] px-1.5">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -102,7 +102,7 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
         aria-label="Escanear"
         className={cn(
           "relative w-[58px] h-[58px] rounded-full flex items-center justify-center shrink-0 transition-colors",
-          plusOpen ? "bg-white" : "willo-glass",
+          plusOpen ? "bg-white" : "willo-float",
         )}
       >
         <ScanLine className={cn("w-[25px] h-[25px]", plusOpen ? "text-[#0B0B0B]" : "text-white")} strokeWidth={2} />

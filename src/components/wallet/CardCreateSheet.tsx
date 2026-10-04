@@ -22,7 +22,7 @@ function CardPreview({ name, digits, limitCents, closing, due, hex }: { name: st
       initial={{ rotateX: 18, y: 12, opacity: 0 }}
       animate={{ rotateX: 0, y: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 160, damping: 18 }}
-      className="relative mx-auto w-full max-w-[340px] overflow-hidden rounded-[22px] border border-white/[0.12] p-5 text-white shadow-[0_24px_50px_-18px_rgba(0,0,0,0.9)]"
+      className="relative mx-auto w-full max-w-[340px] overflow-hidden rounded-[22px] border border-white/[0.08] p-5 text-white shadow-[0_24px_50px_-18px_rgba(0,0,0,0.9)]"
       style={{ aspectRatio: "1.586", transformPerspective: 900 }}
     >
       <motion.div className="absolute inset-0" animate={{ background: `radial-gradient(130% 140% at 0% 0%, ${hex} 0%, ${hex}AA 28%, #161616 72%)` }} transition={{ duration: 0.45 }} />
@@ -181,7 +181,7 @@ const CardCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClose:
         <AnimatePresence initial={false}>
           {editing && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <div className="mt-2 rounded-[22px] border border-white/[0.12] willo-glass p-3">
+              <div className="mt-2 rounded-[22px] border border-white/[0.08] willo-glass p-3">
                 <p className="mb-2 px-1 text-[12px] text-white/62">{editing === "closing" ? "Dia em que a fatura fecha" : "Dia em que a fatura vence"}</p>
                 <DayGrid
                   value={editing === "closing" ? closing : due}

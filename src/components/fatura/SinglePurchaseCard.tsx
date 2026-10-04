@@ -42,7 +42,7 @@ export default function SinglePurchaseCard({ item, index, customCats, card, onOp
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
-      className="overflow-hidden rounded-[20px] border border-white/[0.12] willo-glass"
+      className="overflow-hidden rounded-[20px] border border-white/[0.08] willo-glass"
     >
       <button type="button" onClick={onOpen} className="block w-full px-3.5 py-3 text-left">
         <div className="flex items-center gap-3">

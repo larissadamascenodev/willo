@@ -52,7 +52,7 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card,
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
-      className={`overflow-hidden rounded-[20px] border willo-glass ${item.isOverdue ? "border-red-400/30" : "border-white/[0.12]"}`}
+      className={`overflow-hidden rounded-[20px] border willo-glass ${item.isOverdue ? "border-red-400/30" : "border-white/[0.08]"}`}
     >
       <button
         type="button"

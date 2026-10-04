@@ -110,7 +110,7 @@ export function ScoreCard({ data }: { data: RaioXData }) {
   return (
     <Section icon={Sparkles} title="Saúde financeira">
       <div
-        className="relative overflow-hidden rounded-[28px] border border-white/[0.12] px-4 pb-5 pt-4"
+        className="relative overflow-hidden rounded-[28px] border border-white/[0.08] px-4 pb-5 pt-4"
         style={{ background: `radial-gradient(120% 80% at 50% 0%, ${report.level.hex}1F 0%, rgba(20,20,20,0.95) 55%, #0E0E0E 100%)` }}
       >
         <div
@@ -332,7 +332,7 @@ export function RadarList({ data }: { data: RaioXData }) {
             onClick={() => { setFilter(f.key); setExpanded(false); }}
             className={cn(
               "flex h-9 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-semibold transition-colors",
-              filter === f.key ? "bg-white text-[#0B0B0B]" : "border border-white/[0.12] willo-glass text-white/82",
+              filter === f.key ? "bg-white text-[#0B0B0B]" : "border border-white/[0.08] willo-glass text-white/82",
             )}
           >
             {f.key !== "todos" && <span className="h-1.5 w-1.5 rounded-full" style={{ background: KIND[f.key].hex }} />}
@@ -358,7 +358,7 @@ export function RadarList({ data }: { data: RaioXData }) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
                   transition={{ delay: i * 0.03 }}
-                  className="relative overflow-hidden rounded-[22px] border border-white/[0.12] willo-glass p-4"
+                  className="relative overflow-hidden rounded-[22px] border border-white/[0.08] willo-glass p-4"
                 >
                   <span className="absolute inset-y-4 left-0 w-[3px] rounded-r-full" style={{ background: kind.hex }} />
                   <div className="flex gap-3">

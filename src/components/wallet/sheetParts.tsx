@@ -38,7 +38,7 @@ export function BankChips({ selectedId, onPick, onOther }: { selectedId: string 
             onClick={() => onPick(b)}
             className={cn(
               "flex shrink-0 items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3.5 text-[13px] font-medium transition-colors",
-              selected ? "border-white bg-white/[0.1] text-white" : "border-white/[0.12] willo-glass-inset text-white/82",
+              selected ? "border-white bg-white/[0.1] text-white" : "border-white/[0.08] willo-glass-inset text-white/82",
             )}
           >
             <span className="h-6 w-6 rounded-full" style={{ background: b.hex, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.15)" }} />
@@ -91,7 +91,7 @@ export function MoneyField({ cents, onChange, chips, negative = false, children 
   children?: ReactNode;
 }) {
   return (
-    <div className="rounded-[22px] border border-white/[0.12] willo-glass p-5">
+    <div className="rounded-[22px] border border-white/[0.08] willo-glass p-5">
       <label className="relative mx-auto flex w-fit items-baseline gap-1.5">
         <span className="text-[20px] font-bold text-white/56">{negative ? `−${currencySymbol()}` : currencySymbol()}</span>
         <span className={cn("text-[40px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "text-white/45" : negative ? "text-red-400" : "text-white")}>

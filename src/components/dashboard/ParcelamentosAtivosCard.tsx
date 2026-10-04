@@ -104,12 +104,12 @@ const ParcelamentosAtivosCard = () => {
   }, [items]);
 
   if (loading) {
-    return <div className="h-[120px] animate-pulse rounded-[22px] border border-white/[0.12] willo-glass" />;
+    return <div className="h-[120px] animate-pulse rounded-[22px] border border-white/[0.08] willo-glass" />;
   }
 
   if (items.length === 0) {
     return (
-      <button onClick={() => navigate("/parcelamentos")} className="block w-full rounded-[22px] border border-white/[0.12] willo-glass p-4 text-left">
+      <button onClick={() => navigate("/parcelamentos")} className="block w-full rounded-[22px] border border-white/[0.08] willo-glass p-4 text-left">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-[16px] font-semibold text-white">Parcelamentos</h3>
@@ -137,7 +137,7 @@ const ParcelamentosAtivosCard = () => {
     d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
 
   return (
-    <div className="rounded-[22px] border border-white/[0.12] willo-glass p-4 select-none">
+    <div className="rounded-[22px] border border-white/[0.08] willo-glass p-4 select-none">
       {/* Header */}
       <button onClick={() => navigate("/parcelamentos")} className="flex w-full items-center justify-between">
         <div className="text-left">
@@ -156,7 +156,7 @@ const ParcelamentosAtivosCard = () => {
             <p className="text-[11px] text-white/62">Por mês</p>
             <p className="text-[17px] font-bold text-white tabular-nums">{formatCurrency(stats.totalMensal)}</p>
           </div>
-          <div className="border-l border-white/[0.12] px-3.5">
+          <div className="border-l border-white/[0.08] px-3.5">
             <p className="text-[11px] text-white/62">Restante</p>
             <p className="text-[17px] font-bold text-white tabular-nums">{formatCurrency(stats.totalRestante)}</p>
           </div>

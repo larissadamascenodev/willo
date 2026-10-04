@@ -243,7 +243,7 @@ function SingleItemReview({ item, onUpdate, accounts = [], showAccountSelector =
       </div>
 
       {/* Fields */}
-      <div className="mt-7 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.12] willo-glass">
+      <div className="mt-7 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.08] willo-glass">
         <Row icon={Edit3} label="Descrição">
           <input value={item.description} onChange={(e) => onUpdate("description", e.target.value)} placeholder="Nome" className={inlineInput} />
         </Row>
@@ -374,7 +374,7 @@ function ItemEditSheet({ item, onClose, onChange }: {
               <p className="mt-2 text-center text-[12px] text-white/56">valor de cada parcela</p>
             )}
 
-            <div className="mt-6 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.12] willo-glass">
+            <div className="mt-6 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.08] willo-glass">
               <Row icon={Edit3} label="Descrição">
                 <input value={data.description} onChange={(e) => update("description", e.target.value)} placeholder="Nome" className={inlineInput} />
               </Row>
@@ -461,12 +461,12 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
   return (
     <div>
       {/* Hero: what is going in, and whether it reconciles with the statement */}
-      <div className="relative mt-1 overflow-hidden rounded-[26px] border border-white/[0.12] bg-gradient-to-b from-[#1A1A1A] to-[#121212] px-5 pb-4 pt-5">
+      <div className="relative mt-1 overflow-hidden rounded-[26px] border border-white/[0.08] bg-gradient-to-b from-[#1A1A1A] to-[#121212] px-5 pb-4 pt-5">
         {matches && (
           <span className="pointer-events-none absolute -top-16 left-1/2 h-40 w-56 -translate-x-1/2 rounded-full bg-willo-green/[0.10] blur-[60px]" />
         )}
         <div className="relative flex items-center justify-between">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] px-2.5 py-1 text-[11.5px] text-white/78">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11.5px] text-white/78">
             <Sparkles className="h-3 w-3" /> Lido pela IA
           </span>
           {avgConfidence !== undefined && <ConfidenceBadge confidence={avgConfidence} />}
@@ -480,7 +480,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
         </p>
 
         {declaredTotal != null && (
-          <div className="relative mt-4 border-t border-white/[0.12] pt-3">
+          <div className="relative mt-4 border-t border-white/[0.08] pt-3">
             <div className="flex items-center justify-between text-[13px]">
               <span className="text-white/62">Total impresso na fatura</span>
               <span className="font-semibold text-white tabular-nums">{fmtMoney(declaredTotal)}</span>
@@ -509,7 +509,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
       {(allPlans.length > 0 || refunds.length > 0) && (
         <div className="mt-2.5 grid grid-cols-2 gap-2.5">
           {allPlans.length > 0 && (
-            <div className="rounded-[20px] border border-white/[0.12] willo-glass px-4 py-3">
+            <div className="rounded-[20px] border border-white/[0.08] willo-glass px-4 py-3">
               <Layers className="h-4 w-4 text-white/62" />
               <p className="mt-2 text-[19px] font-bold leading-none text-white tabular-nums">{allPlans.length}</p>
               <p className="mt-1 text-[11.5px] text-white/56">parcelamentos</p>
@@ -543,7 +543,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
         </button>
       </div>
 
-      <div className="mt-2 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.12] willo-glass">
+      <div className="mt-2 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.08] willo-glass">
         {items.map((item, idx) => {
           const { Icon, hex } = categoryVisual(item.category, []);
           const isIn = item.type === "receita";
@@ -657,7 +657,7 @@ export default function InvoiceUploadReviewModal({
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 34, stiffness: 320 }}
-          className="willo-bg fixed inset-0 z-[60] flex flex-col md:inset-auto md:left-1/2 md:top-1/2 md:h-[88vh] md:w-[440px] md:-translate-x-1/2 md:-translate-y-1/2 md:overflow-hidden md:rounded-[32px] md:border md:border-white/[0.12]"
+          className="willo-bg fixed inset-0 z-[60] flex flex-col md:inset-auto md:left-1/2 md:top-1/2 md:h-[88vh] md:w-[440px] md:-translate-x-1/2 md:-translate-y-1/2 md:overflow-hidden md:rounded-[32px] md:border md:border-white/[0.08]"
         >
           {/* Nav */}
           <div className="shrink-0 px-4" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>

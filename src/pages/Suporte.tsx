@@ -74,7 +74,7 @@ const Suporte = () => {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.14 }}
-        className="divide-y divide-white/[0.06] overflow-hidden rounded-[22px] border border-white/[0.12] willo-glass"
+        className="divide-y divide-white/[0.06] overflow-hidden rounded-[22px] border border-white/[0.08] willo-glass"
       >
         <button type="button" onClick={() => navigate("/ajuda")} className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left active:bg-white/[0.04]">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-white/[0.06]">

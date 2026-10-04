@@ -113,7 +113,7 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.08 }}
-      className="mt-4 rounded-[22px] border border-white/[0.12] willo-glass p-5"
+      className="mt-4 rounded-[22px] border border-white/[0.08] willo-glass p-5"
     >
       {/* The hero above already states the selected month's figures — this is the navigator */}
       <div className="flex items-center justify-between gap-3">

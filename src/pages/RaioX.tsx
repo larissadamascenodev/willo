@@ -143,7 +143,7 @@ function EmptyState() {
   const navigate = useNavigate();
   return (
     <div className="mt-12 flex flex-col items-center px-6 text-center">
-      <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.04]">
+      <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04]">
         <Sparkles className="h-8 w-8 text-white/66" />
       </span>
       <p className="mt-5 text-[19px] font-bold text-white">Nada pra analisar ainda</p>

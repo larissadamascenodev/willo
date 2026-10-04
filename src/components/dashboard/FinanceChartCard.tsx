@@ -286,11 +286,11 @@ const FinanceChartCard = memo(() => {
   }, [data, view, period]);
 
   if (!data || !summary) {
-    return <div className="h-[190px] animate-pulse rounded-[22px] border border-white/[0.12] bg-white/[0.03]" />;
+    return <div className="h-[190px] animate-pulse rounded-[22px] border border-white/[0.08] bg-white/[0.03]" />;
   }
 
   return (
-    <div className="rounded-[22px] border border-white/[0.12] willo-glass px-3.5 py-3">
+    <div className="rounded-[22px] border border-white/[0.08] willo-glass px-3.5 py-3">
       <div className="flex items-center justify-between gap-2">
         <Segmented<View>
           id="finance-view"

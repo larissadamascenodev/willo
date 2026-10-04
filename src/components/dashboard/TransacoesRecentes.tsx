@@ -66,7 +66,7 @@ const TransacoesRecentes = memo(({ transactions, onVerTodas }: Props) => {
   const visible = transactions.slice(0, VISIBLE_COUNT);
 
   return (
-    <div className="rounded-[22px] border border-white/[0.12] willo-glass px-4 pt-4 pb-1">
+    <div className="rounded-[22px] border border-white/[0.08] willo-glass px-4 pt-4 pb-1">
       <div className="flex items-center justify-between">
         <h3 className="text-[16px] font-semibold text-white">Transações recentes</h3>
         {transactions.length > 0 && (

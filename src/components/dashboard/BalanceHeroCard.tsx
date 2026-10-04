@@ -131,13 +131,13 @@ const BalanceHeroCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, topIns
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="truncate text-[28px] font-normal leading-tight tracking-tight text-white"
+          className="truncate text-[30px] font-bold leading-[1.12] tracking-[-0.03em] text-white"
         >
           {greeting}{firstName ? `, ${firstName}` : ""}
         </motion.p>
         <p className="mt-1 text-[13px] text-white/56">Toque duas vezes na tela para lançar</p>
 
-        <div className="willo-glass mt-4 rounded-[24px] border border-white/[0.12] p-[18px]">
+        <div className="willo-glass mt-4 rounded-[24px] border border-white/[0.08] p-[18px]">
           <p className="text-[13px] text-white/66">Saldo disponível</p>
           <p className="mt-2 truncate text-[34px] font-extrabold leading-none tracking-[-0.035em] text-white tabular-nums">
             {hidden ? `${currencySymbol()} ••••••` : animatedSaldo}
@@ -150,7 +150,7 @@ const BalanceHeroCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, topIns
             </span>
           </p>
 
-          <div className="mt-4 flex items-stretch border-t border-white/[0.12] pt-4">
+          <div className="mt-4 flex items-stretch border-t border-white/[0.08] pt-4">
             {[
               { key: "in", label: "Receitas", value: animatedReceitas, to: "/detalhe/receitas",
                 Icon: ArrowDownLeft, iconCls: "text-willo-green" },
@@ -161,7 +161,7 @@ const BalanceHeroCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, topIns
                 key={key}
                 onClick={(e) => { e.stopPropagation(); navigate(to); }}
                 className={`min-w-0 flex-1 text-left active:opacity-70 ${
-                  i === 0 ? "pr-4" : "border-l border-white/[0.12] pl-4"
+                  i === 0 ? "pr-4" : "border-l border-white/[0.08] pl-4"
                 }`}
               >
                 <span className="flex items-center gap-1.5 text-[13px] text-white/66">

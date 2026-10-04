@@ -106,7 +106,7 @@ const ProximosEventos = memo(({ events, selectedMonth, selectedYear, onVerTodos,
   };
 
   return (
-    <div className="rounded-[22px] border border-white/[0.12] willo-glass overflow-hidden">
+    <div className="rounded-[22px] border border-white/[0.08] willo-glass overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 pt-4">
         <CalendarDays className="h-4 w-4 text-white/74" />

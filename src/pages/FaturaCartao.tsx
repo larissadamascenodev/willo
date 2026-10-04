@@ -83,7 +83,7 @@ export function formatCurrency(value: number) {
 
 
 const EmptyTab = ({ label }: { label: string }) => (
-  <div className="rounded-[22px] border border-dashed border-white/[0.12] px-4 py-10 text-center">
+  <div className="rounded-[22px] border border-dashed border-white/[0.08] px-4 py-10 text-center">
     <p className="text-[14px] text-white/56">{label}</p>
   </div>
 );
@@ -601,7 +601,7 @@ const FaturaCartao = () => {
           <button
             type="button"
             onClick={() => uploadRef.current?.click()}
-            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.12] willo-glass px-3.5 text-[13px] font-semibold text-white active:scale-95"
+            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.08] willo-glass px-3.5 text-[13px] font-semibold text-white active:scale-95"
           >
             <Plus className="h-3.5 w-3.5" /> Lançamento
           </button>
@@ -661,7 +661,7 @@ const FaturaCartao = () => {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="relative overflow-hidden rounded-[26px] border border-white/[0.12] willo-glass p-5"
+        className="relative overflow-hidden rounded-[26px] border border-white/[0.08] willo-glass p-5"
       >
         <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full blur-[70px]" style={{ background: cardHex, opacity: 0.3 }} />
 
@@ -776,7 +776,7 @@ const FaturaCartao = () => {
       )}
 
       {/* ===== Geral / Parcelados / À vista ===== */}
-      <div className="mt-5 isolate grid grid-cols-2 rounded-full border border-white/[0.12] willo-glass p-1">
+      <div className="mt-5 isolate grid grid-cols-2 rounded-full border border-white/[0.08] willo-glass p-1">
         {([["geral", "Geral"], ["parcelados", "Compras parceladas"]] as const).map(([key, label]) => (
           <button key={key} type="button" onClick={() => setTab(key)} className="relative h-10 rounded-full text-[14px] font-medium">
             {tab === key && (

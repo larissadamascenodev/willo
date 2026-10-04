@@ -76,14 +76,14 @@ const SetupFixedIncomeStep = ({ onDone, onSkip }: Props) => {
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoFocus
-          className="h-14 willo-glass border-white/[0.12] rounded-2xl text-[15px] text-white placeholder:text-white/56 px-5"
+          className="h-14 willo-glass border-white/[0.08] rounded-2xl text-[15px] text-white placeholder:text-white/56 px-5"
         />
         <Input
           placeholder="Valor mensal"
           type="number"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="h-14 willo-glass border-white/[0.12] rounded-2xl text-[15px] text-white placeholder:text-white/56 px-5"
+          className="h-14 willo-glass border-white/[0.08] rounded-2xl text-[15px] text-white placeholder:text-white/56 px-5"
         />
 
         <div className="flex flex-wrap gap-2">
@@ -96,7 +96,7 @@ const SetupFixedIncomeStep = ({ onDone, onSkip }: Props) => {
                 "px-3.5 py-2 rounded-full text-[13px] font-semibold border transition-all",
                 category === c
                   ? "bg-white text-[#0B0B0B] border-white"
-                  : "willo-glass text-white border-white/[0.12]"
+                  : "willo-glass text-white border-white/[0.08]"
               )}
             >
               {c}

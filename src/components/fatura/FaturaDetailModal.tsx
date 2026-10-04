@@ -194,7 +194,7 @@ export default function FaturaDetailModal({ open, onClose, card, month, year, to
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ type: "spring", stiffness: 340, damping: 26 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-sm overflow-hidden rounded-[28px] border border-white/[0.12] willo-glass shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]"
+            className="relative w-full max-w-sm overflow-hidden rounded-[28px] border border-white/[0.08] willo-glass shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]"
           >
             <span
               className="pointer-events-none absolute -right-14 -top-20 h-48 w-48 rounded-full blur-[70px]"
@@ -310,7 +310,7 @@ export default function FaturaDetailModal({ open, onClose, card, month, year, to
               )}
               <button
                 onClick={handleViewFull}
-                className="flex h-12 w-full items-center justify-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] text-[14px] font-semibold text-white active:opacity-70"
+                className="flex h-12 w-full items-center justify-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] text-[14px] font-semibold text-white active:opacity-70"
               >
                 Ver fatura completa
                 <ChevronRight className="h-4 w-4" />

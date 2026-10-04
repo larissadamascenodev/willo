@@ -29,7 +29,7 @@ const FinanceOverviewCard = ({ receitas, despesas, saldoPrevisto, nextMonthBalan
     <motion.button
       whileTap={{ scale: 0.98 }}
       onClick={() => navigate("/bot-finance/balanco")}
-      className="flex w-full flex-col rounded-[22px] border border-white/[0.12] willo-glass p-4 text-left"
+      className="flex w-full flex-col rounded-[22px] border border-white/[0.08] willo-glass p-4 text-left"
     >
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-2">

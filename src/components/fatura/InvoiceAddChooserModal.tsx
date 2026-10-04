@@ -28,7 +28,7 @@ const OptionRow = ({ option, index }: { option: Option; index: number }) => (
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: index * 0.05, type: "spring", stiffness: 320, damping: 26 }}
     onClick={option.onClick}
-    className="flex w-full items-center gap-3.5 rounded-[22px] border border-white/[0.12] willo-glass-inset px-4 py-4 text-left active:scale-[0.99]"
+    className="flex w-full items-center gap-3.5 rounded-[22px] border border-white/[0.08] willo-glass-inset px-4 py-4 text-left active:scale-[0.99]"
   >
     <span
       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"

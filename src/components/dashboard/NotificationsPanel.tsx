@@ -351,7 +351,7 @@ function NotificationContent({
           </div>
         ) : groups.length === 0 ? (
           <div className="flex flex-col items-center px-8 pt-20 text-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.06]">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.06]">
               <Bell className="h-8 w-8 text-white/56" />
             </div>
             <p className="mt-5 text-[18px] font-bold text-white">Tudo em dia</p>
@@ -363,7 +363,7 @@ function NotificationContent({
           groups.map((group) => (
             <section key={group.label} className="pt-5">
               <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-white/56">{group.label}</h2>
-              <div className="overflow-hidden rounded-[22px] border border-white/[0.12] willo-glass">
+              <div className="overflow-hidden rounded-[22px] border border-white/[0.08] willo-glass">
                 <AnimatePresence initial={false}>
                   {group.items.map((n, i) => (
                     <motion.div key={n.id} layout exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }}>
@@ -502,7 +502,7 @@ export default function NotificationsPanel({ open, onClose }: NotificationsPanel
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md overflow-hidden rounded-[28px] border-white/[0.12] willo-glass/95 p-0 backdrop-blur-2xl [&>button]:hidden">
+      <DialogContent className="max-w-md overflow-hidden rounded-[28px] border-white/[0.08] willo-glass/95 p-0 backdrop-blur-2xl [&>button]:hidden">
         <DialogTitle className="sr-only">Notificações</DialogTitle>
         <DialogDescription className="sr-only">Lista das suas notificações recentes.</DialogDescription>
         <NotificationContent {...contentProps} variant="dialog" />

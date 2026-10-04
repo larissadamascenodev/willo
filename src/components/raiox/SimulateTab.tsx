@@ -96,7 +96,7 @@ function PurchaseCopilot({ data }: { data: RaioXData }) {
               className={cn(
                 "h-9 rounded-full text-[12px] font-semibold transition-colors",
                 n === 1 && "col-span-2",
-                times === n ? "bg-white text-[#0B0B0B]" : "border border-white/[0.12] bg-white/[0.04] text-white/82",
+                times === n ? "bg-white text-[#0B0B0B]" : "border border-white/[0.08] bg-white/[0.04] text-white/82",
               )}
             >
               {n === 1 ? "À vista" : `${n}x`}
@@ -108,7 +108,7 @@ function PurchaseCopilot({ data }: { data: RaioXData }) {
             aria-label="Outro número de parcelas"
             className={cn(
               "flex h-9 items-center justify-center gap-0.5 rounded-full text-[12px] font-semibold transition-colors",
-              times > 6 ? "bg-white text-[#0B0B0B]" : "border border-white/[0.12] bg-white/[0.04] text-white/82",
+              times > 6 ? "bg-white text-[#0B0B0B]" : "border border-white/[0.08] bg-white/[0.04] text-white/82",
             )}
           >
             {times > 6 ? `${times}x` : <Plus className="h-4 w-4" />}
@@ -126,7 +126,7 @@ function PurchaseCopilot({ data }: { data: RaioXData }) {
                   onChange={(e) => setCustom(e.target.value.replace(/\D/g, "").slice(0, 2))}
                   onKeyDown={(e) => e.key === "Enter" && applyCustom()}
                   placeholder="Ex.: 18"
-                  className="h-10 min-w-0 flex-1 rounded-full border border-white/[0.12] bg-white/[0.04] px-4 text-[14px] text-white placeholder:text-white/45 focus:outline-none"
+                  className="h-10 min-w-0 flex-1 rounded-full border border-white/[0.08] bg-white/[0.04] px-4 text-[14px] text-white placeholder:text-white/45 focus:outline-none"
                 />
                 <button type="button" onClick={applyCustom} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#0B0B0B]">
                   <Check className="h-4 w-4" strokeWidth={3} />
@@ -214,7 +214,7 @@ function CutSimulator({ data }: { data: RaioXData }) {
         <button
           type="button"
           onClick={() => setPickerOpen(true)}
-          className="flex w-full items-center gap-3 rounded-[18px] border border-white/[0.12] bg-white/[0.04] px-3.5 py-3 text-left"
+          className="flex w-full items-center gap-3 rounded-[18px] border border-white/[0.08] bg-white/[0.04] px-3.5 py-3 text-left"
         >
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ background: `${getCategoryHexColor(selected.name)}1F` }}>
             <SelectedIcon className="h-[18px] w-[18px]" style={{ color: getCategoryHexColor(selected.name) }} />
@@ -238,7 +238,7 @@ function CutSimulator({ data }: { data: RaioXData }) {
               onClick={() => setCut(s)}
               className={cn(
                 "h-9 rounded-full text-[12px] font-semibold transition-colors disabled:opacity-30",
-                cut === s ? "bg-willo-green text-[#0B0B0B]" : "border border-white/[0.12] bg-white/[0.04] text-white/82",
+                cut === s ? "bg-willo-green text-[#0B0B0B]" : "border border-white/[0.08] bg-white/[0.04] text-white/82",
               )}
             >
               {s}

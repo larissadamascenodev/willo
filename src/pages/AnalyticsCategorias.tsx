@@ -122,7 +122,7 @@ function computeCategoryScore(pct: number, variation: number | null, txCount: nu
 // ── Reusable Glass Card ──────────────────────────────────
 const GlassCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
   <div
-    className={`rounded-[22px] border border-white/[0.12] willo-glass ${className}`}
+    className={`rounded-[22px] border border-white/[0.08] willo-glass ${className}`}
     
   >
     {children}
@@ -521,7 +521,7 @@ const AllInstallmentsOverview = ({ impacts }: { impacts: InstallmentImpact[] }) 
 
   return (
     <div
-      className="rounded-[22px] border border-white/[0.12] willo-glass p-3 md:p-4"
+      className="rounded-[22px] border border-white/[0.08] willo-glass p-3 md:p-4"
     >
       <div className="flex items-center gap-2 mb-2.5">
         <Repeat className="w-4 h-4 text-primary/70" />
@@ -639,7 +639,7 @@ const CategoryInstallmentDetail = ({ impact }: { impact: InstallmentImpact | und
   const isHighImpact = impact.impactPct > 30 || impact.totalRemaining > 1000;
   return (
     <div
-      className="rounded-[22px] border border-white/[0.12] willo-glass p-3 md:p-4"
+      className="rounded-[22px] border border-white/[0.08] willo-glass p-3 md:p-4"
     >
       <div className="flex items-center gap-2 mb-2.5">
         <span className="text-sm">💳</span>
@@ -1000,7 +1000,7 @@ const CategoryDetail = ({
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 divide-x divide-white/[0.06] rounded-[22px] border border-white/[0.12] willo-glass py-3.5">
+      <div className="grid grid-cols-3 divide-x divide-white/[0.06] rounded-[22px] border border-white/[0.08] willo-glass py-3.5">
         {[
           { label: "Transações", value: String(category.txCount) },
           { label: "Por transação", value: money(category.avgPerTx) },
@@ -1014,7 +1014,7 @@ const CategoryDetail = ({
       </div>
 
       {/* Monthly limit */}
-      <div className="rounded-[22px] border border-white/[0.12] willo-glass p-4">
+      <div className="rounded-[22px] border border-white/[0.08] willo-glass p-4">
         {limit ? (
           <>
             <div className="flex items-start justify-between gap-3">
@@ -1056,7 +1056,7 @@ const CategoryDetail = ({
 
       {/* Fixed expenses in this category → yearly estimate + upcoming months */}
       {fixedItems.length > 0 && (
-        <div className="rounded-[22px] border border-white/[0.12] willo-glass p-4">
+        <div className="rounded-[22px] border border-white/[0.08] willo-glass p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[14px] font-semibold text-white">Despesa fixa</p>
@@ -1104,7 +1104,7 @@ const CategoryDetail = ({
 
       {/* Transactions this month */}
       {catTxs.length > 0 && (
-        <div className="rounded-[22px] border border-white/[0.12] willo-glass px-4 pt-3.5 pb-1">
+        <div className="rounded-[22px] border border-white/[0.08] willo-glass px-4 pt-3.5 pb-1">
           <p className="text-[14px] font-semibold text-white">Transações em {monthLabel}</p>
           <div className="mt-1 divide-y divide-white/[0.06]">
             {catTxs.slice(0, 12).map((t) => (
@@ -1134,7 +1134,7 @@ const CategoryDetail = ({
       {/* 3-month trend */}
       {trendAnalysis && trendAnalysis.momChange != null && (
         <div
-          className="rounded-[22px] border border-white/[0.12] willo-glass p-3 md:p-4"
+          className="rounded-[22px] border border-white/[0.08] willo-glass p-3 md:p-4"
         >
           <div className="flex items-center gap-2 mb-2">
             {trendAnalysis.risingTrend ? (
@@ -1174,7 +1174,7 @@ const CategoryDetail = ({
       {/* Internal distribution */}
       {merchantDistribution.length > 1 && (
         <div
-          className="rounded-[22px] border border-white/[0.12] willo-glass p-3 md:p-4"
+          className="rounded-[22px] border border-white/[0.08] willo-glass p-3 md:p-4"
         >
           <div className="flex items-center gap-2 mb-2.5">
             <PieChartIcon className="w-4 h-4 text-primary" />
@@ -1690,7 +1690,7 @@ const AnalyticsCategorias = () => {
       {!selectedCategory && (
         <div className="mb-5 pt-1">
           <PageNav onBack={() => navigate(-1)}>
-            <div className="rounded-full border border-white/[0.12] willo-glass p-1">
+            <div className="rounded-full border border-white/[0.08] willo-glass p-1">
               <MonthSelector
                 selectedMonth={selectedMonth}
                 selectedYear={selectedYear}
@@ -1761,7 +1761,7 @@ const AnalyticsCategorias = () => {
                 )}
 
                 {/* Category limits */}
-                <div className="rounded-[22px] border border-white/[0.12] willo-glass p-4">
+                <div className="rounded-[22px] border border-white/[0.08] willo-glass p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-[16px] font-semibold text-white">Limites por categoria</p>

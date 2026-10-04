@@ -69,7 +69,7 @@ const BottomSheet = ({ open, onClose, children, size = "auto", footer, className
             dragElastic={{ top: 0, bottom: 0.6 }}
             onDragEnd={handleDragEnd}
             className={cn(
-              "absolute inset-x-0 bottom-0 mx-auto flex w-full max-w-lg flex-col rounded-t-[32px] border-t border-white/[0.12] willo-glass-strong shadow-[0_-20px_60px_rgba(0,0,0,0.6)]",
+              "absolute inset-x-0 bottom-0 mx-auto flex w-full max-w-lg flex-col rounded-t-[32px] border-t border-white/[0.08] willo-glass-strong shadow-[0_-20px_60px_rgba(0,0,0,0.6)]",
               size === "full" ? "h-[94dvh]" : "max-h-[92dvh]",
               className,
             )}

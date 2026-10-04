@@ -48,7 +48,7 @@ function ReadingState() {
         <span className="absolute -right-2.5 top-2 h-full w-full rotate-[5deg] rounded-[20px] border border-white/[0.06] bg-white/[0.02]" />
         <span className="absolute -left-2 top-1 h-full w-full -rotate-[3deg] rounded-[20px] border border-white/[0.05] bg-white/[0.015]" />
 
-        <div className="relative h-56 w-44 overflow-hidden rounded-[20px] border border-white/[0.12] bg-gradient-to-b from-white/[0.08] via-white/[0.03] to-white/[0.015] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.9)]">
+        <div className="relative h-56 w-44 overflow-hidden rounded-[20px] border border-white/[0.08] bg-gradient-to-b from-white/[0.08] via-white/[0.03] to-white/[0.015] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.9)]">
           {/* Statement header */}
           <div className="flex items-center gap-1.5 px-4 pt-4">
             <span className="h-4 w-4 rounded-[5px] bg-white/25" />
@@ -149,13 +149,13 @@ function FoundList({ items, onDone }: { items: ExtractedItem[]; onDone: () => vo
         </p>
 
         <div className="relative mt-4 flex items-center justify-center gap-1.5">
-          <span className="rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1.5 text-[12px] font-semibold tabular-nums text-white">
+          <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-[12px] font-semibold tabular-nums text-white">
             {fmt(running)}
           </span>
           {plans > 0 && (
             <motion.span
               layout
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1.5 text-[12px] text-white/82"
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-[12px] text-white/82"
             >
               <Layers className="h-3 w-3" /> {plans}
             </motion.span>
@@ -186,7 +186,7 @@ function FoundList({ items, onDone }: { items: ExtractedItem[]; onDone: () => vo
                   initial={{ opacity: 0, y: -14, scale: 0.96, filter: "blur(4px)" }}
                   animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
                   transition={{ type: "spring", stiffness: 430, damping: 32 }}
-                  className="flex items-center gap-3 rounded-[18px] border border-white/[0.12] bg-gradient-to-b from-[#171717] to-[#131313] px-3.5 py-2.5 shadow-[0_6px_20px_-12px_rgba(0,0,0,0.9)]"
+                  className="flex items-center gap-3 rounded-[18px] border border-white/[0.08] bg-gradient-to-b from-[#171717] to-[#131313] px-3.5 py-2.5 shadow-[0_6px_20px_-12px_rgba(0,0,0,0.9)]"
                 >
                   <span
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1 ring-inset"
@@ -242,7 +242,7 @@ export default function InvoiceScanScreen({ open, items, onClose, onDone }: {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="willo-bg fixed inset-0 z-[70] flex flex-col md:inset-auto md:left-1/2 md:top-1/2 md:h-[88vh] md:w-[440px] md:-translate-x-1/2 md:-translate-y-1/2 md:overflow-hidden md:rounded-[32px] md:border md:border-white/[0.12]"
+          className="willo-bg fixed inset-0 z-[70] flex flex-col md:inset-auto md:left-1/2 md:top-1/2 md:h-[88vh] md:w-[440px] md:-translate-x-1/2 md:-translate-y-1/2 md:overflow-hidden md:rounded-[32px] md:border md:border-white/[0.08]"
         >
           <div className="shrink-0 px-4" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
             <div className="flex h-11 items-center justify-between">

@@ -87,7 +87,7 @@ const AccountCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClo
         {/* Live preview */}
         <motion.div
           layout
-          className="relative mt-5 overflow-hidden rounded-[24px] border border-white/[0.12] willo-glass p-4"
+          className="relative mt-5 overflow-hidden rounded-[24px] border border-white/[0.08] willo-glass p-4"
         >
           <motion.div
             className="pointer-events-none absolute -left-16 -top-20 h-48 w-48 rounded-full blur-[60px]"

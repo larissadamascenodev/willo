@@ -118,7 +118,7 @@ export function NumberWheel({ value, min, max, onChange, unit }: {
 
   return (
     <div className="relative mx-auto h-[340px] w-full">
-      <div className="pointer-events-none absolute inset-x-0 top-1/2 h-[68px] -translate-y-1/2 border-y border-white/[0.12]" />
+      <div className="pointer-events-none absolute inset-x-0 top-1/2 h-[68px] -translate-y-1/2 border-y border-white/[0.08]" />
       {unit && (
         <span className="pointer-events-none absolute left-[calc(50%+62px)] top-1/2 -translate-y-1/2 text-[12px] font-semibold uppercase tracking-[0.2em] text-white/66">
           {unit}

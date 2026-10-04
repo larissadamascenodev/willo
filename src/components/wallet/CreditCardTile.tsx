@@ -105,7 +105,7 @@ export const CreditCardTile = ({ card, idx, invoiceInfo, navigate, extraClass }:
       onClick={() => navigate(`/fatura/${card.id}`)}
       className={cn(
         "relative rounded-[22px] overflow-hidden cursor-pointer group transition-all duration-300 active:scale-[0.98]",
-        "willo-glass border border-white/[0.12] hover:border-white/15",
+        "willo-glass border border-white/[0.08] hover:border-white/15",
         extraClass
       )}
     >

@@ -64,7 +64,7 @@ export function CurrentScenario({ data }: { data: RaioXData }) {
   return (
     <Section icon={Activity} title="Como você está" hint={`Fechamento previsto de ${monthName}`}>
       <div
-        className="relative overflow-hidden rounded-[28px] border border-white/[0.12] p-5"
+        className="relative overflow-hidden rounded-[28px] border border-white/[0.08] p-5"
         style={{ background: `radial-gradient(120% 90% at 100% 0%, ${hex}1C 0%, rgba(20,20,20,0.96) 55%, #0E0E0E 100%)` }}
       >
         <div className="flex items-start justify-between gap-3">
@@ -129,7 +129,7 @@ export function CurrentScenario({ data }: { data: RaioXData }) {
 
         {/* Where the income is already committed */}
         {commitment.income > 0 && (
-          <div className="mt-4 border-t border-white/[0.12] pt-3.5">
+          <div className="mt-4 border-t border-white/[0.08] pt-3.5">
             <div className="flex items-center justify-between text-[12px] text-white/62">
               <span>Renda comprometida</span>
               <span className={cn("font-bold tabular-nums", commitment.committedPct >= 0.6 ? "text-red-400" : commitment.committedPct >= 0.4 ? "text-amber-300" : "text-white")}>

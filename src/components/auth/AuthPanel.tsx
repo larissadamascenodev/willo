@@ -130,7 +130,7 @@ const AuthPanel = ({ mode, onBack, pendingProfile }: Props) => {
     }
   };
 
-  const socialBtn = "flex h-[58px] w-full items-center justify-center gap-3 rounded-full border border-white/[0.12] willo-glass text-[15px] font-medium uppercase tracking-[0.04em] text-white transition-transform active:scale-[0.98]";
+  const socialBtn = "flex h-[58px] w-full items-center justify-center gap-3 rounded-full border border-white/[0.08] willo-glass text-[15px] font-medium uppercase tracking-[0.04em] text-white transition-transform active:scale-[0.98]";
 
   return (
     <div

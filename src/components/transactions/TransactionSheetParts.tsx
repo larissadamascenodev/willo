@@ -36,7 +36,7 @@ export const inlineInput =
 
 /** The group the rows sit in. */
 export const RowGroup = ({ children, className }: { children: ReactNode; className?: string }) => (
-  <div className={cn("divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.12] willo-glass", className)}>
+  <div className={cn("divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.08] willo-glass", className)}>
     {children}
   </div>
 );

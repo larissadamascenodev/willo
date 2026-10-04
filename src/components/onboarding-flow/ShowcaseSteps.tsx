@@ -46,7 +46,7 @@ export function CategoriesStep({ onBack, onNext }: StepProps) {
       <div className="pt-6">
         <Heading light="Em todo gasto," bold="você vê pra onde foi." />
       </div>
-      <div className="relative mt-7 h-[230px] overflow-hidden rounded-[28px] border border-white/[0.12] willo-glass">
+      <div className="relative mt-7 h-[230px] overflow-hidden rounded-[28px] border border-white/[0.08] willo-glass">
         <AnimatePresence mode="popLayout">
           <motion.div
             key={cat.name}
@@ -107,7 +107,7 @@ export function InsightStep({ surplus, monthlySave, cut, onBack, onNext }: StepP
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.35 }}
-        className="mt-8 rounded-[24px] border border-white/[0.12] willo-glass p-5"
+        className="mt-8 rounded-[24px] border border-white/[0.08] willo-glass p-5"
       >
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/62">Pra chegar na meta, guarde</p>
         <div className="mt-2 flex items-end justify-between gap-3">
@@ -252,7 +252,7 @@ export function CommitmentStep({ onBack, onNext }: StepProps) {
           <span className="font-extrabold">um pouco todo dia?</span>
         </h1>
         <p className="mt-2 text-center text-[14px] leading-snug text-white/62">Um minuto por dia já muda o mês. É um combinado com você.</p>
-        <div className="relative mt-8 h-[250px] overflow-hidden rounded-[26px] border border-white/[0.12] willo-glass">
+        <div className="relative mt-8 h-[250px] overflow-hidden rounded-[26px] border border-white/[0.08] willo-glass">
           {length === 0 && (
             <svg viewBox="0 0 100 100" className="pointer-events-none absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 54 L40 76 L84 26" />
