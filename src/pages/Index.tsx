@@ -132,7 +132,7 @@ const Index = () => {
           <div className="space-y-4">
             <WalletSummaryCard />
             {isCurrentMonth && <FinanceChartCard />}
-            <FinanceOverviewCard receitas={receitas} despesas={despesas} saldoPrevisto={saldoPrevisto} nextMonthBalance={data.projection.nextMonthBalance} />
+            <FinanceOverviewCard receitas={receitas} despesas={despesas} saldoPrevisto={saldoPrevisto} nextMonthBalance={data.projection.nextMonthBalance} month={selectedMonth} />
             <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
             <AssinaturasCard />
             <MetasResumoCard />
@@ -167,7 +167,7 @@ const Index = () => {
           {data.categories.length > 0 && (
             <GastosPorCategoria categories={data.categories} selectedMonth={selectedMonth} onVerAnalise={() => navigate("/transacoes")} />
           )}
-          <FinanceOverviewCard receitas={receitas} despesas={despesas} saldoPrevisto={saldoPrevisto} nextMonthBalance={data.projection.nextMonthBalance} />
+          <FinanceOverviewCard receitas={receitas} despesas={despesas} saldoPrevisto={saldoPrevisto} nextMonthBalance={data.projection.nextMonthBalance} month={selectedMonth} />
           <TransacoesRecentes transactions={data.transactions} onDelete={refetch} />
           <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
           <AssinaturasCard />
@@ -193,7 +193,7 @@ const Index = () => {
           )}
           <GastosPorCategoria categories={data.categories} selectedMonth={selectedMonth} onVerAnalise={() => navigate("/transacoes")} />
           <TransacoesRecentes transactions={data.transactions} onDelete={refetch} />
-          <FinanceOverviewCard receitas={receitas} despesas={despesas} saldoPrevisto={saldoPrevisto} nextMonthBalance={data.projection.nextMonthBalance} />
+          <FinanceOverviewCard receitas={receitas} despesas={despesas} saldoPrevisto={saldoPrevisto} nextMonthBalance={data.projection.nextMonthBalance} month={selectedMonth} />
           <CardsOverviewSection />
           <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
           <AssinaturasCard />

@@ -230,7 +230,7 @@ export const HomeScreen = ({ to, extra = [], withIfood = false }: { to?: string;
         <div data-section="categorias">
           <GastosPorCategoria categories={categoriesFor(withIfood)} selectedMonth={8} onVerAnalise={noop} />
         </div>
-        <FinanceOverviewCard receitas={6450} despesas={3215.8 + spent} saldoPrevisto={9120.3 - spent} nextMonthBalance={10480} />
+        <FinanceOverviewCard receitas={6450} despesas={3215.8 + spent} saldoPrevisto={9120.3 - spent} nextMonthBalance={10480} month={8} />
         <div data-section="cartoes">
           <CardsOverviewView cards={CARDS} invoices={INVOICES} today={TODAY} />
         </div>
