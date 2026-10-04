@@ -3,14 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle, ArrowDownLeft, ArrowRight, ArrowUpRight, CalendarDays,
-  ChevronRight, Equal, Eye, EyeOff, Info, Minus, Plus, TrendingDown, TrendingUp,
+  ChevronRight, Equal, Eye, EyeOff, Info, Minus, Plus, TrendingDown, TrendingUp, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCategoryIcon, getCategoryHexColor } from "@/lib/categoryUtils";
 import { useCashFlow, periodStart, sumFlow, toDateKey, type CashFlowEntry, type CashFlowPeriod } from "@/hooks/useCashFlow";
 import { useFinancialProjection } from "@/hooks/useFinancialProjection";
 import { PageHeader, SectionTitle, Surface } from "@/components/shared/MobilePage";
-import BottomSheet from "@/components/shared/BottomSheet";
 import { currencySymbol, getCurrency } from "@/lib/currency";
 
 type Tool = "fluxo" | "balanco" | "projecoes";
@@ -548,27 +547,52 @@ function FuturoPanel() {
       <ProjectionBars rows={rows} selectedIdx={Math.min(selectedIdx, rows.length - 1)} onSelect={setSelectedIdx} />
 
       <SectionTitle>Mês a mês</SectionTitle>
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {ahead.map((r) => (
           <button
             key={`${r.year}-${r.month}`}
             onClick={() => setOpenMonth(r)}
-            className="flex w-full items-center gap-3 rounded-[18px] border border-white/[0.08] willo-glass px-[14px] py-3.5 text-left active:opacity-70"
+            className="w-full rounded-[20px] border border-white/[0.08] willo-glass px-[14px] pb-3.5 pt-3.5 text-left active:opacity-80"
           >
-            <span className={cn(
-              "h-1.5 w-1.5 shrink-0 rounded-full",
-              r.fecha < 0 ? "bg-red-400" : r.risk === "atencao" ? "bg-amber-300" : "bg-willo-green",
-            )} />
-            <span className="min-w-0 flex-1 truncate text-[14.5px] font-semibold text-white">
-              {r.name}{r.yearTag ? `/${r.yearTag}` : ""}
-            </span>
-            <span className={cn(
-              "shrink-0 text-[16px] font-extrabold tracking-[-0.02em] tabular-nums",
-              r.fecha < 0 ? "text-red-400" : "text-white",
-            )}>
-              {r.fecha > 0 ? "+" : ""}{compact(r.fecha)}
-            </span>
-            <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
+            <div className="flex items-start justify-between gap-3">
+              <span className="flex min-w-0 items-center gap-2">
+                <span className={cn(
+                  "h-1.5 w-1.5 shrink-0 rounded-full",
+                  r.fecha < 0 ? "bg-red-400" : r.risk === "atencao" ? "bg-amber-300" : "bg-willo-green",
+                )} />
+                <span className="min-w-0">
+                  <span className="block truncate text-[15px] font-bold tracking-tight text-white">
+                    {r.name}{r.yearTag ? `/${r.yearTag}` : ""}
+                  </span>
+                  <span className="mt-0.5 block text-[11.5px] text-white/45">fecha o mês com</span>
+                </span>
+              </span>
+              <span className="flex shrink-0 items-center gap-1.5">
+                <span className={cn(
+                  "text-[20px] font-extrabold tracking-[-0.03em] tabular-nums",
+                  r.fecha < 0 ? "text-red-400" : "text-white",
+                )}>
+                  {r.fecha > 0 ? "+" : ""}{compact(r.fecha)}
+                </span>
+                <ChevronRight className="h-4 w-4 text-white/30" />
+              </span>
+            </div>
+
+            {/* The three figures that make it, so the card answers before the sheet does */}
+            <div className="mt-3.5 flex items-stretch border-t border-white/[0.07] pt-3">
+              {[
+                { k: "Entra", v: r.income, cls: "text-willo-green" },
+                { k: "Sai", v: -r.expense, cls: "text-red-400" },
+                { k: "Sobra", v: r.sobra, cls: r.sobra < 0 ? "text-red-400" : "text-white" },
+              ].map(({ k, v, cls }, i) => (
+                <span key={k} className={cn("min-w-0 flex-1", i > 0 && "border-l border-white/[0.07] pl-3", i < 2 && "pr-3")}>
+                  <span className="block text-[11px] text-white/45">{k}</span>
+                  <span className={cn("mt-1 block truncate text-[14px] font-bold tabular-nums", cls)}>
+                    {v > 0 ? "+" : ""}{compact(v)}
+                  </span>
+                </span>
+              ))}
+            </div>
           </button>
         ))}
       </div>
@@ -579,27 +603,57 @@ function FuturoPanel() {
         Conforme novos gastos entrarem, estes valores se ajustam sozinhos.
       </p>
 
-      <BottomSheet open={!!openMonth} onClose={() => setOpenMonth(null)}>
+      <AnimatePresence>
         {openMonth && (
-          <div className="px-5 pb-6">
-            <p className="text-[17px] font-bold tracking-tight text-white">
-              {openMonth.name}{openMonth.yearTag ? `/${openMonth.yearTag}` : ""}
-            </p>
-            <p className="mt-3 text-[12px] text-white/50">Previsão de fechar com</p>
-            <p className={cn(
-              "mt-1.5 text-[36px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
-              openMonth.fecha < 0 ? "text-red-400" : "text-willo-green",
-            )}>
-              {openMonth.fecha > 0 ? "+" : ""}{compact(openMonth.fecha)}
-            </p>
-            <MonthBreakdown row={openMonth} prevName={MONTH_NAMES[(openMonth.month + 11) % 12]} />
-            <p className="mt-4 flex items-start gap-2 text-[12px] leading-snug text-white/50">
-              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              Só o que já está previsto entra nessa conta. Novos gastos ajustam o valor.
-            </p>
+          <div className="fixed inset-0 z-[75] flex items-center justify-center px-5">
+            <motion.div
+              className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setOpenMonth(null)}
+            />
+            <motion.div
+              role="dialog"
+              aria-modal
+              initial={{ opacity: 0, scale: 0.94, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ type: "spring", stiffness: 340, damping: 26 }}
+              className="relative max-h-[86vh] w-full max-w-sm overflow-y-auto rounded-[28px] border border-white/[0.08] willo-glass px-5 pb-5 pt-5 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-[17px] font-bold tracking-tight text-white">
+                    {openMonth.name}{openMonth.yearTag ? `/${openMonth.yearTag}` : ""}
+                  </p>
+                  <p className="mt-2.5 text-[12px] text-white/50">Previsão de fechar com</p>
+                  <p className={cn(
+                    "mt-1.5 truncate text-[36px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
+                    openMonth.fecha < 0 ? "text-red-400" : "text-willo-green",
+                  )}>
+                    {openMonth.fecha > 0 ? "+" : ""}{compact(openMonth.fecha)}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setOpenMonth(null)}
+                  aria-label="Fechar"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.07] text-white/70 active:opacity-60"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <MonthBreakdown row={openMonth} prevName={MONTH_NAMES[(openMonth.month + 11) % 12]} />
+
+              <p className="mt-4 flex items-start gap-2 text-[12px] leading-snug text-white/50">
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                Só o que já está previsto entra nessa conta. Novos gastos ajustam o valor.
+              </p>
+            </motion.div>
           </div>
         )}
-      </BottomSheet>
+      </AnimatePresence>
     </div>
   );
 }
