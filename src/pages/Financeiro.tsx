@@ -678,33 +678,52 @@ function FuturoPanel() {
   );
 }
 
-/** Entra, sai, sobra, vem de trás, fecha — the five lines that make the figure above. */
+/**
+ * The month as the two sums it actually is: what moved this month gives the leftover,
+ * and that plus what was left of last month gives the close. Rules sit where an equals
+ * sign would, which is what makes it read as a ledger rather than a list of five rows.
+ */
 function MonthBreakdown({ row, prevName }: {
   row: { income: number; expense: number; sobra: number; prevBalance: number; fecha: number; name: string };
   prevName: string;
 }) {
+  const Line = ({ k, v, strong = false, tone = "plain" }: {
+    k: string;
+    v: number;
+    strong?: boolean;
+    tone?: "plain" | "result";
+  }) => (
+    <div className="flex items-baseline justify-between gap-4 py-[9px]">
+      <span className={cn("text-[13px]", strong ? "font-semibold text-white" : "text-white/55")}>{k}</span>
+      <span
+        className={cn(
+          "shrink-0 text-right text-[14px] tabular-nums",
+          strong ? "font-bold" : "font-semibold",
+          tone === "result" ? (v < 0 ? "text-red-400" : "text-willo-green") : "text-white",
+        )}
+      >
+        {v > 0 && tone === "result" ? "+" : ""}{compact(v)}
+      </span>
+    </div>
+  );
+
   return (
-    <div className="mt-5 border-t border-white/[0.07] pt-1">
-      {[
-        { k: "Entra", v: row.income, tone: "in" as const },
-        { k: "Sai", v: -row.expense, tone: "out" as const },
-        { k: "Sobra do mês", v: row.sobra, tone: "sum" as const },
-        { k: `Sobra de ${prevName.toLowerCase()}`, v: row.prevBalance, tone: "plain" as const },
-      ].map(({ k, v, tone }) => (
-        <div key={k} className="flex items-baseline justify-between gap-3 border-b border-white/[0.05] py-2 last:border-b-0">
-          <span className={cn("text-[13px]", tone === "sum" ? "font-semibold text-white/80" : "text-white/55")}>{k}</span>
-          <span className={cn(
-            "shrink-0 text-[13.5px] font-semibold tabular-nums",
-            tone === "in" ? "text-willo-green" : tone === "out" ? "text-red-400" : "text-white",
-          )}>
-            {v > 0 && tone !== "plain" ? "+" : ""}{compact(v)}
-          </span>
-        </div>
-      ))}
-      <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-white/[0.12] pt-2.5">
-        <span className="text-[13px] font-semibold text-white">Fecha {row.name.toLowerCase()} com</span>
+    <div className="mt-5">
+      <Line k="Entra" v={row.income} />
+      <Line k="Sai" v={-row.expense} />
+
+      <div className="border-t border-white/[0.09] pt-0.5">
+        <Line k="Sobra do mês" v={row.sobra} strong tone="result" />
+      </div>
+
+      <div className="mt-2.5">
+        <Line k={`Sobra de ${prevName.toLowerCase()}`} v={row.prevBalance} />
+      </div>
+
+      <div className="mt-0.5 flex items-baseline justify-between gap-4 border-t border-white/[0.16] pt-3.5">
+        <span className="text-[13.5px] font-semibold text-white">Fecha {row.name.toLowerCase()} com</span>
         <span className={cn(
-          "shrink-0 text-[15px] font-extrabold tabular-nums",
+          "shrink-0 text-[19px] font-extrabold tracking-[-0.02em] tabular-nums",
           row.fecha < 0 ? "text-red-400" : "text-willo-green",
         )}>
           {row.fecha > 0 ? "+" : ""}{compact(row.fecha)}
