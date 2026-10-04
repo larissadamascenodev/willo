@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle, ArrowDownLeft, ArrowRight, ArrowUpRight, CalendarDays,
-  Equal, Eye, EyeOff, Info, Minus, Plus, TrendingDown, TrendingUp,
+  ChevronRight, Equal, Eye, EyeOff, Info, Minus, Plus, TrendingDown, TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCategoryIcon, getCategoryHexColor } from "@/lib/categoryUtils";
 import { useCashFlow, periodStart, sumFlow, toDateKey, type CashFlowEntry, type CashFlowPeriod } from "@/hooks/useCashFlow";
 import { useFinancialProjection } from "@/hooks/useFinancialProjection";
 import { PageHeader, SectionTitle, Surface } from "@/components/shared/MobilePage";
+import BottomSheet from "@/components/shared/BottomSheet";
 import { currencySymbol, getCurrency } from "@/lib/currency";
 
 type Tool = "fluxo" | "balanco" | "projecoes";
@@ -455,6 +456,7 @@ function FuturoPanel() {
   const navigate = useNavigate();
   const { projections, data, loading } = useFinancialProjection();
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const [openMonth, setOpenMonth] = useState<ProjectionRowView | null>(null);
 
   const rows = useMemo(
     () =>
@@ -531,39 +533,43 @@ function FuturoPanel() {
       </section>
 
       {negatives.length > 0 && (
-        <p className="mt-3 flex items-start gap-2 rounded-[16px] border border-red-400/20 bg-red-400/[0.07] px-3.5 py-3 text-[12.5px] leading-snug text-red-300">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          {negatives.length === 1
-            ? <>Seu saldo fecha negativo em <b className="font-semibold">{negatives[0].name.toLowerCase()}</b>. Dá tempo de mudar isso.</>
-            : <>Seu saldo fecha negativo em <b className="font-semibold">{negatives.length} meses</b>. Dá tempo de mudar isso.</>}
-        </p>
+        <div className="mt-3 flex items-center gap-3 rounded-[16px] border border-red-400/20 bg-red-400/[0.07] px-3.5 py-3">
+          <AlertTriangle className="h-[18px] w-[18px] shrink-0 text-red-400" strokeWidth={2.2} />
+          <p className="min-w-0 text-[13px] leading-snug text-red-200">
+            {negatives.length === 1
+              ? `Seu saldo fecha negativo em ${negatives[0].name.toLowerCase()}.`
+              : `Seu saldo fecha negativo em ${negatives.length} meses.`}{" "}
+            <span className="text-red-300/70">Dá tempo de mudar.</span>
+          </p>
+        </div>
       )}
 
       <SectionTitle>Como seu saldo evolui</SectionTitle>
-      <ProjectionHistoryChart
-        rows={rows.map((r) => ({ ...r, balance: r.fecha }))}
-        selectedIdx={Math.min(selectedIdx, rows.length - 1)}
-        onSelect={setSelectedIdx}
-        maxAbs={Math.max(...rows.map((r) => Math.abs(r.fecha)), 1)}
-      />
+      <ProjectionBars rows={rows} selectedIdx={Math.min(selectedIdx, rows.length - 1)} onSelect={setSelectedIdx} />
 
       <SectionTitle>Mês a mês</SectionTitle>
-      <div className="space-y-2.5">
-        {ahead.map((r, i) => (
-          <section key={`${r.year}-${r.month}`} className="rounded-[22px] border border-white/[0.08] willo-glass px-[14px] pb-[14px] pt-3.5">
-            <div className="flex items-baseline justify-between gap-3">
-              <p className="text-[15px] font-bold tracking-tight text-white">
-                {r.name}{r.yearTag ? `/${r.yearTag}` : ""}
-              </p>
-              <p className={cn(
-                "shrink-0 text-[18px] font-extrabold tracking-[-0.03em] tabular-nums",
-                r.fecha < 0 ? "text-red-400" : "text-willo-green",
-              )}>
-                {r.fecha > 0 ? "+" : ""}{compact(r.fecha)}
-              </p>
-            </div>
-            <MonthBreakdown row={r} prevName={(i === 0 ? current : ahead[i - 1]).name} />
-          </section>
+      <div className="space-y-2">
+        {ahead.map((r) => (
+          <button
+            key={`${r.year}-${r.month}`}
+            onClick={() => setOpenMonth(r)}
+            className="flex w-full items-center gap-3 rounded-[18px] border border-white/[0.08] willo-glass px-[14px] py-3.5 text-left active:opacity-70"
+          >
+            <span className={cn(
+              "h-1.5 w-1.5 shrink-0 rounded-full",
+              r.fecha < 0 ? "bg-red-400" : r.risk === "atencao" ? "bg-amber-300" : "bg-willo-green",
+            )} />
+            <span className="min-w-0 flex-1 truncate text-[14.5px] font-semibold text-white">
+              {r.name}{r.yearTag ? `/${r.yearTag}` : ""}
+            </span>
+            <span className={cn(
+              "shrink-0 text-[16px] font-extrabold tracking-[-0.02em] tabular-nums",
+              r.fecha < 0 ? "text-red-400" : "text-white",
+            )}>
+              {r.fecha > 0 ? "+" : ""}{compact(r.fecha)}
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
+          </button>
         ))}
       </div>
 
@@ -572,6 +578,28 @@ function FuturoPanel() {
         Conta só o que já está previsto: contas fixas, parcelas lançadas e recorrências.
         Conforme novos gastos entrarem, estes valores se ajustam sozinhos.
       </p>
+
+      <BottomSheet open={!!openMonth} onClose={() => setOpenMonth(null)}>
+        {openMonth && (
+          <div className="px-5 pb-6">
+            <p className="text-[17px] font-bold tracking-tight text-white">
+              {openMonth.name}{openMonth.yearTag ? `/${openMonth.yearTag}` : ""}
+            </p>
+            <p className="mt-3 text-[12px] text-white/50">Previsão de fechar com</p>
+            <p className={cn(
+              "mt-1.5 text-[36px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
+              openMonth.fecha < 0 ? "text-red-400" : "text-willo-green",
+            )}>
+              {openMonth.fecha > 0 ? "+" : ""}{compact(openMonth.fecha)}
+            </p>
+            <MonthBreakdown row={openMonth} prevName={MONTH_NAMES[(openMonth.month + 11) % 12]} />
+            <p className="mt-4 flex items-start gap-2 text-[12px] leading-snug text-white/50">
+              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              Só o que já está previsto entra nessa conta. Novos gastos ajustam o valor.
+            </p>
+          </div>
+        )}
+      </BottomSheet>
     </div>
   );
 }
@@ -607,6 +635,76 @@ function MonthBreakdown({ row, prevName }: {
         )}>
           {row.fecha > 0 ? "+" : ""}{compact(row.fecha)}
         </span>
+      </div>
+    </div>
+  );
+}
+
+/** The chart the statements use, pointed at months: scrollable bars, the selected one
+    lit and the rest dimmed, a dot under the live label. */
+function ProjectionBars({ rows, selectedIdx, onSelect }: {
+  rows: ProjectionRowView[];
+  selectedIdx: number;
+  onSelect: (i: number) => void;
+}) {
+  const max = Math.max(...rows.map((r) => Math.abs(r.fecha)), 1);
+  const selected = rows[selectedIdx];
+
+  return (
+    <div className="rounded-[22px] border border-white/[0.08] willo-glass p-5">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[12px] font-semibold uppercase tracking-wider text-white/50">Saldo no fim de cada mês</p>
+        {selected && (
+          <span className={cn(
+            "inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11.5px] font-semibold tabular-nums",
+            selected.fecha < 0 ? "bg-red-400/15 text-red-300" : "bg-willo-green/12 text-willo-green",
+          )}>
+            {selected.short} · {compact(selected.fecha)}
+          </span>
+        )}
+      </div>
+
+      <div className="mt-4 flex select-none items-end gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {rows.map((r, i) => {
+          const height = Math.max(14, (Math.abs(r.fecha) / max) * 92);
+          const isSel = i === selectedIdx;
+          return (
+            <button
+              key={`${r.year}-${r.month}`}
+              onClick={() => onSelect(i)}
+              className="flex w-[38px] shrink-0 flex-col items-center gap-2"
+            >
+              <span className="flex h-[92px] w-full items-end">
+                <motion.span
+                  initial={{ height: 0 }}
+                  animate={{ height }}
+                  transition={{ duration: 0.45, ease: "easeOut" }}
+                  className={cn(
+                    "w-full rounded-[8px] transition-all duration-200",
+                    r.fecha < 0
+                      ? "bg-gradient-to-t from-red-400/55 to-red-400"
+                      : r.risk === "atencao"
+                        ? "bg-gradient-to-t from-amber-300/55 to-amber-300"
+                        : "bg-gradient-to-t from-willo-green/55 to-willo-green",
+                    !isSel && "opacity-40",
+                  )}
+                />
+              </span>
+              <span className="flex flex-col items-center gap-1">
+                <span className={cn("text-[11px] tabular-nums transition-colors", isSel ? "font-bold text-white" : "text-white/50")}>
+                  {r.short}
+                </span>
+                <span className={cn("h-1 w-1 rounded-full transition-colors", isSel ? "bg-white" : "bg-transparent")} />
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 flex items-center justify-center gap-4 border-t border-white/[0.06] pt-3 text-[11px] text-white/56">
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px] bg-willo-green/70" /> Tranquilo</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px] bg-amber-300/70" /> Atenção</span>
+        <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px] bg-red-400/70" /> Negativo</span>
       </div>
     </div>
   );
