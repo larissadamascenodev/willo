@@ -343,7 +343,9 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
   const dayOfMonth = isCurrentMonth ? now.getDate() : daysInMonth;
   const daysLeft = daysInMonth - dayOfMonth;
   const spent = current.income > 0 ? Math.min((current.expense / current.income) * 100, 100) : current.expense > 0 ? 100 : 0;
-  const perDay = daysLeft > 0 ? current.fecha / daysLeft : 0;
+  // The month on its own: what came in less what went out. What last month left over
+  // belongs to the running balance, which is what Projeções is for.
+  const perDay = daysLeft > 0 ? current.sobra / daysLeft : 0;
 
   return (
     <div className="mt-5">
@@ -354,12 +356,12 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
 
         <p className={cn(
           "mt-3.5 truncate text-[42px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
-          current.fecha < 0 ? "text-red-400" : "text-willo-green",
+          current.sobra < 0 ? "text-red-400" : "text-willo-green",
         )}>
-          {current.fecha > 0 ? "+" : ""}{compact(current.fecha)}
+          {current.sobra > 0 ? "+" : ""}{compact(current.sobra)}
         </p>
         <p className="mt-2 text-[12.5px] text-white/50">
-          {current.fecha < 0 ? "faltando no mês" : "sobrando no mês"}
+          {current.sobra < 0 ? "faltando no mês" : "sobrando no mês"}
           {isCurrentMonth && daysLeft > 0 ? ` · ${compact(perDay)} por dia até o fim` : ""}
         </p>
 
@@ -372,7 +374,7 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
           />
         </div>
 
-        <MonthBreakdown row={current} prevName={MONTH_NAMES[(current.month + 11) % 12]} />
+        <MonthBreakdown row={current} prevName={MONTH_NAMES[(current.month + 11) % 12]} carry={false} />
       </section>
 
       {isCurrentMonth && (
@@ -400,7 +402,7 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
       {ahead.length > 0 && (
         <>
           <div className="mt-6 flex items-baseline justify-between gap-3 px-1">
-            <h2 className="text-[15px] font-bold tracking-tight text-white">Pelos próximos meses</h2>
+            <h2 className="text-[15px] font-bold tracking-tight text-white">Balanço dos próximos meses</h2>
             <button onClick={onOpenProjecoes} className="shrink-0 text-[12.5px] font-semibold text-white/55 active:opacity-70">
               Ver tudo
             </button>
@@ -420,7 +422,7 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
                   <span className="flex items-center gap-1.5">
                     <span className={cn(
                       "h-1.5 w-1.5 shrink-0 rounded-full",
-                      r.fecha < 0 ? "bg-red-400" : r.risk === "atencao" ? "bg-amber-300" : "bg-willo-green",
+                      r.sobra < 0 ? "bg-red-400" : "bg-willo-green",
                     )} />
                     <span className="truncate text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white/50">
                       {r.short}{r.yearTag ? `/${r.yearTag}` : ""}
@@ -428,9 +430,9 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
                   </span>
                   <span className={cn(
                     "mt-2.5 block truncate text-[19px] font-extrabold leading-none tracking-[-0.03em] tabular-nums",
-                    r.fecha < 0 ? "text-red-400" : "text-white",
+                    r.sobra < 0 ? "text-red-400" : "text-white",
                   )}>
-                    {r.fecha > 0 ? "+" : ""}{compact(r.fecha)}
+                    {r.sobra > 0 ? "+" : ""}{compact(r.sobra)}
                   </span>
                   <span className="mt-3 block h-[4px] overflow-hidden rounded-full bg-willo-green/25">
                     <span className="block h-full rounded-full bg-red-400/80" style={{ width: `${s}%` }} />
@@ -442,7 +444,7 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
 
           <p className="mt-4 flex items-start gap-2 px-1 text-[12px] leading-snug text-white/45">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            Os meses à frente contam só o que já está previsto. Novos gastos ajustam os valores.
+            Cada mês conta só o que entra e sai nele, sem o que sobrou do anterior. Só o que já está previsto entra na conta.
           </p>
         </>
       )}
@@ -711,9 +713,11 @@ function FuturoPanel() {
  * and that plus what was left of last month gives the close. Rules sit where an equals
  * sign would, which is what makes it read as a ledger rather than a list of five rows.
  */
-function MonthBreakdown({ row, prevName }: {
+function MonthBreakdown({ row, prevName, carry = true }: {
   row: { income: number; expense: number; sobra: number; prevBalance: number; fecha: number; name: string };
   prevName: string;
+  /** Off in Balanço, which reports a month on its own; Projeções chains them. */
+  carry?: boolean;
 }) {
   const Line = ({ k, v, strong = false, tone = "plain" }: {
     k: string;
@@ -735,26 +739,32 @@ function MonthBreakdown({ row, prevName }: {
     </div>
   );
 
+  const total = carry ? row.fecha : row.sobra;
+  const totalLabel = carry ? `Fecha ${row.name.toLowerCase()} com` : `Balanço de ${row.name.toLowerCase()}`;
+
   return (
     <div className="mt-5">
       <Line k="Entra" v={row.income} />
       <Line k="Sai" v={-row.expense} />
 
-      <div className="border-t border-white/[0.09] pt-0.5">
-        <Line k="Sobra do mês" v={row.sobra} strong tone="result" />
-      </div>
-
-      <div className="mt-2.5">
-        <Line k={`Sobra de ${prevName.toLowerCase()}`} v={row.prevBalance} />
-      </div>
+      {carry && (
+        <>
+          <div className="border-t border-white/[0.09] pt-0.5">
+            <Line k="Sobra do mês" v={row.sobra} strong tone="result" />
+          </div>
+          <div className="mt-2.5">
+            <Line k={`Sobra de ${prevName.toLowerCase()}`} v={row.prevBalance} />
+          </div>
+        </>
+      )}
 
       <div className="mt-0.5 flex items-baseline justify-between gap-4 border-t border-white/[0.16] pt-3.5">
-        <span className="text-[13.5px] font-semibold text-white">Fecha {row.name.toLowerCase()} com</span>
+        <span className="text-[13.5px] font-semibold text-white">{totalLabel}</span>
         <span className={cn(
           "shrink-0 text-[19px] font-extrabold tracking-[-0.02em] tabular-nums",
-          row.fecha < 0 ? "text-red-400" : "text-willo-green",
+          total < 0 ? "text-red-400" : "text-willo-green",
         )}>
-          {row.fecha > 0 ? "+" : ""}{compact(row.fecha)}
+          {total > 0 ? "+" : ""}{compact(total)}
         </span>
       </div>
     </div>
