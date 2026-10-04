@@ -75,72 +75,66 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
   }
 
   const usedPct = summary.limit > 0 ? Math.min(summary.used / summary.limit, 1) : 0;
-  const R = 30;
-  const C = 2 * Math.PI * R;
+  const tight = usedPct >= 0.8;
 
   return (
     <button
       onClick={() => navigate("/cartoes?aba=faturas")}
-      className="block w-full rounded-[22px] border border-white/[0.08] willo-glass p-4 text-left active:scale-[0.99] transition-transform"
+      className="block w-full rounded-[22px] border border-white/[0.08] willo-glass px-[14px] pb-[14px] pt-3.5 text-left transition-transform active:scale-[0.99]"
     >
-      <div className="flex items-center justify-between">
-        <p className="text-[14px] text-white/66">Cartões de crédito</p>
-        <ChevronRight className="h-4 w-4 text-white/45" />
-      </div>
-
-      <div className="mt-3 flex items-center gap-4">
-        {/* Fatura atual */}
-        <div className="min-w-0 flex-1">
-          <p className="whitespace-nowrap text-[11px] text-white/62">Fatura atual</p>
-          <p className="truncate whitespace-nowrap text-[22px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{fmt(summary.invoiceTotal)}</p>
-          <p className={`truncate whitespace-nowrap text-[11px] ${summary.allPaid ? "text-white/56" : "text-amber-300/90"}`}>
-            {summary.invoiceTotal === 0 ? "Sem fatura este mês" : summary.allPaid ? "Tudo pago" : summary.nextDue ? dueText(summary.nextDue, today) : ""}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[12px] text-white/50">Cartões de crédito</p>
+          {/* What you owe is the figure; the limit is context underneath it. The two
+              used to share the row as equals, which made neither the headline. */}
+          <p className="mt-1.5 truncate text-[32px] font-extrabold leading-none tracking-[-0.035em] tabular-nums text-white">
+            {fmt(summary.invoiceTotal)}
+          </p>
+          <p className={`mt-1.5 truncate text-[12px] ${summary.allPaid ? "text-white/50" : "text-amber-300/90"}`}>
+            {summary.invoiceTotal === 0
+              ? "Sem fatura este mês"
+              : summary.allPaid
+                ? "Tudo pago"
+                : summary.nextDue
+                  ? dueText(summary.nextDue, today)
+                  : "A pagar"}
           </p>
         </div>
-
-        {/* Limite disponível */}
-        <div className="flex shrink-0 items-center gap-2.5 border-l border-white/[0.08] pl-3">
-          <div className="relative h-[52px] w-[52px]">
-            <svg viewBox="0 0 76 76" className="h-full w-full -rotate-90">
-              <circle cx="38" cy="38" r={R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="9" />
-              <motion.circle
-                cx="38" cy="38" r={R} fill="none" stroke="#FFFFFF" strokeWidth="9" strokeLinecap="round"
-                initial={{ strokeDasharray: `0 ${C}` }}
-                animate={{ strokeDasharray: `${(1 - usedPct) * C} ${C}` }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-              />
-            </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-white tabular-nums">
-              {Math.round((1 - usedPct) * 100)}%
-            </span>
-          </div>
-          <div>
-            <p className="whitespace-nowrap text-[11px] text-white/62">Limite livre</p>
-            <p className="whitespace-nowrap text-[14px] font-bold text-white tabular-nums">{fmt(summary.available)}</p>
-            <p className="whitespace-nowrap text-[10px] text-white/50 tabular-nums">de {fmt(summary.limit)}</p>
-          </div>
-        </div>
+        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-white/35" />
       </div>
 
-      {/* Per card */}
-      <div className="mt-4 space-y-2.5 border-t border-white/[0.06] pt-3.5">
-        {summary.current.map(({ card, invoice, due }) => {
-          const available = Math.max(card.limit - card.used, 0);
-          return (
-            <div key={card.id} className="flex items-center gap-2.5">
-              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: cardHex(card.color) }} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] text-white">{card.name}</span>
-                <span className="block truncate whitespace-nowrap text-[11px] text-white/56 tabular-nums">
-                  {invoice?.isPaid ? "Fatura paga" : `Vence ${due.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`} · {fmt(available)} livre
-                </span>
-              </span>
-              <span className={`shrink-0 whitespace-nowrap text-[14px] tabular-nums ${invoice?.isPaid ? "text-white/56 line-through" : "text-white"}`}>
-                {fmt(invoice?.total ?? 0)}
-              </span>
-            </div>
-          );
-        })}
+      {/* The limit as a bar rather than a ring: a 52px ring reading "15%" never said
+          15% of what, and the figures below carry it better. */}
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.08]">
+        <motion.div
+          className={`h-full rounded-full ${tight ? "bg-amber-300" : "bg-white/75"}`}
+          initial={{ width: 0 }}
+          animate={{ width: `${usedPct * 100}%` }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+        />
+      </div>
+      <p className="mt-2.5 text-[12.5px] text-white/55">
+        <span className="font-semibold text-white tabular-nums">{fmt(summary.available)}</span> livres
+        {" "}de <span className="tabular-nums">{fmt(summary.limit)}</span>
+      </p>
+
+      <div className="mt-3.5 border-t border-white/[0.07]">
+        {summary.current.map(({ card, invoice, due }, i) => (
+          <div key={card.id} className={`flex items-center gap-2.5 py-2.5 ${i > 0 ? "border-t border-white/[0.05]" : ""}`}>
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: cardHex(card.color) }} />
+            <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-white">{card.name}</span>
+            <span className="shrink-0 whitespace-nowrap text-[11.5px] text-white/45 tabular-nums">
+              {invoice?.isPaid ? "paga" : due.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+            </span>
+            <span
+              className={`w-[88px] shrink-0 text-right text-[13.5px] font-bold tabular-nums ${
+                invoice?.isPaid ? "text-white/45 line-through" : "text-white"
+              }`}
+            >
+              {fmt(invoice?.total ?? 0)}
+            </span>
+          </div>
+        ))}
       </div>
     </button>
   );
