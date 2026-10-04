@@ -437,6 +437,20 @@ const RISK = {
 } as const;
 const riskOf = (r: string) => RISK[r as keyof typeof RISK] ?? RISK.risco;
 
+interface ProjectionRowView {
+  month: number;
+  year: number;
+  risk: "positivo" | "atencao" | "risco";
+  income: number;
+  expense: number;
+  sobra: number;
+  prevBalance: number;
+  fecha: number;
+  short: string;
+  name: string;
+  yearTag: string;
+}
+
 function FuturoPanel() {
   const navigate = useNavigate();
   const { projections, data, loading } = useFinancialProjection();
@@ -444,34 +458,40 @@ function FuturoPanel() {
 
   const rows = useMemo(
     () =>
-      projections.map((p, i) => ({
-        ...p,
-        prevBalance: i > 0 ? projections[i - 1].balance : data.previousMonthEndingBalance,
-        short: MONTH_SHORT[p.month],
-        yearTag: p.year !== new Date().getFullYear() ? String(p.year).slice(2) : "",
-      })),
+      projections.reduce<ProjectionRowView[]>((acc, p, i) => {
+        // Rounded once, here, and every figure derived from those rounded parts — the
+        // card shows whole reais, and four independently rounded numbers do not add
+        // up to the fifth. Each is within a real of the exact value.
+        const income = Math.round(p.income);
+        const expense = Math.round(p.expense);
+        const sobra = income - expense;
+        const prevBalance = i > 0 ? acc[i - 1].fecha : Math.round(data.previousMonthEndingBalance);
+        acc.push({
+          ...p,
+          income,
+          expense,
+          sobra,
+          prevBalance,
+          fecha: prevBalance + sobra,
+          short: MONTH_SHORT[p.month],
+          name: MONTH_NAMES[p.month],
+          yearTag: p.year !== new Date().getFullYear() ? String(p.year).slice(2) : "",
+        });
+        return acc;
+      }, []),
     [projections, data.previousMonthEndingBalance],
   );
-
-  const insights = useMemo(() => {
-    if (rows.length === 0) return null;
-    const first = rows[0];
-    const last = rows[rows.length - 1];
-    const negatives = rows.filter((r) => r.balance < 0);
-    const lowest = rows.reduce((a, b) => (b.balance < a.balance ? b : a));
-    return { first, last, negatives, lowest, growth: last.balance - first.prevBalance };
-  }, [rows]);
 
   if (loading) {
     return (
       <div className="mt-6 space-y-3">
-        <div className="h-44 animate-pulse rounded-[26px] willo-glass" />
+        <div className="h-40 animate-pulse rounded-[26px] willo-glass" />
         <div className="h-64 animate-pulse rounded-[24px] willo-glass" />
       </div>
     );
   }
 
-  if ((!data.transactions.length && !data.events.length) || !insights) {
+  if ((!data.transactions.length && !data.events.length) || rows.length === 0) {
     return (
       <div className="mt-10 flex flex-col items-center px-8 text-center">
         <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.05]">
@@ -486,122 +506,108 @@ function FuturoPanel() {
     );
   }
 
-  const selected = rows[Math.min(selectedIdx, rows.length - 1)];
-  const balances = rows.map((r) => r.balance);
-  const maxAbs = Math.max(...balances.map((b) => Math.abs(b)), 1);
-
-  const headline = insights.negatives.length > 0
-    ? `Seu saldo fica negativo em ${insights.negatives.length} ${insights.negatives.length === 1 ? "mês" : "meses"}. Dá tempo de mudar isso.`
-    : insights.growth >= 0
-      ? `Mantendo o ritmo, você termina com ${compact(insights.last.balance)} em ${MONTH_NAMES[insights.last.month].toLowerCase()}.`
-      : `Mantendo o ritmo, seu saldo encolhe ${compact(Math.abs(insights.growth))} até ${MONTH_NAMES[insights.last.month].toLowerCase()}.`;
+  const [current, ...ahead] = rows;
+  const negatives = rows.filter((r) => r.fecha < 0);
+  const today = new Date();
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const daysLeft = lastDay - today.getDate();
 
   return (
-    <div>
-      <motion.section
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative mt-6 overflow-hidden rounded-[28px] border border-white/[0.08] p-5"
-        style={{
-          background: `radial-gradient(120% 90% at 100% 0%, ${insights.growth >= 0 ? "#C8F36D1C" : "#F8717120"} 0%, rgba(20,20,20,0.96) 55%, #0E0E0E 100%)`,
-        }}
-      >
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[12px] text-white/62">Hoje</p>
-            <p className="truncate text-[20px] font-bold text-white tabular-nums">{compact(insights.first.prevBalance)}</p>
-          </div>
-          <ArrowRight className="mb-1.5 h-5 w-5 shrink-0 text-white/45" />
-          <div className="min-w-0 text-right">
-            <p className="truncate text-[12px] text-white/62">
-              {MONTH_NAMES[insights.last.month]}{insights.last.yearTag ? `/${insights.last.yearTag}` : ""}
-            </p>
-            <p className={cn("truncate text-[30px] font-extrabold leading-tight tracking-tight tabular-nums", insights.last.balance < 0 ? "text-red-400" : "text-white")}>
-              {compact(insights.last.balance)}
-            </p>
-          </div>
-        </div>
+    <div className="mt-5">
+      {/* This month, closed out */}
+      <section className="rounded-[24px] border border-white/[0.08] willo-glass px-[14px] pb-[14px] pt-4">
+        <p className="text-[12px] text-white/50">{current.name} fecha com</p>
+        <p className={cn(
+          "mt-1.5 truncate text-[40px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
+          current.fecha < 0 ? "text-red-400" : "text-willo-green",
+        )}>
+          {current.fecha > 0 ? "+" : ""}{compact(current.fecha)}
+        </p>
+        <p className="mt-2 text-[12.5px] text-white/55">
+          previsto · {daysLeft === 0 ? "último dia do mês" : `faltam ${daysLeft} dias`}
+        </p>
 
-        <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3 py-1.5">
-          {insights.growth >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-willo-green" /> : <TrendingDown className="h-3.5 w-3.5 text-red-400" />}
-          <span className={cn("text-[13px] font-semibold tabular-nums", insights.growth >= 0 ? "text-willo-green" : "text-red-400")}>
-            {insights.growth >= 0 ? "+" : "−"}{compact(Math.abs(insights.growth))}
-          </span>
-          <span className="text-[12px] text-white/66">em {rows.length} meses</span>
-        </div>
+        <MonthBreakdown row={current} prevName={MONTH_NAMES[(current.month + 11) % 12]} />
+      </section>
 
-        <p className="mt-3 rounded-[16px] bg-black/25 px-3.5 py-2.5 text-[13px] leading-snug text-white/85">{headline}</p>
-      </motion.section>
+      {negatives.length > 0 && (
+        <p className="mt-3 flex items-start gap-2 rounded-[16px] border border-red-400/20 bg-red-400/[0.07] px-3.5 py-3 text-[12.5px] leading-snug text-red-300">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          {negatives.length === 1
+            ? <>Seu saldo fecha negativo em <b className="font-semibold">{negatives[0].name.toLowerCase()}</b>. Dá tempo de mudar isso.</>
+            : <>Seu saldo fecha negativo em <b className="font-semibold">{negatives.length} meses</b>. Dá tempo de mudar isso.</>}
+        </p>
+      )}
 
       <SectionTitle>Como seu saldo evolui</SectionTitle>
-      <ProjectionHistoryChart rows={rows} selectedIdx={selectedIdx} onSelect={setSelectedIdx} maxAbs={maxAbs} />
+      <ProjectionHistoryChart
+        rows={rows.map((r) => ({ ...r, balance: r.fecha }))}
+        selectedIdx={Math.min(selectedIdx, rows.length - 1)}
+        onSelect={setSelectedIdx}
+        maxAbs={Math.max(...rows.map((r) => Math.abs(r.fecha)), 1)}
+      />
 
-      <SectionTitle>{MONTH_NAMES[selected.month]} {selected.year}</SectionTitle>
-      <Surface className="p-5">
-        <div className="space-y-2.5">
-          {[
-            { Icon: null, label: "Saldo que vem do mês anterior", value: selected.prevBalance, tone: "text-white" },
-            { Icon: Plus, label: "Receitas previstas", value: selected.income, tone: "text-willo-green" },
-            { Icon: Minus, label: "Despesas previstas", value: selected.expense, tone: "text-red-400" },
-          ].map(({ Icon, label, value, tone }) => (
-            <div key={label} className="flex items-center gap-2.5">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
-                {Icon && <Icon className="h-3 w-3 text-white/74" />}
-              </span>
-              <span className="min-w-0 flex-1 truncate text-[13.5px] text-white/74">{label}</span>
-              <span className={cn("shrink-0 text-[14px] font-medium tabular-nums", tone)}>{fmt(value)}</span>
+      <SectionTitle>Mês a mês</SectionTitle>
+      <div className="space-y-2.5">
+        {ahead.map((r, i) => (
+          <section key={`${r.year}-${r.month}`} className="rounded-[22px] border border-white/[0.08] willo-glass px-[14px] pb-[14px] pt-3.5">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-[15px] font-bold tracking-tight text-white">
+                {r.name}{r.yearTag ? `/${r.yearTag}` : ""}
+              </p>
+              <p className={cn(
+                "shrink-0 text-[18px] font-extrabold tracking-[-0.03em] tabular-nums",
+                r.fecha < 0 ? "text-red-400" : "text-willo-green",
+              )}>
+                {r.fecha > 0 ? "+" : ""}{compact(r.fecha)}
+              </p>
             </div>
-          ))}
-          <div className="flex items-center gap-2.5 rounded-[16px] bg-white/[0.05] px-2.5 py-3">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[#0B0B0B]">
-              <Equal className="h-3 w-3" strokeWidth={3} />
-            </span>
-            <span className="flex-1 text-[14px] font-semibold text-white">Saldo no fim do mês</span>
-            <span className={cn("text-[17px] font-bold tabular-nums", selected.balance < 0 ? "text-red-400" : "text-white")}>{fmt(selected.balance)}</span>
-          </div>
-        </div>
-
-        <p
-          className="mt-3 flex items-start gap-2 rounded-[16px] px-3.5 py-2.5 text-[13px] leading-snug"
-          style={{ background: `${riskOf(selected.risk).hex}14`, color: "rgba(255,255,255,0.8)" }}
-        >
-          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: riskOf(selected.risk).hex }} />
-          {selected.balance < 0
-            ? `Mês fecha negativo em ${fmt(Math.abs(selected.balance))}. Antecipar receitas ou adiar uma compra resolve.`
-            : selected.delta < 0
-              ? `Neste mês você gasta ${fmt(Math.abs(selected.delta))} a mais do que recebe, mas o saldo acumulado segura.`
-              : `Sobram ${fmt(selected.delta)} neste mês. Bom momento para guardar uma parte.`}
-        </p>
-      </Surface>
-
-      {insights.negatives.length > 0 && (
-        <>
-          <SectionTitle>Meses de atenção</SectionTitle>
-          <Surface className="divide-y divide-white/[0.06] px-4">
-            {insights.negatives.map((r) => (
-              <button
-                key={`neg-${r.year}-${r.month}`}
-                onClick={() => setSelectedIdx(rows.findIndex((x) => x.month === r.month && x.year === r.year))}
-                className="flex w-full items-center gap-3 py-3.5 text-left"
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-400/15">
-                  <AlertTriangle className="h-[18px] w-[18px] text-red-400" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] text-white">{MONTH_NAMES[r.month]} {r.year}</span>
-                  <span className="block text-[12px] text-white/62">saldo previsto</span>
-                </span>
-                <span className="shrink-0 text-[15px] font-semibold text-red-400 tabular-nums">{fmt(r.balance)}</span>
-              </button>
-            ))}
-          </Surface>
-        </>
-      )}
+            <MonthBreakdown row={r} prevName={(i === 0 ? current : ahead[i - 1]).name} />
+          </section>
+        ))}
+      </div>
 
       <p className="mt-5 flex items-start gap-2 px-1 text-[12px] leading-snug text-white/50">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        A projeção usa suas contas fixas, parcelas já lançadas e a média dos seus gastos. Novos lançamentos ajustam o cálculo na hora.
+        Conta só o que já está previsto: contas fixas, parcelas lançadas e recorrências.
+        Conforme novos gastos entrarem, estes valores se ajustam sozinhos.
       </p>
+    </div>
+  );
+}
+
+/** Entra, sai, sobra, vem de trás, fecha — the five lines that make the figure above. */
+function MonthBreakdown({ row, prevName }: {
+  row: { income: number; expense: number; sobra: number; prevBalance: number; fecha: number; name: string };
+  prevName: string;
+}) {
+  return (
+    <div className="mt-3.5 border-t border-white/[0.07] pt-1">
+      {[
+        { k: "Entra", v: row.income, tone: "in" as const },
+        { k: "Sai", v: -row.expense, tone: "out" as const },
+        { k: "Sobra do mês", v: row.sobra, tone: "sum" as const },
+        { k: `Vem de ${prevName.toLowerCase()}`, v: row.prevBalance, tone: "plain" as const },
+      ].map(({ k, v, tone }) => (
+        <div key={k} className="flex items-baseline justify-between gap-3 border-b border-white/[0.05] py-2 last:border-b-0">
+          <span className={cn("text-[13px]", tone === "sum" ? "font-semibold text-white/80" : "text-white/55")}>{k}</span>
+          <span className={cn(
+            "shrink-0 text-[13.5px] font-semibold tabular-nums",
+            tone === "in" ? "text-willo-green" : tone === "out" ? "text-red-400" : "text-white",
+          )}>
+            {v > 0 && tone !== "plain" ? "+" : ""}{compact(v)}
+          </span>
+        </div>
+      ))}
+      <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-white/[0.12] pt-2.5">
+        <span className="text-[13px] font-semibold text-white">Fecha {row.name.toLowerCase()} com</span>
+        <span className={cn(
+          "shrink-0 text-[15px] font-extrabold tabular-nums",
+          row.fecha < 0 ? "text-red-400" : "text-willo-green",
+        )}>
+          {row.fecha > 0 ? "+" : ""}{compact(row.fecha)}
+        </span>
+      </div>
     </div>
   );
 }

@@ -6,7 +6,7 @@ const TABS = [
   { label: "Contas", path: "/gestao" },
   { label: "Cartões", path: "/cartoes" },
   { label: "Parcelamentos", path: "/parcelamentos" },
-  { label: "Projeções", path: "/bot-finance/projecoes" },
+  { label: "Financeiro", path: "/bot-finance/balanco" },
   { label: "Raio-X", path: "/bot-finance" },
 ] as const;
 
