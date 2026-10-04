@@ -120,12 +120,24 @@
   }
 
   /* Screen background: the wallpaper everything sits on. */
-  /* Flat near black. Nothing behind the panels: the identity carries itself with
-     type and one white button, so a lit ground would be fighting it. */
   .willo-bg {
     position: relative;
     isolation: isolate;
     background: #0E0E0F;
+  }
+  /* Sky across the top, pinned to the viewport so the panels travel over it while it
+     holds still. Its scrim is baked into the image and lands on the app's own black,
+     so the band dissolves into the ground with nothing to mask. */
+  .willo-bg::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 420px;
+    z-index: -1;
+    pointer-events: none;
+    background: url("./assets/bg/sky-top.jpg") center top / auto 420px no-repeat;
   }
   /* Floating graphite card: hairline border, soft blur where supported. */
   .willo-glass {
