@@ -77,7 +77,7 @@ const BalanceHeroCard = ({ topInset = 0, slot, pinned = true }: Props) => {
   const collapsed = progress > 0.55;
 
   // The pinned block carries this padding itself, so the spacer must not count it twice.
-  const heroPadTop = 80 + topInset;
+  const heroPadTop = 70 + topInset;
 
   /** The translucent control surface the pills and the round buttons share. */
   const control =
@@ -165,7 +165,7 @@ const BalanceHeroCard = ({ topInset = 0, slot, pinned = true }: Props) => {
             section pills sit last, landing directly above the first card. */}
         {slot ?? <div className="h-[118px]" aria-hidden="true" />}
 
-        <div className="mt-7 pb-1">
+        <div className="mt-8 pb-5">
           <HomeSectionTabs />
         </div>
       </div>
