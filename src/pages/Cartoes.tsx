@@ -79,29 +79,15 @@ function MonthBars({ slots, values, selected, paidKeys, currentKey, onSelect }: 
                       height: Math.max((value / max) * HEIGHT, 36),
                       backgroundColor: isSelected
                         ? "rgba(255,255,255,1)"
-                        : isPaid
-                          ? "rgba(200,243,109,0.26)"
-                          : isFuture
-                            ? "rgba(255,255,255,0.14)"
-                            : "rgba(255,255,255,0.25)",
+                        : isFuture
+                          ? "rgba(255,255,255,0.14)"
+                          : "rgba(255,255,255,0.25)",
                     }}
                     transition={{
                       height: { delay: i * 0.02, duration: 0.45, ease: "easeOut" },
                       backgroundColor: { duration: 0.28, ease: "easeOut" },
                     }}
-                  >
-                    {/* A settled month says so on the bar, so you can see it without opening it */}
-                    {isPaid && (
-                      <span
-                        className={cn(
-                          "absolute inset-x-0 top-2 mx-auto flex h-4 w-4 items-center justify-center rounded-full",
-                          isSelected ? "bg-[#0B0B0B]/12" : "bg-willo-green/25",
-                        )}
-                      >
-                        <Check className={cn("h-3 w-3", isSelected ? "text-[#0B0B0B]" : "text-willo-green")} strokeWidth={3.2} />
-                      </span>
-                    )}
-                  </motion.span>
+                  />
                 ) : (
                   <motion.span
                     className="block h-8 w-8 rounded-full border border-dashed"
@@ -110,14 +96,19 @@ function MonthBars({ slots, values, selected, paidKeys, currentKey, onSelect }: 
                   />
                 )}
               </div>
+              {/* Settled months say so beside their name: a tick on the label reads at a
+                  glance and leaves the bar alone, which the selection owns. */}
               <motion.span
-                className="mt-3 text-[12px] tabular-nums"
+                className="mt-3 flex items-center justify-center gap-1 text-[12px] tabular-nums"
                 animate={{
-                  color: isSelected ? "rgba(255,255,255,1)" : isFuture ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.62)",
-                  fontWeight: isSelected ? 600 : 400,
+                  color: isPaid && !isSelected
+                    ? "rgba(200,243,109,0.95)"
+                    : isSelected ? "rgba(255,255,255,1)" : isFuture ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.62)",
+                  fontWeight: isSelected || isPaid ? 600 : 400,
                 }}
                 transition={{ duration: 0.28 }}
               >
+                {isPaid && <Check className="h-3 w-3 shrink-0" strokeWidth={3.4} />}
                 {slot.label}
               </motion.span>
             </button>

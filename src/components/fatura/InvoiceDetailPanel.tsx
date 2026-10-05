@@ -4,11 +4,18 @@ import { CalendarCheck, CalendarClock, Layers, Plus, Wallet } from "lucide-react
 import { toast } from "sonner";
 import { getInvoiceItems, payInvoice } from "@/services/invoiceService";
 import { getAccounts } from "@/services/transactionService";
-import { getCategoryIcon, getCategoryColor } from "@/lib/categoryUtils";
+import { useNavigate } from "react-router-dom";
+import { getCategoryIcon, getCategoryColor, getCategoryHexColor } from "@/lib/categoryUtils";
+import {
+  SpendRing, CategoryRows, GroupCards, ViewToggle, groupCategories,
+  type OverviewCategory,
+} from "@/components/analytics/CategoryOverviewViews";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { formatCurrency, type EnrichedItem } from "@/pages/FaturaCartao";
 import { cardHex, type OverviewCard, type OverviewInvoice } from "@/hooks/useCardsOverview";
 import NovaTransacaoModal from "@/components/dashboard/NovaTransacaoModal";
+import InstallmentPurchaseCard from "@/components/installments/InstallmentPurchaseCard";
+import SinglePurchaseCard from "./SinglePurchaseCard";
 import InvoicePayModal from "./InvoicePayModal";
 import BottomSheet from "@/components/shared/BottomSheet";
 import { cn } from "@/lib/utils";
@@ -30,6 +37,11 @@ interface CategoryRow {
 
 const PREVIEW = 5;
 
+const MONTH_LABELS = [
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+];
+
 /**
  * Everything a single card's statement had on a page of its own, folded into the tab
  * that already lists the statements. Two screens were showing the same month from the
@@ -48,6 +60,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
   const [view, setView] = useState<"geral" | "parcelado">("geral");
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
   const [allCatsOpen, setAllCatsOpen] = useState(false);
+  const [catView, setCatView] = useState<"categorias" | "grupos">("categorias");
 
   const [accounts, setAccounts] = useState<AccountInfo[]>([]);
   const [payAccountId, setPayAccountId] = useState("");
@@ -55,6 +68,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
   const [paying, setPaying] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
 
+  const navigate = useNavigate();
   const hex = cardHex(card.color);
 
   const loadItems = useCallback(() => {
@@ -105,6 +119,22 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
       }))
       .sort((a, b) => b.total - a.total);
   }, [items]);
+
+  // The shared category views take hex and an icon per row, and cannot plot a refund,
+  // so those are listed separately underneath instead of being dropped.
+  const overviewCats = useMemo<OverviewCategory[]>(() => {
+    const positive = categories.filter((c) => c.total > 0);
+    const sum = positive.reduce((acc, c) => acc + c.total, 0);
+    return positive.map((c) => ({
+      name: c.category,
+      amount: c.total,
+      percentage: sum > 0 ? Math.round((c.total / sum) * 100) : 0,
+      hexColor: getCategoryHexColor(c.category, customCats),
+      icon: getCategoryIcon(c.category, customCats),
+    }));
+  }, [categories, customCats]);
+
+  const refunds = useMemo(() => categories.filter((c) => c.total < 0), [categories]);
 
   // Newest at the top: a statement is read backwards from the last thing you bought.
   const sorted = useMemo(
@@ -333,74 +363,100 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
               <p className="text-[13.5px] text-white/60">Nenhuma compra parcelada nessa fatura.</p>
             </div>
           ) : (
-            <div className="divide-y divide-white/[0.055] rounded-[22px] border border-white/[0.08] willo-glass px-4">
-              <AnimatePresence initial={false} mode="popLayout">
-                {shown.map((item, i) => {
-                  const color = getCategoryColor(item.transaction_category, customCats);
-                  const Icon = getCategoryIcon(item.transaction_category, customCats);
-                  const total = item.total_installments ?? 1;
-                  const current = item.installment_number ?? 1;
-                  return (
-                    <motion.div
-                      key={item.id}
-                      layout
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ delay: Math.min(i, 8) * 0.02 }}
-                      className="flex items-center gap-3 py-3.5"
-                    >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: `hsl(${color} / 0.15)` }}>
-                        <Icon className="h-[17px] w-[17px]" style={{ color: `hsl(${color})` }} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <p className="truncate text-[14.5px] font-medium text-white">{item.transaction_name}</p>
-                          <p className={cn(
-                            "shrink-0 text-[14.5px] font-semibold tabular-nums",
-                            Number(item.amount) < 0 ? "text-willo-green" : "text-white",
-                          )}>
-                            {formatCurrency(Number(item.amount))}
-                          </p>
-                        </div>
-                        <div className="mt-0.5 flex items-baseline justify-between gap-2">
-                          <p className="truncate text-[12px] text-white/45">{item.transaction_category || "Outros"}</p>
-                          {total > 1 && (
-                            <p className="shrink-0 text-[12px] tabular-nums text-white/45">{current} de {total}</p>
-                          )}
-                        </div>
-                        {total > 1 && (
-                          <div className="mt-2 flex gap-[3px]">
-                            {Array.from({ length: Math.min(total, 24) }, (_, k) => (
-                              <span
-                                key={k}
-                                className={cn("h-[3px] flex-1 rounded-full", k < current ? "bg-white/70" : "bg-white/[0.12]")}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
+            /* One card per purchase rather than rows in a single list: an instalment
+               plan carries its own count, its per-instalment and total values and what
+               is left, which is more than a row can hold. */
+            <div className="space-y-2.5">
+              {shown.map((item, i) =>
+                (item.total_installments ?? 1) > 1 ? (
+                  <InstallmentPurchaseCard
+                    key={item.id}
+                    index={i}
+                    customCats={customCats}
+                    card={{ name: card.name, color: card.color }}
+                    item={{
+                      id: item.transaction_id,
+                      name: item.transaction_name,
+                      category: item.transaction_category,
+                      amount: Number(item.amount),
+                      installment_current: item.installment_number,
+                      installments: item.total_installments,
+                      payment_method: "cartao",
+                      date: item.transaction_date,
+                      credit_card_id: card.id,
+                      isOverdue: false,
+                      dueDate: null,
+                    }}
+                  />
+                ) : (
+                  <SinglePurchaseCard
+                    key={item.id}
+                    index={i}
+                    customCats={customCats}
+                    card={{ name: card.name, color: card.color }}
+                    item={{
+                      id: item.id,
+                      name: item.transaction_name,
+                      category: item.transaction_category,
+                      amount: Number(item.amount),
+                      date: item.transaction_date,
+                    }}
+                  />
+                ),
+              )}
             </div>
           )}
         </>
       )}
 
-      {/* Every category with its own numbers, rather than a list that just gets longer */}
+      {/* The same ring and the same two readings the categories screen uses, over this
+          one statement — it is the view people already know, pointed at one card. */}
       <BottomSheet open={allCatsOpen} onClose={() => setAllCatsOpen(false)} size="full" zIndex={65}>
-        <div className="px-5 pb-4">
-          <p className="text-[20px] font-bold text-white">Gastos por categoria</p>
-          <p className="mt-1 text-[13px] text-white/55">
-            {card.name} · fatura de {String(month).padStart(2, "0")}/{year} · {formatCurrency(invoiceTotal)}
+        <div className="px-4 pb-6">
+          <p className="px-1 text-[20px] font-bold text-white">Gastos por categoria</p>
+          <p className="mt-1 px-1 text-[13px] text-white/55">
+            {card.name} · fatura de {MONTH_LABELS[month - 1]}
           </p>
-          <div className="mt-5 space-y-3.5">
-            {categories.map((row, i) => (
-              <CatRow key={row.category} row={row} index={i} />
-            ))}
+
+          <div className="mt-5">
+            <SpendRing
+              segments={overviewCats.map((c) => ({ key: c.name, hex: c.hexColor, amount: c.amount }))}
+              total={overviewCats.reduce((acc, c) => acc + c.amount, 0)}
+              caption={refunds.length > 0 ? "antes dos estornos" : "nesta fatura"}
+            />
           </div>
+
+          <div className="mt-6">
+            <ViewToggle<"categorias" | "grupos">
+              value={catView}
+              onChange={setCatView}
+              options={[{ key: "categorias", label: "Categorias" }, { key: "grupos", label: "Grupos" }]}
+            />
+          </div>
+
+          <div className="mt-4">
+            {catView === "categorias" ? (
+              <CategoryRows categories={overviewCats} onOpen={() => navigate("/analytics/categorias")} />
+            ) : (
+              <GroupCards groups={groupCategories(overviewCats)} />
+            )}
+          </div>
+
+          {refunds.length > 0 && (
+            <div className="mt-5 rounded-[22px] border border-white/[0.08] willo-glass px-4 py-3.5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-white/45">Estornos</p>
+              <div className="mt-2.5 space-y-2">
+                {refunds.map((r) => (
+                  <div key={r.category} className="flex items-baseline justify-between gap-3">
+                    <span className="truncate text-[14px] text-white/75">{r.category}</span>
+                    <span className="shrink-0 text-[14px] font-semibold tabular-nums text-willo-green">
+                      {formatCurrency(r.total)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </BottomSheet>
 

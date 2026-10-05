@@ -79,6 +79,17 @@ export function getAccent(color: string | null) {
 /* ══════════════════════════════════════════════
    Credit Card Tile – shared by mobile & desktop
    ══════════════════════════════════════════════ */
+
+const TILE_HEX: Record<string, string> = {
+  violet: "#8B5CF6", emerald: "#10B981", sky: "#0EA5E9", amber: "#F59E0B", rose: "#F43F5E",
+  cyan: "#06B6D4", fuchsia: "#D946EF", lime: "#84CC16", purple: "#8A05BE", orange: "#F97316",
+};
+
+/**
+ * The card itself, as a piece of glass lit by its own colour. The name and the chip
+ * carry the identity, the open statement is the figure, and the limit runs underneath
+ * as a single rule with what is spent and what is left on either end.
+ */
 export const CreditCardTile = ({ card, idx, invoiceInfo, navigate, extraClass }: {
   card: CreditCardItem;
   idx: number;
@@ -90,12 +101,10 @@ export const CreditCardTile = ({ card, idx, invoiceInfo, navigate, extraClass }:
   const limitValue = Number(card.limit);
   const usedPct = limitValue > 0 ? Math.min((usedValue / limitValue) * 100, 100) : 0;
   const available = Math.max(limitValue - usedValue, 0);
-  const accent = getAccent(card.color);
   const status = getInvoiceStatusLabel(card, invoiceInfo);
   const invoiceAmount = invoiceInfo?.amount || 0;
-
-  const barColor = usedPct >= 100 ? "bg-red-400" : usedPct >= 80 ? "bg-amber-300" : "bg-white";
-  const barTrackColor = "bg-white/[0.08]";
+  const hex = TILE_HEX[card.color ?? "violet"] ?? TILE_HEX.violet;
+  const tight = usedPct >= 80;
 
   return (
     <motion.div
@@ -104,75 +113,71 @@ export const CreditCardTile = ({ card, idx, invoiceInfo, navigate, extraClass }:
       transition={{ delay: idx * 0.06 }}
       onClick={() => navigate(`/fatura/${card.id}`)}
       className={cn(
-        "relative rounded-[22px] overflow-hidden cursor-pointer group transition-all duration-300 active:scale-[0.98]",
-        "willo-glass border border-white/[0.08] hover:border-white/15",
-        extraClass
+        "relative cursor-pointer overflow-hidden rounded-[24px] border border-white/[0.09] willo-glass px-[18px] pb-[18px] pt-4",
+        "transition-transform duration-200 active:scale-[0.985]",
+        extraClass,
       )}
     >
-      <div className="p-4">
-        {/* Header: icon + name + chevron */}
-        <div className="flex items-center gap-2.5 mb-3">
-          <div className={cn("w-10 h-10 rounded-full flex items-center justify-center shrink-0", accent.iconBg)}>
-            <CreditCard className={cn("w-4 h-4", accent.dot.replace("bg-", "text-"))} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-semibold text-white leading-tight truncate">{card.name}</p>
-            {card.last_four_digits && (
-              <p className="text-[12px] text-white/56 tabular-nums mt-0.5">•••• {card.last_four_digits}</p>
-            )}
-          </div>
-          <ChevronRight className="w-4 h-4 text-white/38 shrink-0" />
-        </div>
+      {/* The card's colour, as light inside the glass rather than as a border */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-16 -top-20 h-48 w-56 rounded-full blur-[46px]"
+        style={{ background: hex, opacity: 0.3 }}
+      />
+      {/* A hairline catching the light along the top edge */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-5 top-0 h-px"
+        style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)" }}
+      />
 
-        {/* Invoice highlight */}
-        <div className="flex items-baseline justify-between mb-3">
-          <div>
-            <p className="text-[12px] text-white/62 leading-none mb-1.5">Fatura em aberto</p>
-            <p className={cn(
-              "text-[24px] font-extrabold tabular-nums leading-none tracking-tight",
-              invoiceAmount > 0 ? "text-white" : "text-white/45"
-            )}>
-              {formatCurrency(invoiceAmount)}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-[12px] text-white/62 leading-none mb-1.5">Disponível</p>
-            <p className={cn("text-sm font-bold tabular-nums leading-none", available > 0 ? "text-willo-green" : "text-destructive")}>
-              {formatCurrency(available)}
-            </p>
-          </div>
-        </div>
+      <div className="relative flex items-center gap-2.5">
+        <span
+          className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[10px]"
+          style={{ background: hex, boxShadow: `0 6px 16px -6px ${hex}` }}
+        >
+          <span className="h-[7px] w-[11px] rounded-[2px] bg-white/85" />
+        </span>
+        <p className="min-w-0 flex-1 truncate text-[16px] font-bold tracking-[-0.01em] text-white">{card.name}</p>
+        {card.last_four_digits && (
+          <span className="shrink-0 text-[12px] tabular-nums text-white/40">•••• {card.last_four_digits}</span>
+        )}
+        <ChevronRight className="h-4 w-4 shrink-0 text-white/35" />
+      </div>
 
-        {/* Progress bar */}
-        <div className="mb-2.5">
-          <div className={cn("w-full h-1.5 rounded-full overflow-hidden", barTrackColor)}>
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${usedPct}%` }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className={cn("h-full rounded-full", barColor)}
-            />
-          </div>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-[11px] text-white/56 tabular-nums">
-              {formatCurrency(usedValue)} / {formatCurrency(limitValue)}
-            </span>
-            <span className="text-[11px] font-semibold tabular-nums text-white/66">
-              {usedPct.toFixed(0)}%
-            </span>
-          </div>
-        </div>
+      <p className="relative mt-3.5 truncate text-[12.5px] text-white/55">
+        {invoiceInfo?.isPaid ? "Fatura paga" : "Fatura aberta"}
+        <span className="text-white/25"> · </span>
+        <span className={cn(status.isClosed && "font-semibold text-amber-300/90")}>{status.label.toLowerCase()}</span>
+      </p>
 
-        {/* Footer: contextual date */}
-        <div className="flex items-center gap-2 pt-2.5 border-t border-white/[0.06]">
-          <CalendarClock className="w-3.5 h-3.5 text-white/50 shrink-0" />
-          <span className={cn("text-[12px] tabular-nums", status.isClosed ? "text-amber-300 font-semibold" : "text-white/66")}>
-            {status.label}
+      <p className={cn(
+        "relative mt-1 truncate text-[27px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
+        invoiceAmount > 0 ? "text-white" : "text-white/40",
+      )}>
+        {formatCurrency(invoiceAmount)}
+      </p>
+
+      <div className="relative mt-4 h-[5px] overflow-hidden rounded-full bg-white/[0.09]">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${usedPct}%` }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="h-full rounded-full"
+          style={{ background: usedPct >= 100 ? "#F87171" : tight ? "#FBBF24" : hex }}
+        />
+      </div>
+
+      <div className="relative mt-2 flex items-baseline justify-between gap-3">
+        <span className="truncate text-[11.5px] text-white/45">
+          Usado <span className="font-semibold tabular-nums text-white/75">{formatCurrency(usedValue)}</span>
+        </span>
+        <span className="shrink-0 truncate text-[11.5px] text-white/45">
+          Disponível <span className={cn("font-semibold tabular-nums", available > 0 ? "text-willo-green" : "text-red-400")}>
+            {formatCurrency(available)}
           </span>
-        </div>
+        </span>
       </div>
     </motion.div>
   );
 };
-
-
