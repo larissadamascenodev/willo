@@ -20,6 +20,8 @@ import RecurrenceActionModal, { type RecurrenceScope } from "./RecurrenceActionM
 
 interface Props {
   items: EnrichedItem[];
+  /** Off where the caller already titles the section, so it is not announced twice. */
+  hideHeader?: boolean;
   installmentCount?: number;
   cardName?: string;
   invoiceMonth: number;
@@ -56,7 +58,7 @@ function InstallmentBar({ current, total }: { current: number; total: number }) 
   );
 }
 
-export default function InvoiceTransactionList({ items, installmentCount = 0, cardName, invoiceMonth, invoiceYear, payments = [], isPaid = false, onEditItem, onDeleteItem }: Props) {
+export default function InvoiceTransactionList({ items, hideHeader = false, installmentCount = 0, cardName, invoiceMonth, invoiceYear, payments = [], isPaid = false, onEditItem, onDeleteItem }: Props) {
   const [selectedItem, setSelectedItem] = useState<EnrichedItem | null>(null);
   const [editItem, setEditItem] = useState<EnrichedItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<EnrichedItem | null>(null);
@@ -150,7 +152,7 @@ export default function InvoiceTransactionList({ items, installmentCount = 0, ca
         className="space-y-2"
       >
         {/* Section header */}
-        <div className="flex items-center justify-between">
+        <div className={cn("flex items-center justify-between", hideHeader && "hidden")}>
           <div className="flex items-center gap-2">
             <div className="w-1 h-5 rounded-full bg-primary" />
             <h2 className="text-sm font-bold text-foreground">Lançamentos</h2>

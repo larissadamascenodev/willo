@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Check, ChevronLeft, Clock, CreditCard } from "lucide-react";
+import { ChevronLeft, Clock, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
-import BottomSheet from "@/components/shared/BottomSheet";
+import InvoiceDetailPanel from "@/components/fatura/InvoiceDetailPanel";
 import CardCreateSheet from "@/components/wallet/CardCreateSheet";
 import { CreditCardTile, type CreditCardItem, type OpenInvoiceInfo } from "@/components/wallet/CreditCardTile";
 import { Plus } from "lucide-react";
@@ -100,7 +100,6 @@ const Cartoes = () => {
 
   const { cards, invoices, installments, loading, refresh } = useCardsOverview();
   const [cardFilter, setCardFilter] = useState<string | null>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [showAddCard, setShowAddCard] = useState(false);
 
   const now = new Date();
@@ -121,7 +120,7 @@ const Cartoes = () => {
     .filter((i) => monthKey(i.year, i.month) === selectedSlot.key && i.total > 0)
     .sort((a, b) => b.total - a.total);
 
-  const filterLabel = cardFilter ? cardById.get(cardFilter)?.name ?? "Cartão" : "Todos os cartões";
+  const selectedCard = cardFilter ? cardById.get(cardFilter) ?? null : null;
 
   return (
     <div className="mx-auto max-w-lg pb-28">
@@ -144,14 +143,27 @@ const Cartoes = () => {
 
       <CardCreateSheet open={showAddCard} onClose={() => setShowAddCard(false)} onCreated={refresh} />
 
-      {/* Card filter */}
-      {cards.length > 1 && (
-        <button
-          onClick={() => setPickerOpen(true)}
-          className="mt-4 inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-[14px] font-medium text-[#0B0B0B]"
-        >
-          <CreditCard className="h-4 w-4" /> {filterLabel}
-        </button>
+      {/* Which card you are looking at. A row rather than a sheet: switching cards is
+          the main gesture on this tab, and a sheet puts two taps in front of it. */}
+      {cards.length > 0 && (
+        <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
+          {[{ id: null as string | null, name: "Todos", color: null as string | null }, ...cards].map((c) => {
+            const active = cardFilter === c.id;
+            return (
+              <button
+                key={c.id ?? "all"}
+                onClick={() => setCardFilter(c.id)}
+                className={cn(
+                  "flex h-10 shrink-0 items-center gap-2 rounded-full border px-4 text-[14px] font-medium transition-colors",
+                  active ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.14] willo-glass-control text-white/88",
+                )}
+              >
+                <CreditCard className="h-4 w-4" style={active ? undefined : { color: c.id ? cardHex(c.color) : undefined }} />
+                {c.name}
+              </button>
+            );
+          })}
+        </div>
       )}
 
       <div className="mt-6">
@@ -160,49 +172,60 @@ const Cartoes = () => {
         ) : cards.length === 0 ? (
           <EmptyState text="Nenhum cartão cadastrado" />
         ) : tab === "cartoes" ? (
-          <CardsList cards={visibleCards} invoices={filteredInvoices} onAdd={() => setShowAddCard(true)} navigate={navigate} />
+          <CardsList
+            cards={visibleCards}
+            invoices={filteredInvoices}
+            onAdd={() => setShowAddCard(true)}
+            // Tapping a card used to push the statement page, which showed the same
+            // month from the same data as this tab. It now just selects the card here.
+            navigate={(to) => {
+              const match = /^\/fatura\/(.+)$/.exec(to);
+              if (match) {
+                setCardFilter(match[1]);
+                setSelectedKey(currentKey);
+                setTab("faturas");
+              } else {
+                navigate(to);
+              }
+            }}
+          />
         ) : tab === "parcelas" ? (
           <InstallmentsOverview installments={filteredInstallments} cardById={cardById} currentKey={currentKey} />
         ) : (
           <>
-            <p className="text-[15px] text-white/66">Total em faturas em {MONTHS[selectedSlot.month - 1]}</p>
+            <p className="mt-6 text-[15px] text-white/66">
+              {selectedCard ? `Fatura de ${MONTHS[selectedSlot.month - 1]}` : `Total em faturas em ${MONTHS[selectedSlot.month - 1]}`}
+            </p>
             <p className="text-[38px] font-extrabold leading-tight tracking-tight text-white tabular-nums">
               {fmt(invoiceValues[invoiceSlots.findIndex((s) => s.key === selectedSlot.key)] ?? 0)}
             </p>
             <div className="mt-6">
               <MonthBars slots={invoiceSlots} values={invoiceValues} selected={selectedSlot.key} onSelect={setSelectedKey} />
             </div>
-            <div className="mt-6">
-              {monthInvoices.length === 0 ? (
-                <EmptyState text="Nenhuma fatura encontrada" />
-              ) : (
-                <InvoiceList invoices={monthInvoices} cardById={cardById} onOpen={(id) => navigate(`/fatura/${id}`)} />
-              )}
-            </div>
+            {selectedCard ? (
+              <InvoiceDetailPanel
+                card={selectedCard}
+                invoice={monthInvoices.find((i) => i.cardId === selectedCard.id) ?? null}
+                month={selectedSlot.month}
+                year={selectedSlot.year}
+              />
+            ) : (
+              <div className="mt-6">
+                {monthInvoices.length === 0 ? (
+                  <EmptyState text="Nenhuma fatura encontrada" />
+                ) : (
+                  <InvoiceList
+                    invoices={monthInvoices}
+                    cardById={cardById}
+                    onOpen={(id) => setCardFilter(id)}
+                  />
+                )}
+              </div>
+            )}
           </>
         )}
       </div>
 
-      <BottomSheet open={pickerOpen} onClose={() => setPickerOpen(false)}>
-        <div className="px-5 pb-2">
-          <p className="text-[20px] font-bold text-white">Filtrar por cartão</p>
-          <div className="mt-3 divide-y divide-white/[0.06]">
-            {[{ id: null as string | null, name: "Todos os cartões", color: null as string | null }, ...cards].map((c) => (
-              <button
-                key={c.id ?? "all"}
-                onClick={() => { setCardFilter(c.id); setPickerOpen(false); }}
-                className="flex w-full items-center gap-3 py-3.5 text-left"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: c.id ? `${cardHex(c.color)}26` : "rgba(255,255,255,0.08)" }}>
-                  <CreditCard className="h-4 w-4" style={{ color: c.id ? cardHex(c.color) : "#fff" }} />
-                </span>
-                <span className="flex-1 text-[16px] text-white">{c.name}</span>
-                {cardFilter === c.id && <Check className="h-5 w-5 text-white" />}
-              </button>
-            ))}
-          </div>
-        </div>
-      </BottomSheet>
     </div>
   );
 };
