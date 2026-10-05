@@ -219,21 +219,19 @@ const Index = () => {
           {/* AGORA — what is true this second: what is in hand, and where it lands. */}
           <SaldoContasCard saldoPrevisto={saldoPrevisto} />
 
-          {/* ESTE MÊS — what moved, what is still due, where it went, and its shape.
-              "Próximos eventos" sits this high because it is the only card on the
-              screen you can act on; buried at the bottom it was a list nobody reached. */}
+          {/* ESTE MÊS — what moved, then what is already spoken for, then what is
+              still due. "Próximos eventos" sits high because it is the only card on the
+              screen you can act on; buried at the bottom it was a list nobody reached.
+              Two tiles here and two further down: four in a block is a keypad, and the
+              eye stops reading them separately. */}
           <FluxoReceitasDespesasCard receitas={receitas} despesas={despesas} month={selectedMonth} isCurrentMonth={isCurrentMonth} />
-          <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
 
-          {/* JÁ COMPROMETIDO — money that is already spoken for, so it sits with what
-              is due rather than at the end. Two here and two further down: four tiles
-              in a block is a keypad, and the eye stops reading them separately. */}
           <TileRow>
             <CardsOverviewSection compact />
             <ParcelamentosAtivosCard compact />
           </TileRow>
 
-          {isCurrentMonth && <FinanceChartCard />}
+          <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
           <GastosPorCategoria categories={data.categories} selectedMonth={selectedMonth} onVerAnalise={() => navigate("/transacoes")} />
 
           <TileRow>
