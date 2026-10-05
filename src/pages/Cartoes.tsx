@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronLeft, Clock, CreditCard } from "lucide-react";
+import { Check, ChevronLeft, Clock, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import InvoiceDetailPanel from "@/components/fatura/InvoiceDetailPanel";
 import CardCreateSheet from "@/components/wallet/CardCreateSheet";
@@ -40,10 +40,13 @@ const keyLabel = (key: number) => {
 };
 
 // ── Month bar strip (faturas) ────────────────────────────
-function MonthBars({ slots, values, selected, onSelect }: {
+function MonthBars({ slots, values, selected, paidKeys, currentKey, onSelect }: {
   slots: MonthSlot[];
   values: number[];
   selected: number;
+  /** Months whose statement is settled, so the strip can say so without being opened. */
+  paidKeys: Set<number>;
+  currentKey: number;
   onSelect: (key: number) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -52,7 +55,9 @@ function MonthBars({ slots, values, selected, onSelect }: {
 
   useEffect(() => {
     const el = ref.current?.querySelector<HTMLElement>(`[data-key="${selected}"]`);
-    el?.scrollIntoView({ inline: "center", block: "nearest" });
+    // Glide rather than jump: the strip moving under your finger is what tells you
+    // the months are a continuum and not a set of tabs.
+    el?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
   }, [selected]);
 
   return (
@@ -61,21 +66,60 @@ function MonthBars({ slots, values, selected, onSelect }: {
         {slots.map((slot, i) => {
           const value = values[i];
           const isSelected = slot.key === selected;
+          const isPaid = paidKeys.has(slot.key);
+          const isFuture = slot.key > currentKey;
           return (
             <button key={slot.key} data-key={slot.key} onClick={() => onSelect(slot.key)} className="flex w-[54px] shrink-0 flex-col items-center">
-              <div className="flex items-end justify-center" style={{ height: HEIGHT }}>
+              <div className="relative flex items-end justify-center" style={{ height: HEIGHT }}>
                 {value > 0 ? (
                   <motion.span
-                    className={cn("block w-9 rounded-full", isSelected ? "bg-white" : "bg-white/25")}
+                    className="relative block w-9 overflow-hidden rounded-full"
                     initial={{ height: 0 }}
-                    animate={{ height: Math.max((value / max) * HEIGHT, 36) }}
-                    transition={{ delay: i * 0.02, duration: 0.45, ease: "easeOut" }}
-                  />
+                    animate={{
+                      height: Math.max((value / max) * HEIGHT, 36),
+                      backgroundColor: isSelected
+                        ? "rgba(255,255,255,1)"
+                        : isPaid
+                          ? "rgba(200,243,109,0.26)"
+                          : isFuture
+                            ? "rgba(255,255,255,0.14)"
+                            : "rgba(255,255,255,0.25)",
+                    }}
+                    transition={{
+                      height: { delay: i * 0.02, duration: 0.45, ease: "easeOut" },
+                      backgroundColor: { duration: 0.28, ease: "easeOut" },
+                    }}
+                  >
+                    {/* A settled month says so on the bar, so you can see it without opening it */}
+                    {isPaid && (
+                      <span
+                        className={cn(
+                          "absolute inset-x-0 top-2 mx-auto flex h-4 w-4 items-center justify-center rounded-full",
+                          isSelected ? "bg-[#0B0B0B]/12" : "bg-willo-green/25",
+                        )}
+                      >
+                        <Check className={cn("h-3 w-3", isSelected ? "text-[#0B0B0B]" : "text-willo-green")} strokeWidth={3.2} />
+                      </span>
+                    )}
+                  </motion.span>
                 ) : (
-                  <span className={cn("block h-8 w-8 rounded-full border border-dashed", isSelected ? "border-white/70" : "border-white/25")} />
+                  <motion.span
+                    className="block h-8 w-8 rounded-full border border-dashed"
+                    animate={{ borderColor: isSelected ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.25)" }}
+                    transition={{ duration: 0.28 }}
+                  />
                 )}
               </div>
-              <span className={cn("mt-3 text-[12px] tabular-nums", isSelected ? "font-semibold text-white" : "text-white/62")}>{slot.label}</span>
+              <motion.span
+                className="mt-3 text-[12px] tabular-nums"
+                animate={{
+                  color: isSelected ? "rgba(255,255,255,1)" : isFuture ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.62)",
+                  fontWeight: isSelected ? 600 : 400,
+                }}
+                transition={{ duration: 0.28 }}
+              >
+                {slot.label}
+              </motion.span>
             </button>
           );
         })}
@@ -83,6 +127,31 @@ function MonthBars({ slots, values, selected, onSelect }: {
     </div>
   );
 }
+
+type MonthStatus = "paga" | "aberta" | "proxima" | "atrasada" | "vazia";
+
+/** Where the selected month stands, said under its figure rather than guessed from it. */
+const MonthTag = ({ status }: { status: MonthStatus }) => {
+  if (status === "vazia") return null;
+  const map = {
+    paga: { label: "Paga", cls: "bg-willo-green/15 text-willo-green", icon: true },
+    aberta: { label: "Fatura aberta", cls: "bg-white/[0.08] text-white/75", icon: false },
+    proxima: { label: "Ainda vai fechar", cls: "bg-white/[0.06] text-white/55", icon: false },
+    atrasada: { label: "Em aberto", cls: "bg-amber-300/15 text-amber-300", icon: false },
+  }[status];
+  return (
+    <motion.span
+      key={status}
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.26 }}
+      className={cn("mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold", map.cls)}
+    >
+      {map.icon && <Check className="h-3 w-3" strokeWidth={3.2} />}
+      {map.label}
+    </motion.span>
+  );
+};
 
 const EmptyState = ({ text }: { text: string }) => (
   <div className="flex items-center gap-3 rounded-[20px] willo-glass px-4 py-4 text-[15px] text-white/62">
@@ -122,6 +191,27 @@ const Cartoes = () => {
 
   const selectedCard = cardFilter ? cardById.get(cardFilter) ?? null : null;
 
+  // A month counts as settled when every statement it holds is, which for one card is
+  // simply that card's, and for the roll-up means nothing is still owed anywhere.
+  const paidKeys = useMemo(() => {
+    const byMonth = new Map<number, { total: number; open: number }>();
+    for (const inv of filteredInvoices) {
+      if (inv.total <= 0) continue;
+      const k = monthKey(inv.year, inv.month);
+      const prev = byMonth.get(k) ?? { total: 0, open: 0 };
+      byMonth.set(k, { total: prev.total + 1, open: prev.open + (inv.isPaid ? 0 : 1) });
+    }
+    return new Set([...byMonth.entries()].filter(([, v]) => v.open === 0).map(([k]) => k));
+  }, [filteredInvoices]);
+
+  const monthStatus: MonthStatus = (() => {
+    const hasValue = monthInvoices.length > 0;
+    if (hasValue && paidKeys.has(selectedSlot.key)) return "paga";
+    if (selectedSlot.key > currentKey) return "proxima";
+    if (selectedSlot.key < currentKey) return hasValue ? "atrasada" : "vazia";
+    return hasValue ? "aberta" : "vazia";
+  })();
+
   return (
     <div className="mx-auto max-w-lg pb-28">
       {/* Nav */}
@@ -152,7 +242,7 @@ const Cartoes = () => {
             return (
               <button
                 key={c.id ?? "all"}
-                onClick={() => setCardFilter(c.id)}
+                onClick={() => { setCardFilter(c.id); setSelectedKey(currentKey); }}
                 className={cn(
                   "flex h-10 shrink-0 items-center gap-2 rounded-full border px-4 text-[14px] font-medium transition-colors",
                   active ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.14] willo-glass-control text-white/88",
@@ -196,11 +286,25 @@ const Cartoes = () => {
             <p className="mt-6 text-[15px] text-white/66">
               {selectedCard ? `Fatura de ${MONTHS[selectedSlot.month - 1]}` : `Total em faturas em ${MONTHS[selectedSlot.month - 1]}`}
             </p>
-            <p className="text-[38px] font-extrabold leading-tight tracking-tight text-white tabular-nums">
+            <motion.p
+              key={selectedSlot.key}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
+              className="text-[38px] font-extrabold leading-tight tracking-tight text-white tabular-nums"
+            >
               {fmt(invoiceValues[invoiceSlots.findIndex((s) => s.key === selectedSlot.key)] ?? 0)}
-            </p>
-            <div className="mt-6">
-              <MonthBars slots={invoiceSlots} values={invoiceValues} selected={selectedSlot.key} onSelect={setSelectedKey} />
+            </motion.p>
+            <MonthTag status={monthStatus} />
+            <div className="mt-5">
+              <MonthBars
+                slots={invoiceSlots}
+                values={invoiceValues}
+                selected={selectedSlot.key}
+                paidKeys={paidKeys}
+                currentKey={currentKey}
+                onSelect={setSelectedKey}
+              />
             </div>
             {selectedCard ? (
               <InvoiceDetailPanel
@@ -208,6 +312,7 @@ const Cartoes = () => {
                 invoice={monthInvoices.find((i) => i.cardId === selectedCard.id) ?? null}
                 month={selectedSlot.month}
                 year={selectedSlot.year}
+                onChanged={refresh}
               />
             ) : (
               <div className="mt-6">
