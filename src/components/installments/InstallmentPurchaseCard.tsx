@@ -107,7 +107,7 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card,
         </div>
         {denseTrack ? (
           <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
-            <div className="h-full rounded-full bg-white" style={{ width: `${(paidCount / item.installments) * 100}%` }} />
+            <div className="h-full rounded-full bg-willo-green" style={{ width: `${(paidCount / item.installments) * 100}%` }} />
           </div>
         ) : (
           <div className="mt-1.5 flex gap-[3px]">
@@ -115,7 +115,7 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card,
               <span
                 key={s.n}
                 className={`h-1.5 flex-1 rounded-full ${
-                  s.status === "paga" ? "bg-white" : s.status === "atual" ? (item.isOverdue ? "bg-red-400" : "bg-willo-green") : "bg-white/[0.1]"
+                  s.status === "paga" ? "bg-willo-green" : s.status === "atual" ? (item.isOverdue ? "bg-red-400" : "bg-white") : "bg-white/[0.1]"
                 }`}
               />
             ))}
@@ -162,7 +162,7 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card,
                     >
                       <span
                         className={`relative z-10 flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-full ${
-                          isPaid ? "bg-white text-[#0B0B0B]" : isCurrent ? (item.isOverdue ? "bg-red-400" : "bg-willo-green") : "border border-white/20 willo-glass"
+                          isPaid ? "bg-willo-green text-[#0B0B0B]" : isCurrent ? (item.isOverdue ? "bg-red-400" : "bg-white") : "border border-white/20 willo-glass"
                         }`}
                       >
                         {isPaid && <Check className="h-3 w-3" strokeWidth={3} />}
@@ -172,7 +172,7 @@ export default function InstallmentPurchaseCard({ item, index, customCats, card,
                         {month} {s.date.getFullYear()}
                       </span>
                       {isCurrent && (
-                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${item.isOverdue ? "bg-red-400/15 text-red-400" : "bg-willo-green/15 text-willo-green"}`}>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${item.isOverdue ? "bg-red-400/15 text-red-400" : "bg-white/15 text-white"}`}>
                           {item.isOverdue ? "Em atraso" : "Este mês"}
                         </span>
                       )}

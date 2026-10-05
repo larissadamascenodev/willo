@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CalendarCheck, CalendarClock, Layers, Plus, Wallet } from "lucide-react";
+import { CalendarCheck, CalendarClock, ChevronRight, Layers, Plus, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { getInvoiceItems, payInvoice } from "@/services/invoiceService";
 import { getAccounts } from "@/services/transactionService";
@@ -295,10 +295,17 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
       ) : (
         <>
           {/* ── Where this card's month went ── */}
-          <section className="rounded-[22px] border border-white/[0.08] willo-glass px-5 pb-4 pt-[18px]">
+          <button
+            type="button"
+            onClick={() => setAllCatsOpen(true)}
+            className="block w-full rounded-[22px] border border-white/[0.08] willo-glass px-5 pb-4 pt-[18px] text-left transition-transform active:scale-[0.99]"
+          >
             <div className="flex items-baseline justify-between gap-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-white/45">Gastos do cartão</p>
-              <p className="text-[13px] font-semibold tabular-nums text-white">{formatCurrency(invoiceTotal)}</p>
+              <p className="flex items-baseline gap-1.5 text-[13px] font-semibold tabular-nums text-white">
+                {formatCurrency(invoiceTotal)}
+                <ChevronRight className="h-4 w-4 shrink-0 self-center text-white/35" />
+              </p>
             </div>
 
             <div className="mt-3 flex h-2 w-full gap-[2px] overflow-hidden rounded-full">
@@ -324,15 +331,11 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
             </div>
 
             {categories.length > PREVIEW && (
-              <button
-                type="button"
-                onClick={() => setAllCatsOpen(true)}
-                className="mt-4 flex h-10 w-full items-center justify-center rounded-full bg-white/[0.05] text-[13px] font-medium text-white/82 active:opacity-70"
-              >
+              <span className="mt-4 flex h-10 w-full items-center justify-center rounded-full bg-white/[0.05] text-[13px] font-medium text-white/82">
                 Ver as {categories.length} categorias
-              </button>
+              </span>
             )}
-          </section>
+          </button>
 
           {/* ── The entries themselves, newest first ── */}
           <div className="flex items-center justify-between gap-3 px-1 pt-1">
