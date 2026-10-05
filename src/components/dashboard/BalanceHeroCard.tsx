@@ -12,6 +12,8 @@ import { useProfile } from "@/hooks/useProfile";
 interface Props {
   /** Extra space above the top row (px), e.g. under a drawn status bar. */
   topInset?: number;
+  /** Fills the room under the greeting. Left empty, it is simply open space. */
+  slot?: React.ReactNode;
 }
 
 /**
@@ -19,7 +21,7 @@ interface Props {
  * greeting. The month's figures are a card further down the stack — the top of
  * the screen is for orientation, not for numbers.
  */
-const BalanceHeroCard = ({ topInset = 0 }: Props) => {
+const BalanceHeroCard = ({ topInset = 0, slot }: Props) => {
   const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
   const { unreadCount, refresh } = useNotifications();
@@ -112,10 +114,9 @@ const BalanceHeroCard = ({ topInset = 0 }: Props) => {
         <HomeSectionTabs />
       </div>
 
-      {/* Greeting only. The balance card that stood here asked the same question as
-          "Saldo em contas" below, so it went; the room it took is deliberately left
-          open rather than closed up, which keeps the greeting breathing and lets the
-          first real card arrive where the eye already expects one. */}
+      {/* Greeting, and then whatever the page puts in the room the balance card used
+          to take — that card asked the same question as "Saldo em contas" below, so it
+          went, and the space stayed. */}
       <div className="relative z-10 mt-12">
         <motion.p
           ref={greetingRef}
@@ -128,7 +129,7 @@ const BalanceHeroCard = ({ topInset = 0 }: Props) => {
         </motion.p>
         <p className="mt-1 text-[13px] text-white/56">Toque duas vezes na tela para lançar</p>
 
-        <div className="mt-4 h-[129px]" aria-hidden="true" />
+        {slot ?? <div className="mt-4 h-[129px]" aria-hidden="true" />}
       </div>
     </div>
     </>

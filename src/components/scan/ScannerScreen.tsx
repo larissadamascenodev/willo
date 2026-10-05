@@ -129,7 +129,16 @@ export default function ScannerScreen({ open, onCapture, onManual, onClose }: {
           />
 
           {/* The frame only means something once there is a picture behind it */}
-          {status === "live" && <ScanBrackets />}
+          {status === "live" && (
+            <ScanBrackets
+              className="pointer-events-none absolute inset-x-[6%]"
+              corner="h-16 w-16"
+              style={{
+                top: "calc(env(safe-area-inset-top, 0px) + 14px)",
+                bottom: "calc(env(safe-area-inset-bottom, 0px) + 26px)",
+              }}
+            />
+          )}
 
           {/* A white flash on the shutter, so the tap is felt */}
           <AnimatePresence>
@@ -167,6 +176,12 @@ export default function ScannerScreen({ open, onCapture, onManual, onClose }: {
             className="absolute inset-x-0 top-0 flex items-center justify-between px-5"
             style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
           >
+            <span className="h-10 w-10" />
+            {status === "live" && (
+              <span className="rounded-full bg-black/45 px-3.5 py-2 text-[12px] font-medium text-white backdrop-blur-md">
+                Aponte para o comprovante
+              </span>
+            )}
             <button
               onClick={() => { stop(); onClose(); }}
               aria-label="Fechar"
@@ -174,12 +189,6 @@ export default function ScannerScreen({ open, onCapture, onManual, onClose }: {
             >
               <X className="h-5 w-5 text-white" strokeWidth={2.2} />
             </button>
-            {status === "live" && (
-              <span className="rounded-full bg-black/45 px-3.5 py-2 text-[12px] font-medium text-white backdrop-blur-md">
-                Aponte para o comprovante
-              </span>
-            )}
-            <span className="h-10 w-10" />
           </div>
 
           {/* Controls */}

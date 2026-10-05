@@ -15,7 +15,7 @@ const WEEK_DAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
 type View = "gastos" | "saldo";
 type Period = "semana" | "mes";
-type SaldoRange = "mes" | "30d";
+type SaldoRange = "7d" | "30d";
 
 interface Point {
   label: string;
@@ -28,8 +28,6 @@ interface ChartData {
   /** Day 1 to the last day of this month. Days after today carry today's balance
       forward, so the line is flat from here on rather than stopping mid-month. */
   balanceMonth: Point[];
-  /** The rolling 30 days, for when the question is "how has it been going". */
-  balance30: Point[];
   prevWeekTotal: number;
 }
 
@@ -48,10 +46,7 @@ async function fetchChartData(userId: string): Promise<ChartData> {
   prevMonday.setDate(monday.getDate() - 7);
 
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const balanceStart = new Date(now);
-  balanceStart.setDate(now.getDate() - 29);
-
-  const rangeStart = [prevMonday, monthStart, balanceStart].reduce((a, b) => (a < b ? a : b));
+  const rangeStart = [prevMonday, monthStart].reduce((a, b) => (a < b ? a : b));
 
   const [{ data: txs }, { data: payments }, { data: accounts }] = await Promise.all([
     supabase
@@ -123,15 +118,6 @@ async function fetchChartData(userId: string): Promise<ChartData> {
     return v;
   };
 
-  const balance30: Point[] = [];
-  let endOfDay = currentBalance;
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
-    balance30.unshift({ label: `${d.getDate()}/${d.getMonth() + 1}`, value: endOfDay });
-    endOfDay -= netByDay.get(toDateStr(d)) ?? 0;
-  }
-
   // The calendar month, start to finish — the window the rest of the app reports on.
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const balanceMonth: Point[] = [];
@@ -146,7 +132,7 @@ async function fetchChartData(userId: string): Promise<ChartData> {
     balanceMonth.push({ label: String(day), value: walking });
   }
 
-  return { week, monthCumulative, balanceMonth, balance30, prevWeekTotal };
+  return { week, monthCumulative, balanceMonth, prevWeekTotal };
 }
 
 function Segmented<T extends string>({
@@ -274,7 +260,7 @@ const FinanceChartCard = memo(() => {
   const { user } = useAuth();
   const [view, setView] = useState<View>("saldo");
   const [period, setPeriod] = useState<Period>("semana");
-  const [saldoRange, setSaldoRange] = useState<SaldoRange>("mes");
+  const [saldoRange, setSaldoRange] = useState<SaldoRange>("30d");
   const [data, setData] = useState<ChartData | null>(() =>
     cache && user && cache.userId === user.id ? cache.data : null
   );
@@ -296,19 +282,29 @@ const FinanceChartCard = memo(() => {
     return () => window.removeEventListener("finance-data-changed", onChange);
   }, [user]);
 
+  // Both windows live inside the month the rest of the app reports on: 30 dias is
+  // day 1 to the last day, 7 dias the week ending today cut from that same walk, so
+  // the two never disagree about what a given day's balance was.
+  const saldoSeries = useMemo(() => {
+    if (!data) return [];
+    if (saldoRange === "30d") return data.balanceMonth;
+    const today = new Date().getDate();
+    const end = Math.min(today, data.balanceMonth.length);
+    return data.balanceMonth.slice(Math.max(end - 7, 0), end);
+  }, [data, saldoRange]);
+
   const summary = useMemo(() => {
     if (!data) return null;
     if (view === "saldo") {
       // No delta here: the line already shows which way it went, and a figure beside
       // it was a second, noisier answer to the same question.
-      const series = saldoRange === "mes" ? data.balanceMonth : data.balance30;
       const today = new Date().getDate();
-      const value = saldoRange === "mes"
-        ? series[Math.min(today, series.length) - 1]?.value ?? 0
-        : series[series.length - 1]?.value ?? 0;
+      const value = saldoRange === "30d"
+        ? data.balanceMonth[Math.min(today, data.balanceMonth.length) - 1]?.value ?? 0
+        : saldoSeries[saldoSeries.length - 1]?.value ?? 0;
       return {
         title: "Saldo",
-        caption: saldoRange === "mes" ? "Saldo hoje, no mês corrente" : "Saldo hoje, últimos 30 dias",
+        caption: saldoRange === "30d" ? "Saldo hoje, no mês corrente" : "Saldo hoje, nos últimos 7 dias",
         value,
         delta: null,
       };
@@ -320,7 +316,7 @@ const FinanceChartCard = memo(() => {
     }
     const total = data.monthCumulative[data.monthCumulative.length - 1]?.value ?? 0;
     return { title: "Gastos do mês", caption: "Acumulado até hoje", value: total, delta: null };
-  }, [data, view, period, saldoRange]);
+  }, [data, view, period, saldoRange, saldoSeries]);
 
   if (!data || !summary) {
     return <div className="h-[190px] animate-pulse rounded-[22px] border border-white/[0.08] bg-white/[0.03]" />;
@@ -370,7 +366,7 @@ const FinanceChartCard = memo(() => {
             value={saldoRange}
             onChange={setSaldoRange}
             options={[
-              { key: "mes", label: "Mês" },
+              { key: "7d", label: "7 dias" },
               { key: "30d", label: "30 dias" },
             ]}
           />
@@ -398,7 +394,7 @@ const FinanceChartCard = memo(() => {
 
       <div className="mt-3">
         {view === "saldo" ? (
-          <LineChart data={saldoRange === "mes" ? data.balanceMonth : data.balance30} id={`saldo-${saldoRange}`} />
+          <LineChart data={saldoSeries} id={`saldo-${saldoRange}`} />
         ) : period === "semana" ? (
           <WeekBars data={data.week} />
         ) : (

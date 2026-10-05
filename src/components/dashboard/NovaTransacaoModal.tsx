@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import BottomSheet from "@/components/shared/BottomSheet";
 import TransactionTypeSwitch, { type EntryType } from "@/components/dashboard/TransactionTypeSwitch";
-import TransferSheet from "@/components/dashboard/TransferSheet";
+import TransferBody from "@/components/dashboard/TransferSheet";
 import { cn } from "@/lib/utils";
 import { format, subDays, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -130,6 +130,15 @@ const MONTH_NAMES_FULL = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
+const BODY_SLIDE = {
+  enter: (dir: number) => ({ x: dir * 26, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (dir: number) => ({ x: dir * -26, opacity: 0 }),
+};
+
+/** Left to right, matching the switch, so the slide direction follows the eye. */
+const KIND_ORDER: EntryType[] = ["receita", "despesa", "transferencia"];
+
 const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa", initialPaymentMethod, initialCreditCardId, editTransaction, prefillData }: Props) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -137,6 +146,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
   // The kind of entry being made. Receita and despesa drive this form; transferência
   // swaps the body out, so the three live in one sheet instead of behind a chooser.
   const [entryKind, setEntryKind] = useState<EntryType>(initialType);
+  const [slideDir, setSlideDir] = useState(1);
   const [status, setStatus] = useState<"pago" | "pendente">("pago");
   const [description, setDescription] = useState("");
   const [amountCents, setAmountCents] = useState(0);
@@ -616,20 +626,18 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
   const selectTrigger = "h-9 w-auto max-w-[190px] gap-1.5 rounded-full border-0 bg-white/[0.06] px-3.5 text-[13px] text-white focus:ring-0";
 
   const changeKind = (next: EntryType) => {
+    if (next === entryKind) return;
+    // The body travels the way the pill did. Switching used to swap one whole sheet
+    // for another, so transferência dropped the modal and rebuilt it from the bottom
+    // while receita and despesa only slid — three controls, two different gestures.
+    setSlideDir(KIND_ORDER.indexOf(next) > KIND_ORDER.indexOf(entryKind) ? 1 : -1);
     setEntryKind(next);
     if (next !== "transferencia") setType(next);
   };
 
   // Editing an existing entry has no kind to choose — it already is one.
   const switcher = isEditMode ? null : <TransactionTypeSwitch value={entryKind} onChange={changeKind} />;
-
-  if (entryKind === "transferencia" && !isEditMode) {
-    return (
-      <AnimatePresence>
-        {open && <TransferSheet switcher={switcher} onClose={onClose} onSuccess={onSuccess} />}
-      </AnimatePresence>
-    );
-  }
+  const isTransfer = entryKind === "transferencia" && !isEditMode;
 
   return (
     <AnimatePresence>
@@ -648,435 +656,464 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                 <X className="h-6 w-6" />
               </button>
               <span className="text-[16px] font-semibold text-white">
-                {isEditMode ? "Editar lançamento" : isReceita ? "Nova receita" : "Nova despesa"}
+                {isEditMode
+                  ? "Editar lançamento"
+                  : isTransfer
+                    ? "Nova transferência"
+                    : isReceita
+                      ? "Nova receita"
+                      : "Nova despesa"}
               </span>
               <span className="w-10" />
             </div>
             {switcher && <div className="pb-1 pt-2">{switcher}</div>}
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
-            {/* Amount */}
-            <div className="flex flex-col items-center pb-7 pt-6" onClick={() => amountInputRef.current?.focus()}>
-              <span className="flex items-center gap-1.5 text-[14px] text-white/66">
-                {isReceita ? <TrendingUp className="h-4 w-4" style={{ color: accent }} /> : <TrendingDown className="h-4 w-4" style={{ color: accent }} />}
-                {isReceita ? "Valor da receita" : "Valor da despesa"}
-              </span>
-              <div className="relative mt-2 flex items-baseline gap-2">
-                <span className="text-[24px] font-bold text-white/56">{currencySymbol()}</span>
-                <motion.span
-                  key={amountCents}
-                  initial={{ scale: 1.04 }}
-                  animate={{ scale: 1 }}
-                  className={cn("text-[52px] font-extrabold leading-none tracking-tight tabular-nums", amountCents === 0 ? "text-white/45" : "text-white")}
-                >
-                  {formatCurrency(amountCents)}
-                </motion.span>
-                <input
-                  ref={amountInputRef}
-                  inputMode="numeric"
-                  value={formatCurrency(amountCents)}
-                  onKeyDown={handleAmountKeyDown}
-                  onChange={(e) => {
-                    const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
-                    setAmountCents(Math.min(Number(digits || "0"), 99999999));
-                  }}
-                  aria-label="Valor da transação"
-                  autoFocus
-                  className="absolute inset-0 w-full cursor-text opacity-0"
-                />
-              </div>
-              <span className="mt-3 h-1 w-10 rounded-full" style={{ background: accent }} />
-            </div>
-
-            {/* Description + category */}
-            <div className="divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.08] willo-glass">
-              <Row icon={FileText} label="Descrição">
-                <input
-                  placeholder={isReceita ? "Ex: Salário" : "Ex: Mercado"}
-                  value={description}
-                  onChange={(e) => handleDescriptionChange(e.target.value)}
-                  maxLength={100}
-                  className="w-full min-w-0 bg-transparent text-right text-[15px] text-white placeholder:text-white/45 focus:outline-none"
-                />
-              </Row>
-              <Row icon={Tag} label="Categoria" onClick={() => setShowCategoryModal(true)}>
-                {suggestingCategory && <Sparkles className="h-3.5 w-3.5 animate-pulse text-white/66" />}
-                {category ? (
-                  <span className="flex min-w-0 items-center gap-2">
-                    {(() => {
-                      const CatIcon = getDefaultCategoryIcon(category);
-                      const hex = getCategoryHexColor(category, customCategories);
-                      return <CatIcon className="h-4 w-4 shrink-0" style={{ color: hex }} />;
-                    })()}
-                    <span className="truncate text-[15px] text-white">{category}</span>
-                  </span>
-                ) : (
-                  <span className="text-[15px] text-white/50">Escolher</span>
-                )}
-                {suggestedCategory && !suggestingCategory && category === suggestedCategory && (
-                  <span className="rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[10px] text-white/74">IA</span>
-                )}
-                <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />
-              </Row>
-            </div>
-
-            {/* Date */}
-            <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/62">Data</p>
-            <div className="rounded-[22px] border border-white/[0.08] willo-glass p-3">
-              <div className="flex gap-2">
-                {(["hoje", "ontem", "outros"] as const).map((mode) => (
-                  <button key={mode} type="button" onClick={() => handleDateMode(mode)} className={chip(dateMode === mode)}>
-                    {mode === "outros" ? "Outra data" : mode === "hoje" ? "Hoje" : "Ontem"}
-                  </button>
-                ))}
-              </div>
-              {dateMode === "outros" && (
-                <div className="mt-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowCalendar((prev) => !prev)}
-                    className="flex h-11 w-full items-center gap-2 rounded-full bg-white/[0.06] px-4 text-[15px] text-white"
-                  >
-                    <CalendarDays className="h-4 w-4 text-white/66" />
-                    {format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                  </button>
-                  {showCalendar && (
-                    <div className="mt-2 flex justify-center rounded-[18px] bg-white/[0.03] p-2">
-                      <Calendar
-                        mode="single"
-                        selected={date}
-                        onSelect={(d) => {
-                          if (d) {
-                            setDate(d);
-                            setShowCalendar(false);
-                          }
-                        }}
-                        className="pointer-events-auto p-1"
-                        locale={ptBR}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Where */}
-            <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/62">{isReceita ? "Onde entrou" : "Como pagou"}</p>
-            <div className="rounded-[22px] border border-white/[0.08] willo-glass">
-              {type === "despesa" && (
-                <div className="grid grid-cols-2 gap-1 p-1.5">
-                  {([["conta", "Conta", Wallet], ["cartao", "Cartão de crédito", CreditCard]] as const).map(([key, label, Icon]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => {
-                        setPaymentMethod(key);
-                        if (key === "cartao") setStatus("pendente");
-                      }}
-                      className={cn(
-                        "flex h-10 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold transition-colors",
-                        paymentMethod === key ? "bg-white text-[#0B0B0B]" : "text-white/70",
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className={cn(type === "despesa" && "border-t border-white/[0.06]")}>
-                {!usingCard ? (
-                  loadingAccounts ? (
-                    <div className="flex items-center justify-center gap-2 p-4 text-[13px] text-white/62">
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" /> Carregando contas...
-                    </div>
-                  ) : accounts.length === 0 ? (
-                    <div className="space-y-3 p-4 text-center">
-                      <p className="text-[14px] text-white/74">Você precisa adicionar uma conta antes</p>
-                      <button
-                        type="button"
-                        onClick={() => { onClose(); navigate("/gestao"); }}
-                        className="h-10 rounded-full bg-white px-5 text-[13px] font-semibold text-[#0B0B0B]"
-                      >
-                        Adicionar conta
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="px-4 py-3.5">
-                        <span className="flex items-center gap-2.5 text-[15px] text-white/74">
-                          <Wallet className="h-[18px] w-[18px] text-white/62" /> Conta
-                        </span>
-                        <div className="mt-2.5 flex flex-wrap gap-2">
-                          {accounts.map((acc, idx) => {
-                            const on = acc.id === accountId;
-                            return (
-                              <button
-                                key={acc.id}
-                                type="button"
-                                onClick={() => setAccountId(acc.id)}
-                                className={cn(
-                                  "flex h-10 items-center gap-2 rounded-full border px-3.5 text-[14px] font-medium transition-colors",
-                                  on ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.08] bg-white/[0.04] text-white/80",
-                                )}
-                              >
-                                <span
-                                  className="h-2.5 w-2.5 rounded-full"
-                                  style={{ backgroundColor: on ? "#0B0B0B" : accountColors[idx % accountColors.length] }}
-                                />
-                                {acc.name}
-                                {acc.is_default && <span className={cn("text-[11px]", on ? "text-[#0B0B0B]/60" : "text-white/56")}>padrão</span>}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                      {!showNewAccount ? (
-                        <button
-                          type="button"
-                          onClick={() => setShowNewAccount(true)}
-                          className="flex w-full items-center gap-1.5 border-t border-white/[0.06] px-4 py-3 text-[13px] text-white/70"
-                        >
-                          <Plus className="h-3.5 w-3.5" /> Criar nova conta
-                        </button>
-                      ) : (
-                        <div className="flex gap-2 border-t border-white/[0.06] p-3">
-                          <Input
-                            placeholder="Nome da conta"
-                            value={newAccountName}
-                            onChange={(e) => setNewAccountName(e.target.value)}
-                            className="h-10 flex-1 rounded-full border-0 bg-white/[0.06] text-[14px]"
-                          />
-                          <button type="button" onClick={handleCreateAccount} disabled={!newAccountName.trim()} className="h-10 rounded-full bg-white px-4 text-[13px] font-semibold text-[#0B0B0B] disabled:opacity-40">
-                            Criar
-                          </button>
-                          <button type="button" onClick={() => { setShowNewAccount(false); setNewAccountName(""); }} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white/74">
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )
+          {/* One shell, one gesture: only this layer changes when the kind changes, and
+              it always travels sideways — the sheet itself never leaves the screen. */}
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            <AnimatePresence initial={false} mode="wait" custom={slideDir}>
+              <motion.div
+                key={isTransfer ? "transferencia" : type}
+                custom={slideDir}
+                variants={BODY_SLIDE}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                className="flex min-h-0 flex-1 flex-col"
+              >
+                {isTransfer ? (
+                  <TransferBody onClose={onClose} onSuccess={onSuccess} />
                 ) : (
                   <>
-                    {creditCards.length > 0 ? (
-                      <Row icon={CreditCard} label="Cartão">
-                        <Select value={creditCardId} onValueChange={setCreditCardId}>
-                          <SelectTrigger className={selectTrigger}>
-                            <SelectValue placeholder="Selecionar" />
-                          </SelectTrigger>
-                          <SelectContent className="z-[70]">
-                            {creditCards.map((card) => (
-                              <SelectItem key={card.id} value={card.id}>
-                                <div className="flex items-center gap-2">
-                                  <span>{card.name}</span>
-                                  <span className="ml-1 text-[10px] text-muted-foreground">Vence dia {card.due_day}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </Row>
-                    ) : (
-                      <p className="p-4 text-center text-[14px] text-white/62">Nenhum cartão cadastrado</p>
-                    )}
-                    {!showNewCard ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowNewCard(true)}
-                        className="flex w-full items-center gap-1.5 border-t border-white/[0.06] px-4 py-3 text-[13px] text-white/70"
-                      >
-                        <Plus className="h-3.5 w-3.5" /> Cadastrar cartão
-                      </button>
-                    ) : (
-                      <div className="space-y-2 border-t border-white/[0.06] p-3">
-                        <Input placeholder="Nome do cartão (ex: Nubank)" value={newCardName} onChange={(e) => setNewCardName(e.target.value)} className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]" />
-                        <Input placeholder="Limite (ex: 5000)" type="number" value={newCardLimit} onChange={(e) => setNewCardLimit(e.target.value)} className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]" />
-                        <div className="flex gap-2">
-                          <div className="flex-1">
-                            <Label className="px-2 text-[11px] text-white/62">Fecha dia</Label>
-                            <Input type="number" min={1} max={31} value={newCardClosingDay} onChange={(e) => setNewCardClosingDay(e.target.value)} className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]" />
-                          </div>
-                          <div className="flex-1">
-                            <Label className="px-2 text-[11px] text-white/62">Vence dia</Label>
-                            <Input type="number" min={1} max={31} value={newCardDueDay} onChange={(e) => setNewCardDueDay(e.target.value)} className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]" />
-                          </div>
-                        </div>
-                        <div className="flex gap-2 pt-1">
-                          <button type="button" onClick={handleCreateCreditCard} disabled={!newCardName.trim() || !newCardLimit} className="h-10 flex-1 rounded-full bg-white text-[13px] font-semibold text-[#0B0B0B] disabled:opacity-40">
-                            Cadastrar
-                          </button>
-                          <button type="button" onClick={() => { setShowNewCard(false); setNewCardName(""); setNewCardLimit(""); }} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white/74">
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Repetition */}
-            <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/62">Repetição</p>
-            <div className="rounded-[22px] border border-white/[0.08] willo-glass p-3">
-              <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                {(isReceita ? (["unica", "fixa"] as const) : (["unica", "parcelado", "fixa"] as const)).map((rt) => (
-                  <button key={rt} type="button" onClick={() => setRecurrenceType(rt)} className={chip(recurrenceType === rt)}>
-                    {rt === "unica" ? "Única" : rt === "parcelado" ? "Parcelado" : usingCard ? "Assinatura" : "Todo mês"}
-                  </button>
-                ))}
-              </div>
-
-              <AnimatePresence>
-                {!isReceita && recurrenceType === "parcelado" && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="space-y-3 overflow-hidden pt-3"
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
+              {/* Amount */}
+              <div className="flex flex-col items-center pb-7 pt-6" onClick={() => amountInputRef.current?.focus()}>
+                <span className="flex items-center gap-1.5 text-[14px] text-white/66">
+                  {isReceita ? <TrendingUp className="h-4 w-4" style={{ color: accent }} /> : <TrendingDown className="h-4 w-4" style={{ color: accent }} />}
+                  {isReceita ? "Valor da receita" : "Valor da despesa"}
+                </span>
+                <div className="relative mt-2 flex items-baseline gap-2">
+                  <span className="text-[24px] font-bold text-white/56">{currencySymbol()}</span>
+                  <motion.span
+                    key={amountCents}
+                    initial={{ scale: 1.04 }}
+                    animate={{ scale: 1 }}
+                    className={cn("text-[52px] font-extrabold leading-none tracking-tight tabular-nums", amountCents === 0 ? "text-white/45" : "text-white")}
                   >
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        placeholder="Nº de parcelas"
-                        value={installments === 0 ? "" : installments}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value === "") {
-                            setInstallments(0);
-                            return;
-                          }
-                          const parsed = Number(value);
-                          if (!Number.isNaN(parsed)) setInstallments(parsed);
-                        }}
-                        onBlur={() => {
-                          setInstallments((prev) => {
-                            if (!prev || prev < 2) return 2;
-                            return Math.min(prev, 48);
-                          });
-                        }}
-                        min={2}
-                        max={48}
-                        className="h-10 flex-1 rounded-full border-0 bg-white/[0.06] text-[14px]"
-                      />
-                      {(["mensal", "anual"] as const).map((f) => (
-                        <button key={f} type="button" onClick={() => setInstallmentFrequency(f)} className={chip(installmentFrequency === f)}>
-                          {f === "mensal" ? "Mensal" : "Anual"}
-                        </button>
-                      ))}
-                    </div>
-
-                    {paymentMethod === "cartao" && installmentMonths.length > 0 ? (
-                      <div className="space-y-2">
-                        <p className="px-1 text-[12px] text-white/62">Parcelas já pagas</p>
-                        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-                          {installmentMonths.map((im, idx) => {
-                            const isSelected = paidMonthFlags[idx] ?? false;
-                            const isLast = idx === installmentMonths.length - 1;
-                            const canToggle = !isSelected ? idx === 0 || (paidMonthFlags[idx - 1] ?? false) : !paidMonthFlags[idx + 1];
-                            return (
-                              <button
-                                key={`${im.year}-${im.month}`}
-                                type="button"
-                                disabled={!canToggle || isLast}
-                                onClick={() => {
-                                  setPaidMonthFlags((prev) => {
-                                    const next = [...prev];
-                                    next[idx] = !next[idx];
-                                    return next;
-                                  });
-                                }}
-                                className={cn(
-                                  "flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-3 text-[12px] font-semibold transition-colors",
-                                  isSelected ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/74",
-                                  (isLast || (!canToggle && !isSelected)) && "opacity-35",
-                                )}
-                              >
-                                {isSelected && <Check className="h-3 w-3" />}
-                                {MONTH_NAMES_SHORT[im.month]}
-                                <span className="text-[10px] opacity-60">{idx + 1}/{installments}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ) : (
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        placeholder="Parcelas já pagas (opcional)"
-                        value={paidInstallments === 0 ? "" : paidInstallments}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value === "") {
-                            setPaidInstallments(0);
-                            return;
-                          }
-                          const parsed = Number(value);
-                          if (!Number.isNaN(parsed)) setPaidInstallments(parsed);
-                        }}
-                        onBlur={() => {
-                          setPaidInstallments((prev) => {
-                            if (prev < 0) return 0;
-                            return Math.min(prev, Math.max(installments - 1, 0));
-                          });
-                        }}
-                        min={0}
-                        max={Math.max(installments - 1, 0)}
-                        className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]"
-                      />
-                    )}
-
-                    {amountCents > 0 && installments > 0 && (
-                      <p className="px-1 text-[13px] text-white/70">
-                        {installments}x de {currencySymbol()} {formatCurrency(Math.round(amountCents / installments))}
-                        {paidInstallments > 0 && ` · ${paidInstallments} já pagas`}
-                      </p>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Status + note */}
-            <form id="nova-transacao-form" onSubmit={handleSubmit}>
-              <div className="mt-6 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.08] willo-glass">
-                {!usingCard && (
-                  <Row icon={status === "pago" ? Check : Clock} label={status === "pago" ? (isReceita ? "Recebido" : "Pago") : isReceita ? "A receber" : "Pendente"}>
-                    <Switch
-                      checked={status === "pago"}
-                      onCheckedChange={(checked) => setStatus(checked ? "pago" : "pendente")}
-                      className="data-[state=checked]:bg-willo-green data-[state=unchecked]:bg-white/15"
-                    />
-                  </Row>
-                )}
-                <Row icon={StickyNote} label="Observação">
+                    {formatCurrency(amountCents)}
+                  </motion.span>
                   <input
-                    placeholder="Opcional"
-                    value={observation}
-                    onChange={(e) => setObservation(e.target.value)}
-                    maxLength={200}
+                    ref={amountInputRef}
+                    inputMode="numeric"
+                    value={formatCurrency(amountCents)}
+                    onKeyDown={handleAmountKeyDown}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setAmountCents(Math.min(Number(digits || "0"), 99999999));
+                    }}
+                    aria-label="Valor da transação"
+                    autoFocus
+                    className="absolute inset-0 w-full cursor-text opacity-0"
+                  />
+                </div>
+                <span className="mt-3 h-1 w-10 rounded-full" style={{ background: accent }} />
+              </div>
+
+              {/* Description + category */}
+              <div className="divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.08] willo-glass">
+                <Row icon={FileText} label="Descrição">
+                  <input
+                    placeholder={isReceita ? "Ex: Salário" : "Ex: Mercado"}
+                    value={description}
+                    onChange={(e) => handleDescriptionChange(e.target.value)}
+                    maxLength={100}
                     className="w-full min-w-0 bg-transparent text-right text-[15px] text-white placeholder:text-white/45 focus:outline-none"
                   />
                 </Row>
+                <Row icon={Tag} label="Categoria" onClick={() => setShowCategoryModal(true)}>
+                  {suggestingCategory && <Sparkles className="h-3.5 w-3.5 animate-pulse text-white/66" />}
+                  {category ? (
+                    <span className="flex min-w-0 items-center gap-2">
+                      {(() => {
+                        const CatIcon = getDefaultCategoryIcon(category);
+                        const hex = getCategoryHexColor(category, customCategories);
+                        return <CatIcon className="h-4 w-4 shrink-0" style={{ color: hex }} />;
+                      })()}
+                      <span className="truncate text-[15px] text-white">{category}</span>
+                    </span>
+                  ) : (
+                    <span className="text-[15px] text-white/50">Escolher</span>
+                  )}
+                  {suggestedCategory && !suggestingCategory && category === suggestedCategory && (
+                    <span className="rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[10px] text-white/74">IA</span>
+                  )}
+                  <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />
+                </Row>
               </div>
-            </form>
-          </div>
 
-          {/* Save */}
-          <div className="shrink-0 border-t border-white/[0.06] px-4 pt-3" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}>
-            <button
-              type="submit"
-              form="nova-transacao-form"
-              disabled={submitting || amountCents === 0}
-              className="h-14 w-full rounded-full bg-white text-[16px] font-bold text-[#0B0B0B] shadow-[0_10px_30px_-12px_rgba(255,255,255,0.35)] transition-opacity disabled:opacity-35"
-            >
-              {submitting ? "Salvando..." : isEditMode ? "Salvar alterações" : isReceita ? "Adicionar receita" : "Adicionar despesa"}
-            </button>
+              {/* Date */}
+              <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/62">Data</p>
+              <div className="rounded-[22px] border border-white/[0.08] willo-glass p-3">
+                <div className="flex gap-2">
+                  {(["hoje", "ontem", "outros"] as const).map((mode) => (
+                    <button key={mode} type="button" onClick={() => handleDateMode(mode)} className={chip(dateMode === mode)}>
+                      {mode === "outros" ? "Outra data" : mode === "hoje" ? "Hoje" : "Ontem"}
+                    </button>
+                  ))}
+                </div>
+                {dateMode === "outros" && (
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowCalendar((prev) => !prev)}
+                      className="flex h-11 w-full items-center gap-2 rounded-full bg-white/[0.06] px-4 text-[15px] text-white"
+                    >
+                      <CalendarDays className="h-4 w-4 text-white/66" />
+                      {format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                    </button>
+                    {showCalendar && (
+                      <div className="mt-2 flex justify-center rounded-[18px] bg-white/[0.03] p-2">
+                        <Calendar
+                          mode="single"
+                          selected={date}
+                          onSelect={(d) => {
+                            if (d) {
+                              setDate(d);
+                              setShowCalendar(false);
+                            }
+                          }}
+                          className="pointer-events-auto p-1"
+                          locale={ptBR}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Where */}
+              <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/62">{isReceita ? "Onde entrou" : "Como pagou"}</p>
+              <div className="rounded-[22px] border border-white/[0.08] willo-glass">
+                {type === "despesa" && (
+                  <div className="grid grid-cols-2 gap-1 p-1.5">
+                    {([["conta", "Conta", Wallet], ["cartao", "Cartão de crédito", CreditCard]] as const).map(([key, label, Icon]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => {
+                          setPaymentMethod(key);
+                          if (key === "cartao") setStatus("pendente");
+                        }}
+                        className={cn(
+                          "flex h-10 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold transition-colors",
+                          paymentMethod === key ? "bg-white text-[#0B0B0B]" : "text-white/70",
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className={cn(type === "despesa" && "border-t border-white/[0.06]")}>
+                  {!usingCard ? (
+                    loadingAccounts ? (
+                      <div className="flex items-center justify-center gap-2 p-4 text-[13px] text-white/62">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" /> Carregando contas...
+                      </div>
+                    ) : accounts.length === 0 ? (
+                      <div className="space-y-3 p-4 text-center">
+                        <p className="text-[14px] text-white/74">Você precisa adicionar uma conta antes</p>
+                        <button
+                          type="button"
+                          onClick={() => { onClose(); navigate("/gestao"); }}
+                          className="h-10 rounded-full bg-white px-5 text-[13px] font-semibold text-[#0B0B0B]"
+                        >
+                          Adicionar conta
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="px-4 py-3.5">
+                          <span className="flex items-center gap-2.5 text-[15px] text-white/74">
+                            <Wallet className="h-[18px] w-[18px] text-white/62" /> Conta
+                          </span>
+                          <div className="mt-2.5 flex flex-wrap gap-2">
+                            {accounts.map((acc, idx) => {
+                              const on = acc.id === accountId;
+                              return (
+                                <button
+                                  key={acc.id}
+                                  type="button"
+                                  onClick={() => setAccountId(acc.id)}
+                                  className={cn(
+                                    "flex h-10 items-center gap-2 rounded-full border px-3.5 text-[14px] font-medium transition-colors",
+                                    on ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.08] bg-white/[0.04] text-white/80",
+                                  )}
+                                >
+                                  <span
+                                    className="h-2.5 w-2.5 rounded-full"
+                                    style={{ backgroundColor: on ? "#0B0B0B" : accountColors[idx % accountColors.length] }}
+                                  />
+                                  {acc.name}
+                                  {acc.is_default && <span className={cn("text-[11px]", on ? "text-[#0B0B0B]/60" : "text-white/56")}>padrão</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        {!showNewAccount ? (
+                          <button
+                            type="button"
+                            onClick={() => setShowNewAccount(true)}
+                            className="flex w-full items-center gap-1.5 border-t border-white/[0.06] px-4 py-3 text-[13px] text-white/70"
+                          >
+                            <Plus className="h-3.5 w-3.5" /> Criar nova conta
+                          </button>
+                        ) : (
+                          <div className="flex gap-2 border-t border-white/[0.06] p-3">
+                            <Input
+                              placeholder="Nome da conta"
+                              value={newAccountName}
+                              onChange={(e) => setNewAccountName(e.target.value)}
+                              className="h-10 flex-1 rounded-full border-0 bg-white/[0.06] text-[14px]"
+                            />
+                            <button type="button" onClick={handleCreateAccount} disabled={!newAccountName.trim()} className="h-10 rounded-full bg-white px-4 text-[13px] font-semibold text-[#0B0B0B] disabled:opacity-40">
+                              Criar
+                            </button>
+                            <button type="button" onClick={() => { setShowNewAccount(false); setNewAccountName(""); }} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white/74">
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )
+                  ) : (
+                    <>
+                      {creditCards.length > 0 ? (
+                        <Row icon={CreditCard} label="Cartão">
+                          <Select value={creditCardId} onValueChange={setCreditCardId}>
+                            <SelectTrigger className={selectTrigger}>
+                              <SelectValue placeholder="Selecionar" />
+                            </SelectTrigger>
+                            <SelectContent className="z-[70]">
+                              {creditCards.map((card) => (
+                                <SelectItem key={card.id} value={card.id}>
+                                  <div className="flex items-center gap-2">
+                                    <span>{card.name}</span>
+                                    <span className="ml-1 text-[10px] text-muted-foreground">Vence dia {card.due_day}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </Row>
+                      ) : (
+                        <p className="p-4 text-center text-[14px] text-white/62">Nenhum cartão cadastrado</p>
+                      )}
+                      {!showNewCard ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowNewCard(true)}
+                          className="flex w-full items-center gap-1.5 border-t border-white/[0.06] px-4 py-3 text-[13px] text-white/70"
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Cadastrar cartão
+                        </button>
+                      ) : (
+                        <div className="space-y-2 border-t border-white/[0.06] p-3">
+                          <Input placeholder="Nome do cartão (ex: Nubank)" value={newCardName} onChange={(e) => setNewCardName(e.target.value)} className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]" />
+                          <Input placeholder="Limite (ex: 5000)" type="number" value={newCardLimit} onChange={(e) => setNewCardLimit(e.target.value)} className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]" />
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <Label className="px-2 text-[11px] text-white/62">Fecha dia</Label>
+                              <Input type="number" min={1} max={31} value={newCardClosingDay} onChange={(e) => setNewCardClosingDay(e.target.value)} className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]" />
+                            </div>
+                            <div className="flex-1">
+                              <Label className="px-2 text-[11px] text-white/62">Vence dia</Label>
+                              <Input type="number" min={1} max={31} value={newCardDueDay} onChange={(e) => setNewCardDueDay(e.target.value)} className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]" />
+                            </div>
+                          </div>
+                          <div className="flex gap-2 pt-1">
+                            <button type="button" onClick={handleCreateCreditCard} disabled={!newCardName.trim() || !newCardLimit} className="h-10 flex-1 rounded-full bg-white text-[13px] font-semibold text-[#0B0B0B] disabled:opacity-40">
+                              Cadastrar
+                            </button>
+                            <button type="button" onClick={() => { setShowNewCard(false); setNewCardName(""); setNewCardLimit(""); }} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white/74">
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Repetition */}
+              <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/62">Repetição</p>
+              <div className="rounded-[22px] border border-white/[0.08] willo-glass p-3">
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                  {(isReceita ? (["unica", "fixa"] as const) : (["unica", "parcelado", "fixa"] as const)).map((rt) => (
+                    <button key={rt} type="button" onClick={() => setRecurrenceType(rt)} className={chip(recurrenceType === rt)}>
+                      {rt === "unica" ? "Única" : rt === "parcelado" ? "Parcelado" : usingCard ? "Assinatura" : "Todo mês"}
+                    </button>
+                  ))}
+                </div>
+
+                <AnimatePresence>
+                  {!isReceita && recurrenceType === "parcelado" && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="space-y-3 overflow-hidden pt-3"
+                    >
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          placeholder="Nº de parcelas"
+                          value={installments === 0 ? "" : installments}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === "") {
+                              setInstallments(0);
+                              return;
+                            }
+                            const parsed = Number(value);
+                            if (!Number.isNaN(parsed)) setInstallments(parsed);
+                          }}
+                          onBlur={() => {
+                            setInstallments((prev) => {
+                              if (!prev || prev < 2) return 2;
+                              return Math.min(prev, 48);
+                            });
+                          }}
+                          min={2}
+                          max={48}
+                          className="h-10 flex-1 rounded-full border-0 bg-white/[0.06] text-[14px]"
+                        />
+                        {(["mensal", "anual"] as const).map((f) => (
+                          <button key={f} type="button" onClick={() => setInstallmentFrequency(f)} className={chip(installmentFrequency === f)}>
+                            {f === "mensal" ? "Mensal" : "Anual"}
+                          </button>
+                        ))}
+                      </div>
+
+                      {paymentMethod === "cartao" && installmentMonths.length > 0 ? (
+                        <div className="space-y-2">
+                          <p className="px-1 text-[12px] text-white/62">Parcelas já pagas</p>
+                          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+                            {installmentMonths.map((im, idx) => {
+                              const isSelected = paidMonthFlags[idx] ?? false;
+                              const isLast = idx === installmentMonths.length - 1;
+                              const canToggle = !isSelected ? idx === 0 || (paidMonthFlags[idx - 1] ?? false) : !paidMonthFlags[idx + 1];
+                              return (
+                                <button
+                                  key={`${im.year}-${im.month}`}
+                                  type="button"
+                                  disabled={!canToggle || isLast}
+                                  onClick={() => {
+                                    setPaidMonthFlags((prev) => {
+                                      const next = [...prev];
+                                      next[idx] = !next[idx];
+                                      return next;
+                                    });
+                                  }}
+                                  className={cn(
+                                    "flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-3 text-[12px] font-semibold transition-colors",
+                                    isSelected ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/74",
+                                    (isLast || (!canToggle && !isSelected)) && "opacity-35",
+                                  )}
+                                >
+                                  {isSelected && <Check className="h-3 w-3" />}
+                                  {MONTH_NAMES_SHORT[im.month]}
+                                  <span className="text-[10px] opacity-60">{idx + 1}/{installments}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          placeholder="Parcelas já pagas (opcional)"
+                          value={paidInstallments === 0 ? "" : paidInstallments}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === "") {
+                              setPaidInstallments(0);
+                              return;
+                            }
+                            const parsed = Number(value);
+                            if (!Number.isNaN(parsed)) setPaidInstallments(parsed);
+                          }}
+                          onBlur={() => {
+                            setPaidInstallments((prev) => {
+                              if (prev < 0) return 0;
+                              return Math.min(prev, Math.max(installments - 1, 0));
+                            });
+                          }}
+                          min={0}
+                          max={Math.max(installments - 1, 0)}
+                          className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]"
+                        />
+                      )}
+
+                      {amountCents > 0 && installments > 0 && (
+                        <p className="px-1 text-[13px] text-white/70">
+                          {installments}x de {currencySymbol()} {formatCurrency(Math.round(amountCents / installments))}
+                          {paidInstallments > 0 && ` · ${paidInstallments} já pagas`}
+                        </p>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Status + note */}
+              <form id="nova-transacao-form" onSubmit={handleSubmit}>
+                <div className="mt-6 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.08] willo-glass">
+                  {!usingCard && (
+                    <Row icon={status === "pago" ? Check : Clock} label={status === "pago" ? (isReceita ? "Recebido" : "Pago") : isReceita ? "A receber" : "Pendente"}>
+                      <Switch
+                        checked={status === "pago"}
+                        onCheckedChange={(checked) => setStatus(checked ? "pago" : "pendente")}
+                        className="data-[state=checked]:bg-willo-green data-[state=unchecked]:bg-white/15"
+                      />
+                    </Row>
+                  )}
+                  <Row icon={StickyNote} label="Observação">
+                    <input
+                      placeholder="Opcional"
+                      value={observation}
+                      onChange={(e) => setObservation(e.target.value)}
+                      maxLength={200}
+                      className="w-full min-w-0 bg-transparent text-right text-[15px] text-white placeholder:text-white/45 focus:outline-none"
+                    />
+                  </Row>
+                </div>
+              </form>
+            </div>
+
+            {/* Save */}
+            <div className="shrink-0 border-t border-white/[0.06] px-4 pt-3" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}>
+              <button
+                type="submit"
+                form="nova-transacao-form"
+                disabled={submitting || amountCents === 0}
+                className="h-14 w-full rounded-full bg-white text-[16px] font-bold text-[#0B0B0B] shadow-[0_10px_30px_-12px_rgba(255,255,255,0.35)] transition-opacity disabled:opacity-35"
+              >
+                {submitting ? "Salvando..." : isEditMode ? "Salvar alterações" : isReceita ? "Adicionar receita" : "Adicionar despesa"}
+              </button>
+            </div>
+                  </>
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           {/* Category picker */}

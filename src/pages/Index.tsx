@@ -14,6 +14,8 @@ import AssinaturasCard from "@/components/dashboard/AssinaturasCard";
 import GastosPorCategoria from "@/components/dashboard/GastosPorCategoria";
 import FinanceChartCard from "@/components/dashboard/FinanceChartCard";
 import CardsOverviewSection from "@/components/dashboard/CardsOverviewSection";
+import { TileRow } from "@/components/dashboard/StatTile";
+import InsightCarousel from "@/components/dashboard/InsightCarousel";
 import SaldoContasCard from "@/components/dashboard/SaldoContasCard";
 import FluxoReceitasDespesasCard from "@/components/dashboard/FluxoReceitasDespesasCard";
 
@@ -183,7 +185,19 @@ const Index = () => {
             figure and a word rides two to a row, so the column has a rhythm instead
             of being one shape repeated nine times. */}
         <div className="md:hidden space-y-3">
-          <BalanceHeroCard />
+          <BalanceHeroCard
+            slot={
+              <InsightCarousel
+                receitas={receitas}
+                despesas={despesas}
+                saldoPrevisto={saldoPrevisto}
+                categories={data.categories}
+                events={data.events}
+                month={selectedMonth}
+                isCurrentMonth={isCurrentMonth}
+              />
+            }
+          />
 
           {profile && !isOnboardingComplete && (
             <OnboardingCard
@@ -204,16 +218,22 @@ const Index = () => {
               screen you can act on; buried at the bottom it was a list nobody reached. */}
           <FluxoReceitasDespesasCard receitas={receitas} despesas={despesas} month={selectedMonth} isCurrentMonth={isCurrentMonth} />
           <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
+
+          {/* JÁ COMPROMETIDO — money that is already spoken for, so it sits with what
+              is due rather than at the end. Two here and two further down: four tiles
+              in a block is a keypad, and the eye stops reading them separately. */}
+          <TileRow>
+            <CardsOverviewSection compact />
+            <ParcelamentosAtivosCard compact />
+          </TileRow>
+
           {isCurrentMonth && <FinanceChartCard />}
           <GastosPorCategoria categories={data.categories} selectedMonth={selectedMonth} onVerAnalise={() => navigate("/transacoes")} />
 
-          {/* JÁ COMPROMETIDO — money that is spoken for. Four figures, so four tiles. */}
-          <div className="grid grid-cols-2 gap-3">
-            <CardsOverviewSection compact />
-            <ParcelamentosAtivosCard compact />
+          <TileRow>
             <AssinaturasCard compact />
             <MetasResumoCard compact />
-          </div>
+          </TileRow>
 
           {/* O REGISTRO. */}
           <TransacoesRecentes transactions={data.transactions} onDelete={refetch} />

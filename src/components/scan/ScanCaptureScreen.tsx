@@ -27,10 +27,19 @@ interface Props<T extends ScanResultItem> {
   resultTitle?: string;
 }
 
-/** Four white corners framing what the AI is reading, breathing slowly. */
-export const ScanBrackets = () => (
+/**
+ * Four white corners framing what the AI is reading, breathing slowly. The default
+ * box suits the reading screen, where a photo sits behind it; the live viewfinder
+ * passes its own, reaching from the close button down to the gallery button.
+ */
+export const ScanBrackets = ({ className, style, corner = "h-12 w-12" }: {
+  className?: string;
+  style?: React.CSSProperties;
+  corner?: string;
+}) => (
   <motion.div
-    className="pointer-events-none absolute inset-x-[9%] top-[22%] bottom-[31%]"
+    style={style}
+    className={className ?? "pointer-events-none absolute inset-x-[9%] top-[22%] bottom-[31%]"}
     initial={{ opacity: 0, scale: 1.08 }}
     animate={{ opacity: 1, scale: [1, 1.02, 1] }}
     exit={{ opacity: 0 }}
@@ -42,7 +51,7 @@ export const ScanBrackets = () => (
       "left-0 bottom-0 border-l-[3px] border-b-[3px] rounded-bl-[18px]",
       "right-0 bottom-0 border-r-[3px] border-b-[3px] rounded-br-[18px]",
     ].map((c) => (
-      <span key={c} className={`absolute h-12 w-12 border-white ${c}`} />
+      <span key={c} className={`absolute ${corner} border-white ${c}`} />
     ))}
     {/* Soft light passing inside the frame */}
     <motion.span

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { X, ArrowDown, CalendarDays, Check } from "lucide-react";
+import { ArrowDownUp, CalendarDays, Check, ChevronRight, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +8,7 @@ import { getAccounts } from "@/services/transactionService";
 import { supabase } from "@/integrations/supabase/client";
 import { colorFor, initials } from "@/lib/banks";
 import { currencySymbol, getCurrency } from "@/lib/currency";
+import BottomSheet from "@/components/shared/BottomSheet";
 import { cn } from "@/lib/utils";
 
 interface Account {
@@ -32,42 +33,24 @@ const INVESTMENT_MESSAGES = [
   "Investir é o melhor gasto que existe 🧠",
 ];
 
-/** One account to pick, drawn the way the accounts card draws them. */
-function AccountChip({ account, selected, disabled, onClick }: {
-  account: Account;
-  selected: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-}) {
-  const hex = colorFor(account.name, account.color);
+function Avatar({ account, size = 38 }: { account: Account; size?: number }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        "flex w-[108px] shrink-0 flex-col items-start gap-2 rounded-[18px] border px-3 py-3 text-left transition",
-        selected ? "border-white/35 bg-white/[0.10]" : "border-white/[0.08] bg-white/[0.03]",
-        disabled && "opacity-30",
-      )}
+    <span
+      className="flex shrink-0 items-center justify-center rounded-full font-bold text-white"
+      style={{ background: colorFor(account.name, account.color), width: size, height: size, fontSize: size * 0.33 }}
     >
-      <span className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: hex }}>
-        {initials(account.name)}
-      </span>
-      <span className="w-full truncate text-[12.5px] font-medium text-white">{account.name}</span>
-      <span className="w-full truncate text-[11px] tabular-nums text-white/45">{money(Number(account.current_balance))}</span>
-    </button>
+      {initials(account.name)}
+    </span>
   );
 }
 
 /**
- * The transfer, in the same sheet and the same language as the other two entries.
- * Money leaving one account and landing in another is one movement, so the screen
- * reads top to bottom as exactly that: the amount, where it leaves, where it lands.
+ * The transfer, as one movement rather than two form fields: origin above,
+ * destination below, and the swap sitting on the rule between them the way the
+ * arrow would. Picking an account opens the same list for both ends, so there is
+ * one thing to learn instead of two.
  */
-export default function TransferSheet({ switcher, onClose, onSuccess }: {
-  /** The type selector, drawn by the parent so all three entries share one control. */
-  switcher?: React.ReactNode;
+export default function TransferBody({ onClose, onSuccess }: {
   onClose: () => void;
   onSuccess: () => void;
 }) {
@@ -78,11 +61,21 @@ export default function TransferSheet({ switcher, onClose, onSuccess }: {
   const [amountCents, setAmountCents] = useState(0);
   const [date, setDate] = useState(() => new Date());
   const [submitting, setSubmitting] = useState(false);
+  const [picking, setPicking] = useState<"from" | "to" | null>(null);
   const amountRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
-    getAccounts(true).then((a) => setAccounts(a as unknown as Account[])).catch(() => undefined);
+    getAccounts(true)
+      .then((a) => {
+        const list = a as unknown as Account[];
+        setAccounts(list);
+        // The account the money usually leaves is the one holding the most; start there
+        // so the common transfer is two taps instead of four.
+        const richest = [...list].sort((x, y) => Number(y.current_balance) - Number(x.current_balance))[0];
+        if (richest) setFromId((prev) => prev || richest.id);
+      })
+      .catch(() => undefined);
   }, [user]);
 
   const from = useMemo(() => accounts.find((a) => a.id === fromId), [accounts, fromId]);
@@ -100,6 +93,11 @@ export default function TransferSheet({ switcher, onClose, onSuccess }: {
       e.preventDefault();
       setAmountCents((p) => (p * 10 + Number(e.key) > 99999999 ? p : p * 10 + Number(e.key)));
     }
+  };
+
+  const swap = () => {
+    setFromId(toId);
+    setToId(fromId);
   };
 
   const submit = async () => {
@@ -134,31 +132,44 @@ export default function TransferSheet({ switcher, onClose, onSuccess }: {
     }
   };
 
-  const today = new Date();
-  const isToday = format(date, "yyyy-MM-dd") === format(today, "yyyy-MM-dd");
+  const isToday = format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+
+  const End = ({ side, label, account }: { side: "from" | "to"; label: string; account?: Account }) => (
+    <button
+      type="button"
+      onClick={() => setPicking(side)}
+      className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03]"
+    >
+      {account ? (
+        <Avatar account={account} />
+      ) : (
+        <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
+          <Wallet className="h-4 w-4 text-white/60" />
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block text-[11px] font-semibold uppercase tracking-[0.13em] text-white/40">{label}</span>
+        <span className={cn("mt-0.5 block truncate text-[15px]", account ? "font-medium text-white" : "text-white/45")}>
+          {account?.name ?? "Escolher conta"}
+        </span>
+      </span>
+      {account && (
+        <span className="shrink-0 text-right text-[12.5px] tabular-nums text-white/45">
+          {money(Number(account.current_balance))}
+        </span>
+      )}
+      <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
+    </button>
+  );
 
   return (
-    <motion.div
-      initial={{ y: "100%" }}
-      animate={{ y: 0 }}
-      exit={{ y: "100%" }}
-      transition={{ type: "spring", damping: 34, stiffness: 320 }}
-      className="willo-bg fixed inset-0 z-[60] flex flex-col md:inset-auto md:left-1/2 md:top-1/2 md:h-[88vh] md:w-[440px] md:-translate-x-1/2 md:-translate-y-1/2 md:overflow-hidden md:rounded-[32px] md:border md:border-white/[0.08]"
-    >
-      <div className="shrink-0 px-4" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
-        <div className="flex h-11 items-center justify-between">
-          <button onClick={onClose} aria-label="Fechar" className="-ml-1 flex h-10 w-10 items-center justify-center rounded-full text-white/82 active:opacity-60">
-            <X className="h-6 w-6" />
-          </button>
-          <span className="text-[16px] font-semibold text-white">Nova transferência</span>
-          <span className="w-10" />
-        </div>
-        {switcher && <div className="pb-1 pt-2">{switcher}</div>}
-      </div>
-
+    <>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
         <div className="flex flex-col items-center pb-7 pt-6" onClick={() => amountRef.current?.focus()}>
-          <span className="text-[14px] text-white/66">Valor da transferência</span>
+          <span className="flex items-center gap-1.5 text-[14px] text-white/66">
+            <ArrowDownUp className="h-4 w-4 text-sky-400" />
+            Valor da transferência
+          </span>
           <div className="relative mt-2 flex items-baseline gap-2">
             <span className="text-[24px] font-bold text-white/56">{currencySymbol()}</span>
             <motion.span
@@ -183,49 +194,37 @@ export default function TransferSheet({ switcher, onClose, onSuccess }: {
           <span className="mt-3 h-1 w-10 rounded-full bg-sky-400" />
         </div>
 
-        <section>
-          <p className="px-1 text-[11.5px] font-semibold uppercase tracking-[0.13em] text-white/45">Sai de</p>
-          <div className="-mx-4 mt-2.5 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
-            {accounts.map((a) => (
-              <AccountChip key={a.id} account={a} selected={a.id === fromId} onClick={() => setFromId(a.id)} />
-            ))}
-          </div>
-        </section>
+        {/* One object, two ends, with the swap on the rule between them */}
+        <div className="relative rounded-[22px] border border-white/[0.08] willo-glass">
+          <End side="from" label="Sai de" account={from} />
+          <div className="mx-4 h-px bg-white/[0.07]" />
+          <End side="to" label="Entra em" account={to} />
 
-        <div className="my-3 flex justify-center">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.07]">
-            <ArrowDown className="h-4 w-4 text-white/70" />
-          </span>
+          <button
+            type="button"
+            onClick={swap}
+            aria-label="Inverter contas"
+            className="absolute left-1/2 top-1/2 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/[0.10] bg-[#1A1B1E] active:scale-90 transition-transform"
+          >
+            <ArrowDownUp className="h-4 w-4 text-white/80" strokeWidth={2.2} />
+          </button>
         </div>
 
-        <section>
-          <p className="px-1 text-[11.5px] font-semibold uppercase tracking-[0.13em] text-white/45">Entra em</p>
-          <div className="-mx-4 mt-2.5 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
-            {accounts.map((a) => (
-              <AccountChip
-                key={a.id}
-                account={a}
-                selected={a.id === toId}
-                disabled={a.id === fromId}
-                onClick={() => a.id !== fromId && setToId(a.id)}
-              />
-            ))}
-          </div>
-        </section>
-
-        <div className="mt-5 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.08] willo-glass">
+        <div className="mt-3 rounded-[22px] border border-white/[0.08] willo-glass">
           <label className="flex min-h-[56px] cursor-pointer items-center gap-3 px-4 py-2.5">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
               <CalendarDays className="h-4 w-4 text-white/82" />
             </span>
             <span className="shrink-0 text-[15px] text-white">Data</span>
-            <span className="flex min-w-0 flex-1 items-center justify-end gap-2 text-right">
+            <span className="relative flex min-w-0 flex-1 items-center justify-end gap-2 text-right">
               <span className="text-[15px] text-white">{isToday ? "Hoje" : format(date, "dd/MM/yyyy")}</span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
               <input
                 type="date"
                 value={format(date, "yyyy-MM-dd")}
                 onChange={(e) => e.target.value && setDate(new Date(`${e.target.value}T12:00:00`))}
-                className="w-[22px] bg-transparent text-right text-[15px] text-white/50 focus:outline-none"
+                aria-label="Data da transferência"
+                className="absolute inset-0 w-full opacity-0"
               />
             </span>
           </label>
@@ -235,9 +234,6 @@ export default function TransferSheet({ switcher, onClose, onSuccess }: {
           <p className="mt-3 px-1 text-[12.5px] text-red-400">
             {from.name} tem {money(Number(from.current_balance))} — menos do que você está transferindo.
           </p>
-        )}
-        {!!fromId && fromId === toId && (
-          <p className="mt-3 px-1 text-[12.5px] text-red-400">Escolha duas contas diferentes.</p>
         )}
         {isInvestment && ready && (
           <p className="mt-3 flex items-center gap-1.5 px-1 text-[12.5px] text-white/50">
@@ -256,6 +252,43 @@ export default function TransferSheet({ switcher, onClose, onSuccess }: {
           {submitting ? "Transferindo..." : isInvestment ? "Investir" : "Transferir"}
         </button>
       </div>
-    </motion.div>
+
+      <BottomSheet open={picking !== null} onClose={() => setPicking(null)} zIndex={70}>
+        <div className="px-4 pb-2">
+          <h3 className="text-[17px] font-bold text-white">
+            {picking === "from" ? "De qual conta sai?" : "Para qual conta vai?"}
+          </h3>
+          <div className="mt-3 divide-y divide-white/[0.06]">
+            {accounts.map((a) => {
+              const taken = picking === "from" ? a.id === toId : a.id === fromId;
+              const chosen = picking === "from" ? a.id === fromId : a.id === toId;
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  disabled={taken}
+                  onClick={() => {
+                    if (picking === "from") setFromId(a.id);
+                    else setToId(a.id);
+                    setPicking(null);
+                  }}
+                  className={cn("flex w-full items-center gap-3 py-3 text-left", taken && "opacity-30")}
+                >
+                  <Avatar account={a} size={40} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-medium text-white">{a.name}</span>
+                    <span className="block truncate text-[12.5px] tabular-nums text-white/45">
+                      {money(Number(a.current_balance))}
+                      {taken ? " · já escolhida do outro lado" : ""}
+                    </span>
+                  </span>
+                  {chosen && <Check className="h-4 w-4 shrink-0 text-sky-400" strokeWidth={2.6} />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </BottomSheet>
+    </>
   );
 }
