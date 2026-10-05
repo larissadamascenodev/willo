@@ -191,8 +191,10 @@ const Index = () => {
                 receitas={receitas}
                 despesas={despesas}
                 saldoPrevisto={saldoPrevisto}
+                saldoAtual={saldoMes}
                 categories={data.categories}
                 events={data.events}
+                transactions={data.transactions}
                 month={selectedMonth}
                 isCurrentMonth={isCurrentMonth}
               />

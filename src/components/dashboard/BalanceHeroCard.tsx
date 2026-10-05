@@ -110,19 +110,20 @@ const BalanceHeroCard = ({ topInset = 0, slot, pinned = true }: Props) => {
           )}
         </button>
 
-        {/* Beside the photo, where a name belongs. It greets you while the top of the
-            screen is still being read and drops to the bare name once it is not. */}
-        <AnimatePresence mode="popLayout" initial={false}>
-          <motion.span
-            key={collapsed ? "short" : "long"}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="min-w-0 flex-1 truncate text-[17px] font-bold tracking-[-0.02em] text-white"
-          >
-            {collapsed ? firstName : `${greeting}${firstName ? `, ${firstName}` : ""}`}
-          </motion.span>
+        {/* The greeting itself opens the readings below; up here only the name
+            appears, and only once the top of the screen has receded. */}
+        <AnimatePresence>
+          {collapsed && firstName && (
+            <motion.span
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="min-w-0 flex-1 truncate text-[19px] font-bold tracking-tight text-white"
+            >
+              {firstName}
+            </motion.span>
+          )}
         </AnimatePresence>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -163,7 +164,7 @@ const BalanceHeroCard = ({ topInset = 0, slot, pinned = true }: Props) => {
         {/* Whatever the page is reading out, straight onto the background — no card,
             so there is no edge across the top of the screen to read as a seam. The
             section pills sit last, landing directly above the first card. */}
-        {slot ?? <div className="h-[118px]" aria-hidden="true" />}
+        {slot ?? <div className="h-[196px]" aria-hidden="true" />}
 
         <div className="mt-8 pb-5">
           <HomeSectionTabs />

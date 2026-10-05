@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { CalendarClock, CreditCard, PieChart, Sparkles, TrendingDown, Wallet } from "lucide-react";
+import { CalendarClock, CreditCard, Hand, PieChart, Receipt, Sparkles, Sun, TrendingDown, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCardsOverview, invoiceDueDate } from "@/hooks/useCardsOverview";
 import { useHiddenValues } from "@/hooks/useHiddenValues";
+import { useProfile } from "@/hooks/useProfile";
+import { useGreeting } from "./DashboardHeader";
 import { getCurrency } from "@/lib/currency";
-import type { CategoryExpense, FinanceEvent } from "@/types/finance";
+import type { CategoryExpense, FinanceEvent, Transaction } from "@/types/finance";
 
 const MONTHS = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -20,7 +22,7 @@ const DWELL = 6500;
 
 /**
  * What the app says back about a category once it has clearly taken over the month.
- * Keep these wry rather than scolding — it is their money, and a dashboard that tuts
+ * Keep these wry rather than scolding: it is their money, and a dashboard that tuts
  * at you gets closed.
  */
 const CATEGORY_QUIPS: { match: RegExp; line: string }[] = [
@@ -36,7 +38,7 @@ const CATEGORY_QUIPS: { match: RegExp; line: string }[] = [
   { match: /sa[úu]de|farm|m[ée]dic/i, line: "Desse não dá pra fugir mesmo." },
   { match: /educa|curso|faculd|livro/i, line: "Esse volta em dobro." },
   { match: /casa|moradia|aluguel|condom/i, line: "O básico, cobrando o de sempre." },
-  { match: /pix.*cr[ée]dito/i, line: "Pix no crédito tem taxa — vale conferir." },
+  { match: /pix.*cr[ée]dito/i, line: "Pix no crédito tem taxa. Vale conferir." },
   { match: /servi[çc]o/i, line: "Muita gente trabalhando pra você." },
   { match: /invest/i, line: "Esse não é gasto, é plantio." },
 ];
@@ -51,42 +53,56 @@ interface Slide {
   accent: string;
   /** Keep it to two lines at phone width; <b> carries the figure. */
   body: React.ReactNode;
-  /** The app answering back — a line of opinion under the fact. */
+  /** The app answering back: a line of opinion under the fact. */
   quip?: string;
   to: string;
   /** How much this deserves the top of the screen. Highest shows first. */
   score: number;
 }
 
+const todayKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
 /**
- * The top of the screen, spent on what the app noticed — a fact and then a line of
+ * The top of the screen, spent on what the app noticed: a fact and then a line of
  * opinion about it, because a dashboard that only recites figures is a spreadsheet
  * with rounded corners.
  *
- * Every candidate reading is built, scored by how much it deserves attention, and the
- * best few kept: an overdue bill outranks a tidy month, a category that has swallowed
- * the budget outranks a routine invoice. All of it comes off data the dashboard has
- * already loaded — the Raio-X analysis is far deeper, but it costs a page of queries,
- * and this renders on every open.
+ * The greeting opens the set, then every candidate reading is built, scored by how
+ * much it deserves attention, and the best few kept. An overdue bill outranks a tidy
+ * month; a category that has swallowed a third of the spend outranks a routine
+ * invoice. All of it comes off data the dashboard has already loaded. The Raio-X
+ * analysis is far deeper, but it costs a page of queries, and this renders on every
+ * open.
  *
  * It sits on the background rather than in a card: a card here would draw an edge
  * across the top of the screen and cut the page in two.
  */
-export default function InsightCarousel({ receitas, despesas, saldoPrevisto, categories, events, month, isCurrentMonth }: {
+export default function InsightCarousel({
+  receitas, despesas, saldoPrevisto, saldoAtual, categories, events, transactions, month, isCurrentMonth,
+}: {
   receitas: number;
   despesas: number;
   saldoPrevisto: number;
+  saldoAtual: number;
   categories: CategoryExpense[];
   events: FinanceEvent[];
+  transactions: Transaction[];
   month: number;
   isCurrentMonth: boolean;
 }) {
   const navigate = useNavigate();
   const hidden = useHiddenValues();
   const { cards, invoices } = useCardsOverview();
+  const { profile } = useProfile();
+  const { greeting, dateStr } = useGreeting();
   const [index, setIndex] = useState(0);
   const [dir, setDir] = useState(1);
   const [paused, setPaused] = useState(false);
+
+  const firstName = profile?.display_name?.trim().split(" ")[0] ?? "";
 
   const slides = useMemo<Slide[]>(() => {
     const out: Slide[] = [];
@@ -94,6 +110,18 @@ export default function InsightCarousel({ receitas, despesas, saldoPrevisto, cat
     const v = (n: number) => (hidden ? "•••" : short(n));
     const now = new Date();
     const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
+
+    // ── The greeting opens, every time ──
+    out.push({
+      id: "ola",
+      label: dateStr,
+      icon: Sun,
+      accent: "#C8F36D",
+      body: <>{greeting}{firstName ? <>, <b>{firstName}</b></> : ""}.</>,
+      quip: "Veja o que mudou por aqui desde a última vez.",
+      to: "/bot-finance",
+      score: Infinity,
+    });
 
     // ── How the month is going ──
     if (receitas > 0 || despesas > 0) {
@@ -121,7 +149,7 @@ export default function InsightCarousel({ receitas, despesas, saldoPrevisto, cat
             ? "Sobrou folga de verdade. Continua assim."
             : pct <= 85
               ? "Dentro do previsto, sem sustos."
-              : "Está no limite — qualquer imprevisto aperta.",
+              : "Está no limite. Qualquer imprevisto aperta.",
           to: "/bot-finance/balanco",
           score: pct > 85 ? 78 : 56,
         });
@@ -130,17 +158,18 @@ export default function InsightCarousel({ receitas, despesas, saldoPrevisto, cat
 
     // ── What is left per day ──
     if (isCurrentMonth && saldoPrevisto > 0 && daysLeft > 0) {
+      const perDay = saldoPrevisto / daysLeft;
       out.push({
         id: "diario",
         label: "Até o fim do mês",
         icon: Wallet,
         accent: "#7DD3FC",
-        body: <>Sobram <b>{v(saldoPrevisto / daysLeft)} por dia</b> pelos próximos {daysLeft} dias.</>,
-        quip: saldoPrevisto / daysLeft < 20
+        body: <>Sobram <b>{v(perDay)} por dia</b> pelos próximos {daysLeft} dias.</>,
+        quip: perDay < 20
           ? "Apertado. Vale segurar o que não for essencial."
           : "Dá pra respirar até virar o mês.",
         to: "/bot-finance/balanco",
-        score: saldoPrevisto / daysLeft < 20 ? 72 : 52,
+        score: perDay < 20 ? 72 : 52,
       });
     }
 
@@ -153,11 +182,66 @@ export default function InsightCarousel({ receitas, despesas, saldoPrevisto, cat
         label: "Maior gasto",
         icon: PieChart,
         accent: "#C084FC",
-        body: <><b>{top.name}</b> levou {share}% do que saiu — {v(top.amount)}.</>,
+        body: <><b>{top.name}</b> levou {share}% do que saiu, {v(top.amount)}.</>,
         quip: share >= 30 ? quipFor(top.name) : undefined,
         to: "/analytics/categorias",
         // A category that has taken a third of the month is news; a quarter is not.
         score: 40 + share,
+      });
+    }
+
+    // ── The single biggest thing that left ──
+    const biggest = transactions
+      .filter((t) => t.type === "despesa")
+      .sort((a, b) => b.amount - a.amount)[0];
+    if (biggest && despesas > 0) {
+      const share = Math.round((biggest.amount / despesas) * 100);
+      out.push({
+        id: "maior-saida",
+        label: "Maior saída do mês",
+        icon: Receipt,
+        accent: "#FB923C",
+        body: <>Sua maior saída foi <b>{biggest.name}</b>, {v(biggest.amount)}.</>,
+        quip: share >= 25 ? `Sozinha, levou ${share}% de tudo que saiu.` : undefined,
+        to: "/transacoes",
+        score: 30 + share,
+      });
+    }
+
+    // ── Today, so far ──
+    if (isCurrentMonth) {
+      const key = todayKey();
+      const spentToday = transactions
+        .filter((t) => t.type === "despesa" && (t.rawDate ?? t.date) === key)
+        .reduce((s, t) => s + t.amount, 0);
+      out.push({
+        id: "hoje",
+        label: "Hoje",
+        icon: Hand,
+        accent: spentToday > 0 ? "#FBBF24" : "#C8F36D",
+        body: spentToday > 0
+          ? <>Já saíram <b>{v(spentToday)}</b> hoje.</>
+          : <>Você ainda <b>não gastou nada</b> hoje.</>,
+        quip: spentToday > 0 ? undefined : "Dia limpo até agora.",
+        to: "/transacoes",
+        score: spentToday > 0 ? 46 : 50,
+      });
+    }
+
+    // ── What is still open this month ──
+    const openOnes = events.filter((e) => e.status === "pendente" || e.status === "atrasado");
+    const openOut = openOnes.filter((e) => e.type !== "receita");
+    if (openOut.length > 1) {
+      const total = openOut.reduce((s, e) => s + e.amount, 0);
+      out.push({
+        id: "pendentes",
+        label: `Ainda falta em ${monthLabel}`,
+        icon: CalendarClock,
+        accent: "#FBBF24",
+        body: <><b>{openOut.length} contas</b> em aberto somam {v(total)}.</>,
+        quip: total > saldoAtual && saldoAtual >= 0 ? "É mais do que está nas contas agora." : undefined,
+        to: "/transacoes",
+        score: total > saldoAtual && saldoAtual >= 0 ? 85 : 54,
       });
     }
 
@@ -180,7 +264,7 @@ export default function InsightCarousel({ receitas, despesas, saldoPrevisto, cat
         icon: CreditCard,
         accent: days <= 3 ? "#F87171" : "#A78BFA",
         body: days <= 0
-          ? <><b>{pending.card.name}</b> vence hoje — {v(pending.invoice!.total)}.</>
+          ? <><b>{pending.card.name}</b> vence hoje, {v(pending.invoice!.total)}.</>
           : <><b>{v(pending.invoice!.total)}</b> no {pending.card.name}, vence em {days} {days === 1 ? "dia" : "dias"}.</>,
         quip: days <= 3 ? "Essa não dá pra deixar passar." : undefined,
         to: "/cartoes",
@@ -189,14 +273,12 @@ export default function InsightCarousel({ receitas, despesas, saldoPrevisto, cat
     }
 
     // ── The next thing on the calendar, coming in or going out ──
-    const next = events
-      .filter((e) => e.status === "pendente" || e.status === "atrasado")
-      .sort((a, b) => (a.rawDate ?? a.date).localeCompare(b.rawDate ?? b.date))[0];
+    const next = openOnes.sort((a, b) => (a.rawDate ?? a.date).localeCompare(b.rawDate ?? b.date))[0];
     if (next) {
       const late = next.status === "atrasado";
       const income = next.type === "receita";
-      // The formatted date already ends in a full stop ("1 de out."), and the sentence
-      // adds its own.
+      // The formatted date already ends in a full stop ("1 de out."); the sentence
+      // brings its own.
       const when = next.date.replace(/\.+$/, "");
       out.push({
         id: "evento",
@@ -204,19 +286,21 @@ export default function InsightCarousel({ receitas, despesas, saldoPrevisto, cat
         icon: CalendarClock,
         accent: late ? "#F87171" : income ? "#C8F36D" : "#FBBF24",
         body: late
-          ? <><b>{next.name}</b> está atrasado — {v(next.amount)}.</>
+          ? <><b>{next.name}</b> está atrasado. São {v(next.amount)}.</>
           : income
             ? <><b>{v(next.amount)}</b> de {next.name} entram em {when}.</>
-            : <><b>{next.name}</b> vence em {when} — {v(next.amount)}.</>,
+            : <><b>{next.name}</b> vence em {when}, {v(next.amount)}.</>,
         quip: late ? "Quanto antes resolver, menos dói." : undefined,
         to: "/transacoes",
         score: late ? 93 : 48,
       });
     }
 
-    // Best first, and only as many as anyone will actually sit through.
-    return out.sort((a, b) => b.score - a.score).slice(0, 6);
-  }, [receitas, despesas, saldoPrevisto, categories, events, month, isCurrentMonth, cards, invoices, hidden]);
+    // Greeting first, then the best of the rest, and only as many as anyone will sit
+    // through.
+    return out.sort((a, b) => b.score - a.score).slice(0, 7);
+  }, [receitas, despesas, saldoPrevisto, saldoAtual, categories, events, transactions, month,
+      isCurrentMonth, cards, invoices, hidden, greeting, dateStr, firstName]);
 
   const count = slides.length;
 
@@ -239,7 +323,7 @@ export default function InsightCarousel({ receitas, despesas, saldoPrevisto, cat
     if (index >= count) setIndex(0);
   }, [count, index]);
 
-  if (count === 0) return <div className="h-[146px]" aria-hidden="true" />;
+  if (count === 0) return <div className="h-[196px]" aria-hidden="true" />;
 
   const slide = slides[Math.min(index, count - 1)];
   const Icon = slide.icon;
@@ -247,12 +331,12 @@ export default function InsightCarousel({ receitas, despesas, saldoPrevisto, cat
   return (
     <div className="relative">
       {/* The slide's colour, washed across the whole top of the screen and faded out
-          well before the first card — there is no edge anywhere to read as a seam. */}
+          well before the first card. There is no edge anywhere to read as a seam. */}
       <motion.span
         key={`wash-${slide.id}`}
         aria-hidden="true"
-        className="pointer-events-none absolute -left-[12vw] -right-[12vw] -top-[220px] h-[520px]"
-        style={{ background: `radial-gradient(68% 50% at 50% 46%, ${slide.accent} 0%, transparent 70%)` }}
+        className="pointer-events-none absolute -left-[12vw] -right-[12vw] -top-[220px] h-[560px]"
+        style={{ background: `radial-gradient(68% 50% at 50% 48%, ${slide.accent} 0%, transparent 70%)` }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 0.26 }}
         exit={{ opacity: 0 }}
@@ -279,7 +363,7 @@ export default function InsightCarousel({ receitas, despesas, saldoPrevisto, cat
         </div>
       )}
 
-      <div className="relative mt-4 h-[124px]">
+      <div className="relative mt-5 h-[168px]">
         <AnimatePresence initial={false} mode="wait" custom={dir}>
           <motion.button
             key={slide.id}
@@ -311,12 +395,12 @@ export default function InsightCarousel({ receitas, despesas, saldoPrevisto, cat
               </span>
             </span>
 
-            <p className="mt-2.5 text-[19px] font-medium leading-[1.3] tracking-[-0.018em] text-white/72 [text-wrap:balance] [&>b]:font-extrabold [&>b]:text-white">
+            <p className="mt-3 text-[22px] font-medium leading-[1.26] tracking-[-0.022em] text-white/72 [text-wrap:balance] [&>b]:font-extrabold [&>b]:text-white">
               {slide.body}
             </p>
 
             {slide.quip && (
-              <p className="mt-2 text-[13px] leading-snug text-white/45 [text-wrap:balance]">{slide.quip}</p>
+              <p className="mt-2.5 text-[13.5px] leading-snug text-white/45 [text-wrap:balance]">{slide.quip}</p>
             )}
           </motion.button>
         </AnimatePresence>
