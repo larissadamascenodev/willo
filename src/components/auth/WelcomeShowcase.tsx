@@ -225,7 +225,7 @@ export const HomeScreen = ({ to, extra = [], withIfood = false }: { to?: string;
   const spent = withIfood ? 45.9 : 0;
   return (
     <ScrollPage to={to}>
-      <BalanceHeroCard topInset={STATUS_H} />
+      <BalanceHeroCard topInset={STATUS_H} pinned={false} />
       <div className="mt-3 space-y-3">
         <div data-section="categorias">
           <GastosPorCategoria categories={categoriesFor(withIfood)} selectedMonth={8} onVerAnalise={noop} />

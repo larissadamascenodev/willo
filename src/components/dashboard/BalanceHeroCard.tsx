@@ -14,6 +14,9 @@ interface Props {
   topInset?: number;
   /** Fills the room under the greeting. Left empty, it is simply open space. */
   slot?: React.ReactNode;
+  /** Off inside the welcome showcase, which scrolls its own phone rather than the
+      window — pinning there would stick this block to the real viewport. */
+  pinned?: boolean;
 }
 
 /**
@@ -21,7 +24,10 @@ interface Props {
  * greeting. The month's figures are a card further down the stack — the top of
  * the screen is for orientation, not for numbers.
  */
-const BalanceHeroCard = ({ topInset = 0, slot }: Props) => {
+/** How far the page scrolls before the pinned block has fully receded. */
+const PIN_TRAVEL = 190;
+
+const BalanceHeroCard = ({ topInset = 0, slot, pinned = true }: Props) => {
   const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
   const { unreadCount, refresh } = useNotifications();
@@ -31,21 +37,47 @@ const BalanceHeroCard = ({ topInset = 0, slot }: Props) => {
   const initial = profile?.display_name?.trim().charAt(0).toUpperCase();
 
   const heroRef = useRef<HTMLDivElement>(null);
-  const greetingRef = useRef<HTMLParagraphElement>(null);
-  const [collapsed, setCollapsed] = useState(false);
+  const pinnedRef = useRef<HTMLDivElement>(null);
+  const [pinnedHeight, setPinnedHeight] = useState(0);
+  const [progress, setProgress] = useState(0);
 
-  // The name appears in the header once the greeting it duplicates has scrolled off.
+  // This block does not scroll: it stays where it is and recedes — blurring, dimming
+  // and sinking slightly — while the cards travel up over it. Progress is how far
+  // into that recession we are, and everything else here reads off it.
   useEffect(() => {
+    let frame = 0;
     const onScroll = () => {
-      const el = greetingRef.current;
-      // Measured against the header's own bottom edge, so the name takes over at the
-      // exact moment the greeting it repeats slides out of sight.
-      if (el) setCollapsed(el.getBoundingClientRect().bottom < 62 + topInset);
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        setProgress(Math.min(Math.max(window.scrollY / PIN_TRAVEL, 0), 1));
+      });
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [topInset]);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  // The spacer below has to be exactly as tall as what was lifted out of the flow,
+  // or the first card starts in the wrong place — and it changes with the carousel.
+  useEffect(() => {
+    const el = pinnedRef.current;
+    if (!pinned || !el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setPinnedHeight(el.offsetHeight));
+    ro.observe(el);
+    setPinnedHeight(el.offsetHeight);
+    return () => ro.disconnect();
+  }, [pinned]);
+
+  // The name takes over in the header once the greeting has faded far enough that
+  // reading it is no longer the point.
+  const collapsed = progress > 0.55;
+
+  // The pinned block carries this padding itself, so the spacer must not count it twice.
+  const heroPadTop = 68 + topInset;
 
   /** The translucent control surface the pills and the round buttons share. */
   const control =
@@ -110,27 +142,48 @@ const BalanceHeroCard = ({ topInset = 0, slot }: Props) => {
         </div>
       </div>
 
-      <div className="relative z-10 mt-5">
-        <HomeSectionTabs />
+      {/* Pinned. The pills, the greeting and the slot stay put at the top of the
+          screen; the cards are what move. Once it has receded far enough it stops
+          taking taps, since by then you cannot read what you would be tapping. */}
+      <div
+        ref={pinnedRef}
+        className={pinned ? "fixed inset-x-0 z-10 px-4" : "relative z-10"}
+        style={pinned ? {
+          top: 0,
+          paddingTop: `calc(env(safe-area-inset-top, 0px) + ${heroPadTop}px)`,
+          filter: progress > 0.001 ? `blur(${(progress * 13).toFixed(2)}px)` : undefined,
+          opacity: 1 - progress * 0.78,
+          transform: `scale(${1 - progress * 0.035})`,
+          transformOrigin: "50% 0%",
+          willChange: "filter, opacity, transform",
+          pointerEvents: progress > 0.4 ? "none" : undefined,
+        } : undefined}
+      >
+        <div className="mt-5">
+          <HomeSectionTabs />
+        </div>
+
+        {/* Greeting, and then whatever the page puts in the room the balance card used
+            to take — that card asked the same question as "Saldo em contas" below, so
+            it went, and the space stayed. */}
+        <div className="mt-12">
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="truncate text-[30px] font-bold leading-[1.12] tracking-[-0.03em] text-white"
+          >
+            {greeting}{firstName ? `, ${firstName}` : ""}
+          </motion.p>
+          <p className="mt-1 text-[13px] text-white/56">Toque duas vezes na tela para lançar</p>
+
+          {slot ?? <div className="mt-4 h-[129px]" aria-hidden="true" />}
+        </div>
       </div>
 
-      {/* Greeting, and then whatever the page puts in the room the balance card used
-          to take — that card asked the same question as "Saldo em contas" below, so it
-          went, and the space stayed. */}
-      <div className="relative z-10 mt-12">
-        <motion.p
-          ref={greetingRef}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="truncate text-[30px] font-bold leading-[1.12] tracking-[-0.03em] text-white"
-        >
-          {greeting}{firstName ? `, ${firstName}` : ""}
-        </motion.p>
-        <p className="mt-1 text-[13px] text-white/56">Toque duas vezes na tela para lançar</p>
-
-        {slot ?? <div className="mt-4 h-[129px]" aria-hidden="true" />}
-      </div>
+      {/* Holds the room the pinned block would have taken, so the first card starts
+          where it would have. */}
+      {pinned && <div aria-hidden="true" style={{ height: pinnedHeight ? pinnedHeight - heroPadTop : undefined }} />}
     </div>
     </>
   );

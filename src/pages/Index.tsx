@@ -184,7 +184,7 @@ const Index = () => {
             sits, the two flows, the chart, the lists. Everything that is really a
             figure and a word rides two to a row, so the column has a rhythm instead
             of being one shape repeated nine times. */}
-        <div className="md:hidden space-y-3">
+        <div className="md:hidden">
           <BalanceHeroCard
             slot={
               <InsightCarousel
@@ -199,6 +199,10 @@ const Index = () => {
             }
           />
 
+          {/* Positioned, so these paint above the pinned block rather than under it —
+              a static box's background sits below any positioned sibling whatever the
+              document order says. */}
+          <div className="relative z-20 space-y-3">
           {profile && !isOnboardingComplete && (
             <OnboardingCard
               profile={profile}
@@ -237,6 +241,7 @@ const Index = () => {
 
           {/* O REGISTRO. */}
           <TransacoesRecentes transactions={data.transactions} onDelete={refetch} />
+          </div>
         </div>
       <PagarEditarModal
         open={showPayModal}
