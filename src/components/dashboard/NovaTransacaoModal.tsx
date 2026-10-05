@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, TrendingUp, TrendingDown, CalendarDays, FileText, Tag,
   Wallet, StickyNote, Check, Clock, CreditCard, Plus,
-  Sparkles, Search, Settings, ChevronRight,
+  Sparkles, Search, Settings, ChevronRight, Minus, Layers, Repeat,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import BottomSheet from "@/components/shared/BottomSheet";
+import { colorFor, initials } from "@/lib/banks";
+import { cardHex } from "@/hooks/useCardsOverview";
 import TransactionTypeSwitch, { type EntryType } from "@/components/dashboard/TransactionTypeSwitch";
 import TransferBody from "@/components/dashboard/TransferSheet";
 import { cn } from "@/lib/utils";
@@ -71,6 +73,158 @@ interface Props {
   editTransaction?: EditTransactionData | null;
   prefillData?: PrefillData | null;
 }
+
+/** One heading per section, and one card per section. Nothing is boxed inside a box. */
+const SECTION = "mb-2.5 mt-7 px-1 text-[10.5px] font-semibold uppercase tracking-[0.13em] text-white/45";
+const GROUP = "divide-y divide-white/[0.055] rounded-[24px] border border-white/[0.07] willo-glass";
+
+/**
+ * The one control that switches between a handful of things. It lives above the group
+ * it governs, never inside it, so a section never reads as two cards.
+ */
+function SegmentedControl<T extends string>({ id, value, options, onChange }: {
+  id: string;
+  value: T;
+  options: { key: T; label: string; icon?: React.ComponentType<{ className?: string }> }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="grid gap-1 rounded-full border border-white/[0.07] bg-white/[0.04] p-1 [isolation:isolate]"
+         style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+      {options.map((o) => {
+        const active = o.key === value;
+        const Icon = o.icon;
+        return (
+          <button
+            key={o.key}
+            type="button"
+            onClick={() => onChange(o.key)}
+            aria-pressed={active}
+            className="relative h-10 rounded-full"
+          >
+            {active && (
+              <motion.span
+                layoutId={`seg-${id}`}
+                transition={{ type: "spring", stiffness: 420, damping: 36 }}
+                className="absolute inset-0 rounded-full bg-white"
+              />
+            )}
+            <span className={cn(
+              "relative flex transform-gpu items-center justify-center gap-1.5 text-[13.5px] font-semibold transition-colors",
+              active ? "text-[#0B0B0B]" : "text-white/60",
+            )}>
+              {Icon && <Icon className="h-4 w-4" />}
+              {o.label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** The same control, sized to sit on the right-hand side of a row. */
+function MiniSegmented<T extends string>({ id, value, options, onChange }: {
+  id: string;
+  value: T;
+  options: { key: T; label: string }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex rounded-full bg-white/[0.07] p-0.5 [isolation:isolate]">
+      {options.map((o) => {
+        const active = o.key === value;
+        return (
+          <button key={o.key} type="button" onClick={() => onChange(o.key)} className="relative h-8 rounded-full px-3 text-[12.5px] font-semibold">
+            {active && (
+              <motion.span
+                layoutId={`mini-${id}`}
+                transition={{ type: "spring", stiffness: 420, damping: 36 }}
+                className="absolute inset-0 rounded-full bg-white"
+              />
+            )}
+            <span className={cn("relative transform-gpu transition-colors", active ? "text-[#0B0B0B]" : "text-white/66")}>{o.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** A number you nudge rather than type: nobody wants a keyboard for "12". */
+const Stepper = ({ value, min, max, onChange, suffix }: {
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+  suffix?: string;
+}) => {
+  const set = (v: number) => onChange(Math.min(Math.max(v, min), max));
+  return (
+    <span className="flex items-center gap-1 rounded-full bg-white/[0.07] p-0.5">
+      <button
+        type="button"
+        onClick={() => set(value - 1)}
+        disabled={value <= min}
+        aria-label="Menos"
+        className="flex h-8 w-8 items-center justify-center rounded-full text-white/80 disabled:opacity-25 active:bg-white/10"
+      >
+        <Minus className="h-4 w-4" strokeWidth={2.6} />
+      </button>
+      <span className="min-w-[34px] text-center text-[15px] font-bold tabular-nums text-white">
+        {value}{suffix}
+      </span>
+      <button
+        type="button"
+        onClick={() => set(value + 1)}
+        disabled={value >= max}
+        aria-label="Mais"
+        className="flex h-8 w-8 items-center justify-center rounded-full text-white/80 disabled:opacity-25 active:bg-white/10"
+      >
+        <Plus className="h-4 w-4" strokeWidth={2.6} />
+      </button>
+    </span>
+  );
+};
+
+/** An account or a card to pick, shown as itself rather than as a chip in a box. */
+const PickRow = ({ selected, onClick, hex, initials: ini, icon: Icon, title, subtitle }: {
+  selected: boolean;
+  onClick: () => void;
+  hex: string;
+  initials?: string;
+  icon?: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  title: string;
+  subtitle?: string;
+}) => (
+  <button type="button" onClick={onClick} className="flex w-full items-center gap-3.5 px-[18px] py-3 text-left active:bg-white/[0.03]">
+    <span
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11.5px] font-bold text-white"
+      style={{ background: hex }}
+    >
+      {Icon ? <Icon className="h-[15px] w-[15px]" style={{ color: "#fff" }} /> : ini}
+    </span>
+    <span className="min-w-0 flex-1">
+      <span className="block truncate text-[15px] font-medium text-white">{title}</span>
+      {subtitle && <span className="block truncate text-[12px] text-white/40">{subtitle}</span>}
+    </span>
+    <span className={cn(
+      "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
+      selected ? "border-white bg-white" : "border-white/20",
+    )}>
+      {selected && <Check className="h-3 w-3 text-[#0B0B0B]" strokeWidth={3.4} />}
+    </span>
+  </button>
+);
+
+const AddRow = ({ label, onClick }: { label: string; onClick: () => void }) => (
+  <button type="button" onClick={onClick} className="flex w-full items-center gap-3.5 px-[18px] py-3.5 text-left active:bg-white/[0.03]">
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-dashed border-white/20">
+      <Plus className="h-4 w-4 text-white/60" />
+    </span>
+    <span className="text-[14.5px] text-white/70">{label}</span>
+  </button>
+);
 
 /** Settings-style row: icon, label on the left, control on the right. */
 const Row = ({ icon: Icon, label, children, onClick }: {
@@ -154,6 +308,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
   const [date, setDate] = useState<Date>(new Date());
   const [dateMode, setDateMode] = useState<"hoje" | "ontem" | "outros">("hoje");
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showDateSheet, setShowDateSheet] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"conta" | "cartao">("conta");
   const [recurrenceType, setRecurrenceType] = useState<"unica" | "parcelado" | "fixa">("unica");
   const [installments, setInstallments] = useState<number>(2);
@@ -276,8 +431,10 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
         .then((accs) => {
           const filtered = (accs as Account[]).filter((a) => a.type !== "investment");
           setAccounts(filtered);
-          const defaultAcc = filtered.find((a: any) => a.is_default);
-          if (defaultAcc) setAccountId(defaultAcc.id);
+          // Falling back to the first account matters: with none flagged as default
+          // nothing was selected at all, and the form let you submit without one.
+          const defaultAcc = filtered.find((a: any) => a.is_default) ?? filtered[0];
+          if (defaultAcc) setAccountId((prev) => prev || defaultAcc.id);
         })
         .catch(() => {
           toast.error("Erro ao carregar contas");
@@ -623,6 +780,12 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
 
   const selectTrigger = "h-9 w-auto max-w-[190px] gap-1.5 rounded-full border-0 bg-white/[0.06] px-3.5 text-[13px] text-white focus:ring-0";
 
+  const today = new Date();
+  const isToday = format(date, "yyyy-MM-dd") === format(today, "yyyy-MM-dd");
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  const isYesterday = format(date, "yyyy-MM-dd") === format(yesterday, "yyyy-MM-dd");
+  const dateLabel = isToday ? "Hoje" : isYesterday ? "Ontem" : format(date, "d 'de' MMMM", { locale: ptBR });
+
   const changeKind = (next: EntryType) => {
     if (next === entryKind) return;
     // The body travels the way the pill did. Switching used to swap one whole sheet
@@ -731,19 +894,20 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                 <span className="relative mt-4 h-[3px] w-12 rounded-full" style={{ background: accent }} />
               </div>
 
-              {/* Description + category */}
-              <div className="divide-y divide-white/[0.055] rounded-[24px] border border-white/[0.07] willo-glass">
+              {/* ── O que foi ──────────────────────────────────────────── */}
+              <p className={SECTION}>O que foi</p>
+              <div className={GROUP}>
                 <Row icon={FileText} label="Descrição">
                   <input
                     placeholder={isReceita ? "Ex: Salário" : "Ex: Mercado"}
                     value={description}
                     onChange={(e) => handleDescriptionChange(e.target.value)}
                     maxLength={100}
-                    className="w-full min-w-0 bg-transparent text-right text-[15px] text-white placeholder:text-white/45 focus:outline-none"
+                    className="w-full min-w-0 bg-transparent text-right text-[15px] text-white placeholder:text-white/30 focus:outline-none"
                   />
                 </Row>
                 <Row icon={Tag} label="Categoria" onClick={() => setShowCategoryModal(true)}>
-                  {suggestingCategory && <Sparkles className="h-3.5 w-3.5 animate-pulse text-white/66" />}
+                  {suggestingCategory && <Sparkles className="h-3.5 w-3.5 animate-pulse text-white/60" />}
                   {category ? (
                     <span className="flex min-w-0 items-center gap-2">
                       {(() => {
@@ -754,339 +918,251 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                       <span className="truncate text-[15px] text-white">{category}</span>
                     </span>
                   ) : (
-                    <span className="text-[15px] text-white/50">Escolher</span>
+                    <span className="text-[15px] text-white/35">Escolher</span>
                   )}
                   {suggestedCategory && !suggestingCategory && category === suggestedCategory && (
-                    <span className="rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[10px] text-white/74">IA</span>
+                    <span className="rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[10px] text-white/70">IA</span>
                   )}
-                  <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />
+                  <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
+                </Row>
+                <Row icon={CalendarDays} label="Data" onClick={() => setShowDateSheet(true)}>
+                  <span className="truncate text-[15px] text-white">{dateLabel}</span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
                 </Row>
               </div>
 
-              {/* Date */}
-              <p className="mb-2.5 mt-7 px-1 text-[10.5px] font-semibold uppercase tracking-[0.13em] text-white/45">Data</p>
-              <div className="rounded-[22px] border border-white/[0.08] willo-glass p-3">
-                <div className="flex gap-2">
-                  {(["hoje", "ontem", "outros"] as const).map((mode) => (
-                    <button key={mode} type="button" onClick={() => handleDateMode(mode)} className={chip(dateMode === mode)}>
-                      {mode === "outros" ? "Outra data" : mode === "hoje" ? "Hoje" : "Ontem"}
-                    </button>
-                  ))}
+              {/* ── Onde ───────────────────────────────────────────────── */}
+              <p className={SECTION}>{isReceita ? "Onde entrou" : "Como pagou"}</p>
+
+              {/* The choice sits above the group it governs rather than inside it:
+                  a control boxed within the box it filters reads as two cards. */}
+              {type === "despesa" && (
+                <div className="mb-2.5">
+                  <SegmentedControl<"conta" | "cartao">
+                    id="pay-method"
+                    value={paymentMethod}
+                    onChange={(key) => {
+                      setPaymentMethod(key);
+                      if (key === "cartao") setStatus("pendente");
+                    }}
+                    options={[
+                      { key: "conta" as const, label: "Conta", icon: Wallet },
+                      { key: "cartao" as const, label: "Cartão", icon: CreditCard },
+                    ]}
+                  />
                 </div>
-                {dateMode === "outros" && (
-                  <div className="mt-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowCalendar((prev) => !prev)}
-                      className="flex h-11 w-full items-center gap-2 rounded-full bg-white/[0.06] px-4 text-[15px] text-white"
-                    >
-                      <CalendarDays className="h-4 w-4 text-white/66" />
-                      {format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                    </button>
-                    {showCalendar && (
-                      <div className="mt-2 flex justify-center rounded-[18px] bg-white/[0.03] p-2">
-                        <Calendar
-                          mode="single"
-                          selected={date}
-                          onSelect={(d) => {
-                            if (d) {
-                              setDate(d);
-                              setShowCalendar(false);
-                            }
-                          }}
-                          className="pointer-events-auto p-1"
-                          locale={ptBR}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+              )}
 
-              {/* Where */}
-              <p className="mb-2.5 mt-7 px-1 text-[10.5px] font-semibold uppercase tracking-[0.13em] text-white/45">{isReceita ? "Onde entrou" : "Como pagou"}</p>
-              <div className="rounded-[22px] border border-white/[0.08] willo-glass">
-                {type === "despesa" && (
-                  <div className="grid grid-cols-2 gap-1 p-1.5">
-                    {([["conta", "Conta", Wallet], ["cartao", "Cartão de crédito", CreditCard]] as const).map(([key, label, Icon]) => (
+              <div className={GROUP}>
+                {!usingCard ? (
+                  loadingAccounts ? (
+                    <div className="flex items-center justify-center gap-2 px-[18px] py-5 text-[13px] text-white/60">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" /> Carregando contas…
+                    </div>
+                  ) : accounts.length === 0 ? (
+                    <div className="space-y-3 px-[18px] py-5 text-center">
+                      <p className="text-[14px] text-white/70">Você precisa de uma conta antes</p>
                       <button
-                        key={key}
                         type="button"
-                        onClick={() => {
-                          setPaymentMethod(key);
-                          if (key === "cartao") setStatus("pendente");
-                        }}
-                        className={cn(
-                          "flex h-10 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold transition-colors",
-                          paymentMethod === key ? "bg-white text-[#0B0B0B]" : "text-white/70",
-                        )}
+                        onClick={() => { onClose(); navigate("/gestao"); }}
+                        className="h-10 rounded-full bg-white px-5 text-[13px] font-semibold text-[#0B0B0B]"
                       >
-                        <Icon className="h-4 w-4" />
-                        {label}
+                        Adicionar conta
                       </button>
-                    ))}
-                  </div>
-                )}
-
-                <div className={cn(type === "despesa" && "border-t border-white/[0.06]")}>
-                  {!usingCard ? (
-                    loadingAccounts ? (
-                      <div className="flex items-center justify-center gap-2 p-4 text-[13px] text-white/62">
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" /> Carregando contas...
-                      </div>
-                    ) : accounts.length === 0 ? (
-                      <div className="space-y-3 p-4 text-center">
-                        <p className="text-[14px] text-white/74">Você precisa adicionar uma conta antes</p>
-                        <button
-                          type="button"
-                          onClick={() => { onClose(); navigate("/gestao"); }}
-                          className="h-10 rounded-full bg-white px-5 text-[13px] font-semibold text-[#0B0B0B]"
-                        >
-                          Adicionar conta
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="px-4 py-3.5">
-                          <span className="flex items-center gap-2.5 text-[15px] text-white/74">
-                            <Wallet className="h-[18px] w-[18px] text-white/62" /> Conta
-                          </span>
-                          <div className="mt-2.5 flex flex-wrap gap-2">
-                            {accounts.map((acc, idx) => {
-                              const on = acc.id === accountId;
-                              return (
-                                <button
-                                  key={acc.id}
-                                  type="button"
-                                  onClick={() => setAccountId(acc.id)}
-                                  className={cn(
-                                    "flex h-10 items-center gap-2 rounded-full border px-3.5 text-[14px] font-medium transition-colors",
-                                    on ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.08] bg-white/[0.04] text-white/80",
-                                  )}
-                                >
-                                  <span
-                                    className="h-2.5 w-2.5 rounded-full"
-                                    style={{ backgroundColor: on ? "#0B0B0B" : accountColors[idx % accountColors.length] }}
-                                  />
-                                  {acc.name}
-                                  {acc.is_default && <span className={cn("text-[11px]", on ? "text-[#0B0B0B]/60" : "text-white/56")}>padrão</span>}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                        {!showNewAccount ? (
-                          <button
-                            type="button"
-                            onClick={() => setShowNewAccount(true)}
-                            className="flex w-full items-center gap-1.5 border-t border-white/[0.06] px-4 py-3 text-[13px] text-white/70"
-                          >
-                            <Plus className="h-3.5 w-3.5" /> Criar nova conta
-                          </button>
-                        ) : (
-                          <div className="flex gap-2 border-t border-white/[0.06] p-3">
-                            <Input
-                              placeholder="Nome da conta"
-                              value={newAccountName}
-                              onChange={(e) => setNewAccountName(e.target.value)}
-                              className="h-10 flex-1 rounded-full border-0 bg-white/[0.06] text-[14px]"
-                            />
-                            <button type="button" onClick={handleCreateAccount} disabled={!newAccountName.trim()} className="h-10 rounded-full bg-white px-4 text-[13px] font-semibold text-[#0B0B0B] disabled:opacity-40">
-                              Criar
-                            </button>
-                            <button type="button" onClick={() => { setShowNewAccount(false); setNewAccountName(""); }} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white/74">
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        )}
-                      </>
-                    )
+                    </div>
                   ) : (
                     <>
-                      {creditCards.length > 0 ? (
-                        <Row icon={CreditCard} label="Cartão">
-                          <Select value={creditCardId} onValueChange={setCreditCardId}>
-                            <SelectTrigger className={selectTrigger}>
-                              <SelectValue placeholder="Selecionar" />
-                            </SelectTrigger>
-                            <SelectContent className="z-[70]">
-                              {creditCards.map((card) => (
-                                <SelectItem key={card.id} value={card.id}>
-                                  <div className="flex items-center gap-2">
-                                    <span>{card.name}</span>
-                                    <span className="ml-1 text-[10px] text-muted-foreground">Vence dia {card.due_day}</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </Row>
+                      {accounts.map((acc) => (
+                        <PickRow
+                          key={acc.id}
+                          selected={acc.id === accountId}
+                          onClick={() => setAccountId(acc.id)}
+                          hex={colorFor(acc.name, (acc as { color?: string | null }).color ?? null)}
+                          initials={initials(acc.name)}
+                          title={acc.name}
+                          subtitle={acc.is_default ? "Conta padrão" : undefined}
+                        />
+                      ))}
+                      {!showNewAccount ? (
+                        <AddRow label="Criar nova conta" onClick={() => setShowNewAccount(true)} />
                       ) : (
-                        <p className="p-4 text-center text-[14px] text-white/62">Nenhum cartão cadastrado</p>
-                      )}
-                      {!showNewCard ? (
-                        <button
-                          type="button"
-                          onClick={() => setShowNewCard(true)}
-                          className="flex w-full items-center gap-1.5 border-t border-white/[0.06] px-4 py-3 text-[13px] text-white/70"
-                        >
-                          <Plus className="h-3.5 w-3.5" /> Cadastrar cartão
-                        </button>
-                      ) : (
-                        <div className="space-y-2 border-t border-white/[0.06] p-3">
-                          <Input placeholder="Nome do cartão (ex: Nubank)" value={newCardName} onChange={(e) => setNewCardName(e.target.value)} className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]" />
-                          <Input placeholder="Limite (ex: 5000)" type="number" value={newCardLimit} onChange={(e) => setNewCardLimit(e.target.value)} className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]" />
-                          <div className="flex gap-2">
-                            <div className="flex-1">
-                              <Label className="px-2 text-[11px] text-white/62">Fecha dia</Label>
-                              <Input type="number" min={1} max={31} value={newCardClosingDay} onChange={(e) => setNewCardClosingDay(e.target.value)} className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]" />
-                            </div>
-                            <div className="flex-1">
-                              <Label className="px-2 text-[11px] text-white/62">Vence dia</Label>
-                              <Input type="number" min={1} max={31} value={newCardDueDay} onChange={(e) => setNewCardDueDay(e.target.value)} className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]" />
-                            </div>
-                          </div>
-                          <div className="flex gap-2 pt-1">
-                            <button type="button" onClick={handleCreateCreditCard} disabled={!newCardName.trim() || !newCardLimit} className="h-10 flex-1 rounded-full bg-white text-[13px] font-semibold text-[#0B0B0B] disabled:opacity-40">
-                              Cadastrar
-                            </button>
-                            <button type="button" onClick={() => { setShowNewCard(false); setNewCardName(""); setNewCardLimit(""); }} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white/74">
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
+                        <div className="flex gap-2 px-3 py-3">
+                          <input
+                            placeholder="Nome da conta"
+                            value={newAccountName}
+                            onChange={(e) => setNewAccountName(e.target.value)}
+                            className="h-11 min-w-0 flex-1 rounded-full bg-white/[0.06] px-4 text-[14px] text-white placeholder:text-white/35 focus:outline-none"
+                          />
+                          <button type="button" onClick={handleCreateAccount} disabled={!newAccountName.trim()} className="h-11 shrink-0 rounded-full bg-white px-4 text-[13px] font-semibold text-[#0B0B0B] disabled:opacity-40">
+                            Criar
+                          </button>
+                          <button type="button" onClick={() => { setShowNewAccount(false); setNewAccountName(""); }} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/70">
+                            <X className="h-4 w-4" />
+                          </button>
                         </div>
                       )}
                     </>
-                  )}
-                </div>
+                  )
+                ) : (
+                  <>
+                    {creditCards.length === 0 ? (
+                      <p className="px-[18px] py-5 text-center text-[14px] text-white/60">Nenhum cartão cadastrado</p>
+                    ) : (
+                      creditCards.map((card) => (
+                        <PickRow
+                          key={card.id}
+                          selected={card.id === creditCardId}
+                          onClick={() => setCreditCardId(card.id)}
+                          hex={cardHex(card.color)}
+                          icon={CreditCard}
+                          title={card.name}
+                          subtitle={`Vence dia ${card.due_day}`}
+                        />
+                      ))
+                    )}
+                    {!showNewCard ? (
+                      <AddRow label="Cadastrar cartão" onClick={() => setShowNewCard(true)} />
+                    ) : (
+                      <div className="space-y-2 px-3 py-3">
+                        <input placeholder="Nome do cartão" value={newCardName} onChange={(e) => setNewCardName(e.target.value)} className="h-11 w-full rounded-full bg-white/[0.06] px-4 text-[14px] text-white placeholder:text-white/35 focus:outline-none" />
+                        <input placeholder="Limite" inputMode="numeric" value={newCardLimit} onChange={(e) => setNewCardLimit(e.target.value)} className="h-11 w-full rounded-full bg-white/[0.06] px-4 text-[14px] text-white placeholder:text-white/35 focus:outline-none" />
+                        <div className="flex gap-2">
+                          <label className="flex h-11 flex-1 items-center gap-2 rounded-full bg-white/[0.06] px-4">
+                            <span className="shrink-0 text-[13px] text-white/50">Fecha</span>
+                            <input inputMode="numeric" value={newCardClosingDay} onChange={(e) => setNewCardClosingDay(e.target.value)} className="w-full min-w-0 bg-transparent text-right text-[14px] tabular-nums text-white focus:outline-none" />
+                          </label>
+                          <label className="flex h-11 flex-1 items-center gap-2 rounded-full bg-white/[0.06] px-4">
+                            <span className="shrink-0 text-[13px] text-white/50">Vence</span>
+                            <input inputMode="numeric" value={newCardDueDay} onChange={(e) => setNewCardDueDay(e.target.value)} className="w-full min-w-0 bg-transparent text-right text-[14px] tabular-nums text-white focus:outline-none" />
+                          </label>
+                        </div>
+                        <div className="flex gap-2 pt-0.5">
+                          <button type="button" onClick={handleCreateCreditCard} disabled={!newCardName.trim() || !newCardLimit} className="h-11 flex-1 rounded-full bg-white text-[13px] font-semibold text-[#0B0B0B] disabled:opacity-40">
+                            Cadastrar
+                          </button>
+                          <button type="button" onClick={() => { setShowNewCard(false); setNewCardName(""); setNewCardLimit(""); }} className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06] text-white/70">
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
-              {/* Repetition */}
-              <p className="mb-2.5 mt-7 px-1 text-[10.5px] font-semibold uppercase tracking-[0.13em] text-white/45">Repetição</p>
-              <div className="rounded-[22px] border border-white/[0.08] willo-glass p-3">
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                  {(isReceita ? (["unica", "fixa"] as const) : (["unica", "parcelado", "fixa"] as const)).map((rt) => (
-                    <button key={rt} type="button" onClick={() => setRecurrenceType(rt)} className={chip(recurrenceType === rt)}>
-                      {rt === "unica" ? "Única" : rt === "parcelado" ? "Parcelado" : usingCard ? "Assinatura" : "Todo mês"}
-                    </button>
-                  ))}
-                </div>
+              {/* ── Repetição ──────────────────────────────────────────── */}
+              <p className={SECTION}>Repetição</p>
+              <SegmentedControl<"unica" | "parcelado" | "fixa">
+                id="recurrence"
+                value={recurrenceType}
+                onChange={setRecurrenceType}
+                options={
+                  isReceita
+                    ? [
+                        { key: "unica" as const, label: "Única" },
+                        { key: "fixa" as const, label: "Todo mês" },
+                      ]
+                    : [
+                        { key: "unica" as const, label: "Única" },
+                        { key: "parcelado" as const, label: "Parcelado" },
+                        { key: "fixa" as const, label: usingCard ? "Assinatura" : "Todo mês" },
+                      ]
+                }
+              />
 
-                <AnimatePresence>
-                  {!isReceita && recurrenceType === "parcelado" && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="space-y-3 overflow-hidden pt-3"
-                    >
-                      <div className="flex gap-2">
-                        <Input
-                          type="number"
-                          inputMode="numeric"
-                          placeholder="Nº de parcelas"
-                          value={installments === 0 ? "" : installments}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (value === "") {
-                              setInstallments(0);
-                              return;
-                            }
-                            const parsed = Number(value);
-                            if (!Number.isNaN(parsed)) setInstallments(parsed);
-                          }}
-                          onBlur={() => {
-                            setInstallments((prev) => {
-                              if (!prev || prev < 2) return 2;
-                              return Math.min(prev, 48);
-                            });
-                          }}
+              <AnimatePresence initial={false}>
+                {!isReceita && recurrenceType === "parcelado" && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className={cn(GROUP, "mt-2.5")}>
+                      <Row icon={Layers} label="Parcelas">
+                        <Stepper
+                          value={installments}
                           min={2}
                           max={48}
-                          className="h-10 flex-1 rounded-full border-0 bg-white/[0.06] text-[14px]"
+                          onChange={setInstallments}
+                          suffix="x"
                         />
-                        {(["mensal", "anual"] as const).map((f) => (
-                          <button key={f} type="button" onClick={() => setInstallmentFrequency(f)} className={chip(installmentFrequency === f)}>
-                            {f === "mensal" ? "Mensal" : "Anual"}
-                          </button>
-                        ))}
-                      </div>
+                      </Row>
+                      <Row icon={Repeat} label="Frequência">
+                        <MiniSegmented<"mensal" | "anual">
+                          id="freq"
+                          value={installmentFrequency}
+                          onChange={setInstallmentFrequency}
+                          options={[
+                            { key: "mensal" as const, label: "Mensal" },
+                            { key: "anual" as const, label: "Anual" },
+                          ]}
+                        />
+                      </Row>
+                      {!(paymentMethod === "cartao" && installmentMonths.length > 0) && (
+                        <Row icon={Check} label="Já pagas">
+                          <Stepper
+                            value={paidInstallments}
+                            min={0}
+                            max={Math.max(installments - 1, 0)}
+                            onChange={setPaidInstallments}
+                          />
+                        </Row>
+                      )}
+                    </div>
 
-                      {paymentMethod === "cartao" && installmentMonths.length > 0 ? (
-                        <div className="space-y-2">
-                          <p className="px-1 text-[12px] text-white/62">Parcelas já pagas</p>
-                          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-                            {installmentMonths.map((im, idx) => {
-                              const isSelected = paidMonthFlags[idx] ?? false;
-                              const isLast = idx === installmentMonths.length - 1;
-                              const canToggle = !isSelected ? idx === 0 || (paidMonthFlags[idx - 1] ?? false) : !paidMonthFlags[idx + 1];
-                              return (
-                                <button
-                                  key={`${im.year}-${im.month}`}
-                                  type="button"
-                                  disabled={!canToggle || isLast}
-                                  onClick={() => {
-                                    setPaidMonthFlags((prev) => {
-                                      const next = [...prev];
-                                      next[idx] = !next[idx];
-                                      return next;
-                                    });
-                                  }}
-                                  className={cn(
-                                    "flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-3 text-[12px] font-semibold transition-colors",
-                                    isSelected ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/74",
-                                    (isLast || (!canToggle && !isSelected)) && "opacity-35",
-                                  )}
-                                >
-                                  {isSelected && <Check className="h-3 w-3" />}
-                                  {MONTH_NAMES_SHORT[im.month]}
-                                  <span className="text-[10px] opacity-60">{idx + 1}/{installments}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
+                    {/* On a card the months are real invoices, so they are picked by name */}
+                    {paymentMethod === "cartao" && installmentMonths.length > 0 && (
+                      <div className="mt-2.5">
+                        <p className="mb-2 px-1 text-[12px] text-white/50">Quais parcelas já foram pagas?</p>
+                        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 scrollbar-none">
+                          {installmentMonths.map((im, idx) => {
+                            const isSelected = paidMonthFlags[idx] ?? false;
+                            const isLast = idx === installmentMonths.length - 1;
+                            const canToggle = !isSelected ? idx === 0 || (paidMonthFlags[idx - 1] ?? false) : !paidMonthFlags[idx + 1];
+                            return (
+                              <button
+                                key={`${im.year}-${im.month}`}
+                                type="button"
+                                disabled={!canToggle || isLast}
+                                onClick={() => {
+                                  setPaidMonthFlags((prev) => {
+                                    const next = [...prev];
+                                    next[idx] = !next[idx];
+                                    return next;
+                                  });
+                                }}
+                                className={cn(
+                                  "flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-3 text-[12px] font-semibold transition-colors",
+                                  isSelected ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/74",
+                                  (isLast || (!canToggle && !isSelected)) && "opacity-35",
+                                )}
+                              >
+                                {isSelected && <Check className="h-3 w-3" />}
+                                {MONTH_NAMES_SHORT[im.month]}
+                                <span className="text-[10px] opacity-60">{idx + 1}/{installments}</span>
+                              </button>
+                            );
+                          })}
                         </div>
-                      ) : (
-                        <Input
-                          type="number"
-                          inputMode="numeric"
-                          placeholder="Parcelas já pagas (opcional)"
-                          value={paidInstallments === 0 ? "" : paidInstallments}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (value === "") {
-                              setPaidInstallments(0);
-                              return;
-                            }
-                            const parsed = Number(value);
-                            if (!Number.isNaN(parsed)) setPaidInstallments(parsed);
-                          }}
-                          onBlur={() => {
-                            setPaidInstallments((prev) => {
-                              if (prev < 0) return 0;
-                              return Math.min(prev, Math.max(installments - 1, 0));
-                            });
-                          }}
-                          min={0}
-                          max={Math.max(installments - 1, 0)}
-                          className="h-10 rounded-full border-0 bg-white/[0.06] text-[14px]"
-                        />
-                      )}
+                      </div>
+                    )}
 
-                      {amountCents > 0 && installments > 0 && (
-                        <p className="px-1 text-[13px] text-white/70">
-                          {installments}x de {currencySymbol()} {formatCurrency(Math.round(amountCents / installments))}
-                          {paidInstallments > 0 && ` · ${paidInstallments} já pagas`}
-                        </p>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                    {amountCents > 0 && installments > 0 && (
+                      <p className="mt-2.5 px-1 text-[13px] text-white/60">
+                        <b className="font-semibold text-white">{installments}x de {currencySymbol()} {formatCurrency(Math.round(amountCents / installments))}</b>
+                        {paidInstallments > 0 && ` · ${paidInstallments} já pagas`}
+                      </p>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-              {/* Status + note */}
+              {/* ── Fechamento ─────────────────────────────────────────── */}
               <form id="nova-transacao-form" onSubmit={handleSubmit}>
-                <div className="mt-6 divide-y divide-white/[0.055] rounded-[24px] border border-white/[0.07] willo-glass">
+                <p className={SECTION}>Mais</p>
+                <div className={GROUP}>
                   {!usingCard && (
                     <Row icon={status === "pago" ? Check : Clock} label={status === "pago" ? (isReceita ? "Recebido" : "Pago") : isReceita ? "A receber" : "Pendente"}>
                       <Switch
@@ -1125,6 +1201,45 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
               </motion.div>
             </AnimatePresence>
           </div>
+
+          {/* When it happened: two taps for the usual answers, a calendar for the rest */}
+          <BottomSheet open={showDateSheet} onClose={() => setShowDateSheet(false)} zIndex={70}>
+            <div className="px-4 pb-2">
+              <h3 className="px-1 text-[17px] font-bold text-white">Quando foi?</h3>
+              <div className={cn(GROUP, "mt-3")}>
+                {([["hoje", "Hoje"], ["ontem", "Ontem"]] as const).map(([mode, label]) => {
+                  const on = mode === "hoje" ? isToday : isYesterday;
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => { handleDateMode(mode); setShowDateSheet(false); }}
+                      className="flex w-full items-center gap-3.5 px-[18px] py-3.5 text-left active:bg-white/[0.03]"
+                    >
+                      <CalendarDays className="h-[17px] w-[17px] shrink-0 text-white/40" strokeWidth={2} />
+                      <span className="flex-1 text-[15px] text-white">{label}</span>
+                      {on && <Check className="h-4 w-4 shrink-0 text-white" strokeWidth={2.8} />}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-3 flex justify-center rounded-[24px] border border-white/[0.07] willo-glass p-2">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={(d) => {
+                    if (d) {
+                      setDate(d);
+                      setDateMode("outros");
+                      setShowDateSheet(false);
+                    }
+                  }}
+                  className="pointer-events-auto p-1"
+                  locale={ptBR}
+                />
+              </div>
+            </div>
+          </BottomSheet>
 
           {/* Category picker */}
           <BottomSheet open={showCategoryModal} onClose={() => setShowCategoryModal(false)} size="full" zIndex={70}>
