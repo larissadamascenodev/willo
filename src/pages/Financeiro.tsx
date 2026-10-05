@@ -346,6 +346,10 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
   // The month on its own: what came in less what went out. What last month left over
   // belongs to the running balance, which is what Projeções is for.
   const perDay = daysLeft > 0 ? current.sobra / daysLeft : 0;
+  // One scale for the whole stack, taken from the largest side of any month shown, so
+  // a bar means the same length in every card and the months compare by eye.
+  const aheadRows = rows.slice(1, 7);
+  const aheadScale = Math.max(...aheadRows.flatMap((r) => [r.income, r.expense]), 1);
 
   return (
     <div className="mt-5">
@@ -408,35 +412,60 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
             </button>
           </div>
 
-          {/* A strip rather than a stack: the question here is the direction, and the
-              month-by-month arithmetic has its own section. */}
-          <div className="mt-3 -mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 scrollbar-none">
-            {ahead.slice(0, 6).map((r) => {
-              const s = r.income > 0 ? Math.min((r.expense / r.income) * 100, 100) : r.expense > 0 ? 100 : 0;
+          {/* Stacked, and each month drawn as the two bars it is made of rather than
+              as its result alone: on one shared scale the eye catches both which month
+              is tight and why — the month that fails is the one whose lower bar runs
+              past the upper one. */}
+          <div className="mt-3 space-y-2">
+            {aheadRows.map((r, i) => {
+              const negative = r.sobra < 0;
+              const Bar = ({ label, value, tone }: { label: string; value: number; tone: string }) => (
+                <div className="flex items-center gap-2.5">
+                  <span className="w-[38px] shrink-0 text-[9.5px] font-semibold uppercase tracking-[0.09em] text-white/35">
+                    {label}
+                  </span>
+                  <span className="h-[5px] flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                    <motion.span
+                      className={cn("block h-full rounded-full", tone)}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.max((value / aheadScale) * 100, 2)}%` }}
+                      transition={{ duration: 0.5, delay: 0.04 * i, ease: "easeOut" }}
+                    />
+                  </span>
+                  <span className="w-[62px] shrink-0 text-right text-[11px] font-medium tabular-nums text-white/45">
+                    {compact(value)}
+                  </span>
+                </div>
+              );
+
               return (
                 <button
                   key={`${r.year}-${r.month}`}
                   onClick={onOpenProjecoes}
-                  className="w-[132px] shrink-0 rounded-[18px] border border-white/[0.08] willo-glass px-3.5 pb-3.5 pt-3 text-left active:opacity-80"
+                  className={cn(
+                    "w-full rounded-[20px] border willo-glass px-4 pb-4 pt-3.5 text-left transition active:scale-[0.985] active:opacity-80",
+                    negative ? "border-red-400/[0.22]" : "border-white/[0.07]",
+                  )}
                 >
-                  <span className="flex items-center gap-1.5">
-                    <span className={cn(
-                      "h-1.5 w-1.5 shrink-0 rounded-full",
-                      r.sobra < 0 ? "bg-red-400" : "bg-willo-green",
-                    )} />
-                    <span className="truncate text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white/50">
-                      {r.short}{r.yearTag ? `/${r.yearTag}` : ""}
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                      {r.name}{r.yearTag ? ` ${r.yearTag}` : ""}
                     </span>
-                  </span>
-                  <span className={cn(
-                    "mt-2.5 block truncate text-[19px] font-extrabold leading-none tracking-[-0.03em] tabular-nums",
-                    r.sobra < 0 ? "text-red-400" : "text-white",
-                  )}>
-                    {r.sobra > 0 ? "+" : ""}{compact(r.sobra)}
-                  </span>
-                  <span className="mt-3 block h-[4px] overflow-hidden rounded-full bg-willo-green/25">
-                    <span className="block h-full rounded-full bg-red-400/80" style={{ width: `${s}%` }} />
-                  </span>
+                    <span className="flex shrink-0 items-center gap-1">
+                      <span className={cn(
+                        "text-[19px] font-extrabold tracking-[-0.03em] tabular-nums",
+                        negative ? "text-red-400" : "text-white",
+                      )}>
+                        {r.sobra > 0 ? "+" : ""}{compact(r.sobra)}
+                      </span>
+                      <ChevronRight className="h-3.5 w-3.5 text-white/25" />
+                    </span>
+                  </div>
+
+                  <div className="mt-3.5 space-y-[7px]">
+                    <Bar label="Entra" value={r.income} tone="bg-white/30" />
+                    <Bar label="Sai" value={r.expense} tone={negative ? "bg-red-400/90" : "bg-white/55"} />
+                  </div>
                 </button>
               );
             })}
