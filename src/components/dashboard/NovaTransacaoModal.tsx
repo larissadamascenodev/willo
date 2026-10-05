@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import BottomSheet from "@/components/shared/BottomSheet";
+import TransactionTypeSwitch, { type EntryType } from "@/components/dashboard/TransactionTypeSwitch";
+import TransferSheet from "@/components/dashboard/TransferSheet";
 import { cn } from "@/lib/utils";
 import { format, subDays, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -132,6 +134,9 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
   const { user } = useAuth();
   const navigate = useNavigate();
   const [type, setType] = useState<"receita" | "despesa">(initialType);
+  // The kind of entry being made. Receita and despesa drive this form; transferência
+  // swaps the body out, so the three live in one sheet instead of behind a chooser.
+  const [entryKind, setEntryKind] = useState<EntryType>(initialType);
   const [status, setStatus] = useState<"pago" | "pendente">("pago");
   const [description, setDescription] = useState("");
   const [amountCents, setAmountCents] = useState(0);
@@ -291,6 +296,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
       if (editTransaction) {
         // Edit mode: pre-fill with transaction data
         setType(editTransaction.type);
+        setEntryKind(editTransaction.type);
         setStatus(editTransaction.status);
         setDescription(editTransaction.name);
         setAmountCents(Math.round(editTransaction.amount * 100));
@@ -328,6 +334,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
         // Create mode: reset form (or pre-fill from OCR)
         const pf = prefillData;
         setType(pf?.type || initialType);
+        setEntryKind(pf?.type || initialType);
         setStatus("pago");
         setDescription(pf?.name || "");
         setAmountCents(pf?.amount ? Math.round(pf.amount * 100) : 0);
@@ -608,6 +615,22 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
 
   const selectTrigger = "h-9 w-auto max-w-[190px] gap-1.5 rounded-full border-0 bg-white/[0.06] px-3.5 text-[13px] text-white focus:ring-0";
 
+  const changeKind = (next: EntryType) => {
+    setEntryKind(next);
+    if (next !== "transferencia") setType(next);
+  };
+
+  // Editing an existing entry has no kind to choose — it already is one.
+  const switcher = isEditMode ? null : <TransactionTypeSwitch value={entryKind} onChange={changeKind} />;
+
+  if (entryKind === "transferencia" && !isEditMode) {
+    return (
+      <AnimatePresence>
+        {open && <TransferSheet switcher={switcher} onClose={onClose} onSuccess={onSuccess} />}
+      </AnimatePresence>
+    );
+  }
+
   return (
     <AnimatePresence>
       {open && (
@@ -629,6 +652,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
               </span>
               <span className="w-10" />
             </div>
+            {switcher && <div className="pb-1 pt-2">{switcher}</div>}
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6">

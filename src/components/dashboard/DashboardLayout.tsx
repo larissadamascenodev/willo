@@ -10,12 +10,12 @@ import { useProfile } from "@/hooks/useProfile";
 import { useLoginStreak } from "@/hooks/useLoginStreak";
 import { MonthProvider } from "@/contexts/MonthContext";
 import NovaTransacaoModal, { type PrefillData, type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
-import TransactionTypeChooser from "@/components/dashboard/TransactionTypeChooser";
 import TransferModal from "@/components/dashboard/TransferModal";
 import type { ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
 import { showScanSavedToast } from "@/components/scan/scanSavedToast";
 import BottomSheet from "@/components/shared/BottomSheet";
 import ScanCaptureScreen from "@/components/scan/ScanCaptureScreen";
+import ScannerScreen from "@/components/scan/ScannerScreen";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 import WelcomeToAppModal from "@/components/dashboard/WelcomeToAppModal";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,12 +46,12 @@ const DashboardLayout = () => {
   const navigate = useNavigate();
   const { streak, streakDates } = useLoginStreak();
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
-  const [showTypeChooser, setShowTypeChooser] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [modalType, setModalType] = useState<"receita" | "despesa">("despesa");
 
   // OCR state
+  const [showScanner, setShowScanner] = useState(false);
   const [showScanScreen, setShowScanScreen] = useState(false);
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null);
   const [scanResultReady, setScanResultReady] = useState(false);
@@ -65,9 +65,6 @@ const DashboardLayout = () => {
   const [prefillData, setPrefillData] = useState<PrefillData | null>(null);
   const [editTransaction, setEditTransaction] = useState<EditTransactionData | null>(null);
 
-  const scanCameraRef = useRef<HTMLInputElement>(null);
-  const scanGalleryRef = useRef<HTMLInputElement>(null);
-  
 
   const getSafeTransactionDate = useCallback((rawDate: string | null | undefined) => {
     const today = new Date();
@@ -85,12 +82,6 @@ const DashboardLayout = () => {
     return rawDate;
   }, []);
 
-  const handleScanFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleScanFile(file);
-    e.target.value = "";
-  };
-
   // Global listener for the mobile + button and desktop "Nova transação"
   useEffect(() => {
     const handleDirect = (e: Event) => {
@@ -102,10 +93,9 @@ const DashboardLayout = () => {
         setShowModal(true);
       }
     };
-    const handleScanner = () => {
-      // Straight to the camera — scanning a receipt almost always means photographing one
-      scanCameraRef.current?.click();
-    };
+    // The viewfinder opens in the app rather than handing off to the system camera
+    // sheet, so the frame, the gallery and manual entry all sit on one screen.
+    const handleScanner = () => setShowScanner(true);
     const handleEditTransaction = (e: Event) => {
       const detail = (e as CustomEvent).detail as EditTransactionData;
       if (detail) {
@@ -121,7 +111,11 @@ const DashboardLayout = () => {
       setShowWelcomeModal(true);
       refetchProfile();
     };
-    const handleTypeChooser = () => setShowTypeChooser(true);
+    // One sheet now asks which kind of entry it is, so there is nothing to choose first.
+    const handleTypeChooser = () => {
+      setModalType("despesa");
+      setShowModal(true);
+    };
     window.addEventListener("open-type-chooser", handleTypeChooser);
     window.addEventListener("open-nova-transacao-direct", handleDirect);
     window.addEventListener("open-scanner", handleScanner);
@@ -157,16 +151,6 @@ const DashboardLayout = () => {
     };
     document.addEventListener("pointerup", onPointerUp);
     return () => document.removeEventListener("pointerup", onPointerUp);
-  }, []);
-
-  const handleTypeSelected = useCallback((type: "receita" | "despesa" | "transferencia") => {
-    setShowTypeChooser(false);
-    if (type === "transferencia") {
-      setShowTransferModal(true);
-    } else {
-      setModalType(type);
-      setShowModal(true);
-    }
   }, []);
 
   const handleSuccess = useCallback(() => {
@@ -365,14 +349,13 @@ const DashboardLayout = () => {
         </div>
         <MobileBottomNav />
         <WelcomeToAppModal open={showWelcomeModal} onConfigure={handleConfigureNow} onSkip={dismissWelcomeModal} />
-        <TransactionTypeChooser
-          open={showTypeChooser}
-          onClose={() => setShowTypeChooser(false)}
-          onSelect={handleTypeSelected}
+        <ScannerScreen
+          open={showScanner}
+          onClose={() => setShowScanner(false)}
+          onCapture={(file) => { setShowScanner(false); handleScanFile(file); }}
+          onManual={() => { setShowScanner(false); setModalType("despesa"); setShowModal(true); }}
         />
-        <input ref={scanCameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanFileInput} />
-        <input ref={scanGalleryRef} type="file" accept="image/*" className="hidden" onChange={handleScanFileInput} />
-        
+
         <ScanCaptureScreen
           open={showScanScreen}
           photoUrl={scanPhotoUrl}
