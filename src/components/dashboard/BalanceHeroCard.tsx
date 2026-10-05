@@ -77,7 +77,7 @@ const BalanceHeroCard = ({ topInset = 0, slot, pinned = true }: Props) => {
   const collapsed = progress > 0.55;
 
   // The pinned block carries this padding itself, so the spacer must not count it twice.
-  const heroPadTop = 68 + topInset;
+  const heroPadTop = 80 + topInset;
 
   /** The translucent control surface the pills and the round buttons share. */
   const control =
@@ -110,18 +110,19 @@ const BalanceHeroCard = ({ topInset = 0, slot, pinned = true }: Props) => {
           )}
         </button>
 
-        <AnimatePresence>
-          {collapsed && firstName && (
-            <motion.span
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              className="min-w-0 flex-1 truncate text-[19px] font-bold tracking-tight text-white"
-            >
-              {firstName}
-            </motion.span>
-          )}
+        {/* Beside the photo, where a name belongs. It greets you while the top of the
+            screen is still being read and drops to the bare name once it is not. */}
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.span
+            key={collapsed ? "short" : "long"}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="min-w-0 flex-1 truncate text-[17px] font-bold tracking-[-0.02em] text-white"
+          >
+            {collapsed ? firstName : `${greeting}${firstName ? `, ${firstName}` : ""}`}
+          </motion.span>
         </AnimatePresence>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -159,25 +160,13 @@ const BalanceHeroCard = ({ topInset = 0, slot, pinned = true }: Props) => {
           pointerEvents: progress > 0.4 ? "none" : undefined,
         } : undefined}
       >
-        <div className="mt-5">
+        {/* Whatever the page is reading out, straight onto the background — no card,
+            so there is no edge across the top of the screen to read as a seam. The
+            section pills sit last, landing directly above the first card. */}
+        {slot ?? <div className="h-[118px]" aria-hidden="true" />}
+
+        <div className="mt-7 pb-1">
           <HomeSectionTabs />
-        </div>
-
-        {/* Greeting, and then whatever the page puts in the room the balance card used
-            to take — that card asked the same question as "Saldo em contas" below, so
-            it went, and the space stayed. */}
-        <div className="mt-12">
-          <motion.p
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="truncate text-[30px] font-bold leading-[1.12] tracking-[-0.03em] text-white"
-          >
-            {greeting}{firstName ? `, ${firstName}` : ""}
-          </motion.p>
-          <p className="mt-1 text-[13px] text-white/56">Toque duas vezes na tela para lançar</p>
-
-          {slot ?? <div className="mt-4 h-[129px]" aria-hidden="true" />}
         </div>
       </div>
 
