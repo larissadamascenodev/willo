@@ -95,7 +95,7 @@ const EmptyState = ({ text }: { text: string }) => (
 const Cartoes = () => {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const tab = (params.get("aba") as Tab) || "cartoes";
+  const tab = (params.get("aba") as Tab) || "faturas";
   const setTab = (t: Tab) => setParams({ aba: t }, { replace: true });
 
   const { cards, invoices, installments, loading, refresh } = useCardsOverview();

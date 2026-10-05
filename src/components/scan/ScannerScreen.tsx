@@ -135,7 +135,7 @@ export default function ScannerScreen({ open, onCapture, onManual, onClose }: {
               corner="h-16 w-16"
               style={{
                 top: "calc(env(safe-area-inset-top, 0px) + 14px)",
-                bottom: "calc(env(safe-area-inset-bottom, 0px) + 26px)",
+                bottom: "calc(env(safe-area-inset-bottom, 0px) + 102px)",
               }}
             />
           )}

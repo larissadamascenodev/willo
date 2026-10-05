@@ -74,7 +74,7 @@ interface Props {
 
 /** Settings-style row: icon, label on the left, control on the right. */
 const Row = ({ icon: Icon, label, children, onClick }: {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: string | number }>;
   label: string;
   children?: React.ReactNode;
   onClick?: () => void;
@@ -82,11 +82,9 @@ const Row = ({ icon: Icon, label, children, onClick }: {
   <div
     role={onClick ? "button" : undefined}
     onClick={onClick}
-    className={cn("flex min-h-[56px] items-center gap-3 px-4 py-2.5", onClick && "cursor-pointer active:bg-white/[0.03]")}
+    className={cn("flex min-h-[58px] items-center gap-3.5 px-[18px] py-2.5", onClick && "cursor-pointer active:bg-white/[0.03]")}
   >
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
-      <Icon className="h-4 w-4 text-white/82" />
-    </span>
+    <Icon className="h-[17px] w-[17px] shrink-0 text-white/40" strokeWidth={2} />
     <span className="shrink-0 text-[15px] text-white">{label}</span>
     <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5 text-right">{children}</div>
   </div>
@@ -689,18 +687,30 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                   <>
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
               {/* Amount */}
-              <div className="flex flex-col items-center pb-7 pt-6" onClick={() => amountInputRef.current?.focus()}>
-                <span className="flex items-center gap-1.5 text-[14px] text-white/66">
-                  {isReceita ? <TrendingUp className="h-4 w-4" style={{ color: accent }} /> : <TrendingDown className="h-4 w-4" style={{ color: accent }} />}
+              <div className="relative flex flex-col items-center pb-8 pt-7" onClick={() => amountInputRef.current?.focus()}>
+                {/* Which kind of entry this is, said as light rather than as one more label */}
+                <motion.span
+                  key={accent}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -top-24 left-1/2 h-[340px] w-[160vw] -translate-x-1/2"
+                  style={{ background: `radial-gradient(50% 44% at 50% 48%, ${accent} 0%, transparent 72%)` }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.22 }}
+                  transition={{ duration: 0.45 }}
+                />
+                <span className="relative flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">
+                  {isReceita
+                    ? <TrendingUp className="h-[13px] w-[13px]" style={{ color: accent }} strokeWidth={2.6} />
+                    : <TrendingDown className="h-[13px] w-[13px]" style={{ color: accent }} strokeWidth={2.6} />}
                   {isReceita ? "Valor da receita" : "Valor da despesa"}
                 </span>
-                <div className="relative mt-2 flex items-baseline gap-2">
-                  <span className="text-[24px] font-bold text-white/56">{currencySymbol()}</span>
+                <div className="relative mt-3.5 flex items-baseline gap-2">
+                  <span className="text-[22px] font-bold text-white/45">{currencySymbol()}</span>
                   <motion.span
                     key={amountCents}
                     initial={{ scale: 1.04 }}
                     animate={{ scale: 1 }}
-                    className={cn("text-[52px] font-extrabold leading-none tracking-tight tabular-nums", amountCents === 0 ? "text-white/45" : "text-white")}
+                    className={cn("text-[54px] font-extrabold leading-none tracking-[-0.04em] tabular-nums", amountCents === 0 ? "text-white/30" : "text-white")}
                   >
                     {formatCurrency(amountCents)}
                   </motion.span>
@@ -718,11 +728,11 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                     className="absolute inset-0 w-full cursor-text opacity-0"
                   />
                 </div>
-                <span className="mt-3 h-1 w-10 rounded-full" style={{ background: accent }} />
+                <span className="relative mt-4 h-[3px] w-12 rounded-full" style={{ background: accent }} />
               </div>
 
               {/* Description + category */}
-              <div className="divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.08] willo-glass">
+              <div className="divide-y divide-white/[0.055] rounded-[24px] border border-white/[0.07] willo-glass">
                 <Row icon={FileText} label="Descrição">
                   <input
                     placeholder={isReceita ? "Ex: Salário" : "Ex: Mercado"}
@@ -754,7 +764,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
               </div>
 
               {/* Date */}
-              <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/62">Data</p>
+              <p className="mb-2.5 mt-7 px-1 text-[10.5px] font-semibold uppercase tracking-[0.13em] text-white/45">Data</p>
               <div className="rounded-[22px] border border-white/[0.08] willo-glass p-3">
                 <div className="flex gap-2">
                   {(["hoje", "ontem", "outros"] as const).map((mode) => (
@@ -794,7 +804,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
               </div>
 
               {/* Where */}
-              <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/62">{isReceita ? "Onde entrou" : "Como pagou"}</p>
+              <p className="mb-2.5 mt-7 px-1 text-[10.5px] font-semibold uppercase tracking-[0.13em] text-white/45">{isReceita ? "Onde entrou" : "Como pagou"}</p>
               <div className="rounded-[22px] border border-white/[0.08] willo-glass">
                 {type === "despesa" && (
                   <div className="grid grid-cols-2 gap-1 p-1.5">
@@ -952,7 +962,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
               </div>
 
               {/* Repetition */}
-              <p className="mb-2 mt-6 px-1 text-[13px] font-semibold text-white/62">Repetição</p>
+              <p className="mb-2.5 mt-7 px-1 text-[10.5px] font-semibold uppercase tracking-[0.13em] text-white/45">Repetição</p>
               <div className="rounded-[22px] border border-white/[0.08] willo-glass p-3">
                 <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                   {(isReceita ? (["unica", "fixa"] as const) : (["unica", "parcelado", "fixa"] as const)).map((rt) => (
@@ -1076,7 +1086,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
 
               {/* Status + note */}
               <form id="nova-transacao-form" onSubmit={handleSubmit}>
-                <div className="mt-6 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.08] willo-glass">
+                <div className="mt-6 divide-y divide-white/[0.055] rounded-[24px] border border-white/[0.07] willo-glass">
                   {!usingCard && (
                     <Row icon={status === "pago" ? Check : Clock} label={status === "pago" ? (isReceita ? "Recebido" : "Pago") : isReceita ? "A receber" : "Pendente"}>
                       <Switch
