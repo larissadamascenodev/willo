@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { X, CreditCard, CheckCircle2, Banknote, CalendarClock, DollarSign, Percent } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { motion } from "framer-motion";
+import { Banknote, CalendarClock, Check, CheckCircle2, ChevronRight, Wallet } from "lucide-react";
 import { formatCurrency, type AccountInfo } from "@/pages/FaturaCartao";
+import { colorFor, initials } from "@/lib/banks";
+import BottomSheet from "@/components/shared/BottomSheet";
+import { currencySymbol } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
-import { currencySymbol } from "@/lib/currency";
 export type PaymentMode = "total" | "minimo" | "parcelado";
 
 export interface PaymentDetails {
@@ -27,18 +28,45 @@ interface Props {
   paying: boolean;
 }
 
-const modeOptions: { value: PaymentMode; label: string; icon: React.ReactNode }[] = [
-  { value: "total", label: "Valor Total", icon: <CheckCircle2 className="w-4 h-4" /> },
-  { value: "minimo", label: "Pagar Parcial", icon: <Banknote className="w-4 h-4" /> },
-  { value: "parcelado", label: "Parcelado", icon: <CalendarClock className="w-4 h-4" /> },
+const MODES: { value: PaymentMode; label: string; hint: string; icon: typeof CheckCircle2 }[] = [
+  { value: "total", label: "Valor total", hint: "Zera a fatura", icon: CheckCircle2 },
+  { value: "minimo", label: "Parcial", hint: "O resto vai pra próxima", icon: Banknote },
+  { value: "parcelado", label: "Parcelado", hint: "Com entrada e juros", icon: CalendarClock },
 ];
 
 function parseAmount(val: string): number {
-  // Handle Brazilian format: "1.234,56" → "1234.56"
-  const cleaned = val.replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
-  return parseFloat(cleaned) || 0;
+  // "1.234,56" → 1234.56
+  return parseFloat(val.replace(/\s/g, "").replace(/\./g, "").replace(",", ".")) || 0;
 }
 
+/** A field that takes money, in the sheet's own language rather than a browser input. */
+const MoneyField = ({ label, value, onChange, placeholder }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) => (
+  <label className="flex min-h-[56px] items-center gap-3 px-[18px] py-2.5">
+    <span className="shrink-0 text-[15px] text-white">{label}</span>
+    <span className="flex min-w-0 flex-1 items-baseline justify-end gap-1.5">
+      <span className="shrink-0 text-[13px] text-white/40">{currencySymbol()}</span>
+      <input
+        inputMode="decimal"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder ?? "0,00"}
+        className="w-full min-w-0 bg-transparent text-right text-[16px] font-semibold tabular-nums text-white placeholder:font-normal placeholder:text-white/30 focus:outline-none"
+      />
+    </span>
+  </label>
+);
+
+/**
+ * Paying a statement, in the same language as every other sheet: the figure first,
+ * then where it comes out of, then how. The three ways to pay carry what they mean
+ * rather than only what they are called, because "parcial" and "parcelado" are a
+ * letter apart and do very different things to next month.
+ */
 export default function InvoicePayModal({
   open, onClose, total, accounts, payAccountId, setPayAccountId, onConfirm, paying,
 }: Props) {
@@ -47,6 +75,7 @@ export default function InvoicePayModal({
   const [entryAmount, setEntryAmount] = useState("");
   const [installments, setInstallments] = useState("2");
   const [installmentAmount, setInstallmentAmount] = useState("");
+  const [pickingAccount, setPickingAccount] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -55,6 +84,7 @@ export default function InvoicePayModal({
       setEntryAmount("");
       setInstallments("2");
       setInstallmentAmount("");
+      setPickingAccount(false);
     }
   }, [open]);
 
@@ -65,20 +95,17 @@ export default function InvoicePayModal({
 
   const remainder = mode === "minimo" ? Math.max(0, total - parsedMinAmount) : 0;
 
-  // Parcelado: user defines entry + installment count + installment value
-  // Interest = (entry + installments × installmentValue) - total
+  // Interest is whatever the plan costs beyond the statement itself.
   const installmentCalc = useMemo(() => {
     if (mode !== "parcelado") return null;
     if (parsedInstallments < 2 || parsedInstallmentAmount <= 0) return null;
-    const financedTotal = parsedInstallmentAmount * parsedInstallments;
-    const totalPaid = parsedEntryAmount + financedTotal;
-    const interest = Math.max(0, totalPaid - total);
-    return {
-      installmentValue: parsedInstallmentAmount,
-      totalPaid,
-      interest,
-    };
+    const totalPaid = parsedEntryAmount + parsedInstallmentAmount * parsedInstallments;
+    return { totalPaid, interest: Math.max(0, totalPaid - total) };
   }, [mode, total, parsedEntryAmount, parsedInstallments, parsedInstallmentAmount]);
+
+  const account = accounts.find((a) => a.id === payAccountId);
+  const paysNow = mode === "total" ? total : mode === "minimo" ? parsedMinAmount : parsedEntryAmount;
+  const short = account ? paysNow > Number(account.current_balance) : false;
 
   const canConfirm = (() => {
     if (!payAccountId) return false;
@@ -88,288 +115,213 @@ export default function InvoicePayModal({
   })();
 
   const handleConfirm = () => {
-    if (mode === "total") {
-      onConfirm({ mode: "total" });
-    } else if (mode === "minimo") {
-      onConfirm({ mode: "minimo", amountPaid: parsedMinAmount });
-    } else {
-      onConfirm({
-        mode: "parcelado",
-        entryAmount: parsedEntryAmount,
-        installments: parsedInstallments,
-        installmentAmount: parsedInstallmentAmount,
-      });
-    }
+    if (mode === "total") onConfirm({ mode: "total" });
+    else if (mode === "minimo") onConfirm({ mode: "minimo", amountPaid: parsedMinAmount });
+    else onConfirm({
+      mode: "parcelado",
+      entryAmount: parsedEntryAmount,
+      installments: parsedInstallments,
+      installmentAmount: parsedInstallmentAmount,
+    });
   };
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          onClick={onClose}
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: "spring", damping: 25, stiffness: 350 }}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-2xl bg-card border border-border/30 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+    <>
+      <BottomSheet
+        open={open && !pickingAccount}
+        onClose={onClose}
+        size="full"
+        zIndex={70}
+        footer={
+          <button
+            type="button"
+            disabled={!canConfirm || paying}
+            onClick={handleConfirm}
+            className="h-14 w-full rounded-full bg-white text-[16px] font-bold text-[#0B0B0B] shadow-[0_10px_30px_-12px_rgba(255,255,255,0.35)] transition-opacity disabled:opacity-35"
           >
-            <div className="p-5 space-y-4">
-              {/* Header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div
-                    className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center"
-                    style={{ filter: "drop-shadow(0 0 6px hsl(var(--primary) / 0.3))" }}
-                  >
-                    <CreditCard className="w-4 h-4 text-primary" />
-                  </div>
-                  <h3 className="text-sm font-bold text-foreground">Pagar Fatura</h3>
-                </div>
+            {paying ? "Pagando..." : paysNow > 0 ? `Pagar ${formatCurrency(paysNow)}` : "Pagar fatura"}
+          </button>
+        }
+      >
+        <div className="px-4 pb-2">
+          {/* What is owed, as the headline rather than a line in a form */}
+          <div className="relative flex flex-col items-center pb-7 pt-2">
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -top-16 left-1/2 h-[260px] w-[150vw] -translate-x-1/2"
+              style={{ background: "radial-gradient(50% 44% at 50% 50%, #A78BFA 0%, transparent 72%)", opacity: 0.2 }}
+            />
+            <span className="relative text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">
+              Saldo em aberto
+            </span>
+            <p className="relative mt-3 text-[44px] font-extrabold leading-none tracking-[-0.04em] tabular-nums text-white">
+              {formatCurrency(total)}
+            </p>
+          </div>
+
+          {/* Where it comes out of */}
+          <p className="mb-2.5 px-1 text-[10.5px] font-semibold uppercase tracking-[0.13em] text-white/45">
+            Debitar da conta
+          </p>
+          <button
+            type="button"
+            onClick={() => setPickingAccount(true)}
+            className="flex w-full items-center gap-3.5 rounded-[24px] border border-white/[0.07] willo-glass px-[18px] py-3.5 text-left active:bg-white/[0.03]"
+          >
+            {account ? (
+              <span
+                className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-[12.5px] font-bold text-white"
+                style={{ background: colorFor(account.name, (account as { color?: string | null }).color ?? null) }}
+              >
+                {initials(account.name)}
+              </span>
+            ) : (
+              <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
+                <Wallet className="h-4 w-4 text-white/60" />
+              </span>
+            )}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[15px] font-medium text-white">
+                {account?.name ?? "Escolher conta"}
+              </span>
+              {account && (
+                <span className={cn("block truncate text-[12.5px] tabular-nums", short ? "text-red-400" : "text-white/45")}>
+                  {formatCurrency(Number(account.current_balance))}
+                  {short ? " · menos do que o pagamento" : " disponíveis"}
+                </span>
+              )}
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
+          </button>
+
+          {/* How */}
+          <p className="mb-2.5 mt-7 px-1 text-[10.5px] font-semibold uppercase tracking-[0.13em] text-white/45">
+            Como pagar
+          </p>
+          <div className="space-y-2">
+            {MODES.map((m) => {
+              const Icon = m.icon;
+              const active = mode === m.value;
+              return (
                 <button
-                  onClick={onClose}
-                  className="w-8 h-8 rounded-lg bg-muted/30 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Amount */}
-              <div className="text-center py-1">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold mb-1">Saldo em aberto</p>
-                <p className="text-2xl font-extrabold text-primary tracking-tight">{formatCurrency(total)}</p>
-              </div>
-
-              {/* Account selector */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
-                  Debitar da conta
-                </label>
-                <Select value={payAccountId} onValueChange={setPayAccountId}>
-                  <SelectTrigger className="bg-muted/20 border-border/20 h-11 rounded-xl text-sm">
-                    <SelectValue placeholder="Selecionar conta" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[70]">
-                    {accounts.map((acc) => (
-                      <SelectItem key={acc.id} value={acc.id}>
-                        {acc.name} ({formatCurrency(Number(acc.current_balance))})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Payment mode selector */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
-                  Forma de pagamento
-                </label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {modeOptions.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setMode(opt.value)}
-                      className={cn(
-                        "flex flex-col items-center gap-1 p-2.5 rounded-xl border transition-all text-center",
-                        mode === opt.value
-                          ? "bg-primary/15 border-primary/30 text-primary shadow-[0_0_10px_-3px_hsl(var(--primary)/0.3)]"
-                          : "bg-muted/10 border-border/20 text-muted-foreground hover:bg-muted/20"
-                      )}
-                    >
-                      {opt.icon}
-                      <span className="text-[10px] font-bold leading-tight">{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Dynamic fields */}
-              <AnimatePresence mode="wait">
-                {mode === "minimo" && (
-                  <motion.div
-                    key="minimo"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="space-y-2 overflow-hidden"
-                  >
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" /> Quanto deseja pagar?
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{currencySymbol()}</span>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={minAmount}
-                          onChange={(e) => setMinAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
-                          placeholder="0,00"
-                          className="w-full h-11 rounded-xl bg-muted/20 border border-border/20 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        />
-                      </div>
-                    </div>
-                    {parsedMinAmount > 0 && parsedMinAmount < total && (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 space-y-1"
-                      >
-                        <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Restante em aberto</p>
-                        <p className="text-sm font-bold text-amber-400">{formatCurrency(remainder)}</p>
-                        <p className="text-[9px] text-muted-foreground">
-                          O valor restante continuará em aberto na fatura atual até o vencimento
-                        </p>
-                      </motion.div>
-                    )}
-                    {parsedMinAmount >= total && parsedMinAmount > 0 && (
-                      <p className="text-[10px] text-destructive font-medium">
-                        Valor deve ser menor que o total da fatura. Para pagar tudo, use "Valor Total".
-                      </p>
-                    )}
-                  </motion.div>
-                )}
-
-                {mode === "parcelado" && (
-                  <motion.div
-                    key="parcelado"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="space-y-3 overflow-hidden"
-                  >
-                    {/* Entry amount */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" /> Valor de entrada
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{currencySymbol()}</span>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={entryAmount}
-                          onChange={(e) => setEntryAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
-                          placeholder="0,00 (opcional)"
-                          className="w-full h-11 rounded-xl bg-muted/20 border border-border/20 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Number of installments */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold flex items-center gap-1">
-                        <CalendarClock className="w-3 h-3" /> Quantidade de parcelas
-                      </label>
-                      <Select value={installments} onValueChange={setInstallments}>
-                        <SelectTrigger className="bg-muted/20 border-border/20 h-11 rounded-xl text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="z-[70]">
-                          {Array.from({ length: 11 }, (_, i) => i + 2).map((n) => (
-                            <SelectItem key={n} value={String(n)}>
-                              {n}x parcelas
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Installment value — user-defined */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold flex items-center gap-1">
-                        <Banknote className="w-3 h-3" /> Valor de cada parcela
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{currencySymbol()}</span>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={installmentAmount}
-                          onChange={(e) => setInstallmentAmount(e.target.value.replace(/[^0-9.,]/g, ""))}
-                          placeholder="0,00"
-                          className="w-full h-11 rounded-xl bg-muted/20 border border-border/20 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Calculation summary */}
-                    {installmentCalc && (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="bg-primary/5 border border-primary/15 rounded-xl p-3 space-y-2"
-                      >
-                        {parsedEntryAmount > 0 && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] text-muted-foreground font-bold uppercase">Entrada</span>
-                            <span className="text-sm font-bold text-foreground">{formatCurrency(parsedEntryAmount)}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-muted-foreground font-bold uppercase">Parcelas</span>
-                          <span className="text-sm font-bold text-foreground">
-                            {parsedInstallments}x de {formatCurrency(installmentCalc.installmentValue)}
-                          </span>
-                        </div>
-                        <div className="h-px bg-border/20" />
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-muted-foreground font-bold uppercase">Total a pagar</span>
-                          <span className="text-sm font-bold text-foreground">{formatCurrency(installmentCalc.totalPaid)}</span>
-                        </div>
-                        {installmentCalc.interest > 0 && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] text-destructive font-bold uppercase flex items-center gap-1">
-                              <Percent className="w-3 h-3" /> Juros
-                            </span>
-                            <span className="text-sm font-bold text-destructive">
-                              + {formatCurrency(installmentCalc.interest)}
-                            </span>
-                          </div>
-                        )}
-                      </motion.div>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Actions */}
-              <div className="flex gap-2 pt-1">
-                <button
+                  key={m.value}
                   type="button"
-                  onClick={onClose}
-                  className="flex-1 h-11 rounded-xl text-xs font-bold border border-border/30 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirm}
-                  disabled={paying || !canConfirm}
+                  onClick={() => setMode(m.value)}
                   className={cn(
-                    "flex-1 h-11 rounded-xl text-xs font-bold transition-all backdrop-blur-md flex items-center justify-center gap-1.5",
-                    canConfirm
-                      ? "bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 shadow-[0_0_12px_-3px_hsl(var(--primary)/0.4)]"
-                      : "bg-muted/20 text-muted-foreground border border-border/10 cursor-not-allowed"
+                    "flex w-full items-center gap-3.5 rounded-[20px] border px-4 py-3.5 text-left transition-colors",
+                    active ? "border-white/35 bg-white/[0.10]" : "border-white/[0.07] willo-glass",
                   )}
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  {paying ? "Processando..." : "Confirmar"}
+                  <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-white" : "text-white/40")} strokeWidth={2.1} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-semibold text-white">{m.label}</span>
+                    <span className="block truncate text-[12.5px] text-white/45">{m.hint}</span>
+                  </span>
+                  <span
+                    className={cn(
+                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
+                      active ? "border-white bg-white" : "border-white/20",
+                    )}
+                  >
+                    {active && <Check className="h-3 w-3 text-[#0B0B0B]" strokeWidth={3.4} />}
+                  </span>
                 </button>
+              );
+            })}
+          </div>
+
+          {/* What the chosen way needs to know */}
+          {mode === "minimo" && (
+            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-3">
+              <div className="rounded-[24px] border border-white/[0.07] willo-glass">
+                <MoneyField label="Pagar agora" value={minAmount} onChange={setMinAmount} />
               </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+              {parsedMinAmount > 0 && (
+                <p className="mt-2.5 px-1 text-[12.5px] text-white/55">
+                  {parsedMinAmount >= total
+                    ? "Isso cobre a fatura inteira. Use “Valor total”."
+                    : <>Ficam <b className="font-semibold text-white">{formatCurrency(remainder)}</b> para a próxima fatura.</>}
+                </p>
+              )}
+            </motion.div>
+          )}
+
+          {mode === "parcelado" && (
+            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-3">
+              <div className="divide-y divide-white/[0.055] rounded-[24px] border border-white/[0.07] willo-glass">
+                <MoneyField label="Entrada" value={entryAmount} onChange={setEntryAmount} />
+                <label className="flex min-h-[56px] items-center gap-3 px-[18px] py-2.5">
+                  <span className="shrink-0 text-[15px] text-white">Parcelas</span>
+                  <input
+                    inputMode="numeric"
+                    value={installments}
+                    onChange={(e) => setInstallments(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                    className="w-full min-w-0 bg-transparent text-right text-[16px] font-semibold tabular-nums text-white focus:outline-none"
+                  />
+                  <span className="shrink-0 text-[13px] text-white/40">x</span>
+                </label>
+                <MoneyField label="Valor da parcela" value={installmentAmount} onChange={setInstallmentAmount} />
+              </div>
+
+              {installmentCalc && (
+                <div className="mt-2.5 rounded-[20px] border border-white/[0.07] willo-glass px-4 py-3.5">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-[13px] text-white/55">Vai pagar no total</span>
+                    <span className="text-[14px] font-semibold tabular-nums text-white">
+                      {formatCurrency(installmentCalc.totalPaid)}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex items-baseline justify-between gap-3">
+                    <span className="text-[13px] text-white/55">Juros</span>
+                    <span className={cn(
+                      "text-[14px] font-semibold tabular-nums",
+                      installmentCalc.interest > 0 ? "text-amber-300" : "text-willo-green",
+                    )}>
+                      {installmentCalc.interest > 0 ? formatCurrency(installmentCalc.interest) : "sem juros"}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {short && canConfirm && (
+            <p className="mt-4 px-1 text-[12.5px] text-red-400">
+              {account?.name} tem menos do que esse pagamento. A conta vai ficar negativa.
+            </p>
+          )}
+        </div>
+      </BottomSheet>
+
+      <BottomSheet open={pickingAccount} onClose={() => setPickingAccount(false)} zIndex={75}>
+        <div className="px-4 pb-2">
+          <h3 className="px-1 text-[17px] font-bold text-white">Debitar de qual conta?</h3>
+          <div className="mt-3 divide-y divide-white/[0.06]">
+            {accounts.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => { setPayAccountId(a.id); setPickingAccount(false); }}
+                className="flex w-full items-center gap-3 py-3 text-left"
+              >
+                <span
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[12.5px] font-bold text-white"
+                  style={{ background: colorFor(a.name, (a as { color?: string | null }).color ?? null) }}
+                >
+                  {initials(a.name)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] font-medium text-white">{a.name}</span>
+                  <span className="block truncate text-[12.5px] tabular-nums text-white/45">
+                    {formatCurrency(Number(a.current_balance))}
+                  </span>
+                </span>
+                {a.id === payAccountId && <Check className="h-4 w-4 shrink-0 text-white" strokeWidth={2.6} />}
+              </button>
+            ))}
+          </div>
+        </div>
+      </BottomSheet>
+    </>
   );
 }

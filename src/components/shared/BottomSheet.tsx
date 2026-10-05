@@ -49,7 +49,7 @@ const BottomSheet = ({ open, onClose, children, size = "auto", footer, className
       {open && (
         <div className={inline ? "absolute inset-0" : "fixed inset-0"} style={{ zIndex }}>
           <motion.div
-            className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-black/60 backdrop-blur-[16px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

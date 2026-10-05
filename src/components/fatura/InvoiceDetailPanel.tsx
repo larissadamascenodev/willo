@@ -3,7 +3,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { CalendarCheck, CalendarClock, ChevronRight, Layers, Plus, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { getInvoiceItems, payInvoice } from "@/services/invoiceService";
-import { getAccounts } from "@/services/transactionService";
+import { getAccounts, getTransactionById } from "@/services/transactionService";
+import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { getCategoryIcon, getCategoryColor, getCategoryHexColor } from "@/lib/categoryUtils";
 import {
@@ -13,7 +14,8 @@ import {
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { formatCurrency, type EnrichedItem } from "@/pages/FaturaCartao";
 import { cardHex, type OverviewCard, type OverviewInvoice } from "@/hooks/useCardsOverview";
-import NovaTransacaoModal from "@/components/dashboard/NovaTransacaoModal";
+import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
+import TransactionDetailModal, { type TransactionRow } from "@/components/dashboard/TransactionDetailModal";
 import InstallmentPurchaseCard from "@/components/installments/InstallmentPurchaseCard";
 import SinglePurchaseCard from "./SinglePurchaseCard";
 import InvoicePayModal from "./InvoicePayModal";
@@ -67,8 +69,11 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
   const [payOpen, setPayOpen] = useState(false);
   const [paying, setPaying] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [detailTx, setDetailTx] = useState<TransactionRow | null>(null);
+  const [editTx, setEditTx] = useState<EditTransactionData | null>(null);
 
   const navigate = useNavigate();
+  const { user } = useAuth();
   const hex = cardHex(card.color);
 
   const loadItems = useCallback(() => {
@@ -173,6 +178,15 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
       toast.error(err?.message ?? "Erro ao pagar fatura");
     } finally {
       setPaying(false);
+    }
+  };
+
+  const openEntry = async (transactionId: string) => {
+    try {
+      const tx = await getTransactionById(transactionId);
+      setDetailTx(tx as unknown as TransactionRow);
+    } catch {
+      toast.error("Não foi possível abrir esse lançamento");
     }
   };
 
@@ -377,6 +391,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
                     index={i}
                     customCats={customCats}
                     card={{ name: card.name, color: card.color }}
+                    onOpen={() => openEntry(item.transaction_id)}
                     item={{
                       id: item.transaction_id,
                       name: item.transaction_name,
@@ -397,6 +412,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
                     index={i}
                     customCats={customCats}
                     card={{ name: card.name, color: card.color }}
+                    onOpen={() => openEntry(item.transaction_id)}
                     item={{
                       id: item.id,
                       name: item.transaction_name,
@@ -472,6 +488,48 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
         setPayAccountId={setPayAccountId}
         onConfirm={handlePay}
         paying={paying}
+      />
+
+      <TransactionDetailModal
+        open={!!detailTx}
+        tx={detailTx}
+        accountName={card.name}
+        userId={user?.id}
+        selectedMonth={month - 1}
+        selectedYear={year}
+        onClose={() => setDetailTx(null)}
+        onRefresh={() => { loadItems(); onChanged(); }}
+        onEdit={(tx) => {
+          setDetailTx(null);
+          setEditTx({
+            id: tx.id,
+            name: tx.name,
+            type: tx.type === "receita" ? "receita" : "despesa",
+            amount: Number(tx.amount),
+            category: tx.category,
+            date: tx.date,
+            status: tx.status === "pago" ? "pago" : "pendente",
+            payment_method: tx.payment_method === "cartao" ? "cartao" : "conta",
+            account_id: tx.account_id,
+            credit_card_id: tx.credit_card_id,
+            recurrence_type: (tx.recurrence_type as EditTransactionData["recurrence_type"]) ?? "unica",
+            installments: tx.installments,
+            installment_current: tx.installment_current,
+            observation: tx.observation,
+          });
+        }}
+      />
+
+      <NovaTransacaoModal
+        open={!!editTx}
+        onClose={() => setEditTx(null)}
+        onSuccess={() => {
+          window.dispatchEvent(new CustomEvent("transaction-created"));
+          loadItems();
+          onChanged();
+        }}
+        editTransaction={editTx}
+        initialType={editTx?.type ?? "despesa"}
       />
 
       <NovaTransacaoModal
