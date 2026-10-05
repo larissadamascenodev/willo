@@ -32,7 +32,7 @@ const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curren
  * reachable, so the bar splits it by account at a glance and the rows name each one —
  * a single account holding everything looks very different from four holding a quarter each.
  */
-const SaldoContasCard = memo(() => {
+const SaldoContasCard = memo(({ saldoPrevisto }: { saldoPrevisto?: number }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const hidden = useHiddenValues();
@@ -88,6 +88,15 @@ const SaldoContasCard = memo(() => {
       )}>
         {value(total)}
       </p>
+
+      {/* What is in hand, then where it lands: the same card answers "quanto tenho"
+          and "quanto sobra", which is the pair the question is actually about. */}
+      {saldoPrevisto !== undefined && (
+        <p className="mt-2 truncate text-[13px] text-white/60">
+          Previsto no fim do mês:{" "}
+          <span className="font-semibold text-white/80 tabular-nums">{value(saldoPrevisto)}</span>
+        </p>
+      )}
 
       {/* One bar split by account: the share each one holds, in its own brand colour. */}
       <div className="mt-3.5 flex h-[7px] gap-[3px] overflow-hidden rounded-full">

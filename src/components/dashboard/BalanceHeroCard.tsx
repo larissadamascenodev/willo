@@ -2,20 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { User, Bell, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useFormattedCounter } from "@/hooks/useAnimatedCounter";
 import { useHiddenValues, setHiddenValues } from "@/hooks/useHiddenValues";
 import NotificationsPanel, { useNotifications } from "./NotificationsPanel";
 import HomeSectionTabs from "./HomeSectionTabs";
 import { useGreeting } from "./DashboardHeader";
 import { useProfile } from "@/hooks/useProfile";
 
-import { currencySymbol } from "@/lib/currency";
 
 interface Props {
-  saldoAtual: number;
-  saldoPrevisto: number;
-  receitas: number;
-  despesas: number;
   /** Extra space above the top row (px), e.g. under a drawn status bar. */
   topInset?: number;
 }
@@ -25,17 +19,14 @@ interface Props {
  * greeting. The month's figures are a card further down the stack — the top of
  * the screen is for orientation, not for numbers.
  */
-const BalanceHeroCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, topInset = 0 }: Props) => {
+const BalanceHeroCard = ({ topInset = 0 }: Props) => {
   const navigate = useNavigate();
-  const hidden = useHiddenValues();
   const [notifOpen, setNotifOpen] = useState(false);
   const { unreadCount, refresh } = useNotifications();
   const { profile } = useProfile();
   const { greeting } = useGreeting();
   const firstName = profile?.display_name?.trim().split(" ")[0] ?? "";
   const initial = profile?.display_name?.trim().charAt(0).toUpperCase();
-  const animatedSaldo = useFormattedCounter(saldoAtual);
-  const animatedPrevisto = useFormattedCounter(saldoPrevisto);
 
   const heroRef = useRef<HTMLDivElement>(null);
   const greetingRef = useRef<HTMLParagraphElement>(null);
@@ -121,8 +112,10 @@ const BalanceHeroCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, topIns
         <HomeSectionTabs />
       </div>
 
-      {/* Greeting, then the one number that answers "can I spend?" — what is left of
-          the month rather than what is in the account today. */}
+      {/* Greeting only. The balance card that stood here asked the same question as
+          "Saldo em contas" below, so it went; the room it took is deliberately left
+          open rather than closed up, which keeps the greeting breathing and lets the
+          first real card arrive where the eye already expects one. */}
       <div className="relative z-10 mt-12">
         <motion.p
           ref={greetingRef}
@@ -135,19 +128,7 @@ const BalanceHeroCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, topIns
         </motion.p>
         <p className="mt-1 text-[13px] text-white/56">Toque duas vezes na tela para lançar</p>
 
-        <div className="willo-glass mt-4 rounded-[24px] border border-white/[0.08] p-[18px]">
-          <p className="text-[13px] text-white/66">Saldo disponível</p>
-          <p className="mt-2 truncate text-[34px] font-extrabold leading-none tracking-[-0.035em] text-white tabular-nums">
-            {hidden ? `${currencySymbol()} ••••••` : animatedSaldo}
-          </p>
-
-          <p className="mt-2.5 truncate text-[13px] text-white/60">
-            Previsto no fim do mês:{" "}
-            <span className="font-semibold text-white/80 tabular-nums">
-              {hidden ? `${currencySymbol()} ••••` : animatedPrevisto}
-            </span>
-          </p>
-        </div>
+        <div className="mt-4 h-[129px]" aria-hidden="true" />
       </div>
     </div>
     </>

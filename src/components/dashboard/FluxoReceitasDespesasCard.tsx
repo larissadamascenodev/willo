@@ -13,14 +13,31 @@ const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curren
  * lengths answer the only question that matters here — which side is bigger —
  * before the figures are read, and the balance below is just their difference.
  */
-const FluxoReceitasDespesasCard = memo(({ receitas, despesas, isCurrentMonth = true }: {
+const MONTHS = [
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+];
+
+const FluxoReceitasDespesasCard = memo(({ receitas, despesas, month, isCurrentMonth = true }: {
   receitas: number;
   despesas: number;
+  /** 0–11, so the verdict line can name the month. */
+  month: number;
   isCurrentMonth?: boolean;
 }) => {
   const navigate = useNavigate();
   const hidden = useHiddenValues();
   const balanco = receitas - despesas;
+  const monthLabel = MONTHS[month];
+  const pct = receitas > 0 ? Math.round((despesas / receitas) * 100) : 0;
+
+  // The verdict the bars cannot draw: two near-equal lengths look fine until you are
+  // told they are 94%.
+  const verdict =
+    receitas <= 0 && despesas <= 0 ? `Nada entrou nem saiu em ${monthLabel} ainda.`
+    : receitas <= 0 ? `Saiu dinheiro em ${monthLabel} sem nenhuma entrada.`
+    : balanco < 0 ? `Você gastou mais do que entrou em ${monthLabel}.`
+    : `Você gastou ${pct}% do que entrou em ${monthLabel}.`;
   const scale = Math.max(receitas, despesas, 1);
   const value = (v: number) => (hidden ? "••••" : fmt(v));
 
@@ -61,6 +78,8 @@ const FluxoReceitasDespesasCard = memo(({ receitas, despesas, isCurrentMonth = t
         </p>
         <ChevronRight className="h-4 w-4 shrink-0 text-white/35" />
       </button>
+
+      <p className="mt-2 text-[13px] leading-snug text-white/55">{verdict}</p>
 
       <div className="mt-3.5 space-y-3.5">
         <Flow label="Entrada" amount={receitas} tone="receita" sign="" to="/detalhe/receitas" delay={0.05} />

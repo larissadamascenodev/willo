@@ -17,9 +17,13 @@ const compact = (v: number) =>
   `${v < 0 ? "−" : ""}${currencySymbol()} ${Math.abs(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
 
 /**
- * The month in a sentence. Every other card on this screen plots something; with
- * R$ 1.592 out of R$ 1.700 any chart here draws two near-identical lengths and says
- * nothing. The fact itself is short enough to simply write down.
+ * The month in a sentence. Every other card plots something; with R$ 1.592 out of
+ * R$ 1.700 any chart here draws two near-identical lengths and says nothing. The fact
+ * itself is short enough to simply write down.
+ *
+ * nextMonthBalance comes from the historical average, so a caller that loads without
+ * history has no figure to give — the footer stays off rather than printing a zero
+ * as if it were a forecast.
  */
 const MONTHS = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -61,8 +65,7 @@ const FinanceOverviewCard = ({ receitas, despesas, saldoPrevisto, nextMonthBalan
       </div>
 
       {/* The month's income still counts what has not landed yet, so this figure is
-          where the month is heading, not what is in hand. The caption says so, and
-          says where it comes from, sitting on the figure's own baseline. */}
+          where the month is heading, not what is in hand. */}
       <div className="mt-5 flex items-baseline justify-between gap-3">
         <p
           className={cn(
@@ -77,22 +80,22 @@ const FinanceOverviewCard = ({ receitas, despesas, saldoPrevisto, nextMonthBalan
         </p>
       </div>
 
-      <div
-        role="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          navigate("/bot-finance/projecoes");
-        }}
-        className="mt-4 flex items-center justify-between gap-2 border-t border-white/[0.07] pt-3"
-      >
-        <span className="truncate text-[12.5px] text-white/55">
-          Em {nextLabel}
-        </span>
-        <span className={cn("flex shrink-0 items-center gap-1.5 text-[13px] font-semibold tabular-nums", trendUp ? "text-willo-green" : "text-red-400")}>
-          <TrendingUp className={cn("h-3.5 w-3.5", !trendUp && "rotate-180")} strokeWidth={2.4} />
-          {compact(nextMonthBalance)}
-        </span>
-      </div>
+      {nextMonthBalance !== 0 && (
+        <div
+          role="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate("/bot-finance/projecoes");
+          }}
+          className="mt-4 flex items-center justify-between gap-2 border-t border-white/[0.07] pt-3"
+        >
+          <span className="truncate text-[12.5px] text-white/55">Em {nextLabel}</span>
+          <span className={cn("flex shrink-0 items-center gap-1.5 text-[13px] font-semibold tabular-nums", trendUp ? "text-willo-green" : "text-red-400")}>
+            <TrendingUp className={cn("h-3.5 w-3.5", !trendUp && "rotate-180")} strokeWidth={2.4} />
+            {compact(nextMonthBalance)}
+          </span>
+        </div>
+      )}
     </motion.button>
   );
 };

@@ -183,7 +183,7 @@ const Index = () => {
             figure and a word rides two to a row, so the column has a rhythm instead
             of being one shape repeated nine times. */}
         <div className="md:hidden space-y-3">
-          <BalanceHeroCard saldoAtual={saldoMes} saldoPrevisto={saldoPrevisto} receitas={receitas} despesas={despesas} />
+          <BalanceHeroCard />
 
           {profile && !isOnboardingComplete && (
             <OnboardingCard
@@ -196,21 +196,27 @@ const Index = () => {
             />
           )}
 
-          <SaldoContasCard />
-          <FluxoReceitasDespesasCard receitas={receitas} despesas={despesas} isCurrentMonth={isCurrentMonth} />
+          {/* AGORA — what is true this second: what is in hand, and where it lands. */}
+          <SaldoContasCard saldoPrevisto={saldoPrevisto} />
+
+          {/* ESTE MÊS — what moved, what is still due, where it went, and its shape.
+              "Próximos eventos" sits this high because it is the only card on the
+              screen you can act on; buried at the bottom it was a list nobody reached. */}
+          <FluxoReceitasDespesasCard receitas={receitas} despesas={despesas} month={selectedMonth} isCurrentMonth={isCurrentMonth} />
+          <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
           {isCurrentMonth && <FinanceChartCard />}
           <GastosPorCategoria categories={data.categories} selectedMonth={selectedMonth} onVerAnalise={() => navigate("/transacoes")} />
 
+          {/* JÁ COMPROMETIDO — money that is spoken for. Four figures, so four tiles. */}
           <div className="grid grid-cols-2 gap-3">
-            <MetasResumoCard compact />
-            <AssinaturasCard compact />
-            <ParcelamentosAtivosCard compact />
             <CardsOverviewSection compact />
+            <ParcelamentosAtivosCard compact />
+            <AssinaturasCard compact />
+            <MetasResumoCard compact />
           </div>
 
+          {/* O REGISTRO. */}
           <TransacoesRecentes transactions={data.transactions} onDelete={refetch} />
-          <FinanceOverviewCard receitas={receitas} despesas={despesas} saldoPrevisto={saldoPrevisto} nextMonthBalance={data.projection.nextMonthBalance} month={selectedMonth} />
-          <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
         </div>
       <PagarEditarModal
         open={showPayModal}
