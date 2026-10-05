@@ -35,8 +35,6 @@ const BalanceHeroCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, topIns
   const firstName = profile?.display_name?.trim().split(" ")[0] ?? "";
   const initial = profile?.display_name?.trim().charAt(0).toUpperCase();
   const animatedSaldo = useFormattedCounter(saldoAtual);
-  const animatedReceitas = useFormattedCounter(receitas);
-  const animatedDespesas = useFormattedCounter(despesas);
   const animatedPrevisto = useFormattedCounter(saldoPrevisto);
 
   const heroRef = useRef<HTMLDivElement>(null);
@@ -149,31 +147,6 @@ const BalanceHeroCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, topIns
               {hidden ? `${currencySymbol()} ••••` : animatedPrevisto}
             </span>
           </p>
-
-          <div className="mt-4 flex items-stretch border-t border-white/[0.08] pt-4">
-            {[
-              { key: "in", label: "Receitas", value: animatedReceitas, to: "/detalhe/receitas",
-                Icon: ArrowDownLeft, iconCls: "text-willo-green" },
-              { key: "out", label: "Despesas", value: animatedDespesas, to: "/detalhe/despesas",
-                Icon: ArrowUpRight, iconCls: "text-red-400" },
-            ].map(({ key, label, value, to, Icon, iconCls }, i) => (
-              <button
-                key={key}
-                onClick={(e) => { e.stopPropagation(); navigate(to); }}
-                className={`min-w-0 flex-1 text-left active:opacity-70 ${
-                  i === 0 ? "pr-4" : "border-l border-white/[0.08] pl-4"
-                }`}
-              >
-                <span className="flex items-center gap-1.5 text-[13px] text-white/66">
-                  <Icon className={`h-3.5 w-3.5 ${iconCls}`} strokeWidth={2.6} />
-                  {label}
-                </span>
-                <span className="mt-1.5 block truncate text-[19px] font-extrabold tracking-tight text-white tabular-nums">
-                  {hidden ? `${currencySymbol()} ••••` : value}
-                </span>
-              </button>
-            ))}
-          </div>
         </div>
       </div>
     </div>

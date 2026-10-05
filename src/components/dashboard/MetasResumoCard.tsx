@@ -1,6 +1,7 @@
 import { memo, useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Target } from "lucide-react";
+import { StatTile } from "@/components/dashboard/StatTile";
 import { getGoalPreset } from "@/lib/goalIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,7 +20,7 @@ export interface GoalRow {
 const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
-const MetasResumoCard = memo(() => {
+const MetasResumoCard = memo(({ compact = false }: { compact?: boolean }) => {
   const { user } = useAuth();
   const [goals, setGoals] = useState<GoalRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,18 +45,18 @@ const MetasResumoCard = memo(() => {
     return () => window.removeEventListener("finance-data-changed", handler);
   }, [user]);
 
-  return <MetasResumoView goals={goals} loading={loading} />;
+  return <MetasResumoView goals={goals} loading={loading} compact={compact} />;
 });
 
 /** The goals summary, fed with data — also drawn by the welcome showcase. */
-export function MetasResumoView({ goals, loading = false }: { goals: GoalRow[]; loading?: boolean }) {
+export function MetasResumoView({ goals, loading = false, compact = false }: { goals: GoalRow[]; loading?: boolean; compact?: boolean }) {
   const navigate = useNavigate();
   const totalGuardado = useMemo(() => goals.reduce((s, g) => s + g.current_amount, 0), [goals]);
   const totalObjetivo = useMemo(() => goals.reduce((s, g) => s + g.target_amount, 0), [goals]);
 
   if (loading) {
     return (
-      <div className="h-[220px] animate-pulse rounded-[22px] border border-white/[0.08] willo-glass" />
+      <div className={`${compact ? "h-[138px]" : "h-[220px]"} animate-pulse rounded-[22px] border border-white/[0.08] willo-glass`} />
     );
   }
 
@@ -63,6 +64,20 @@ export function MetasResumoView({ goals, loading = false }: { goals: GoalRow[]; 
   if (goals.length === 0) return null;
 
   const overall = totalObjetivo > 0 ? Math.min(totalGuardado / totalObjetivo, 1) : 0;
+
+  if (compact) {
+    return (
+      <StatTile
+        label="Metas"
+        value={fmt(totalGuardado)}
+        caption={`${Math.round(overall * 100)}% de ${fmt(totalObjetivo)}`}
+        icon={Target}
+        accent="#C8F36D"
+        progress={overall}
+        onClick={() => navigate("/metas")}
+      />
+    );
+  }
   const sortedGoals = [...goals].sort(
     (a, b) => Math.min(1, b.current_amount / b.target_amount) - Math.min(1, a.current_amount / a.target_amount),
   );

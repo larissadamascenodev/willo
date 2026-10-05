@@ -14,6 +14,8 @@ import AssinaturasCard from "@/components/dashboard/AssinaturasCard";
 import GastosPorCategoria from "@/components/dashboard/GastosPorCategoria";
 import FinanceChartCard from "@/components/dashboard/FinanceChartCard";
 import CardsOverviewSection from "@/components/dashboard/CardsOverviewSection";
+import SaldoContasCard from "@/components/dashboard/SaldoContasCard";
+import FluxoReceitasDespesasCard from "@/components/dashboard/FluxoReceitasDespesasCard";
 
 import MetasResumoCard from "@/components/dashboard/MetasResumoCard";
 import ParcelamentosAtivosCard from "@/components/dashboard/ParcelamentosAtivosCard";
@@ -175,12 +177,14 @@ const Index = () => {
            <MetasResumoCard />
         </div>
 
-        {/* MOBILE LAYOUT */}
+        {/* MOBILE LAYOUT
+            Full width is spent on the cards that need it — the hero, where the money
+            sits, the two flows, the chart, the lists. Everything that is really a
+            figure and a word rides two to a row, so the column has a rhythm instead
+            of being one shape repeated nine times. */}
         <div className="md:hidden space-y-3">
           <BalanceHeroCard saldoAtual={saldoMes} saldoPrevisto={saldoPrevisto} receitas={receitas} despesas={despesas} />
 
-          {/* MicroInteracoesCard temporarily disabled */}
-          {isCurrentMonth && <FinanceChartCard />}
           {profile && !isOnboardingComplete && (
             <OnboardingCard
               profile={profile}
@@ -191,15 +195,22 @@ const Index = () => {
               onCreateFixedExpense={handleNovaTransacao}
             />
           )}
+
+          <SaldoContasCard />
+          <FluxoReceitasDespesasCard receitas={receitas} despesas={despesas} isCurrentMonth={isCurrentMonth} />
+          {isCurrentMonth && <FinanceChartCard />}
           <GastosPorCategoria categories={data.categories} selectedMonth={selectedMonth} onVerAnalise={() => navigate("/transacoes")} />
+
+          <div className="grid grid-cols-2 gap-3">
+            <MetasResumoCard compact />
+            <AssinaturasCard compact />
+            <ParcelamentosAtivosCard compact />
+            <CardsOverviewSection compact />
+          </div>
+
           <TransacoesRecentes transactions={data.transactions} onDelete={refetch} />
           <FinanceOverviewCard receitas={receitas} despesas={despesas} saldoPrevisto={saldoPrevisto} nextMonthBalance={data.projection.nextMonthBalance} month={selectedMonth} />
-          <CardsOverviewSection />
           <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
-          <AssinaturasCard />
-          <ParcelamentosAtivosCard />
-          
-          <MetasResumoCard />
         </div>
       <PagarEditarModal
         open={showPayModal}

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChevronRight, CreditCard, Plus } from "lucide-react";
 import { useCardsOverview, cardHex, invoiceDueDate, type OverviewCard, type OverviewInvoice } from "@/hooks/useCardsOverview";
+import { StatTile } from "@/components/dashboard/StatTile";
 
 import { getCurrency } from "@/lib/currency";
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
@@ -19,17 +20,18 @@ function dueText(date: Date, now = new Date()) {
 }
 
 /** Dashboard card: current invoice and available limit across credit cards; opens the cards page. */
-const CardsOverviewSection = memo(() => {
+const CardsOverviewSection = memo(({ compact = false }: { compact?: boolean }) => {
   const { cards, invoices, loading } = useCardsOverview();
-  return <CardsOverviewView cards={cards} invoices={invoices} loading={loading} />;
+  return <CardsOverviewView cards={cards} invoices={invoices} loading={loading} compact={compact} />;
 });
 
 /** The card itself, fed with data — also drawn by the welcome showcase. */
-export function CardsOverviewView({ cards, invoices, loading = false, today = new Date() }: {
+export function CardsOverviewView({ cards, invoices, loading = false, today = new Date(), compact = false }: {
   cards: OverviewCard[];
   invoices: OverviewInvoice[];
   loading?: boolean;
   today?: Date;
+  compact?: boolean;
 }) {
   const navigate = useNavigate();
 
@@ -53,10 +55,11 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
   }, [cards, invoices, today]);
 
   if (loading) {
-    return <div className="h-[168px] animate-pulse rounded-[22px] border border-white/[0.08] willo-glass" />;
+    return <div className={`${compact ? "h-[138px]" : "h-[168px]"} animate-pulse rounded-[22px] border border-white/[0.08] willo-glass`} />;
   }
 
   if (cards.length === 0) {
+    if (compact) return null;
     return (
       <button
         onClick={() => navigate("/gestao")}
@@ -76,6 +79,24 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
 
   const usedPct = summary.limit > 0 ? Math.min(summary.used / summary.limit, 1) : 0;
   const tight = usedPct >= 0.8;
+
+  if (compact) {
+    return (
+      <StatTile
+        label="Em faturas"
+        value={fmt(summary.invoiceTotal)}
+        caption={summary.allPaid
+          ? `${cards.length} ${cards.length === 1 ? "cartão" : "cartões"} · tudo pago`
+          : summary.nextDue
+            ? `Vence ${summary.nextDue.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`
+            : `${cards.length} ${cards.length === 1 ? "cartão" : "cartões"}`}
+        icon={CreditCard}
+        accent={tight ? "#F87171" : "#A78BFA"}
+        progress={usedPct}
+        onClick={() => navigate("/cartoes")}
+      />
+    );
+  }
 
   return (
     <button

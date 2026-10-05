@@ -1,4 +1,6 @@
 import { memo, useEffect, useState, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { StatTile } from "@/components/dashboard/StatTile";
 import { Check, ChevronDown, ChevronUp, Pencil, Repeat, Trash2, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -162,8 +164,9 @@ const BrandIcon = ({ name, category, brand, customCategories }: { name: string; 
   );
 };
 
-const AssinaturasCard = memo(() => {
+const AssinaturasCard = memo(({ compact = false }: { compact?: boolean }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { selectedMonth, selectedYear } = useMonth();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
@@ -281,10 +284,12 @@ const AssinaturasCard = memo(() => {
   const receitaCount = useMemo(() => subscriptions.filter((s) => s.txType === "receita").length, [subscriptions]);
 
   if (loading) {
-    return <div className="h-[200px] animate-pulse rounded-[22px] border border-white/[0.08] willo-glass" />;
+    return <div className={`${compact ? "h-[138px]" : "h-[200px]"} animate-pulse rounded-[22px] border border-white/[0.08] willo-glass`} />;
   }
 
   if (subscriptions.length === 0) {
+    // A tile cannot say "nothing here yet" in the room it has; the full card can.
+    if (compact) return null;
     return (
       <div className="rounded-[22px] border border-white/[0.08] willo-glass p-4">
         <h2 className="text-[16px] font-semibold text-white">Recorrentes</h2>
@@ -296,6 +301,20 @@ const AssinaturasCard = memo(() => {
           <p className="flex-1 text-[13px] text-white/66">Nenhuma despesa ou receita recorrente ainda.</p>
         </div>
       </div>
+    );
+  }
+
+  if (compact) {
+    const despesaTotal = subscriptions.filter((s) => s.txType === "despesa").reduce((acc, x) => acc + x.amount, 0);
+    return (
+      <StatTile
+        label="Recorrentes"
+        value={fmt(despesaTotal)}
+        caption={`${despesaCount} ${despesaCount === 1 ? "cobrança" : "cobranças"} no mês`}
+        icon={Repeat}
+        accent="#7DD3FC"
+        onClick={() => navigate("/transacoes?filtro=recorrentes")}
+      />
     );
   }
 

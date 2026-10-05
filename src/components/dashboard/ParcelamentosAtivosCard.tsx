@@ -7,9 +7,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryUtils";
 import { buildActiveInstallmentItems, type ActiveInstallmentItem, type InstallmentInvoiceRow, type InstallmentTransactionRow } from "@/lib/installmentProgress";
 import type { CustomCategory } from "@/services/categoryService";
+import { StatTile } from "@/components/dashboard/StatTile";
 
 import { getCurrency } from "@/lib/currency";
-const ParcelamentosAtivosCard = () => {
+const ParcelamentosAtivosCard = ({ compact = false }: { compact?: boolean }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [items, setItems] = useState<ActiveInstallmentItem[]>([]);
@@ -104,10 +105,11 @@ const ParcelamentosAtivosCard = () => {
   }, [items]);
 
   if (loading) {
-    return <div className="h-[120px] animate-pulse rounded-[22px] border border-white/[0.08] willo-glass" />;
+    return <div className={`${compact ? "h-[138px]" : "h-[120px]"} animate-pulse rounded-[22px] border border-white/[0.08] willo-glass`} />;
   }
 
   if (items.length === 0) {
+    if (compact) return null;
     return (
       <button onClick={() => navigate("/parcelamentos")} className="block w-full rounded-[22px] border border-white/[0.08] willo-glass p-4 text-left">
         <div className="flex items-center justify-between">
@@ -135,6 +137,19 @@ const ParcelamentosAtivosCard = () => {
 
   const formatMonth = (d: Date) =>
     d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+
+  if (compact) {
+    return (
+      <StatTile
+        label="Parcelamentos"
+        value={formatCurrency(stats?.totalRestante ?? 0)}
+        caption={`${formatCurrency(stats?.totalMensal ?? 0)} por mês`}
+        icon={CreditCard}
+        accent="#F59E0B"
+        onClick={() => navigate("/parcelamentos")}
+      />
+    );
+  }
 
   return (
     <div className="rounded-[22px] border border-white/[0.08] willo-glass p-4 select-none">
