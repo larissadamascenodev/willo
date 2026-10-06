@@ -34,16 +34,18 @@ export type TabFilter = "todos" | "receita" | "despesa";
 const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
-const WEEKDAYS = ["Domingo", "Segunda-Feira", "Terça-Feira", "Quarta-Feira", "Quinta-Feira", "Sexta-Feira", "Sábado"];
-const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+// Short forms, because the header is set in tracked caps and a full "quinta-feira,
+// 15 de outubro" runs the width of the screen.
+const WEEKDAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+const MONTHS_SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
 export const formatDateHeader = (dateStr: string, today = new Date()) => {
   const [y, m, d] = dateStr.split("-").map(Number);
   const date = new Date(y, m - 1, d);
   const isToday = date.toDateString() === today.toDateString();
   const weekday = WEEKDAYS[date.getDay()];
-  const month = MONTHS_FULL[date.getMonth()];
-  const label = `${weekday}, ${d} De ${month}`;
+  const month = MONTHS_SHORT[date.getMonth()];
+  const label = `${weekday}, ${d} de ${month}`;
   return { label, isToday };
 };
 
@@ -58,33 +60,52 @@ export const TransactionsSummaryCard = ({ saldoAtual, saldoPrevisto, receitas, d
   <motion.div
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
-    className={cn("rounded-[24px] border border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-4", className)}
+    className={cn("rounded-[22px] border border-white/[0.08] willo-glass px-4 pb-4 pt-3.5", className)}
   >
-    <p className="text-[13px] text-white/62">Saldo disponível</p>
-    <p className="text-[32px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{fmt(saldoAtual)}</p>
+    <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-white/45">Saldo em contas</p>
+    <p className={cn(
+      "mt-1.5 truncate text-[30px] font-extrabold leading-none tracking-[-0.03em] tabular-nums",
+      saldoAtual < 0 ? "text-red-400" : "text-white",
+    )}>
+      {fmt(saldoAtual)}
+    </p>
     {saldoPrevisto !== saldoAtual && (
-      <p className="text-[12px] text-white/56 tabular-nums">Previsto no fim do mês: {fmt(saldoPrevisto)}</p>
+      <p className="mt-2 truncate text-[13px] text-white/55">
+        Previsto no fim do mês:{" "}
+        <span className="font-semibold tabular-nums text-white/80">{fmt(saldoPrevisto)}</span>
+      </p>
     )}
-    <div className="mt-4 grid grid-cols-2 border-t border-white/[0.08] pt-3.5">
-      <div className="pr-3">
-        <span className="flex items-center gap-1 text-[12px] text-white/62">
-          <ArrowDownLeft className="h-3.5 w-3.5 text-willo-green" strokeWidth={2.5} /> Receitas
-        </span>
-        <p className="mt-0.5 text-[17px] font-bold text-white tabular-nums">{fmt(receitas)}</p>
-      </div>
-      <div className="border-l border-white/[0.08] pl-4">
-        <span className="flex items-center gap-1 text-[12px] text-white/62">
-          <ArrowUpRight className="h-3.5 w-3.5 text-red-400" strokeWidth={2.5} /> Despesas
-        </span>
-        <p className="mt-0.5 text-[17px] font-bold text-white tabular-nums">{fmt(despesas)}</p>
-      </div>
+
+    {/* Both on one scale, the way the dashboard draws them, so the two pages agree */}
+    <div className="mt-4 space-y-3 border-t border-white/[0.07] pt-4">
+      {([
+        { label: "Entrada", value: receitas, tone: "in" as const },
+        { label: "Saída", value: despesas, tone: "out" as const },
+      ]).map(({ label, value, tone }, i) => (
+        <div key={label}>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[13.5px] font-medium text-white">{label}</span>
+            <span className={cn("shrink-0 text-[14px] font-semibold tabular-nums", tone === "in" ? "text-white" : "text-red-400")}>
+              {tone === "out" ? "−" : ""}{fmt(value)}
+            </span>
+          </div>
+          <div className="mt-1.5 h-[5px] overflow-hidden rounded-full bg-white/[0.06]">
+            <motion.span
+              className={cn("block h-full rounded-full", tone === "in" ? "bg-willo-green" : "bg-red-400")}
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.max((value / Math.max(receitas, despesas, 1)) * 100, value > 0 ? 3 : 0)}%` }}
+              transition={{ duration: 0.6, delay: 0.05 + i * 0.07, ease: "easeOut" }}
+            />
+          </div>
+        </div>
+      ))}
     </div>
   </motion.div>
 );
 
 /** Todas / Receitas / Despesas. */
 export const TransactionTabs = ({ value, onChange, layoutId = "tx-tab-pill" }: { value: TabFilter; onChange: (v: TabFilter) => void; layoutId?: string }) => (
-  <div className="grid flex-1 grid-cols-3 isolate rounded-full border border-white/[0.08] willo-glass p-1">
+  <div className="grid flex-1 grid-cols-3 isolate rounded-full border border-white/[0.07] bg-white/[0.04] p-1">
     {([
       { key: "todos" as TabFilter, label: "Todas" },
       { key: "receita" as TabFilter, label: "Receitas" },
@@ -93,7 +114,7 @@ export const TransactionTabs = ({ value, onChange, layoutId = "tx-tab-pill" }: {
       <button
         key={tab.key}
         onClick={() => onChange(tab.key)}
-        className="relative h-9 rounded-full text-[13px] font-semibold"
+        className="relative h-10 rounded-full text-[13.5px] font-semibold"
       >
         {value === tab.key && (
           <motion.span
@@ -102,7 +123,7 @@ export const TransactionTabs = ({ value, onChange, layoutId = "tx-tab-pill" }: {
             transition={{ type: "spring", stiffness: 420, damping: 34 }}
           />
         )}
-        <span className={`relative z-10 transition-colors ${value === tab.key ? "text-[#0B0B0B]" : "text-white/70"}`}>{tab.label}</span>
+        <span className={`relative z-10 transform-gpu transition-colors ${value === tab.key ? "text-[#0B0B0B]" : "text-white/60"}`}>{tab.label}</span>
       </button>
     ))}
   </div>
@@ -199,26 +220,27 @@ export const TransactionListItem = ({
         dragElastic={0.3}
         onDragEnd={handleDragEnd}
         style={{ x }}
-        className="relative flex items-center gap-3 px-4 py-3 cursor-grab active:cursor-grabbing willo-glass"
+        className="relative flex cursor-grab items-center gap-3.5 px-4 py-3.5 active:cursor-grabbing willo-glass"
         onClick={() => onEdit(tx)}
         whileTap={{ scale: 0.99 }}
       >
         {/* Category icon */}
+        {/* The pending dot is gone: the status is already written under the amount,
+            and a bare dot on the icon says nothing on its own. */}
         <div
-          className="relative w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
-          style={{ background: `hsl(${catColor} / 0.12)` }}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+          style={{ background: `hsl(${catColor} / 0.15)` }}
         >
-          <CatIcon className="w-[18px] h-[18px]" style={{ color: `hsl(${catColor})` }} />
-          {isPending && <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-[#141414] bg-amber-300" />}
+          <CatIcon className="h-[17px] w-[17px]" style={{ color: `hsl(${catColor})` }} />
         </div>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <p className="text-[15px] font-medium text-white truncate">{tx.name}</p>
-            {isRecurring && <RefreshCw className="w-3 h-3 text-white/45 shrink-0" />}
+            <p className="truncate text-[14.5px] font-medium text-white">{tx.name}</p>
+            {isRecurring && <RefreshCw className="h-3 w-3 shrink-0 text-white/35" />}
           </div>
-          <p className="text-[12px] text-white/56 truncate">
+          <p className="mt-0.5 truncate text-[12px] text-white/45">
             {tx.category}
             {tx.installments && tx.installment_current ? ` · ${tx.installment_current}/${tx.installments}x` : ""}
             {accountName ? ` · ${accountName}` : ""}
@@ -227,11 +249,11 @@ export const TransactionListItem = ({
         </div>
 
         {/* Amount + status tag */}
-        <div className="text-right shrink-0">
-          <p className={`text-[15px] font-semibold tabular-nums ${isReceita ? "text-willo-green" : "text-white"}`}>
+        <div className="shrink-0 text-right">
+          <p className={cn("text-[14.5px] font-semibold tabular-nums", isReceita ? "text-willo-green" : "text-white")}>
             {isReceita ? "+" : "−"}{fmt(tx.amount)}
           </p>
-          <span className={`block text-[11px] ${isPending ? "text-amber-300/90" : "text-white/50"}`}>
+          <span className={cn("mt-0.5 block text-[11.5px]", isPending ? "text-amber-300/90" : "text-white/40")}>
             {isPending ? (isReceita ? "A receber" : "Pendente") : (isReceita ? "Recebido" : "Pago")}
           </span>
         </div>

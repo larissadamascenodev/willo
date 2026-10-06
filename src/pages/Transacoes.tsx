@@ -525,7 +525,7 @@ const Transacoes = () => {
             onClick={() => setShowFilters(!showFilters)}
             aria-label="Filtros"
             className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors ${
-              activeFiltersCount > 0 || showFilters ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.08] willo-glass text-white/82"
+              activeFiltersCount > 0 || showFilters ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.07] bg-white/[0.04] text-white/70"
             }`}
           >
             <SlidersHorizontal className="w-4 h-4" />
@@ -545,7 +545,7 @@ const Transacoes = () => {
             placeholder="Buscar transação..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-11 pl-11 pr-10 rounded-full willo-glass border border-white/[0.08] text-[14px] text-white placeholder:text-white/45 focus:outline-none focus:border-white/25 transition-colors"
+            className="h-11 w-full rounded-full border border-white/[0.07] bg-white/[0.04] pl-11 pr-10 text-[14px] text-white transition-colors placeholder:text-white/35 focus:border-white/25 focus:outline-none"
           />
           {search && (
             <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -666,12 +666,12 @@ const Transacoes = () => {
             return (
               <div key={date} className={gi > 0 ? "mt-5" : ""}>
                 {/* Date header */}
-                <div className="mb-2 flex items-center justify-between px-1">
-                  <span className={`text-[13px] font-semibold ${isToday ? "text-white" : "text-white/66"}`}>
-                    {isToday ? `Hoje, ${label}` : label}
+                <div className="mb-2.5 flex items-baseline justify-between gap-3 px-1">
+                  <span className={`truncate text-[10.5px] font-semibold uppercase tracking-[0.13em] ${isToday ? "text-white" : "text-white/45"}`}>
+                    {isToday ? `Hoje · ${label}` : label}
                   </span>
                   {txs.length > 0 && dayTotal.net !== 0 && (
-                    <span className={`text-[12px] tabular-nums ${dayTotal.net > 0 ? "text-willo-green" : "text-white/62"}`}>
+                    <span className={`shrink-0 text-[12px] font-semibold tabular-nums ${dayTotal.net > 0 ? "text-willo-green" : "text-white/45"}`}>
                       {dayTotal.net > 0 ? "+" : "−"}{fmt(Math.abs(dayTotal.net))}
                     </span>
                   )}
@@ -679,11 +679,11 @@ const Transacoes = () => {
 
                 {/* Transactions */}
                 {txs.length === 0 && (
-                  <div className="rounded-[22px] border border-dashed border-white/[0.08] py-4 text-center text-[13px] text-white/50">
+                  <div className="rounded-[22px] border border-dashed border-white/[0.09] py-5 text-center text-[13px] text-white/40">
                     Nada registrado hoje
                   </div>
                 )}
-                <div className={txs.length > 0 ? "overflow-hidden rounded-[22px] border border-white/[0.08] willo-glass divide-y divide-white/[0.06]" : ""}>
+                <div className={txs.length > 0 ? "overflow-hidden rounded-[22px] border border-white/[0.08] divide-y divide-white/[0.055]" : ""}>
                   {txs.map((tx, i) => (
                     <motion.div
                       key={tx.id}
