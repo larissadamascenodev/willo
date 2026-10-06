@@ -164,7 +164,7 @@ export default function TransferBody({ onClose, onSuccess }: {
 
   return (
     <>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-none px-4 pb-6">
         <div className="flex flex-col items-center pb-7 pt-6" onClick={() => amountRef.current?.focus()}>
           <span className="flex items-center gap-1.5 text-[14px] text-white/66">
             <ArrowDownUp className="h-4 w-4 text-sky-400" />

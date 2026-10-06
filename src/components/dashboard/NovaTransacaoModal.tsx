@@ -848,19 +848,9 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                   <TransferBody onClose={onClose} onSuccess={onSuccess} />
                 ) : (
                   <>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-none px-4 pb-6">
               {/* Amount */}
               <div className="relative flex flex-col items-center pb-8 pt-7" onClick={() => amountInputRef.current?.focus()}>
-                {/* Which kind of entry this is, said as light rather than as one more label */}
-                <motion.span
-                  key={accent}
-                  aria-hidden="true"
-                  className="pointer-events-none absolute -top-24 left-1/2 h-[340px] w-[160vw] -translate-x-1/2"
-                  style={{ background: `radial-gradient(50% 44% at 50% 48%, ${accent} 0%, transparent 72%)` }}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 0.22 }}
-                  transition={{ duration: 0.45 }}
-                />
                 <span className="relative flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">
                   {isReceita
                     ? <TrendingUp className="h-[13px] w-[13px]" style={{ color: accent }} strokeWidth={2.6} />

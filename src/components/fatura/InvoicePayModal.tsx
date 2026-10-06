@@ -146,11 +146,6 @@ export default function InvoicePayModal({
         <div className="px-4 pb-2">
           {/* What is owed, as the headline rather than a line in a form */}
           <div className="relative flex flex-col items-center pb-7 pt-2">
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute -top-16 left-1/2 h-[260px] w-[150vw] -translate-x-1/2"
-              style={{ background: "radial-gradient(50% 44% at 50% 50%, #A78BFA 0%, transparent 72%)", opacity: 0.2 }}
-            />
             <span className="relative text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">
               Saldo em aberto
             </span>
