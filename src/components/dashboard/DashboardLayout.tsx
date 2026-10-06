@@ -327,6 +327,10 @@ const DashboardLayout = () => {
     window.dispatchEvent(new CustomEvent("transaction-created"));
   }, [refetchProfile]);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Drives the scroll edge: nothing is under the header until the page has moved.
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
