@@ -293,8 +293,9 @@ export default function InsightCarousel({
 
   // Stepping by hand stops at the ends, the way a story does: tapping forward on the
   // last one should not throw you back to the first. Only the clock below wraps.
+  // Stepping never pauses: a story keeps running after you tap past one. Only a
+  // finger held down holds it, and letting go starts the next one's clock.
   const step = useCallback((delta: number) => {
-    setPaused(true);
     setDir(delta);
     setIndex((i) => Math.min(Math.max(i + delta, 0), Math.max(count - 1, 0)));
   }, [count]);
@@ -305,8 +306,20 @@ export default function InsightCarousel({
   const indexBeforeTap = useRef(0);
   const indexRef = useRef(0);
   indexRef.current = index;
+  const pressed = useRef<{ x: number; y: number } | null>(null);
 
-  const handleTap = useCallback((delta: number) => {
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    pressed.current = { x: e.clientX, y: e.clientY };
+    setPaused(true);
+  }, []);
+
+  const onPointerUp = useCallback((e: React.PointerEvent) => {
+    const from = pressed.current;
+    pressed.current = null;
+    setPaused(false);
+    // A drag has its own handler; only a press that stayed put counts as a tap.
+    if (!from || Math.abs(e.clientX - from.x) > 10 || Math.abs(e.clientY - from.y) > 10) return;
+
     const now = Date.now();
     if (now - tapAt.current < 280) {
       tapAt.current = 0;
@@ -316,7 +329,9 @@ export default function InsightCarousel({
     }
     tapAt.current = now;
     indexBeforeTap.current = indexRef.current;
-    step(delta);
+
+    const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    step(e.clientX - box.left < box.width * 0.34 ? -1 : 1);
   }, [step]);
 
   useEffect(() => {
@@ -377,7 +392,11 @@ export default function InsightCarousel({
           <motion.div
             key={slide.id}
             custom={dir}
-            onPointerDown={() => setPaused(true)}
+            role="group"
+            aria-label={`${slide.label}. Toque à direita para avançar, à esquerda para voltar, duas vezes para lançar.`}
+            onPointerDown={onPointerDown}
+            onPointerUp={onPointerUp}
+            onPointerCancel={() => { pressed.current = null; setPaused(false); }}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.14}
@@ -412,22 +431,6 @@ export default function InsightCarousel({
             )}
           </motion.div>
         </AnimatePresence>
-
-        {/* The two halves you tap to step through, the way a story works. They sit over
-            the slide so the text underneath stays selectable-looking but inert, and a
-            second tap inside 280ms means "lançar" instead. */}
-        <button
-          type="button"
-          aria-label="Anterior"
-          onClick={() => handleTap(-1)}
-          className="absolute inset-y-0 left-0 w-[34%] cursor-default"
-        />
-        <button
-          type="button"
-          aria-label="Próximo"
-          onClick={() => handleTap(1)}
-          className="absolute inset-y-0 right-0 w-[66%] cursor-default"
-        />
       </div>
     </div>
   );

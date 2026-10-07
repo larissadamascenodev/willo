@@ -7,6 +7,7 @@ import { createTransaction } from "@/services/transactionService";
 import { processScanFile } from "@/lib/scanUpload";
 import { anchorPurchaseDate } from "@/lib/installments";
 import InvoiceEntryChooser from "./InvoiceEntryChooser";
+import InvoiceScanScreen from "./InvoiceScanScreen";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "./InvoiceUploadReviewModal";
 import { getAccounts, getTransactionById } from "@/services/transactionService";
 import { useAuth } from "@/contexts/AuthContext";
@@ -80,6 +81,8 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
   const [declaredTotal, setDeclaredTotal] = useState<number | null>(null);
   const [avgConfidence, setAvgConfidence] = useState<number | undefined>(undefined);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanItems, setScanItems] = useState<ExtractedItem[] | null>(null);
   const [importing, setImporting] = useState(false);
   const [detailTx, setDetailTx] = useState<TransactionRow | null>(null);
   const [editTx, setEditTx] = useState<EditTransactionData | null>(null);
@@ -174,12 +177,13 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
   // before anything is written.
   const handleUpload = async (file: File) => {
     setChooserOpen(false);
-    toast.loading("Lendo a fatura…", { id: "invoice-upload" });
+    setScanItems(null);
+    setScanOpen(true);
     try {
       const data = await processScanFile(file, "invoice");
       const items: ExtractedItem[] = (data.items || []).map((item: any) => ({ ...item, selected: true }));
-      toast.dismiss("invoice-upload");
       if (items.length === 0) {
+        setScanOpen(false);
         toast.error("Nenhuma compra encontrada nessa fatura.");
         return;
       }
@@ -187,9 +191,9 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
       setExtractedMessage(data.message || "Lançamentos encontrados!");
       setDeclaredTotal(data.declared_total ?? null);
       setAvgConfidence(typeof data.avg_confidence === "number" ? data.avg_confidence : undefined);
-      setReviewOpen(true);
+      setScanItems(items);
     } catch (err: any) {
-      toast.dismiss("invoice-upload");
+      setScanOpen(false);
       toast.error(err?.message || "Erro ao processar a fatura");
     }
   };
@@ -568,6 +572,13 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
         onClose={() => setChooserOpen(false)}
         onManual={() => { setChooserOpen(false); setAddOpen(true); }}
         onFile={handleUpload}
+      />
+
+      <InvoiceScanScreen
+        open={scanOpen}
+        items={scanItems}
+        onClose={() => { setScanOpen(false); setScanItems(null); }}
+        onDone={() => { setScanOpen(false); setScanItems(null); setReviewOpen(true); }}
       />
 
       <InvoiceUploadReviewModal
