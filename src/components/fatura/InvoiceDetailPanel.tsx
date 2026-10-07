@@ -3,6 +3,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { CalendarCheck, CalendarClock, ChevronRight, Layers, Plus, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { getInvoiceItems, payInvoice } from "@/services/invoiceService";
+import { createTransaction } from "@/services/transactionService";
+import { processScanFile } from "@/lib/scanUpload";
+import { anchorPurchaseDate } from "@/lib/installments";
+import InvoiceEntryChooser from "./InvoiceEntryChooser";
+import InvoiceUploadReviewModal, { type ExtractedItem } from "./InvoiceUploadReviewModal";
 import { getAccounts, getTransactionById } from "@/services/transactionService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -69,6 +74,13 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
   const [payOpen, setPayOpen] = useState(false);
   const [paying, setPaying] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [chooserOpen, setChooserOpen] = useState(false);
+  const [extracted, setExtracted] = useState<ExtractedItem[]>([]);
+  const [extractedMessage, setExtractedMessage] = useState("");
+  const [declaredTotal, setDeclaredTotal] = useState<number | null>(null);
+  const [avgConfidence, setAvgConfidence] = useState<number | undefined>(undefined);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [detailTx, setDetailTx] = useState<TransactionRow | null>(null);
   const [editTx, setEditTx] = useState<EditTransactionData | null>(null);
 
@@ -157,6 +169,78 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
 
   const paidAmount = invoice?.paid ?? 0;
   const outstanding = Math.max((invoice?.total ?? 0) - paidAmount, 0);
+
+  // A photo or a PDF of the whole statement, read by the AI and shown for review
+  // before anything is written.
+  const handleUpload = async (file: File) => {
+    setChooserOpen(false);
+    toast.loading("Lendo a fatura…", { id: "invoice-upload" });
+    try {
+      const data = await processScanFile(file, "invoice");
+      const items: ExtractedItem[] = (data.items || []).map((item: any) => ({ ...item, selected: true }));
+      toast.dismiss("invoice-upload");
+      if (items.length === 0) {
+        toast.error("Nenhuma compra encontrada nessa fatura.");
+        return;
+      }
+      setExtracted(items);
+      setExtractedMessage(data.message || "Lançamentos encontrados!");
+      setDeclaredTotal(data.declared_total ?? null);
+      setAvgConfidence(typeof data.avg_confidence === "number" ? data.avg_confidence : undefined);
+      setReviewOpen(true);
+    } catch (err: any) {
+      toast.dismiss("invoice-upload");
+      toast.error(err?.message || "Erro ao processar a fatura");
+    }
+  };
+
+  const handleImport = async (selected: ExtractedItem[]) => {
+    if (!user) return;
+    setImporting(true);
+    try {
+      const invoicePeriod = year * 12 + (month - 1);
+      for (const item of selected) {
+        // A refund is a single credit on this statement, never an instalment plan.
+        const isRefund = item.amount < 0;
+        const isParcelado = !isRefund && !!(item.installment_current && item.installment_total && item.installment_total > 1);
+        // "4/10" means three were charged on earlier statements; the card triggers skip
+        // those, so this invoice is the first one billed here.
+        const paidInstallments = isParcelado ? item.installment_current! - 1 : 0;
+        const purchaseDate = anchorPurchaseDate(item, invoicePeriod, paidInstallments, card.closingDay);
+        const purchaseNote = isParcelado && item.date && item.date !== purchaseDate ? `compra em ${item.date}` : "";
+
+        await createTransaction(
+          {
+            name: item.description,
+            type: "despesa",
+            amount: item.amount,
+            category: item.category || "Outros",
+            date: purchaseDate,
+            status: "pago",
+            payment_method: "cartao",
+            credit_card_id: card.id,
+            recurrence_type: isParcelado ? "parcelado" : "unica",
+            installments: isParcelado ? item.installment_total : null,
+            installment_current: isParcelado ? item.installment_current : null,
+            observation: paidInstallments > 0
+              ? `paid_installments:${paidInstallments}${purchaseNote ? ` | ${purchaseNote}` : ""}`
+              : null,
+          },
+          user.id,
+        );
+      }
+      toast.success(`${selected.length} lançamento${selected.length > 1 ? "s" : ""} importado${selected.length > 1 ? "s" : ""}! 🎉`);
+      setReviewOpen(false);
+      setExtracted([]);
+      window.dispatchEvent(new CustomEvent("transaction-created"));
+      loadItems();
+      onChanged();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao importar lançamentos");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const handlePay = async (details: import("./InvoicePayModal").PaymentDetails) => {
     if (!invoice || !payAccountId) return;
@@ -288,7 +372,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
         )}
         <button
           type="button"
-          onClick={() => setAddOpen(true)}
+          onClick={() => setChooserOpen(true)}
           className={cn(
             "flex min-h-[52px] items-center justify-center gap-2 rounded-full border border-white/[0.14] willo-glass-control text-[15px] font-semibold text-white active:opacity-75",
             invoice && outstanding > 0 ? "w-[52px] shrink-0" : "flex-1",
@@ -478,6 +562,24 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
           )}
         </div>
       </BottomSheet>
+
+      <InvoiceEntryChooser
+        open={chooserOpen}
+        onClose={() => setChooserOpen(false)}
+        onManual={() => { setChooserOpen(false); setAddOpen(true); }}
+        onFile={handleUpload}
+      />
+
+      <InvoiceUploadReviewModal
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        items={extracted}
+        message={extractedMessage}
+        onConfirm={handleImport}
+        confirming={importing}
+        avgConfidence={avgConfidence}
+        declaredTotal={declaredTotal}
+      />
 
       <InvoicePayModal
         open={payOpen}
