@@ -136,7 +136,7 @@ export default function CreditCardEditModal({ open, onClose, card, onUpdated, on
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-[72] flex items-center justify-center bg-black/66 p-4 backdrop-blur-[20px]"
           onClick={onClose}
         >
           <motion.div

@@ -24,6 +24,7 @@ import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashb
 import TransactionTypeChooser from "@/components/dashboard/TransactionTypeChooser";
 import CardEntryModal from "@/components/fatura/CardEntryModal";
 import FaturaDetailModal from "@/components/fatura/FaturaDetailModal";
+import HoldActions from "@/components/shared/HoldActions";
 import { TransactionListItem, TransactionTabs, TransactionsSummaryCard, formatDateHeader, type TabFilter, type TransactionRow } from "@/components/transactions/TransactionParts";
 import type { DashboardData } from "@/types/finance";
 
@@ -123,6 +124,7 @@ const Transacoes = () => {
   const [newModalType, setNewModalType] = useState<"receita" | "despesa">("despesa");
   const [detailTx, setDetailTx] = useState<TransactionRow | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [heldTx, setHeldTx] = useState<TransactionRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TransactionRow | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [faturaDetailTx, setFaturaDetailTx] = useState<TransactionRow | null>(null);
@@ -697,6 +699,7 @@ const Transacoes = () => {
                         onDelete={handleDelete}
                         customCategories={customCategories}
                         creditCards={creditCards}
+                        onLongPress={setHeldTx}
                         onEdit={(t) => {
                           if (t.id.startsWith("initial-balance-")) {
                             toast.info("Esse item mostra quando a conta foi criada com saldo inicial.");
@@ -728,6 +731,23 @@ const Transacoes = () => {
 
       {/* Detail Modal */}
       {/* Editing reuses the very form that creates a transaction */}
+      <HoldActions
+        open={!!heldTx}
+        title={heldTx?.name ?? ""}
+        subtitle={heldTx?.category}
+        onClose={() => setHeldTx(null)}
+        onEdit={() => {
+          const t = heldTx;
+          setHeldTx(null);
+          if (t) { setDetailTx(t); setShowDetailModal(true); }
+        }}
+        onDelete={() => {
+          const t = heldTx;
+          setHeldTx(null);
+          if (t) handleDelete(t.id);
+        }}
+      />
+
       <NovaTransacaoModal
         open={!!editingTx}
         onClose={() => setEditingTx(null)}

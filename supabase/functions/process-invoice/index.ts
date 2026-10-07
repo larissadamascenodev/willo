@@ -92,6 +92,17 @@ Por isso existem três tipos de linha, e os três entram:
    Valor NEGATIVO (ex: -19.90), com a mesma categoria que a compra original teria.
    Sem eles a conta do usuário não fecha.
 
+NUNCA conte a mesma compra duas vezes. É o erro mais caro que existe aqui:
+- Uma fatura costuma trazer um RESUMO (por categoria, por portador, por período) e depois o
+  DETALHAMENTO linha a linha. Extraia SÓ o detalhamento. Se a mesma compra aparece nos dois,
+  ela entra uma vez só.
+- Páginas de PDF às vezes se repetem ou se sobrepõem. Se a mesma linha (mesmo nome, mesmo valor,
+  mesma data) aparecer em mais de um lugar, ela entra uma vez só.
+- Blocos de "Pagamentos e Financiamentos", "Resumo por categoria" e gráficos repetem valores que
+  já estão no detalhamento. Ignore todos.
+- Um parcelamento entra pelo valor da PARCELA desta fatura, nunca pelo total da compra, e nunca
+  pelos dois.
+
 NUNCA extraia estas linhas (não são nem compra, nem encargo, nem estorno):
 - Pagamentos da fatura: "Pagamento em 14 AGO", "PAGAMENTO EFETUADO", "PAGAMENTO RECEBIDO", "PGTO DEBITO AUTOMATICO"
 - Saldos e seus créditos espelhados, que se anulam: "Saldo em rotativo" com "Crédito de rotativo",
@@ -492,11 +503,44 @@ ${csvText}` }];
         };
       });
 
-    const hasInstallments = cleanedItems.some((i) => i.installment_total && i.installment_total > 1);
-    const totalItems = cleanedItems.length;
-    const installmentItems = cleanedItems.filter((i) => i.installment_total && i.installment_total > 1);
-    const avgConfidence = cleanedItems.length > 0
-      ? cleanedItems.reduce((sum, i) => sum + i.confidence, 0) / cleanedItems.length
+
+
+    const sumOf = (list: ExtractedItem[]) =>
+      Math.round(list.reduce((sum, i) => sum + i.amount, 0) * 100) / 100;
+
+    const declaredTotal = Number(parsed.summary?.total_a_pagar) || null;
+
+    // The statement prints its own total, so it is the one number that cannot be a
+    // misread. When the extraction overshoots it, the usual cause is the same purchase
+    // read twice — from a summary block as well as the detail, or from two overlapping
+    // PDF pages. Dropping exact repeats is only allowed to stand if it brings the sum
+    // CLOSER to what the statement says; two identical coffees on the same day are
+    // real, and this must never quietly delete them.
+    let finalItems = cleanedItems;
+    let deduped = 0;
+    if (declaredTotal && Math.abs(sumOf(cleanedItems) - declaredTotal) > 0.5) {
+      const seen = new Set<string>();
+      const unique = cleanedItems.filter((i) => {
+        const key = [i.description, i.amount, i.date, i.installment_current, i.installment_total].join("|");
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      const before = Math.abs(sumOf(cleanedItems) - declaredTotal);
+      const after = Math.abs(sumOf(unique) - declaredTotal);
+      if (unique.length < cleanedItems.length && after < before) {
+        deduped = cleanedItems.length - unique.length;
+        finalItems = unique;
+      }
+    }
+
+    const extractedTotal = sumOf(finalItems);
+
+    const hasInstallments = finalItems.some((i) => i.installment_total && i.installment_total > 1);
+    const totalItems = finalItems.length;
+    const installmentItems = finalItems.filter((i) => i.installment_total && i.installment_total > 1);
+    const avgConfidence = finalItems.length > 0
+      ? finalItems.reduce((sum, i) => sum + i.confidence, 0) / finalItems.length
       : 0;
 
     let message = `${totalItems} lançamento${totalItems > 1 ? "s" : ""} encontrado${totalItems > 1 ? "s" : ""} 🎯`;
@@ -513,12 +557,10 @@ ${csvText}` }];
       message += " ⚠️ Confiança baixa — revise os dados com atenção.";
     }
 
-    const extractedTotal = Math.round(cleanedItems.reduce((sum, i) => sum + i.amount, 0) * 100) / 100;
-    const declaredTotal = Number(parsed.summary?.total_a_pagar) || null;
 
     return new Response(
       JSON.stringify({
-        items: cleanedItems,
+        items: finalItems,
         message,
         total_items: totalItems,
         installment_items: installmentItems.length,
@@ -526,6 +568,8 @@ ${csvText}` }];
         extracted_total: extractedTotal,
         declared_total: declaredTotal,
         declared_purchases: Number(parsed.summary?.total_compras) || null,
+        /** How many exact repeats were dropped to make the sum meet the printed total. */
+        deduped,
       }),
       {
         status: 200,

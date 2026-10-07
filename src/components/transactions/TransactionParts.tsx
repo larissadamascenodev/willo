@@ -1,6 +1,7 @@
 import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 import { ArrowDownLeft, ArrowUpRight, CreditCard, Pencil, RefreshCw, Trash2, Wallet } from "lucide-react";
 import type { CustomCategory } from "@/services/categoryService";
+import { useLongPress } from "@/hooks/useLongPress";
 import { getCategoryColor, getCategoryIcon } from "@/lib/categoryUtils";
 import { getCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
@@ -137,6 +138,7 @@ export const TransactionListItem = ({
   onEdit,
   customCategories,
   creditCards,
+  onLongPress,
 }: {
   tx: TransactionRow;
   accountName: string;
@@ -144,7 +146,10 @@ export const TransactionListItem = ({
   onEdit: (tx: TransactionRow) => void;
   customCategories?: CustomCategory[];
   creditCards?: any[];
+  /** Hold a row to choose between editing and removing it. */
+  onLongPress?: (tx: TransactionRow) => void;
 }) => {
+  const press = useLongPress(() => onLongPress?.(tx));
   const x = useMotionValue(0);
   const editOpacity = useTransform(x, [0, 60, 120], [0, 0.5, 1]);
   const deleteOpacity = useTransform(x, [-120, -60, 0], [1, 0.5, 0]);
@@ -221,7 +226,13 @@ export const TransactionListItem = ({
         onDragEnd={handleDragEnd}
         style={{ x }}
         className="relative flex cursor-grab items-center gap-3.5 px-4 py-3.5 active:cursor-grabbing willo-glass"
-        onClick={() => onEdit(tx)}
+        onPointerDownCapture={onLongPress ? press.onPointerDown : undefined}
+        onPointerMove={onLongPress ? press.onPointerMove : undefined}
+        onPointerUp={onLongPress ? press.onPointerUp : undefined}
+        onPointerCancel={onLongPress ? press.onPointerCancel : undefined}
+        onPointerLeave={onLongPress ? press.onPointerLeave : undefined}
+        onContextMenu={(e) => { if (onLongPress) e.preventDefault(); }}
+        onClick={press.guard(() => onEdit(tx))}
         whileTap={{ scale: 0.99 }}
       >
         {/* Category icon */}

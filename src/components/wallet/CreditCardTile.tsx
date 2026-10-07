@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useLongPress } from "@/hooks/useLongPress";
 import { CalendarClock, ChevronRight, CreditCard } from "lucide-react";
 import { getCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
@@ -90,13 +91,16 @@ const TILE_HEX: Record<string, string> = {
  * carry the identity, the open statement is the figure, and the limit runs underneath
  * as a single rule with what is spent and what is left on either end.
  */
-export const CreditCardTile = ({ card, idx, invoiceInfo, navigate, extraClass }: {
+export const CreditCardTile = ({ card, idx, invoiceInfo, navigate, extraClass, onLongPress }: {
   card: CreditCardItem;
   idx: number;
   invoiceInfo?: OpenInvoiceInfo;
   navigate: (path: string) => void;
   extraClass?: string;
+  /** Hold the card to edit or remove it. */
+  onLongPress?: () => void;
 }) => {
+  const press = useLongPress(() => onLongPress?.());
   const usedValue = Number(card.used_limit);
   const limitValue = Number(card.limit);
   const usedPct = limitValue > 0 ? Math.min((usedValue / limitValue) * 100, 100) : 0;
@@ -111,7 +115,13 @@ export const CreditCardTile = ({ card, idx, invoiceInfo, navigate, extraClass }:
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: idx * 0.06 }}
-      onClick={() => navigate(`/fatura/${card.id}`)}
+      onPointerDown={onLongPress ? press.onPointerDown : undefined}
+      onPointerMove={onLongPress ? press.onPointerMove : undefined}
+      onPointerUp={onLongPress ? press.onPointerUp : undefined}
+      onPointerCancel={onLongPress ? press.onPointerCancel : undefined}
+      onPointerLeave={onLongPress ? press.onPointerLeave : undefined}
+      onContextMenu={(e) => { if (onLongPress) e.preventDefault(); }}
+      onClick={press.guard(() => navigate(`/fatura/${card.id}`))}
       className={cn(
         "relative cursor-pointer overflow-hidden rounded-[24px] border border-white/[0.09] willo-glass px-[18px] pb-[18px] pt-4",
         "transition-transform duration-200 active:scale-[0.985]",

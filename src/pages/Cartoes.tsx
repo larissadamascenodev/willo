@@ -4,6 +4,9 @@ import { motion } from "framer-motion";
 import { Check, ChevronLeft, Clock, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import InvoiceDetailPanel from "@/components/fatura/InvoiceDetailPanel";
+import CreditCardEditModal from "@/components/fatura/CreditCardEditModal";
+import HoldActions from "@/components/shared/HoldActions";
+import { getCreditCards } from "@/services/transactionService";
 import CardCreateSheet from "@/components/wallet/CardCreateSheet";
 import { CreditCardTile, type CreditCardItem, type OpenInvoiceInfo } from "@/components/wallet/CreditCardTile";
 import { Plus } from "lucide-react";
@@ -161,6 +164,9 @@ const Cartoes = () => {
   const { cards, invoices, installments, loading, refresh } = useCardsOverview();
   const [cardFilter, setCardFilter] = useState<string | null>(null);
   const [showAddCard, setShowAddCard] = useState(false);
+  // The card a long press is acting on, and the full row it needs to edit.
+  const [heldCard, setHeldCard] = useState<OverviewCard | null>(null);
+  const [editingCard, setEditingCard] = useState<any | null>(null);
 
   const now = new Date();
   const currentKey = monthKey(now.getFullYear(), now.getMonth() + 1);
@@ -224,6 +230,45 @@ const Cartoes = () => {
 
       <CardCreateSheet open={showAddCard} onClose={() => setShowAddCard(false)} onCreated={refresh} />
 
+      <HoldActions
+        open={!!heldCard}
+        title={heldCard?.name ?? ""}
+        subtitle="Cartão de crédito"
+        onClose={() => setHeldCard(null)}
+        onEdit={async () => {
+          const held = heldCard;
+          setHeldCard(null);
+          if (!held) return;
+          // The edit form needs the stored row, not the overview's trimmed shape.
+          const all = (await getCreditCards()) as any[];
+          const full = all.find((c) => c.id === held.id);
+          if (full) setEditingCard(full);
+        }}
+        onDelete={() => {
+          const held = heldCard;
+          setHeldCard(null);
+          if (held) setEditingCard({ ...held, __deleting: true });
+        }}
+      />
+
+      {editingCard && (
+        <CreditCardEditModal
+          open
+          card={{
+            id: editingCard.id,
+            name: editingCard.name,
+            closing_day: editingCard.closing_day ?? editingCard.closingDay ?? 1,
+            due_day: editingCard.due_day ?? editingCard.dueDay ?? 10,
+            limit: Number(editingCard.limit ?? 0),
+            color: editingCard.color ?? null,
+            last_four_digits: editingCard.last_four_digits ?? editingCard.lastFour ?? null,
+          }}
+          onClose={() => setEditingCard(null)}
+          onUpdated={() => { setEditingCard(null); refresh(); }}
+          onDeleted={() => { setEditingCard(null); setCardFilter(null); refresh(); }}
+        />
+      )}
+
       {/* Which card you are looking at. A row rather than a sheet: switching cards is
           the main gesture on this tab, and a sheet puts two taps in front of it. */}
       {cards.length > 0 && (
@@ -257,6 +302,7 @@ const Cartoes = () => {
             cards={visibleCards}
             invoices={filteredInvoices}
             onAdd={() => setShowAddCard(true)}
+            onHold={setHeldCard}
             // Tapping a card used to push the statement page, which showed the same
             // month from the same data as this tab. It now just selects the card here.
             navigate={(to) => {
@@ -480,11 +526,12 @@ function InstallmentsOverview({ installments, cardById, currentKey }: {
  * name, open invoice, and the limit bar with both sides of it — so moving the cards
  * here changes where they live, not how they look.
  */
-function CardsList({ cards, invoices, onAdd, navigate }: {
+function CardsList({ cards, invoices, onAdd, navigate, onHold }: {
   cards: OverviewCard[];
   invoices: OverviewInvoice[];
   onAdd: () => void;
   navigate: (to: string) => void;
+  onHold?: (card: OverviewCard) => void;
 }) {
   const now = new Date();
   const openByCard = new Map<string, OpenInvoiceInfo>();
@@ -508,7 +555,16 @@ function CardsList({ cards, invoices, onAdd, navigate }: {
           color: c.color,
           last_four_digits: c.lastFour,
         };
-        return <CreditCardTile key={c.id} card={item} idx={idx} invoiceInfo={openByCard.get(c.id)} navigate={navigate} />;
+        return (
+          <CreditCardTile
+            key={c.id}
+            card={item}
+            idx={idx}
+            invoiceInfo={openByCard.get(c.id)}
+            navigate={navigate}
+            onLongPress={onHold ? () => onHold(c) : undefined}
+          />
+        );
       })}
 
       <button
