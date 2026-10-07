@@ -48,8 +48,15 @@ interface Props {
   onConfirm: (items: ExtractedItem[]) => void;
   confirming: boolean;
   avgConfidence?: number;
-  /** "Total a pagar" printed on the statement, so the review can prove the maths closes. */
+  /** "Total a pagar" printed on the statement. */
   declaredTotal?: number | null;
+  /**
+   * What the lines should add up to. Not the same as the printed total: that one is a
+   * balance, carrying last month's bill and subtracting the payment made against it.
+   */
+  expectedTotal?: number | null;
+  /** Last month's bill plus payments. Non-zero means the two numbers above differ. */
+  carriedOver?: number | null;
   accounts?: ReviewAccount[];
   showAccountSelector?: boolean;
 }
@@ -436,12 +443,14 @@ function ItemEditSheet({ item, onClose, onChange }: {
   );
 }
 
-function MultiItemReview({ items, setItems, avgConfidence, message, declaredTotal }: {
+function MultiItemReview({ items, setItems, avgConfidence, message, declaredTotal, expectedTotal, carriedOver }: {
   items: ExtractedItem[];
   setItems: React.Dispatch<React.SetStateAction<ExtractedItem[]>>;
   avgConfidence?: number;
   message: string;
   declaredTotal?: number | null;
+  expectedTotal?: number | null;
+  carriedOver?: number | null;
 }) {
   const [editing, setEditing] = useState<number | null>(null);
   const toggleItem = (idx: number) =>
@@ -453,7 +462,12 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
   const plans = items.filter((i) => i.installment_total && i.installment_total > 1 && (i.installment_current ?? 1) > 1);
   const refunds = items.filter((i) => i.amount < 0);
   const selectedTotal = items.filter((i) => i.selected).reduce((sum, i) => sum + i.amount, 0);
-  const gap = declaredTotal ? Math.round((selectedTotal - declaredTotal) * 100) / 100 : null;
+  // Check against the period's own movement, not against the balance to pay. A statement
+  // that was overpaid last month shows a total far below its own purchases, and comparing
+  // with that total used to accuse a correct reading of counting things twice.
+  const reference = expectedTotal ?? declaredTotal ?? null;
+  const carried = Math.abs(carriedOver ?? 0) > 0.5 ? carriedOver! : null;
+  const gap = reference !== null ? Math.round((selectedTotal - reference) * 100) / 100 : null;
   const matches = gap !== null && Math.abs(gap) <= 0.5;
 
   const allPlans = items.filter((i) => (i.installment_total ?? 0) > 1);
@@ -479,12 +493,22 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
           {items.length} lançamento{items.length === 1 ? "" : "s"} nesta fatura
         </p>
 
-        {declaredTotal != null && (
+        {reference != null && (
           <div className="relative mt-4 border-t border-white/[0.08] pt-3">
             <div className="flex items-center justify-between text-[13px]">
-              <span className="text-white/62">Total impresso na fatura</span>
-              <span className="font-semibold text-white tabular-nums">{fmtMoney(declaredTotal)}</span>
+              <span className="text-white/62">{carried ? "Lançamentos do período" : "Total impresso na fatura"}</span>
+              <span className="font-semibold text-white tabular-nums">{fmtMoney(reference)}</span>
             </div>
+            {/* Say why the two numbers differ, so the smaller one on the statement does not
+                look like proof that the reading is wrong. */}
+            {carried != null && declaredTotal != null && (
+              <div className="mt-1.5 flex items-center justify-between text-[12.5px]">
+                <span className="text-white/45">
+                  Total a pagar {carried < 0 ? "(desconta o que você já pagou)" : "(soma a fatura anterior)"}
+                </span>
+                <span className="tabular-nums text-white/55">{fmtMoney(declaredTotal)}</span>
+              </div>
+            )}
             <div className="mt-2.5 flex items-center gap-2">
               {matches ? (
                 <>
@@ -621,6 +645,8 @@ export default function InvoiceUploadReviewModal({
   confirming,
   avgConfidence,
   declaredTotal,
+  expectedTotal,
+  carriedOver,
   accounts = [],
   showAccountSelector = false,
 }: Props) {
@@ -680,7 +706,15 @@ export default function InvoiceUploadReviewModal({
                 avgConfidence={avgConfidence}
               />
             ) : (
-              <MultiItemReview items={items} setItems={setItems} avgConfidence={avgConfidence} message={message} declaredTotal={declaredTotal} />
+              <MultiItemReview
+                items={items}
+                setItems={setItems}
+                avgConfidence={avgConfidence}
+                message={message}
+                declaredTotal={declaredTotal}
+                expectedTotal={expectedTotal}
+                carriedOver={carriedOver}
+              />
             )}
           </div>
 

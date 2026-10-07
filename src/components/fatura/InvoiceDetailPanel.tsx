@@ -79,6 +79,10 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
   const [extracted, setExtracted] = useState<ExtractedItem[]>([]);
   const [extractedMessage, setExtractedMessage] = useState("");
   const [declaredTotal, setDeclaredTotal] = useState<number | null>(null);
+  // What the lines should add up to, which is the printed total minus whatever the
+  // statement carried in from the month before.
+  const [expectedTotal, setExpectedTotal] = useState<number | null>(null);
+  const [carriedOver, setCarriedOver] = useState<number | null>(null);
   const [avgConfidence, setAvgConfidence] = useState<number | undefined>(undefined);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
@@ -190,6 +194,8 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
       setExtracted(items);
       setExtractedMessage(data.message || "Lançamentos encontrados!");
       setDeclaredTotal(data.declared_total ?? null);
+      setExpectedTotal(data.expected_total ?? null);
+      setCarriedOver(data.carried_over ?? null);
       setAvgConfidence(typeof data.avg_confidence === "number" ? data.avg_confidence : undefined);
       setScanItems(items);
     } catch (err: any) {
@@ -590,6 +596,8 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
         confirming={importing}
         avgConfidence={avgConfidence}
         declaredTotal={declaredTotal}
+        expectedTotal={expectedTotal}
+        carriedOver={carriedOver}
       />
 
       <InvoicePayModal

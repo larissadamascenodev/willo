@@ -82,8 +82,17 @@ Extraia TODAS as compras listadas na fatura, linha por linha, de todas as págin
 
 ${NAME_RULES}
 
-A SOMA de tudo que você extrair precisa fechar com o "Total a pagar" impresso na fatura.
-Por isso existem três tipos de linha, e os três entram:
+A SOMA de tudo que você extrair precisa fechar com os LANÇAMENTOS DO PERÍODO:
+"Total de compras" + IOF + encargos − estornos.
+
+CUIDADO, e isso é o mais importante desta instrução: o "Total a pagar" NÃO é essa soma. Ele é
+um SALDO. Já soma o que sobrou da fatura anterior e já desconta o pagamento que a pessoa fez.
+Numa fatura em que a pessoa pagou mais do que devia, as compras do período somam MUITO MAIS
+que o "Total a pagar", e está certo assim. Nunca descarte uma compra de verdade, nunca invente
+um valor negativo e nunca mude o valor de uma linha para forçar a soma a bater com o
+"Total a pagar".
+
+Existem três tipos de linha, e os três entram:
 
 1. COMPRAS — valor positivo, categoria pela lista abaixo.
 2. ENCARGOS realmente cobrados nesta fatura — juros de rotativo, multa de atraso, IOF, anuidade,
@@ -113,8 +122,17 @@ NUNCA extraia estas linhas (não são nem compra, nem encargo, nem estorno):
 - Limites e cabeçalhos: "Limite total", "Limite disponível", "Pré-aprovado", "Valor máximo", "Pagamentos e Financiamentos"
 - Subtotais por portador: uma linha com só um nome de pessoa/empresa e um valor, sem data, logo acima de um bloco de compras
 
-Retorne também "summary" com os valores IMPRESSOS na fatura, para o app conferir a conta:
-{ "total_a_pagar": número, "total_compras": número }
+Retorne também "summary" com os valores IMPRESSOS no RESUMO da fatura, exatamente como estão
+lá, para o app conferir a conta. Zero quando a linha não existe nessa fatura, e sinal negativo
+quando a fatura mostra o valor negativo:
+{
+  "total_a_pagar": número,      // "Total a pagar"
+  "total_compras": número,      // "Total de compras" do período
+  "fatura_anterior": número,    // "Fatura anterior", "Saldo anterior", "Saldo da fatura anterior"
+  "pagamentos": número,         // "Pagamento recebido", "Pagamentos", "Créditos" — NEGATIVO
+  "estornos_resumo": número,    // "Estorno de juros", "Estorno de encargos" do resumo — NEGATIVO
+  "outros_lancamentos": número  // "Outros lançamentos" do resumo, com o sinal impresso
+}
 
 Para cada compra retorne:
 - description: nome SIMPLIFICADO do estabelecimento (ver regras acima), sem a marcação de parcela
@@ -465,7 +483,17 @@ ${csvText}` }];
 
     rawContent = rawContent.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
 
-    let parsed: { items: any[]; summary?: { total_a_pagar?: number; total_compras?: number } };
+    let parsed: {
+      items: any[];
+      summary?: {
+        total_a_pagar?: number;
+        total_compras?: number;
+        fatura_anterior?: number;
+        pagamentos?: number;
+        estornos_resumo?: number;
+        outros_lancamentos?: number;
+      };
+    };
     try {
       parsed = JSON.parse(rawContent);
     } catch {
@@ -508,17 +536,38 @@ ${csvText}` }];
     const sumOf = (list: ExtractedItem[]) =>
       Math.round(list.reduce((sum, i) => sum + i.amount, 0) * 100) / 100;
 
-    const declaredTotal = Number(parsed.summary?.total_a_pagar) || null;
+    const num = (v: unknown) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+    const summary = parsed.summary ?? {};
+    const declaredTotal = Number(summary.total_a_pagar) || null;
+    const declaredPurchases = Number(summary.total_compras) || null;
 
-    // The statement prints its own total, so it is the one number that cannot be a
-    // misread. When the extraction overshoots it, the usual cause is the same purchase
-    // read twice — from a summary block as well as the detail, or from two overlapping
-    // PDF pages. Dropping exact repeats is only allowed to stand if it brings the sum
-    // CLOSER to what the statement says; two identical coffees on the same day are
-    // real, and this must never quietly delete them.
+    // What the statement brought in from before this period: last month's bill, the payment
+    // that was made against it, and any reversal of old charges.
+    const carried = num(summary.fatura_anterior) + num(summary.pagamentos) + num(summary.estornos_resumo);
+
+    // What the extracted lines should add up to. The printed "Total a pagar" is NOT that
+    // number — it is a balance, so it already carries last month's bill and subtracts the
+    // payment. On a statement where more was paid than was owed, the period's purchases
+    // legitimately come to far MORE than the total to pay, and treating that total as the
+    // reference is what made a R$ 973,44 statement look like it had been read twice.
+    // Taking the carry-over back out leaves the period's own movement.
+    let expectedTotal: number | null = null;
+    if (declaredTotal !== null) {
+      expectedTotal = Math.round((declaredTotal - carried) * 100) / 100;
+    } else if (declaredPurchases !== null) {
+      expectedTotal = declaredPurchases;
+    }
+
+    // A double count can only ever push the sum ABOVE that reference, and only an exact
+    // repeat is a candidate. Dropping repeats is allowed to stand only when it brings the
+    // sum CLOSER: two identical coffees on the same day are real, and nothing here may
+    // quietly delete them.
     let finalItems = cleanedItems;
     let deduped = 0;
-    if (declaredTotal && Math.abs(sumOf(cleanedItems) - declaredTotal) > 0.5) {
+    if (expectedTotal !== null && sumOf(cleanedItems) - expectedTotal > 0.5) {
       const seen = new Set<string>();
       const unique = cleanedItems.filter((i) => {
         const key = [i.description, i.amount, i.date, i.installment_current, i.installment_total].join("|");
@@ -526,8 +575,8 @@ ${csvText}` }];
         seen.add(key);
         return true;
       });
-      const before = Math.abs(sumOf(cleanedItems) - declaredTotal);
-      const after = Math.abs(sumOf(unique) - declaredTotal);
+      const before = Math.abs(sumOf(cleanedItems) - expectedTotal);
+      const after = Math.abs(sumOf(unique) - expectedTotal);
       if (unique.length < cleanedItems.length && after < before) {
         deduped = cleanedItems.length - unique.length;
         finalItems = unique;
@@ -567,8 +616,12 @@ ${csvText}` }];
         avg_confidence: Math.round(avgConfidence * 100) / 100,
         extracted_total: extractedTotal,
         declared_total: declaredTotal,
-        declared_purchases: Number(parsed.summary?.total_compras) || null,
-        /** How many exact repeats were dropped to make the sum meet the printed total. */
+        declared_purchases: declaredPurchases,
+        /** What the lines should add up to: the printed total with the carry-over taken back out. */
+        expected_total: expectedTotal,
+        /** Last month's bill plus payments. Non-zero means "Total a pagar" is not the period's sum. */
+        carried_over: Math.round(carried * 100) / 100,
+        /** How many exact repeats were dropped to make the sum meet that reference. */
         deduped,
       }),
       {

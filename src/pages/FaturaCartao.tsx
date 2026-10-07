@@ -118,6 +118,8 @@ const FaturaCartao = () => {
   const [extractedItems, setExtractedItems] = useState<ExtractedItem[]>([]);
   const [extractedMessage, setExtractedMessage] = useState("");
   const [declaredTotal, setDeclaredTotal] = useState<number | null>(null);
+  const [expectedTotal, setExpectedTotal] = useState<number | null>(null);
+  const [carriedOver, setCarriedOver] = useState<number | null>(null);
   const [avgConfidence, setAvgConfidence] = useState<number | undefined>(undefined);
   const [scanOpen, setScanOpen] = useState(false);
   const [scanItems, setScanItems] = useState<ExtractedItem[] | null>(null);
@@ -450,6 +452,8 @@ const FaturaCartao = () => {
       setExtractedItems(items);
       setExtractedMessage(data.message || "Lançamentos encontrados!");
       setDeclaredTotal(isInvoice ? (data.declared_total ?? null) : null);
+      setExpectedTotal(isInvoice ? (data.expected_total ?? null) : null);
+      setCarriedOver(isInvoice ? (data.carried_over ?? null) : null);
       setAvgConfidence(typeof data.avg_confidence === "number" ? data.avg_confidence : undefined);
       toast.dismiss("upload-processing");
 
@@ -905,6 +909,8 @@ const FaturaCartao = () => {
         items={extractedItems}
         message={extractedMessage}
         declaredTotal={declaredTotal}
+        expectedTotal={expectedTotal}
+        carriedOver={carriedOver}
         avgConfidence={avgConfidence}
         onConfirm={handleConfirmImport}
         confirming={confirmingImport}
