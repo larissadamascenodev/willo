@@ -521,7 +521,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
                 <>
                   <AlertTriangle className="h-4 w-4 shrink-0 text-amber-300" />
                   <span className="text-[12.5px] leading-snug text-white/78">
-                    {fmtMoney(Math.abs(gap!))} de diferença — {gap! < 0 ? "algo pode não ter sido lido" : "algo pode ter entrado duas vezes"}
+                    {fmtMoney(Math.abs(gap!))} de diferença. {gap! < 0 ? "Algo pode não ter sido lido" : "Algo pode ter entrado duas vezes"}
                   </span>
                 </>
               )}
@@ -552,7 +552,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
       {plans.length > 0 && (
         <p className="mt-3 px-1 text-[12.5px] leading-snug text-white/56">
           <span className="text-white/78">{plans.length} {plans.length === 1 ? "parcelamento já vinha de antes" : "parcelamentos já vinham de antes"}.</span>{" "}
-          As parcelas pagas antes desta fatura não são lançadas — a cobrança continua daqui pra frente.
+          As parcelas pagas antes desta fatura não são lançadas. A cobrança continua daqui pra frente.
         </p>
       )}
 
