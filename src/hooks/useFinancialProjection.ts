@@ -131,5 +131,8 @@ export function useFinancialProjection() {
     refreshAll,
     selectedMonth,
     selectedYear,
+    /** A whole month's data, keyed "month-year", for the months ahead. Already
+        fetched to build the projection, so reading it costs nothing more. */
+    monthData: monthDataMap,
   };
 }

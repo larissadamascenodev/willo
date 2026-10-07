@@ -10,6 +10,8 @@ import { getCategoryIcon, getCategoryHexColor } from "@/lib/categoryUtils";
 import { useCashFlow, periodStart, sumFlow, toDateKey, type CashFlowEntry, type CashFlowPeriod } from "@/hooks/useCashFlow";
 import { useFinancialProjection } from "@/hooks/useFinancialProjection";
 import type { MonthProjection } from "@/services/projection/types";
+import type { DashboardData, FinanceEvent } from "@/types/finance";
+import BottomSheet from "@/components/shared/BottomSheet";
 import { PageHeader, SectionTitle, Surface } from "@/components/shared/MobilePage";
 import { currencySymbol, getCurrency } from "@/lib/currency";
 
@@ -320,7 +322,8 @@ function RealizadoPanel() {
  * how far through it you are, and where the months after it land.
  */
 function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void }) {
-  const { projections, data, loading, selectedMonth, selectedYear } = useFinancialProjection();
+  const { projections, data, loading, selectedMonth, selectedYear, monthData } = useFinancialProjection();
+  const [openMonth, setOpenMonth] = useState<ProjectionRowView | null>(null);
   const rows = useMemo(
     () => buildRows(projections, data.previousMonthEndingBalance),
     [projections, data.previousMonthEndingBalance],
@@ -369,11 +372,20 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
           {isCurrentMonth && daysLeft > 0 ? ` · ${compact(perDay)} por dia até o fim` : ""}
         </p>
 
-        <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-willo-green/25">
-          <motion.div
-            className="h-full rounded-full bg-red-400/80"
-            initial={{ width: 0 }}
-            animate={{ width: `${spent}%` }}
+        {/* The month split in two rather than a track being eaten: what went out and
+            what is still there, side by side, so spending grows the red by exactly as
+            much as it shrinks the green. */}
+        <div className="mt-4 flex h-[6px] gap-[3px] overflow-hidden rounded-full">
+          <motion.span
+            className="h-full rounded-full bg-red-400"
+            initial={{ flexGrow: 0 }}
+            animate={{ flexGrow: Math.max(spent, current.expense > 0 ? 3 : 0) }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+          />
+          <motion.span
+            className="h-full rounded-full bg-willo-green"
+            initial={{ flexGrow: 0 }}
+            animate={{ flexGrow: Math.max(100 - spent, current.sobra > 0 ? 3 : 0) }}
             transition={{ duration: 0.6, ease: "easeOut" }}
           />
         </div>
@@ -441,7 +453,7 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
               return (
                 <button
                   key={`${r.year}-${r.month}`}
-                  onClick={onOpenProjecoes}
+                  onClick={() => setOpenMonth(r)}
                   className={cn(
                     "w-full rounded-[20px] border willo-glass px-4 pb-4 pt-3.5 text-left transition active:scale-[0.985] active:opacity-80",
                     negative ? "border-red-400/[0.22]" : "border-white/[0.07]",
@@ -463,8 +475,8 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
                   </div>
 
                   <div className="mt-3.5 space-y-[7px]">
-                    <Bar label="Entra" value={r.income} tone="bg-white/30" />
-                    <Bar label="Sai" value={r.expense} tone={negative ? "bg-red-400/90" : "bg-white/55"} />
+                    <Bar label="Entra" value={r.income} tone="bg-willo-green" />
+                    <Bar label="Sai" value={r.expense} tone="bg-red-400" />
                   </div>
                 </button>
               );
@@ -477,7 +489,101 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
           </p>
         </>
       )}
+
+      <MonthBalanceSheet
+        row={openMonth}
+        data={openMonth ? monthData.get(`${openMonth.month}-${openMonth.year}`) : undefined}
+        onClose={() => setOpenMonth(null)}
+        onSeeProjections={() => { setOpenMonth(null); onOpenProjecoes(); }}
+      />
     </div>
+  );
+}
+
+/**
+ * What makes a month's balance, without having to go and change the month on another
+ * screen to find out. Everything that comes in on one side, everything that goes out
+ * on the other, and the two sums meeting at the bottom.
+ */
+function MonthBalanceSheet({ row, data, onClose, onSeeProjections }: {
+  row: ProjectionRowView | null;
+  data?: DashboardData;
+  onClose: () => void;
+  onSeeProjections: () => void;
+}) {
+  const events = data?.events ?? [];
+  const entradas = events.filter((e) => e.type === "receita");
+  const saidas = events.filter((e) => e.type !== "receita");
+
+  const Section = ({ title, items, total, tone }: {
+    title: string;
+    items: FinanceEvent[];
+    total: number;
+    tone: "in" | "out";
+  }) => (
+    <section className="rounded-[22px] border border-white/[0.08] willo-glass px-4 pb-3.5 pt-3.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-white/45">{title}</p>
+        <p className={cn("text-[14px] font-bold tabular-nums", tone === "in" ? "text-willo-green" : "text-red-400")}>
+          {tone === "out" ? "−" : ""}{compact(total)}
+        </p>
+      </div>
+
+      {items.length === 0 ? (
+        <p className="mt-3 text-[13px] text-white/40">Nada previsto neste mês.</p>
+      ) : (
+        <div className="mt-2.5 divide-y divide-white/[0.055]">
+          {items.map((e) => (
+            <div key={e.id} className="flex items-baseline justify-between gap-3 py-2.5">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[14px] text-white">{e.name}</span>
+                <span className="block truncate text-[11.5px] text-white/40">{e.category} · {e.date}</span>
+              </span>
+              <span className="shrink-0 text-[14px] font-semibold tabular-nums text-white">
+                {compact(e.amount)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+
+  return (
+    <BottomSheet open={!!row} onClose={onClose} size="full" zIndex={70}>
+      {row && (
+        <div className="px-4 pb-6">
+          <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.13em] text-white/45">
+            Balanço de {row.name}{row.yearTag ? ` ${row.yearTag}` : ""}
+          </p>
+          <p className={cn(
+            "mt-2 px-1 text-[34px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
+            row.sobra < 0 ? "text-red-400" : "text-willo-green",
+          )}>
+            {row.sobra > 0 ? "+" : ""}{compact(row.sobra)}
+          </p>
+          <p className="mt-2 px-1 text-[12.5px] text-white/50">
+            {row.sobra < 0 ? "faltando no mês" : "sobrando no mês"}
+          </p>
+
+          <div className="mt-5 space-y-2.5">
+            <Section title="Entra" items={entradas} total={row.income} tone="in" />
+            <Section title="Sai" items={saidas} total={row.expense} tone="out" />
+          </div>
+
+          {!data && (
+            <p className="mt-4 px-1 text-[12.5px] text-white/40">Carregando os lançamentos deste mês…</p>
+          )}
+
+          <button
+            onClick={onSeeProjections}
+            className="mt-5 flex h-12 w-full items-center justify-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.04] text-[14px] font-semibold text-white active:opacity-70"
+          >
+            Ver em Projeções <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+    </BottomSheet>
   );
 }
 
