@@ -152,9 +152,9 @@
      sits behind them and the text on top still has to be readable. */
   .willo-glass-strong {
     /* Sheets keep a blur: what sits behind them is content, not a flat ground. */
-    background-color: rgba(23, 23, 25, 0.92);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    background-color: rgba(23, 23, 25, 0.965);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
   }
   /* iOS's scroll edge: a band at the top of the viewport that blurs and dims whatever

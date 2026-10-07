@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { clearOnboardingProgress } from "@/lib/onboardingProgress";
 import { processScanFile } from "@/lib/scanUpload";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Camera, ImageIcon } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -44,6 +44,7 @@ const DashboardLayout = () => {
   const { profile, loading: profileLoading, refetch: refetchProfile } = profileState;
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { streak, streakDates } = useLoginStreak();
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -327,8 +328,15 @@ const DashboardLayout = () => {
     window.dispatchEvent(new CustomEvent("transaction-created"));
   }, [refetchProfile]);
 
+  // Safari hands the page back from its cache with the old offset restored, which is
+  // what "close the app and open it again" does — pageshow is the only moment that
+  // happens, so the reset belongs there as well as on mount.
   useEffect(() => {
-    window.scrollTo(0, 0);
+    const toTop = () => window.scrollTo(0, 0);
+    toTop();
+    requestAnimationFrame(toTop);
+    window.addEventListener("pageshow", toTop);
+    return () => window.removeEventListener("pageshow", toTop);
   }, []);
 
   // Drives the scroll edge: nothing is under the header until the page has moved.
@@ -346,7 +354,12 @@ const DashboardLayout = () => {
         <OnboardingFlow onComplete={handleOnboardingComplete} onRefetch={refetchProfile} />
       )}
       <div className="willo-bg min-h-screen text-foreground" style={showOnboarding ? { display: "none" } : undefined}>
-        <div className="willo-scroll-edge md:hidden" data-on={scrolled} aria-hidden="true" />
+        {/* Only the home pins a header for content to dissolve under. On every other
+            page the header scrolls away with the page, so this band had nothing to
+            soften and simply smeared the title and the name as they passed beneath. */}
+        {location.pathname === "/" && (
+          <div className="willo-scroll-edge md:hidden" data-on={scrolled} aria-hidden="true" />
+        )}
         <div className="w-full mx-auto px-4 md:px-6 lg:px-8 xl:px-12 pt-0 pb-24 md:pb-8">
           <DashboardHeader profile={profile} streak={streak} streakDates={streakDates} />
           <Outlet context={profileState} />
