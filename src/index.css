@@ -25,7 +25,7 @@
     --background: 0 0% 3%;
     --foreground: 0 0% 98%;
 
-    --card: 0 0% 8%;
+    --card: 0 0% 7%;
     --card-foreground: 0 0% 98%;
 
     --popover: 0 0% 10%;
@@ -38,7 +38,7 @@
     --secondary-foreground: 0 0% 98%;
 
     --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 58%;
+    --muted-foreground: 0 0% 48%;
 
     --accent: 0 0% 13%;
     --accent-foreground: 0 0% 98%;
@@ -52,11 +52,11 @@
     --success: 145 65% 45%;
     --success-foreground: 0 0% 4%;
 
-    --border: 0 0% 15%;
-    --input: 0 0% 11%;
+    --border: 0 0% 11%;
+    --input: 0 0% 10%;
     --ring: 0 0% 100%;
 
-    --radius: 1rem;
+    --radius: 1.375rem;
 
     --chart-1: 79 85% 69%;
     --chart-2: 199 75% 55%;
