@@ -59,7 +59,19 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
   }
 
   if (cards.length === 0) {
-    if (compact) return null;
+    if (compact) {
+      return (
+        <StatTile
+          label="Em faturas"
+          value="Nenhum cartão"
+          caption="Toque para adicionar"
+          icon={CreditCard}
+          accent="#A78BFA"
+          empty
+          onClick={() => navigate("/cartoes")}
+        />
+      );
+    }
     return (
       <button
         onClick={() => navigate("/gestao")}

@@ -288,8 +288,19 @@ const AssinaturasCard = memo(({ compact = false }: { compact?: boolean }) => {
   }
 
   if (subscriptions.length === 0) {
-    // A tile cannot say "nothing here yet" in the room it has; the full card can.
-    if (compact) return null;
+    if (compact) {
+      return (
+        <StatTile
+          label="Recorrentes"
+          value="Nenhuma"
+          caption="Contas fixas e assinaturas"
+          icon={Repeat}
+          accent="#7DD3FC"
+          empty
+          onClick={() => navigate("/transacoes")}
+        />
+      );
+    }
     return (
       <div className="rounded-[22px] border border-white/[0.08] willo-glass p-4">
         <h2 className="text-[16px] font-semibold text-white">Recorrentes</h2>

@@ -109,7 +109,19 @@ const ParcelamentosAtivosCard = ({ compact = false }: { compact?: boolean }) => 
   }
 
   if (items.length === 0) {
-    if (compact) return null;
+    if (compact) {
+      return (
+        <StatTile
+          label="Parcelamentos"
+          value="Nenhum"
+          caption="Nada parcelado agora"
+          icon={CreditCard}
+          accent="#F59E0B"
+          empty
+          onClick={() => navigate("/parcelamentos")}
+        />
+      );
+    }
     return (
       <button onClick={() => navigate("/parcelamentos")} className="block w-full rounded-[22px] border border-white/[0.08] willo-glass p-4 text-left">
         <div className="flex items-center justify-between">

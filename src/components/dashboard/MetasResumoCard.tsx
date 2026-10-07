@@ -60,10 +60,24 @@ export function MetasResumoView({ goals, loading = false, compact = false }: { g
     );
   }
 
+  const overall = totalObjetivo > 0 ? Math.min(totalGuardado / totalObjetivo, 1) : 0;
+
+  if (compact && goals.length === 0) {
+    return (
+      <StatTile
+        label="Metas"
+        value="Nenhuma"
+        caption="Toque para criar"
+        icon={Target}
+        accent="#C8F36D"
+        empty
+        onClick={() => navigate("/metas")}
+      />
+    );
+  }
+
   // Nothing to celebrate yet — stay out of the way instead of nagging.
   if (goals.length === 0) return null;
-
-  const overall = totalObjetivo > 0 ? Math.min(totalGuardado / totalObjetivo, 1) : 0;
 
   if (compact) {
     return (

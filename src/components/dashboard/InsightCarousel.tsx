@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
 import { CalendarClock, CreditCard, Hand, PieChart, Receipt, Sparkles, Sun, TrendingDown, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useCardsOverview, invoiceDueDate } from "@/hooks/useCardsOverview";
@@ -55,7 +54,6 @@ interface Slide {
   body: React.ReactNode;
   /** The app answering back: a line of opinion under the fact. */
   quip?: string;
-  to: string;
   /** How much this deserves the top of the screen. Highest shows first. */
   score: number;
 }
@@ -93,7 +91,6 @@ export default function InsightCarousel({
   month: number;
   isCurrentMonth: boolean;
 }) {
-  const navigate = useNavigate();
   const hidden = useHiddenValues();
   const { cards, invoices } = useCardsOverview();
   const { profile } = useProfile();
@@ -119,7 +116,6 @@ export default function InsightCarousel({
       accent: "#C8F36D",
       body: <>{greeting}{firstName ? <>, <b>{firstName}</b></> : ""}.</>,
       quip: "Veja o que mudou por aqui desde a última vez.",
-      to: "/bot-finance",
       score: Infinity,
     });
 
@@ -135,7 +131,6 @@ export default function InsightCarousel({
           accent: "#F87171",
           body: <>Saiu <b>{v(despesas - receitas)} a mais</b> do que entrou em {monthLabel}.</>,
           quip: "Esse mês cobrou caro. Dá pra virar o jogo no próximo.",
-          to: "/bot-finance/balanco",
           score: 95,
         });
       } else {
@@ -150,7 +145,6 @@ export default function InsightCarousel({
             : pct <= 85
               ? "Dentro do previsto, sem sustos."
               : "Está no limite. Qualquer imprevisto aperta.",
-          to: "/bot-finance/balanco",
           score: pct > 85 ? 78 : 56,
         });
       }
@@ -168,7 +162,6 @@ export default function InsightCarousel({
         quip: perDay < 20
           ? "Apertado. Vale segurar o que não for essencial."
           : "Dá pra respirar até virar o mês.",
-        to: "/bot-finance/balanco",
         score: perDay < 20 ? 72 : 52,
       });
     }
@@ -184,7 +177,6 @@ export default function InsightCarousel({
         accent: "#C084FC",
         body: <><b>{top.name}</b> levou {share}% do que saiu, {v(top.amount)}.</>,
         quip: share >= 30 ? quipFor(top.name) : undefined,
-        to: "/analytics/categorias",
         // A category that has taken a third of the month is news; a quarter is not.
         score: 40 + share,
       });
@@ -203,7 +195,6 @@ export default function InsightCarousel({
         accent: "#FB923C",
         body: <>Sua maior saída foi <b>{biggest.name}</b>, {v(biggest.amount)}.</>,
         quip: share >= 25 ? `Sozinha, levou ${share}% de tudo que saiu.` : undefined,
-        to: "/transacoes",
         score: 30 + share,
       });
     }
@@ -223,7 +214,6 @@ export default function InsightCarousel({
           ? <>Já saíram <b>{v(spentToday)}</b> hoje.</>
           : <>Você ainda <b>não gastou nada</b> hoje.</>,
         quip: spentToday > 0 ? undefined : "Dia limpo até agora.",
-        to: "/transacoes",
         score: spentToday > 0 ? 46 : 50,
       });
     }
@@ -240,7 +230,6 @@ export default function InsightCarousel({
         accent: "#FBBF24",
         body: <><b>{openOut.length} contas</b> em aberto somam {v(total)}.</>,
         quip: total > saldoAtual && saldoAtual >= 0 ? "É mais do que está nas contas agora." : undefined,
-        to: "/transacoes",
         score: total > saldoAtual && saldoAtual >= 0 ? 85 : 54,
       });
     }
@@ -267,7 +256,6 @@ export default function InsightCarousel({
           ? <><b>{pending.card.name}</b> vence hoje, {v(pending.invoice!.total)}.</>
           : <><b>{v(pending.invoice!.total)}</b> no {pending.card.name}, vence em {days} {days === 1 ? "dia" : "dias"}.</>,
         quip: days <= 3 ? "Essa não dá pra deixar passar." : undefined,
-        to: "/cartoes",
         score: days <= 3 ? 90 : Math.max(44, 70 - days),
       });
     }
@@ -291,7 +279,6 @@ export default function InsightCarousel({
             ? <><b>{v(next.amount)}</b> de {next.name} entram em {when}.</>
             : <><b>{next.name}</b> vence em {when}, {v(next.amount)}.</>,
         quip: late ? "Quanto antes resolver, menos dói." : undefined,
-        to: "/transacoes",
         score: late ? 93 : 48,
       });
     }
@@ -304,11 +291,33 @@ export default function InsightCarousel({
 
   const count = slides.length;
 
-  const go = useCallback((next: number) => {
-    if (count === 0) return;
-    setDir(next > index ? 1 : -1);
-    setIndex(((next % count) + count) % count);
-  }, [count, index]);
+  // Stepping by hand stops at the ends, the way a story does: tapping forward on the
+  // last one should not throw you back to the first. Only the clock below wraps.
+  const step = useCallback((delta: number) => {
+    setPaused(true);
+    setDir(delta);
+    setIndex((i) => Math.min(Math.max(i + delta, 0), Math.max(count - 1, 0)));
+  }, [count]);
+
+  // A tap moves at once, so the carousel never feels like it is waiting to see whether
+  // a second one is coming. If it is, the move is put back and the entry sheet opens.
+  const tapAt = useRef(0);
+  const indexBeforeTap = useRef(0);
+  const indexRef = useRef(0);
+  indexRef.current = index;
+
+  const handleTap = useCallback((delta: number) => {
+    const now = Date.now();
+    if (now - tapAt.current < 280) {
+      tapAt.current = 0;
+      setIndex(indexBeforeTap.current);
+      window.dispatchEvent(new CustomEvent("open-type-chooser"));
+      return;
+    }
+    tapAt.current = now;
+    indexBeforeTap.current = indexRef.current;
+    step(delta);
+  }, [step]);
 
   useEffect(() => {
     if (paused || count <= 1) return;
@@ -365,17 +374,16 @@ export default function InsightCarousel({
 
       <div className="relative mt-5 h-[168px]">
         <AnimatePresence initial={false} mode="wait" custom={dir}>
-          <motion.button
+          <motion.div
             key={slide.id}
             custom={dir}
-            onClick={() => navigate(slide.to)}
             onPointerDown={() => setPaused(true)}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.14}
             onDragEnd={(_, info) => {
-              if (info.offset.x < -44) go(index + 1);
-              else if (info.offset.x > 44) go(index - 1);
+              if (info.offset.x < -44) step(1);
+              else if (info.offset.x > 44) step(-1);
             }}
             variants={{
               enter: (d: number) => ({ x: d * 36, opacity: 0 }),
@@ -402,8 +410,24 @@ export default function InsightCarousel({
             {slide.quip && (
               <p className="mt-2.5 text-[13.5px] leading-snug text-white/45 [text-wrap:balance]">{slide.quip}</p>
             )}
-          </motion.button>
+          </motion.div>
         </AnimatePresence>
+
+        {/* The two halves you tap to step through, the way a story works. They sit over
+            the slide so the text underneath stays selectable-looking but inert, and a
+            second tap inside 280ms means "lançar" instead. */}
+        <button
+          type="button"
+          aria-label="Anterior"
+          onClick={() => handleTap(-1)}
+          className="absolute inset-y-0 left-0 w-[34%] cursor-default"
+        />
+        <button
+          type="button"
+          aria-label="Próximo"
+          onClick={() => handleTap(1)}
+          className="absolute inset-y-0 right-0 w-[66%] cursor-default"
+        />
       </div>
     </div>
   );
