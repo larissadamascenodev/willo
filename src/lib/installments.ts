@@ -64,8 +64,8 @@ export type ImportRow<T> = {
   installments: number | null;
   installmentCurrent: number | null;
   paidInstallments: number;
-  /** A continuation resumes the month AFTER this invoice, not on it. */
-  startsNextMonth: boolean;
+  /** How many months after this invoice the row's first instalment falls. 0 is this one. */
+  periodOffset: number;
   /**
    * Bill this on the invoice being imported, whatever date the line carries. Beside an
    * instalment the statement prints the day that instalment was billed, and a purchase on
@@ -85,9 +85,13 @@ export type ImportRow<T> = {
  * and then silently dropped three instalments.
  *
  * So a plan with prepaid lines becomes: this month's instalment and each prepaid one as
- * single charges on this invoice, plus one plan carrying whatever is left, resuming the
- * month after. When the prepaid lines run to the end of the plan there is nothing left and
- * no continuation is written.
+ * single charges on this invoice, plus what is left of the plan resuming the month after.
+ *
+ * What is left is not always one stretch. Prepaying the last two of a six when you are on
+ * the first leaves the second, third and fourth still owed, with a hole after them; a plan
+ * can only bill consecutive months, so each unbroken run becomes its own row, and the runs
+ * are placed one after another from next month, which is the order the bank bills them in.
+ * When the prepaid lines reach the end there is nothing left and nothing is written.
  *
  * The amount has to match as well as the merchant and the length: two plans can share a
  * shop, and truncating the wrong one would quietly delete charges that are still owed.
@@ -115,7 +119,7 @@ export function planImportRows<T extends PlanItem>(items: T[]): ImportRow<T>[] {
       installments: null,
       installmentCurrent: null,
       paidInstallments: 0,
-      startsNextMonth: false,
+      periodOffset: 0,
       pinToInvoice: isPrepaidLine(item.description),
     };
 
@@ -136,7 +140,7 @@ export function planImportRows<T extends PlanItem>(items: T[]): ImportRow<T>[] {
         installments: total,
         installmentCurrent: current,
         paidInstallments: current - 1,
-        startsNextMonth: false,
+        periodOffset: 0,
         pinToInvoice: false,
       });
       continue;
@@ -146,16 +150,24 @@ export function planImportRows<T extends PlanItem>(items: T[]): ImportRow<T>[] {
     // forward sit between it and the rest, and a plan can only bill consecutive months.
     rows.push({ ...single, pinToInvoice: true });
 
-    const resumeAt = Math.max(...prepaid) + 1;
-    if (resumeAt <= total) {
+    const prepaidSet = new Set(prepaid);
+    const remaining: number[] = [];
+    for (let n = current + 1; n <= total; n++) if (!prepaidSet.has(n)) remaining.push(n);
+
+    let offset = 1;
+    for (let i = 0; i < remaining.length; ) {
+      let j = i;
+      while (j + 1 < remaining.length && remaining[j + 1] === remaining[j] + 1) j += 1;
       rows.push({
         item,
-        installments: total,
-        installmentCurrent: resumeAt,
-        paidInstallments: resumeAt - 1,
-        startsNextMonth: true,
+        installments: remaining[j],
+        installmentCurrent: remaining[i],
+        paidInstallments: remaining[i] - 1,
+        periodOffset: offset,
         pinToInvoice: false,
       });
+      offset += j - i + 1;
+      i = j + 1;
     }
   }
 

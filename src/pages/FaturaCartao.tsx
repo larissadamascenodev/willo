@@ -493,7 +493,7 @@ const FaturaCartao = () => {
           ? invoiceAnchorDate(invoicePeriod)
           : anchorPurchaseDate(
               item,
-              invoicePeriod + (row.startsNextMonth ? 1 : 0),
+              invoicePeriod + row.periodOffset,
               paidInstallments,
               card.closing_day,
             );

@@ -221,7 +221,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
           ? invoiceAnchorDate(invoicePeriod)
           : anchorPurchaseDate(
               item,
-              invoicePeriod + (row.startsNextMonth ? 1 : 0),
+              invoicePeriod + row.periodOffset,
               paidInstallments,
               card.closingDay,
             );
