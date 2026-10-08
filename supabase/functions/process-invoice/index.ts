@@ -355,13 +355,23 @@ class GeminiError extends Error {
 /**
  * How long the whole read may take, shared between attempts.
  *
- * It used to be a flat 55s per model with two models tried in turn, which on a thirteen
- * page statement meant two attempts that each ran out of time and a user told to try again.
- * The first attempt now gets most of the budget, because a long document is slow rather
- * than broken, and a second model only runs when the first failed with time to spare.
+ * The thirteen page statement this was tuned against reads in about thirty seconds when
+ * the service is healthy. What breaks it is not length: it is a run of 5xx from upstream,
+ * and the old shape gave each model exactly one try, so a bad minute became "tente
+ * novamente" with nothing retried. Attempts now alternate between the models and back off
+ * between tries, for as long as the budget allows, because the second model lives on the
+ * same service as the first and a moment later is often all it takes.
  */
 const TOTAL_BUDGET_MS = 115_000;
 const MIN_ATTEMPT_MS = 20_000;
+const MAX_ATTEMPTS = 4;
+/** Growing pauses, so a struggling service is not hammered. */
+const BACKOFF_MS = [0, 2_000, 5_000, 9_000];
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Worth trying again: overloaded, rate limited, timed out, or a model that moved. */
+const isRetryable = (status: number) => status === 429 || status === 404 || status >= 500;
 
 async function callGemini(
   apiKey: string,
@@ -511,25 +521,49 @@ ${csvText}` }];
     let rawContent = "";
     let lastError: GeminiError | null = null;
     const startedAt = Date.now();
-    for (const model of GEMINI_MODELS) {
-      const left = TOTAL_BUDGET_MS - (Date.now() - startedAt);
-      if (left < MIN_ATTEMPT_MS) break;
+    // What each attempt actually did, returned on failure. Without it a read that breaks on
+    // someone else's machine is only ever "tente novamente", and there is nothing to act on.
+    const attempts: Array<{ model: string; seconds: number; status?: number; message?: string }> = [];
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      const model = GEMINI_MODELS[attempt % GEMINI_MODELS.length];
+      const pause = BACKOFF_MS[attempt] ?? 0;
+      let left = TOTAL_BUDGET_MS - (Date.now() - startedAt);
+      if (left - pause < MIN_ATTEMPT_MS) break;
+      if (pause) {
+        await sleep(pause);
+        left = TOTAL_BUDGET_MS - (Date.now() - startedAt);
+      }
+
+      const attemptAt = Date.now();
       try {
         rawContent = await callGemini(GEMINI_API_KEY, model, systemPrompt, parts, left);
+        attempts.push({ model, seconds: Math.round((Date.now() - attemptAt) / 1000) });
         lastError = null;
         break;
       } catch (err) {
         if (!(err instanceof GeminiError)) throw err;
         console.error(`Gemini ${model} failed: status=${err.status} ${err.message}`);
+        attempts.push({
+          model,
+          seconds: Math.round((Date.now() - attemptAt) / 1000),
+          status: err.status,
+          message: String(err.message).slice(0, 200),
+        });
         lastError = err;
-        // Quota, overload or a retired model are worth retrying on the next model
-        if (err.status !== 429 && err.status !== 404 && err.status < 500) break;
+        if (!isRetryable(err.status)) break;
       }
     }
 
     if (lastError) {
       if (lastError.status === 504 || lastError.status === 503) {
-        throw new Error("A leitura está demorando mais que o normal. Tente novamente em instantes.");
+        return new Response(
+          JSON.stringify({
+            error: "A leitura está demorando mais que o normal. Tente novamente em instantes.",
+            reason: "leitura_lenta",
+            attempts,
+          }),
+          { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       }
       if (lastError.status === 429) {
         return new Response(JSON.stringify({ error: "Limite gratuito de leituras atingido. Tente novamente em alguns minutos." }), {
@@ -540,7 +574,14 @@ ${csvText}` }];
       if ([401, 403].includes(lastError.status) || /API key/i.test(lastError.message)) {
         throw new Error("A leitura por IA está indisponível no momento. Tente novamente mais tarde.");
       }
-      throw new Error("Não foi possível processar a imagem. Tente com uma foto mais nítida.");
+      return new Response(
+        JSON.stringify({
+          error: "Não foi possível processar a imagem. Tente com uma foto mais nítida.",
+          reason: "sem_resposta",
+          attempts,
+        }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const jsonStart = rawContent.indexOf("{");
@@ -724,6 +765,8 @@ ${csvText}` }];
         declared_outstanding: declaredOutstanding,
         declared_card_limit: declaredCardLimit,
         declared_used_limit: declaredUsedLimit,
+        /** Which models ran and how long each took, so a slow read can be seen, not guessed. */
+        attempts,
         /** Unfiltered, for the reconciliation engine. */
         raw_events: rawEvents,
         summary: {
