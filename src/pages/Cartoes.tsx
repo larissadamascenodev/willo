@@ -154,6 +154,29 @@ const EmptyState = ({ text }: { text: string }) => (
   </div>
 );
 
+/**
+ * What the tab shows with no cards at all, on every tab. It has to carry the add button
+ * itself: deleting the last card used to leave a page with nothing to act on, because the
+ * only "Adicionar cartão" lived inside the list this replaces.
+ */
+const NoCardsState = ({ onAdd }: { onAdd: () => void }) => (
+  <div className="overflow-hidden rounded-[26px] border border-white/[0.08] willo-glass px-5 pb-5 pt-6 text-center">
+    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04]">
+      <CreditCard className="h-[22px] w-[22px] text-white/70" strokeWidth={2} />
+    </div>
+    <p className="mt-3.5 text-[17px] font-bold text-white">Nenhum cartão cadastrado</p>
+    <p className="mx-auto mt-1.5 max-w-[16rem] text-[13.5px] leading-snug text-white/55">
+      Cadastre um cartão para acompanhar faturas, limite e parcelamentos.
+    </p>
+    <button
+      onClick={onAdd}
+      className="mt-4 flex h-[50px] w-full items-center justify-center gap-2 rounded-[18px] bg-white text-[15px] font-semibold text-[#0B0B0B] active:opacity-80"
+    >
+      <Plus className="h-[18px] w-[18px]" strokeWidth={2.4} /> Adicionar cartão
+    </button>
+  </div>
+);
+
 // ── Page ─────────────────────────────────────────────────
 const Cartoes = () => {
   const navigate = useNavigate();
@@ -244,10 +267,15 @@ const Cartoes = () => {
           const full = all.find((c) => c.id === held.id);
           if (full) setEditingCard(full);
         }}
-        onDelete={() => {
+        onDelete={async () => {
           const held = heldCard;
           setHeldCard(null);
-          if (held) setEditingCard({ ...held, __deleting: true });
+          if (!held) return;
+          const all = (await getCreditCards()) as any[];
+          const full = all.find((c) => c.id === held.id);
+          // Open straight on the confirmation: the menu already asked for Excluir, and
+          // showing the edit form first made the deletion take a second Excluir.
+          if (full) setEditingCard({ ...full, __deleting: true });
         }}
       />
 
@@ -263,6 +291,7 @@ const Cartoes = () => {
             color: editingCard.color ?? null,
             last_four_digits: editingCard.last_four_digits ?? editingCard.lastFour ?? null,
           }}
+          startDeleting={!!editingCard.__deleting}
           onClose={() => setEditingCard(null)}
           onUpdated={() => { setEditingCard(null); refresh(); }}
           onDeleted={() => { setEditingCard(null); setCardFilter(null); refresh(); }}
@@ -296,7 +325,7 @@ const Cartoes = () => {
         {loading ? (
           <div className="h-64 animate-pulse rounded-[22px] willo-glass" />
         ) : cards.length === 0 ? (
-          <EmptyState text="Nenhum cartão cadastrado" />
+          <NoCardsState onAdd={() => setShowAddCard(true)} />
         ) : tab === "cartoes" ? (
           <CardsList
             cards={visibleCards}
