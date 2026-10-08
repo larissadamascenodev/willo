@@ -118,8 +118,14 @@ NUNCA conte a mesma compra duas vezes. É o erro mais caro que existe aqui:
 - Um parcelamento entra pelo valor da PARCELA desta fatura, nunca pelo total da compra, e nunca
   pelos dois.
 
+PAGAMENTOS DA FATURA: extraia, SIM, com valor NEGATIVO.
+"Pagamento em 14 AGO", "PAGAMENTO EFETUADO", "PAGAMENTO RECEBIDO", "PGTO DEBITO AUTOMATICO".
+Mantenha a palavra "Pagamento" no começo do description. O app precisa saber quanto foi pago
+para calcular o limite liberado. Ele sabe que pagamento não é despesa e cuida disso sozinho.
+NÃO extraia a linha de resumo "Pagamento recebido": ela repete a soma dos pagamentos do
+detalhamento. Só as linhas do detalhamento, uma por pagamento.
+
 NUNCA extraia estas linhas (não são nem compra, nem encargo, nem estorno):
-- Pagamentos da fatura: "Pagamento em 14 AGO", "PAGAMENTO EFETUADO", "PAGAMENTO RECEBIDO", "PGTO DEBITO AUTOMATICO"
 - Saldos e seus créditos espelhados, que se anulam: "Saldo em rotativo" com "Crédito de rotativo",
   "Saldo em atraso" com "Crédito de atraso", "Saldo em aberto", "Saldo financiado", "Saldo anterior",
   "Encerramento de dívida" com "Juros de dívida encerrada" e com "Estorno de juros da dívida encerrada".
@@ -346,11 +352,26 @@ class GeminiError extends Error {
 
 // A full statement PDF regularly takes ~20s to read, and a long one more than that;
 // the old 25s ceiling turned those into "a leitura está demorando mais que o normal".
-const GEMINI_TIMEOUT_MS = 55_000;
+/**
+ * How long the whole read may take, shared between attempts.
+ *
+ * It used to be a flat 55s per model with two models tried in turn, which on a thirteen
+ * page statement meant two attempts that each ran out of time and a user told to try again.
+ * The first attempt now gets most of the budget, because a long document is slow rather
+ * than broken, and a second model only runs when the first failed with time to spare.
+ */
+const TOTAL_BUDGET_MS = 115_000;
+const MIN_ATTEMPT_MS = 20_000;
 
-async function callGemini(apiKey: string, model: string, systemPrompt: string, parts: GeminiPart[]): Promise<string> {
+async function callGemini(
+  apiKey: string,
+  model: string,
+  systemPrompt: string,
+  parts: GeminiPart[],
+  timeoutMs: number,
+): Promise<string> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     let res: Response;
     let data: any;
@@ -489,9 +510,12 @@ ${csvText}` }];
 
     let rawContent = "";
     let lastError: GeminiError | null = null;
+    const startedAt = Date.now();
     for (const model of GEMINI_MODELS) {
+      const left = TOTAL_BUDGET_MS - (Date.now() - startedAt);
+      if (left < MIN_ATTEMPT_MS) break;
       try {
-        rawContent = await callGemini(GEMINI_API_KEY, model, systemPrompt, parts);
+        rawContent = await callGemini(GEMINI_API_KEY, model, systemPrompt, parts, left);
         lastError = null;
         break;
       } catch (err) {
@@ -550,6 +574,25 @@ ${csvText}` }];
     if (!parsed.items || !Array.isArray(parsed.items)) {
       throw new Error("Nenhuma transação encontrada.");
     }
+
+    /*
+     * Everything the reader saw, before any line is judged. The import below still works
+     * from the filtered list, so nothing changes for it; this array exists so the
+     * reconciliation engine can decide for itself what a line means. It has to: a payment
+     * is dropped by the filter, and the engine cannot report what was paid off a list that
+     * has already had the payments taken out of it.
+     */
+    const rawEvents = parsed.items
+      .filter((item: any) => item.description && Number.isFinite(Number(item.amount)))
+      .map((item: any, i: number) => ({
+        id: `ev_${i + 1}`,
+        date: item.date || null,
+        description: String(item.description),
+        amount: Number(item.amount),
+        installment_current: item.installment_current ? Number(item.installment_current) : null,
+        installment_total: item.installment_total ? Number(item.installment_total) : null,
+        financing: item.financing ?? null,
+      }));
 
     const cleanedItems: ExtractedItem[] = parsed.items
       .filter((item: any) => item.description && Number(item.amount) && Number.isFinite(Number(item.amount)))
@@ -681,6 +724,19 @@ ${csvText}` }];
         declared_outstanding: declaredOutstanding,
         declared_card_limit: declaredCardLimit,
         declared_used_limit: declaredUsedLimit,
+        /** Unfiltered, for the reconciliation engine. */
+        raw_events: rawEvents,
+        summary: {
+          total_a_pagar: declaredTotal,
+          total_compras: declaredPurchases,
+          fatura_anterior: num(summary.fatura_anterior),
+          pagamentos: num(summary.pagamentos),
+          outros_lancamentos: num(summary.outros_lancamentos),
+          fechamento_proxima_fatura: declaredNextInvoice,
+          saldo_aberto_total: declaredOutstanding,
+          limite_total: declaredCardLimit,
+          limite_utilizado: declaredUsedLimit,
+        },
         /** Last month's bill plus payments. Non-zero means "Total a pagar" is not the period's sum. */
         carried_over: Math.round(carried * 100) / 100,
         /** How many exact repeats were dropped to make the sum meet that reference. */
