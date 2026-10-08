@@ -9,6 +9,7 @@ import { reconcileInvoice } from "@/lib/invoice/engine";
 import { toCents } from "@/lib/invoice/money";
 import { toImportRows } from "@/lib/invoice/toImportRows";
 import { statementCarryLine } from "@/lib/statementCarry";
+import { saveStatementFigures } from "@/services/statementFigures";
 import InvoiceEntryChooser from "./InvoiceEntryChooser";
 import InvoiceScanScreen from "./InvoiceScanScreen";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "./InvoiceUploadReviewModal";
@@ -88,6 +89,8 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
   const [carriedOver, setCarriedOver] = useState<number | null>(null);
   const [declaredNext, setDeclaredNext] = useState<number | null>(null);
   const [declaredOutstanding, setDeclaredOutstanding] = useState<number | null>(null);
+  const [declaredCardLimit, setDeclaredCardLimit] = useState<number | null>(null);
+  const [declaredUsedLimit, setDeclaredUsedLimit] = useState<number | null>(null);
   const [avgConfidence, setAvgConfidence] = useState<number | undefined>(undefined);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
@@ -207,6 +210,8 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
       setCarriedOver(data.carried_over ?? null);
       setDeclaredNext(data.declared_next_invoice ?? null);
       setDeclaredOutstanding(data.declared_outstanding ?? null);
+      setDeclaredCardLimit(data.declared_card_limit ?? null);
+      setDeclaredUsedLimit(data.declared_used_limit ?? null);
       setAvgConfidence(typeof data.avg_confidence === "number" ? data.avg_confidence : undefined);
       setScanItems(items);
     } catch (err: any) {
@@ -262,6 +267,19 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
           user.id,
         );
       }
+      // What the bank printed, written down beside what the app worked out. It is evidence,
+      // never an input: the used limit stays derived, and this sits next to it.
+      await saveStatementFigures(card.id, month, year, {
+        totalLimit: declaredCardLimit,
+        usedLimit: declaredUsedLimit,
+        availableLimit:
+          declaredCardLimit != null && declaredUsedLimit != null
+            ? Math.round((declaredCardLimit - declaredUsedLimit) * 100) / 100
+            : null,
+        officialTotal: declaredTotal,
+        nextInvoiceClosing: declaredNext,
+      });
+
       toast.success(`${selected.length} lançamento${selected.length > 1 ? "s" : ""} importado${selected.length > 1 ? "s" : ""}! 🎉`);
       setReviewOpen(false);
       setExtracted([]);
@@ -378,6 +396,18 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
             <p className="mt-0.5 text-[14px] font-semibold tabular-nums text-white">{formatCurrency(limit)}</p>
           </div>
         </div>
+
+        {/* What the bank printed, when it disagrees with what the app counts. Both are
+            shown rather than one being chosen: ours is every instalment still owed, theirs
+            was measured the day the statement closed, and the gap is worth seeing. */}
+        {card.statementUsed != null && Math.abs(card.statementUsed - used) > 0.5 && (
+          <p className="mt-3 border-t border-white/[0.06] pt-3 text-[12px] leading-snug text-white/45">
+            A sua fatura{card.statementRef ? ` de ${card.statementRef}` : ""} dizia{" "}
+            <span className="font-semibold tabular-nums text-white/70">{formatCurrency(card.statementUsed)}</span>{" "}
+            de limite usado, {formatCurrency(Math.abs(card.statementUsed - used))} a{" "}
+            {card.statementUsed > used ? "mais" : "menos"} que a nossa conta.
+          </p>
+        )}
 
         <div className="mt-4 flex items-center gap-4 border-t border-white/[0.06] pt-3.5">
           <span className="flex items-center gap-2 text-[12.5px] text-white/60">

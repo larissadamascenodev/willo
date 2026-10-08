@@ -33,6 +33,7 @@ import { reconcileInvoice } from "@/lib/invoice/engine";
 import { toCents } from "@/lib/invoice/money";
 import { toImportRows } from "@/lib/invoice/toImportRows";
 import { statementCarryLine } from "@/lib/statementCarry";
+import { saveStatementFigures } from "@/services/statementFigures";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
 import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
 import CreditCardEditModal from "@/components/fatura/CreditCardEditModal";
@@ -126,6 +127,8 @@ const FaturaCartao = () => {
   const [carriedOver, setCarriedOver] = useState<number | null>(null);
   const [declaredNext, setDeclaredNext] = useState<number | null>(null);
   const [declaredOutstanding, setDeclaredOutstanding] = useState<number | null>(null);
+  const [declaredCardLimit, setDeclaredCardLimit] = useState<number | null>(null);
+  const [declaredUsedLimit, setDeclaredUsedLimit] = useState<number | null>(null);
   const [avgConfidence, setAvgConfidence] = useState<number | undefined>(undefined);
   const [scanOpen, setScanOpen] = useState(false);
   const [scanItems, setScanItems] = useState<ExtractedItem[] | null>(null);
@@ -471,6 +474,8 @@ const FaturaCartao = () => {
       setCarriedOver(isInvoice ? (data.carried_over ?? null) : null);
       setDeclaredNext(isInvoice ? (data.declared_next_invoice ?? null) : null);
       setDeclaredOutstanding(isInvoice ? (data.declared_outstanding ?? null) : null);
+      setDeclaredCardLimit(isInvoice ? (data.declared_card_limit ?? null) : null);
+      setDeclaredUsedLimit(isInvoice ? (data.declared_used_limit ?? null) : null);
       setAvgConfidence(typeof data.avg_confidence === "number" ? data.avg_confidence : undefined);
       toast.dismiss("upload-processing");
 
@@ -531,6 +536,18 @@ const FaturaCartao = () => {
           user.id
         );
       }
+
+      // The bank's own figures, stored beside the app's, never instead of them.
+      await saveStatementFigures(cardId, selectedMonth, selectedYear, {
+        totalLimit: declaredCardLimit,
+        usedLimit: declaredUsedLimit,
+        availableLimit:
+          declaredCardLimit != null && declaredUsedLimit != null
+            ? Math.round((declaredCardLimit - declaredUsedLimit) * 100) / 100
+            : null,
+        officialTotal: declaredTotal,
+        nextInvoiceClosing: declaredNext,
+      });
 
       toast.success(`${selectedItems.length} lançamento${selectedItems.length > 1 ? "s" : ""} importado${selectedItems.length > 1 ? "s" : ""} com sucesso! 🎉`);
       setShowReviewModal(false);

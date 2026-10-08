@@ -11,6 +11,9 @@ export interface OverviewCard {
   dueDay: number;
   color: string | null;
   lastFour: string | null;
+  /** What the bank printed on the last statement read. Evidence, never an input. */
+  statementUsed?: number | null;
+  statementRef?: string | null;
 }
 
 export interface OverviewInvoice {
@@ -74,6 +77,9 @@ export function useCardsOverview() {
       dueDay: c.due_day ?? 10,
       color: c.color,
       lastFour: c.last_four_digits,
+      statementUsed:
+        (c as any).statement_used_limit == null ? null : Number((c as any).statement_used_limit),
+      statementRef: (c as any).statement_ref ?? null,
     }));
     const nextInvoices: OverviewInvoice[] = (invoiceRows ?? []).map((inv) => ({
       id: inv.id,
