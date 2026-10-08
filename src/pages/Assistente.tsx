@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUp, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useHiloSnapshot } from "@/hooks/useHiloSnapshot";
+import { useAssistantSnapshot } from "@/hooks/useAssistantSnapshot";
 import { cn } from "@/lib/utils";
 
 type Turn = { role: "user" | "assistant"; content: string };
 
-/** Openers that show what Hilo is for: deciding, not just looking things up. */
+/** Openers that show what the assistant is for: deciding, not just looking things up. */
 const OPENERS = [
   "Como está meu mês?",
   "Posso gastar R$ 300 essa semana?",
@@ -55,8 +55,8 @@ function Thinking() {
   );
 }
 
-export default function Hilo() {
-  const { build, loading: snapshotLoading } = useHiloSnapshot();
+export default function Assistente() {
+  const { build, loading: snapshotLoading } = useAssistantSnapshot();
   const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -81,7 +81,7 @@ export default function Hilo() {
       setSending(true);
 
       try {
-        const { data, error } = await supabase.functions.invoke("hilo-chat", {
+        const { data, error } = await supabase.functions.invoke("willo-assistant", {
           body: { messages: next, snapshot: build() },
         });
 
@@ -94,14 +94,14 @@ export default function Hilo() {
           } catch {
             said = null;
           }
-          throw new Error(said || "Não consegui falar com o Hilo agora.");
+          throw new Error(said || "Não consegui falar com o Willo agora.");
         }
         if (data?.error) throw new Error(data.error);
 
         setTurns((prev) => [...prev, { role: "assistant", content: data.reply }]);
       } catch (err: any) {
         // Say it failed rather than leaving a turn that looks answered.
-        setFailed(err?.message || "Não consegui falar com o Hilo agora.");
+        setFailed(err?.message || "Não consegui falar com o Willo agora.");
       } finally {
         setSending(false);
       }
@@ -119,7 +119,7 @@ export default function Hilo() {
             <Sparkles className="h-[15px] w-[15px] text-white/80" strokeWidth={2.1} />
           </span>
           <div className="min-w-0">
-            <p className="text-[16px] font-bold leading-none text-white">Hilo</p>
+            <p className="text-[16px] font-bold leading-none text-white">Willo</p>
             <p className="mt-1 text-[11.5px] text-white/45">Olha os seus números de verdade</p>
           </div>
         </div>
@@ -200,7 +200,7 @@ export default function Hilo() {
           </button>
         </div>
         <p className="mt-2 px-1 text-center text-[11px] leading-snug text-white/30">
-          O Hilo analisa e recomenda. Ainda não registra lançamentos.
+          O Willo analisa e recomenda. Ainda não registra lançamentos.
         </p>
       </div>
     </div>

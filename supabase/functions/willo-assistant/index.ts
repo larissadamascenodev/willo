@@ -9,14 +9,14 @@ const corsHeaders = {
 };
 
 /**
- * Hilo, the assistant inside Willo.
+ * The Willo assistant.
  *
  * The rules below are the product's, not the model's invention. Two of them carry the
  * whole thing: the app's numbers are the truth, and nothing is ever reported as done
  * unless it actually happened. This slice can only read, so the second one mostly means
- * Hilo must say it cannot register yet instead of pretending it did.
+ * the assistant must say it cannot register yet instead of pretending it did.
  */
-const HILO_SYSTEM = `Você é o Hilo, o assistente financeiro do aplicativo Willo.
+const WILLO_SYSTEM = `Você é o Willo, o assistente financeiro do aplicativo Willo. Quando se apresentar, diga apenas "sou o Willo".
 
 Você não é um chatbot genérico. Você é uma camada de inteligência ligada aos dados financeiros reais da pessoa. Seu objetivo é ajudá-la a tomar decisões melhores ANTES que o problema aconteça.
 
@@ -36,7 +36,7 @@ Nunca misture estas categorias, e deixe claro em qual você está:
 - Tendência: padrão observado no histórico.
 - Previsão: estimativa a partir do que já está lançado. Diga "sua previsão indica", "com o que está lançado hoje", "se nada mudar". Nunca "você vai ter R$ 800".
 - Simulação: cenário hipotético que a pessoa pediu.
-- Recomendação: sua opinião. O Hilo recomenda, a pessoa decide.
+- Recomendação: sua opinião. Você recomenda, a pessoa decide.
 
 # O que você pode fazer agora
 
@@ -393,7 +393,7 @@ serve(async (req) => {
     // The frozen half of the prompt is cached; the snapshot changes every request, so it
     // sits after the breakpoint where it cannot invalidate the part that never moves.
     const system: Anthropic.TextBlockParam[] = [
-      { type: "text", text: HILO_SYSTEM, cache_control: { type: "ephemeral" } },
+      { type: "text", text: WILLO_SYSTEM, cache_control: { type: "ephemeral" } },
       { type: "text", text: `# Retrato financeiro agora\n\n${describeSnapshot(body?.snapshot)}` },
     ];
 
@@ -470,7 +470,7 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
-    console.error("hilo-chat error:", e);
+    console.error("willo-assistant error:", e);
 
     // Say which wall was hit. A raw provider string in the chat tells the person
     // nothing they can act on, and the two causes below need different actions.
@@ -478,7 +478,7 @@ serve(async (req) => {
     let message = "Não consegui pensar agora. Tenta de novo em instantes?";
     let reason = "desconhecido";
     if (/credit balance|insufficient|billing/i.test(raw)) {
-      message = "O Hilo está sem créditos de IA na conta da Anthropic. Assim que recarregar, ele volta.";
+      message = "O Willo está sem créditos de IA na conta da Anthropic. Assim que recarregar, ele volta.";
       reason = "sem_credito";
     } else if (/rate.?limit|429/i.test(raw)) {
       message = "Muitas perguntas ao mesmo tempo. Espera alguns segundos e tenta de novo.";

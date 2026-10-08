@@ -15,7 +15,7 @@ export const navItems: {
 }[] = [
   { icon: Home, label: "Início", path: "/" },
   { icon: ArrowLeftRight, label: "Transações", path: "/transacoes" },
-  { icon: Sparkles, label: "Assistente", path: "/hilo" },
+  { icon: Sparkles, label: "Assistente", path: "/assistente" },
 ];
 
 const MobileBottomNav = memo(() => {

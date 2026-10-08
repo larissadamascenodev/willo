@@ -4,7 +4,7 @@ import { useFinancialProjection } from "@/hooks/useFinancialProjection";
 import { getAccounts } from "@/services/transactionService";
 
 /**
- * What Hilo is told about the person's money before it is asked anything.
+ * What the assistant is told about the person's money before it is asked anything.
  *
  * The derived figures live here rather than in the edge function on purpose: the
  * projection, the month's totals and the invoice maths are the app's own rules, already
@@ -17,9 +17,9 @@ const MONTHS = [
   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
 ];
 
-export type HiloSnapshot = Record<string, unknown>;
+export type AssistantSnapshot = Record<string, unknown>;
 
-export function useHiloSnapshot() {
+export function useAssistantSnapshot() {
   const { data, projections, loading: projLoading } = useFinancialProjection();
   const { cards, invoices, loading: cardsLoading } = useCardsOverview();
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -32,7 +32,7 @@ export function useHiloSnapshot() {
     return () => { alive = false; };
   }, []);
 
-  const build = useCallback((): HiloSnapshot => {
+  const build = useCallback((): AssistantSnapshot => {
     const now = new Date();
     const month = now.getMonth();
     const year = now.getFullYear();
@@ -72,7 +72,7 @@ export function useHiloSnapshot() {
 
       // Only the month-by-month projection goes up. DashboardData.projection carries
       // three-month averages that come back as 0 on this screen's fetch, and a zero
-      // presented as a fact is exactly the thing Hilo must never do.
+      // presented as a fact is exactly the thing the assistant must never do.
       previsao: {
         proximos_meses: projections.slice(0, 6).map((p) => ({
           mes: `${MONTHS[p.month]} de ${p.year}`,
