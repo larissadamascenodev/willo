@@ -11,6 +11,9 @@ import { toImportRows } from "@/lib/invoice/toImportRows";
 import { statementCarryLine } from "@/lib/statementCarry";
 import { saveStatementFigures } from "@/services/statementFigures";
 import { findPreviousImport, hashFile, recordImport, type PreviousImport } from "@/services/invoiceImports";
+import { applyImportedPayments, type PaymentMatchResult } from "@/services/importedPayments";
+import ImportSummaryModal from "./ImportSummaryModal";
+import type { InvoiceImportResult } from "@/lib/invoice/types";
 import InvoiceEntryChooser from "./InvoiceEntryChooser";
 import InvoiceScanScreen from "./InvoiceScanScreen";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "./InvoiceUploadReviewModal";
@@ -95,6 +98,9 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
   const [documentHash, setDocumentHash] = useState<string | null>(null);
   const [documentName, setDocumentName] = useState<string | null>(null);
   const [alreadyImported, setAlreadyImported] = useState<PreviousImport | null>(null);
+  const [summary, setSummary] = useState<
+    { result: InvoiceImportResult; rows: number; payments: PaymentMatchResult | null } | null
+  >(null);
   const [avgConfidence, setAvgConfidence] = useState<number | undefined>(undefined);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
@@ -280,6 +286,16 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
           user.id,
         );
       }
+      // A payment on a statement settled an earlier invoice, not this one. Applied where
+      // the app has that invoice, which frees the limit it was holding.
+      const paymentMatches = await applyImportedPayments({
+        userId: user.id,
+        cardId: card.id,
+        dueDay: card.dueDay,
+        invoicePeriod,
+        payments: result.payments,
+      });
+
       // Where this came from and what it read, so a number that looks wrong later has
       // something behind it. Written after the money, and never allowed to fail the import.
       await recordImport({
@@ -306,7 +322,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
         nextInvoiceClosing: declaredNext,
       });
 
-      toast.success(`${selected.length} lançamento${selected.length > 1 ? "s" : ""} importado${selected.length > 1 ? "s" : ""}! 🎉`);
+      setSummary({ result, rows: rows.length, payments: paymentMatches });
       setReviewOpen(false);
       setExtracted([]);
       window.dispatchEvent(new CustomEvent("transaction-created"));
@@ -657,6 +673,14 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
         onClose={() => setChooserOpen(false)}
         onManual={() => { setChooserOpen(false); setAddOpen(true); }}
         onFile={handleUpload}
+      />
+
+      <ImportSummaryModal
+        open={!!summary}
+        onClose={() => setSummary(null)}
+        result={summary?.result ?? null}
+        rowsWritten={summary?.rows ?? 0}
+        payments={summary?.payments ?? null}
       />
 
       <InvoiceScanScreen
