@@ -160,6 +160,13 @@ Para cada compra retorne:
 - type: sempre "despesa"
 - confidence: 0 a 1 conforme a legibilidade da linha (valor nítido, data presente, nome claro = alto)
 
+FOTO OU PRINT EM VEZ DE PDF:
+Pode vir um print do extrato ou da lista de lançamentos do app do banco, não a fatura inteira.
+Nesse caso cada lançamento costuma ocupar uma linha ou um bloco com: nome, tipo ("Pix no crédito",
+"Compra no débito"), data, marcação de parcela e valor à direita. Extraia um item por lançamento
+visível, do mesmo jeito. O valor à direita de uma linha parcelada é o valor DA PARCELA.
+Não invente o que está cortado na borda da imagem: se não dá para ler, não extraia.
+
 REGRAS DE DETECÇÃO DE PARCELAMENTO:
 - Padrões: "- Parcela 4/10", "Parcela 4/10", "4/10", "04/10", "PARC 04/10", "Parcela 4 de 10", "4 DE 10", "(4/10)"
 - Extraia installment_current e installment_total e REMOVA essa marcação do description

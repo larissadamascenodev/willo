@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Check, Loader2, Sparkles, ShieldCheck, ShieldAlert, AlertTriangle,
@@ -7,6 +8,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { cn } from "@/lib/utils";
 import { DEFAULT_EXPENSE_CATEGORIES, getDefaultCategoryIcon } from "@/lib/categoryIcons";
 import { getCustomCategories, createCustomCategory, type CustomCategory } from "@/services/categoryService";
@@ -422,11 +424,38 @@ function ItemEditSheet({ item, onClose, onChange }: {
               )}
             </div>
 
-            {isPlan && (
-              <p className="mt-3 px-1 text-center text-[12px] leading-snug text-white/50">
-                As parcelas anteriores não entram. A cobrança começa nesta fatura e segue até a {data.installment_total}ª.
-              </p>
-            )}
+            {isPlan && (() => {
+              // The statement prints the instalment, so the purchase it came from has to be
+              // worked out: parcela times the plan's length. What matters for this card is
+              // the second line, since the instalments already charged are not owed here.
+              const total = data.installment_total ?? 1;
+              const current = Math.max(1, Math.min(total, data.installment_current ?? 1));
+              const remaining = total - current + 1;
+              return (
+                <div className="mt-3 rounded-[18px] border border-white/[0.07] bg-white/[0.03] px-3.5 py-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-[12.5px] text-white/55">
+                      Compra inteira · {total}x de {fmtMoney(data.amount)}
+                    </span>
+                    <span className="shrink-0 text-[13.5px] font-semibold tabular-nums text-white/75">
+                      {fmtMoney(data.amount * total)}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex items-baseline justify-between gap-3">
+                    <span className="text-[12.5px] text-white/55">
+                      Entra aqui · {remaining} parcela{remaining === 1 ? "" : "s"}, da {current}ª em diante
+                    </span>
+                    <span className="shrink-0 text-[13.5px] font-bold tabular-nums text-white">
+                      {fmtMoney(data.amount * remaining)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[11.5px] leading-snug text-white/40">
+                    As {current - 1} parcela{current - 1 === 1 ? "" : "s"} já cobrada{current - 1 === 1 ? "" : "s"} não
+                    entra{current - 1 === 1 ? "" : "m"}, nem na fatura nem no limite do cartão.
+                  </p>
+                </div>
+              );
+            })()}
 
             <button
               type="button"
@@ -750,7 +779,11 @@ export default function InvoiceUploadReviewModal({
 
   const confirm = () => (isSingleItem ? onConfirm([{ ...items[0], selected: true }]) : onConfirm(selectedItems));
 
-  return (
+  useScrollLock(open);
+
+  // Portalled for the same reason as the reading screen: `fixed` is measured against the
+  // nearest transformed ancestor, and this is mounted inside a page full of them.
+  const screen = (
     <AnimatePresence>
       {open && (
         <motion.div
@@ -825,4 +858,6 @@ export default function InvoiceUploadReviewModal({
       )}
     </AnimatePresence>
   );
+
+  return typeof document !== "undefined" ? createPortal(screen, document.body) : null;
 }

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, FileText, Layers, RotateCcw, Check } from "lucide-react";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { getDefaultCategoryIcon } from "@/lib/categoryIcons";
 import { getCategoryHexColor } from "@/lib/categoryUtils";
 import { getCurrency } from "@/lib/currency";
@@ -235,7 +237,17 @@ export default function InvoiceScanScreen({ open, items, onClose, onDone }: {
   onClose: () => void;
   onDone: () => void;
 }) {
-  return (
+  useScrollLock(open);
+
+  /*
+   * Covering the screen takes more than `fixed inset-0`. This is mounted deep inside the
+   * cards page, and any ancestor with a transform, which every framer-motion animation
+   * leaves behind, becomes the frame that `fixed` is measured against: the screen then
+   * started partway down the page with the dashboard showing above it, and scrolling moved
+   * that dashboard instead of the reading screen. Portalling to the body leaves every
+   * transform behind, and the lock stops the page underneath from moving at all.
+   */
+  const screen = (
     <AnimatePresence>
       {open && (
         <motion.div
@@ -259,4 +271,6 @@ export default function InvoiceScanScreen({ open, items, onClose, onDone }: {
       )}
     </AnimatePresence>
   );
+
+  return typeof document !== "undefined" ? createPortal(screen, document.body) : null;
 }

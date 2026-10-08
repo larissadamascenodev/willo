@@ -1,6 +1,7 @@
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useDragControls, type PanInfo } from "framer-motion";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -24,13 +25,6 @@ interface Props {
   placement?: "center" | "bottom";
 }
 
-/**
- * Sheets stack (a picker on top of a form, a creator on top of the picker), so the scroll
- * lock is counted: saving and restoring the previous value left the page stuck whenever
- * one sheet closed while another was still open.
- */
-let scrollLocks = 0;
-
 const BottomSheet = ({
   open, onClose, children, size = "auto", footer, className, zIndex = 60, inline = false,
   placement = "center",
@@ -38,15 +32,9 @@ const BottomSheet = ({
   const dragControls = useDragControls();
   const bottom = placement === "bottom";
 
-  useEffect(() => {
-    if (!open || inline) return;
-    scrollLocks += 1;
-    document.body.style.overflow = "hidden";
-    return () => {
-      scrollLocks = Math.max(0, scrollLocks - 1);
-      if (scrollLocks === 0) document.body.style.overflow = "";
-    };
-  }, [open, inline]);
+  // Shared with the full-screen overlays: a count per component unlocks the page as soon
+  // as one of them closes, even with another still covering it.
+  useScrollLock(open && !inline);
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
     if (info.offset.y > 120 || info.velocity.y > 600) onClose();
