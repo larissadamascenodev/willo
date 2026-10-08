@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUp, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAssistantSnapshot } from "@/hooks/useAssistantSnapshot";
+import GmailConnection from "@/components/assistant/GmailConnection";
 import { cn } from "@/lib/utils";
 
 type Turn = { role: "user" | "assistant"; content: string };
@@ -137,7 +138,11 @@ export default function Assistente() {
               Eu leio o que já está lançado no Willo. Posso analisar, comparar meses e simular
               uma compra antes de você fazer.
             </p>
-            <div className="mt-5 space-y-2">
+            <div className="mt-5">
+              <GmailConnection />
+            </div>
+
+            <div className="mt-2.5 space-y-2">
               {OPENERS.map((o) => (
                 <button
                   key={o}
