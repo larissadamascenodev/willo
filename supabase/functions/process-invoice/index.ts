@@ -151,9 +151,17 @@ Para cada compra retorne:
 REGRAS DE DETECÇÃO DE PARCELAMENTO:
 - Padrões: "- Parcela 4/10", "Parcela 4/10", "4/10", "04/10", "PARC 04/10", "Parcela 4 de 10", "4 DE 10", "(4/10)"
 - Extraia installment_current e installment_total e REMOVA essa marcação do description
-- Quando a linha explica o total ("Total a pagar: R$ 391,00 ... divididos em 6 parcelas de R$ 65,17"),
-  o amount continua sendo o valor cobrado NESTA fatura, não o total da compra
+- A linha que EXPLICA um parcelamento NÃO é uma compra. Em faturas do Nubank ela vem logo
+  abaixo da compra, recuada, nesta forma:
+      "Total a pagar: R$ 384,89 (valor da transação de R$ 300,00 + R$ 2,01 de IOF
+       + R$ 82,88 de juros) divididos em 6 parcelas de R$ 64,15."
+  Ela repete valores que já estão na linha de cima. Use ela só para confirmar o número de
+  parcelas e o valor da parcela da compra anterior, e NUNCA gere um item a partir dela.
+  Se a explicação ocupa duas ou três linhas, continua sendo zero itens.
 - Uma compra "4/10" significa que 3 parcelas já foram cobradas em faturas anteriores — mesmo assim extraia normalmente, o app cuida disso
+- "Antecipada - Loja X - Parcela 6/6" é uma parcela que o banco puxou para esta fatura.
+  MANTENHA a palavra "Antecipada" no começo do description: é por ela que o app sabe que
+  essa parcela já foi cobrada e não deve cobrá-la de novo lá na frente.
 - Sem indicação de parcelamento: os dois campos ficam null (não invente "1/1")
 
 ${CATEGORY_GUIDE}
