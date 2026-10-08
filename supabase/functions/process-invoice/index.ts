@@ -116,7 +116,11 @@ NUNCA extraia estas linhas (não são nem compra, nem encargo, nem estorno):
 - Pagamentos da fatura: "Pagamento em 14 AGO", "PAGAMENTO EFETUADO", "PAGAMENTO RECEBIDO", "PGTO DEBITO AUTOMATICO"
 - Saldos e seus créditos espelhados, que se anulam: "Saldo em rotativo" com "Crédito de rotativo",
   "Saldo em atraso" com "Crédito de atraso", "Saldo em aberto", "Saldo financiado", "Saldo anterior",
-  "Encerramento de dívida" com "Juros de dívida encerrada"
+  "Encerramento de dívida" com "Juros de dívida encerrada" e com "Estorno de juros da dívida encerrada".
+  Esses pares se anulam e o sinal varia: às vezes o encerramento é positivo e o estorno negativo,
+  às vezes o contrário. Fora os DOIS lados, sempre, não importa o sinal de cada um.
+- "Estorno de juros" que aparece no RESUMO da fatura. Ele é o mesmo lançamento que o detalhamento
+  mostra como "Estorno de juros de rotativo". Extraia só o do detalhamento, uma vez.
 - Resumo da fatura: "Fatura anterior", "Total de compras", "Total a pagar", "Outros lançamentos",
   "Juros de financiamento" (é o mesmo valor que já aparece como "Juros de rotativo" na lista)
 - Limites e cabeçalhos: "Limite total", "Limite disponível", "Pré-aprovado", "Valor máximo", "Pagamentos e Financiamentos"
@@ -552,9 +556,14 @@ ${csvText}` }];
     const declaredTotal = Number(summary.total_a_pagar) || null;
     const declaredPurchases = Number(summary.total_compras) || null;
 
-    // What the statement brought in from before this period: last month's bill, the payment
-    // that was made against it, and any reversal of old charges.
-    const carried = num(summary.fatura_anterior) + num(summary.pagamentos) + num(summary.estornos_resumo);
+    // What the statement brought in from before this period: last month's bill and the
+    // payment made against it.
+    //
+    // The summary's reversal line stays out. A statement prints it twice, once in the
+    // summary ("Estorno de juros") and once in the detail ("Estorno de juros de rotativo"),
+    // and the detail is already extracted as its own item. Adding it here as well credited
+    // the same R$ 20,69 twice.
+    const carried = num(summary.fatura_anterior) + num(summary.pagamentos);
 
     // What the extracted lines should add up to. The printed "Total a pagar" is NOT that
     // number — it is a balance, so it already carries last month's bill and subtracts the
