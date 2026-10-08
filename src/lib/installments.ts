@@ -51,6 +51,17 @@ export const isPrepaidLine = (description: string) => PREPAID_PREFIX.test(descri
 export const planKeyOf = (description: string, total: number | null | undefined) =>
   `${description.trim().replace(PREPAID_PREFIX, "").toLowerCase()}|${total ?? 0}`;
 
+/** "Estorno de Shein", "Crédito de Shein", "Devolução de Shein": the purchase coming undone. */
+const REVERSAL_PREFIX = /^(estorno|credito|crédito|devolucao|devolução|cancelamento)\s+(de|da|do)\s+/i;
+
+const merchantOf = (description: string) =>
+  description
+    .trim()
+    .replace(PREPAID_PREFIX, "")
+    .replace(REVERSAL_PREFIX, "")
+    .replace(/^["']|["']$/g, "")
+    .toLowerCase();
+
 type PlanItem = {
   description: string;
   amount: number;
@@ -130,6 +141,26 @@ export function planImportRows<T extends PlanItem>(items: T[]): ImportRow<T>[] {
     // A refund, a one-off, or a prepaid line: one charge on this invoice and nothing after.
     if (!isPlan || isPrepaidLine(item.description)) {
       rows.push(single);
+      continue;
+    }
+
+    // A plan bought and reversed on the same statement leaves nothing behind. The credit
+    // only cancels this month's instalment, so the invoice looks right while eight more
+    // months of a purchase that no longer exists sit in the future and eat the limit.
+    // Only a plan on its FIRST instalment qualifies: further along, a credit of the same
+    // size is far more likely to be a refund of one instalment.
+    const reversedNow =
+      current === 1 &&
+      items.some(
+        (other) =>
+          other !== item &&
+          other.amount < 0 &&
+          Math.abs(Math.abs(other.amount) - item.amount) <= 0.05 &&
+          REVERSAL_PREFIX.test(other.description.trim()) &&
+          merchantOf(other.description) === merchantOf(item.description),
+      );
+    if (reversedNow) {
+      rows.push({ ...single, pinToInvoice: true });
       continue;
     }
 
