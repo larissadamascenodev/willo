@@ -135,8 +135,16 @@ quando a fatura mostra o valor negativo:
   "fatura_anterior": número,    // "Fatura anterior", "Saldo anterior", "Saldo da fatura anterior"
   "pagamentos": número,         // "Pagamento recebido", "Pagamentos", "Créditos" — NEGATIVO
   "estornos_resumo": número,    // "Estorno de juros", "Estorno de encargos" do resumo — NEGATIVO
-  "outros_lancamentos": número  // "Outros lançamentos" do resumo, com o sinal impresso
+  "outros_lancamentos": número,  // "Outros lançamentos" do resumo, com o sinal impresso
+  "fechamento_proxima_fatura": número,  // "Fechamento da próxima fatura", 0 se não houver
+  "saldo_aberto_total": número,         // "Saldo em aberto total" / "Saldo devedor total"
+  "limite_total": número,               // "Limite total" do cartão
+  "limite_utilizado": número            // "Utilizado" / "Limite utilizado"
 }
+
+Esses quatro últimos são CONFERÊNCIA, não lançamento. O app usa eles para avisar a pessoa
+quando a leitura não fechou. Copie o que está impresso, sem calcular nada. Se a fatura não
+trouxer algum deles, mande 0.
 
 Para cada compra retorne:
 - description: nome SIMPLIFICADO do estabelecimento (ver regras acima), sem a marcação de parcela
@@ -509,6 +517,10 @@ ${csvText}` }];
         pagamentos?: number;
         estornos_resumo?: number;
         outros_lancamentos?: number;
+        fechamento_proxima_fatura?: number;
+        saldo_aberto_total?: number;
+        limite_total?: number;
+        limite_utilizado?: number;
       };
     };
     try {
@@ -560,6 +572,10 @@ ${csvText}` }];
     const summary = parsed.summary ?? {};
     const declaredTotal = Number(summary.total_a_pagar) || null;
     const declaredPurchases = Number(summary.total_compras) || null;
+    const declaredNextInvoice = Number(summary.fechamento_proxima_fatura) || null;
+    const declaredOutstanding = Number(summary.saldo_aberto_total) || null;
+    const declaredCardLimit = Number(summary.limite_total) || null;
+    const declaredUsedLimit = Number(summary.limite_utilizado) || null;
 
     // What the statement brought in from before this period: last month's bill and the
     // payment made against it.
@@ -641,6 +657,13 @@ ${csvText}` }];
         declared_purchases: declaredPurchases,
         /** What the lines should add up to: the printed total with the carry-over taken back out. */
         expected_total: expectedTotal,
+        /* The statement's own checkpoints, so the review can prove the import against more
+           than one number. A reading can land the current invoice and still be wrong about
+           what is owed later. */
+        declared_next_invoice: declaredNextInvoice,
+        declared_outstanding: declaredOutstanding,
+        declared_card_limit: declaredCardLimit,
+        declared_used_limit: declaredUsedLimit,
         /** Last month's bill plus payments. Non-zero means "Total a pagar" is not the period's sum. */
         carried_over: Math.round(carried * 100) / 100,
         /** How many exact repeats were dropped to make the sum meet that reference. */

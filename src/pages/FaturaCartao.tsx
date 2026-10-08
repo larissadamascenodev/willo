@@ -121,6 +121,8 @@ const FaturaCartao = () => {
   const [declaredTotal, setDeclaredTotal] = useState<number | null>(null);
   const [expectedTotal, setExpectedTotal] = useState<number | null>(null);
   const [carriedOver, setCarriedOver] = useState<number | null>(null);
+  const [declaredNext, setDeclaredNext] = useState<number | null>(null);
+  const [declaredOutstanding, setDeclaredOutstanding] = useState<number | null>(null);
   const [avgConfidence, setAvgConfidence] = useState<number | undefined>(undefined);
   const [scanOpen, setScanOpen] = useState(false);
   const [scanItems, setScanItems] = useState<ExtractedItem[] | null>(null);
@@ -464,6 +466,8 @@ const FaturaCartao = () => {
       setDeclaredTotal(isInvoice ? (data.declared_total ?? null) : null);
       setExpectedTotal(isInvoice ? (data.expected_total ?? null) : null);
       setCarriedOver(isInvoice ? (data.carried_over ?? null) : null);
+      setDeclaredNext(isInvoice ? (data.declared_next_invoice ?? null) : null);
+      setDeclaredOutstanding(isInvoice ? (data.declared_outstanding ?? null) : null);
       setAvgConfidence(typeof data.avg_confidence === "number" ? data.avg_confidence : undefined);
       toast.dismiss("upload-processing");
 
@@ -921,6 +925,10 @@ const FaturaCartao = () => {
         declaredTotal={declaredTotal}
         expectedTotal={expectedTotal}
         carriedOver={carriedOver}
+        declaredNextInvoice={declaredNext}
+        declaredOutstanding={declaredOutstanding}
+        invoicePeriod={selectedYear * 12 + (selectedMonth - 1)}
+        closingDay={card?.closing_day}
         avgConfidence={avgConfidence}
         onConfirm={handleConfirmImport}
         confirming={confirmingImport}

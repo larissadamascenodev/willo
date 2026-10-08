@@ -16,6 +16,7 @@ import BottomSheet from "@/components/shared/BottomSheet";
 import { useAuth } from "@/contexts/AuthContext";
 
 import { currencySymbol, getCurrency } from "@/lib/currency";
+import { projectImport, reconcile } from "@/lib/statementCheck";
 export interface ExtractedItem {
   description: string;
   /** Negative on a refund, so the imported total matches the statement. */
@@ -59,6 +60,12 @@ interface Props {
   expectedTotal?: number | null;
   /** Last month's bill plus payments. Non-zero means the two numbers above differ. */
   carriedOver?: number | null;
+  /** The statement's other printed checkpoints, so the review can prove more than one. */
+  declaredNextInvoice?: number | null;
+  declaredOutstanding?: number | null;
+  /** Needed to work out which month each instalment would land in. */
+  invoicePeriod?: number;
+  closingDay?: number;
   accounts?: ReviewAccount[];
   showAccountSelector?: boolean;
 }
@@ -445,7 +452,7 @@ function ItemEditSheet({ item, onClose, onChange }: {
   );
 }
 
-function MultiItemReview({ items, setItems, avgConfidence, message, declaredTotal, expectedTotal, carriedOver }: {
+function MultiItemReview({ items, setItems, avgConfidence, message, declaredTotal, expectedTotal, carriedOver, declaredNextInvoice, declaredOutstanding, invoicePeriod, closingDay }: {
   items: ExtractedItem[];
   setItems: React.Dispatch<React.SetStateAction<ExtractedItem[]>>;
   avgConfidence?: number;
@@ -453,6 +460,10 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
   declaredTotal?: number | null;
   expectedTotal?: number | null;
   carriedOver?: number | null;
+  declaredNextInvoice?: number | null;
+  declaredOutstanding?: number | null;
+  invoicePeriod?: number;
+  closingDay?: number;
 }) {
   const [editing, setEditing] = useState<number | null>(null);
   const toggleItem = (idx: number) =>
@@ -472,6 +483,17 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
   // longer the period, it is what the statement actually asks for, so the printed total
   // becomes the right thing to measure against.
   const carryIn = items.some((i) => i.is_carry && i.selected);
+
+  // What this import would do to every month, checked against the statement's own figures.
+  // The current invoice adding up proves nothing about the ones after it: a plan read one
+  // instalment short shows up nowhere until that month arrives.
+  const checks =
+    invoicePeriod != null && closingDay != null
+      ? reconcile(
+          projectImport(items.filter((i) => i.selected), invoicePeriod, closingDay),
+          { total: declaredTotal, nextInvoice: declaredNextInvoice, outstanding: declaredOutstanding },
+        )
+      : [];
   const reference = (carryIn ? declaredTotal : expectedTotal) ?? declaredTotal ?? null;
   const carried = Math.abs(carriedOver ?? 0) > 0.5 ? carriedOver! : null;
   const gap = reference !== null ? Math.round((selectedTotal - reference) * 100) / 100 : null;
@@ -538,6 +560,47 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
           </div>
         )}
       </div>
+
+      {/* Three of the statement's own numbers, against what this import would produce.
+          Shown whether or not they agree: a silent pass teaches nothing, and the gap is
+          what tells someone their statement was read wrong. */}
+      {checks.length > 0 && (
+        <div className="mt-2.5 rounded-[22px] border border-white/[0.08] willo-glass px-4 py-3.5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-white/45">
+            Conferindo com a fatura
+          </p>
+          <div className="mt-2.5 space-y-2">
+            {checks.map((c) => (
+              <div key={c.label} className="flex items-center gap-2.5">
+                {c.ok ? (
+                  <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-willo-green">
+                    <Check className="h-2.5 w-2.5 text-[#0B0B0B]" strokeWidth={4} />
+                  </span>
+                ) : (
+                  <AlertTriangle className="h-[18px] w-[18px] shrink-0 text-amber-300" />
+                )}
+                <span className="flex-1 text-[13px] text-white/70">{c.label}</span>
+                <span className="shrink-0 text-right">
+                  <span className="block text-[13.5px] font-semibold tabular-nums text-white">
+                    {fmtMoney(c.mine)}
+                  </span>
+                  {!c.ok && (
+                    <span className="block text-[11.5px] tabular-nums text-amber-300">
+                      fatura: {fmtMoney(c.printed)}
+                    </span>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+          {checks.some((c) => !c.ok) && (
+            <p className="mt-3 border-t border-white/[0.07] pt-2.5 text-[12px] leading-snug text-white/55">
+              Algo não fechou com o que está impresso. Vale olhar os lançamentos abaixo antes de
+              confirmar, principalmente os parcelados e os estornos.
+            </p>
+          )}
+        </div>
+      )}
 
       {(allPlans.length > 0 || refunds.length > 0) && (
         <div className="mt-2.5 grid grid-cols-2 gap-2.5">
@@ -656,6 +719,10 @@ export default function InvoiceUploadReviewModal({
   declaredTotal,
   expectedTotal,
   carriedOver,
+  declaredNextInvoice,
+  declaredOutstanding,
+  invoicePeriod,
+  closingDay,
   accounts = [],
   showAccountSelector = false,
 }: Props) {
@@ -723,6 +790,10 @@ export default function InvoiceUploadReviewModal({
                 declaredTotal={declaredTotal}
                 expectedTotal={expectedTotal}
                 carriedOver={carriedOver}
+                declaredNextInvoice={declaredNextInvoice}
+                declaredOutstanding={declaredOutstanding}
+                invoicePeriod={invoicePeriod}
+                closingDay={closingDay}
               />
             )}
           </div>

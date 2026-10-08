@@ -84,6 +84,8 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
   // statement carried in from the month before.
   const [expectedTotal, setExpectedTotal] = useState<number | null>(null);
   const [carriedOver, setCarriedOver] = useState<number | null>(null);
+  const [declaredNext, setDeclaredNext] = useState<number | null>(null);
+  const [declaredOutstanding, setDeclaredOutstanding] = useState<number | null>(null);
   const [avgConfidence, setAvgConfidence] = useState<number | undefined>(undefined);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
@@ -201,6 +203,8 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
       setDeclaredTotal(data.declared_total ?? null);
       setExpectedTotal(data.expected_total ?? null);
       setCarriedOver(data.carried_over ?? null);
+      setDeclaredNext(data.declared_next_invoice ?? null);
+      setDeclaredOutstanding(data.declared_outstanding ?? null);
       setAvgConfidence(typeof data.avg_confidence === "number" ? data.avg_confidence : undefined);
       setScanItems(items);
     } catch (err: any) {
@@ -605,6 +609,10 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
         declaredTotal={declaredTotal}
         expectedTotal={expectedTotal}
         carriedOver={carriedOver}
+        declaredNextInvoice={declaredNext}
+        declaredOutstanding={declaredOutstanding}
+        invoicePeriod={year * 12 + (month - 1)}
+        closingDay={card.closingDay}
       />
 
       <InvoicePayModal
