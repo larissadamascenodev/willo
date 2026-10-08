@@ -36,6 +36,12 @@ const NAME_RULES = `REGRA CRÍTICA DE DESCRIÇÃO — SIMPLIFIQUE NOMES:
   * "PAG*JoseDaSilva" → "José da Silva"
   * "MERCADOPAGO*LOJA123" → "MercadoPago - Loja 123"
 - Se identificar o estabelecimento final (ex: McDonald's via iFood), use: "iFood - McDonald's"
+- "Pix no Crédito - FULANO DE TAL" é uma COMPRA de verdade: um Pix pago com o limite do cartão.
+  O nome é a pessoa ou empresa que recebeu, sem o "Pix no Crédito" na frente:
+  * "Pix no Crédito - BEATRIZ DIAS BUZZATTO - 3/4" → "Beatriz Dias Buzzatto", parcela 3 de 4
+  * "Pix no Crédito - Larissa Dias Damasceno - 2/6" → "Larissa Dias Damasceno", parcela 2 de 6
+  Só ignore "Pix no crédito" quando ela vier SOZINHA, sem nome nenhum: aí é a linha de limite
+  do bloco "Valor máximo para transações", não um lançamento.
 - Mantenha o nome curto, limpo e reconhecível`;
 
 const CATEGORY_GUIDE = `CATEGORIAS DISPONÍVEIS (use EXATAMENTE um destes nomes, nunca invente outro):
@@ -303,7 +309,11 @@ const NON_PURCHASE = [
   /^valor\s+(maximo|original)/,
   /^fechamento\s+da\s+proxima/,
   /^encargos\b/,
-  /^(saque|pix)\s+no\s+credito/,
+  // Anchored to the end on purpose. This is here for the limits block, which prints the
+  // label by itself ("Pix no crédito ... R$ 3.600,00"). Unanchored it also threw away every
+  // real "Pix no Crédito - FULANO - 2/6", which is how a screenshot of five transactions
+  // came back with one.
+  /^(saque|pix)\s+no\s+credito\s*$/,
   /^conversao:/,
 ];
 
