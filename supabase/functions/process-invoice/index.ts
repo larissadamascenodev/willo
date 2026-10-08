@@ -278,6 +278,11 @@ const NON_PURCHASE = [
   /^credito\s+de\s+(atraso|rotativo|divida|juros)/,
   /^juros\s+(de\s+)?(financiamento|parcelamento|divida)/,
   /^encerramento\s+de\s+divida/,
+  // The other half of that pair. The signs swap from statement to statement, so excluding
+  // only "Encerramento de dívida" let a lone credit through and the invoice came out short
+  // by exactly its value. "Estorno de juros de rotativo" is a real credit and stays: this
+  // only matches the one tied to a dívida.
+  /^estorno\s+de\s+juros\s+d[ao]\s+divida/,
   /^iof\s+de\s+compras/,
   /^outros\s+lancamentos/,
   /^valor\s+(maximo|original)/,
