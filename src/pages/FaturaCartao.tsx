@@ -34,6 +34,7 @@ import { toCents } from "@/lib/invoice/money";
 import { toImportRows } from "@/lib/invoice/toImportRows";
 import { statementCarryLine } from "@/lib/statementCarry";
 import { saveStatementFigures } from "@/services/statementFigures";
+import { findPreviousImport, hashFile, recordImport, type PreviousImport } from "@/services/invoiceImports";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
 import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
 import CreditCardEditModal from "@/components/fatura/CreditCardEditModal";
@@ -129,6 +130,9 @@ const FaturaCartao = () => {
   const [declaredOutstanding, setDeclaredOutstanding] = useState<number | null>(null);
   const [declaredCardLimit, setDeclaredCardLimit] = useState<number | null>(null);
   const [declaredUsedLimit, setDeclaredUsedLimit] = useState<number | null>(null);
+  const [documentHash, setDocumentHash] = useState<string | null>(null);
+  const [documentName, setDocumentName] = useState<string | null>(null);
+  const [alreadyImported, setAlreadyImported] = useState<PreviousImport | null>(null);
   const [avgConfidence, setAvgConfidence] = useState<number | undefined>(undefined);
   const [scanOpen, setScanOpen] = useState(false);
   const [scanItems, setScanItems] = useState<ExtractedItem[] | null>(null);
@@ -443,7 +447,16 @@ const FaturaCartao = () => {
     } else {
       toast.loading("Lendo a compra...", { id: "upload-processing" });
     }
+    setAlreadyImported(null);
     try {
+      if (isInvoice && cardId) {
+        // The same file hashes the same, so a repeat is visible before anything is written.
+        const hash = await hashFile(file);
+        setDocumentHash(hash);
+        setDocumentName(file.name || null);
+        setAlreadyImported(await findPreviousImport(cardId, hash));
+      }
+
       const data = await processScanFile(file, isInvoice ? "invoice" : "transaction");
 
       const items: ExtractedItem[] = (data.items || []).map((item: any) => ({
@@ -514,7 +527,8 @@ const FaturaCartao = () => {
         invoicePeriod,
       });
 
-      for (const row of toImportRows(result, invoicePeriod)) {
+      const rows = toImportRows(result, invoicePeriod);
+      for (const row of rows) {
         const isParcelado = !!row.installments && row.installments > 1;
         await createTransaction(
           {
@@ -536,6 +550,18 @@ const FaturaCartao = () => {
           user.id
         );
       }
+
+      // Where it came from and what it read, same as the cards tab.
+      await recordImport({
+        userId: user.id,
+        cardId,
+        month: selectedMonth,
+        year: selectedYear,
+        documentHash,
+        fileName: documentName,
+        result,
+        rowCount: rows.length,
+      });
 
       // The bank's own figures, stored beside the app's, never instead of them.
       await saveStatementFigures(cardId, selectedMonth, selectedYear, {
@@ -953,6 +979,7 @@ const FaturaCartao = () => {
         carriedOver={carriedOver}
         declaredNextInvoice={declaredNext}
         declaredOutstanding={declaredOutstanding}
+        alreadyImported={alreadyImported}
         invoicePeriod={selectedYear * 12 + (selectedMonth - 1)}
         closingDay={card?.closing_day}
         avgConfidence={avgConfidence}

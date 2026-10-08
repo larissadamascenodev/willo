@@ -10,6 +10,7 @@ import { toCents } from "@/lib/invoice/money";
 import { toImportRows } from "@/lib/invoice/toImportRows";
 import { statementCarryLine } from "@/lib/statementCarry";
 import { saveStatementFigures } from "@/services/statementFigures";
+import { findPreviousImport, hashFile, recordImport, type PreviousImport } from "@/services/invoiceImports";
 import InvoiceEntryChooser from "./InvoiceEntryChooser";
 import InvoiceScanScreen from "./InvoiceScanScreen";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "./InvoiceUploadReviewModal";
@@ -91,6 +92,9 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
   const [declaredOutstanding, setDeclaredOutstanding] = useState<number | null>(null);
   const [declaredCardLimit, setDeclaredCardLimit] = useState<number | null>(null);
   const [declaredUsedLimit, setDeclaredUsedLimit] = useState<number | null>(null);
+  const [documentHash, setDocumentHash] = useState<string | null>(null);
+  const [documentName, setDocumentName] = useState<string | null>(null);
+  const [alreadyImported, setAlreadyImported] = useState<PreviousImport | null>(null);
   const [avgConfidence, setAvgConfidence] = useState<number | undefined>(undefined);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
@@ -191,7 +195,15 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
     setChooserOpen(false);
     setScanItems(null);
     setScanOpen(true);
+    setAlreadyImported(null);
     try {
+      // The same file read twice hashes the same, which is what makes a repeat visible
+      // before anything is written rather than after it has been duplicated.
+      const hash = await hashFile(file);
+      setDocumentHash(hash);
+      setDocumentName(file.name || null);
+      setAlreadyImported(await findPreviousImport(card.id, hash));
+
       const data = await processScanFile(file, "invoice");
       const items: ExtractedItem[] = (data.items || []).map((item: any) => ({ ...item, selected: true }));
       if (items.length === 0) {
@@ -245,7 +257,8 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
         invoicePeriod,
       });
 
-      for (const row of toImportRows(result, invoicePeriod)) {
+      const rows = toImportRows(result, invoicePeriod);
+      for (const row of rows) {
         const isParcelado = !!row.installments && row.installments > 1;
         await createTransaction(
           {
@@ -267,6 +280,19 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
           user.id,
         );
       }
+      // Where this came from and what it read, so a number that looks wrong later has
+      // something behind it. Written after the money, and never allowed to fail the import.
+      await recordImport({
+        userId: user.id,
+        cardId: card.id,
+        month,
+        year,
+        documentHash,
+        fileName: documentName,
+        result,
+        rowCount: rows.length,
+      });
+
       // What the bank printed, written down beside what the app worked out. It is evidence,
       // never an input: the used limit stays derived, and this sits next to it.
       await saveStatementFigures(card.id, month, year, {
@@ -653,6 +679,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
         carriedOver={carriedOver}
         declaredNextInvoice={declaredNext}
         declaredOutstanding={declaredOutstanding}
+        alreadyImported={alreadyImported}
         invoicePeriod={year * 12 + (month - 1)}
         closingDay={card.closingDay}
       />

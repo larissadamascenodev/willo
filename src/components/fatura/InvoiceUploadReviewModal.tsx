@@ -68,6 +68,8 @@ interface Props {
   /** Needed to work out which month each instalment would land in. */
   invoicePeriod?: number;
   closingDay?: number;
+  /** Set when this exact file has been imported before. */
+  alreadyImported?: { month: number; year: number; createdAt: string; rowCount: number } | null;
   accounts?: ReviewAccount[];
   showAccountSelector?: boolean;
 }
@@ -752,6 +754,7 @@ export default function InvoiceUploadReviewModal({
   declaredOutstanding,
   invoicePeriod,
   closingDay,
+  alreadyImported,
   accounts = [],
   showAccountSelector = false,
 }: Props) {
@@ -806,6 +809,20 @@ export default function InvoiceUploadReviewModal({
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
+            {/* The same document, already imported. Said before confirming, because
+                afterwards it is two of everything and somebody has to delete by hand. */}
+            {alreadyImported && (
+              <div className="mt-3 flex items-start gap-2.5 rounded-[20px] border border-amber-300/25 bg-amber-300/[0.08] px-4 py-3">
+                <AlertTriangle className="mt-0.5 h-[18px] w-[18px] shrink-0 text-amber-300" />
+                <p className="text-[13px] leading-snug text-white/82">
+                  <span className="font-semibold text-white">Essa fatura já foi importada</span> em{" "}
+                  {new Date(alreadyImported.createdAt).toLocaleDateString("pt-BR")}, com{" "}
+                  {alreadyImported.rowCount} lançamento{alreadyImported.rowCount === 1 ? "" : "s"}.
+                  Importar de novo cria tudo em dobro. Se a ideia é refazer, apague os lançamentos
+                  antigos primeiro.
+                </p>
+              </div>
+            )}
             {items.length === 0 ? null : isSingleItem ? (
               <SingleItemReview
                 item={items[0]}
