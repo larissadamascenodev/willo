@@ -15,6 +15,9 @@ export function invoicePeriodIndex(dateStr: string, closingDay: number): number 
 const firstOfPeriod = (index: number) =>
   `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}-01`;
 
+/** The first day of the invoice being imported, for lines that certainly belong to it. */
+export const invoiceAnchorDate = (invoicePeriod: number) => firstOfPeriod(invoicePeriod);
+
 /**
  * When a purchase was made.
  *
@@ -48,39 +51,115 @@ export const isPrepaidLine = (description: string) => PREPAID_PREFIX.test(descri
 export const planKeyOf = (description: string, total: number | null | undefined) =>
   `${description.trim().replace(PREPAID_PREFIX, "").toLowerCase()}|${total ?? 0}`;
 
-/**
- * How many instalments a plan still has ahead of it, once the statement's own "Antecipada"
- * lines are taken into account.
- *
- * Those lines are instalments the bank pulled forward and charged on THIS invoice. Read on
- * their own they look like fresh plans, so the plan they came from keeps generating the very
- * instalments that were just prepaid, and each one gets billed twice. Capping the plan at the
- * instalment below the earliest prepaid one ends it where it actually ended.
- *
- * The amount has to match too: two plans can share a merchant and a length, and truncating
- * the wrong one would quietly delete charges that are still owed.
- */
-export function effectivePlanLength<T extends {
+type PlanItem = {
   description: string;
   amount: number;
   installment_total?: number | null;
   installment_current?: number | null;
-}>(item: T, all: T[]): number | null {
-  const total = item.installment_total ?? null;
-  if (!total || total < 2 || isPrepaidLine(item.description)) return total;
+};
 
-  const key = planKeyOf(item.description, total);
-  let earliestPrepaid: number | null = null;
-  for (const other of all) {
-    if (other === item || !isPrepaidLine(other.description)) continue;
-    if (planKeyOf(other.description, other.installment_total) !== key) continue;
-    if (Math.abs(other.amount - item.amount) > 0.01) continue;
-    const n = other.installment_current ?? 0;
-    if (n > 0 && (earliestPrepaid === null || n < earliestPrepaid)) earliestPrepaid = n;
+/** One transaction the import should write, and how the card triggers should bill it. */
+export type ImportRow<T> = {
+  item: T;
+  installments: number | null;
+  installmentCurrent: number | null;
+  paidInstallments: number;
+  /** A continuation resumes the month AFTER this invoice, not on it. */
+  startsNextMonth: boolean;
+  /**
+   * Bill this on the invoice being imported, whatever date the line carries. Beside an
+   * instalment the statement prints the day that instalment was billed, and a purchase on
+   * the closing day itself falls either side of the boundary, so the printed date puts the
+   * charge in the wrong month.
+   */
+  pinToInvoice: boolean;
+};
+
+/**
+ * What to write for each line of a statement.
+ *
+ * "Antecipada - Loja X - Parcela 9/12" names exactly one instalment the bank pulled forward
+ * and billed here. It is not a statement that everything from the ninth onwards was settled:
+ * on a 12x plan where only the ninth was prepaid, the tenth, eleventh and twelfth are still
+ * owed. Ending the plan at the eighth, as this used to, charged the right amount this month
+ * and then silently dropped three instalments.
+ *
+ * So a plan with prepaid lines becomes: this month's instalment and each prepaid one as
+ * single charges on this invoice, plus one plan carrying whatever is left, resuming the
+ * month after. When the prepaid lines run to the end of the plan there is nothing left and
+ * no continuation is written.
+ *
+ * The amount has to match as well as the merchant and the length: two plans can share a
+ * shop, and truncating the wrong one would quietly delete charges that are still owed.
+ */
+export function planImportRows<T extends PlanItem>(items: T[]): ImportRow<T>[] {
+  const prepaidFor = (item: T): number[] => {
+    const key = planKeyOf(item.description, item.installment_total);
+    return items
+      .filter(
+        (other) =>
+          other !== item &&
+          isPrepaidLine(other.description) &&
+          planKeyOf(other.description, other.installment_total) === key &&
+          Math.abs(other.amount - item.amount) <= 0.01,
+      )
+      .map((other) => other.installment_current ?? 0)
+      .filter((n) => n > 0);
+  };
+
+  const rows: ImportRow<T>[] = [];
+
+  for (const item of items) {
+    const single: ImportRow<T> = {
+      item,
+      installments: null,
+      installmentCurrent: null,
+      paidInstallments: 0,
+      startsNextMonth: false,
+      pinToInvoice: isPrepaidLine(item.description),
+    };
+
+    const total = item.installment_total ?? 0;
+    const current = item.installment_current ?? 0;
+    const isPlan = item.amount > 0 && total > 1 && current >= 1 && current <= total;
+
+    // A refund, a one-off, or a prepaid line: one charge on this invoice and nothing after.
+    if (!isPlan || isPrepaidLine(item.description)) {
+      rows.push(single);
+      continue;
+    }
+
+    const prepaid = prepaidFor(item);
+    if (prepaid.length === 0) {
+      rows.push({
+        item,
+        installments: total,
+        installmentCurrent: current,
+        paidInstallments: current - 1,
+        startsNextMonth: false,
+        pinToInvoice: false,
+      });
+      continue;
+    }
+
+    // This month's instalment stands on its own, because the instalments the bank pulled
+    // forward sit between it and the rest, and a plan can only bill consecutive months.
+    rows.push({ ...single, pinToInvoice: true });
+
+    const resumeAt = Math.max(...prepaid) + 1;
+    if (resumeAt <= total) {
+      rows.push({
+        item,
+        installments: total,
+        installmentCurrent: resumeAt,
+        paidInstallments: resumeAt - 1,
+        startsNextMonth: true,
+        pinToInvoice: false,
+      });
+    }
   }
 
-  if (earliestPrepaid === null) return total;
-  return Math.max(earliestPrepaid - 1, item.installment_current ?? 1);
+  return rows;
 }
 
 /**

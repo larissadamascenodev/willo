@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { getInvoiceItems, payInvoice } from "@/services/invoiceService";
 import { createTransaction } from "@/services/transactionService";
 import { processScanFile } from "@/lib/scanUpload";
-import { anchorPurchaseDate, effectivePlanLength, isPrepaidLine } from "@/lib/installments";
+import { anchorPurchaseDate, invoiceAnchorDate, planImportRows } from "@/lib/installments";
 import { statementCarryLine } from "@/lib/statementCarry";
 import InvoiceEntryChooser from "./InvoiceEntryChooser";
 import InvoiceScanScreen from "./InvoiceScanScreen";
@@ -214,19 +214,17 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
     setImporting(true);
     try {
       const invoicePeriod = year * 12 + (month - 1);
-      for (const item of selected) {
-        // A refund is a single credit on this statement, never an instalment plan.
-        const isRefund = item.amount < 0;
-        // "Antecipada - X - Parcela 6/6" is an instalment the bank pulled forward and
-        // billed here. Read as a plan it would generate the months it just cancelled.
-        const prepaid = isPrepaidLine(item.description);
-        const planLength = prepaid ? null : effectivePlanLength(item, selected);
-        const isParcelado =
-          !isRefund && !prepaid && !!(item.installment_current && planLength && planLength > 1);
-        // "4/10" means three were charged on earlier statements; the card triggers skip
-        // those, so this invoice is the first one billed here.
-        const paidInstallments = isParcelado ? item.installment_current! - 1 : 0;
-        const purchaseDate = anchorPurchaseDate(item, invoicePeriod, paidInstallments, card.closingDay);
+      for (const row of planImportRows(selected)) {
+        const { item, installments, installmentCurrent, paidInstallments } = row;
+        const isParcelado = !!installments && installments > 1;
+        const purchaseDate = row.pinToInvoice
+          ? invoiceAnchorDate(invoicePeriod)
+          : anchorPurchaseDate(
+              item,
+              invoicePeriod + (row.startsNextMonth ? 1 : 0),
+              paidInstallments,
+              card.closingDay,
+            );
 
         await createTransaction(
           {
@@ -239,8 +237,8 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
             payment_method: "cartao",
             credit_card_id: card.id,
             recurrence_type: isParcelado ? "parcelado" : "unica",
-            installments: isParcelado ? planLength : null,
-            installment_current: isParcelado ? item.installment_current : null,
+            installments: isParcelado ? installments : null,
+            installment_current: isParcelado ? installmentCurrent : null,
             // The printed date is the instalment's, not the purchase's, so it is not
             // written down as if it were the purchase date.
             observation: paidInstallments > 0 ? `paid_installments:${paidInstallments}` : null,

@@ -28,7 +28,7 @@ import InstallmentPurchaseCard from "@/components/installments/InstallmentPurcha
 import SinglePurchaseCard from "@/components/fatura/SinglePurchaseCard";
 import CardEntryModal, { type CardEntry } from "@/components/fatura/CardEntryModal";
 import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
-import { anchorPurchaseDate, effectivePlanLength, invoicePeriodIndex, isPrepaidLine } from "@/lib/installments";
+import { anchorPurchaseDate, invoiceAnchorDate, invoicePeriodIndex, planImportRows } from "@/lib/installments";
 import { statementCarryLine } from "@/lib/statementCarry";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
 import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
@@ -486,19 +486,17 @@ const FaturaCartao = () => {
     try {
       const invoicePeriod = selectedYear * 12 + (selectedMonth - 1);
 
-      for (const item of selectedItems) {
-        // A refund is a single credit on this invoice, never an instalment plan
-        const isRefund = item.amount < 0;
-        // "Antecipada - X - Parcela 6/6" is an instalment the bank pulled forward and
-        // billed here. Read as a plan it would generate the months it just cancelled.
-        const prepaid = isPrepaidLine(item.description);
-        const planLength = prepaid ? null : effectivePlanLength(item, selectedItems);
-        const isParcelado =
-          !isRefund && !prepaid && !!(item.installment_current && planLength && planLength > 1);
-        // "4/10" means three instalments were charged in earlier statements; the card
-        // triggers skip those, so this invoice is the first one billed here.
-        const paidInstallments = isParcelado ? item.installment_current! - 1 : 0;
-        const purchaseDate = anchorPurchaseDate(item, invoicePeriod, paidInstallments, card.closing_day);
+      for (const row of planImportRows(selectedItems)) {
+        const { item, installments, installmentCurrent, paidInstallments } = row;
+        const isParcelado = !!installments && installments > 1;
+        const purchaseDate = row.pinToInvoice
+          ? invoiceAnchorDate(invoicePeriod)
+          : anchorPurchaseDate(
+              item,
+              invoicePeriod + (row.startsNextMonth ? 1 : 0),
+              paidInstallments,
+              card.closing_day,
+            );
 
         await createTransaction(
           {
@@ -511,8 +509,8 @@ const FaturaCartao = () => {
             payment_method: "cartao",
             credit_card_id: cardId,
             recurrence_type: isParcelado ? "parcelado" : "unica",
-            installments: isParcelado ? planLength : null,
-            installment_current: isParcelado ? item.installment_current : null,
+            installments: isParcelado ? installments : null,
+            installment_current: isParcelado ? installmentCurrent : null,
             // The printed date is the instalment's, not the purchase's, so it is not
             // written down as if it were the purchase date.
             observation: paidInstallments > 0 ? `paid_installments:${paidInstallments}` : null,
