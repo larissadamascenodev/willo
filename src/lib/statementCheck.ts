@@ -30,12 +30,13 @@ type Item = {
 };
 
 /**
- * Which invoice a date falls in, as a month index, matching the database's own rule.
- * parseDateOnly counts months from zero, so there is nothing to subtract here.
+ * Which invoice a date falls in, as a month index, matching the database's own rule: on
+ * the closing day the invoice shuts, so the purchase goes to the next one. parseDateOnly
+ * counts months from zero, so there is nothing to subtract here.
  */
 const periodOf = (dateStr: string, closingDay: number) => {
   const { year, month, day } = parseDateOnly(dateStr);
-  return year * 12 + month + (day > closingDay ? 1 : 0);
+  return year * 12 + month + (day >= closingDay ? 1 : 0);
 };
 
 export function projectImport(

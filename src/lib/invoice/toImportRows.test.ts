@@ -27,7 +27,7 @@ type Fixture = {
 /** Which invoice a date falls in, the way the database decides it. */
 const periodOf = (dateStr: string) => {
   const { year, month, day } = parseDateOnly(dateStr);
-  return year * 12 + month + (day > CLOSING ? 1 : 0);
+  return year * 12 + month + (day >= CLOSING ? 1 : 0);
 };
 
 /** What a set of rows actually bills, month by month, however they were produced. */

@@ -156,7 +156,10 @@ export const CreditCardTile = ({ card, idx, invoiceInfo, navigate, extraClass, o
       </div>
 
       <p className="relative mt-3.5 truncate text-[12.5px] text-white/55">
-        {invoiceInfo?.isPaid ? "Fatura paga" : "Fatura aberta"}
+        {/* Open means still taking new spending. Past the closing day it is not: the
+            invoice shut and is waiting to be paid, and saying "aberta" there invites
+            someone to expect today's purchase on it. */}
+        {invoiceInfo?.isPaid ? "Fatura paga" : status.isClosed ? "Fatura fechada" : "Fatura aberta"}
         <span className="text-white/25"> · </span>
         <span className={cn(status.isClosed && "font-semibold text-amber-300/90")}>{status.label.toLowerCase()}</span>
       </p>

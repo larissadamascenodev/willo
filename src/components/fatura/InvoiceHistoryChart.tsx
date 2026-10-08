@@ -55,7 +55,7 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
     const endIndex = Math.max(lastWithData, currentYear * 12 + (currentMonth - 1) + 3);
 
     const today = now.getDate();
-    const openPeriod = currentYear * 12 + (currentMonth - 1) + (closingDay && today > closingDay ? 1 : 0);
+    const openPeriod = currentYear * 12 + (currentMonth - 1) + (closingDay && today >= closingDay ? 1 : 0);
 
     const entries: { month: number; year: number; amount: number; status: Status; isSelected: boolean }[] = [];
     let m = rangeStartM;

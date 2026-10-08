@@ -6,10 +6,14 @@ export function paidInstallmentsOf(observation?: string | null): number {
   return match ? Number(match[1]) : 0;
 }
 
-/** Which invoice a purchase lands in, as a month index — mirrors get_invoice_period in the database. */
+/**
+ * Which invoice a purchase lands in, as a month index. Mirrors get_invoice_period in the
+ * database, including its boundary: on the closing day the invoice shuts, so the purchase
+ * goes to the one that opens.
+ */
 export function invoicePeriodIndex(dateStr: string, closingDay: number): number {
   const { year, month, day } = parseDateOnly(dateStr);
-  return year * 12 + month + (day > closingDay ? 1 : 0);
+  return year * 12 + month + (day >= closingDay ? 1 : 0);
 }
 
 const firstOfPeriod = (index: number) =>

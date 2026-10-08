@@ -122,7 +122,7 @@ function MonthBars({ slots, values, selected, paidKeys, currentKey, onSelect }: 
   );
 }
 
-type MonthStatus = "paga" | "aberta" | "proxima" | "atrasada" | "vazia";
+type MonthStatus = "paga" | "aberta" | "fechada" | "proxima" | "atrasada" | "vazia";
 
 /** Where the selected month stands, said under its figure rather than guessed from it. */
 const MonthTag = ({ status }: { status: MonthStatus }) => {
@@ -130,6 +130,7 @@ const MonthTag = ({ status }: { status: MonthStatus }) => {
   const map = {
     paga: { label: "Paga", cls: "bg-willo-green/15 text-willo-green", icon: true },
     aberta: { label: "Fatura aberta", cls: "bg-white/[0.08] text-white/75", icon: false },
+    fechada: { label: "Fechada, a pagar", cls: "bg-amber-300/15 text-amber-300", icon: false },
     proxima: { label: "Ainda vai fechar", cls: "bg-white/[0.06] text-white/55", icon: false },
     atrasada: { label: "Em aberto", cls: "bg-amber-300/15 text-amber-300", icon: false },
   }[status];
@@ -229,7 +230,12 @@ const Cartoes = () => {
     if (hasValue && paidKeys.has(selectedSlot.key)) return "paga";
     if (selectedSlot.key > currentKey) return "proxima";
     if (selectedSlot.key < currentKey) return hasValue ? "atrasada" : "vazia";
-    return hasValue ? "aberta" : "vazia";
+    if (!hasValue) return "vazia";
+    // This month's invoice is only open while it is still taking spending. Once the
+    // closing day arrives it has shut, and anything bought today lands on the next one.
+    const closingDay = selectedCard?.closingDay ?? cards[0]?.closingDay;
+    const closed = !!closingDay && new Date().getDate() >= closingDay;
+    return closed ? "fechada" : "aberta";
   })();
 
   return (

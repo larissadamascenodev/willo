@@ -349,7 +349,8 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
     let firstMonth: number, firstYear: number;
     const pMonth = purchaseDate.getMonth(); // 0-indexed
     const pYear = purchaseDate.getFullYear();
-    if (dayOfMonth > closingDay) {
+    // On the closing day the invoice shuts, so the first instalment goes to the next one.
+    if (dayOfMonth >= closingDay) {
       // Goes to next month
       if (pMonth === 11) {
         firstMonth = 0;
