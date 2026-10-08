@@ -19,6 +19,7 @@ export interface ReaderOutput {
     amount: number;
     installment_current?: number | null;
     installment_total?: number | null;
+    category?: string | null;
     financing?: {
       principal: number;
       iof: number;
@@ -71,6 +72,7 @@ export function toReconcileInput(reader: ReaderOutput, invoicePeriod: number): R
     amount: toCents(e.amount),
     installmentNumber: e.installment_current ?? null,
     installmentTotal: e.installment_total ?? null,
+    appCategory: e.category ?? null,
     financing: e.financing
       ? {
           principal: toCents(e.financing.principal),

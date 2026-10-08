@@ -51,6 +51,8 @@ export interface InvoiceRawEvent {
   installmentTotal?: number | null;
   /** Only when the statement itself breaks the financing down. Never inferred. */
   financing?: Financing | null;
+  /** The app's own spending category, carried through untouched. */
+  appCategory?: string | null;
   category: EventCategory;
   confidence: Confidence;
   /** Filled by the aggregator, linking events that describe one operation. */
@@ -94,6 +96,7 @@ export interface FinancialOperation {
   /** What lands on the invoice being imported. */
   amountThisInvoice: Cents;
   financing?: Financing | null;
+  appCategory?: string | null;
   installmentCount?: number | null;
   currentInstallment?: number | null;
   remainingInstallments?: number | null;

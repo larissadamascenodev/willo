@@ -5,7 +5,9 @@ import { toast } from "sonner";
 import { getInvoiceItems, payInvoice } from "@/services/invoiceService";
 import { createTransaction } from "@/services/transactionService";
 import { processScanFile } from "@/lib/scanUpload";
-import { anchorPurchaseDate, invoiceAnchorDate, planImportRows } from "@/lib/installments";
+import { reconcileInvoice } from "@/lib/invoice/engine";
+import { toCents } from "@/lib/invoice/money";
+import { toImportRows } from "@/lib/invoice/toImportRows";
 import { statementCarryLine } from "@/lib/statementCarry";
 import InvoiceEntryChooser from "./InvoiceEntryChooser";
 import InvoiceScanScreen from "./InvoiceScanScreen";
@@ -218,34 +220,44 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
     setImporting(true);
     try {
       const invoicePeriod = year * 12 + (month - 1);
-      for (const row of planImportRows(selected)) {
-        const { item, installments, installmentCurrent, paidInstallments } = row;
-        const isParcelado = !!installments && installments > 1;
-        const purchaseDate = row.pinToInvoice
-          ? invoiceAnchorDate(invoicePeriod)
-          : anchorPurchaseDate(
-              item,
-              invoicePeriod + row.periodOffset,
-              paidInstallments,
-              card.closingDay,
-            );
 
+      // The engine decides what every line means and which month it belongs to; this only
+      // writes what it decided. The opening balance arrives as a line of its own that can
+      // be unchecked, so the summary's own carry figures are left out here or the same
+      // money would be counted twice.
+      const carryIncluded = selected.some((i) => i.is_carry);
+      const result = reconcileInvoice({
+        events: selected.map((item, i) => ({
+          id: `ev_${i + 1}`,
+          date: item.date,
+          description: item.description,
+          amount: toCents(item.amount),
+          installmentNumber: item.installment_current,
+          installmentTotal: item.installment_total,
+          appCategory: item.category,
+        })),
+        summary: carryIncluded ? {} : { previousInvoice: null, paymentsReceived: null },
+        invoicePeriod,
+      });
+
+      for (const row of toImportRows(result, invoicePeriod)) {
+        const isParcelado = !!row.installments && row.installments > 1;
         await createTransaction(
           {
-            name: item.description,
+            name: row.description,
             type: "despesa",
-            amount: item.amount,
-            category: item.category || "Outros",
-            date: purchaseDate,
+            amount: row.amount,
+            category: row.category || "Outros",
+            date: row.date,
             status: "pago",
             payment_method: "cartao",
             credit_card_id: card.id,
             recurrence_type: isParcelado ? "parcelado" : "unica",
-            installments: isParcelado ? installments : null,
-            installment_current: isParcelado ? installmentCurrent : null,
+            installments: isParcelado ? row.installments : null,
+            installment_current: isParcelado ? row.installmentCurrent : null,
             // The printed date is the instalment's, not the purchase's, so it is not
             // written down as if it were the purchase date.
-            observation: paidInstallments > 0 ? `paid_installments:${paidInstallments}` : null,
+            observation: row.paidInstallments > 0 ? `paid_installments:${row.paidInstallments}` : null,
           },
           user.id,
         );
