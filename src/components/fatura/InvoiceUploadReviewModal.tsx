@@ -30,6 +30,8 @@ export interface ExtractedItem {
   merchant?: string | null;
   selected: boolean;
   is_recurring?: boolean;
+  /** The balance brought in from the previous statement, not a purchase. */
+  is_carry?: boolean;
   time?: string | null;
   account_id?: string | null;
 }
@@ -465,7 +467,12 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
   // Check against the period's own movement, not against the balance to pay. A statement
   // that was overpaid last month shows a total far below its own purchases, and comparing
   // with that total used to accuse a correct reading of counting things twice.
-  const reference = expectedTotal ?? declaredTotal ?? null;
+  //
+  // Unless the opening balance is going in too: with that line selected the sum is no
+  // longer the period, it is what the statement actually asks for, so the printed total
+  // becomes the right thing to measure against.
+  const carryIn = items.some((i) => i.is_carry && i.selected);
+  const reference = (carryIn ? declaredTotal : expectedTotal) ?? declaredTotal ?? null;
   const carried = Math.abs(carriedOver ?? 0) > 0.5 ? carriedOver! : null;
   const gap = reference !== null ? Math.round((selectedTotal - reference) * 100) / 100 : null;
   const matches = gap !== null && Math.abs(gap) <= 0.5;
@@ -496,12 +503,14 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
         {reference != null && (
           <div className="relative mt-4 border-t border-white/[0.08] pt-3">
             <div className="flex items-center justify-between text-[13px]">
-              <span className="text-white/62">{carried ? "Lançamentos do período" : "Total impresso na fatura"}</span>
+              <span className="text-white/62">
+                {carryIn || !carried ? "Total impresso na fatura" : "Lançamentos do período"}
+              </span>
               <span className="font-semibold text-white tabular-nums">{fmtMoney(reference)}</span>
             </div>
             {/* Say why the two numbers differ, so the smaller one on the statement does not
                 look like proof that the reading is wrong. */}
-            {carried != null && declaredTotal != null && (
+            {!carryIn && carried != null && declaredTotal != null && (
               <div className="mt-1.5 flex items-center justify-between text-[12.5px]">
                 <span className="text-white/45">
                   Total a pagar {carried < 0 ? "(desconta o que você já pagou)" : "(soma a fatura anterior)"}

@@ -29,6 +29,7 @@ import SinglePurchaseCard from "@/components/fatura/SinglePurchaseCard";
 import CardEntryModal, { type CardEntry } from "@/components/fatura/CardEntryModal";
 import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import { anchorPurchaseDate, effectivePlanLength, invoicePeriodIndex, isPrepaidLine } from "@/lib/installments";
+import { statementCarryLine } from "@/lib/statementCarry";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
 import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
 import CreditCardEditModal from "@/components/fatura/CreditCardEditModal";
@@ -449,6 +450,15 @@ const FaturaCartao = () => {
         return;
       }
 
+      if (isInvoice) {
+        // What the statement brought in from last month goes in as its own line, so the
+        // invoice ends up asking for what the statement asks for.
+        const carry = statementCarryLine(
+          data.carried_over,
+          `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`,
+        );
+        if (carry) items.push(carry);
+      }
       setExtractedItems(items);
       setExtractedMessage(data.message || "Lançamentos encontrados!");
       setDeclaredTotal(isInvoice ? (data.declared_total ?? null) : null);

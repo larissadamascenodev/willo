@@ -6,6 +6,7 @@ import { getInvoiceItems, payInvoice } from "@/services/invoiceService";
 import { createTransaction } from "@/services/transactionService";
 import { processScanFile } from "@/lib/scanUpload";
 import { anchorPurchaseDate, effectivePlanLength, isPrepaidLine } from "@/lib/installments";
+import { statementCarryLine } from "@/lib/statementCarry";
 import InvoiceEntryChooser from "./InvoiceEntryChooser";
 import InvoiceScanScreen from "./InvoiceScanScreen";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "./InvoiceUploadReviewModal";
@@ -191,6 +192,10 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
         toast.error("Nenhuma compra encontrada nessa fatura.");
         return;
       }
+      // What the statement brought in from last month goes in as its own line, so the
+      // invoice ends up asking for what the statement asks for.
+      const carry = statementCarryLine(data.carried_over, `${year}-${String(month).padStart(2, "0")}-01`);
+      if (carry) items.push(carry);
       setExtracted(items);
       setExtractedMessage(data.message || "Lançamentos encontrados!");
       setDeclaredTotal(data.declared_total ?? null);
