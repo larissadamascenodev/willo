@@ -56,6 +56,40 @@ export function getRecurringSourceId(transaction: {
 }
 
 /**
+ * What makes two "fixa" rows the same standing commitment.
+ *
+ * The same commitment gets written down more than once: redefining it later leaves the old
+ * row behind, so the newest definition of a signature wins and the rest are ignored.
+ *
+ * The day of the month is part of it, and leaving it out was a real bug. A salary paid in
+ * two parts, on the 6th and the 15th, matches on every other field, so the two collapsed
+ * into one and the newer entry silently replaced the older one everywhere. They are two
+ * commitments. The full date is deliberately NOT used: the same commitment redefined in a
+ * later month still falls on the same day, and must still collapse.
+ */
+export function recurringSignature(t: {
+  name: string;
+  type: string;
+  category: string;
+  amount: number | string;
+  payment_method?: string | null;
+  account_id?: string | null;
+  credit_card_id?: string | null;
+  date: string;
+}) {
+  return [
+    t.name,
+    t.type,
+    t.category,
+    Number(t.amount).toFixed(2),
+    t.payment_method ?? "",
+    t.account_id ?? "",
+    t.credit_card_id ?? "",
+    dayOfMonth(t.date),
+  ].join("::");
+}
+
+/**
  * Fetch all "fixa" transactions that should appear in a given month.
  * A fixa transaction appears in every month from its creation date onward,
  * unless there's an exclusion record for that specific month.
@@ -74,19 +108,9 @@ export async function getRecurringForMonth(month: number, year: number) {
   if (txError) throw txError;
   if (!fixaTxs || fixaTxs.length === 0) return [];
 
-  const buildSignature = (t: any) => [
-    t.name,
-    t.type,
-    t.category,
-    Number(t.amount).toFixed(2),
-    t.payment_method ?? "",
-    t.account_id ?? "",
-    t.credit_card_id ?? "",
-  ].join("::");
-
   const latestBySignature = new Map<string, any>();
   for (const tx of fixaTxs) {
-    const key = buildSignature(tx);
+    const key = recurringSignature(tx);
     if (!latestBySignature.has(key)) {
       latestBySignature.set(key, tx);
     }
