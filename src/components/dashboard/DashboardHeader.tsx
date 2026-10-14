@@ -66,7 +66,7 @@ const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profi
   const handleTransacaoOption = (type: "receita" | "despesa" | "scanner") => {
     setTransacaoMenuOpen(false);
     if (type === "scanner") {
-      window.dispatchEvent(new CustomEvent("open-scanner"));
+      window.dispatchEvent(new CustomEvent("open-registro-rapido"));
     } else {
       window.dispatchEvent(new CustomEvent("open-nova-transacao-direct", { detail: { type } }));
     }

@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useState } from "react";
-import { Home, ArrowLeftRight, Plus, TrendingUp, TrendingDown, Camera, ScanLine, Sparkles } from "lucide-react";
+import { Home, ArrowLeftRight, Plus, TrendingUp, TrendingDown, Camera, Sparkles } from "lucide-react";
+import RegistroRapidoIcon from "@/components/registro/RegistroRapidoIcon";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -24,7 +25,7 @@ const MobileBottomNav = memo(() => {
 
   return (
     <>
-      {/* Bottom Nav Bar — pill (Início/Transações/Assistente/Escanear) + separate add button */}
+      {/* Bottom Nav Bar — pill (Início/Transações/Assistente) + separate quick-entry button */}
       <div
         className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-center gap-3 px-5 md:hidden"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}
@@ -32,7 +33,7 @@ const MobileBottomNav = memo(() => {
         <BottomNavBar
           activePath={location.pathname}
           onNavigate={(path) => navigate(path)}
-          onPlus={() => window.dispatchEvent(new CustomEvent("open-scanner"))}
+          onPlus={() => window.dispatchEvent(new CustomEvent("open-registro-rapido"))}
         />
       </div>
     </>
@@ -67,7 +68,7 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
                 key={item.label}
                 onClick={() => {
                   if (item.soon) return;
-                  if (item.scan) window.dispatchEvent(new CustomEvent("open-scanner"));
+                  if (item.scan) window.dispatchEvent(new CustomEvent("open-registro-rapido"));
                   else if (item.path) onNavigate?.(item.path);
                 }}
                 aria-label={item.soon ? `${item.label} — em breve` : item.label}
@@ -99,13 +100,13 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
 
       <button
         onClick={onPlus}
-        aria-label="Escanear"
+        aria-label="Registro rápido"
         className={cn(
           "relative w-[58px] h-[58px] rounded-full flex items-center justify-center shrink-0 transition-colors",
           plusOpen ? "bg-white" : "willo-float",
         )}
       >
-        <ScanLine className={cn("w-[25px] h-[25px]", plusOpen ? "text-[#0B0B0B]" : "text-white")} strokeWidth={2} />
+        <RegistroRapidoIcon className={cn("w-[25px] h-[25px]", plusOpen ? "text-[#0B0B0B]" : "text-white")} />
       </button>
     </>
   );

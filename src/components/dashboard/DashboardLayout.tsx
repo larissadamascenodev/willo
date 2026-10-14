@@ -98,7 +98,7 @@ const DashboardLayout = () => {
     };
     // The viewfinder opens in the app rather than handing off to the system camera
     // sheet, so the frame, the gallery and manual entry all sit on one screen.
-    const handleScanner = () => setShowRegistro(true);
+    const handleRegistroRapido = () => setShowRegistro(true);
     const handleEditTransaction = (e: Event) => {
       const detail = (e as CustomEvent).detail as EditTransactionData;
       if (detail) {
@@ -121,21 +121,21 @@ const DashboardLayout = () => {
     };
     window.addEventListener("open-type-chooser", handleTypeChooser);
     window.addEventListener("open-nova-transacao-direct", handleDirect);
-    window.addEventListener("open-scanner", handleScanner);
+    window.addEventListener("open-registro-rapido", handleRegistroRapido);
     window.addEventListener("edit-transaction", handleEditTransaction);
     window.addEventListener("show-welcome-modal", handleShowWelcome);
     return () => {
       window.removeEventListener("open-type-chooser", handleTypeChooser);
       window.removeEventListener("open-nova-transacao-direct", handleDirect);
-      window.removeEventListener("open-scanner", handleScanner);
+      window.removeEventListener("open-registro-rapido", handleRegistroRapido);
       window.removeEventListener("edit-transaction", handleEditTransaction);
       window.removeEventListener("show-welcome-modal", handleShowWelcome);
     };
   }, [refetchProfile]);
 
-  // Two taps on any empty part of any screen start an entry. Controls and anything
-  // inside an open sheet are left alone, or the gesture would fire while you are
-  // using them — and a double tap that lands on text should not count either.
+  // Two taps on any empty part of any screen open Registro rápido. Controls and
+  // anything inside an open sheet are left alone, or the gesture would fire while you
+  // are using them — and a double tap that lands on text should not count either.
   useEffect(() => {
     let last = 0;
     const onPointerUp = (e: PointerEvent) => {
@@ -147,7 +147,7 @@ const DashboardLayout = () => {
       const now = Date.now();
       if (now - last < 320) {
         last = 0;
-        window.dispatchEvent(new CustomEvent("open-type-chooser"));
+        window.dispatchEvent(new CustomEvent("open-registro-rapido"));
       } else {
         last = now;
       }

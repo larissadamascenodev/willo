@@ -324,7 +324,7 @@ export default function InsightCarousel({
     if (now - tapAt.current < 280) {
       tapAt.current = 0;
       setIndex(indexBeforeTap.current);
-      window.dispatchEvent(new CustomEvent("open-type-chooser"));
+      window.dispatchEvent(new CustomEvent("open-registro-rapido"));
       return;
     }
     tapAt.current = now;
