@@ -241,17 +241,24 @@
     background-color: rgba(255, 255, 255, 0.062);
   }
 
-  /* The quick-entry sheet's ground.
-     One wash of light from the top and nothing else. The colour is painted on the
-     element itself rather than on a pseudo-element, because the panels above it carry
-     backdrop-blur and a blur sampling a separate painted layer is where the artefacts
-     come from. A quiet ground also keeps the only colour on the screen meaningful:
-     green means saved. */
+  /* The quick-entry sheet's ground: the home's sky, turned down.
+     The home opens on a storm with a break of fire in it. This screen borrows the same
+     light so the two feel like one app, but at roughly a third of the strength and
+     pushed to the top — everything here is glass, and glass over a bright ground is
+     just a smear. Painted on the element itself rather than a pseudo-element, because
+     the panels above carry backdrop-blur and a blur sampling a separate painted layer
+     is where the artefacts come from. */
   .willo-aurora {
-    background-color: #0B0C0E;
+    background-color: #0A0B0D;
     background-image:
-      radial-gradient(118% 44% at 50% -6%, rgba(255, 255, 255, 0.075) 0%, transparent 72%),
-      radial-gradient(76% 30% at 50% -2%, rgba(200, 243, 109, 0.055) 0%, transparent 70%);
+      radial-gradient(58% 5% at 31% 9%, rgba(255, 182, 104, 0.17) 0%, transparent 100%),
+      radial-gradient(42% 4% at 73% 6%, rgba(255, 134, 52, 0.15) 0%, transparent 100%),
+      radial-gradient(68% 4% at 54% 13%, rgba(255, 104, 38, 0.11) 0%, transparent 100%),
+      radial-gradient(88% 11% at 47% 10%, rgba(255, 112, 38, 0.13) 0%, transparent 100%),
+      radial-gradient(64% 12% at 58% 30%, rgba(96, 190, 206, 0.10) 0%, transparent 100%),
+      radial-gradient(72% 18% at 48% 26%, rgba(38, 118, 156, 0.17) 0%, transparent 100%),
+      radial-gradient(120% 13% at 50% 0%, rgba(8, 12, 22, 0.90) 0%, transparent 100%),
+      linear-gradient(180deg, #0a1020 0%, #0d1526 14%, #0c1a28 30%, #0b141d 48%, #0A0B0D 72%);
     background-repeat: no-repeat;
   }
 

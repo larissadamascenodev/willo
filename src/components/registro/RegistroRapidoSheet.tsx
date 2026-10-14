@@ -16,6 +16,7 @@ import Notinha, { type NotinhaLine } from "./Notinha";
 import ReceiptViewer from "./ReceiptViewer";
 import HistoricoPanel from "./HistoricoPanel";
 import BotMark from "./BotMark";
+import Confirmado from "./Confirmado";
 
 /**
  * Registro rápido: say what you spent, in one sentence, and have it filed.
@@ -35,7 +36,8 @@ import BotMark from "./BotMark";
 
 type Item =
   | { kind: "msg"; id: string; role: "bot" | "user"; text: string }
-  | { kind: "batch"; id: string };
+  | { kind: "batch"; id: string }
+  | { kind: "done"; id: string; text: string };
 
 interface Line {
   batchId: string;
@@ -209,7 +211,11 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
         const key = `done:${b}`;
         if (own.length > 0 && own.every((l) => l.saved) && !askedRef.current.has(key)) {
           askedRef.current.add(key);
-          pushBot(own.length > 1 ? "Anotado. Tudo no lugar." : "Anotado.");
+          setItems((m) => [...m, {
+            kind: "done",
+            id: uid(),
+            text: own.length > 1 ? `${own.length} lançamentos anotados` : "Anotado",
+          }]);
         }
       }
       return;
@@ -234,18 +240,15 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
 
   /* ---- reading what was said ---------------------------------------------- */
 
-  const ingest = useCallback(async (input: { text?: string; audio?: { data: string; mimeType: string } }) => {
-    setThinking(input.audio ? "Ouvindo" : "Anotando");
+  /** Reads a sentence. Speech reaches here too, but only after it has been read back
+      to the person and sent by them, so there is one way in from here down. */
+  const ingest = useCallback(async (said: string) => {
+    setThinking("Anotando");
     try {
-      const { entries, transcript } = await readEntry({ ...input, categories });
-      // Only for audio. Asked to transcribe, the model happily echoes typed text back
-      // as a transcript too, which would post the sentence into the thread twice.
-      if (input.audio && transcript) pushUser(transcript);
+      const { entries } = await readEntry({ text: said, categories });
 
       if (entries.length === 0) {
-        pushBot(input.audio && !transcript?.trim()
-          ? "Não consegui ouvir. Fala mais perto, num lugar mais quieto?"
-          : "Não achei nenhum valor aí. Tenta algo como “mercado 30” ou “recebi 200 de freela”.");
+        pushBot("Não achei nenhum valor aí. Tenta algo como “mercado 30” ou “recebi 200 de freela”.");
         return;
       }
 
@@ -277,7 +280,7 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
     } finally {
       setThinking(null);
     }
-  }, [categories, setup, pushBot, pushUser]);
+  }, [categories, setup, pushBot]);
 
   /* ---- answering ---------------------------------------------------------- */
 
@@ -326,9 +329,16 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
       return;
     }
     pushUser(said);
-    ingest({ text: said });
+    ingest(said);
   }, [text, thinking, question, answerCategory, ingest, pushUser]);
 
+  /**
+   * What was heard goes into the box, not into the books.
+   *
+   * A misheard word becomes a wrong entry, and an entry is harder to notice and undo
+   * than a sentence is to correct before sending. So speaking fills the field and
+   * stops there: read it, fix the word, send it.
+   */
   const toggleRecording = useCallback(async () => {
     if (recorder.recording) {
       const audio = await recorder.stop();
@@ -336,7 +346,23 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
         pushBot("Não peguei nada. Segura um pouquinho mais?");
         return;
       }
-      ingest({ audio: { data: audio.data, mimeType: audio.mimeType } });
+      setThinking("Ouvindo");
+      try {
+        const { transcript } = await readEntry({
+          audio: { data: audio.data, mimeType: audio.mimeType },
+          categories,
+        });
+        if (!transcript?.trim()) {
+          pushBot("Não consegui ouvir. Fala mais perto, num lugar mais quieto?");
+          return;
+        }
+        setText(transcript.trim());
+        inputRef.current?.focus();
+      } catch {
+        pushBot("Não consegui ouvir agora. Tenta de novo?");
+      } finally {
+        setThinking(null);
+      }
       return;
     }
     try {
@@ -348,7 +374,7 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
         ? "O microfone está bloqueado. Libere o Willo nas configurações do aparelho."
         : "Não consegui acessar o microfone agora.");
     }
-  }, [recorder, ingest, pushBot]);
+  }, [recorder, categories, pushBot]);
 
   /* ---- what each receipt shows -------------------------------------------- */
 
@@ -399,16 +425,19 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
     <>
       <AnimatePresence>
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.22 }}
+          initial={{ opacity: 0, y: 28, scale: 0.975 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 18, scale: 0.985 }}
+          transition={{ type: "spring", stiffness: 320, damping: 32, mass: 0.9 }}
           className="willo-aurora fixed inset-0 z-[120] flex flex-col overflow-hidden"
           role="dialog"
           aria-label="Registro rápido"
         >
           {/* Header — the title leads, the controls sit off to the side. */}
-          <div
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="flex shrink-0 items-center justify-between gap-3 px-5 pb-2.5"
             style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
           >
@@ -437,11 +466,13 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
                 <X className="h-[17px] w-[17px]" strokeWidth={2.4} />
               </button>
             </div>
-          </div>
+          </motion.div>
 
           {/* Thread */}
           <div ref={threadRef} className="flex-1 space-y-2 overflow-y-auto px-5 pb-4 pt-1">
-            {items.map((item) => item.kind === "msg" ? (
+            {items.map((item) => item.kind === "done" ? (
+              <div key={item.id} className="py-1"><Confirmado text={item.text} /></div>
+            ) : item.kind === "msg" ? (
               <motion.div
                 key={item.id}
                 initial={{ opacity: 0, y: 8, scale: 0.98 }}
@@ -491,7 +522,10 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
           </div>
 
           {/* Composer */}
-          <div
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
             className="shrink-0 border-t border-white/[0.07] bg-black/30 px-4 pt-2.5 backdrop-blur-xl"
             style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)" }}
           >
@@ -592,7 +626,7 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
               <PenLine className="h-[13px] w-[13px]" strokeWidth={2.2} />
               Adicionar manualmente
             </button>
-          </div>
+          </motion.div>
         </motion.div>
       </AnimatePresence>
 
