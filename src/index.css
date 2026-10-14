@@ -241,22 +241,18 @@
     background-color: rgba(255, 255, 255, 0.062);
   }
 
-  /* The quick-entry sheet's own ground. The home has a sky; this has a room lit from
-     two corners — the house green low on the left, a cool violet high on the right —
-     so a screen made almost entirely of glass has something to be glass against. */
+  /* The quick-entry sheet's ground.
+     One wash of light from the top and nothing else. The colour is painted on the
+     element itself rather than on a pseudo-element, because the panels above it carry
+     backdrop-blur and a blur sampling a separate painted layer is where the artefacts
+     come from. A quiet ground also keeps the only colour on the screen meaningful:
+     green means saved. */
   .willo-aurora {
     background-color: #0B0C0E;
-  }
-  .willo-aurora::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    background:
-      radial-gradient(80% 44% at 88% 2%, rgba(129, 140, 248, 0.34) 0%, transparent 70%),
-      radial-gradient(72% 40% at 4% 98%, rgba(200, 243, 109, 0.22) 0%, transparent 72%),
-      radial-gradient(90% 50% at 50% 50%, rgba(255, 255, 255, 0.035) 0%, transparent 76%);
+    background-image:
+      radial-gradient(118% 44% at 50% -6%, rgba(255, 255, 255, 0.075) 0%, transparent 72%),
+      radial-gradient(76% 30% at 50% -2%, rgba(200, 243, 109, 0.055) 0%, transparent 70%);
+    background-repeat: no-repeat;
   }
 
   /* A light passing over something still being worked out. Used on the receipt while

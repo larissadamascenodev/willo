@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUp, Camera, Loader2, Mic, PenLine, Square, X } from "lucide-react";
+import { ArrowUp, Camera, History, Mic, PenLine, Square, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useScrollLock } from "@/hooks/useScrollLock";
@@ -14,6 +14,8 @@ import type { QuickDraft, QuickQuestion, QuickSetup } from "@/lib/quickEntry/typ
 import type { ReceiptItem } from "@/lib/receiptImage";
 import Notinha, { type NotinhaLine } from "./Notinha";
 import ReceiptViewer from "./ReceiptViewer";
+import HistoricoPanel from "./HistoricoPanel";
+import BotMark from "./BotMark";
 
 /**
  * Registro rápido: say what you spent, in one sentence, and have it filed.
@@ -22,19 +24,21 @@ import ReceiptViewer from "./ReceiptViewer";
  * only ever answered one question — "I have a receipt in my hand" — and most spending
  * never produces one. The camera is still here, and so is the full form.
  *
- * The screen is a conversation with a receipt attached. The thread scrolls and is
- * disposable; the receipt stays and is the record. Anything the app cannot work out it
- * asks about — but only what it genuinely cannot know, which is why the questions come
- * from resolve.ts and not from the model.
+ * The screen is a conversation with receipts in it. Each thing said produces its own
+ * receipt, in place, so a lone Uber is a receipt for an Uber and five things dictated
+ * together are one receipt for the five: what gets totalled is what was said together,
+ * which is the only grouping the person actually made.
  *
- * The composer puts writing in the middle with the camera and the microphone on either
- * side, because they are three ways to say the same thing, not one action with two
- * links underneath it.
+ * Anything the app cannot work out it asks about — but only what it genuinely cannot
+ * know, which is why the questions come from resolve.ts and not from the model.
  */
 
-type Msg = { id: string; role: "bot" | "user"; text: string };
+type Item =
+  | { kind: "msg"; id: string; role: "bot" | "user"; text: string }
+  | { kind: "batch"; id: string };
 
 interface Line {
+  batchId: string;
   draft: QuickDraft;
   saved: boolean;
   saving: boolean;
@@ -43,12 +47,14 @@ interface Line {
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
-/** Examples that between them show the range: several at once, income, card, a past day. */
+/** Examples that between them show the range: one thing, several, income, card, a past day. */
 const CHIPS = [
-  "mercado 120 no crédito",
+  "café 12",
+  "uber 18",
+  "mercado 90 no crédito",
+  "almoço 35 ontem",
   "uber 18 e farmácia 40",
   "recebi 200 de freela",
-  "almoço 35 ontem",
   "luz 180, água 60",
 ];
 
@@ -56,30 +62,17 @@ const INCOME_CATEGORIES = [
   "Salário", "Freelance", "Investimentos", "Vendas", "Aluguéis", "Bônus", "Comissão", "Mesada",
 ];
 
-/** The bot working something out. Three dots, not a spinner — it reads as a pause. */
-function Thinking({ label }: { label: string }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -4 }}
-      className="flex justify-start"
-    >
-      <div className="flex items-center gap-2.5 rounded-[20px] rounded-bl-[7px] border border-white/[0.09] bg-white/[0.06] px-4 py-3 backdrop-blur-xl">
-        <span className="flex gap-1">
-          {[0, 1, 2].map((i) => (
-            <motion.span
-              key={i}
-              className="block h-[5px] w-[5px] rounded-full bg-willo-green"
-              animate={{ opacity: [0.25, 1, 0.25], y: [0, -2.5, 0] }}
-              transition={{ duration: 1.05, repeat: Infinity, ease: "easeInOut", delay: i * 0.15 }}
-            />
-          ))}
-        </span>
-        <span className="text-[14px] text-white/60">{label}</span>
-      </div>
-    </motion.div>
-  );
+/** How the money moved, in the words the receipt should carry. */
+function methodLabel(draft: QuickDraft, setup: QuickSetup): string | undefined {
+  if (draft.paymentMethod === "cartao") {
+    const card = setup.cards.find((c) => c.id === draft.creditCardId);
+    return card ? `Crédito · ${card.name}` : "Crédito";
+  }
+  if (draft.paymentMethod === "conta") {
+    const account = setup.accounts.find((a) => a.id === draft.accountId);
+    return account ? `Débito · ${account.name}` : "Débito";
+  }
+  return undefined;
 }
 
 export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }: {
@@ -93,38 +86,40 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
   const { user } = useAuth();
   useScrollLock(open);
 
-  const [messages, setMessages] = useState<Msg[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [lines, setLines] = useState<Line[]>([]);
   const [setup, setSetup] = useState<QuickSetup>({ accounts: [], cards: [] });
   const [categories, setCategories] = useState<string[]>([]);
   const [text, setText] = useState("");
   const [thinking, setThinking] = useState<string | null>(null);
   const [question, setQuestion] = useState<QuickQuestion | null>(null);
-  const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptBatch, setReceiptBatch] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
-  const askedRef = useRef("");
+  const askedRef = useRef<Set<string>>(new Set());
   const savingRef = useRef<Set<string>>(new Set());
   const savedCountRef = useRef(0);
   const threadRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const recorder = useAudioRecorder();
 
-  const pushBot = useCallback((t: string) => setMessages((m) => [...m, { id: uid(), role: "bot", text: t }]), []);
-  const pushUser = useCallback((t: string) => setMessages((m) => [...m, { id: uid(), role: "user", text: t }]), []);
+  const pushBot = useCallback((t: string) => setItems((m) => [...m, { kind: "msg", id: uid(), role: "bot", text: t }]), []);
+  const pushUser = useCallback((t: string) => setItems((m) => [...m, { kind: "msg", id: uid(), role: "user", text: t }]), []);
 
   /* ---- opening and closing ------------------------------------------------ */
 
   useEffect(() => {
     if (!open) return;
-    setMessages([
-      { id: uid(), role: "bot", text: "Me conta o que entrou ou saiu." },
-      { id: uid(), role: "bot", text: "Pode ser tudo de uma vez — escrevendo, falando ou fotografando." },
+    setItems([
+      { kind: "msg", id: uid(), role: "bot", text: "Me conta o que entrou ou saiu." },
+      { kind: "msg", id: uid(), role: "bot", text: "Pode ser tudo de uma vez — escrevendo, falando ou fotografando." },
     ]);
     setLines([]);
     setText("");
     setQuestion(null);
-    setShowReceipt(false);
-    askedRef.current = "";
+    setReceiptBatch(null);
+    setShowHistory(false);
+    askedRef.current = new Set();
     savingRef.current = new Set();
     savedCountRef.current = 0;
 
@@ -147,7 +142,7 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
     if (!open) return;
     const el = threadRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [messages, lines, thinking, open]);
+  }, [items, lines, thinking, open]);
 
   const handleClose = useCallback(() => {
     recorder.cancel();
@@ -161,7 +156,9 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
     for (const line of toSave) savingRef.current.add(line.draft.id);
     setLines((ls) => ls.map((l) => (savingRef.current.has(l.draft.id) && !l.saved ? { ...l, saving: true } : l)));
 
-    for (const line of toSave) {
+    // In parallel: three things dictated together should land together, not one after
+    // another while the person watches a row at a time flip over.
+    await Promise.all(toSave.map(async (line) => {
       const d = line.draft;
       try {
         await createTransaction(
@@ -183,7 +180,7 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
         setLines((ls) => ls.map((l) => (l.draft.id === d.id ? { ...l, error: true, saving: false } : l)));
         toast.error(`Não consegui salvar "${d.name}"`);
       }
-    }
+    }));
 
     window.dispatchEvent(new CustomEvent("transaction-created"));
   }, [user]);
@@ -196,17 +193,24 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
   }, [lines]);
 
   /* ---- the question loop --------------------------------------------------
-     Everything still outstanding comes from one place, so the thread and the receipt
+     Everything still outstanding comes from one place, so the thread and the receipts
      cannot disagree about what is missing. */
 
   useEffect(() => {
     if (!open) return;
     const unsaved = lines.filter((l) => !l.saved && !l.error);
+
     if (unsaved.length === 0) {
       setQuestion(null);
-      if (lines.length > 0 && lines.every((l) => l.saved) && askedRef.current !== "done") {
-        askedRef.current = "done";
-        pushBot(lines.length > 1 ? "Anotado. Tudo no lugar." : "Anotado.");
+      // One "done" per batch, not one for the session.
+      const batches = [...new Set(lines.map((l) => l.batchId))];
+      for (const b of batches) {
+        const own = lines.filter((l) => l.batchId === b);
+        const key = `done:${b}`;
+        if (own.length > 0 && own.every((l) => l.saved) && !askedRef.current.has(key)) {
+          askedRef.current.add(key);
+          pushBot(own.length > 1 ? "Anotado. Tudo no lugar." : "Anotado.");
+        }
       }
       return;
     }
@@ -215,8 +219,8 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
     if (q) {
       setQuestion(q);
       const key = `${q.draftId}:${q.kind}`;
-      if (askedRef.current !== key) {
-        askedRef.current = key;
+      if (!askedRef.current.has(key)) {
+        askedRef.current.add(key);
         pushBot(q.prompt);
         chimeAsk();
       }
@@ -243,7 +247,9 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
         return;
       }
 
+      const batchId = uid();
       const fresh: Line[] = entries.map((e) => ({
+        batchId,
         draft: applyDefaults(
           {
             id: uid(),
@@ -262,7 +268,7 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
         saving: false,
         error: false,
       }));
-      askedRef.current = "";
+      setItems((m) => [...m, { kind: "batch", id: batchId }]);
       setLines((ls) => [...ls, ...fresh]);
     } catch (err) {
       pushBot(err instanceof Error ? err.message : "Não consegui ler agora. Tenta de novo?");
@@ -279,7 +285,6 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
         ? { ...l, draft: applyDefaults(answerDraft(l.draft, q, value), setup) }
         : l,
     ));
-    askedRef.current = "";
   }, [setup]);
 
   const answerWithOption = useCallback((q: QuickQuestion, option: { id: string; label: string }) => {
@@ -339,26 +344,31 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
     }
   }, [recorder, ingest, pushBot]);
 
-  /* ---- what the receipt shows --------------------------------------------- */
+  /* ---- what each receipt shows -------------------------------------------- */
 
-  const notinhaLines: NotinhaLine[] = useMemo(() => lines.map((l) => ({
-    id: l.draft.id,
-    name: l.draft.name,
-    sub: l.draft.category ?? "",
-    amount: l.draft.amount,
-    type: l.draft.type,
-    status: l.error ? "error" : l.saved ? "saved" : l.saving ? "saving"
-      : question?.draftId === l.draft.id ? "asking" : "reading",
-  })), [lines, question]);
-
-  const receiptItems: ReceiptItem[] = useMemo(() => lines
-    .filter((l) => l.saved)
-    .map((l) => ({
+  const linesOf = useCallback((batchId: string): NotinhaLine[] =>
+    lines.filter((l) => l.batchId === batchId).map((l) => ({
+      id: l.draft.id,
       name: l.draft.name,
-      category: l.draft.category ?? "Outros",
+      sub: l.draft.category ?? "",
       amount: l.draft.amount,
       type: l.draft.type,
-    })), [lines]);
+      status: l.error ? "error" : l.saved ? "saved" : l.saving ? "saving"
+        : question?.draftId === l.draft.id ? "asking" : "reading",
+    })), [lines, question]);
+
+  const receiptItems: ReceiptItem[] = useMemo(() => {
+    if (!receiptBatch) return [];
+    return lines
+      .filter((l) => l.batchId === receiptBatch && l.saved)
+      .map((l) => ({
+        name: l.draft.name,
+        category: l.draft.category ?? "Outros",
+        amount: l.draft.amount,
+        type: l.draft.type,
+        method: methodLabel(l.draft, setup),
+      }));
+  }, [receiptBatch, lines, setup]);
 
   /** Categories worth offering by hand, for the type being asked about. */
   const categoryChips = useMemo(() => {
@@ -377,6 +387,8 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
 
   if (!open) return null;
 
+  const chipBase = "shrink-0 rounded-full px-3.5 py-[7px] text-[13px] transition-transform active:scale-95";
+
   return createPortal(
     <>
       <AnimatePresence>
@@ -389,70 +401,102 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
           role="dialog"
           aria-label="Registro rápido"
         >
-          {/* Header — the title leads, the way out sits off to the side. */}
+          {/* Header — the title leads, the controls sit off to the side. */}
           <div
-            className="relative z-10 flex shrink-0 items-center justify-between gap-3 px-5 pb-3"
-            style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
+            className="flex shrink-0 items-center justify-between gap-3 px-5 pb-2.5"
+            style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
           >
-            <div className="min-w-0">
-              <h2 className="text-[20px] font-bold tracking-[-0.02em] text-white">Registro rápido</h2>
-              <p className="text-[12.5px] text-white/42">
-                {allSaved ? "Tudo anotado" : hasEntries ? "Quase lá" : "Uma frase basta"}
-              </p>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <BotMark working={busy} size={34} />
+              <div className="min-w-0">
+                <h2 className="text-[18px] font-bold leading-tight tracking-[-0.02em] text-white">Registro rápido</h2>
+                <p className="text-[12px] leading-tight text-white/40">
+                  {busy ? "Trabalhando…" : allSaved ? "Tudo anotado" : hasEntries ? "Quase lá" : "Uma frase basta"}
+                </p>
+              </div>
             </div>
-            <button
-              onClick={handleClose}
-              aria-label={hasEntries ? "Concluir" : "Fechar"}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/85 ring-1 ring-white/15 backdrop-blur-md transition-transform active:scale-95"
-            >
-              <X className="h-[18px] w-[18px]" strokeWidth={2.4} />
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                onClick={() => setShowHistory(true)}
+                aria-label="Histórico"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.08] text-white/75 ring-1 ring-white/10 active:scale-95"
+              >
+                <History className="h-[17px] w-[17px]" strokeWidth={2.2} />
+              </button>
+              <button
+                onClick={handleClose}
+                aria-label={hasEntries ? "Concluir" : "Fechar"}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.08] text-white/85 ring-1 ring-white/10 active:scale-95"
+              >
+                <X className="h-[17px] w-[17px]" strokeWidth={2.4} />
+              </button>
+            </div>
           </div>
 
           {/* Thread */}
-          <div ref={threadRef} className="relative z-10 flex-1 space-y-2.5 overflow-y-auto px-5 pb-5">
-            {messages.map((m) => (
+          <div ref={threadRef} className="flex-1 space-y-2 overflow-y-auto px-5 pb-4 pt-1">
+            {items.map((item) => item.kind === "msg" ? (
               <motion.div
-                key={m.id}
+                key={item.id}
                 initial={{ opacity: 0, y: 8, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                className={m.role === "user" ? "flex justify-end" : "flex justify-start"}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                className={item.role === "user" ? "flex justify-end" : "flex justify-start"}
               >
-                <p className={m.role === "user"
-                  ? "max-w-[84%] rounded-[20px] rounded-br-[7px] bg-white px-4 py-2.5 text-[15px] font-medium leading-snug tracking-[-0.01em] text-[#0B0B0B]"
-                  : "max-w-[84%] rounded-[20px] rounded-bl-[7px] border border-white/[0.09] bg-white/[0.06] px-4 py-2.5 text-[15px] leading-snug text-white/92 backdrop-blur-xl"}
+                <p className={item.role === "user"
+                  ? "max-w-[84%] rounded-[19px] rounded-br-[7px] bg-white px-3.5 py-2.5 text-[15px] font-medium leading-snug tracking-[-0.01em] text-[#0B0B0B]"
+                  : "max-w-[84%] rounded-[19px] rounded-bl-[7px] border border-white/[0.09] bg-white/[0.06] px-3.5 py-2.5 text-[15px] leading-snug text-white/92"}
                 >
-                  {m.text}
+                  {item.text}
                 </p>
               </motion.div>
-            ))}
-
-            <AnimatePresence>{busy && <Thinking key="t" label={thinking} />}</AnimatePresence>
-
-            {hasEntries && (
-              <div className="pt-1.5">
+            ) : (
+              <div key={item.id} className="py-1.5">
                 <Notinha
-                  lines={notinhaLines}
-                  onOpen={receiptItems.length > 0 ? () => setShowReceipt(true) : undefined}
+                  lines={linesOf(item.id)}
+                  onOpen={() => setReceiptBatch(item.id)}
                 />
               </div>
-            )}
+            ))}
+
+            <AnimatePresence>
+              {busy && (
+                <motion.div
+                  key="thinking"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="flex items-center gap-2"
+                >
+                  <BotMark working size={26} />
+                  <span className="flex gap-1 rounded-full border border-white/[0.09] bg-white/[0.06] px-3 py-2">
+                    {[0, 1, 2].map((i) => (
+                      <motion.span
+                        key={i}
+                        className="block h-[5px] w-[5px] rounded-full bg-willo-green"
+                        animate={{ opacity: [0.25, 1, 0.25], y: [0, -2.5, 0] }}
+                        transition={{ duration: 1.05, repeat: Infinity, ease: "easeInOut", delay: i * 0.15 }}
+                      />
+                    ))}
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Composer */}
           <div
-            className="relative z-10 shrink-0 border-t border-white/[0.07] bg-black/25 px-5 pt-3 backdrop-blur-2xl"
-            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
+            className="shrink-0 border-t border-white/[0.07] bg-black/30 px-4 pt-2.5 backdrop-blur-xl"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)" }}
           >
             {/* Chips: what is being asked for, the categories to choose from, or —
                 with nothing pending — examples of what one sentence can carry. */}
-            <div className="-mx-5 mb-3 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="-mx-4 mb-2 flex gap-1.5 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {optionChips.map((o) => (
                 <button
                   key={o.id}
                   onClick={() => question && answerWithOption(question, o)}
-                  className="shrink-0 rounded-full bg-willo-green px-4 py-2 text-[13.5px] font-bold text-[#0B0B0B] transition-transform active:scale-95"
+                  className={`${chipBase} bg-willo-green font-bold text-[#0B0B0B]`}
                 >
                   {o.label}
                 </button>
@@ -466,7 +510,7 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
                     pushUser(c);
                     applyAnswer(question, c);
                   }}
-                  className="shrink-0 rounded-full border border-white/[0.10] bg-white/[0.06] px-4 py-2 text-[13.5px] font-medium text-white/85 backdrop-blur-md transition-transform active:scale-95"
+                  className={`${chipBase} border border-white/[0.10] bg-white/[0.06] font-medium text-white/85`}
                 >
                   {c}
                 </button>
@@ -475,24 +519,26 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
                 <button
                   key={c}
                   onClick={() => { setText(c); inputRef.current?.focus(); }}
-                  className="shrink-0 rounded-full border border-white/[0.09] bg-white/[0.04] px-4 py-2 text-[13.5px] text-white/60 backdrop-blur-md transition-transform active:scale-95"
+                  className={`${chipBase} border border-white/[0.08] bg-white/[0.035] text-white/55`}
                 >
                   {c}
                 </button>
               ))}
             </div>
 
-            {/* Writing in the middle, the camera and the microphone on either side. */}
-            <div className="flex items-center gap-2.5">
+            {/* Writing in the middle, the camera and the microphone on either side, and
+                the full form tucked into the same row rather than claiming one of
+                its own. */}
+            <div className="flex items-center gap-2">
               <button
                 onClick={onPhoto}
                 aria-label="Foto do comprovante"
-                className="flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-full border border-white/[0.10] bg-white/[0.06] text-white/80 backdrop-blur-md transition-transform active:scale-95"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/[0.10] bg-white/[0.06] text-white/75 active:scale-95"
               >
-                <Camera className="h-[19px] w-[19px]" strokeWidth={2.1} />
+                <Camera className="h-[18px] w-[18px]" strokeWidth={2.1} />
               </button>
 
-              <div className={`flex h-[48px] min-w-0 flex-1 items-center rounded-full border bg-white/[0.05] backdrop-blur-md transition-colors ${
+              <div className={`flex h-11 min-w-0 flex-1 items-center rounded-full border bg-white/[0.05] transition-colors ${
                 recorder.recording ? "border-[#F87171]/60" : text ? "border-willo-green/55" : "border-white/[0.11]"
               }`}>
                 <input
@@ -503,7 +549,7 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
                   placeholder={recorder.recording ? `Ouvindo…  ${recorder.seconds}s` : "o que rolou?"}
                   disabled={recorder.recording}
                   enterKeyHint="send"
-                  className="h-full w-full rounded-full bg-transparent px-4 text-[15px] text-white placeholder:text-white/32 focus:outline-none disabled:opacity-70"
+                  className="h-full w-full rounded-full bg-transparent px-3.5 text-[15px] text-white placeholder:text-white/32 focus:outline-none disabled:opacity-70"
                 />
               </div>
 
@@ -511,10 +557,10 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
                 onClick={text.trim() ? submitText : toggleRecording}
                 disabled={busy || (!text.trim() && !recorder.supported)}
                 aria-label={text.trim() ? "Enviar" : recorder.recording ? "Parar gravação" : "Gravar"}
-                className={`relative flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-full transition-all active:scale-95 disabled:opacity-40 ${
+                className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all active:scale-95 disabled:opacity-40 ${
                   recorder.recording ? "bg-[#F87171]"
                     : text.trim() ? "bg-willo-green"
-                    : "border border-white/[0.10] bg-white/[0.06] backdrop-blur-md"
+                    : "border border-white/[0.10] bg-white/[0.06]"
                 }`}
               >
                 {recorder.recording && (
@@ -526,32 +572,31 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
                   />
                 )}
                 <span className="relative">
-                  {busy ? <Loader2 className="h-5 w-5 animate-spin text-white" />
-                    : text.trim() ? <ArrowUp className="h-5 w-5 text-[#0B0B0B]" strokeWidth={2.8} />
-                    : recorder.recording ? <Square className="h-[15px] w-[15px] fill-white text-white" />
-                    : <Mic className="h-[19px] w-[19px] text-white/80" strokeWidth={2.1} />}
+                  {text.trim() ? <ArrowUp className="h-[19px] w-[19px] text-[#0B0B0B]" strokeWidth={2.8} />
+                    : recorder.recording ? <Square className="h-[14px] w-[14px] fill-white text-white" />
+                    : <Mic className="h-[18px] w-[18px] text-white/75" strokeWidth={2.1} />}
                 </span>
               </button>
             </div>
 
-            <div className="mt-2.5 flex justify-center">
-              <button
-                onClick={onManual}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13.5px] font-medium text-white/50 transition-colors active:text-white/80"
-              >
-                <PenLine className="h-[14px] w-[14px]" strokeWidth={2.2} />
-                Adicionar manualmente
-              </button>
-            </div>
+            <button
+              onClick={onManual}
+              className="mx-auto mt-1.5 flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-medium text-white/45 active:text-white/80"
+            >
+              <PenLine className="h-[13px] w-[13px]" strokeWidth={2.2} />
+              Adicionar manualmente
+            </button>
           </div>
         </motion.div>
       </AnimatePresence>
 
       <ReceiptViewer
-        open={showReceipt}
+        open={receiptBatch !== null && receiptItems.length > 0}
         items={receiptItems}
-        onClose={() => setShowReceipt(false)}
+        onClose={() => setReceiptBatch(null)}
       />
+
+      <HistoricoPanel open={showHistory} onClose={() => setShowHistory(false)} />
     </>,
     document.body,
   );
