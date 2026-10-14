@@ -17,7 +17,7 @@ interface Props {
 }
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
-const INITIAL_COUNT = 5;
+const INITIAL_COUNT = 3;
 
 const FALLBACK_COLORS = [
   "330 80% 60%", "250 70% 65%", "35 90% 55%", "200 80% 55%",

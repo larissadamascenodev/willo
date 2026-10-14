@@ -14,7 +14,7 @@ interface Props {
 }
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
-const VISIBLE_COUNT = 5;
+const VISIBLE_COUNT = 3;
 
 function statusLabel(tx: Transaction) {
   const isReceita = tx.type === "receita";

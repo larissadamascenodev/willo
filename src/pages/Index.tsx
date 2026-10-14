@@ -10,7 +10,8 @@ import ReceitasDespesasCards from "@/components/dashboard/ReceitasDespesasCards"
 import SaldoWalletCarousel from "@/components/dashboard/SaldoWalletCarousel";
 import TransacoesRecentes from "@/components/dashboard/TransacoesRecentes";
 import ProximosEventos from "@/components/dashboard/ProximosEventos";
-import AssinaturasCard from "@/components/dashboard/AssinaturasCard";
+import GastosFixosCard from "@/components/dashboard/GastosFixosCard";
+import AssinaturasTile from "@/components/dashboard/AssinaturasTile";
 import GastosPorCategoria from "@/components/dashboard/GastosPorCategoria";
 import FinanceChartCard from "@/components/dashboard/FinanceChartCard";
 import CardsOverviewSection from "@/components/dashboard/CardsOverviewSection";
@@ -138,7 +139,7 @@ const Index = () => {
             {isCurrentMonth && <FinanceChartCard />}
             <FinanceOverviewCard receitas={receitas} despesas={despesas} saldoPrevisto={saldoPrevisto} nextMonthBalance={data.projection.nextMonthBalance} month={selectedMonth} />
             <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
-            <AssinaturasCard />
+            <GastosFixosCard />
             <MetasResumoCard />
           </div>
         </div>
@@ -174,7 +175,7 @@ const Index = () => {
           <FinanceOverviewCard receitas={receitas} despesas={despesas} saldoPrevisto={saldoPrevisto} nextMonthBalance={data.projection.nextMonthBalance} month={selectedMonth} />
           <TransacoesRecentes transactions={data.transactions} onDelete={refetch} />
           <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
-          <AssinaturasCard />
+          <GastosFixosCard />
            <ParcelamentosAtivosCard />
            <MetasResumoCard />
         </div>
@@ -226,20 +227,28 @@ const Index = () => {
               eye stops reading them separately. */}
           <FluxoReceitasDespesasCard receitas={receitas} despesas={despesas} month={selectedMonth} isCurrentMonth={isCurrentMonth} />
 
+          <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
+
+          {/* O QUE JÁ ESTÁ COMPROMETIDO — quatro resumos em pares, e o quinto sozinho.
+              Gastos e receitas fixas ocupa a linha inteira porque é a única coisa aqui
+              que são dois números: o que sai todo mês e o que entra todo mês só querem
+              dizer alguma coisa um ao lado do outro. Ele fechando o bloco também quebra
+              a grade, para seis caixas iguais não virarem um teclado. */}
           <TileRow>
             <CardsOverviewSection compact />
             <ParcelamentosAtivosCard compact />
           </TileRow>
 
-          <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
-          <GastosPorCategoria categories={data.categories} selectedMonth={selectedMonth} onVerAnalise={() => navigate("/transacoes")} />
-
           <TileRow>
-            <AssinaturasCard compact />
+            <AssinaturasTile />
             <MetasResumoCard compact />
           </TileRow>
 
-          {/* O REGISTRO. */}
+          <GastosFixosCard compact />
+
+          {/* O REGISTRO. Três de cada: o suficiente para reconhecer o mês, não para
+              virar extrato. */}
+          <GastosPorCategoria categories={data.categories} selectedMonth={selectedMonth} onVerAnalise={() => navigate("/transacoes")} />
           <TransacoesRecentes transactions={data.transactions} onDelete={refetch} />
           </div>
         </div>
