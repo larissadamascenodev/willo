@@ -9,6 +9,12 @@ export interface QuickDraft {
   category: string | null;
   /** yyyy-mm-dd. Today unless the person said otherwise. */
   date: string;
+  /**
+   * Whether the money has already moved. "pago" covers both directions: the app has
+   * no separate settled-income status, and a receita filed as anything else never
+   * reaches the balance, because the trigger that recalculates it counts only "pago".
+   */
+  status: "pago" | "pendente";
   paymentMethod: "conta" | "cartao" | null;
   accountId: string | null;
   creditCardId: string | null;

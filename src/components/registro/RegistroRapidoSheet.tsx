@@ -9,7 +9,7 @@ import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { chimeAsk, chimeSaved } from "@/lib/chime";
 import { createTransaction, getAccounts, getCreditCards } from "@/services/transactionService";
 import { allowedCategories, categoriseAnswer, readEntry, todayISO } from "@/services/quickEntry";
-import { applyDefaults, answer as answerDraft, nextQuestion } from "@/lib/quickEntry/resolve";
+import { applyDefaults, answer as answerDraft, nextQuestion, statusFor } from "@/lib/quickEntry/resolve";
 import type { QuickDraft, QuickQuestion, QuickSetup } from "@/lib/quickEntry/types";
 import type { ReceiptItem } from "@/lib/receiptImage";
 import Notinha, { type NotinhaLine } from "./Notinha";
@@ -170,7 +170,7 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
             amount: d.amount,
             category: d.category ?? "Outros",
             date: d.date,
-            status: d.type === "receita" ? "recebido" : "pago",
+            status: d.status,
             payment_method: d.paymentMethod ?? "conta",
             account_id: d.accountId,
             credit_card_id: d.creditCardId,
@@ -263,6 +263,7 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
             amount: e.amount,
             category: e.category,
             date: e.date || todayISO(),
+            status: statusFor(e.settled, e.date || todayISO(), todayISO()),
             paymentMethod: e.paymentMethod,
             accountId: null,
             creditCardId: null,

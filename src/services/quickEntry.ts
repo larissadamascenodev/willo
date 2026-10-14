@@ -13,6 +13,8 @@ export interface ParsedEntry {
   category: string | null;
   date: string;
   paymentMethod: "conta" | "cartao" | null;
+  /** Did the sentence say the money already moved? null when it did not say. */
+  settled: boolean | null;
 }
 
 export interface ParseResult {

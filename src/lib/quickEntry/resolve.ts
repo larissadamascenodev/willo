@@ -22,6 +22,27 @@ const fmt = (v: number) =>
  * Fills in everything that follows from the person's setup, so the only things left
  * are things genuinely worth a question.
  */
+/**
+ * Has the money already moved?
+ *
+ * The sentence decides when it says so — "recebi" and "paguei" are past tense, "vou
+ * receber" and "a receber" are not — and that reading is the model's job. When the
+ * sentence says nothing either way, the date decides: something dated ahead has not
+ * happened yet. That half is arithmetic, so it lives here.
+ *
+ * Both directions land on "pago". The app has no settled-income status; a receita
+ * filed as anything else never reaches the balance.
+ */
+export function statusFor(
+  settled: boolean | null | undefined,
+  date: string,
+  today: string,
+): "pago" | "pendente" {
+  if (settled === true) return "pago";
+  if (settled === false) return "pendente";
+  return date > today ? "pendente" : "pago";
+}
+
 export function applyDefaults(draft: QuickDraft, setup: QuickSetup): QuickDraft {
   const next = { ...draft };
 

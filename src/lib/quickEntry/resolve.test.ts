@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyDefaults, answer, isReady, missingFrom, nextQuestion } from "./resolve";
+import { applyDefaults, answer, isReady, missingFrom, nextQuestion, statusFor } from "./resolve";
 import type { QuickDraft, QuickSetup } from "./types";
 
 /*
@@ -14,6 +14,7 @@ const draft = (over: Partial<QuickDraft> = {}): QuickDraft => ({
   amount: 30,
   category: "Supermercado",
   date: "2026-10-14",
+  status: "pago",
   paymentMethod: null,
   accountId: null,
   creditCardId: null,
@@ -26,6 +27,45 @@ const setup = (accounts: number, cards: number): QuickSetup => ({
 });
 
 const resolved = (d: QuickDraft, s: QuickSetup) => applyDefaults(d, s);
+
+/*
+ * O status é metade leitura de frase, metade aritmética de data. A leitura é do
+ * modelo; a aritmética é daqui, e é o que estes testes protegem.
+ *
+ * As duas direções terminam em "pago": o app não tem status de receita recebida, e
+ * uma receita gravada com qualquer outra coisa nunca chega ao saldo.
+ */
+describe("já aconteceu, ou ainda vai acontecer", () => {
+  const hoje = "2026-10-14";
+
+  it("“recebi” e “paguei” entram como pago", () => {
+    expect(statusFor(true, hoje, hoje)).toBe("pago");
+  });
+
+  it("“vou receber” e “a receber” entram como pendente", () => {
+    expect(statusFor(false, hoje, hoje)).toBe("pendente");
+  });
+
+  it("sem dizer nada, uma data futura é pendente", () => {
+    expect(statusFor(null, "2026-10-20", hoje)).toBe("pendente");
+  });
+
+  it("sem dizer nada, hoje é pago", () => {
+    expect(statusFor(null, hoje, hoje)).toBe("pago");
+  });
+
+  it("sem dizer nada, ontem é pago", () => {
+    expect(statusFor(null, "2026-10-13", hoje)).toBe("pago");
+  });
+
+  it("a frase ganha da data: “já paguei a academia de dia 20”", () => {
+    expect(statusFor(true, "2026-10-20", hoje)).toBe("pago");
+  });
+
+  it("a frase ganha da data no outro sentido também", () => {
+    expect(statusFor(false, "2026-10-13", hoje)).toBe("pendente");
+  });
+});
 
 describe("o que não vale perguntar", () => {
   it("sem cartão nenhum, não pergunta débito ou crédito", () => {

@@ -110,6 +110,13 @@ Para cada lançamento:
 - date: ISO yyyy-mm-dd. Sem menção de data, use ${today}. "ontem" é o dia anterior,
   "anteontem" dois dias antes, "sexta passada" a sexta mais recente já passada,
   "dia 10" o dia 10 do mês corrente, ou do anterior se o dia 10 ainda não chegou.
+- settled: o dinheiro JÁ se moveu?
+  true  -> a frase está no passado: "recebi", "paguei", "gastei", "comprei", "caiu",
+           "entrou", "já paguei", "torrei".
+  false -> a frase aponta para frente: "vou receber", "vou pagar", "a receber",
+           "a pagar", "vence dia", "pagar dia".
+  null  -> a frase não diz. NÃO deduza pela data: quem decide nesse caso é o app.
+  Atenção: isto é independente do tipo. "recebi 50 no pix" é receita com settled true.
 - paymentMethod: "cartao" só se a frase disser cartão de crédito ou "no crédito".
   "conta" se disser pix, débito, dinheiro, transferência ou boleto.
   null se a frase não disser nada sobre isso. Não deduza.
@@ -132,6 +139,7 @@ const SCHEMA = {
           category: { type: "string", nullable: true },
           date: { type: "string" },
           paymentMethod: { type: "string", enum: ["conta", "cartao"], nullable: true },
+          settled: { type: "boolean", nullable: true },
         },
         required: ["name", "type", "amount", "date"],
       },
@@ -189,6 +197,9 @@ serve(async (req) => {
         date: /^\d{4}-\d{2}-\d{2}$/.test(String(e.date)) ? String(e.date) : today,
         paymentMethod:
           e.paymentMethod === "cartao" || e.paymentMethod === "conta" ? e.paymentMethod : null,
+        // Left as null unless the sentence actually said; the date decides the rest,
+        // and that decision belongs to the app, not here.
+        settled: typeof e.settled === "boolean" ? e.settled : null,
       }));
 
     return json({ entries, transcript: result?.transcript ?? null });
