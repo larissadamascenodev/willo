@@ -108,11 +108,29 @@ export function isReady(drafts: QuickDraft[], setup: QuickSetup): boolean {
   return drafts.length > 0 && nextQuestion(drafts, setup) === null;
 }
 
+/**
+ * Names the reader falls back to when the sentence gave it no merchant to work with.
+ * "Gastei 20" produces one of these, and a row called "Gasto" tells the person nothing
+ * later, so once they say what it was for, that becomes its name.
+ */
+const PLACEHOLDER_NAMES = new Set([
+  "gasto", "gastos", "despesa", "receita", "lançamento", "lancamento",
+  "compra", "pagamento", "entrada", "saída", "saida",
+]);
+
+export function isPlaceholderName(name: string): boolean {
+  return PLACEHOLDER_NAMES.has(name.trim().toLowerCase());
+}
+
 /** Applies an answer to the entry it was asked about. */
 export function answer(draft: QuickDraft, question: QuickQuestion, value: string): QuickDraft {
   switch (question.kind) {
     case "category":
-      return { ...draft, category: value };
+      return {
+        ...draft,
+        category: value,
+        name: isPlaceholderName(draft.name) ? value : draft.name,
+      };
     case "paymentMethod":
       return { ...draft, paymentMethod: value === "cartao" ? "cartao" : "conta" };
     case "account":

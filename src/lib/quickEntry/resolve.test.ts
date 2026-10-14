@@ -109,6 +109,18 @@ describe("a ordem das perguntas", () => {
   });
 });
 
+describe("o nome de um lançamento sem dono", () => {
+  const ask = { kind: "category" as const, draftId: "d1", prompt: "", options: [] };
+
+  it("“Gasto” vira a categoria que a pessoa respondeu", () => {
+    expect(answer(draft({ name: "Gasto", category: null }), ask, "Transporte").name).toBe("Transporte");
+  });
+
+  it("um nome de verdade é preservado", () => {
+    expect(answer(draft({ name: "Uber", category: null }), ask, "Transporte").name).toBe("Uber");
+  });
+});
+
 describe("quando está pronto para salvar", () => {
   it("nada a perguntar, nada a responder", () => {
     const s = setup(1, 0);

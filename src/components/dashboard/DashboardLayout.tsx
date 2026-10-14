@@ -16,6 +16,7 @@ import { showScanSavedToast } from "@/components/scan/scanSavedToast";
 import BottomSheet from "@/components/shared/BottomSheet";
 import ScanCaptureScreen from "@/components/scan/ScanCaptureScreen";
 import ScannerScreen from "@/components/scan/ScannerScreen";
+import RegistroRapidoSheet from "@/components/registro/RegistroRapidoSheet";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 import WelcomeToAppModal from "@/components/dashboard/WelcomeToAppModal";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,6 +53,7 @@ const DashboardLayout = () => {
   const [modalType, setModalType] = useState<"receita" | "despesa">("despesa");
 
   // OCR state
+  const [showRegistro, setShowRegistro] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [showScanScreen, setShowScanScreen] = useState(false);
   const [scanPhotoUrl, setScanPhotoUrl] = useState<string | null>(null);
@@ -96,7 +98,7 @@ const DashboardLayout = () => {
     };
     // The viewfinder opens in the app rather than handing off to the system camera
     // sheet, so the frame, the gallery and manual entry all sit on one screen.
-    const handleScanner = () => setShowScanner(true);
+    const handleScanner = () => setShowRegistro(true);
     const handleEditTransaction = (e: Event) => {
       const detail = (e as CustomEvent).detail as EditTransactionData;
       if (detail) {
@@ -371,6 +373,13 @@ const DashboardLayout = () => {
         </div>
         <MobileBottomNav />
         <WelcomeToAppModal open={showWelcomeModal} onConfigure={handleConfigureNow} onSkip={dismissWelcomeModal} />
+        <RegistroRapidoSheet
+          open={showRegistro}
+          onClose={() => setShowRegistro(false)}
+          onPhoto={() => { setShowRegistro(false); setShowScanner(true); }}
+          onManual={() => { setShowRegistro(false); setModalType("despesa"); setShowModal(true); }}
+        />
+
         <ScannerScreen
           open={showScanner}
           onClose={() => setShowScanner(false)}
