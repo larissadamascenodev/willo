@@ -243,7 +243,9 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
       if (input.audio && transcript) pushUser(transcript);
 
       if (entries.length === 0) {
-        pushBot("Não achei nenhum valor aí. Tenta algo como “mercado 30” ou “recebi 200 de freela”.");
+        pushBot(input.audio && !transcript?.trim()
+          ? "Não consegui ouvir. Fala mais perto, num lugar mais quieto?"
+          : "Não achei nenhum valor aí. Tenta algo como “mercado 30” ou “recebi 200 de freela”.");
         return;
       }
 
@@ -339,8 +341,12 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
     }
     try {
       await recorder.start();
-    } catch {
-      toast.error("Preciso de acesso ao microfone para ouvir.");
+    } catch (err) {
+      const denied = err instanceof DOMException
+        && (err.name === "NotAllowedError" || err.name === "SecurityError");
+      toast.error(denied
+        ? "O microfone está bloqueado. Libere o Willo nas configurações do aparelho."
+        : "Não consegui acessar o microfone agora.");
     }
   }, [recorder, ingest, pushBot]);
 

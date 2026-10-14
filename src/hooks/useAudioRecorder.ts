@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toWav } from "@/lib/audioToWav";
 
 /**
  * Records a short spoken note and hands it back as base64 for the reader.
  *
- * The container is whatever the browser will actually produce: Safari and the iOS web
- * view only give mp4, Chrome and Android give webm/opus. Asking for the wrong one does
- * not throw — it silently records nothing — so the type is chosen from what the browser
- * admits to supporting, and sent along with the audio so the reader knows what it got.
+ * Recording uses whatever container the browser will actually produce — Chrome gives
+ * WebM/Opus, Safari and the iOS web view give MP4/AAC — because asking for one it does
+ * not support does not throw, it silently records nothing.
+ *
+ * What goes out is always WAV. The reader accepts WAV, MP3, AAC, OGG and FLAC but not
+ * WebM, so sending the recording as it came would work on a phone and come back empty
+ * on a laptop with nothing to show why.
  */
 
 const CANDIDATES = [
@@ -92,15 +96,24 @@ export function useAudioRecorder() {
 
     if (blob.size === 0) return null;
 
+    // If the conversion fails the recording still goes, in its own container: it may
+    // be a format the reader understands, and a chance beats a certainty of nothing.
+    let payload = blob;
+    try {
+      payload = await toWav(blob);
+    } catch {
+      /* keep the original */
+    }
+
     const data = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onerror = () => reject(reader.error);
       // readAsDataURL gives "data:<type>;base64,<payload>" — only the payload travels.
       reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
-      reader.readAsDataURL(blob);
+      reader.readAsDataURL(payload);
     });
 
-    return { data, mimeType: blob.type || "audio/webm", seconds: elapsed };
+    return { data, mimeType: payload.type || "audio/wav", seconds: elapsed };
   }, [cleanup]);
 
   /** Throws the recording away without reading it. */

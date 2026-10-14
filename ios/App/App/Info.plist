@@ -26,6 +26,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>O Willo usa a câmera para você fotografar comprovantes e faturas e lançar os gastos automaticamente.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>O Willo usa o microfone para você ditar um gasto em vez de digitar.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>O Willo acessa suas fotos para você enviar comprovantes, faturas, foto de perfil e capas das suas metas.</string>
 	<key>UIApplicationSceneManifest</key>
