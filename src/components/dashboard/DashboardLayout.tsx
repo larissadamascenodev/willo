@@ -353,7 +353,12 @@ const DashboardLayout = () => {
       {showOnboarding && (
         <OnboardingFlow onComplete={handleOnboardingComplete} onRefetch={refetchProfile} />
       )}
-      <div className="willo-bg min-h-screen text-foreground" style={showOnboarding ? { display: "none" } : undefined}>
+      <div
+        // Only the home gets the sky. It is the one screen whose top is a greeting over open
+        // space; everywhere else a picture would sit behind a working header.
+        className={`willo-bg min-h-screen text-foreground${location.pathname === "/" ? " willo-sky" : ""}`}
+        style={showOnboarding ? { display: "none" } : undefined}
+      >
         {/* Only the home pins a header for content to dissolve under. On every other
             page the header scrolls away with the page, so this band had nothing to
             soften and simply smeared the title and the name as they passed beneath. */}

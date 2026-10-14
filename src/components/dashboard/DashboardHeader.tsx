@@ -327,7 +327,7 @@ const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profi
             className="flex min-w-0 items-center gap-2.5 active:opacity-70"
             aria-label="Perfil"
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[14px] font-bold text-white">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[14px] font-bold text-white ring-1 ring-white/20">
               {profile?.avatar_url ? (
                 <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
               ) : (
@@ -347,11 +347,11 @@ const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profi
           <div className="relative shrink-0" ref={notifRef}>
             <button
               onClick={handleOpenNotif}
-              className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] text-white/85 transition-colors active:opacity-70"
+              className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white/90 ring-1 ring-white/15 backdrop-blur-md transition-colors active:opacity-70"
               aria-label="Notificações"
             >
               <Bell className="h-[18px] w-[18px]" />
-              {unreadCount > 0 && <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-willo-green ring-2 ring-[#0B0B0B]" />}
+              {unreadCount > 0 && <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-willo-green ring-2 ring-black/40" />}
             </button>
             {isMobile && <NotificationsPanel open={notifOpen} onClose={handleCloseNotif} />}
           </div>
