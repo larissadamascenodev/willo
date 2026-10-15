@@ -39,7 +39,23 @@ export interface OverviewInstallment {
   year: number;
 }
 
-let cache: { userId: string; cards: OverviewCard[]; invoices: OverviewInvoice[]; installments: OverviewInstallment[]; t: number } | null = null;
+/** Every line of an invoice, with only what it takes to count them. */
+export interface OverviewItem {
+  id: string;
+  cardId: string;
+  month: number; // 1-12 (invoice month)
+  year: number;
+  isParcelado: boolean;
+}
+
+let cache: {
+  userId: string;
+  cards: OverviewCard[];
+  invoices: OverviewInvoice[];
+  installments: OverviewInstallment[];
+  items: OverviewItem[];
+  t: number;
+} | null = null;
 const CACHE_TTL = 120_000;
 
 /** Credit cards with their invoices and card installments, from 3 months back to 12 months ahead. */
@@ -49,6 +65,7 @@ export function useCardsOverview() {
   const [cards, setCards] = useState<OverviewCard[]>(fresh?.cards ?? []);
   const [invoices, setInvoices] = useState<OverviewInvoice[]>(fresh?.invoices ?? []);
   const [installments, setInstallments] = useState<OverviewInstallment[]>(fresh?.installments ?? []);
+  const [items, setItems] = useState<OverviewItem[]>(fresh?.items ?? []);
   const [loading, setLoading] = useState(!fresh);
 
   const load = useCallback(async () => {
@@ -60,11 +77,12 @@ export function useCardsOverview() {
     const [{ data: cardRows }, { data: invoiceRows }, { data: itemRows }] = await Promise.all([
       supabase.from("credit_cards").select("*").eq("user_id", user.id).order("created_at"),
       supabase.from("invoices").select("id, credit_card_id, month, year, total_amount, paid_amount, is_paid").eq("user_id", user.id).gte("year", fromYear),
+      /* Every line, not just the instalments: the wallet says how many lines an
+         invoice has and how many of them are parcelas, and that is one question. */
       supabase
         .from("invoice_items")
         .select("id, amount, installment_number, total_installments, transaction_id, invoices!inner(user_id, month, year, credit_card_id), transactions!inner(name, category, parent_transaction_id)")
         .eq("invoices.user_id", user.id)
-        .gt("total_installments", 1)
         .gte("invoices.year", fromYear),
     ]);
 
@@ -90,11 +108,24 @@ export function useCardsOverview() {
       paid: Number(inv.paid_amount ?? 0),
       isPaid: !!inv.is_paid,
     }));
-    const nextInstallments: OverviewInstallment[] = ((itemRows ?? []) as Array<{
+    type ItemRow = {
       id: string; amount: number; installment_number: number | null; total_installments: number | null; transaction_id: string;
       invoices: { month: number; year: number; credit_card_id: string };
       transactions: { name: string; category: string; parent_transaction_id: string | null };
-    }>).map((it) => ({
+    };
+    const rows = (itemRows ?? []) as ItemRow[];
+
+    const nextItems: OverviewItem[] = rows.map((it) => ({
+      id: it.id,
+      cardId: it.invoices.credit_card_id,
+      month: it.invoices.month,
+      year: it.invoices.year,
+      isParcelado: (it.total_installments ?? 1) > 1,
+    }));
+
+    const nextInstallments: OverviewInstallment[] = rows
+      .filter((it) => (it.total_installments ?? 1) > 1)
+      .map((it) => ({
       id: it.id,
       groupId: it.transactions.parent_transaction_id ?? it.transaction_id,
       name: it.transactions.name,
@@ -107,10 +138,18 @@ export function useCardsOverview() {
       year: it.invoices.year,
     }));
 
-    cache = { userId: user.id, cards: nextCards, invoices: nextInvoices, installments: nextInstallments, t: Date.now() };
+    cache = {
+      userId: user.id,
+      cards: nextCards,
+      invoices: nextInvoices,
+      installments: nextInstallments,
+      items: nextItems,
+      t: Date.now(),
+    };
     setCards(nextCards);
     setInvoices(nextInvoices);
     setInstallments(nextInstallments);
+    setItems(nextItems);
     setLoading(false);
   }, [user]);
 
@@ -135,7 +174,7 @@ export function useCardsOverview() {
     await load();
   }, [load]);
 
-  return { cards, invoices, installments, loading, refresh };
+  return { cards, invoices, installments, items, loading, refresh };
 }
 
 export const CARD_HEX: Record<string, string> = {

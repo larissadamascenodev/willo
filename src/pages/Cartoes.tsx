@@ -31,7 +31,6 @@ import {
  */
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
-const MONTH_SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
 interface CardRow {
   card: OverviewCard;
@@ -42,64 +41,9 @@ interface CardRow {
   status: { label: string; isClosed: boolean };
 }
 
-/** The share of the limit that is spent, drawn as an arc rather than another bar. */
-function LimitGauge({ pct, available, used, limit }: {
-  pct: number;
-  available: number;
-  used: number;
-  limit: number;
-}) {
-  const tone = pct >= 100 ? "#F87171" : pct >= 80 ? "#FBBF24" : "#FFFFFF";
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative">
-        <svg viewBox="0 0 160 88" className="w-[190px]" aria-hidden="true">
-          <path
-            d="M 12 80 A 68 68 0 0 1 148 80"
-            fill="none"
-            stroke="rgb(255 255 255 / 0.09)"
-            strokeWidth="11"
-            strokeLinecap="round"
-          />
-          <motion.path
-            d="M 12 80 A 68 68 0 0 1 148 80"
-            fill="none"
-            stroke={tone}
-            strokeWidth="11"
-            strokeLinecap="round"
-            pathLength={1}
-            initial={{ strokeDasharray: "0 1" }}
-            animate={{ strokeDasharray: `${Math.min(pct, 100) / 100} 1` }}
-            transition={{ duration: 0.9, ease: "easeOut" }}
-          />
-        </svg>
-
-        <div className="absolute inset-x-0 bottom-1 flex flex-col items-center">
-          <p className={cn(
-            "text-[22px] font-extrabold leading-none tracking-[-0.03em] tabular-nums",
-            available > 0 ? "text-white" : "text-red-400",
-          )}>
-            {fmt(available)}
-          </p>
-          <p className="mt-1 text-[11.5px] t-softer">disponível</p>
-        </div>
-      </div>
-
-      <div className="mt-1 flex w-full items-baseline justify-between gap-3">
-        <span className="truncate text-[11.5px] t-softer">
-          Usado <span className="font-semibold tabular-nums text-white/75">{fmt(used)}</span>
-        </span>
-        <span className="shrink-0 truncate text-[11.5px] t-softer">
-          Limite <span className="font-semibold tabular-nums text-white/75">{fmt(limit)}</span>
-        </span>
-      </div>
-    </div>
-  );
-}
-
 const Cartoes = () => {
   const navigate = useNavigate();
-  const { cards, invoices, installments, loading, refresh } = useCardsOverview();
+  const { cards, invoices, installments, items, loading, refresh } = useCardsOverview();
   const [showAddCard, setShowAddCard] = useState(false);
   const [heldCard, setHeldCard] = useState<OverviewCard | null>(null);
   const [editingCard, setEditingCard] = useState<any | null>(null);
@@ -139,56 +83,27 @@ const Cartoes = () => {
   }, [cards, invoices]);
 
   const sums = useMemo(() => {
-    const now = new Date();
-    const currentKey = monthKey(now.getFullYear(), now.getMonth() + 1);
-    const ahead = installments.filter((i) => monthKey(i.year, i.month) >= currentKey);
+    /* The lines of the invoices that are open — how many there are, and how many of
+       them are instalments of something bought earlier. */
+    const openKey = new Map(
+      rows.filter((r) => r.open).map((r) => [r.card.id, monthKey(r.open!.year, r.open!.month)]),
+    );
+    const lines = items.filter((i) => openKey.get(i.cardId) === monthKey(i.year, i.month));
 
-    /* The strip starts at the invoice that is open, not at the calendar month: past the
-       closing day those are different, and an empty October at the head of the run says
-       nothing about what is coming. */
-    const openKeys = rows.map((r) => (r.open ? monthKey(r.open.year, r.open.month) : null));
-    const firstKey = Math.min(...openKeys.filter((k): k is number => k !== null), currentKey + 1);
-
-    /* What the next six invoices already carry in instalments, before a single new
-       purchase — the part of next month that is decided before it starts. */
-    const load = Array.from({ length: 6 }, (_, k) => {
-      const key = firstKey + k;
-      const y = Math.floor(key / 12);
-      const m = (key % 12) + 1;
-      return {
-        key,
-        label: MONTH_SHORT[m - 1],
-        amount: ahead
-          .filter((i) => monthKey(i.year, i.month) === key)
-          .reduce((s, i) => s + i.amount, 0),
-      };
-    });
-
-    const faturas = rows.reduce((s, r) => s + r.total, 0);
-    const pago = rows.reduce((s, r) => s + r.paid, 0);
     const limite = rows.reduce((s, r) => s + r.card.limit, 0);
     const usado = rows.reduce((s, r) => s + r.card.used, 0);
-    const lastKey = ahead.length ? Math.max(...ahead.map((i) => monthKey(i.year, i.month))) : null;
 
     return {
-      faturas,
-      pago,
-      restante: Math.max(faturas - pago, 0),
+      faturas: rows.reduce((s, r) => s + r.total, 0),
       maior: Math.max(...rows.map((r) => r.total), 1),
-      aVencer: ahead.reduce((s, i) => s + i.amount, 0),
-      compras: new Set(ahead.map((i) => i.groupId)).size,
-      horizonte: lastKey === null
-        ? null
-        : `${MONTH_SHORT[lastKey % 12]}/${String(Math.floor(lastKey / 12)).slice(2)}`,
-      load,
+      lancamentos: lines.length,
+      parcelados: lines.filter((i) => i.isParcelado).length,
       limite,
       usado,
       disponivel: Math.max(limite - usado, 0),
       usadoPct: limite > 0 ? Math.min((usado / limite) * 100, 100) : 0,
     };
-  }, [rows, installments]);
-
-  const maxLoad = Math.max(...sums.load.map((l) => l.amount), 1);
+  }, [rows, items]);
 
   return (
     <div className="mx-auto max-w-lg pb-28">
@@ -231,14 +146,12 @@ const Cartoes = () => {
             <p className="mt-1 truncate text-[40px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">
               {fmt(sums.faturas)}
             </p>
-            <p className="mt-2.5 text-[12.5px] t-soft">
-              {rows.length} {rows.length === 1 ? "cartão" : "cartões"}
-              {sums.pago > 0 && (
+            <p className="mt-2.5 text-[12.5px] t-soft tabular-nums">
+              {sums.lancamentos} {sums.lancamentos === 1 ? "lançamento" : "lançamentos"}
+              {sums.parcelados > 0 && (
                 <>
                   <span className="text-white/20"> · </span>
-                  <span className="tabular-nums text-willo-green-ink">{fmt(sums.pago)} já pagos</span>
-                  <span className="text-white/20"> · </span>
-                  <span className="tabular-nums">restam {fmt(sums.restante)}</span>
+                  {sums.parcelados} parcelado{sums.parcelados === 1 ? "" : "s"}
                 </>
               )}
             </p>
@@ -277,61 +190,59 @@ const Cartoes = () => {
 
             {/* — limite, somando os cartões — */}
             <div className="mt-5 border-t border-white/[0.07] pt-4">
-              <p className="text-[11.5px] font-semibold uppercase tracking-[0.12em] t-softer">Limite</p>
-              <div className="mt-1">
-                <LimitGauge
-                  pct={sums.usadoPct}
-                  available={sums.disponivel}
-                  used={sums.usado}
-                  limit={sums.limite}
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-[11.5px] font-semibold uppercase tracking-[0.12em] t-softer">Limite</span>
+                <span className={cn(
+                  "text-[12px] font-semibold tabular-nums",
+                  sums.usadoPct >= 100 ? "text-red-400" : sums.usadoPct >= 80 ? "text-willo-amber" : "t-softer",
+                )}>
+                  {sums.usadoPct.toFixed(0)}% usado
+                </span>
+              </div>
+
+              {/* One bar split the way the limit itself is split: each card's share of
+                  what is spent, in its own colour, and what is left at the end. */}
+              <div className="mt-3 flex h-2 gap-[3px]">
+                {rows.map((r, i) => {
+                  const pct = sums.limite > 0 ? (r.card.used / sums.limite) * 100 : 0;
+                  if (pct < 0.5) return null;
+                  return (
+                    <motion.span
+                      key={r.card.id}
+                      className="h-full rounded-full"
+                      style={{ background: r.hex, minWidth: 6 }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.6, delay: 0.1 + i * 0.06, ease: "easeOut" }}
+                    />
+                  );
+                })}
+                <motion.span
+                  className="h-full rounded-full bg-white/[0.08]"
+                  initial={{ width: 0 }}
+                  animate={{
+                    width: `${sums.limite > 0 ? (sums.disponivel / sums.limite) * 100 : 100}%`,
+                  }}
+                  transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
                 />
               </div>
-            </div>
 
-            {/* — o que já está comprometido em parcelas — */}
-            {sums.aVencer > 0 && (
-              <div className="mt-4 border-t border-white/[0.07] pt-4">
-                <div className="flex items-end justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[11.5px] font-semibold uppercase tracking-[0.12em] t-softer">
-                      Parcelamentos
-                    </p>
-                    <p className="mt-1.5 truncate text-[21px] font-extrabold leading-none tracking-[-0.03em] text-white tabular-nums">
-                      {fmt(sums.aVencer)}
-                    </p>
-                  </div>
-                  <p className="shrink-0 text-right text-[11.5px] leading-tight t-faint">
-                    {sums.compras} {sums.compras === 1 ? "compra" : "compras"}
-                    {sums.horizonte && (
-                      <>
-                        <br />
-                        até {sums.horizonte}
-                      </>
-                    )}
-                  </p>
-                </div>
-
-                {/* The next six months, as the instalments already owe them */}
-                <div className="mt-3.5 flex items-end gap-1.5">
-                  {sums.load.map((l, i) => (
-                    <div key={l.key} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-                      <span className="flex h-[38px] w-full items-end">
-                        <motion.span
-                          className={cn(
-                            "w-full rounded-[5px]",
-                            i === 0 ? "bg-white/80" : "bg-white/[0.18]",
-                          )}
-                          initial={{ height: 0 }}
-                          animate={{ height: `${l.amount > 0 ? Math.max((l.amount / maxLoad) * 100, 8) : 3}%` }}
-                          transition={{ duration: 0.5, delay: 0.1 + i * 0.04, ease: "easeOut" }}
-                        />
-                      </span>
-                      <span className="text-[10px] t-faint">{l.label}</span>
-                    </div>
-                  ))}
-                </div>
+              <div className="mt-3 flex items-baseline justify-between gap-3">
+                <span className="truncate text-[12.5px] t-soft tabular-nums">
+                  Usado <span className="font-semibold text-white">{fmt(sums.usado)}</span> de{" "}
+                  {fmt(sums.limite)}
+                </span>
+                <span className="shrink-0 text-[12.5px] t-soft">
+                  Disponível{" "}
+                  <span className={cn(
+                    "font-semibold tabular-nums",
+                    sums.disponivel > 0 ? "text-willo-green-ink" : "text-red-400",
+                  )}>
+                    {fmt(sums.disponivel)}
+                  </span>
+                </span>
               </div>
-            )}
+            </div>
           </motion.section>
 
           {/* ══ The cards ══ */}
