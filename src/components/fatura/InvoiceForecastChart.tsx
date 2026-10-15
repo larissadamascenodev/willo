@@ -91,6 +91,12 @@ export default function InvoiceForecastChart({
       });
     }
 
+    /* The past only goes back as far as the app was there for. Before the first
+       invoice this card ever recorded there is nothing to show — a run of empty
+       months is not history, it is the time before you started, and pulling the
+       strip into it says the card spent nothing when in truth nobody was looking. */
+    while (list.length > 1 && list[0].period < open && list[0].amount <= 0) list.shift();
+
     /* The horizon is where the plans actually end, not where the window does. */
     const lastPaying = [...list].reverse().find((b) => b.amount > 0);
     return {
