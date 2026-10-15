@@ -66,9 +66,15 @@ export function BankChips({ selectedId, onPick, onOther }: { selectedId: string 
  * one.
  */
 export function ColorPicker({ value, onChange }: { value: string; onChange: (hex: string) => void }) {
+  /* A bank's own colour is not in the palette, so picking Bradesco used to leave the
+     row with nothing selected — eight swatches and no answer to "which one am I".
+     It joins the row at the front instead, already chosen. */
+  const inPalette = PALETTE.some((c) => c.hex === value || c.value === value);
+  const swatches = inPalette ? PALETTE : [{ value: "atual", hex: value }, ...PALETTE];
+
   return (
-    <div className="flex justify-between px-1">
-      {PALETTE.map((c) => {
+    <div className="flex items-center justify-between gap-1.5 px-1">
+      {swatches.map((c) => {
         const selected = value === c.hex || value === c.value;
         return (
           <button
@@ -76,10 +82,16 @@ export function ColorPicker({ value, onChange }: { value: string; onChange: (hex
             type="button"
             onClick={() => onChange(c.hex)}
             aria-label={c.value}
-            className={cn("flex h-9 w-9 items-center justify-center rounded-full transition-transform", selected ? "scale-110 ring-2 ring-white ring-offset-2 ring-offset-[#111111]" : "opacity-70")}
+            aria-pressed={selected}
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all",
+              // A ring drawn tight to the swatch: an offset ring needs a solid colour
+              // behind it to sit on, and this row sits on glass.
+              selected ? "scale-[1.14] shadow-[0_0_0_2px_rgba(255,255,255,0.9)]" : "opacity-85",
+            )}
             style={{ background: c.hex }}
           >
-            {selected && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
+            {selected && <Check className="h-[15px] w-[15px] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" strokeWidth={3.2} />}
           </button>
         );
       })}

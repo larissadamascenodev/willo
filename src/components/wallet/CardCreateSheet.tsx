@@ -64,19 +64,23 @@ function CardPreview({ name, digits, limitCents, closing, due, hex, showDates }:
         <p className="mt-auto font-mono text-[13px] tracking-[0.18em] text-white/90">
           •••• •••• •••• {digits.padEnd(4, "•")}
         </p>
-        <div className="mt-1.5 flex items-end justify-between text-[10px]">
-          <span className="text-white/74">
-            {showDates ? `Fecha ${closing} · Vence ${due}` : "Fechamento e vencimento"}
-          </span>
-          <span className="text-right">
-            <span className="block text-white/66">Limite</span>
-            <span className="text-[12px] font-bold tabular-nums">
-              {limitCents > 0
-                ? `${currencySymbol()} ${(limitCents / 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`
-                : "—"}
+        {/* Only what is known so far. An empty "Limite —" on the first step is a
+            field asking to be filled on a card that cannot be typed into. */}
+        {(showDates || limitCents > 0) && (
+          <div className="mt-1.5 flex items-end justify-between gap-3 text-[10px]">
+            <span className="truncate text-white/74">
+              {showDates ? `Fecha ${closing} · Vence ${due}` : ""}
             </span>
-          </span>
-        </div>
+            {limitCents > 0 && (
+              <span className="shrink-0 text-right">
+                <span className="block leading-tight text-white/66">Limite</span>
+                <span className="text-[12px] font-bold leading-tight tabular-nums">
+                  {currencySymbol()} {(limitCents / 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                </span>
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -209,11 +213,16 @@ const CardCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClose:
               boxShadow: "0 40px 90px -30px rgb(0 0 0 / 0.95), inset 0 1px 0 rgb(255 255 255 / 0.10)",
             }}
           >
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-12 top-0 z-10 h-px"
+              style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent)" }}
+            />
             {/* The card's own light, inside the glass */}
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute -left-20 -top-24 h-64 w-[150%] rounded-full blur-[70px]"
-              style={{ background: hex, opacity: 0.26 }}
+              className="pointer-events-none absolute -left-20 -top-28 h-56 w-[150%] rounded-full blur-[72px]"
+              style={{ background: hex, opacity: 0.17 }}
             />
 
             {/* ── Header ── */}
@@ -236,18 +245,13 @@ const CardCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClose:
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {!editing && (
-                  <div className="flex items-center gap-1.5">
-                    {[1, 2].map((n) => (
-                      <motion.span
-                        key={n}
-                        className="h-1.5 rounded-full"
-                        animate={{
-                          width: step === n ? 18 : 7,
-                          backgroundColor: step === n ? hex : "rgba(255,255,255,0.18)",
-                        }}
-                        transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                      />
-                    ))}
+                  <div className="flex h-1.5 w-[34px] overflow-hidden rounded-full bg-white/[0.14]">
+                    <motion.span
+                      className="h-full rounded-full"
+                      style={{ background: shade(hex, 0.3) }}
+                      animate={{ width: step === 1 ? "50%" : "100%" }}
+                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                    />
                   </div>
                 )}
                 <button
@@ -388,7 +392,7 @@ const CardCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClose:
             {/* ── Action ── */}
             {!editing && (
               <div
-                className="relative shrink-0 px-5 pt-3"
+                className="relative mt-4 shrink-0 border-t border-white/[0.07] px-5 pt-4"
                 style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
               >
                 <div className="flex gap-2.5">
