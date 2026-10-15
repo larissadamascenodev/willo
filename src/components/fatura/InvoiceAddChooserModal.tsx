@@ -1,9 +1,9 @@
 import { useRef, useState, type ComponentType } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PenLine, FileText, Receipt, Camera, Images, FolderUp, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { PenLine, Camera, Images, FolderUp, ChevronLeft, ChevronRight, Sparkles, Upload } from "lucide-react";
 import BottomSheet from "@/components/shared/BottomSheet";
 
-/** "invoice" reads a whole statement; "single" reads one purchase (a receipt or a cropped screenshot). */
+/** "invoice" reads a whole statement; "single" reads one purchase. */
 export type ScanMode = "invoice" | "single";
 
 interface Props {
@@ -44,14 +44,22 @@ const OptionRow = ({ option, index }: { option: Option; index: number }) => (
   </motion.button>
 );
 
+/**
+ * How a purchase gets onto this card: you write it, or you hand over a picture of it.
+ *
+ * It used to ask a third question first — whether the file was a whole statement or a
+ * single receipt — which is a question about how the reader works, not about what you
+ * have in your hand. The reader finds what is there either way, and nothing is written
+ * until the review screen, so the question is gone.
+ */
 export default function InvoiceAddChooserModal({ open, onClose, onManual, onScan }: Props) {
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [scanMode, setScanMode] = useState<ScanMode | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const handleClose = () => {
-    setScanMode(null);
+    setUploading(false);
     onClose();
   };
 
@@ -59,78 +67,59 @@ export default function InvoiceAddChooserModal({ open, onClose, onManual, onScan
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    onScan(file, scanMode ?? "invoice");
+    onScan(file, "invoice");
     handleClose();
   };
 
   const mainOptions: Option[] = [
     {
-      icon: FileText,
-      hex: "#C8F36D",
-      label: "Fatura completa",
-      description: "PDF ou foto da fatura — a IA lê todas as compras de uma vez",
-      onClick: () => setScanMode("invoice"),
-    },
-    {
-      icon: Receipt,
-      hex: "#5ED8C8",
-      label: "Uma compra só",
-      description: "Print ou comprovante de um lançamento específico",
-      onClick: () => setScanMode("single"),
-    },
-    {
       icon: PenLine,
-      hex: "#FFFFFF",
+      hex: "#C8F36D",
       label: "Digitar manualmente",
-      description: "Preencher nome, valor, parcelas e categoria",
+      description: "Nome, valor, parcelas e categoria",
       onClick: () => { onManual(); handleClose(); },
+    },
+    {
+      icon: Upload,
+      hex: "#7DD3FC",
+      label: "Fazer upload",
+      description: "Foto, print ou PDF — a IA lê as compras",
+      onClick: () => setUploading(true),
     },
   ];
 
-  const scanOptions: Option[] = [
-    {
-      icon: FolderUp,
-      hex: "#C8F36D",
-      label: "Escolher arquivo",
-      description: scanMode === "invoice" ? "PDF da fatura, planilha CSV ou Excel" : "PDF ou imagem do comprovante",
-      onClick: () => fileRef.current?.click(),
-    },
-    {
-      icon: Images,
-      hex: "#5ED8C8",
-      label: "Galeria",
-      description: scanMode === "invoice" ? "Print da fatura salvo no aparelho" : "Print da compra salvo no aparelho",
-      onClick: () => galleryRef.current?.click(),
-    },
+  const sourceOptions: Option[] = [
     {
       icon: Camera,
-      hex: "#FFFFFF",
+      hex: "#C8F36D",
       label: "Tirar foto",
       description: "Usar a câmera agora",
       onClick: () => cameraRef.current?.click(),
     },
+    {
+      icon: Images,
+      hex: "#7DD3FC",
+      label: "Galeria",
+      description: "Print ou foto salva no aparelho",
+      onClick: () => galleryRef.current?.click(),
+    },
+    {
+      icon: FolderUp,
+      hex: "#FFFFFF",
+      label: "Escolher arquivo",
+      description: "PDF da fatura, planilha CSV ou Excel",
+      onClick: () => fileRef.current?.click(),
+    },
   ];
-
-  const inScanStep = scanMode !== null;
-  const title = !inScanStep
-    ? "Adicionar lançamento"
-    : scanMode === "invoice"
-      ? "Enviar a fatura"
-      : "Enviar a compra";
-  const subtitle = !inScanStep
-    ? "Escolha como quer registrar esse gasto no cartão."
-    : scanMode === "invoice"
-      ? "Parcelamentos em andamento entram a partir desta fatura — as parcelas já pagas não são lançadas."
-      : "Serve para aquela compra que você acabou de fazer, sem precisar subir a fatura inteira.";
 
   return (
     <BottomSheet open={open} onClose={handleClose}>
       <div className="px-5 pb-2">
         <div className="flex items-start gap-2.5">
-          {inScanStep && (
+          {uploading && (
             <button
               type="button"
-              onClick={() => setScanMode(null)}
+              onClick={() => setUploading(false)}
               aria-label="Voltar"
               className="-ml-1.5 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/74 active:opacity-60"
             >
@@ -138,27 +127,33 @@ export default function InvoiceAddChooserModal({ open, onClose, onManual, onScan
             </button>
           )}
           <div className="min-w-0 flex-1">
-            <h2 className="text-[22px] font-extrabold tracking-tight text-white">{title}</h2>
-            <p className="mt-1 text-[13px] leading-snug text-white/62">{subtitle}</p>
+            <h2 className="text-[22px] font-extrabold tracking-tight text-white">
+              {uploading ? "De onde vem" : "Adicionar lançamento"}
+            </h2>
+            <p className="mt-1 text-[13px] leading-snug text-white/62">
+              {uploading
+                ? "Foto da fatura, print de uma compra ou o PDF do banco."
+                : "Escolha como quer registrar esse gasto no cartão."}
+            </p>
           </div>
         </div>
 
         <AnimatePresence mode="wait">
           <motion.div
-            key={scanMode ?? "main"}
-            initial={{ opacity: 0, x: inScanStep ? 16 : -16 }}
+            key={uploading ? "source" : "main"}
+            initial={{ opacity: 0, x: uploading ? 16 : -16 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
             className="mt-5 space-y-2.5"
           >
-            {(inScanStep ? scanOptions : mainOptions).map((option, i) => (
+            {(uploading ? sourceOptions : mainOptions).map((option, i) => (
               <OptionRow key={option.label} option={option} index={i} />
             ))}
           </motion.div>
         </AnimatePresence>
 
-        {inScanStep && (
+        {uploading && (
           <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-[12px] t-softer">
             <Sparkles className="h-3.5 w-3.5" /> Você confere tudo antes de importar
           </p>
@@ -170,7 +165,7 @@ export default function InvoiceAddChooserModal({ open, onClose, onManual, onScan
       <input
         ref={fileRef}
         type="file"
-        accept={scanMode === "single" ? ".pdf,image/*" : ".pdf,.csv,.xls,.xlsx,image/*"}
+        accept=".pdf,.csv,.xls,.xlsx,image/*"
         className="hidden"
         onChange={handleInputChange}
       />

@@ -109,7 +109,7 @@ export default function InvoiceForecastChart({
     const el = scrollRef.current;
     const bar = el?.querySelector<HTMLElement>(`[data-period="${openPeriod}"]`);
     if (!el || !bar) return;
-    el.scrollLeft = bar.offsetLeft - 4;
+    el.scrollLeft = bar.offsetLeft - 16;
     parked.current = true;
   }, [bars, openPeriod]);
 
@@ -136,7 +136,7 @@ export default function InvoiceForecastChart({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.08 }}
-      className="rounded-[24px] border border-white/[0.08] willo-glass p-5"
+      className="px-1"
     >
       <div className="flex items-end justify-between gap-3">
         <div>
@@ -158,8 +158,14 @@ export default function InvoiceForecastChart({
 
       <div
         ref={scrollRef}
-        className="-mx-1 mt-5 flex select-none items-end gap-2 overflow-x-auto px-1 pb-1 scrollbar-none"
-        style={{ cursor: dragging ? "grabbing" : "grab" }}
+        className="-mx-4 mt-5 flex select-none items-end gap-2 overflow-x-auto px-4 pb-1 scrollbar-none"
+        style={{
+          cursor: dragging ? "grabbing" : "grab",
+          /* The months either side of the window are pulled, not cut: a bar sliced in
+             half at the edge reads as a drawing mistake rather than as more to come. */
+          maskImage: "linear-gradient(90deg, transparent 0, #000 15px, #000 calc(100% - 15px), transparent 100%)",
+          WebkitMaskImage: "linear-gradient(90deg, transparent 0, #000 15px, #000 calc(100% - 15px), transparent 100%)",
+        }}
         onMouseDown={onDown}
         onMouseMove={onMove}
         onMouseUp={onUp}
@@ -211,7 +217,7 @@ export default function InvoiceForecastChart({
         })}
       </div>
 
-      <div className="mt-3 flex items-center justify-center gap-4 border-t border-white/[0.06] pt-3 text-[11px] t-soft">
+      <div className="mt-3 flex items-center gap-4 text-[11px] t-softer">
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-[3px] bg-willo-green/70" /> Paga
         </span>

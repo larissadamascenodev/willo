@@ -72,7 +72,9 @@ const Cartoes = () => {
         card,
         hex: colorFor(card.name, card.color, "#8B5CF6"),
         open,
-        total: open?.total ?? 0,
+        /* What the invoice asks for today: a payment already made has left it. The
+           card screen shows the same figure, so the two never disagree. */
+        total: open ? Math.max(open.total - open.paid, 0) : 0,
         paid: open?.paid ?? 0,
         status: getInvoiceStatusLabel(
           item,
@@ -105,7 +107,7 @@ const Cartoes = () => {
   }, [rows, items]);
 
   return (
-    <div className="mx-auto max-w-lg pb-28">
+    <div className="mx-auto max-w-lg pb-28 pt-4">
       <div className="flex h-11 items-center">
         {/* Cartões is a page off the dashboard, and that is where back goes. */}
         <BackButton to="/" />
@@ -266,7 +268,6 @@ const Cartoes = () => {
                 }}
                 owed={r.total}
                 status={r.status}
-                isPaid={!!r.open?.isPaid || (!r.open && r.total === 0)}
                 onOpen={() => navigate(`/fatura/${r.card.id}`)}
                 onHold={() => setHeldCard(r.card)}
               />

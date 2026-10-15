@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
 import { useLongPress } from "@/hooks/useLongPress";
 import { getCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
@@ -30,6 +29,26 @@ const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curren
 export const USED_LIMIT_HEX = "rgb(255 255 255 / 0.42)";
 export const FREE_LIMIT_HEX = "#C8F36D";
 
+/**
+ * …except on a card that is itself green. PicPay and Inter bring their own greens, and
+ * two greens side by side on one rule say nothing — so when the bank's hue comes near
+ * ours, what is left is drawn in white instead. The rule still reads as a pair; only
+ * which pair changes.
+ */
+export function freeToneFor(cardHex: string) {
+  const n = cardHex.replace("#", "");
+  const full = n.length === 3 ? n.split("").map((c) => c + c).join("") : n;
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max === min) return FREE_LIMIT_HEX;
+  const d = max - min;
+  const hue =
+    (max === r ? ((g - b) / d + (g < b ? 6 : 0)) : max === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60;
+  const apart = Math.abs(hue - 80);
+  return Math.min(apart, 360 - apart) < 85 ? "#FFFFFF" : FREE_LIMIT_HEX;
+}
+
 export interface CardFace {
   id: string;
   name: string;
@@ -41,7 +60,7 @@ export interface CardFace {
 }
 
 export default function CardFaceTile({
-  card, hex, owed, status, isPaid, index, onOpen, onHold,
+  card, hex, owed, status, index, onOpen, onHold,
 }: {
   card: CardFace;
   /** The bank's colour. */
@@ -50,7 +69,6 @@ export default function CardFaceTile({
   owed: number;
   /** Where that invoice stands, in words. */
   status: { label: string; isClosed: boolean };
-  isPaid: boolean;
   index: number;
   onOpen: () => void;
   onHold: () => void;
@@ -58,6 +76,7 @@ export default function CardFaceTile({
   const press = useLongPress(onHold);
   const usedPct = card.limit > 0 ? Math.min((card.used / card.limit) * 100, 100) : 0;
   const available = Math.max(card.limit - card.used, 0);
+  const freeTone = freeToneFor(hex);
 
   return (
     <motion.div
@@ -115,36 +134,55 @@ export default function CardFaceTile({
           </p>
         </div>
 
-        <ChevronRight className="h-[18px] w-[18px] shrink-0 t-faint" />
+        {/* Where the invoice stands, as a mark rather than a sentence. */}
+        <span
+          className={cn(
+            "shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-bold",
+            owed <= 0
+              ? "bg-willo-green/12 text-willo-green-ink"
+              : status.isClosed
+                ? "bg-white/[0.10] text-white/85"
+                : "bg-white/[0.06] text-white/62",
+          )}
+        >
+          {owed <= 0 ? "Em dia" : status.isClosed ? "Fechada" : "Aberta"}
+        </span>
       </div>
 
-      <p className="relative mt-4 truncate text-[12.5px] t-softer">
-        {isPaid ? "Fatura paga" : status.isClosed ? "Fatura fechada" : "Fatura aberta"}
-        <span className="text-white/20"> · </span>
-        <span className={cn(status.isClosed && !isPaid && "font-semibold text-amber-300/90")}>
-          {status.label.toLowerCase()}
-        </span>
-      </p>
       <p className={cn(
-        "relative mt-0.5 truncate text-[28px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
+        "relative mt-5 truncate text-[29px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
         owed > 0 ? "text-white" : "t-softer",
       )}>
         {fmt(owed)}
       </p>
+      <p className="relative mt-1.5 truncate text-[12px] t-softer">
+        {owed > 0 ? status.label : "Sem fatura em aberto"}
+      </p>
 
-      <div
-        className="relative mt-4 h-[6px] overflow-hidden rounded-full bg-white/[0.07]"
-        style={{ boxShadow: "inset 0 1px 1px rgb(0 0 0 / 0.35)" }}
-      >
+      {/* The same two tones as everywhere else: what is spent in the card's own
+          colour, what is left in the green this app says every good number in. */}
+      <div className="relative mt-4 flex h-[7px] gap-[3px]">
         <motion.span
-          className="block h-full rounded-full"
+          className="h-full rounded-full"
           style={{
             background: usedPct >= 100 ? "#F87171" : hex,
-            boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.30)",
+            boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.25)",
+            minWidth: card.used > 0 ? 6 : 0,
           }}
           initial={{ width: 0 }}
           animate={{ width: `${usedPct}%` }}
           transition={{ duration: 0.75, ease: "easeOut", delay: 0.1 + index * 0.07 }}
+        />
+        <motion.span
+          className="h-full rounded-full"
+          style={{
+            background: freeTone,
+            boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.35)",
+            minWidth: available > 0 ? 6 : 0,
+          }}
+          initial={{ width: 0 }}
+          animate={{ width: `${card.limit > 0 ? Math.max(100 - usedPct, 0) : 100}%` }}
+          transition={{ duration: 0.75, ease: "easeOut", delay: 0.18 + index * 0.07 }}
         />
       </div>
 
@@ -156,7 +194,7 @@ export default function CardFaceTile({
           Disponível{" "}
           <span
             className="font-semibold tabular-nums"
-            style={{ color: available > 0 ? FREE_LIMIT_HEX : "#F87171" }}
+            style={{ color: available > 0 ? freeTone : "#F87171" }}
           >
             {fmt(available)}
           </span>

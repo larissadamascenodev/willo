@@ -24,6 +24,7 @@ import InvoiceTransactionList from "@/components/fatura/InvoiceTransactionList";
 import InvoicePayModal from "@/components/fatura/InvoicePayModal";
 import InvoiceForecastChart from "@/components/fatura/InvoiceForecastChart";
 import InvoiceRecentCard from "@/components/fatura/InvoiceRecentCard";
+import { freeToneFor } from "@/components/wallet/CardFaceTile";
 import CardEntryModal from "@/components/fatura/CardEntryModal";
 import InvoiceAddChooserModal from "@/components/fatura/InvoiceAddChooserModal";
 import InvoiceScanScreen from "@/components/fatura/InvoiceScanScreen";
@@ -523,10 +524,9 @@ const FaturaCartao = () => {
   }, [card, selectedMonth, selectedYear, userStartDate]);
 
   /**
-   * Where this invoice is in its month: when it closed (or closes), when it is due, and
-   * where today sits between the two. The strip is drawn from the previous closing to
-   * the due date, because that whole stretch is one cycle — the part before the notch
-   * is still collecting purchases, the part after it is waiting to be paid.
+   * When this invoice falls due, said the way a person asks it: in days. The closing
+   * day comes along for the ride, because "vence em 29 dias" is only reassuring if you
+   * also know the invoice is still open and will grow.
    */
   const cycle = useMemo(() => {
     if (!card) return null;
@@ -536,34 +536,23 @@ const FaturaCartao = () => {
     const closing = dayIn(selectedYear, selectedMonth, card.closing_day);
     let due = dayIn(selectedYear, selectedMonth, card.due_day);
     if (due <= closing) due = dayIn(selectedYear, selectedMonth + 1, card.due_day);
-    const start = dayIn(selectedYear, selectedMonth - 1, card.closing_day);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const span = Math.max(due.getTime() - start.getTime(), 1);
-    const at = (d: Date) => Math.min(Math.max((d.getTime() - start.getTime()) / span, 0), 1) * 100;
     const days = (d: Date) => Math.round((d.getTime() - today.getTime()) / 86_400_000);
-
     const toClose = days(closing);
     const toDue = days(due);
-    const label = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+    const plural = (n: number) => `${n} dia${n === 1 ? "" : "s"}`;
 
-    const sentence =
-      total > 0 && outstanding <= 0 ? "Fatura paga."
-      : toDue < 0 ? `Venceu há ${Math.abs(toDue)} dia${Math.abs(toDue) === 1 ? "" : "s"}.`
+    const line =
+      total > 0 && outstanding <= 0 ? "Fatura paga"
+      : toDue < 0 ? `Venceu há ${plural(Math.abs(toDue))}`
+      : toDue === 0 ? "Vence hoje"
       : toClose > 0
-        ? `Ainda aberta: fecha em ${toClose} dia${toClose === 1 ? "" : "s"} e vence em ${toDue}.`
-        : toDue === 0 ? "Fechada. Vence hoje."
-        : `Fechada. Vence em ${toDue} dia${toDue === 1 ? "" : "s"}.`;
+        ? `Vence em ${plural(toDue)} · fecha dia ${card.closing_day}`
+        : `Vence em ${plural(toDue)} · fatura fechada`;
 
-    return {
-      closingLabel: label(closing),
-      dueLabel: label(due),
-      closingPct: at(closing),
-      pct: at(today),
-      overdue: toDue < 0 && outstanding > 0,
-      sentence,
-    };
+    return { line, overdue: toDue < 0 && outstanding > 0 };
   }, [card, selectedMonth, selectedYear, total, outstanding]);
 
   const invoiceStatus = useMemo(() => {
@@ -601,10 +590,12 @@ const FaturaCartao = () => {
      handlers, so there is no second place for the numbers to disagree. */
   const onEntries = location.pathname.endsWith("/lancamentos");
   const monthQuery = `?month=${selectedMonth}&year=${selectedYear}`;
-  const headline = paidAmount > 0 && outstanding > 0 ? outstanding : total;
+  /* What the invoice asks for today. A payment already made is gone from it — the
+     figure is the one you would pay now, not the one the statement was printed with. */
+  const headline = outstanding > 0 ? outstanding : total;
 
   return (
-    <div className="mx-auto max-w-lg pb-28 pt-2">
+    <div className="mx-auto max-w-lg pb-28 pt-4">
       {onEntries ? (
         <div className="space-y-4">
           <div className="flex h-11 items-center justify-between">
@@ -613,7 +604,7 @@ const FaturaCartao = () => {
               type="button"
               onClick={() => setShowAddChooser(true)}
               aria-label="Adicionar lançamento"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.07] text-white/82 ring-1 ring-white/10 active:scale-95"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.10] bg-white/[0.07] text-white active:scale-95"
             >
               <Plus className="h-[18px] w-[18px]" strokeWidth={2.4} />
             </button>
@@ -626,8 +617,8 @@ const FaturaCartao = () => {
               Fatura de {MONTH_NAMES[selectedMonth - 1]}
             </p>
             <p className="mt-1 text-[13px] t-soft tabular-nums">
-              {formatCurrency(total)}
-              <span className="text-white/25"> · </span>
+              {formatCurrency(headline)}
+              <span className="text-white/20"> · </span>
               {items.length} lançament{items.length === 1 ? "o" : "os"}
             </p>
           </div>
@@ -656,12 +647,12 @@ const FaturaCartao = () => {
           />
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="flex h-11 items-center justify-between">
             <BackButton to="/cartoes" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button aria-label="Opções do cartão" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.07] text-white/82 ring-1 ring-white/10 transition-colors hover:text-white">
+                <button aria-label="Opções do cartão" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.10] bg-white/[0.07] text-white/82 transition-colors hover:text-white">
                   <MoreVertical className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
@@ -695,12 +686,18 @@ const FaturaCartao = () => {
             </DropdownMenu>
           </div>
 
-          {/* ── Who this is, and what it is asking for ── */}
-          <div className="px-1">
-            <div className="flex items-center gap-2.5">
+          {/* ── Who this is, and what it asks for ── */}
+          <div className="relative px-1">
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -left-8 -top-10 h-44 w-72 rounded-full blur-[64px]"
+              style={{ background: cardHex, opacity: 0.22 }}
+            />
+
+            <div className="relative flex items-center gap-2.5">
               <span
                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px]"
-                style={{ background: cardHex }}
+                style={{ background: cardHex, boxShadow: `0 6px 16px -8px ${cardHex}` }}
               >
                 <span className="h-[6px] w-[9px] rounded-[1.5px] bg-white/85" />
               </span>
@@ -720,130 +717,111 @@ const FaturaCartao = () => {
               )}
             </div>
 
-            <p className="mt-5 text-[13px] text-white/62">Fatura de {MONTH_NAMES[selectedMonth - 1]}</p>
-            {/* What is still owed, never the leftover of a figure already part paid. */}
-            <p className="mt-0.5 text-[40px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">
+            <p className="relative mt-6 text-[13px] text-white/62">
+              Fatura de {MONTH_NAMES[selectedMonth - 1]}
+            </p>
+            <p className="relative mt-1 text-[42px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">
               {formatCurrency(headline)}
             </p>
-            {paidAmount > 0 && outstanding > 0 ? (
-              <p className="mt-2 text-[12.5px] t-soft tabular-nums">
-                <span className="text-willo-green-ink">{formatCurrency(paidAmount)} já pagos</span> de{" "}
-                {formatCurrency(total)}
+            {cycle && (
+              <p className={cn("relative mt-2.5 text-[13px]", cycle.overdue ? "text-red-400" : "t-soft")}>
+                {cycle.line}
               </p>
-            ) : total > 0 && outstanding <= 0 ? (
-              <p className="mt-2 flex items-center gap-1.5 text-[13px] font-medium text-willo-green-ink">
-                <Check className="h-3.5 w-3.5" strokeWidth={3} /> Fatura paga
-              </p>
-            ) : null}
+            )}
           </div>
 
-          {/* ── The cycle, then the limit: the two things that bound this invoice ── */}
-          <motion.section
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-            className="rounded-[24px] border border-white/[0.08] willo-glass px-5 pb-5 pt-4"
-          >
-            {cycle && (
-              <>
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-[11.5px] font-semibold uppercase tracking-[0.12em] t-softer">Fecha</span>
-                  <span className="text-[11.5px] font-semibold uppercase tracking-[0.12em] t-softer">Vence</span>
-                </div>
-                <div className="mt-1 flex items-baseline justify-between gap-3">
-                  <span className="text-[15px] font-bold text-white">{cycle.closingLabel}</span>
-                  <span className={cn("text-[15px] font-bold", cycle.overdue ? "text-red-400" : "text-white")}>
-                    {cycle.dueLabel}
-                  </span>
-                </div>
-
-                {/* Where today sits between the two dates. */}
-                <div className="relative mt-3 h-[6px] rounded-full bg-white/[0.08]">
-                  <motion.span
-                    className="absolute inset-y-0 left-0 rounded-full bg-white/35"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${cycle.pct}%` }}
-                    transition={{ duration: 0.7, ease: "easeOut" }}
-                  />
-                  {/* the closing day, as a notch on the way to the due date */}
-                  <span
-                    className="absolute top-1/2 h-[12px] w-px -translate-y-1/2 bg-white/35"
-                    style={{ left: `${cycle.closingPct}%` }}
-                  />
-                  <motion.span
-                    className="absolute top-1/2 h-[13px] w-[13px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[#0B0C10] bg-white"
-                    initial={{ left: 0 }}
-                    animate={{ left: `${cycle.pct}%` }}
-                    transition={{ duration: 0.7, ease: "easeOut" }}
-                  />
-                </div>
-
-                <p className={cn("mt-3 text-[13px]", cycle.overdue ? "text-red-400" : "t-soft")}>
-                  {cycle.sentence}
-                </p>
-
-                <div className="my-4 h-px bg-white/[0.07]" />
-              </>
-            )}
-
+          {/* ── Limite, solto embaixo ── */}
+          <div className="px-1">
             <div className="flex items-baseline justify-between gap-3">
-              <span className="text-[13px] text-white/66">Limite</span>
+              <span className="text-[11.5px] font-semibold uppercase tracking-[0.12em] t-softer">Limite</span>
               <span className={cn(
-                "text-[12.5px] font-semibold tabular-nums",
-                isOverLimit ? "text-red-400" : usedPct >= 80 ? "text-willo-amber" : "text-white/72",
+                "text-[12px] font-semibold tabular-nums",
+                isOverLimit ? "text-red-400" : "t-softer",
               )}>
                 {usedPct.toFixed(0)}% usado
               </span>
             </div>
 
-            <div className="mt-2.5 h-[10px] overflow-hidden rounded-full bg-white/[0.07]">
+            {/* Inside a card the card's own colour rules; what is left is the green
+                every good number in this app is written in. */}
+            <div className="mt-3 flex h-2.5 gap-[3px]">
               <motion.span
-                className="block h-full rounded-full"
-                style={{ background: isOverLimit ? "#F87171" : usedPct >= 80 ? "#FBBF24" : cardHex }}
+                className="h-full rounded-full"
+                style={{
+                  background: isOverLimit ? "#F87171" : cardHex,
+                  boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.25)",
+                  minWidth: usedLimit > 0 ? 6 : 0,
+                }}
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min(usedPct, 100)}%` }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
               />
+              <motion.span
+                className="h-full rounded-full"
+                style={{
+                  background: freeToneFor(cardHex),
+                  boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.35)",
+                  minWidth: availableLimit > 0 ? 6 : 0,
+                }}
+                initial={{ width: 0 }}
+                animate={{ width: `${limitTotal > 0 ? Math.max(100 - usedPct, 0) : 100}%` }}
+                transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
+              />
             </div>
 
-            <div className="mt-3 flex items-baseline justify-between gap-3">
-              <span className="truncate text-[12.5px] t-soft">
-                Usado <span className="font-semibold tabular-nums text-white">{formatCurrency(usedLimit)}</span>
-              </span>
-              <span className="shrink-0 truncate text-[12.5px] t-soft">
-                Disponível{" "}
-                <span className={cn(
-                  "font-semibold tabular-nums",
-                  availableLimit > 0 ? "text-willo-green-ink" : "text-red-400",
-                )}>
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div>
+                <p className="flex items-center gap-1.5 text-[11.5px] t-softer">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: cardHex }} />
+                  Usado
+                </p>
+                <p className="mt-1 truncate text-[16px] font-bold tabular-nums text-white/72">
+                  {formatCurrency(usedLimit)}
+                </p>
+              </div>
+              <div>
+                <p className="flex items-center gap-1.5 text-[11.5px] t-softer">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: freeToneFor(cardHex) }} />
+                  Disponível
+                </p>
+                <p
+                  className="mt-1 truncate text-[16px] font-bold tabular-nums"
+                  style={{ color: availableLimit > 0 ? freeToneFor(cardHex) : "#F87171" }}
+                >
                   {formatCurrency(availableLimit)}
-                </span>
-              </span>
+                </p>
+              </div>
             </div>
-            <p className="mt-1.5 text-[11.5px] t-faint tabular-nums">
+
+            <p className="mt-3 text-[11.5px] tabular-nums t-faint">
               Limite total {formatCurrency(limitTotal)}
             </p>
-          </motion.section>
+          </div>
 
-          {/* ── The two things you came here to do ── */}
-          <div className="space-y-2.5">
-            {currentInvoice && outstanding > 0 && (
+          {/* ── Pagar, e acrescentar ── */}
+          <div className="flex gap-2.5 px-1">
+            {currentInvoice && outstanding > 0 ? (
               <button
                 type="button"
                 onClick={() => setShowPayModal(true)}
-                className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-white text-[15px] font-bold willo-on-invert active:scale-[0.99]"
+                className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full bg-white text-[15px] font-bold willo-on-invert active:scale-[0.99]"
               >
                 <Wallet className="h-4 w-4" />
                 Pagar fatura · {formatCurrency(outstanding)}
               </button>
+            ) : (
+              <div className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full border border-white/[0.08] text-[14.5px] font-semibold t-soft">
+                <Check className="h-4 w-4 text-willo-green-ink" strokeWidth={3} />
+                Nada a pagar nesta fatura
+              </div>
             )}
             <button
               type="button"
               onClick={() => setShowAddChooser(true)}
-              className="flex h-13 w-full items-center justify-center gap-2 rounded-full border border-white/[0.14] willo-glass-control py-4 text-[14.5px] font-semibold text-white active:scale-[0.99]"
+              aria-label="Adicionar lançamento"
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-white/[0.14] willo-glass-control text-white active:scale-95"
             >
-              <Plus className="h-4 w-4" strokeWidth={2.4} />
-              Adicionar lançamento
+              <Plus className="h-5 w-5" strokeWidth={2.4} />
             </button>
           </div>
 
