@@ -17,6 +17,8 @@ import BottomSheet from "@/components/shared/BottomSheet";
 import ScanCaptureScreen from "@/components/scan/ScanCaptureScreen";
 import ScannerScreen from "@/components/scan/ScannerScreen";
 import RegistroRapidoSheet from "@/components/registro/RegistroRapidoSheet";
+import BackButton from "@/components/shared/BackButton";
+import { isNavSection } from "@/components/dashboard/MobileBottomNav";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 import WelcomeToAppModal from "@/components/dashboard/WelcomeToAppModal";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,6 +40,21 @@ interface ScanAccountOption {
   type: string;
   is_default: boolean;
 }
+
+/**
+ * Pages that drew no way back of their own. With the nav gone from pages, these had no
+ * exit at all, so the layout supplies one. The rest already have theirs.
+ */
+const PAGES_WITHOUT_BACK = new Set([
+  "/metas",
+  "/bot-finance",
+  "/bot-finance/projecoes",
+  "/bot-finance/balanco",
+  "/fluxo-de-caixa",
+  "/gestao",
+  "/configuracoes",
+  "/categorias",
+]);
 
 const DashboardLayout = () => {
   useSwipeBack();
@@ -371,6 +388,17 @@ const DashboardLayout = () => {
           <DashboardHeader profile={profile} streak={streak} streakDates={streakDates} />
           <Outlet context={profileState} />
         </div>
+        {/* A page has no nav, so it needs the one thing a page needs. Drawn here rather
+            than in each page because it is the same button on all of them, and because
+            the pages that were missing it had no way out at all once the nav went.
+            The six that already draw their own keep it; this fills the gaps. */}
+        {!isNavSection(location.pathname) && PAGES_WITHOUT_BACK.has(location.pathname) && (
+          <BackButton
+            className="fixed left-5 z-40 md:hidden"
+            style={{ top: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
+          />
+        )}
+
         <MobileBottomNav />
         <WelcomeToAppModal open={showWelcomeModal} onConfigure={handleConfigureNow} onSkip={dismissWelcomeModal} />
         <RegistroRapidoSheet

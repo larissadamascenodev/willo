@@ -31,7 +31,10 @@ const NAV_ITEMS = [
 
 /** Routes that keep the app header; every other screen shows a back bar instead. */
 // Home is left out: BalanceHeroCard draws its own top row there.
-const MAIN_TABS = ["/transacoes", "/gestao", "/bot-finance"];
+/* Who is signed in is the home's business. On a page it was a second identity banner
+   above content that had its own title, and on a section it says nothing you did not
+   already know from being there. */
+const SHOWS_PROFILE = ["/"];
 
 const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profile?: { display_name: string | null; avatar_url?: string | null } | null; streak?: number; streakDates?: string[] }) => {
   const { signOut, user } = useAuth();
@@ -317,7 +320,7 @@ const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profi
       {/* Mobile Header — same top row as BalanceHeroCard on the home route
           (which renders its own), sitting directly on the page background. */}
       <header
-        className={cn("md:hidden -mx-4 px-4 pb-4", !MAIN_TABS.includes(location.pathname) && "hidden")}
+        className={cn("md:hidden -mx-4 px-4 pb-4", !SHOWS_PROFILE.includes(location.pathname) && "hidden")}
         style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
       >
         <div className="flex items-center justify-between gap-3">

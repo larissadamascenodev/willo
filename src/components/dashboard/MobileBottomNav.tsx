@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { Home, ArrowLeftRight, Plus, TrendingUp, TrendingDown, Camera, Sparkles } from "lucide-react";
 import RegistroRapidoIcon from "@/components/registro/RegistroRapidoIcon";
 import BotMark from "@/components/registro/BotMark";
@@ -23,6 +23,18 @@ export const navItems: {
 
 const openQuickEntry = () => window.dispatchEvent(new CustomEvent("open-registro-rapido"));
 
+/**
+ * The screens the nav belongs on.
+ *
+ * A section is somewhere you switch to; a page is somewhere you went into and come back
+ * from. Carrying the nav into a page gives two ways out of it that mean different
+ * things — one returns, the other abandons — stacked on top of each other at the bottom
+ * of the screen. Pages get a back arrow instead, which is the only thing they need.
+ */
+export const NAV_SECTIONS = ["/", "/transacoes", "/assistente"];
+
+export const isNavSection = (path: string) => NAV_SECTIONS.includes(path);
+
 /* One curve for the whole fold, slow out of the gate and settling rather than snapping.
    A spring here read as a flinch every time the page moved, and the first eased version
    was still quick enough that the bar looked dropped rather than folded. */
@@ -31,6 +43,10 @@ const EASE = { duration: 0.58, ease: [0.32, 0.72, 0, 1] } as const;
 /* The bar overhead leaves a little later than the row rearranges, so the two movements
    read as one thing handing over rather than as two things firing at once. */
 const EASE_BAR = { duration: 0.5, ease: [0.32, 0.72, 0, 1], delay: 0.04 } as const;
+
+/* The same curve as a CSS transition, for the widths that calc decides. */
+const TRANSITION =
+  "width .58s cubic-bezier(.32,.72,0,1), height .58s cubic-bezier(.32,.72,0,1)";
 
 /** The invitation itself, in whichever shape the row is currently wearing. */
 function QuickEntryContent({ compact = false }: { compact?: boolean }) {
@@ -56,30 +72,15 @@ const MobileBottomNav = memo(() => {
 
   // Folded once the page has moved enough that the bar would be in the way. The
   // threshold is generous so a thumb twitch does not make the row flap.
-  const [collapsed, setCollapsed] = useState(false);
+  const [scrolledPast, setScrolledPast] = useState(false);
+  /* Held open on purpose: tapping Início while already on Início unfolds the row where
+     you are, so the other sections are reachable without scrolling back to the top for
+     them. The next scroll hands control back to the page. */
+  const [heldOpen, setHeldOpen] = useState(false);
+  const collapsed = scrolledPast && !heldOpen;
 
-  /* The row animates real widths, not a layout projection.
-     Framer's `layout` moves a box by scaling it, and a box that goes from 267px to 50px
-     gets scaleX 0.19 while its height barely moves — so every icon inside is squashed
-     flat on the way down and stretched wide on the way back. Measuring the row once and
-     animating width in pixels costs one observer and distorts nothing. */
-  const rowRef = useRef<HTMLDivElement>(null);
-  const [rowWidth, setRowWidth] = useState(0);
-  useEffect(() => {
-    const el = rowRef.current;
-    if (!el) return;
-    const read = () => setRowWidth(el.getBoundingClientRect().width);
-    read();
-    const ro = new ResizeObserver(read);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  useEffect(() => {
-    const read = () => setCollapsed(window.scrollY > 90);
-    read();
-    window.addEventListener("scroll", read, { passive: true });
-    return () => window.removeEventListener("scroll", read);
-  }, []);
+  // Pages are left alone; see NAV_SECTIONS.
+  if (!isNavSection(location.pathname)) return null;
 
   return (
     <>
@@ -111,31 +112,43 @@ const MobileBottomNav = memo(() => {
         {/* Three separate things, the way the reference has them: Início on one end,
             Willo on the other, and the invitation between — its own piece of glass
             rather than a slot carved out of one long bar. */}
-        <div ref={rowRef} className="flex items-center gap-2.5">
+        {/* w-full, so the row is as wide as the screen allows and never as wide as its
+            children want to be. Without it the measurement fed itself: the nav took the
+            width it was given, the row grew to hold it, the observer read the bigger
+            row, and the next frame pushed Willo further off the edge. */}
+        <div className="flex w-full items-center gap-2.5">
           <BottomNavBar
-            rowWidth={rowWidth}
             activePath={location.pathname}
             collapsed={collapsed}
-            onNavigate={(path) => navigate(path)}
+            onNavigate={(path) => {
+              // Already here: unfold where you are rather than going nowhere.
+              if (path === location.pathname) setHeldOpen(true);
+              else navigate(path);
+            }}
             onPlus={() => navigate("/assistente")}
             middle={
-              <motion.button
+              <button
                 /* Always mounted, and it is the width that opens and closes. Mounting it
                    on arrival meant it had to fade in from nothing while the nav was
-                   still shrinking, which is the part that looked dropped. */
-                animate={{
-                  width: collapsed ? Math.max(rowWidth - 2 * 10 - 50 - 50, 0) : 0,
-                  opacity: collapsed ? 1 : 0,
-                }}
-                initial={false}
-                transition={EASE}
+                   still shrinking, which is the part that looked dropped.
+                   Two gaps of 10 and two ends of 50 is what it has to give back. */
                 onClick={openQuickEntry}
                 aria-hidden={!collapsed}
-                style={{ pointerEvents: collapsed ? "auto" : "none" }}
-                className="willo-float flex h-[50px] shrink-0 items-center gap-2 overflow-hidden rounded-full pl-3.5 pr-4 text-left"
+                style={{
+                  width: collapsed ? "calc(100% - 120px)" : 0,
+                  // Padding is a floor a width of 0 cannot push through: left in place it
+                  // held 30px open next to Willo and pushed him off the edge. It closes
+                  // with the width.
+                  paddingLeft: collapsed ? 14 : 0,
+                  paddingRight: collapsed ? 16 : 0,
+                  opacity: collapsed ? 1 : 0,
+                  pointerEvents: collapsed ? "auto" : "none",
+                  transition: `${TRANSITION}, padding .58s cubic-bezier(.32,.72,0,1), opacity .4s ease`,
+                }}
+                className="willo-float flex h-[50px] shrink-0 items-center gap-2 overflow-hidden rounded-full text-left"
               >
                 <QuickEntryContent compact />
-              </motion.button>
+              </button>
             }
           />
         </div>
@@ -151,11 +164,9 @@ MobileBottomNav.displayName = "MobileBottomNav";
  * it to the bottom of the screen; the welcome showcase draws it inside its
  * phone so both always look exactly the same.
  */
-export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, rowWidth = 0, middle, onNavigate, onPlus }: {
+export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, middle, onNavigate, onPlus }: {
   activePath: string;
   plusOpen?: boolean;
-  /** Measured width of the row, so the pieces can animate in pixels rather than scale. */
-  rowWidth?: number;
   /** Folded: the nav shrinks to Início alone and `middle` takes the room it gave up. */
   collapsed?: boolean;
   /** Sits between the nav and Willo, as its own thing rather than inside either. */
@@ -169,19 +180,21 @@ export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, 
      up height and width to pay for it. Spreading icons that stayed one size just left
      margins at both ends of the pill, which is the version that looks unfinished. */
   const end = collapsed ? 50 : 58;
-  const GAP = 10;
-  // Open, the nav takes everything Willo does not. Folded, it is a circle like him.
-  const navWidth = rowWidth > 0 ? (collapsed ? end : rowWidth - GAP - end) : undefined;
+  /* Open, the nav takes everything the other two leave: Willo's 58 and BOTH gaps. The
+     invitation between them collapses to nothing, but a flex gap does not collapse with
+     it, so the row still spends 20 on air — forgetting the second one is what pushed
+     Willo ten pixels past the margin.
+     Asking the browser with calc beats measuring the row, which could grow to fit what
+     it was told and then report the larger number back. */
+  const navWidth = collapsed ? `${end}px` : "calc(100% - 78px)";
   return (
     <>
       {/* isolate keeps the sliding pill from compositing above the icons: WebKit
           promotes a layoutId element to its own layer and paints it over
           non-composited siblings whatever the z-index says. */}
-      <motion.nav
-        animate={navWidth !== undefined ? { width: navWidth, height: end } : undefined}
-        transition={EASE}
-        style={navWidth === undefined ? { height: end } : undefined}
-        className="willo-float shrink-0 overflow-hidden rounded-full [isolation:isolate]"
+      <nav
+        style={{ width: navWidth, height: end, transition: TRANSITION }}
+        className="willo-float min-w-0 shrink-0 overflow-hidden rounded-full [isolation:isolate]"
       >
         <div className="flex h-full items-center justify-around px-1.5">
           {shown.map((item) => {
@@ -226,14 +239,14 @@ export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, 
             );
           })}
         </div>
-      </motion.nav>
+      </nav>
 
       {middle}
 
       <button
         onClick={onPlus}
         aria-label="Willo"
-        style={{ width: end, height: end, transition: "width .58s, height .58s" }}
+        style={{ width: end, height: end, transition: TRANSITION }}
         className="relative flex shrink-0 items-center justify-center rounded-full active:scale-95"
       >
         {/* Filling the button, so the only gap in the row is the one between the two
