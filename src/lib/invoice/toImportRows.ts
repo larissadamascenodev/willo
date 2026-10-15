@@ -61,12 +61,53 @@ export function toImportRows(result: InvoiceImportResult, invoicePeriod: number)
       continue;
     }
 
-    // Billed here: the instalment of the month plus any the bank pulled forward. Each is
-    // its own charge, pinned to this invoice rather than dated from the line, because a
-    // statement prints the day an instalment was billed and the closing day can put that
-    // on the wrong side of the boundary.
+    /* The instalment of the month, and the run that follows it, written as one plan.
+       They used to be split: the current one as a single row with no instalment numbers
+       on it, the future ones as a plan of their own. The future months then said
+       "7 de 10" while the month you had just imported — the only one you were looking
+       at — said "à vista" for every instalment purchase on the statement.
+       Written as one plan anchored so instalment n lands in this invoice, the triggers
+       bill n through the end of the run across consecutive months, which is what the
+       two halves were doing between them, and the line keeps its identity in the month
+       it was read from. */
+    const future = mine
+      .filter((i) => i.status === "FUTURE" && i.periodIndex !== null)
+      .sort((a, b) => a.installmentNumber - b.installmentNumber);
+
+    const current = mine.find((i) => i.periodIndex === invoicePeriod && i.status === "CURRENT");
+    if (current) {
+      // Only while unbroken: an instalment the bank pulled forward leaves a hole, and a
+      // plan written across it would bill a month that was already settled.
+      let end = current;
+      while (true) {
+        const next = future.find(
+          (f) =>
+            f.installmentNumber === end.installmentNumber + 1 &&
+            f.periodIndex === (end === current ? invoicePeriod : end.periodIndex!) + 1,
+        );
+        if (!next) break;
+        future.splice(future.indexOf(next), 1);
+        end = next;
+      }
+
+      const base = invoicePeriod - (current.installmentNumber - 1);
+      rows.push({
+        description: op.description,
+        amount: toReais(current.amount),
+        date: invoiceAnchorDate(base),
+        category: op.appCategory ?? null,
+        installments: end.installmentNumber,
+        installmentCurrent: current.installmentNumber,
+        paidInstallments: current.installmentNumber - 1,
+        operationId: op.id,
+      });
+    }
+
+    // Anything the bank pulled forward is its own charge on this invoice, pinned to it
+    // rather than dated from the line: a statement prints the day an instalment was
+    // billed, and the closing day can put that on the wrong side of the boundary.
     const here = mine.filter(
-      (i) => i.periodIndex === invoicePeriod && (i.status === "CURRENT" || i.status === "ANTICIPATED"),
+      (i) => i.periodIndex === invoicePeriod && i.status === "ANTICIPATED",
     );
     for (const inst of here) {
       rows.push({
@@ -98,11 +139,7 @@ export function toImportRows(result: InvoiceImportResult, invoicePeriod: number)
       });
     }
 
-    // What is still owed, one row per unbroken run.
-    const future = mine
-      .filter((i) => i.status === "FUTURE" && i.periodIndex !== null)
-      .sort((a, b) => a.installmentNumber - b.installmentNumber);
-
+    // Whatever the current run did not absorb: one row per unbroken stretch.
     for (let i = 0; i < future.length; ) {
       let j = i;
       while (

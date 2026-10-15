@@ -174,3 +174,49 @@ describe("o ano que o leitor inventa", () => {
     expect(rows[0].date).toBe("2026-10-02");
   });
 });
+
+describe("a parcela do mês importado não perde a identidade", () => {
+  it("uma compra 7 de 10 é gravada como parcelamento, não como à vista", () => {
+    // O bug: no mês que você acabou de importar — o único que você está olhando —
+    // toda compra parcelada aparecia como "à vista", e só os meses futuros diziam
+    // "7 de 10".
+    const [row] = newPath([
+      { description: "Kabum", amount: 337.66, installment_current: 7, installment_total: 10, date: "2026-09-06" },
+    ]);
+    expect(row.installments).toBe(10);
+    expect(row.installmentCurrent).toBe(7);
+    expect(row.paidInstallments).toBe(6);
+  });
+
+  it("e continua cobrando os mesmos meses: desta até a última", () => {
+    const rows = newPath([
+      { description: "Kabum", amount: 100, installment_current: 8, installment_total: 10, date: "2026-09-06" },
+    ]);
+    // 8, 9 e 10: esta fatura e as duas seguintes.
+    expect(billing(rows)).toEqual([
+      [PERIOD, 100],
+      [PERIOD + 1, 100],
+      [PERIOD + 2, 100],
+    ]);
+  });
+
+  it("a última parcela sozinha também se identifica", () => {
+    const [row] = newPath([
+      { description: "Kabum", amount: 50, installment_current: 10, installment_total: 10, date: "2026-09-06" },
+    ]);
+    expect(row.installments).toBe(10);
+    expect(row.installmentCurrent).toBe(10);
+  });
+
+  it("uma antecipação no meio não faz o plano atravessar o buraco", () => {
+    // 4 de 6 nesta fatura, com a 6 antecipada: o plano vai de 4 a 5, e a 6 é
+    // cobrança própria. Escrever 4..6 cobraria um mês já quitado.
+    const rows = newPath([
+      { description: "Larissa Dias", amount: 88.15, installment_current: 4, installment_total: 6, date: "2026-09-06" },
+      { description: "Antecipada - Larissa Dias", amount: 88.15, installment_current: 6, installment_total: 6, date: "2026-10-01" },
+    ]);
+    const plano = rows.find((r) => r.installments && !/antecipad/i.test(r.description));
+    expect(plano?.installmentCurrent).toBe(4);
+    expect(plano?.installments).toBe(5);
+  });
+});
