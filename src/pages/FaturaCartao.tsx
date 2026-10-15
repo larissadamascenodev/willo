@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { importStatement } from "@/services/invoiceImport";
 import { processScanFile } from "@/lib/scanUpload";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft,
@@ -30,11 +31,7 @@ import SinglePurchaseCard from "@/components/fatura/SinglePurchaseCard";
 import CardEntryModal, { type CardEntry } from "@/components/fatura/CardEntryModal";
 import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import { invoicePeriodIndex } from "@/lib/installments";
-import { reconcileInvoice } from "@/lib/invoice/engine";
-import { toCents } from "@/lib/invoice/money";
-import { toImportRows } from "@/lib/invoice/toImportRows";
 import { statementCarryLine } from "@/lib/statementCarry";
-import { saveStatementFigures } from "@/services/statementFigures";
 import { findPreviousImport, hashFile, recordImport, type PreviousImport } from "@/services/invoiceImports";
 import InvoiceUploadReviewModal, { type ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
 import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
@@ -510,73 +507,27 @@ const FaturaCartao = () => {
     if (!user || !cardId || !card) return;
     setConfirmingImport(true);
     try {
-      const invoicePeriod = selectedYear * 12 + (selectedMonth - 1);
-
-      // Same engine as the cards tab: one place decides what a line means.
-      const carryIncluded = selectedItems.some((i) => i.is_carry);
-      const result = reconcileInvoice({
-        events: selectedItems.map((item, i) => ({
-          id: `ev_${i + 1}`,
-          date: item.date,
-          description: item.description,
-          amount: toCents(item.amount),
-          installmentNumber: item.installment_current,
-          installmentTotal: item.installment_total,
-          appCategory: item.category,
-        })),
-        summary: carryIncluded ? {} : { previousInvoice: null, paymentsReceived: null },
-        invoicePeriod,
-      });
-
-      const rows = toImportRows(result, invoicePeriod);
-      for (const row of rows) {
-        const isParcelado = !!row.installments && row.installments > 1;
-        await createTransaction(
-          {
-            name: row.description,
-            type: "despesa",
-            amount: row.amount,
-            category: row.category || "Outros",
-            date: row.date,
-            status: "pago",
-            payment_method: "cartao",
-            credit_card_id: cardId,
-            recurrence_type: isParcelado ? "parcelado" : "unica",
-            installments: isParcelado ? row.installments : null,
-            installment_current: isParcelado ? row.installmentCurrent : null,
-            // The printed date is the instalment's, not the purchase's, so it is not
-            // written down as if it were the purchase date.
-            observation: row.paidInstallments > 0 ? `paid_installments:${row.paidInstallments}` : null,
-          },
-          user.id
-        );
-      }
-
-      // Where it came from and what it read, same as the cards tab.
-      await recordImport({
+      /* The same sequence the card panel runs — it is one function now. This screen
+         used to skip applying the payments the statement reported, so importing the
+         very same PDF here left earlier invoices unsettled and their limit held. */
+      const outcome = await importStatement({
         userId: user.id,
-        cardId,
+        card: { id: cardId, dueDay: card.due_day },
         month: selectedMonth,
         year: selectedYear,
+        items: selectedItems,
         documentHash,
-        fileName: documentName,
-        result,
-        rowCount: rows.length,
+        documentName,
+        declared: {
+          cardLimit: declaredCardLimit,
+          usedLimit: declaredUsedLimit,
+          total: declaredTotal,
+          nextClosing: declaredNext,
+        },
       });
 
-      // The bank's own figures, stored beside the app's, never instead of them.
-      await saveStatementFigures(cardId, selectedMonth, selectedYear, {
-        totalLimit: declaredCardLimit,
-        usedLimit: declaredUsedLimit,
-        availableLimit:
-          declaredCardLimit != null && declaredUsedLimit != null
-            ? Math.round((declaredCardLimit - declaredUsedLimit) * 100) / 100
-            : null,
-        officialTotal: declaredTotal,
-        nextInvoiceClosing: declaredNext,
-      });
-
-      toast.success(`${selectedItems.length} lançamento${selectedItems.length > 1 ? "s" : ""} importado${selectedItems.length > 1 ? "s" : ""} com sucesso! 🎉`);
+      const n = outcome.rowCount;
+      toast.success(`${n} lançamento${n > 1 ? "s" : ""} importado${n > 1 ? "s" : ""} com sucesso! 🎉`);
       setShowReviewModal(false);
       setExtractedItems([]);
       await refreshItems();

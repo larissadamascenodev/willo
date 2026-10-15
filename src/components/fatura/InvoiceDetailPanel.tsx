@@ -1,17 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { importStatement } from "@/services/invoiceImport";
+import type { PaymentMatchResult } from "@/services/importedPayments";
 import { AnimatePresence, motion } from "framer-motion";
 import { CalendarCheck, CalendarClock, ChevronRight, Layers, Plus, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { getInvoiceItems, payInvoice } from "@/services/invoiceService";
-import { createTransaction } from "@/services/transactionService";
 import { processScanFile } from "@/lib/scanUpload";
-import { reconcileInvoice } from "@/lib/invoice/engine";
-import { toCents } from "@/lib/invoice/money";
-import { toImportRows } from "@/lib/invoice/toImportRows";
 import { statementCarryLine } from "@/lib/statementCarry";
-import { saveStatementFigures } from "@/services/statementFigures";
 import { findPreviousImport, hashFile, recordImport, type PreviousImport } from "@/services/invoiceImports";
-import { applyImportedPayments, type PaymentMatchResult } from "@/services/importedPayments";
 import ImportSummaryModal from "./ImportSummaryModal";
 import type { InvoiceImportResult } from "@/lib/invoice/types";
 import InvoiceEntryChooser from "./InvoiceEntryChooser";
@@ -242,90 +238,26 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
     if (!user) return;
     setImporting(true);
     try {
-      const invoicePeriod = year * 12 + (month - 1);
-
-      // The engine decides what every line means and which month it belongs to; this only
-      // writes what it decided. The opening balance arrives as a line of its own that can
-      // be unchecked, so the summary's own carry figures are left out here or the same
-      // money would be counted twice.
-      const carryIncluded = selected.some((i) => i.is_carry);
-      const result = reconcileInvoice({
-        events: selected.map((item, i) => ({
-          id: `ev_${i + 1}`,
-          date: item.date,
-          description: item.description,
-          amount: toCents(item.amount),
-          installmentNumber: item.installment_current,
-          installmentTotal: item.installment_total,
-          appCategory: item.category,
-        })),
-        summary: carryIncluded ? {} : { previousInvoice: null, paymentsReceived: null },
-        invoicePeriod,
-      });
-
-      const rows = toImportRows(result, invoicePeriod);
-      for (const row of rows) {
-        const isParcelado = !!row.installments && row.installments > 1;
-        await createTransaction(
-          {
-            name: row.description,
-            type: "despesa",
-            amount: row.amount,
-            category: row.category || "Outros",
-            date: row.date,
-            status: "pago",
-            payment_method: "cartao",
-            credit_card_id: card.id,
-            recurrence_type: isParcelado ? "parcelado" : "unica",
-            installments: isParcelado ? row.installments : null,
-            installment_current: isParcelado ? row.installmentCurrent : null,
-            // The printed date is the instalment's, not the purchase's, so it is not
-            // written down as if it were the purchase date.
-            observation: row.paidInstallments > 0 ? `paid_installments:${row.paidInstallments}` : null,
-          },
-          user.id,
-        );
-      }
-      // A payment on a statement settled an earlier invoice, not this one. Applied where
-      // the app has that invoice, which frees the limit it was holding.
-      const paymentMatches = await applyImportedPayments({
+      // The whole sequence lives in one place now; see services/invoiceImport.
+      const outcome = await importStatement({
         userId: user.id,
-        cardId: card.id,
-        dueDay: card.dueDay,
-        invoicePeriod,
-        payments: result.payments,
-      });
-
-      // Where this came from and what it read, so a number that looks wrong later has
-      // something behind it. Written after the money, and never allowed to fail the import.
-      await recordImport({
-        userId: user.id,
-        cardId: card.id,
+        card: { id: card.id, dueDay: card.dueDay },
         month,
         year,
+        items: selected,
         documentHash,
-        fileName: documentName,
-        result,
-        rowCount: rows.length,
+        documentName,
+        declared: {
+          cardLimit: declaredCardLimit,
+          usedLimit: declaredUsedLimit,
+          total: declaredTotal,
+          nextClosing: declaredNext,
+        },
       });
 
-      // What the bank printed, written down beside what the app worked out. It is evidence,
-      // never an input: the used limit stays derived, and this sits next to it.
-      await saveStatementFigures(card.id, month, year, {
-        totalLimit: declaredCardLimit,
-        usedLimit: declaredUsedLimit,
-        availableLimit:
-          declaredCardLimit != null && declaredUsedLimit != null
-            ? Math.round((declaredCardLimit - declaredUsedLimit) * 100) / 100
-            : null,
-        officialTotal: declaredTotal,
-        nextInvoiceClosing: declaredNext,
-      });
-
-      setSummary({ result, rows: rows.length, payments: paymentMatches });
+      setSummary({ result: outcome.result, rows: outcome.rowCount, payments: outcome.payments });
       setReviewOpen(false);
       setExtracted([]);
-      window.dispatchEvent(new CustomEvent("transaction-created"));
       loadItems();
       onChanged();
     } catch (err: any) {
