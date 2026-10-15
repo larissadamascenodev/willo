@@ -18,6 +18,15 @@ export default {
         display: ['Plus Jakarta Sans', 'sans-serif'],
       },
       colors: {
+        /* The app was written dark: 1,579 `text-white`, 348 `bg-white/x`, 375
+           `border-white/x`. Hand-converting them would take weeks and regress.
+           Instead white and black stop being fixed and become the two ends of the
+           theme: ink is whatever text is made of, paper is whatever sits behind it.
+           Every existing `text-white` and `bg-white/[0.06]` becomes theme-aware
+           without being touched — in light, that same 6% tint is a soft grey surface
+           instead of a soft light one. */
+        white: "rgb(var(--ink) / <alpha-value>)",
+        black: "rgb(var(--paper) / <alpha-value>)",
         "willo-green": "#C8F36D",
         "willo-black": "#0B0B0B",
         "willo-off-white": "#F8F7EE",

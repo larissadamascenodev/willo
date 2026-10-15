@@ -22,6 +22,12 @@
     /* Willo dark identity — neutral black/graphite (no navy tint), white pill
        buttons, graphite cards with hairline borders. Green (#C8F36D) only
        marks positive values, applied via the literal `willo-green` class. */
+    /* The two ends of the theme, as RGB channels so Tailwind's opacity modifiers
+       work on them. Ink is what text and tints are made of; paper is what sits
+       behind. Swapping these two is what turns the whole app over. */
+    --ink: 255 255 255;
+    --paper: 0 0 0;
+
     --background: 0 0% 3%;
     --foreground: 0 0% 98%;
 
@@ -87,6 +93,76 @@
     --shadow-card-lg: 0 8px 40px -8px rgba(0, 0, 0, 0.7), 0 2px 6px -2px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
     --shadow-glow: 0 4px 20px -4px hsl(0 0% 100% / 0.12);
     --shadow-inner-light: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  }
+
+  /* Light.
+     Paper rather than a dimmed version of the dark theme: white cards lifted off a
+     soft grey ground by shadow instead of hairlines, near-black ink, and blue where
+     dark uses white for the thing to press. The accents that carry meaning — the
+     green for money in, the red for money out, the category colours — do not move,
+     because they mean the same thing on either ground. */
+  [data-theme="light"] {
+    --ink: 18 18 22;
+    --paper: 255 255 255;
+
+    --background: 260 11% 96%;
+    --foreground: 240 8% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 8% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 8% 10%;
+
+    /* The thing to press is blue here. In dark it is a white pill; on paper a white
+       pill is invisible. */
+    --primary: 226 100% 59%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 255 8% 93%;
+    --secondary-foreground: 240 8% 10%;
+
+    --muted: 255 8% 93%;
+    --muted-foreground: 240 5% 44%;
+
+    --accent: 255 8% 93%;
+    --accent-foreground: 240 8% 10%;
+
+    --destructive: 4 72% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 28 80% 46%;
+    --warning-foreground: 0 0% 100%;
+
+    --success: 145 62% 34%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 255 8% 89%;
+    --input: 255 8% 91%;
+    --ring: 226 100% 59%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 8% 10%;
+    --sidebar-primary: 226 100% 59%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 255 8% 93%;
+    --sidebar-accent-foreground: 240 8% 10%;
+    --sidebar-border: 255 8% 89%;
+    --sidebar-ring: 226 100% 59%;
+
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(0 0% 100%) 100%);
+    --gradient-card-hover: linear-gradient(145deg, hsl(260 20% 99%) 0%, hsl(0 0% 100%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(260 11% 97%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(226 100% 59%) 0%, hsl(232 94% 64%) 100%);
+    --gradient-primary-subtle: linear-gradient(135deg, hsl(226 100% 59% / 0.12) 0%, hsl(226 100% 59% / 0.04) 100%);
+    --gradient-border: linear-gradient(135deg, hsl(255 8% 88%) 0%, hsl(255 8% 93%) 100%);
+    --gradient-glow: radial-gradient(ellipse at 50% 0%, hsl(226 100% 59% / 0.05) 0%, transparent 60%);
+
+    /* On paper, depth is shadow. The dark theme's inset highlight would be a scratch. */
+    --shadow-card: 0 2px 10px -2px rgba(18, 18, 22, 0.07), 0 8px 28px -10px rgba(18, 18, 22, 0.10);
+    --shadow-card-lg: 0 4px 16px -2px rgba(18, 18, 22, 0.09), 0 16px 44px -14px rgba(18, 18, 22, 0.14);
+    --shadow-glow: 0 6px 22px -6px hsl(226 100% 59% / 0.35);
+    --shadow-inner-light: none;
   }
 }
 
@@ -297,6 +373,75 @@
     color: #0B0B0B;
     font-weight: 600;
     letter-spacing: -0.01em;
+  }
+
+  /* Light: the glass surfaces become paper.
+     Translucency is a dark-room effect — it works because there is light behind it.
+     On a pale ground a 4% white film is invisible, so the same elements become white
+     cards lifted by shadow, which is what the reference does and what paper does. */
+  [data-theme="light"] .willo-glass,
+  [data-theme="light"] .willo-glass-inset,
+  [data-theme="light"] .willo-glass-chip {
+    background-color: #ffffff;
+    border-color: rgba(18, 18, 22, 0.06);
+    box-shadow: var(--shadow-card);
+  }
+
+  [data-theme="light"] .willo-glass-strong {
+    background-color: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    box-shadow: 0 -2px 40px -8px rgba(18, 18, 22, 0.16);
+  }
+
+  [data-theme="light"] .willo-glass-control {
+    background-color: rgba(18, 18, 22, 0.05);
+  }
+
+  [data-theme="light"] .willo-float {
+    background-color: rgba(255, 255, 255, 0.92);
+    box-shadow: inset 0 0 0 1px rgba(18, 18, 22, 0.05), 0 12px 30px -12px rgba(18, 18, 22, 0.28);
+  }
+
+  /* The pill is the thing to press: white on a dark room, blue on paper. */
+  [data-theme="light"] .willo-pill {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  [data-theme="light"] .willo-bg {
+    background: hsl(var(--background));
+  }
+  [data-theme="light"] .willo-bg::after {
+    background: none;
+  }
+
+  /* Same sky, same hour, different light: the storm turns to a mauve sunset and the
+     page under it is paper rather than night. */
+  [data-theme="light"] .willo-sky::before {
+    background:
+      radial-gradient(58% 5% at 31% 11%, rgba(255, 214, 190, 0.62) 0%, transparent 100%),
+      radial-gradient(42% 4% at 73% 8%, rgba(255, 186, 170, 0.55) 0%, transparent 100%),
+      radial-gradient(68% 4% at 54% 16%, rgba(236, 160, 162, 0.40) 0%, transparent 100%),
+      radial-gradient(88% 13% at 47% 13%, rgba(228, 150, 158, 0.38) 0%, transparent 100%),
+      radial-gradient(68% 20% at 48% 42%, rgba(176, 162, 200, 0.42) 0%, transparent 100%),
+      radial-gradient(120% 17% at 50% 0%, rgba(150, 130, 165, 0.30) 0%, transparent 100%),
+      linear-gradient(180deg, #b9a7c4 0%, #d6b4bb 18%, #e8c3bd 38%, #eedcd8 58%, hsl(var(--background)) 86%);
+  }
+  [data-theme="light"] .willo-sky::after {
+    background: none;
+  }
+
+  [data-theme="light"] .willo-aurora {
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(88% 11% at 47% 8%, rgba(255, 196, 180, 0.42) 0%, transparent 100%),
+      radial-gradient(72% 18% at 48% 24%, rgba(186, 172, 214, 0.30) 0%, transparent 100%),
+      linear-gradient(180deg, #e2cfd2 0%, #ece0e0 22%, hsl(var(--background)) 58%);
+  }
+
+  [data-theme="light"] .willo-scroll-edge {
+    background: linear-gradient(to bottom, hsl(var(--background) / 0.92) 0%, hsl(var(--background) / 0.42) 58%, transparent 100%);
   }
 
   .glass-card {

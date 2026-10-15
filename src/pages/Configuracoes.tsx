@@ -4,7 +4,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Bell, Camera, Check, ChevronRight, Eye, EyeOff, FileText, Flame, Globe, Headphones,
   HelpCircle, Loader2, Lock, LogOut, Pencil, ShieldCheck, Shuffle, Sparkles, Trash2, User, UserX,
+  Sun, Moon, SunMoon,
 } from "lucide-react";
+import { useTheme, type ThemeChoice } from "@/contexts/ThemeContext";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -70,6 +72,45 @@ function Row({ icon: Icon, label, value, danger = false, onClick }: {
       {value && <span className="shrink-0 text-[13.5px] text-white/56">{value}</span>}
       {!danger && <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />}
     </button>
+  );
+}
+
+/**
+ * Three segments rather than a switch, because "follow the phone" is a real answer and
+ * a two-way switch cannot say it — it would force a choice the device already made.
+ */
+function ThemePicker() {
+  const { choice, setChoice } = useTheme();
+  const options: { id: ThemeChoice; label: string; icon: typeof Globe }[] = [
+    { id: "system", label: "Sistema", icon: SunMoon },
+    { id: "light", label: "Claro", icon: Sun },
+    { id: "dark", label: "Escuro", icon: Moon },
+  ];
+  return (
+    <div className="flex gap-1.5 p-3">
+      {options.map((o) => {
+        const active = choice === o.id;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            onClick={() => setChoice(o.id)}
+            aria-pressed={active}
+            className={cn(
+              "flex flex-1 flex-col items-center gap-1.5 rounded-[16px] px-2 py-3 transition-colors",
+              // A tint of ink marks the choice on a dark ground; on paper the same
+              // tint is a grey smudge, so there it is the primary colour instead.
+              active
+                ? "bg-white/[0.12] text-white [html[data-theme=light]_&]:bg-primary [html[data-theme=light]_&]:text-primary-foreground"
+                : "bg-white/[0.04] text-white/55",
+            )}
+          >
+            <o.icon className="h-[18px] w-[18px]" strokeWidth={2} />
+            <span className="text-[12.5px] font-semibold">{o.label}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -393,6 +434,10 @@ const Configuracoes = () => {
         <Row icon={User} label="Dados pessoais" onClick={openProfile} />
         <Row icon={ShieldCheck} label="Senha e segurança" onClick={() => { resetPasswordFields(); setSheet("password"); }} />
         <Row icon={Bell} label="Lembretes e alertas" onClick={() => setNotifOpen(true)} />
+      </Group>
+
+      <Group title="Aparência" delay={0.09}>
+        <ThemePicker />
       </Group>
 
       <Group title="Preferências" delay={0.1}>
