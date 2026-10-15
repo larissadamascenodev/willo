@@ -18,6 +18,7 @@ import ScanCaptureScreen from "@/components/scan/ScanCaptureScreen";
 import ScannerScreen from "@/components/scan/ScannerScreen";
 import RegistroRapidoSheet from "@/components/registro/RegistroRapidoSheet";
 import BackButton from "@/components/shared/BackButton";
+import { resolveReceiptDate } from "@/lib/receiptDate";
 import { isNavSection } from "@/components/dashboard/MobileBottomNav";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 import WelcomeToAppModal from "@/components/dashboard/WelcomeToAppModal";
@@ -86,21 +87,13 @@ const DashboardLayout = () => {
   const [editTransaction, setEditTransaction] = useState<EditTransactionData | null>(null);
 
 
-  const getSafeTransactionDate = useCallback((rawDate: string | null | undefined) => {
-    const today = new Date();
-    const fallback = today.toISOString().split("T")[0];
-
-    if (!rawDate) return fallback;
-
-    const parsed = new Date(`${rawDate}T12:00:00`);
-    if (Number.isNaN(parsed.getTime())) return fallback;
-
-    // Keep the date printed on the receipt, even from past months; only
-    // future dates are treated as a misread.
-    if (parsed > today) return fallback;
-
-    return rawDate;
-  }, []);
+  /* See resolveReceiptDate: a receipt's year is the part the reader gets wrong, and a
+     wrong year is invisible — the row looks ordinary and lands in an invoice nobody
+     will ever open. */
+  const getSafeTransactionDate = useCallback(
+    (rawDate: string | null | undefined) => resolveReceiptDate(rawDate),
+    [],
+  );
 
   // Global listener for the mobile + button and desktop "Nova transação"
   useEffect(() => {

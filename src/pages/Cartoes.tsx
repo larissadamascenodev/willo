@@ -130,9 +130,9 @@ const MonthTag = ({ status }: { status: MonthStatus }) => {
   if (status === "vazia") return null;
   const map = {
     paga: { label: "Paga", cls: "bg-willo-green/15 text-willo-green-ink", icon: true },
-    aberta: { label: "Fatura aberta", cls: "bg-white/[0.08] text-white/75", icon: false },
+    aberta: { label: "Em aberto", cls: "bg-white/[0.08] text-white/75", icon: false },
     fechada: { label: "Fechada, a pagar", cls: "bg-amber-300/15 text-willo-amber", icon: false },
-    proxima: { label: "Ainda vai fechar", cls: "bg-white/[0.06] t-soft", icon: false },
+    proxima: { label: "Próxima fatura", cls: "bg-white/[0.06] t-soft", icon: false },
     atrasada: { label: "Em aberto", cls: "bg-amber-300/15 text-willo-amber", icon: false },
   }[status];
   return (
@@ -195,7 +195,12 @@ const Cartoes = () => {
 
   const now = new Date();
   const currentKey = monthKey(now.getFullYear(), now.getMonth() + 1);
-  const [selectedKey, setSelectedKey] = useState(currentKey);
+  /* The month the calendar is in is not the invoice you are living in. Past its closing
+     day, this month's invoice is shut and everything you spend lands on the next one —
+     so opening the screen on the calendar month showed "nenhuma fatura encontrada" for
+     a card that has one open right now. null until the invoices load, then the earliest
+     unpaid one from this month forward. */
+  const [selectedKey, setSelectedKey] = useState<number | null>(null);
 
   const cardById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
   const visibleCards = cardFilter ? cards.filter((c) => c.id === cardFilter) : cards;
@@ -203,7 +208,19 @@ const Cartoes = () => {
   const filteredInstallments = cardFilter ? installments.filter((i) => i.cardId === cardFilter) : installments;
 
   const invoiceSlots = useMemo(() => monthSlots(-3, 15), []);
-  const selectedSlot = invoiceSlots.find((s) => s.key === selectedKey) ?? invoiceSlots.find((s) => s.key === currentKey)!;
+
+  /** The invoice actually open: the first from this month on that still owes something. */
+  const openKey = useMemo(() => {
+    const owing = filteredInvoices
+      .filter((i) => !i.isPaid && i.total > 0 && monthKey(i.year, i.month) >= currentKey)
+      .map((i) => monthKey(i.year, i.month))
+      .sort((a, b) => a - b);
+    return owing[0] ?? currentKey;
+  }, [filteredInvoices, currentKey]);
+
+  const activeKey = selectedKey ?? openKey;
+  const selectedSlot =
+    invoiceSlots.find((s) => s.key === activeKey) ?? invoiceSlots.find((s) => s.key === currentKey)!;
   const invoiceValues = invoiceSlots.map((s) =>
     filteredInvoices.filter((i) => monthKey(i.year, i.month) === s.key).reduce((sum, i) => sum + i.total, 0),
   );
@@ -229,14 +246,13 @@ const Cartoes = () => {
   const monthStatus: MonthStatus = (() => {
     const hasValue = monthInvoices.length > 0;
     if (hasValue && paidKeys.has(selectedSlot.key)) return "paga";
-    if (selectedSlot.key > currentKey) return "proxima";
-    if (selectedSlot.key < currentKey) return hasValue ? "atrasada" : "vazia";
+    /* Measured against the invoice that is open, not against the calendar. Past the
+       closing day those are different months, and comparing with the calendar called
+       the open invoice "próxima" — the one thing it is not. */
+    if (selectedSlot.key > openKey) return "proxima";
+    if (selectedSlot.key < openKey) return hasValue ? "atrasada" : "vazia";
     if (!hasValue) return "vazia";
-    // This month's invoice is only open while it is still taking spending. Once the
-    // closing day arrives it has shut, and anything bought today lands on the next one.
-    const closingDay = selectedCard?.closingDay ?? cards[0]?.closingDay;
-    const closed = !!closingDay && new Date().getDate() >= closingDay;
-    return closed ? "fechada" : "aberta";
+    return "aberta";
   })();
 
   return (
@@ -249,7 +265,7 @@ const Cartoes = () => {
       {/* Tabs */}
       <div className="mt-2 grid grid-cols-3 isolate rounded-full border border-white/[0.08] willo-glass p-1">
         {([["cartoes", "Cartões"], ["faturas", "Faturas"], ["parcelas", "Parcelas"]] as const).map(([key, label]) => (
-          <button key={key} onClick={() => { setTab(key); setSelectedKey(currentKey); }} className="relative h-11 rounded-full text-[15px] font-medium">
+          <button key={key} onClick={() => { setTab(key); setSelectedKey(null); }} className="relative h-11 rounded-full text-[15px] font-medium">
             {tab === key && <motion.span layoutId="cards-tab" className="pointer-events-none absolute inset-0 z-0 rounded-full willo-invert" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
             <span className={cn("relative z-10 transform-gpu transform-gpu", tab === key ? "willo-on-invert" : "text-white")}>{label}</span>
           </button>
@@ -312,7 +328,7 @@ const Cartoes = () => {
             return (
               <button
                 key={c.id ?? "all"}
-                onClick={() => { setCardFilter(c.id); setSelectedKey(currentKey); }}
+                onClick={() => { setCardFilter(c.id); setSelectedKey(null); }}
                 className={cn(
                   "flex h-10 shrink-0 items-center gap-2 rounded-full border px-4 text-[14px] font-medium transition-colors",
                   active ? "willo-invert" : "border-white/[0.14] willo-glass-control text-white/88",
@@ -343,7 +359,7 @@ const Cartoes = () => {
               const match = /^\/fatura\/(.+)$/.exec(to);
               if (match) {
                 setCardFilter(match[1]);
-                setSelectedKey(currentKey);
+                setSelectedKey(null);
                 setTab("faturas");
               } else {
                 navigate(to);
