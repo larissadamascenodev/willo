@@ -108,7 +108,7 @@ export default function ReceiptViewer({ open, items, onClose }: {
               className="max-h-full w-full max-w-[330px] object-contain drop-shadow-[0_24px_48px_rgba(0,0,0,0.6)]"
             />
           ) : (
-            <Loader2 className="h-6 w-6 animate-spin text-white/50" />
+            <Loader2 className="h-6 w-6 animate-spin t-soft" />
           )}
         </div>
 

@@ -121,7 +121,7 @@ export function MetasResumoView({ goals, loading = false, compact = false }: { g
           transition={{ duration: 0.8, ease: "easeOut" }}
         />
       </div>
-      <p className="mt-1.5 text-[12px] text-white/56 tabular-nums">{Math.round(overall * 100)}% do total guardado</p>
+      <p className="mt-1.5 text-[12px] t-soft tabular-nums">{Math.round(overall * 100)}% do total guardado</p>
 
       <div className="mt-4 space-y-3 border-t border-white/[0.06] pt-3.5">
         {visible.map((goal, idx) => {
@@ -159,7 +159,7 @@ export function MetasResumoView({ goals, loading = false, compact = false }: { g
                     transition={{ delay: 0.1 + idx * 0.05, duration: 0.6, ease: "easeOut" }}
                   />
                 </div>
-                <p className="mt-1 truncate text-[11px] text-white/56 tabular-nums">
+                <p className="mt-1 truncate text-[11px] t-soft tabular-nums">
                   {done ? "Meta alcançada" : `${fmt(goal.current_amount)} de ${fmt(goal.target_amount)}`}
                 </p>
               </div>

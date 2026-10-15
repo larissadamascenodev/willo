@@ -90,7 +90,7 @@ export function formatCurrency(value: number) {
 
 const EmptyTab = ({ label }: { label: string }) => (
   <div className="rounded-[22px] border border-dashed border-white/[0.08] px-4 py-10 text-center">
-    <p className="text-[14px] text-white/56">{label}</p>
+    <p className="text-[14px] t-soft">{label}</p>
   </div>
 );
 
@@ -744,7 +744,7 @@ const FaturaCartao = () => {
             <div className="min-w-0">
               <p className="truncate text-[16px] font-bold text-white">{card?.name}</p>
               {card?.last_four_digits && (
-                <p className="text-[12px] tabular-nums text-white/56">•••• {card.last_four_digits}</p>
+                <p className="text-[12px] tabular-nums t-soft">•••• {card.last_four_digits}</p>
               )}
             </div>
           </div>
@@ -777,12 +777,12 @@ const FaturaCartao = () => {
         {/* Closing / due */}
         <div className="relative mt-4 flex items-center gap-4 border-t border-white/[0.06] pt-4">
           <span className="flex items-center gap-2 text-[12.5px] text-white/66">
-            <CalendarClock className="h-4 w-4 shrink-0 text-white/50" />
+            <CalendarClock className="h-4 w-4 shrink-0 t-soft" />
             Fecha dia <span className="font-semibold text-white">{card?.closing_day}</span>
           </span>
           <span className="h-3 w-px bg-white/10" />
           <span className="flex items-center gap-2 text-[12.5px] text-white/66">
-            <CalendarCheck className="h-4 w-4 shrink-0 text-white/50" />
+            <CalendarCheck className="h-4 w-4 shrink-0 t-soft" />
             Vence dia <span className="font-semibold text-white">{card?.due_day}</span>
           </span>
         </div>
@@ -806,15 +806,15 @@ const FaturaCartao = () => {
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
             <div>
-              <p className="text-[11.5px] text-white/56">Usado</p>
+              <p className="text-[11.5px] t-soft">Usado</p>
               <p className="text-[14px] font-semibold text-white tabular-nums">{formatCurrency(usedLimit)}</p>
             </div>
             <div className="border-x border-white/[0.06]">
-              <p className="text-[11.5px] text-white/56">Disponível</p>
+              <p className="text-[11.5px] t-soft">Disponível</p>
               <p className={cn("text-[14px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-willo-green-ink")}>{formatCurrency(availableLimit)}</p>
             </div>
             <div>
-              <p className="text-[11.5px] text-white/56">Total</p>
+              <p className="text-[11.5px] t-soft">Total</p>
               <p className="text-[14px] font-semibold text-white tabular-nums">{formatCurrency(limitTotal)}</p>
             </div>
           </div>

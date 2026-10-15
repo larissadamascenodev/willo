@@ -79,7 +79,7 @@ const SaldoContasCard = memo(({ saldoPrevisto }: { saldoPrevisto?: number }) => 
     >
       <div className="flex items-center justify-between gap-3">
         <p className="text-[14px] text-white/66">Saldo em contas</p>
-        <ChevronRight className="h-4 w-4 shrink-0 text-white/35" />
+        <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
       </div>
 
       <p className={cn(
@@ -92,7 +92,7 @@ const SaldoContasCard = memo(({ saldoPrevisto }: { saldoPrevisto?: number }) => 
       {/* What is in hand, then where it lands: the same card answers "quanto tenho"
           and "quanto sobra", which is the pair the question is actually about. */}
       {saldoPrevisto !== undefined && (
-        <p className="mt-2 truncate text-[13px] text-white/60">
+        <p className="mt-2 truncate text-[13px] t-soft">
           Previsto no fim do mês:{" "}
           <span className="font-semibold text-white/80 tabular-nums">{value(saldoPrevisto)}</span>
         </p>
@@ -129,7 +129,7 @@ const SaldoContasCard = memo(({ saldoPrevisto }: { saldoPrevisto?: number }) => 
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[14px] font-medium text-white">{a.name}</p>
-                <p className="truncate text-[11.5px] text-white/45">{TYPE_LABEL[a.type] ?? "Conta"}</p>
+                <p className="truncate text-[11.5px] t-softer">{TYPE_LABEL[a.type] ?? "Conta"}</p>
               </div>
               <div className="shrink-0 text-right">
                 <p className={cn(
@@ -138,7 +138,7 @@ const SaldoContasCard = memo(({ saldoPrevisto }: { saldoPrevisto?: number }) => 
                 )}>
                   {value(a.balance)}
                 </p>
-                <p className="text-[11.5px] tabular-nums text-white/45">{Math.round(share)}%</p>
+                <p className="text-[11.5px] tabular-nums t-softer">{Math.round(share)}%</p>
               </div>
             </div>
           );

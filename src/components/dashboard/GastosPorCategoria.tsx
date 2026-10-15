@@ -97,14 +97,14 @@ const GastosPorCategoria = memo(({ categories, selectedMonth, onVerAnalise }: Pr
       {/* Header */}
       <div className="flex items-start justify-between gap-3 px-[14px] pb-3.5 pt-3.5">
         <div className="min-w-0">
-          <p className="text-[12px] text-white/50">Gastos por categoria · {monthLabel}</p>
+          <p className="text-[12px] t-soft">Gastos por categoria · {monthLabel}</p>
           <p className="mt-1.5 truncate text-[26px] font-extrabold leading-none tracking-[-0.035em] tabular-nums text-white">
             {fmt(totalExpenses)}
           </p>
         </div>
         <button
           onClick={() => navigate("/analytics/categorias")}
-          className="mt-0.5 flex shrink-0 items-center gap-0.5 text-[12px] font-semibold text-white/55 active:opacity-70"
+          className="mt-0.5 flex shrink-0 items-center gap-0.5 text-[12px] font-semibold t-soft active:opacity-70"
         >
           Análise <ChevronRight className="h-3.5 w-3.5" />
         </button>
@@ -113,7 +113,7 @@ const GastosPorCategoria = memo(({ categories, selectedMonth, onVerAnalise }: Pr
       {sorted.length === 0 && (
         <div className="px-4 pb-4">
           <div className="h-2.5 rounded-full bg-white/[0.06]" />
-          <p className="mt-3 text-[13px] text-white/56">Nenhum gasto registrado em {monthLabel}.</p>
+          <p className="mt-3 text-[13px] t-soft">Nenhum gasto registrado em {monthLabel}.</p>
         </div>
       )}
 
@@ -215,7 +215,7 @@ const GastosPorCategoria = memo(({ categories, selectedMonth, onVerAnalise }: Pr
                 <div className="flex items-baseline gap-2">
                   <p className="truncate text-[13.5px] font-semibold text-white">{cat.name}</p>
                   {hasLimit && limitLabel && (
-                    <span className={cn("shrink-0 text-[10px] font-semibold", limitRatio > 1 ? "text-red-400" : "text-amber-400")}>
+                    <span className={cn("shrink-0 text-[10px] font-semibold", limitRatio > 1 ? "text-red-400" : "text-willo-amber")}>
                       {limitLabel}
                     </span>
                   )}
@@ -243,7 +243,7 @@ const GastosPorCategoria = memo(({ categories, selectedMonth, onVerAnalise }: Pr
 
               <div className="shrink-0 text-right">
                 <p className="text-[13.5px] font-bold tabular-nums text-white">{fmt(cat.amount)}</p>
-                <p className="text-[10.5px] tabular-nums text-white/40">
+                <p className="text-[10.5px] tabular-nums t-softer">
                   {hasLimit ? `de ${fmt(limit)}` : `${pct}%`}
                 </p>
               </div>

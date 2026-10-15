@@ -265,7 +265,7 @@ export default function CreditCardEditModal({ open, onClose, card, onUpdated, on
               <SectionLabel
                 right={
                   usedLimit !== null ? (
-                    <span className="text-[12.5px] tabular-nums text-white/50">
+                    <span className="text-[12.5px] tabular-nums t-soft">
                       {currencySymbol()} {fmt(floor)} em uso
                     </span>
                   ) : undefined
@@ -285,7 +285,7 @@ export default function CreditCardEditModal({ open, onClose, card, onUpdated, on
                       exit={{ opacity: 0 }}
                       className="mt-4 flex items-start gap-2 rounded-[16px] border border-amber-300/20 bg-amber-300/[0.07] px-3 py-2.5"
                     >
-                      <AlertTriangle className="mt-px h-4 w-4 shrink-0 text-amber-300" />
+                      <AlertTriangle className="mt-px h-4 w-4 shrink-0 text-willo-amber" />
                       <span className="text-[12.5px] leading-snug text-white/80">
                         Você já usou {currencySymbol()} {fmt(floor)}. Pague as faturas em aberto para liberar limite antes de diminuir.
                       </span>
@@ -296,7 +296,7 @@ export default function CreditCardEditModal({ open, onClose, card, onUpdated, on
                       initial={{ opacity: 0, y: -4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
-                      className="mt-4 text-center text-[12.5px] text-white/55"
+                      className="mt-4 text-center text-[12.5px] t-soft"
                     >
                       {delta > 0 ? "Aumento de " : "Redução de "}
                       <span className="font-semibold tabular-nums text-white/80">
@@ -341,7 +341,7 @@ export default function CreditCardEditModal({ open, onClose, card, onUpdated, on
                   </motion.div>
                 )}
               </AnimatePresence>
-              <p className="mt-2 px-1 text-[12px] leading-snug text-white/50">
+              <p className="mt-2 px-1 text-[12px] leading-snug t-soft">
                 As datas novas valem a partir da próxima fatura. A atual continua como está.
               </p>
 

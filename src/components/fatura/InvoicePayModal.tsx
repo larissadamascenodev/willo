@@ -49,13 +49,13 @@ const MoneyField = ({ label, value, onChange, placeholder }: {
   <label className="flex min-h-[56px] items-center gap-3 px-[18px] py-2.5">
     <span className="shrink-0 text-[15px] text-white">{label}</span>
     <span className="flex min-w-0 flex-1 items-baseline justify-end gap-1.5">
-      <span className="shrink-0 text-[13px] text-white/40">{currencySymbol()}</span>
+      <span className="shrink-0 text-[13px] t-softer">{currencySymbol()}</span>
       <input
         inputMode="decimal"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder ?? "0,00"}
-        className="w-full min-w-0 bg-transparent text-right text-[16px] font-semibold tabular-nums text-white placeholder:font-normal placeholder:text-white/30 focus:outline-none"
+        className="w-full min-w-0 bg-transparent text-right text-[16px] font-semibold tabular-nums text-white placeholder:font-normal placeholder:t-faint focus:outline-none"
       />
     </span>
   </label>
@@ -146,7 +146,7 @@ export default function InvoicePayModal({
         <div className="px-4 pb-2">
           {/* What is owed, as the headline rather than a line in a form */}
           <div className="relative flex flex-col items-center pb-7 pt-2">
-            <span className="relative text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">
+            <span className="relative text-[11px] font-semibold uppercase tracking-[0.14em] t-soft">
               Saldo em aberto
             </span>
             <p className="relative mt-3 text-[44px] font-extrabold leading-none tracking-[-0.04em] tabular-nums text-white">
@@ -155,7 +155,7 @@ export default function InvoicePayModal({
           </div>
 
           {/* Where it comes out of */}
-          <p className="mb-2.5 px-1 text-[10.5px] font-semibold uppercase tracking-[0.13em] text-white/45">
+          <p className="mb-2.5 px-1 text-[10.5px] font-semibold uppercase tracking-[0.13em] t-softer">
             Debitar da conta
           </p>
           <button
@@ -172,7 +172,7 @@ export default function InvoicePayModal({
               </span>
             ) : (
               <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
-                <Wallet className="h-4 w-4 text-white/60" />
+                <Wallet className="h-4 w-4 t-soft" />
               </span>
             )}
             <span className="min-w-0 flex-1">
@@ -180,17 +180,17 @@ export default function InvoicePayModal({
                 {account?.name ?? "Escolher conta"}
               </span>
               {account && (
-                <span className={cn("block truncate text-[12.5px] tabular-nums", short ? "text-red-400" : "text-white/45")}>
+                <span className={cn("block truncate text-[12.5px] tabular-nums", short ? "text-red-400" : "t-softer")}>
                   {formatCurrency(Number(account.current_balance))}
                   {short ? " · menos do que o pagamento" : " disponíveis"}
                 </span>
               )}
             </span>
-            <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
+            <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
           </button>
 
           {/* How */}
-          <p className="mb-2.5 mt-7 px-1 text-[10.5px] font-semibold uppercase tracking-[0.13em] text-white/45">
+          <p className="mb-2.5 mt-7 px-1 text-[10.5px] font-semibold uppercase tracking-[0.13em] t-softer">
             Como pagar
           </p>
           <div className="space-y-2">
@@ -207,10 +207,10 @@ export default function InvoicePayModal({
                     active ? "border-white/35 bg-white/[0.10]" : "border-white/[0.07] willo-glass",
                   )}
                 >
-                  <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-white" : "text-white/40")} strokeWidth={2.1} />
+                  <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-white" : "t-softer")} strokeWidth={2.1} />
                   <span className="min-w-0 flex-1">
                     <span className="block text-[15px] font-semibold text-white">{m.label}</span>
-                    <span className="block truncate text-[12.5px] text-white/45">{m.hint}</span>
+                    <span className="block truncate text-[12.5px] t-softer">{m.hint}</span>
                   </span>
                   <span
                     className={cn(
@@ -232,7 +232,7 @@ export default function InvoicePayModal({
                 <MoneyField label="Pagar agora" value={minAmount} onChange={setMinAmount} />
               </div>
               {parsedMinAmount > 0 && (
-                <p className="mt-2.5 px-1 text-[12.5px] text-white/55">
+                <p className="mt-2.5 px-1 text-[12.5px] t-soft">
                   {parsedMinAmount >= total
                     ? "Isso cobre a fatura inteira. Use “Valor total”."
                     : <>Ficam <b className="font-semibold text-white">{formatCurrency(remainder)}</b> para a próxima fatura.</>}
@@ -253,7 +253,7 @@ export default function InvoicePayModal({
                     onChange={(e) => setInstallments(e.target.value.replace(/\D/g, "").slice(0, 2))}
                     className="w-full min-w-0 bg-transparent text-right text-[16px] font-semibold tabular-nums text-white focus:outline-none"
                   />
-                  <span className="shrink-0 text-[13px] text-white/40">x</span>
+                  <span className="shrink-0 text-[13px] t-softer">x</span>
                 </label>
                 <MoneyField label="Valor da parcela" value={installmentAmount} onChange={setInstallmentAmount} />
               </div>
@@ -261,16 +261,16 @@ export default function InvoicePayModal({
               {installmentCalc && (
                 <div className="mt-2.5 rounded-[20px] border border-white/[0.07] willo-glass px-4 py-3.5">
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-[13px] text-white/55">Vai pagar no total</span>
+                    <span className="text-[13px] t-soft">Vai pagar no total</span>
                     <span className="text-[14px] font-semibold tabular-nums text-white">
                       {formatCurrency(installmentCalc.totalPaid)}
                     </span>
                   </div>
                   <div className="mt-1.5 flex items-baseline justify-between gap-3">
-                    <span className="text-[13px] text-white/55">Juros</span>
+                    <span className="text-[13px] t-soft">Juros</span>
                     <span className={cn(
                       "text-[14px] font-semibold tabular-nums",
-                      installmentCalc.interest > 0 ? "text-amber-300" : "text-willo-green-ink",
+                      installmentCalc.interest > 0 ? "text-willo-amber" : "text-willo-green-ink",
                     )}>
                       {installmentCalc.interest > 0 ? formatCurrency(installmentCalc.interest) : "sem juros"}
                     </span>
@@ -307,7 +307,7 @@ export default function InvoicePayModal({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[15px] font-medium text-white">{a.name}</span>
-                  <span className="block truncate text-[12.5px] tabular-nums text-white/45">
+                  <span className="block truncate text-[12.5px] tabular-nums t-softer">
                     {formatCurrency(Number(a.current_balance))}
                   </span>
                 </span>

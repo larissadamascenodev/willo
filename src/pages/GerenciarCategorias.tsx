@@ -205,7 +205,7 @@ export default function GerenciarCategorias() {
         <h2 className="text-[18px] font-bold text-white">
           {tab === "despesa" ? "De despesa" : "De receita"}
         </h2>
-        <span className="text-[13px] text-white/56">{unifiedCategories.length} categorias</span>
+        <span className="text-[13px] t-soft">{unifiedCategories.length} categorias</span>
       </div>
 
       {loading ? (
@@ -216,7 +216,7 @@ export default function GerenciarCategorias() {
         </div>
       ) : unifiedCategories.length === 0 ? (
         <div className="rounded-[22px] border border-dashed border-white/[0.1] px-6 py-10 text-center">
-          <Tag className="mx-auto mb-2 h-7 w-7 text-white/38" />
+          <Tag className="mx-auto mb-2 h-7 w-7 t-faint" />
           <p className="text-[14px] text-white/70">Nenhuma categoria por aqui</p>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -249,19 +249,19 @@ export default function GerenciarCategorias() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[15px] font-semibold text-white">{cat.name}</span>
-                  <span className="block text-[12px] text-white/56">
+                  <span className="block text-[12px] t-soft">
                     {cat.isDefault ? "Padrão do Willo" : "Criada por você"}
                   </span>
                 </span>
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: cat.color }} />
-                <MoreHorizontal className="h-5 w-5 shrink-0 text-white/45" />
+                <MoreHorizontal className="h-5 w-5 shrink-0 t-softer" />
               </motion.button>
             ))}
           </AnimatePresence>
         </div>
       )}
 
-      <p className="mt-3 px-1 text-[12px] leading-relaxed text-white/50">
+      <p className="mt-3 px-1 text-[12px] leading-relaxed t-soft">
         Cada categoria tem nome e cor únicos, para que seus gráficos fiquem fáceis de ler. Toque em uma categoria para editar ou excluir.
       </p>
 

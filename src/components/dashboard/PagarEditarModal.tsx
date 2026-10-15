@@ -191,8 +191,8 @@ const PagarEditarModal = ({ open, event, onClose, onSuccess }: Props) => {
                 >
                   <p className="text-sm font-semibold text-foreground">{event.name}</p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">{event.category} · {event.date}</p>
-                  <p className="text-xl font-bold mt-2 text-amber-500">{fmt(event.amount)}</p>
-                  <span className="inline-block text-[9px] font-semibold uppercase mt-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                  <p className="text-xl font-bold mt-2 text-willo-amber">{fmt(event.amount)}</p>
+                  <span className="inline-block text-[9px] font-semibold uppercase mt-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-willo-amber border border-amber-500/20">
                     Pendente
                   </span>
                 </div>

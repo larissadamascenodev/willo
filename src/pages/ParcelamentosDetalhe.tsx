@@ -224,7 +224,7 @@ const ParcelamentosDetalhe = () => {
         <h1 className="mt-2 text-[28px] font-extrabold tracking-tight text-white">Parcelamentos</h1>
         <div className="mt-8 flex flex-col items-center px-8 text-center">
           <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.05]">
-            <CalendarClock className="h-8 w-8 text-white/56" />
+            <CalendarClock className="h-8 w-8 t-soft" />
           </span>
           <p className="mt-5 text-[18px] font-bold text-white">Nenhum parcelamento ativo</p>
           <p className="mt-1 text-[14px] text-white/62">Compras parceladas aparecem aqui com o progresso de cada uma.</p>
@@ -290,12 +290,12 @@ const ParcelamentosDetalhe = () => {
       {projectionData.length > 1 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="mt-3 rounded-[24px] border border-white/[0.08] willo-glass p-4">
           <p className="text-[16px] font-semibold text-white">Próximos meses</p>
-          <p className="text-[12px] text-white/56">O valor cai conforme as parcelas terminam</p>
+          <p className="text-[12px] t-soft">O valor cai conforme as parcelas terminam</p>
           <div className="-mx-4 mt-4 overflow-x-auto px-4 scrollbar-hide">
             <div className="flex items-end gap-2.5" style={{ minWidth: projectionData.length * 52 }}>
               {projectionData.map((p, i) => (
                 <div key={p.key} className="flex w-[44px] shrink-0 flex-col items-center">
-                  <span className={`mb-1.5 text-[10px] tabular-nums ${i === 0 ? "text-white" : "text-white/56"}`}>
+                  <span className={`mb-1.5 text-[10px] tabular-nums ${i === 0 ? "text-white" : "t-soft"}`}>
                     {p.value >= 1000 ? `${(p.value / 1000).toFixed(1)}k` : p.value.toFixed(0)}
                   </span>
                   <div className="flex h-[110px] items-end">
@@ -362,7 +362,7 @@ const ParcelamentosDetalhe = () => {
       </div>
 
       <div className="mt-3 space-y-2">
-        {visibleItems.length === 0 && <p className="py-6 text-center text-[14px] text-white/56">Nenhuma compra neste filtro</p>}
+        {visibleItems.length === 0 && <p className="py-6 text-center text-[14px] t-soft">Nenhuma compra neste filtro</p>}
         {visibleItems.map((item, i) => (
           <InstallmentPurchaseCard
             key={item.id}

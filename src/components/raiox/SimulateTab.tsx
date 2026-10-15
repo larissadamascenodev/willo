@@ -76,7 +76,7 @@ function PurchaseCopilot({ data }: { data: RaioXData }) {
       <Card className="p-4">
         <p className="text-[12px] text-white/62">Quanto custa o que você quer comprar?</p>
         <label className="mt-1 flex items-baseline gap-1.5">
-          <span className="text-[20px] font-bold text-white/56">{currencySymbol()}</span>
+          <span className="text-[20px] font-bold t-soft">{currencySymbol()}</span>
           <input
             inputMode="numeric"
             value={value ? value.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : ""}
@@ -96,7 +96,7 @@ function PurchaseCopilot({ data }: { data: RaioXData }) {
               className={cn(
                 "h-9 rounded-full text-[12px] font-semibold transition-colors",
                 n === 1 && "col-span-2",
-                times === n ? "bg-white text-[#0B0B0B]" : "border border-white/[0.08] bg-white/[0.04] text-white/82",
+                times === n ? "willo-invert" : "border border-white/[0.08] bg-white/[0.04] text-white/82",
               )}
             >
               {n === 1 ? "À vista" : `${n}x`}
@@ -108,7 +108,7 @@ function PurchaseCopilot({ data }: { data: RaioXData }) {
             aria-label="Outro número de parcelas"
             className={cn(
               "flex h-9 items-center justify-center gap-0.5 rounded-full text-[12px] font-semibold transition-colors",
-              times > 6 ? "bg-white text-[#0B0B0B]" : "border border-white/[0.08] bg-white/[0.04] text-white/82",
+              times > 6 ? "willo-invert" : "border border-white/[0.08] bg-white/[0.04] text-white/82",
             )}
           >
             {times > 6 ? `${times}x` : <Plus className="h-4 w-4" />}
@@ -126,9 +126,9 @@ function PurchaseCopilot({ data }: { data: RaioXData }) {
                   onChange={(e) => setCustom(e.target.value.replace(/\D/g, "").slice(0, 2))}
                   onKeyDown={(e) => e.key === "Enter" && applyCustom()}
                   placeholder="Ex.: 18"
-                  className="h-10 min-w-0 flex-1 rounded-full border border-white/[0.08] bg-white/[0.04] px-4 text-[14px] text-white placeholder:text-white/45 focus:outline-none"
+                  className="h-10 min-w-0 flex-1 rounded-full border border-white/[0.08] bg-white/[0.04] px-4 text-[14px] text-white placeholder:t-softer focus:outline-none"
                 />
-                <button type="button" onClick={applyCustom} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#0B0B0B]">
+                <button type="button" onClick={applyCustom} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full willo-invert">
                   <Check className="h-4 w-4" strokeWidth={3} />
                 </button>
               </div>
@@ -148,12 +148,12 @@ function PurchaseCopilot({ data }: { data: RaioXData }) {
                 <div className="rounded-[16px] bg-white/[0.04] p-3">
                   <p className="truncate text-[11px] text-white/62">{times === 1 ? "Sai este mês" : "Por mês"}</p>
                   <p className="truncate text-[17px] font-bold text-white tabular-nums">{brlCents(sim.monthly)}</p>
-                  {sim.share !== null && <p className="text-[11px] text-white/56">{Math.round(sim.share * 100)}% da renda</p>}
+                  {sim.share !== null && <p className="text-[11px] t-soft">{Math.round(sim.share * 100)}% da renda</p>}
                 </div>
                 <div className="rounded-[16px] bg-white/[0.04] p-3">
                   <p className="truncate text-[11px] text-white/62">Sobra depois</p>
                   <p className={cn("truncate text-[17px] font-bold tabular-nums", sim.months[0].after < 0 ? "text-red-400" : "text-white")}>{brl(sim.months[0].after)}</p>
-                  <p className="truncate text-[11px] text-white/56 tabular-nums">antes: {brl(sim.months[0].before)}</p>
+                  <p className="truncate text-[11px] t-soft tabular-nums">antes: {brl(sim.months[0].before)}</p>
                 </div>
               </div>
 
@@ -171,7 +171,7 @@ function PurchaseCopilot({ data }: { data: RaioXData }) {
                       );
                     })}
                   </div>
-                  {sim.months.length > 12 && <p className="mt-2 text-[11px] text-white/56">+{sim.months.length - 12} meses no mesmo ritmo</p>}
+                  {sim.months.length > 12 && <p className="mt-2 text-[11px] t-soft">+{sim.months.length - 12} meses no mesmo ritmo</p>}
                 </div>
               )}
 
@@ -223,7 +223,7 @@ function CutSimulator({ data }: { data: RaioXData }) {
             <span className="block text-[11px] text-white/62">Categoria</span>
             <span className="block truncate text-[15px] font-semibold text-white">{selected.name}</span>
           </span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-white/56" />
+          <ChevronDown className="h-4 w-4 shrink-0 t-soft" />
         </button>
 
         <p className="mt-3.5 text-[12px] leading-snug text-white/66">

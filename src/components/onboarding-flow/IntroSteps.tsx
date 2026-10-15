@@ -28,7 +28,7 @@ export function NameStep({ value, onChange, onBack, onNext }: StepProps & { valu
         onChange={(e) => onChange(e.target.value.slice(0, 30))}
         onKeyDown={(e) => e.key === "Enter" && ok && onNext()}
         placeholder="Seu nome ou apelido..."
-        className="mt-10 h-[58px] w-full rounded-full border border-white/[0.06] willo-glass px-6 text-center text-[17px] text-white placeholder:text-white/45 focus:border-white/20 focus:outline-none"
+        className="mt-10 h-[58px] w-full rounded-full border border-white/[0.06] willo-glass px-6 text-center text-[17px] text-white placeholder:t-softer focus:border-white/20 focus:outline-none"
       />
     </FlowScreen>
   );
@@ -101,7 +101,7 @@ export function EvolutionStep({ name, onBack, onNext }: StepProps & { name: stri
           <span>Mês 6</span>
         </div>
         <div className="relative mt-2">
-          <span className="absolute -left-1 top-1/2 origin-left -translate-y-1/2 -rotate-90 text-[10px] font-semibold uppercase tracking-[0.25em] text-white/45">
+          <span className="absolute -left-1 top-1/2 origin-left -translate-y-1/2 -rotate-90 text-[10px] font-semibold uppercase tracking-[0.25em] t-softer">
             Seu saldo
           </span>
           <svg viewBox={`0 0 ${W} ${H}`} className="w-full pl-4">
@@ -155,7 +155,7 @@ export function EvolutionStep({ name, onBack, onNext }: StepProps & { name: stri
           <span className="flex items-center gap-2 text-white"><span className="h-[3px] w-5 rounded-full bg-white" /> Com o Willo</span>
           <span className="flex items-center gap-2 text-white/62"><span className="w-5 border-t-2 border-dashed border-white/40" /> Sem controle</span>
         </div>
-        <p className="mt-4 text-center text-[12px] text-white/45">Comparação ilustrativa</p>
+        <p className="mt-4 text-center text-[12px] t-softer">Comparação ilustrativa</p>
       </div>
     </FlowScreen>
   );

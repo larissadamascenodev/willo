@@ -199,7 +199,7 @@ const AuthPanel = ({ mode, onBack, pendingProfile }: Props) => {
               <label className="block rounded-[22px] border border-white/[0.1] bg-[#0B0B0B] px-5 py-3.5">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/66">E-mail</span>
                 <span className="mt-1.5 flex items-center gap-3">
-                  <Mail className="h-5 w-5 shrink-0 text-white/56" />
+                  <Mail className="h-5 w-5 shrink-0 t-soft" />
                   <input
                     type="email"
                     autoFocus
@@ -207,23 +207,23 @@ const AuthPanel = ({ mode, onBack, pendingProfile }: Props) => {
                     placeholder="seu@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="min-w-0 flex-1 bg-transparent text-[17px] text-white placeholder:text-white/50 focus:outline-none"
+                    className="min-w-0 flex-1 bg-transparent text-[17px] text-white placeholder:t-soft focus:outline-none"
                   />
                 </span>
               </label>
               <label className="block rounded-[22px] border border-white/[0.1] bg-[#0B0B0B] px-5 py-3.5">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/66">Senha</span>
                 <span className="mt-1.5 flex items-center gap-3">
-                  <Lock className="h-5 w-5 shrink-0 text-white/56" />
+                  <Lock className="h-5 w-5 shrink-0 t-soft" />
                   <input
                     type={showPassword ? "text" : "password"}
                     autoComplete={isLogin ? "current-password" : "new-password"}
                     placeholder={isLogin ? "••••••••" : "Crie uma senha"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="min-w-0 flex-1 bg-transparent text-[17px] text-white placeholder:text-white/50 focus:outline-none"
+                    className="min-w-0 flex-1 bg-transparent text-[17px] text-white placeholder:t-soft focus:outline-none"
                   />
-                  <button type="button" onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} className="text-white/56">
+                  <button type="button" onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} className="t-soft">
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </span>
@@ -234,7 +234,7 @@ const AuthPanel = ({ mode, onBack, pendingProfile }: Props) => {
               </GlowButton>
 
               {isLogin && (
-                <button type="button" onClick={handleForgot} className="mx-auto block pt-2 text-[15px] font-medium text-white/56 active:text-white">
+                <button type="button" onClick={handleForgot} className="mx-auto block pt-2 text-[15px] font-medium t-soft active:text-white">
                   Esqueci minha senha
                 </button>
               )}
@@ -242,7 +242,7 @@ const AuthPanel = ({ mode, onBack, pendingProfile }: Props) => {
           )}
         </AnimatePresence>
 
-        <motion.p layout className="mx-auto mt-8 max-w-[320px] text-center text-[14px] leading-relaxed text-white/56">
+        <motion.p layout className="mx-auto mt-8 max-w-[320px] text-center text-[14px] leading-relaxed t-soft">
           Ao continuar, você concorda com os{" "}
           <button type="button" onClick={() => setLegal("terms")} className="font-bold text-white/74 underline underline-offset-2">
             Termos de Uso

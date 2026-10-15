@@ -33,6 +33,13 @@
        Tuned against black here; see the light block. */
     --chip-fill: 13%;
     --chip-deepen: 0%;
+    /* "Pendente". Bright enough to catch the eye in the dark, deep enough to be a
+       colour rather than a highlighter stain on paper. */
+    --brand-amber: 45 93% 64%;
+    /* The three things a commitment can be. Tuned against black here. */
+    --status-paid: 80 84% 69%;
+    --status-pending: 45 93% 64%;
+    --status-late: 0 91% 71%;
 
     --background: 0 0% 3%;
     --foreground: 0 0% 98%;
@@ -117,6 +124,10 @@
     --brand-green-ink: 74 118 10;
     --chip-fill: 20%;
     --chip-deepen: 26%;
+    --brand-amber: 36 92% 40%;
+    --status-paid: 92 72% 28%;
+    --status-pending: 36 92% 40%;
+    --status-late: 0 74% 47%;
 
     --background: 260 11% 96%;
     --foreground: 240 8% 10%;
@@ -387,6 +398,52 @@
     font-weight: 600;
     letter-spacing: -0.01em;
   }
+
+  /* Dimming what is not selected, in a chart or a row of bars.
+     Fading to 45% leaves a shape on black and nearly nothing on white, because fading
+     towards white is fading towards the page. On paper it stays much closer to full,
+     which reads as the same degree of "not this one". */
+  .chart-dim { opacity: 0.45; }
+  [data-theme="light"] .chart-dim { opacity: 0.66; }
+
+  /* A bar that has not happened yet: an outline rather than a fill. The dark version
+     is a whisper of white; on paper a whisper of ink is invisible, so it firms up. */
+  .chart-ghost {
+    border-color: rgb(var(--ink) / 0.20);
+    background-color: rgb(var(--ink) / 0.04);
+  }
+  [data-theme="light"] .chart-ghost {
+    border-color: rgb(var(--ink) / 0.34);
+    background-color: rgb(var(--ink) / 0.06);
+  }
+
+  /* The inverted pill: a chosen filter, a primary button, a selected tab.
+     Written as `bg-white text-[#0B0B0B]`, which inverts beautifully on a dark room and
+     becomes near-black type on a near-black slab the moment ink and paper swap. On
+     paper it takes the colour of the thing to press instead, which is also what the
+     reference does. */
+  .willo-invert {
+    background-color: #ffffff;
+    color: #0B0B0B;
+    border-color: #ffffff;
+  }
+  [data-theme="light"] .willo-invert {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-color: hsl(var(--primary));
+  }
+
+  /* Secondary type, in a way that survives turning the lights on.
+     A tint of ink reads the same to the eye on either ground only if the alpha moves:
+     45% white on black is a clear grey, 45% black on white is a smudge. These keep the
+     dark values exactly as they were and lift the light ones until the words hold
+     their own, which is the difference between quiet and unreadable. */
+  .t-soft   { color: rgb(var(--ink) / 0.56); }
+  .t-softer { color: rgb(var(--ink) / 0.45); }
+  .t-faint  { color: rgb(var(--ink) / 0.36); }
+  [data-theme="light"] .t-soft   { color: rgb(var(--ink) / 0.74); }
+  [data-theme="light"] .t-softer { color: rgb(var(--ink) / 0.60); }
+  [data-theme="light"] .t-faint  { color: rgb(var(--ink) / 0.48); }
 
   /* What the person said. On a dark room it is a white slip with dark type; on paper a
      white slip is the page, so there it takes the colour of the thing to press. The

@@ -67,7 +67,7 @@ const Suporte = () => {
             <ExternalLink className="h-3.5 w-3.5 opacity-60" />
           </a>
         )}
-        <p className="text-center text-[12.5px] text-white/50">{SUPPORT_EMAIL}</p>
+        <p className="text-center text-[12.5px] t-soft">{SUPPORT_EMAIL}</p>
       </motion.div>
 
       <motion.div
@@ -100,7 +100,7 @@ const Suporte = () => {
 
       <div className="flex flex-col items-center gap-2 pt-2">
         <Logo size="sm" className="opacity-40" />
-        <div className="flex items-center gap-2 text-[12.5px] text-white/56">
+        <div className="flex items-center gap-2 text-[12.5px] t-soft">
           <button type="button" onClick={() => navigate("/termos-de-uso")} className="py-1">Termos de uso</button>
           <span className="text-white/20">·</span>
           <button type="button" onClick={() => navigate("/politica-privacidade")} className="py-1">Privacidade</button>

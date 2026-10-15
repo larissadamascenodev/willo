@@ -15,7 +15,7 @@ import type { PaymentMatchResult } from "@/services/importedPayments";
 
 const Line = ({ label, value, muted }: { label: string; value: string; muted?: boolean }) => (
   <div className="flex items-baseline justify-between gap-3 py-[7px]">
-    <span className="text-[13px] text-white/55">{label}</span>
+    <span className="text-[13px] t-soft">{label}</span>
     <span className={cn("shrink-0 text-[14px] font-semibold tabular-nums", muted ? "text-white/70" : "text-white")}>
       {value}
     </span>
@@ -62,7 +62,7 @@ export default function ImportSummaryModal({
           </span>
           <div className="min-w-0">
             <p className="text-[17px] font-bold leading-tight text-white">Fatura importada</p>
-            <p className="mt-0.5 text-[12.5px] text-white/50">
+            <p className="mt-0.5 text-[12.5px] t-soft">
               {rowsWritten} lançamento{rowsWritten === 1 ? "" : "s"} gravado{rowsWritten === 1 ? "" : "s"}
             </p>
           </div>
@@ -73,10 +73,10 @@ export default function ImportSummaryModal({
           <Line label="Valor reconciliado" value={fmtCents(rec.calculatedTotal)} muted />
           {!reconciled && rec.difference != null && (
             <div className="mt-2 border-t border-white/[0.07] pt-2.5">
-              <p className="text-[12.5px] leading-snug text-amber-300">
+              <p className="text-[12.5px] leading-snug text-willo-amber">
                 Diferença de {fmtCents(Math.abs(rec.difference))}.
               </p>
-              <p className="mt-1 text-[12px] leading-snug text-white/50">
+              <p className="mt-1 text-[12px] leading-snug t-soft">
                 O valor da fatura foi preservado. Nada foi ajustado para os dois baterem.
               </p>
             </div>
@@ -85,18 +85,18 @@ export default function ImportSummaryModal({
 
         <div className="mt-2.5 grid grid-cols-2 gap-2.5">
           <div className="rounded-[20px] border border-white/[0.07] bg-white/[0.03] px-3.5 py-3">
-            <Layers className="h-4 w-4 text-white/40" />
+            <Layers className="h-4 w-4 t-softer" />
             <p className="mt-1.5 text-[18px] font-bold leading-none tabular-nums text-white">{future.length}</p>
-            <p className="mt-1 text-[11.5px] leading-snug text-white/50">
+            <p className="mt-1 text-[11.5px] leading-snug t-soft">
               parcelas futuras{anticipated.length > 0 ? `, ${anticipated.length} antecipada${anticipated.length === 1 ? "" : "s"}` : ""}
             </p>
           </div>
           <div className="rounded-[20px] border border-white/[0.07] bg-white/[0.03] px-3.5 py-3">
-            <RotateCcw className="h-4 w-4 text-white/40" />
+            <RotateCcw className="h-4 w-4 t-softer" />
             <p className="mt-1.5 text-[18px] font-bold leading-none tabular-nums text-white">
               {fmtCents(Math.abs(creditTotal))}
             </p>
-            <p className="mt-1 text-[11.5px] leading-snug text-white/50">
+            <p className="mt-1 text-[11.5px] leading-snug t-soft">
               em créditos e estornos{credits.length ? `, ${credits.length} linha${credits.length === 1 ? "" : "s"}` : ""}
             </p>
           </div>
@@ -105,13 +105,13 @@ export default function ImportSummaryModal({
         {result.payments.length > 0 && (
           <div className="mt-2.5 rounded-[20px] border border-white/[0.07] bg-white/[0.03] px-4 py-3">
             <div className="flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-white/40" />
-              <span className="text-[13px] text-white/60">Pagamentos identificados</span>
+              <Wallet className="h-4 w-4 t-softer" />
+              <span className="text-[13px] t-soft">Pagamentos identificados</span>
               <span className="ml-auto text-[14px] font-semibold tabular-nums text-white">
                 {fmtCents(result.payments.reduce((s, p) => s + p.amount, 0))}
               </span>
             </div>
-            <p className="mt-1.5 text-[12px] leading-snug text-white/45">
+            <p className="mt-1.5 text-[12px] leading-snug t-softer">
               {payments && payments.matched.length > 0
                 ? `${payments.matched.length} de ${result.payments.length} foram lançados nas faturas que você tem aqui, liberando limite. Os outros quitaram faturas anteriores ao que o app guarda.`
                 : "Nenhum deles corresponde a uma fatura que o app tem. O efeito já está no saldo que veio da fatura anterior."}
@@ -125,7 +125,7 @@ export default function ImportSummaryModal({
             <Line label="Limite utilizado, na fatura" value={fmtCents(lim.officialUsed)} muted />
           )}
           {lim.status === "DISCREPANCY" && lim.difference != null && (
-            <p className="mt-2 border-t border-white/[0.07] pt-2.5 text-[12px] leading-snug text-white/50">
+            <p className="mt-2 border-t border-white/[0.07] pt-2.5 text-[12px] leading-snug t-soft">
               {fmtCents(Math.abs(lim.difference))} de diferença. Guardamos os dois, e o número do banco
               não entra em nenhum cálculo.
             </p>

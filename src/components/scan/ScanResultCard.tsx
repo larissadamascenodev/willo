@@ -65,7 +65,7 @@ function isOtherMonth(date?: string | null) {
   return d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear();
 }
 
-const inputCls = "w-full min-w-0 bg-transparent text-right text-[16px] font-medium text-white placeholder:text-white/45 focus:outline-none";
+const inputCls = "w-full min-w-0 bg-transparent text-right text-[16px] font-medium text-white placeholder:t-softer focus:outline-none";
 
 /**
  * Bottom card shown over the captured receipt photo: what the AI read, item
@@ -130,7 +130,7 @@ function ScanResultCard<T extends ScanResultItem>({
             {statusLabel}
           </motion.p>
         ) : (
-          <p className={cn("flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.2em]", !editing && lowConfidence ? "text-amber-300" : "text-white/80")}>
+          <p className={cn("flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.2em]", !editing && lowConfidence ? "text-willo-amber" : "text-white/80")}>
             {editing ? <Pencil className="h-3.5 w-3.5" /> : <AlertTriangle className="h-4 w-4" />}
             {statusLabel}
           </p>
@@ -142,7 +142,7 @@ function ScanResultCard<T extends ScanResultItem>({
             aria-label={editing ? "Concluir edição" : "Editar"}
             className={cn(
               "flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors active:scale-95",
-              editing ? "bg-white text-[#0B0B0B]" : "bg-white/[0.08] text-white",
+              editing ? "willo-invert" : "bg-white/[0.08] text-white",
             )}
           >
             {editing ? <Check className="h-4 w-4" strokeWidth={3} /> : <Pencil className="h-4 w-4" />}
@@ -181,7 +181,7 @@ function ScanResultCard<T extends ScanResultItem>({
                   <span className="shrink-0 font-medium tabular-nums text-white">{fmt(item.amount)}</span>
                 </div>
               ))}
-          {!single && items.length > 5 && <p className="py-2.5 text-[13px] text-white/56">+{items.length - 5} itens</p>}
+          {!single && items.length > 5 && <p className="py-2.5 text-[13px] t-soft">+{items.length - 5} itens</p>}
           {single && isOtherMonth(single.date) && (
             <p className="mt-2.5 flex items-start gap-1.5 rounded-[14px] bg-amber-300/10 px-3 py-2 text-[12px] leading-snug text-amber-200">
               <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
@@ -199,7 +199,7 @@ function ScanResultCard<T extends ScanResultItem>({
                   key={t}
                   type="button"
                   onClick={() => update(0, { type: t })}
-                  className={cn("h-8 rounded-full px-3.5 text-[13px] font-semibold", (isIncome ? "receita" : "despesa") === t ? "bg-white text-[#0B0B0B]" : "text-white/70")}
+                  className={cn("h-8 rounded-full px-3.5 text-[13px] font-semibold", (isIncome ? "receita" : "despesa") === t ? "willo-invert" : "text-white/70")}
                 >
                   {t === "despesa" ? "Despesa" : "Receita"}
                 </button>
@@ -218,7 +218,7 @@ function ScanResultCard<T extends ScanResultItem>({
               <span className="flex items-center gap-1.5 text-[16px] font-medium text-white">
                 <span className="h-2 w-2 rounded-full" style={{ background: getCategoryHexColor(single.category || "Outros") }} />
                 {single.category || "Escolher"}
-                <ChevronDown className={cn("h-4 w-4 text-white/56 transition-transform", pickingCategory && "rotate-180")} />
+                <ChevronDown className={cn("h-4 w-4 t-soft transition-transform", pickingCategory && "rotate-180")} />
               </span>
             </button>
             <AnimatePresence initial={false}>
@@ -235,7 +235,7 @@ function ScanResultCard<T extends ScanResultItem>({
                           onClick={() => { update(0, { category: cat }); setPickingCategory(false); }}
                           className={cn(
                             "flex h-9 items-center gap-1.5 rounded-full border px-3 text-[13px]",
-                            selected ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.08] bg-white/[0.04] text-white/80",
+                            selected ? "willo-invert" : "border-white/[0.08] bg-white/[0.04] text-white/80",
                           )}
                         >
                           <Icon className="h-3.5 w-3.5" style={{ color: selected ? "#0B0B0B" : getCategoryHexColor(cat) }} />
@@ -263,7 +263,7 @@ function ScanResultCard<T extends ScanResultItem>({
                     onClick={() => onAccountChange?.(a.id)}
                     className={cn(
                       "h-9 shrink-0 rounded-full border px-3.5 text-[13px] font-medium",
-                      a.id === accountId ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.08] bg-white/[0.04] text-white/80",
+                      a.id === accountId ? "willo-invert" : "border-white/[0.08] bg-white/[0.04] text-white/80",
                     )}
                   >
                     {a.name}
@@ -283,7 +283,7 @@ function ScanResultCard<T extends ScanResultItem>({
                   type="button"
                   onClick={() => update(i, { selected: !on })}
                   aria-label={on ? "Remover" : "Incluir"}
-                  className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full border", on ? "border-white bg-white text-[#0B0B0B]" : "border-white/30")}
+                  className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full border", on ? "willo-invert" : "border-white/30")}
                 >
                   {on && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
                 </button>

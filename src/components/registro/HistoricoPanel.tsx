@@ -104,7 +104,7 @@ export default function HistoricoPanel({ open, onClose }: { open: boolean; onClo
         >
           <div>
             <h2 className="text-[20px] font-bold tracking-[-0.02em] text-white">Histórico</h2>
-            <p className="text-[12.5px] text-white/42">Os últimos lançamentos</p>
+            <p className="text-[12.5px] t-softer">Os últimos lançamentos</p>
           </div>
           <button
             onClick={onClose}
@@ -118,19 +118,19 @@ export default function HistoricoPanel({ open, onClose }: { open: boolean; onClo
         <div className="flex-1 overflow-y-auto px-5 pb-8">
           {rows === null && (
             <div className="flex justify-center py-12">
-              <Loader2 className="h-5 w-5 animate-spin text-white/40" />
+              <Loader2 className="h-5 w-5 animate-spin t-softer" />
             </div>
           )}
 
           {rows?.length === 0 && (
-            <p className="py-12 text-center text-[14px] text-white/45">
+            <p className="py-12 text-center text-[14px] t-softer">
               Nada lançado ainda.
             </p>
           )}
 
           {groups.map((group) => (
             <div key={group.label} className="mb-5">
-              <p className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/35">
+              <p className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.16em] t-faint">
                 {group.label}
               </p>
               <div className="overflow-hidden rounded-[18px] border border-white/[0.08] bg-white/[0.045]">
@@ -141,7 +141,7 @@ export default function HistoricoPanel({ open, onClose }: { open: boolean; onClo
                   >
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[15px] font-semibold leading-tight text-white">{row.name}</p>
-                      <p className="truncate text-[12px] leading-tight text-white/42">
+                      <p className="truncate text-[12px] leading-tight t-softer">
                         {row.category}
                         {row.payment_method === "cartao" ? " · Crédito" : ""}
                         {row.time ? ` · ${row.time.slice(0, 5)}` : ""}

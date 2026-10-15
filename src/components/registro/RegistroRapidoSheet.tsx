@@ -446,7 +446,7 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
               <BotMark working={busy} size={34} />
               <div className="min-w-0">
                 <h2 className="text-[18px] font-bold leading-tight tracking-[-0.02em] text-white">Registro rápido</h2>
-                <p className="text-[12px] leading-tight text-white/40">
+                <p className="text-[12px] leading-tight t-softer">
                   {busy ? "Trabalhando…" : allSaved ? "Tudo anotado" : hasEntries ? "Quase lá" : "Uma frase basta"}
                 </p>
               </div>
@@ -560,7 +560,7 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
                 <button
                   key={c}
                   onClick={() => { setText(c); inputRef.current?.focus(); }}
-                  className={`${chipBase} border border-white/[0.08] bg-white/[0.035] text-white/55`}
+                  className={`${chipBase} border border-white/[0.08] bg-white/[0.035] t-soft`}
                 >
                   {c}
                 </button>
@@ -590,7 +590,7 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
                   placeholder={recorder.recording ? `Ouvindo…  ${recorder.seconds}s` : "o que rolou?"}
                   disabled={recorder.recording}
                   enterKeyHint="send"
-                  className="h-full w-full rounded-full bg-transparent px-3.5 text-[15px] text-white placeholder:text-white/32 focus:outline-none disabled:opacity-70"
+                  className="h-full w-full rounded-full bg-transparent px-3.5 text-[15px] text-white placeholder:t-faint focus:outline-none disabled:opacity-70"
                 />
               </div>
 
@@ -622,7 +622,7 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
 
             <button
               onClick={onManual}
-              className="mx-auto mt-1.5 flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-medium text-white/45 active:text-white/80"
+              className="mx-auto mt-1.5 flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-medium t-softer active:text-white/80"
             >
               <PenLine className="h-[13px] w-[13px]" strokeWidth={2.2} />
               Adicionar manualmente

@@ -236,7 +236,7 @@ const ReceitasDespesasDetalhe = () => {
             {isReceita ? "Recebido" : "Pago"} <span className="font-semibold text-white tabular-nums">{fmt(paid)}</span>
           </span>
           <span className="flex items-center gap-1.5 text-[13px] text-white/74">
-            <Clock className="h-3.5 w-3.5 text-amber-300" />
+            <Clock className="h-3.5 w-3.5 text-willo-amber" />
             Pendente <span className="font-semibold text-white tabular-nums">{fmt(pending)}</span>
           </span>
         </div>
@@ -253,7 +253,7 @@ const ReceitasDespesasDetalhe = () => {
                 const barH = Math.max((h.value / maxHistory) * 84, 6);
                 return (
                   <div key={h.month} className="flex flex-1 flex-col items-center gap-1.5">
-                    <span className={cn("whitespace-nowrap text-[10px] font-bold tabular-nums", isCurrent ? "text-white" : "text-white/56")}>
+                    <span className={cn("whitespace-nowrap text-[10px] font-bold tabular-nums", isCurrent ? "text-white" : "t-soft")}>
                       {h.value > 0 ? compact(h.value) : "—"}
                     </span>
                     <motion.div
@@ -263,7 +263,7 @@ const ReceitasDespesasDetalhe = () => {
                       animate={{ height: barH }}
                       transition={{ delay: i * 0.03, duration: 0.5, ease: "easeOut" }}
                     />
-                    <span className={cn("text-[11px]", isCurrent ? "font-semibold text-white" : "text-white/56")}>{h.month}</span>
+                    <span className={cn("text-[11px]", isCurrent ? "font-semibold text-white" : "t-soft")}>{h.month}</span>
                   </div>
                 );
               })}
@@ -384,7 +384,7 @@ const TxRowItem = ({
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[14.5px] font-semibold text-white">{tx.name}</p>
-        <p className="truncate text-[12px] text-white/56">{tx.category} · {dateFormatted}</p>
+        <p className="truncate text-[12px] t-soft">{tx.category} · {dateFormatted}</p>
       </div>
       <div className="shrink-0 text-right">
         <p className="text-[14px] font-bold tabular-nums" style={{ color: statusColor }}>
@@ -418,7 +418,7 @@ const InvoiceRowItem = ({
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[14.5px] font-semibold text-white">Fatura {inv.card_name}</p>
-        <p className="truncate text-[12px] text-white/56">{MONTH_SHORT[inv.month - 1]}/{inv.year}</p>
+        <p className="truncate text-[12px] t-soft">{MONTH_SHORT[inv.month - 1]}/{inv.year}</p>
       </div>
       <div className="shrink-0 text-right">
         <p className="text-[14px] font-bold tabular-nums" style={{ color: statusColor }}>−{fmt(inv.total_amount)}</p>

@@ -66,7 +66,7 @@ export default function SinglePurchaseCard({ item, index, customCats, card, onOp
 
           <div className="shrink-0 text-right">
             <p className="text-[15px] font-bold text-white tabular-nums">{formatCurrency(item.amount)}</p>
-            <p className="text-[11px] text-white/56">à vista</p>
+            <p className="text-[11px] t-soft">à vista</p>
           </div>
         </div>
 
@@ -80,7 +80,7 @@ export default function SinglePurchaseCard({ item, index, customCats, card, onOp
               </>
             )}
           </span>
-          {onOpen && <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />}
+          {onOpen && <ChevronRight className="h-4 w-4 shrink-0 t-faint" />}
         </div>
       </button>
     </motion.div>

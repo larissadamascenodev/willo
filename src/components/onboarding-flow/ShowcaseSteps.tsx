@@ -274,8 +274,8 @@ export function CommitmentStep({ onBack, onNext }: StepProps) {
             )}
           </AnimatePresence>
         </div>
-        <p className="mt-4 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-white/56">Desenhe um ✓ na caixa para confirmar</p>
-        <button type="button" onClick={clear} className="mx-auto mt-2 text-[13px] text-white/50">Limpar</button>
+        <p className="mt-4 text-center text-[11px] font-semibold uppercase tracking-[0.2em] t-soft">Desenhe um ✓ na caixa para confirmar</p>
+        <button type="button" onClick={clear} className="mx-auto mt-2 text-[13px] t-soft">Limpar</button>
       </div>
     </FlowScreen>
   );

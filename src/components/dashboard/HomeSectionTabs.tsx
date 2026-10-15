@@ -33,7 +33,7 @@ export default function HomeSectionTabs({ activePath }: { activePath?: string })
             className={cn(
               "h-10 min-w-0 flex-1 truncate rounded-full border px-1.5 text-[13px] font-semibold tracking-tight transition-colors duration-200",
               active
-                ? "border-white/70 bg-white text-[#0B0B0B]"
+                ? "border-white/70 willo-invert"
                 : "border-white/[0.20] willo-glass-control text-white/90 active:opacity-70",
             )}
           >

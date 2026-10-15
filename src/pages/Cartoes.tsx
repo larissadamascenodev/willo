@@ -130,9 +130,9 @@ const MonthTag = ({ status }: { status: MonthStatus }) => {
   const map = {
     paga: { label: "Paga", cls: "bg-willo-green/15 text-willo-green-ink", icon: true },
     aberta: { label: "Fatura aberta", cls: "bg-white/[0.08] text-white/75", icon: false },
-    fechada: { label: "Fechada, a pagar", cls: "bg-amber-300/15 text-amber-300", icon: false },
-    proxima: { label: "Ainda vai fechar", cls: "bg-white/[0.06] text-white/55", icon: false },
-    atrasada: { label: "Em aberto", cls: "bg-amber-300/15 text-amber-300", icon: false },
+    fechada: { label: "Fechada, a pagar", cls: "bg-amber-300/15 text-willo-amber", icon: false },
+    proxima: { label: "Ainda vai fechar", cls: "bg-white/[0.06] t-soft", icon: false },
+    atrasada: { label: "Em aberto", cls: "bg-amber-300/15 text-willo-amber", icon: false },
   }[status];
   return (
     <motion.span
@@ -166,7 +166,7 @@ const NoCardsState = ({ onAdd }: { onAdd: () => void }) => (
       <CreditCard className="h-[22px] w-[22px] text-white/70" strokeWidth={2} />
     </div>
     <p className="mt-3.5 text-[17px] font-bold text-white">Nenhum cartão cadastrado</p>
-    <p className="mx-auto mt-1.5 max-w-[16rem] text-[13.5px] leading-snug text-white/55">
+    <p className="mx-auto mt-1.5 max-w-[16rem] text-[13.5px] leading-snug t-soft">
       Cadastre um cartão para acompanhar faturas, limite e parcelamentos.
     </p>
     <button
@@ -316,7 +316,7 @@ const Cartoes = () => {
                 onClick={() => { setCardFilter(c.id); setSelectedKey(currentKey); }}
                 className={cn(
                   "flex h-10 shrink-0 items-center gap-2 rounded-full border px-4 text-[14px] font-medium transition-colors",
-                  active ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.14] willo-glass-control text-white/88",
+                  active ? "willo-invert" : "border-white/[0.14] willo-glass-control text-white/88",
                 )}
               >
                 <CreditCard className="h-4 w-4" style={active ? undefined : { color: c.id ? cardHex(c.color) : undefined }} />
@@ -425,7 +425,7 @@ function InvoiceList({ invoices, cardById, onOpen }: {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[15px] font-medium text-white">{card.name}</span>
-              <span className={cn("block text-[12px]", inv.isPaid ? "text-white/56" : "text-amber-300/90")}>
+              <span className={cn("block text-[12px]", inv.isPaid ? "t-soft" : "text-amber-300/90")}>
                 {inv.isPaid ? "Paga" : `Vence ${due.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`}
               </span>
             </span>
@@ -526,14 +526,14 @@ function InstallmentsOverview({ installments, cardById, currentKey }: {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-medium text-white">{p.name}</p>
-                  <p className="flex items-center gap-1.5 truncate text-[12px] text-white/56">
+                  <p className="flex items-center gap-1.5 truncate text-[12px] t-soft">
                     {card && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: cardHex(card.color) }} />}
                     {card?.name ?? "Cartão"}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-[15px] font-semibold text-white tabular-nums">{fmt(p.amount)}</p>
-                  <p className="text-[11px] text-white/56">por mês</p>
+                  <p className="text-[11px] t-soft">por mês</p>
                 </div>
               </div>
               <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
@@ -635,11 +635,11 @@ function LimitsList({ cards }: { cards: OverviewCard[] }) {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-medium text-white">{c.name}</p>
-                  {c.lastFour && <p className="text-[12px] text-white/56 tabular-nums">•••• {c.lastFour}</p>}
+                  {c.lastFour && <p className="text-[12px] t-soft tabular-nums">•••• {c.lastFour}</p>}
                 </div>
                 <p className="text-right">
                   <span className="block text-[15px] font-semibold text-white tabular-nums">{fmt(Math.max(c.limit - c.used, 0))}</span>
-                  <span className="block text-[11px] text-white/56">disponível</span>
+                  <span className="block text-[11px] t-soft">disponível</span>
                 </p>
               </div>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.08]">
@@ -654,7 +654,7 @@ function LimitsList({ cards }: { cards: OverviewCard[] }) {
                 <span>{fmt(c.used)} usado</span>
                 <span>Limite {fmt(c.limit)}</span>
               </div>
-              <p className="mt-2 text-[12px] text-white/50">Fecha dia {c.closingDay} · vence dia {c.dueDay}</p>
+              <p className="mt-2 text-[12px] t-soft">Fecha dia {c.closingDay} · vence dia {c.dueDay}</p>
             </div>
           );
         })}

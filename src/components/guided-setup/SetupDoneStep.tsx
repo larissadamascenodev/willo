@@ -80,7 +80,7 @@ const SetupDoneStep = ({ onDone }: Props) => {
           transition={{ duration: (DONE_MS - 900) / 1000, ease: "linear" }}
         />
       </motion.div>
-      <p className="mt-2 text-[12px] text-white/45">Abrindo seu painel…</p>
+      <p className="mt-2 text-[12px] t-softer">Abrindo seu painel…</p>
     </div>
   );
 };

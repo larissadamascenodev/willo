@@ -1043,7 +1043,7 @@ const CategoryDetail = ({
           </>
         ) : (
           <button onClick={onEditLimit} className="flex w-full items-center gap-3 text-left active:opacity-70">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#0B0B0B]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full willo-invert">
               <Plus className="h-4 w-4" strokeWidth={2.5} />
             </span>
             <span className="flex-1">
@@ -1065,7 +1065,7 @@ const CategoryDetail = ({
             <div className="text-right">
               <p className="text-[11px] text-white/62">Até dezembro</p>
               <p className="text-[15px] font-semibold text-white tabular-nums">{money(fixedMonthly * remainingMonths.length)}</p>
-              <p className="text-[11px] text-white/50 tabular-nums">{money(fixedMonthly * 12)}/ano</p>
+              <p className="text-[11px] t-soft tabular-nums">{money(fixedMonthly * 12)}/ano</p>
             </div>
           </div>
           <div className="mt-3 divide-y divide-white/[0.06]">
@@ -1080,7 +1080,7 @@ const CategoryDetail = ({
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className={`text-[14px] ${m.status === "pago" ? "text-white/70" : "text-white"}`}>{m.label}</p>
-                  <p className="text-[12px] text-white/56">
+                  <p className="text-[12px] t-soft">
                     {m.status === "pago" ? "Pago" : m.status === "pendente" ? "Pendente este mês" : "Previsto"}
                   </p>
                 </div>
@@ -1111,7 +1111,7 @@ const CategoryDetail = ({
               <div key={`${t.id}-${t.date}`} className="flex items-center gap-3 py-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14px] text-white">{t.name}</p>
-                  <p className="text-[12px] text-white/56">
+                  <p className="text-[12px] t-soft">
                     {new Date(t.date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
                     {" · "}
                     {t.status === "pago" ? "Pago" : "Pendente"}
@@ -1786,7 +1786,7 @@ const AnalyticsCategorias = () => {
                         const left = lim.limit_amount - spent;
                         const Icon = getCategoryIcon(lim.category, customCats);
                         const hex = getCategoryHexColor(lim.category, customCats);
-                        const tone = left < 0 ? "text-red-400" : ratio >= 0.8 ? "text-amber-300" : "text-white/74";
+                        const tone = left < 0 ? "text-red-400" : ratio >= 0.8 ? "text-willo-amber" : "text-white/74";
                         const bar = left < 0 ? "bg-red-400" : ratio >= 0.8 ? "bg-amber-300" : "bg-white";
                         return (
                           <button key={lim.id} onClick={() => setLimitSheet({ open: true, category: lim.category })} className="block w-full text-left active:opacity-70">
@@ -1796,7 +1796,7 @@ const AnalyticsCategorias = () => {
                               </span>
                               <span className="min-w-0 flex-1">
                                 <span className="block truncate text-[14px] text-white">{lim.category}</span>
-                                <span className="block text-[11px] text-white/56 tabular-nums">{fmt(spent)} de {fmt(lim.limit_amount)}</span>
+                                <span className="block text-[11px] t-soft tabular-nums">{fmt(spent)} de {fmt(lim.limit_amount)}</span>
                               </span>
                               <span className={`text-right text-[13px] font-semibold tabular-nums ${tone}`}>
                                 {left < 0 ? `${fmt(-left)} acima` : `${fmt(left)} livre`}

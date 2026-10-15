@@ -63,7 +63,7 @@ export const TransactionsSummaryCard = ({ saldoAtual, saldoPrevisto, receitas, d
     animate={{ opacity: 1, y: 0 }}
     className={cn("rounded-[22px] border border-white/[0.08] willo-glass px-4 pb-4 pt-3.5", className)}
   >
-    <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-white/45">Saldo em contas</p>
+    <p className="text-[11px] font-semibold uppercase tracking-[0.13em] t-softer">Saldo em contas</p>
     <p className={cn(
       "mt-1.5 truncate text-[30px] font-extrabold leading-none tracking-[-0.03em] tabular-nums",
       saldoAtual < 0 ? "text-red-400" : "text-white",
@@ -71,7 +71,7 @@ export const TransactionsSummaryCard = ({ saldoAtual, saldoPrevisto, receitas, d
       {fmt(saldoAtual)}
     </p>
     {saldoPrevisto !== saldoAtual && (
-      <p className="mt-2 truncate text-[13px] text-white/55">
+      <p className="mt-2 truncate text-[13px] t-soft">
         Previsto no fim do mês:{" "}
         <span className="font-semibold tabular-nums text-white/80">{fmt(saldoPrevisto)}</span>
       </p>
@@ -124,7 +124,7 @@ export const TransactionTabs = ({ value, onChange, layoutId = "tx-tab-pill" }: {
             transition={{ type: "spring", stiffness: 420, damping: 34 }}
           />
         )}
-        <span className={`relative z-10 transform-gpu transition-colors ${value === tab.key ? "text-[#0B0B0B]" : "text-white/60"}`}>{tab.label}</span>
+        <span className={`relative z-10 transform-gpu transition-colors ${value === tab.key ? "text-[#0B0B0B]" : "t-soft"}`}>{tab.label}</span>
       </button>
     ))}
   </div>
@@ -249,9 +249,9 @@ export const TransactionListItem = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <p className="truncate text-[14.5px] font-medium text-white">{tx.name}</p>
-            {isRecurring && <RefreshCw className="h-3 w-3 shrink-0 text-white/35" />}
+            {isRecurring && <RefreshCw className="h-3 w-3 shrink-0 t-faint" />}
           </div>
-          <p className="mt-0.5 truncate text-[12px] text-white/45">
+          <p className="mt-0.5 truncate text-[12px] t-softer">
             {tx.category}
             {tx.installments && tx.installment_current ? ` · ${tx.installment_current}/${tx.installments}x` : ""}
             {accountName ? ` · ${accountName}` : ""}
@@ -264,7 +264,7 @@ export const TransactionListItem = ({
           <p className={cn("text-[14.5px] font-semibold tabular-nums", isReceita ? "text-willo-green-ink" : "text-white")}>
             {isReceita ? "+" : "−"}{fmt(tx.amount)}
           </p>
-          <span className={cn("mt-0.5 block text-[11.5px]", isPending ? "text-amber-300/90" : "text-white/40")}>
+          <span className={cn("mt-0.5 block text-[11.5px]", isPending ? "text-amber-300/90" : "t-softer")}>
             {isPending ? (isReceita ? "A receber" : "Pendente") : (isReceita ? "Recebido" : "Pago")}
           </span>
         </div>

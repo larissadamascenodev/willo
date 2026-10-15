@@ -146,7 +146,7 @@ const TransactionDetailModal = ({
 
   const statusChip = isPaid
     ? { label: isReceita ? "Recebido" : "Pago", cls: "bg-willo-green/12 text-willo-green-ink", Icon: Check }
-    : { label: "Pendente", cls: "bg-amber-300/12 text-amber-300", Icon: Clock };
+    : { label: "Pendente", cls: "bg-amber-300/12 text-willo-amber", Icon: Clock };
 
   return (
     <BottomSheet open={open} onClose={close} size="full" zIndex={70}>

@@ -79,7 +79,7 @@ export function OptionRow({ label, hint, selected, onClick, delay = 0, square = 
     >
       <span className="min-w-0 flex-1">
         <span className={cn("block text-[16px] font-semibold", selected ? "text-[#0B0B0B]" : "text-white/80")}>{label}</span>
-        {hint && <span className={cn("mt-0.5 block text-[13px]", selected ? "text-[#0B0B0B]/60" : "text-white/56")}>{hint}</span>}
+        {hint && <span className={cn("mt-0.5 block text-[13px]", selected ? "text-[#0B0B0B]/60" : "t-soft")}>{hint}</span>}
       </span>
       <span
         className={cn(
@@ -224,7 +224,7 @@ export function ValueRuler({ value, min, max, step, onChange, format, unit, labe
           )}
           {unit && <span className="text-[12px] font-semibold uppercase tracking-[0.2em] text-white/66">{unit}</span>}
         </span>
-        <span className="mt-3 text-[11px] font-semibold uppercase tracking-[0.25em] text-white/56">Toque para editar</span>
+        <span className="mt-3 text-[11px] font-semibold uppercase tracking-[0.25em] t-soft">Toque para editar</span>
       </button>
       {hint && <div className="mt-3 flex justify-center">{hint}</div>}
 
@@ -246,7 +246,7 @@ export function ValueRuler({ value, min, max, step, onChange, format, unit, labe
                 <div key={i} className="absolute top-0 flex flex-col items-center" style={{ left: i * TICK }}>
                   <span className={cn("w-[2px] rounded-full", major ? "h-[34px] bg-white/60" : mid ? "h-[24px] bg-white/35" : "h-[16px] bg-white/20")} />
                   {major && (
-                    <span className="mt-2 whitespace-nowrap text-[11px] tabular-nums text-white/56">{format(min + i * step)}</span>
+                    <span className="mt-2 whitespace-nowrap text-[11px] tabular-nums t-soft">{format(min + i * step)}</span>
                   )}
                 </div>
               );

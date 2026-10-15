@@ -109,7 +109,7 @@ const Metas = () => {
           <button
             onClick={() => setShowCreateModal(true)}
             aria-label="Nova meta"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#0B0B0B] active:scale-95 transition-transform"
+            className="flex h-10 w-10 items-center justify-center rounded-full willo-invert active:scale-95 transition-transform"
           >
             <Plus className="h-5 w-5" strokeWidth={2.5} />
           </button>
@@ -145,7 +145,7 @@ const Metas = () => {
           <span className="block text-[15px] font-medium text-white">Planejar com IA</span>
           <span className="block text-[12px] text-white/62">Diga seu objetivo e montamos o plano</span>
         </span>
-        <ChevronRight className="h-4 w-4 text-white/45" />
+        <ChevronRight className="h-4 w-4 t-softer" />
       </button>
 
       {goals.length > 0 && <SectionTitle>Suas metas</SectionTitle>}
@@ -159,7 +159,7 @@ const Metas = () => {
       ) : goals.length === 0 ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-12 flex flex-col items-center px-8 text-center">
           <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.05]">
-            <Target className="h-8 w-8 text-white/56" />
+            <Target className="h-8 w-8 t-soft" />
           </span>
           <p className="mt-5 text-[18px] font-bold text-white">Nenhuma meta ainda</p>
           <p className="mt-1 text-[14px] text-white/62">Crie sua primeira meta e acompanhe quanto falta para chegar lá.</p>
@@ -225,7 +225,7 @@ const Metas = () => {
                     <div className="mt-1 flex items-baseline justify-between gap-2">
                       <p className="text-[15px] tabular-nums">
                         <span className="font-bold text-white">{fmt(goal.current_amount)}</span>
-                        <span className="text-white/56"> de {fmt(goal.target_amount)}</span>
+                        <span className="t-soft"> de {fmt(goal.target_amount)}</span>
                       </p>
                       <span className={`text-[13px] font-semibold tabular-nums ${isComplete ? "text-willo-green-ink" : "text-white"}`}>{Math.round(progress * 100)}%</span>
                     </div>
@@ -273,7 +273,7 @@ const Metas = () => {
               onClick={() => { if (menuGoal) setEditGoal(menuGoal); setMenuGoalId(null); }}
               className="flex w-full items-center gap-3 rounded-[20px] bg-white/[0.05] px-4 py-3.5 text-left"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#0B0B0B]"><Edit2 className="h-4 w-4" /></span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-full willo-invert"><Edit2 className="h-4 w-4" /></span>
               <span className="text-[15px] font-medium text-white">Editar meta</span>
             </button>
             <button

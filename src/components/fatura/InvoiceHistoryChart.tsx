@@ -117,7 +117,7 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
     >
       {/* The hero above already states the selected month's figures — this is the navigator */}
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[12px] font-semibold uppercase tracking-wider text-white/50">Histórico de faturas</p>
+        <p className="text-[12px] font-semibold uppercase tracking-wider t-soft">Histórico de faturas</p>
         {selected && (
           <span
             className={cn(
@@ -159,10 +159,10 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
                   className={cn(
                     // No ring: it painted outside the scroller and got clipped at the edges
                     "w-full rounded-[8px] transition-all duration-200",
-                    entry.status === "paga" && "bg-gradient-to-t from-willo-green/60 to-willo-green",
+                    entry.status === "paga" && "bg-gradient-to-t from-willo-green/70 to-willo-green",
                     entry.status === "aberta" && "bg-gradient-to-t from-white/60 to-white",
-                    entry.status === "futura" && "border border-dashed border-white/20 bg-white/[0.04]",
-                    !entry.isSelected && "opacity-45",
+                    entry.status === "futura" && "chart-ghost border border-dashed",
+                    !entry.isSelected && "chart-dim",
                   )}
                 />
               </span>
@@ -170,7 +170,7 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
                 <span
                   className={cn(
                     "text-[11px] tabular-nums transition-colors",
-                    entry.isSelected ? "font-bold text-white" : "text-white/50",
+                    entry.isSelected ? "font-bold text-white" : "t-soft",
                   )}
                 >
                   {MONTH_SHORT[entry.month - 1]}
@@ -182,7 +182,7 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
         })}
       </div>
 
-      <div className="mt-3 flex items-center justify-center gap-4 border-t border-white/[0.06] pt-3 text-[11px] text-white/56">
+      <div className="mt-3 flex items-center justify-center gap-4 border-t border-white/[0.06] pt-3 text-[11px] t-soft">
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-[3px] bg-willo-green/70" /> Paga
         </span>
@@ -190,7 +190,7 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
           <span className="h-2.5 w-2.5 rounded-[3px] bg-white/85" /> Em aberto
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-[3px] border border-dashed border-white/25" /> Projeção
+          <span className="chart-ghost h-2.5 w-2.5 rounded-[3px] border border-dashed" /> Projeção
         </span>
       </div>
     </motion.div>

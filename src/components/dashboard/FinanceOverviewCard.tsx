@@ -61,7 +61,7 @@ const FinanceOverviewCard = ({ receitas, despesas, saldoPrevisto, nextMonthBalan
         <p className="text-[21px] font-medium leading-[1.3] tracking-[-0.02em] text-white/80 [text-wrap:balance] [&>b]:font-extrabold [&>b]:text-white">
           {line}
         </p>
-        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-white/35" />
+        <ChevronRight className="mt-1 h-4 w-4 shrink-0 t-faint" />
       </div>
 
       {/* The month's income still counts what has not landed yet, so this figure is
@@ -75,7 +75,7 @@ const FinanceOverviewCard = ({ receitas, despesas, saldoPrevisto, nextMonthBalan
         >
           {balanco > 0 ? "+" : ""}{compact(balanco)}
         </p>
-        <p className="shrink-0 text-right text-[11.5px] leading-[1.35] text-white/45">
+        <p className="shrink-0 text-right text-[11.5px] leading-[1.35] t-softer">
           previsto entre<br />receitas e despesas
         </p>
       </div>
@@ -89,7 +89,7 @@ const FinanceOverviewCard = ({ receitas, despesas, saldoPrevisto, nextMonthBalan
           }}
           className="mt-4 flex items-center justify-between gap-2 border-t border-white/[0.07] pt-3"
         >
-          <span className="truncate text-[12.5px] text-white/55">Em {nextLabel}</span>
+          <span className="truncate text-[12.5px] t-soft">Em {nextLabel}</span>
           <span className={cn("flex shrink-0 items-center gap-1.5 text-[13px] font-semibold tabular-nums", trendUp ? "text-willo-green-ink" : "text-red-400")}>
             <TrendingUp className={cn("h-3.5 w-3.5", !trendUp && "rotate-180")} strokeWidth={2.4} />
             {compact(nextMonthBalance)}

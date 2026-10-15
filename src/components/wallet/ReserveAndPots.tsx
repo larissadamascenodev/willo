@@ -67,7 +67,7 @@ const ReserveAndPots = ({ goals, essentialMonthly = 0, onCreated }: Props) => {
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-willo-green/15">
               <ShieldCheck className="h-[18px] w-[18px] text-willo-green-ink" />
             </span>
-            {reserve ? <ChevronRight className="h-4 w-4 text-white/38" /> : <Plus className="h-4 w-4 text-white/56" />}
+            {reserve ? <ChevronRight className="h-4 w-4 t-faint" /> : <Plus className="h-4 w-4 t-soft" />}
           </div>
           <p className="mt-auto text-[13px] text-white/66">Reserva de emergência</p>
           {reserve ? (
@@ -78,7 +78,7 @@ const ReserveAndPots = ({ goals, essentialMonthly = 0, onCreated }: Props) => {
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
                 <div className="h-full rounded-full bg-willo-green" style={{ width: `${Math.min(reserveProgress, 1) * 100}%` }} />
               </div>
-              <p className="mt-1.5 truncate text-[11px] text-white/56 tabular-nums">
+              <p className="mt-1.5 truncate text-[11px] t-soft tabular-nums">
                 {Math.round(Math.min(reserveProgress, 1) * 100)}% de {fmt(reserve.target_amount)}
               </p>
             </>
@@ -97,13 +97,13 @@ const ReserveAndPots = ({ goals, essentialMonthly = 0, onCreated }: Props) => {
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#7DD3FC]/15">
               <PiggyBank className="h-[18px] w-[18px] text-[#7DD3FC]" />
             </span>
-            {pots.length > 0 ? <ChevronRight className="h-4 w-4 text-white/38" /> : <Plus className="h-4 w-4 text-white/56" />}
+            {pots.length > 0 ? <ChevronRight className="h-4 w-4 t-faint" /> : <Plus className="h-4 w-4 t-soft" />}
           </div>
           <p className="mt-auto text-[13px] text-white/66">Cofrinhos</p>
           {pots.length > 0 ? (
             <>
               <p className="truncate text-[20px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{fmt(potsTotal)}</p>
-              <p className="mt-2 truncate text-[11px] text-white/56">
+              <p className="mt-2 truncate text-[11px] t-soft">
                 {pots.length} {pots.length === 1 ? "cofrinho" : "cofrinhos"} · {pots[0].name}
               </p>
             </>

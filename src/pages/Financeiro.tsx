@@ -241,7 +241,7 @@ function RealizadoPanel() {
               onClick={() => setSubTab(key)}
               className={cn(
                 "h-9 rounded-full border px-3.5 text-[13.5px] font-medium transition-colors",
-                subTab === key ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.1] text-white/74",
+                subTab === key ? "willo-invert" : "border-white/[0.1] text-white/74",
               )}
             >
               {label}
@@ -272,7 +272,7 @@ function RealizadoPanel() {
             </p>
           </div>
         )}
-        <p className="mt-3 text-[12px] leading-snug text-white/56">
+        <p className="mt-3 text-[12px] leading-snug t-soft">
           Considera só o dinheiro que entrou e saiu das contas. Compras no cartão entram quando a fatura é paga.
         </p>
       </div>
@@ -296,7 +296,7 @@ function RealizadoPanel() {
         {subTab === "geral" ? "Últimos lançamentos" : subTab === "entradas" ? "Últimas entradas" : "Últimas saídas"}
       </SectionTitle>
       {latest.length === 0 ? (
-        <p className="py-8 text-center text-[14px] text-white/56">Nada por aqui neste período</p>
+        <p className="py-8 text-center text-[14px] t-soft">Nada por aqui neste período</p>
       ) : (
         <div>
           {latest.map((e) => (
@@ -357,7 +357,7 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
   return (
     <div className="mt-5">
       <section className="rounded-[26px] border border-white/[0.08] willo-glass px-5 pb-5 pt-[18px]">
-        <p className="text-[11.5px] font-semibold uppercase tracking-[0.13em] text-white/50">
+        <p className="text-[11.5px] font-semibold uppercase tracking-[0.13em] t-soft">
           {isPast ? "Balanço final" : isCurrentMonth ? "Balanço parcial" : "Balanço previsto"} · {current.name}
         </p>
 
@@ -367,7 +367,7 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
         )}>
           {current.sobra > 0 ? "+" : ""}{compact(current.sobra)}
         </p>
-        <p className="mt-2 text-[12.5px] text-white/50">
+        <p className="mt-2 text-[12.5px] t-soft">
           {current.sobra < 0 ? "faltando no mês" : "sobrando no mês"}
           {isCurrentMonth && daysLeft > 0 ? ` · ${compact(perDay)} por dia até o fim` : ""}
         </p>
@@ -396,8 +396,8 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
       {isCurrentMonth && (
         <section className="mt-2.5 rounded-[22px] border border-white/[0.08] willo-glass px-5 pb-4 pt-4">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[11.5px] font-semibold uppercase tracking-[0.13em] text-white/50">Mês em andamento</span>
-            <span className="text-[12px] tabular-nums text-white/50">
+            <span className="text-[11.5px] font-semibold uppercase tracking-[0.13em] t-soft">Mês em andamento</span>
+            <span className="text-[12px] tabular-nums t-soft">
               {daysLeft} {daysLeft === 1 ? "dia restante" : "dias restantes"}
             </span>
           </div>
@@ -419,7 +419,7 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
         <>
           <div className="mt-6 flex items-baseline justify-between gap-3 px-1">
             <h2 className="text-[15px] font-bold tracking-tight text-white">Balanço dos próximos meses</h2>
-            <button onClick={onOpenProjecoes} className="shrink-0 text-[12.5px] font-semibold text-white/55 active:opacity-70">
+            <button onClick={onOpenProjecoes} className="shrink-0 text-[12.5px] font-semibold t-soft active:opacity-70">
               Ver tudo
             </button>
           </div>
@@ -433,7 +433,7 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
               const negative = r.sobra < 0;
               const Bar = ({ label, value, tone }: { label: string; value: number; tone: string }) => (
                 <div className="flex items-center gap-2.5">
-                  <span className="w-[38px] shrink-0 text-[9.5px] font-semibold uppercase tracking-[0.09em] text-white/35">
+                  <span className="w-[38px] shrink-0 text-[9.5px] font-semibold uppercase tracking-[0.09em] t-faint">
                     {label}
                   </span>
                   <span className="h-[5px] flex-1 overflow-hidden rounded-full bg-white/[0.06]">
@@ -444,7 +444,7 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
                       transition={{ duration: 0.5, delay: 0.04 * i, ease: "easeOut" }}
                     />
                   </span>
-                  <span className="w-[62px] shrink-0 text-right text-[11px] font-medium tabular-nums text-white/45">
+                  <span className="w-[62px] shrink-0 text-right text-[11px] font-medium tabular-nums t-softer">
                     {compact(value)}
                   </span>
                 </div>
@@ -460,7 +460,7 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
                   )}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                    <span className="truncate text-[11px] font-semibold uppercase tracking-[0.14em] t-softer">
                       {r.name}{r.yearTag ? ` ${r.yearTag}` : ""}
                     </span>
                     <span className="flex shrink-0 items-center gap-1">
@@ -483,7 +483,7 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
             })}
           </div>
 
-          <p className="mt-4 flex items-start gap-2 px-1 text-[12px] leading-snug text-white/45">
+          <p className="mt-4 flex items-start gap-2 px-1 text-[12px] leading-snug t-softer">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             Cada mês conta só o que entra e sai nele, sem o que sobrou do anterior. Só o que já está previsto entra na conta.
           </p>
@@ -523,21 +523,21 @@ function MonthBalanceSheet({ row, data, onClose, onSeeProjections }: {
   }) => (
     <section className="rounded-[22px] border border-white/[0.08] willo-glass px-4 pb-3.5 pt-3.5">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-white/45">{title}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.13em] t-softer">{title}</p>
         <p className={cn("text-[14px] font-bold tabular-nums", tone === "in" ? "text-willo-green-ink" : "text-red-400")}>
           {tone === "out" ? "−" : ""}{compact(total)}
         </p>
       </div>
 
       {items.length === 0 ? (
-        <p className="mt-3 text-[13px] text-white/40">Nada previsto neste mês.</p>
+        <p className="mt-3 text-[13px] t-softer">Nada previsto neste mês.</p>
       ) : (
         <div className="mt-2.5 divide-y divide-white/[0.055]">
           {items.map((e) => (
             <div key={e.id} className="flex items-baseline justify-between gap-3 py-2.5">
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[14px] text-white">{e.name}</span>
-                <span className="block truncate text-[11.5px] text-white/40">{e.category} · {e.date}</span>
+                <span className="block truncate text-[11.5px] t-softer">{e.category} · {e.date}</span>
               </span>
               <span className="shrink-0 text-[14px] font-semibold tabular-nums text-white">
                 {compact(e.amount)}
@@ -553,7 +553,7 @@ function MonthBalanceSheet({ row, data, onClose, onSeeProjections }: {
     <BottomSheet open={!!row} onClose={onClose} size="full" zIndex={70}>
       {row && (
         <div className="px-4 pb-6">
-          <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.13em] text-white/45">
+          <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.13em] t-softer">
             Balanço de {row.name}{row.yearTag ? ` ${row.yearTag}` : ""}
           </p>
           <p className={cn(
@@ -562,7 +562,7 @@ function MonthBalanceSheet({ row, data, onClose, onSeeProjections }: {
           )}>
             {row.sobra > 0 ? "+" : ""}{compact(row.sobra)}
           </p>
-          <p className="mt-2 px-1 text-[12.5px] text-white/50">
+          <p className="mt-2 px-1 text-[12.5px] t-soft">
             {row.sobra < 0 ? "faltando no mês" : "sobrando no mês"}
           </p>
 
@@ -572,7 +572,7 @@ function MonthBalanceSheet({ row, data, onClose, onSeeProjections }: {
           </div>
 
           {!data && (
-            <p className="mt-4 px-1 text-[12.5px] text-white/40">Carregando os lançamentos deste mês…</p>
+            <p className="mt-4 px-1 text-[12.5px] t-softer">Carregando os lançamentos deste mês…</p>
           )}
 
           <button
@@ -661,7 +661,7 @@ function FuturoPanel() {
     return (
       <div className="mt-10 flex flex-col items-center px-8 text-center">
         <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.05]">
-          <CalendarDays className="h-8 w-8 text-white/56" />
+          <CalendarDays className="h-8 w-8 t-soft" />
         </span>
         <p className="mt-5 text-[18px] font-bold text-white">Ainda sem dados suficientes</p>
         <p className="mt-1 text-[14px] text-white/62">Adicione transações para ver suas projeções.</p>
@@ -682,14 +682,14 @@ function FuturoPanel() {
     <div className="mt-5">
       {/* This month, closed out */}
       <section className="rounded-[24px] border border-white/[0.08] willo-glass px-[14px] pb-[14px] pt-4">
-        <p className="text-[12px] text-white/50">{current.name} fecha com</p>
+        <p className="text-[12px] t-soft">{current.name} fecha com</p>
         <p className={cn(
           "mt-1.5 truncate text-[40px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
           current.fecha < 0 ? "text-red-400" : "text-willo-green-ink",
         )}>
           {current.fecha > 0 ? "+" : ""}{compact(current.fecha)}
         </p>
-        <p className="mt-2 text-[12.5px] text-white/55">
+        <p className="mt-2 text-[12.5px] t-soft">
           previsto · {daysLeft === 0 ? "último dia do mês" : `faltam ${daysLeft} dias`}
         </p>
 
@@ -729,7 +729,7 @@ function FuturoPanel() {
                     "h-1.5 w-1.5 shrink-0 rounded-full",
                     r.fecha < 0 ? "bg-red-400" : r.risk === "atencao" ? "bg-amber-300" : "bg-willo-green",
                   )} />
-                  <span className="truncate text-[11.5px] font-semibold uppercase tracking-[0.13em] text-white/50">
+                  <span className="truncate text-[11.5px] font-semibold uppercase tracking-[0.13em] t-soft">
                     {r.name}{r.yearTag ? `/${r.yearTag}` : ""}
                   </span>
                 </span>
@@ -742,7 +742,7 @@ function FuturoPanel() {
               )}>
                 {r.fecha > 0 ? "+" : ""}{compact(r.fecha)}
               </p>
-              <p className="mt-1.5 text-[12px] text-white/45">fecha o mês com</p>
+              <p className="mt-1.5 text-[12px] t-softer">fecha o mês com</p>
 
               <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-willo-green/25">
                 <motion.div
@@ -762,7 +762,7 @@ function FuturoPanel() {
                   { k: "Sobra", v: r.sobra, cls: r.sobra < 0 ? "text-red-400" : "text-willo-green-ink" },
                 ].map(({ k, v, cls }) => (
                   <span key={k} className="min-w-0 flex-1">
-                    <span className="block text-[10px] font-semibold uppercase tracking-[0.11em] text-white/35">{k}</span>
+                    <span className="block text-[10px] font-semibold uppercase tracking-[0.11em] t-faint">{k}</span>
                     <span className={cn("mt-1.5 block truncate text-[14.5px] font-bold tabular-nums", cls)}>
                       {v > 0 ? "+" : ""}{compact(v)}
                     </span>
@@ -774,7 +774,7 @@ function FuturoPanel() {
         })}
       </div>
 
-      <p className="mt-5 flex items-start gap-2 px-1 text-[12px] leading-snug text-white/50">
+      <p className="mt-5 flex items-start gap-2 px-1 text-[12px] leading-snug t-soft">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         Conta só o que já está previsto: contas fixas, parcelas lançadas e recorrências.
         Conforme novos gastos entrarem, estes valores se ajustam sozinhos.
@@ -808,7 +808,7 @@ function FuturoPanel() {
                     "h-1.5 w-1.5 shrink-0 rounded-full",
                     openMonth.fecha < 0 ? "bg-red-400" : openMonth.risk === "atencao" ? "bg-amber-300" : "bg-willo-green",
                   )} />
-                  <span className="truncate text-[12px] font-semibold uppercase tracking-[0.12em] text-white/55">
+                  <span className="truncate text-[12px] font-semibold uppercase tracking-[0.12em] t-soft">
                     {openMonth.name}{openMonth.yearTag ? `/${openMonth.yearTag}` : ""}
                   </span>
                 </span>
@@ -821,7 +821,7 @@ function FuturoPanel() {
                 </button>
               </div>
 
-              <p className="mt-5 text-[12.5px] text-white/50">Previsão de fechar com</p>
+              <p className="mt-5 text-[12.5px] t-soft">Previsão de fechar com</p>
               <p className={cn(
                 "mt-2 truncate text-[40px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
                 openMonth.fecha < 0 ? "text-red-400" : "text-willo-green-ink",
@@ -831,7 +831,7 @@ function FuturoPanel() {
 
               <MonthBreakdown row={openMonth} prevName={MONTH_NAMES[(openMonth.month + 11) % 12]} />
 
-              <p className="mt-5 flex items-start gap-2 border-t border-white/[0.07] pt-4 text-[12px] leading-snug text-white/45">
+              <p className="mt-5 flex items-start gap-2 border-t border-white/[0.07] pt-4 text-[12px] leading-snug t-softer">
                 <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 Só o que já está previsto entra nessa conta. Novos gastos ajustam o valor.
               </p>
@@ -861,7 +861,7 @@ function MonthBreakdown({ row, prevName, carry = true }: {
     tone?: "plain" | "result";
   }) => (
     <div className="flex items-baseline justify-between gap-4 py-[9px]">
-      <span className={cn("text-[13px]", strong ? "font-semibold text-white" : "text-white/55")}>{k}</span>
+      <span className={cn("text-[13px]", strong ? "font-semibold text-white" : "t-soft")}>{k}</span>
       <span
         className={cn(
           "shrink-0 text-right text-[14px] tabular-nums",
@@ -919,7 +919,7 @@ function ProjectionBars({ rows, selectedIdx, onSelect }: {
   return (
     <div className="rounded-[22px] border border-white/[0.08] willo-glass p-5">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[12px] font-semibold uppercase tracking-wider text-white/50">Saldo no fim de cada mês</p>
+        <p className="text-[12px] font-semibold uppercase tracking-wider t-soft">Saldo no fim de cada mês</p>
         {selected && (
           <span className={cn(
             "inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11.5px] font-semibold tabular-nums",
@@ -957,7 +957,7 @@ function ProjectionBars({ rows, selectedIdx, onSelect }: {
                 />
               </span>
               <span className="flex flex-col items-center gap-1">
-                <span className={cn("text-[11px] tabular-nums transition-colors", isSel ? "font-bold text-white" : "text-white/50")}>
+                <span className={cn("text-[11px] tabular-nums transition-colors", isSel ? "font-bold text-white" : "t-soft")}>
                   {r.short}
                 </span>
                 <span className={cn("h-1 w-1 rounded-full transition-colors", isSel ? "bg-white" : "bg-transparent")} />
@@ -967,7 +967,7 @@ function ProjectionBars({ rows, selectedIdx, onSelect }: {
         })}
       </div>
 
-      <div className="mt-3 flex items-center justify-center gap-4 border-t border-white/[0.06] pt-3 text-[11px] text-white/56">
+      <div className="mt-3 flex items-center justify-center gap-4 border-t border-white/[0.06] pt-3 text-[11px] t-soft">
         <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px] bg-willo-green/70" /> Tranquilo</span>
         <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px] bg-amber-300/70" /> Atenção</span>
         <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px] bg-red-400/70" /> Negativo</span>
@@ -1047,7 +1047,7 @@ function ProjectionHistoryChart({
               onClick={() => { if (!isDragging) onSelect(i); }}
               className="group flex min-w-[52px] flex-1 shrink-0 flex-col items-center gap-1.5"
             >
-              <span className={cn("whitespace-nowrap text-[10.5px] font-bold tabular-nums transition-opacity", on ? "text-white" : "text-white/56")}>
+              <span className={cn("whitespace-nowrap text-[10.5px] font-bold tabular-nums transition-opacity", on ? "text-white" : "t-soft")}>
                 {compact(r.balance)}
               </span>
 
@@ -1061,8 +1061,8 @@ function ProjectionHistoryChart({
                 />
               </div>
 
-              <span className={cn("whitespace-nowrap text-[11px] font-semibold transition-colors", on ? "text-white" : "text-white/56")}>
-                {r.short}{r.yearTag && <span className="text-white/38">/{r.yearTag}</span>}
+              <span className={cn("whitespace-nowrap text-[11px] font-semibold transition-colors", on ? "text-white" : "t-soft")}>
+                {r.short}{r.yearTag && <span className="t-faint">/{r.yearTag}</span>}
               </span>
             </button>
           );

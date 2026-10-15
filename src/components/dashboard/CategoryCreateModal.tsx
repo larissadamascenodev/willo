@@ -265,14 +265,14 @@ export default function CategoryCreateModal({
         </div>
 
         <div className="mt-7">
-          <p className="px-1 text-[12px] font-semibold uppercase tracking-wider text-white/50">Nome</p>
+          <p className="px-1 text-[12px] font-semibold uppercase tracking-wider t-soft">Nome</p>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ex: Streaming"
             maxLength={30}
             autoFocus
-            className="mt-2 h-14 w-full rounded-[18px] border border-white/[0.08] willo-glass px-4 text-[16px] text-white placeholder:text-white/38 focus:border-white/20 focus:outline-none"
+            className="mt-2 h-14 w-full rounded-[18px] border border-white/[0.08] willo-glass px-4 text-[16px] text-white placeholder:t-faint focus:border-white/20 focus:outline-none"
           />
           <AnimatePresence>
             {(nameError || colorError) && (
@@ -289,7 +289,7 @@ export default function CategoryCreateModal({
         </div>
 
         <div className="mt-6">
-          <p className="px-1 text-[12px] font-semibold uppercase tracking-wider text-white/50">Cor</p>
+          <p className="px-1 text-[12px] font-semibold uppercase tracking-wider t-soft">Cor</p>
           <div className="-mx-5 mt-2.5 flex gap-3 overflow-x-auto px-5 pb-1.5 pt-1 scrollbar-none">
             {freeColors.map((c) => (
               <button
@@ -317,7 +317,7 @@ export default function CategoryCreateModal({
         </div>
 
         <div className="mt-6">
-          <p className="px-1 text-[12px] font-semibold uppercase tracking-wider text-white/50">Ícone</p>
+          <p className="px-1 text-[12px] font-semibold uppercase tracking-wider t-soft">Ícone</p>
           <div className="mt-2.5 grid grid-cols-6 gap-2">
             {ICON_OPTIONS.map(({ name: iconName, Icon: IconComp }) => {
               const active = icon === iconName;

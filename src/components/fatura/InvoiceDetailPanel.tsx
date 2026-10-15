@@ -392,7 +392,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
                 style={{ background: `hsl(${color})` }}
               />
             </span>
-            <span className="shrink-0 text-[11px] tabular-nums text-white/45">
+            <span className="shrink-0 text-[11px] tabular-nums t-softer">
               {row.share.toFixed(0)}% · {row.count} {row.count === 1 ? "compra" : "compras"}
             </span>
           </div>
@@ -406,7 +406,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
       {/* ── Limit: used, left, total, and the two dates that govern the card ── */}
       <section className="rounded-[22px] border border-white/[0.08] willo-glass px-5 pb-4 pt-[18px]">
         <div className="flex items-baseline justify-between">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.13em] text-white/45">Limite usado</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.13em] t-softer">Limite usado</span>
           <span className={cn("text-[12.5px] font-semibold tabular-nums", over ? "text-red-400" : "text-white/82")}>
             {usedPct.toFixed(0)}%
           </span>
@@ -424,17 +424,17 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
 
         <div className="mt-3.5 grid grid-cols-3 gap-2 text-center">
           <div>
-            <p className="text-[11.5px] text-white/50">Usado</p>
+            <p className="text-[11.5px] t-soft">Usado</p>
             <p className="mt-0.5 text-[14px] font-semibold tabular-nums text-white">{formatCurrency(used)}</p>
           </div>
           <div className="border-x border-white/[0.06]">
-            <p className="text-[11.5px] text-white/50">Disponível</p>
+            <p className="text-[11.5px] t-soft">Disponível</p>
             <p className={cn("mt-0.5 text-[14px] font-semibold tabular-nums", available < 0 ? "text-red-400" : "text-willo-green-ink")}>
               {formatCurrency(available)}
             </p>
           </div>
           <div>
-            <p className="text-[11.5px] text-white/50">Total</p>
+            <p className="text-[11.5px] t-soft">Total</p>
             <p className="mt-0.5 text-[14px] font-semibold tabular-nums text-white">{formatCurrency(limit)}</p>
           </div>
         </div>
@@ -443,7 +443,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
             shown rather than one being chosen: ours is every instalment still owed, theirs
             was measured the day the statement closed, and the gap is worth seeing. */}
         {card.statementUsed != null && Math.abs(card.statementUsed - used) > 0.5 && (
-          <p className="mt-3 border-t border-white/[0.06] pt-3 text-[12px] leading-snug text-white/45">
+          <p className="mt-3 border-t border-white/[0.06] pt-3 text-[12px] leading-snug t-softer">
             A sua fatura{card.statementRef ? ` de ${card.statementRef}` : ""} dizia{" "}
             <span className="font-semibold tabular-nums text-white/70">{formatCurrency(card.statementUsed)}</span>{" "}
             de limite usado, {formatCurrency(Math.abs(card.statementUsed - used))} a{" "}
@@ -452,13 +452,13 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
         )}
 
         <div className="mt-4 flex items-center gap-4 border-t border-white/[0.06] pt-3.5">
-          <span className="flex items-center gap-2 text-[12.5px] text-white/60">
-            <CalendarClock className="h-4 w-4 shrink-0 text-white/40" />
+          <span className="flex items-center gap-2 text-[12.5px] t-soft">
+            <CalendarClock className="h-4 w-4 shrink-0 t-softer" />
             Fecha dia <span className="font-semibold text-white">{card.closingDay}</span>
           </span>
           <span className="h-3 w-px bg-white/10" />
-          <span className="flex items-center gap-2 text-[12.5px] text-white/60">
-            <CalendarCheck className="h-4 w-4 shrink-0 text-white/40" />
+          <span className="flex items-center gap-2 text-[12.5px] t-soft">
+            <CalendarCheck className="h-4 w-4 shrink-0 t-softer" />
             Vence dia <span className="font-semibold text-white">{card.dueDay}</span>
           </span>
         </div>
@@ -493,7 +493,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
         <div className="h-48 animate-pulse rounded-[22px] border border-white/[0.08] willo-glass" />
       ) : items.length === 0 ? (
         <div className="rounded-[22px] border border-dashed border-white/[0.10] px-5 py-8 text-center">
-          <p className="text-[14px] text-white/55">Nada lançado nessa fatura.</p>
+          <p className="text-[14px] t-soft">Nada lançado nessa fatura.</p>
         </div>
       ) : (
         <>
@@ -504,10 +504,10 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
             className="block w-full rounded-[22px] border border-white/[0.08] willo-glass px-5 pb-4 pt-[18px] text-left transition-transform active:scale-[0.99]"
           >
             <div className="flex items-baseline justify-between gap-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-white/45">Gastos do cartão</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.13em] t-softer">Gastos do cartão</p>
               <p className="flex items-baseline gap-1.5 text-[13px] font-semibold tabular-nums text-white">
                 {formatCurrency(invoiceTotal)}
-                <ChevronRight className="h-4 w-4 shrink-0 self-center text-white/35" />
+                <ChevronRight className="h-4 w-4 shrink-0 self-center t-faint" />
               </p>
             </div>
 
@@ -522,7 +522,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
             </div>
 
             {categories[0] && (
-              <p className="mt-2.5 text-[12.5px] text-white/60">
+              <p className="mt-2.5 text-[12.5px] t-soft">
                 <span className="font-semibold text-white">{categories[0].category}</span> lidera com {categories[0].share.toFixed(0)}% da fatura
               </p>
             )}
@@ -542,7 +542,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
 
           {/* ── The entries themselves, newest first ── */}
           <div className="flex items-center justify-between gap-3 px-1 pt-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-white/45">Lançamentos</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.13em] t-softer">Lançamentos</p>
             <div className="flex rounded-full bg-white/[0.07] p-0.5 [isolation:isolate]">
               {([["geral", "Geral", sorted.length], ["parcelado", "Parcelado", parceladas.length]] as const).map(([key, label, n]) => (
                 <button key={key} onClick={() => setView(key)} className="relative h-7 rounded-full px-3 text-[11.5px] font-semibold">
@@ -564,9 +564,9 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
           {shown.length === 0 ? (
             <div className="flex items-center gap-3 rounded-[22px] border border-white/[0.08] willo-glass px-4 py-5">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
-                <Layers className="h-4 w-4 text-white/60" />
+                <Layers className="h-4 w-4 t-soft" />
               </span>
-              <p className="text-[13.5px] text-white/60">Nenhuma compra parcelada nessa fatura.</p>
+              <p className="text-[13.5px] t-soft">Nenhuma compra parcelada nessa fatura.</p>
             </div>
           ) : (
             /* One card per purchase rather than rows in a single list: an instalment
@@ -622,7 +622,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
       <BottomSheet open={allCatsOpen} onClose={() => setAllCatsOpen(false)} size="full" zIndex={65}>
         <div className="px-4 pb-6">
           <p className="px-1 text-[20px] font-bold text-white">Gastos por categoria</p>
-          <p className="mt-1 px-1 text-[13px] text-white/55">
+          <p className="mt-1 px-1 text-[13px] t-soft">
             {card.name} · fatura de {MONTH_LABELS[month - 1]}
           </p>
 
@@ -652,7 +652,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
 
           {refunds.length > 0 && (
             <div className="mt-5 rounded-[22px] border border-white/[0.08] willo-glass px-4 py-3.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-white/45">Estornos</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.13em] t-softer">Estornos</p>
               <div className="mt-2.5 space-y-2">
                 {refunds.map((r) => (
                   <div key={r.category} className="flex items-baseline justify-between gap-3">

@@ -44,7 +44,7 @@ export function Section({ icon: Icon, title, hint, aside, children, id }: {
             </span>
             {title}
           </h2>
-          {hint && <p className="mt-0.5 pl-9 text-[12px] text-white/56">{hint}</p>}
+          {hint && <p className="mt-0.5 pl-9 text-[12px] t-soft">{hint}</p>}
         </div>
         {aside}
       </div>

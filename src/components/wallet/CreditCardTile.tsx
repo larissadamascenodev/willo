@@ -150,12 +150,12 @@ export const CreditCardTile = ({ card, idx, invoiceInfo, navigate, extraClass, o
         </span>
         <p className="min-w-0 flex-1 truncate text-[16px] font-bold tracking-[-0.01em] text-white">{card.name}</p>
         {card.last_four_digits && (
-          <span className="shrink-0 text-[12px] tabular-nums text-white/40">•••• {card.last_four_digits}</span>
+          <span className="shrink-0 text-[12px] tabular-nums t-softer">•••• {card.last_four_digits}</span>
         )}
-        <ChevronRight className="h-4 w-4 shrink-0 text-white/35" />
+        <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
       </div>
 
-      <p className="relative mt-3.5 truncate text-[12.5px] text-white/55">
+      <p className="relative mt-3.5 truncate text-[12.5px] t-soft">
         {/* Open means still taking new spending. Past the closing day it is not: the
             invoice shut and is waiting to be paid, and saying "aberta" there invites
             someone to expect today's purchase on it. */}
@@ -166,7 +166,7 @@ export const CreditCardTile = ({ card, idx, invoiceInfo, navigate, extraClass, o
 
       <p className={cn(
         "relative mt-1 truncate text-[27px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
-        invoiceAmount > 0 ? "text-white" : "text-white/40",
+        invoiceAmount > 0 ? "text-white" : "t-softer",
       )}>
         {formatCurrency(invoiceAmount)}
       </p>
@@ -182,10 +182,10 @@ export const CreditCardTile = ({ card, idx, invoiceInfo, navigate, extraClass, o
       </div>
 
       <div className="relative mt-2 flex items-baseline justify-between gap-3">
-        <span className="truncate text-[11.5px] text-white/45">
+        <span className="truncate text-[11.5px] t-softer">
           Usado <span className="font-semibold tabular-nums text-white/75">{formatCurrency(usedValue)}</span>
         </span>
-        <span className="shrink-0 truncate text-[11.5px] text-white/45">
+        <span className="shrink-0 truncate text-[11.5px] t-softer">
           Disponível <span className={cn("font-semibold tabular-nums", available > 0 ? "text-willo-green-ink" : "text-red-400")}>
             {formatCurrency(available)}
           </span>

@@ -270,8 +270,8 @@ const TransactionsScreen = ({ rows, spent }: { rows: TransactionRow[]; spent: nu
             </span>
           </div>
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
-            <div className="flex h-11 w-full items-center rounded-full border border-white/[0.08] willo-glass pl-11 text-[14px] text-white/45">Buscar transação...</div>
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 t-soft" />
+            <div className="flex h-11 w-full items-center rounded-full border border-white/[0.08] willo-glass pl-11 text-[14px] t-softer">Buscar transação...</div>
           </div>
         </div>
         <div>
@@ -349,7 +349,7 @@ export const RaioXScreen = () => (
   <div className="absolute inset-0 overflow-hidden px-4">
     <AppHeader />
     <header className="px-1 pt-1">
-      <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/56">
+      <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] t-soft">
         <span className="relative flex h-2 w-2">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-willo-green opacity-60" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-willo-green" />
@@ -395,7 +395,7 @@ const NewExpenseDemo = () => {
     return () => timers.forEach(clearTimeout);
   }, []);
 
-  const chip = (active: boolean) => cn("flex h-9 shrink-0 items-center rounded-full px-4 text-[13px] font-semibold", active ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/74");
+  const chip = (active: boolean) => cn("flex h-9 shrink-0 items-center rounded-full px-4 text-[13px] font-semibold", active ? "willo-invert" : "bg-white/[0.06] text-white/74");
   const CatIcon = category ? getDefaultCategoryIcon(category) : null;
 
   return (
@@ -420,12 +420,12 @@ const NewExpenseDemo = () => {
             <TrendingDown className="h-4 w-4" style={{ color: "#F87171" }} /> Valor da despesa
           </span>
           <div className="relative mt-2 flex items-baseline gap-2">
-            <span className="text-[24px] font-bold text-white/56">R$</span>
+            <span className="text-[24px] font-bold t-soft">R$</span>
             <motion.span
               key={cents}
               initial={{ scale: 1.06 }}
               animate={{ scale: 1 }}
-              className={cn("text-[52px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "text-white/45" : "text-white")}
+              className={cn("text-[52px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "t-softer" : "text-white")}
             >
               {(cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </motion.span>
@@ -435,7 +435,7 @@ const NewExpenseDemo = () => {
 
         <div className="divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.08] willo-glass">
           <ModalRow icon={FileText} label="Descrição">
-            <span className={cn("text-[15px]", desc ? "text-white" : "text-white/45")}>{desc || "Ex: Mercado"}</span>
+            <span className={cn("text-[15px]", desc ? "text-white" : "t-softer")}>{desc || "Ex: Mercado"}</span>
             {desc && desc.length < 5 && <span className="h-5 w-[2px] animate-pulse bg-white" />}
           </ModalRow>
           <ModalRow icon={Tag} label="Categoria">
@@ -446,9 +446,9 @@ const NewExpenseDemo = () => {
                 <span className="rounded-full bg-white/[0.08] px-1.5 py-0.5 text-[10px] text-white/74">IA</span>
               </motion.span>
             ) : (
-              <span className="text-[15px] text-white/50">Escolher</span>
+              <span className="text-[15px] t-soft">Escolher</span>
             )}
-            <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />
+            <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
           </ModalRow>
         </div>
 
@@ -465,7 +465,7 @@ const NewExpenseDemo = () => {
         <div className="rounded-[22px] border border-white/[0.08] willo-glass">
           <div className="grid grid-cols-2 gap-1 p-1.5">
             {([["Conta", Wallet, true], ["Cartão de crédito", CreditCard, false]] as const).map(([label, Icon, on]) => (
-              <span key={label} className={cn("flex h-10 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold", on ? "bg-white text-[#0B0B0B]" : "text-white/70")}>
+              <span key={label} className={cn("flex h-10 items-center justify-center gap-1.5 rounded-full text-[13px] font-semibold", on ? "willo-invert" : "text-white/70")}>
                 <Icon className="h-4 w-4" /> {label}
               </span>
             ))}

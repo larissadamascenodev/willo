@@ -70,7 +70,7 @@ function StartingScore({ plan }: { plan: OnboardingPlan }) {
         </svg>
         <div className="absolute inset-x-0 bottom-0 flex flex-col items-center">
           <motion.span className="text-[52px] font-extrabold leading-none tracking-tighter text-white tabular-nums">{shown}</motion.span>
-          <span className="mt-1 text-[11px] text-white/56">de 1000 pontos</span>
+          <span className="mt-1 text-[11px] t-soft">de 1000 pontos</span>
         </div>
       </div>
       <div className="mt-3 flex justify-center">
@@ -96,7 +96,7 @@ function StartingScore({ plan }: { plan: OnboardingPlan }) {
                   transition={{ delay: 0.6 + i * 0.1, duration: 0.7, ease: "easeOut" }}
                 />
               </div>
-              <p className="mt-1 text-[11.5px] text-white/56">{f.description}</p>
+              <p className="mt-1 text-[11.5px] t-soft">{f.description}</p>
             </div>
           );
         })}
@@ -122,7 +122,7 @@ function Trajectory({ answers, plan }: { answers: OnboardingAnswers; plan: Onboa
     <div className="mt-2.5 rounded-[22px] willo-glass-inset p-4">
       <div className="flex items-end justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/56">Hoje</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] t-soft">Hoje</p>
           <p className="text-[20px] font-extrabold text-white">R$ 0</p>
         </div>
         <div className="text-right">
@@ -136,7 +136,7 @@ function Trajectory({ answers, plan }: { answers: OnboardingAnswers; plan: Onboa
           <motion.circle key={i} cx={p.x} cy={p.y} r={i === 2 ? 6 : 4} fill={i === 2 ? "#C8F36D" : "#0B0B0B"} stroke={i === 2 ? "#C8F36D" : "#FFFFFF"} strokeWidth="2.5" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.4 + i * 0.4 }} />
         ))}
       </svg>
-      <div className="mt-1 flex justify-between text-[11px] text-white/56">
+      <div className="mt-1 flex justify-between text-[11px] t-soft">
         <span>Agora</span>
         <span>em {months} {months === 1 ? "mês" : "meses"}</span>
       </div>
@@ -159,7 +159,7 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
   const V = TONE[verdict.tone];
 
   const section = (label: string) => (
-    <p className="mb-3 mt-8 px-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-white/56">{label}</p>
+    <p className="mb-3 mt-8 px-1 text-[11px] font-semibold uppercase tracking-[0.25em] t-soft">{label}</p>
   );
 
   return (
@@ -244,7 +244,7 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
                 <div key={b.key} className="flex items-center justify-between text-[14px]">
                   <span className="flex items-center gap-2 text-white/74">
                     <span className="h-2 w-2 rounded-full" style={{ background: b.hex }} />
-                    {b.label} <span className="text-white/45">{b.share}%</span>
+                    {b.label} <span className="t-softer">{b.share}%</span>
                   </span>
                   <span className="font-semibold tabular-nums" style={{ color: b.key === "savings" ? b.hex : "#FFFFFF" }}>{brl0(plan[b.key])}</span>
                 </div>
@@ -276,7 +276,7 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
           )}
         </AnimatePresence>
 
-        <p className="mx-auto mt-6 max-w-[330px] text-center text-[11.5px] leading-relaxed text-white/45">
+        <p className="mx-auto mt-6 max-w-[330px] text-center text-[11.5px] leading-relaxed t-softer">
           Essa análise usa só as suas respostas e serve pra organização e educação financeira. Não é recomendação de investimento.
         </p>
       </div>

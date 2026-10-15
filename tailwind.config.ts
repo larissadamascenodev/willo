@@ -37,6 +37,8 @@ export default {
            chip — stay white on both themes. They are on the brand's ground, not on the
            app's, so they must not follow the theme. */
         "on-color": "#ffffff",
+        /* The colour of "not yet", deep enough to be read on paper. */
+        "willo-amber": "hsl(var(--brand-amber))",
         "willo-black": "#0B0B0B",
         "willo-off-white": "#F8F7EE",
         "willo-caramel": "#B9804F",

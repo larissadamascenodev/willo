@@ -26,7 +26,7 @@ export function PressureCalendar({ data }: { data: RaioXData }) {
   return (
     <Section icon={CalendarDays} title="O que vem pela frente" hint="Toque num dia para ver o que acontece nele">
       <Card className="p-4">
-        <div className="mb-2 grid grid-cols-7 gap-1.5 text-center text-[10px] text-white/50">
+        <div className="mb-2 grid grid-cols-7 gap-1.5 text-center text-[10px] t-soft">
           {["D", "S", "T", "Q", "Q", "S", "S"].map((d, i) => <span key={i}>{d}</span>)}
         </div>
         <div className="grid grid-cols-7 gap-1.5">
@@ -38,7 +38,7 @@ export function PressureCalendar({ data }: { data: RaioXData }) {
               onClick={() => setSelected(d)}
               className={cn(
                 "relative flex aspect-square items-center justify-center rounded-[12px] text-[12px] font-medium transition-colors",
-                d.isPast ? "bg-white/[0.03] text-white/38" : "text-white",
+                d.isPast ? "bg-white/[0.03] t-faint" : "text-white",
                 d.isToday && "ring-2 ring-white",
               )}
               style={!d.isPast ? { background: d.pressure === "tranquilo" ? "rgba(255,255,255,0.05)" : `${PRESSURE_HEX[d.pressure]}2E` } : undefined}
@@ -87,7 +87,7 @@ export function PressureCalendar({ data }: { data: RaioXData }) {
                   </p>
                 )}
               </div>
-              <button type="button" onClick={() => setSelected(null)} aria-label="Fechar" className="text-white/56">
+              <button type="button" onClick={() => setSelected(null)} aria-label="Fechar" className="t-soft">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -107,7 +107,7 @@ export function PressureCalendar({ data }: { data: RaioXData }) {
               <p className="mt-3 text-[13px] text-white/62">Nenhum compromisso agendado neste dia.</p>
             )}
             {selected.estimated > 0 && (
-              <p className="mt-2 text-[12px] text-white/56">+ {brl(selected.estimated)} estimados de gastos do dia a dia.</p>
+              <p className="mt-2 text-[12px] t-soft">+ {brl(selected.estimated)} estimados de gastos do dia a dia.</p>
             )}
             {!selected.isPast && selected.pressure !== "tranquilo" && (
               <p className="mt-2.5 text-[12.5px]" style={{ color: PRESSURE_HEX[selected.pressure] }}>
@@ -165,7 +165,7 @@ export function SmartInvoice({ data }: { data: RaioXData }) {
           </div>
           <div className="rounded-[16px] bg-white/[0.04] px-3 py-2.5">
             <p className="truncate text-[11px] text-white/62">% da renda</p>
-            <p className={cn("truncate text-[17px] font-bold tabular-nums", share >= 0.5 ? "text-red-400" : share >= 0.3 ? "text-amber-300" : "text-white")}>
+            <p className={cn("truncate text-[17px] font-bold tabular-nums", share >= 0.5 ? "text-red-400" : share >= 0.3 ? "text-willo-amber" : "text-white")}>
               {Math.round(share * 100)}%
             </p>
           </div>

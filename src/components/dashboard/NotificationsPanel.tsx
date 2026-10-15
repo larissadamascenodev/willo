@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const CATEGORY_CONFIG: Record<string, { icon: typeof Bell; className: string; bg: string }> = {
-  vencimento: { icon: AlertTriangle, className: "text-amber-300", bg: "bg-amber-300/[0.12]" },
+  vencimento: { icon: AlertTriangle, className: "text-willo-amber", bg: "bg-amber-300/[0.12]" },
   fatura: { icon: CreditCard, className: "text-red-400", bg: "bg-red-400/[0.12]" },
   meta: { icon: Target, className: "text-willo-green-ink", bg: "bg-willo-green/[0.12]" },
   saldo: { icon: Wallet, className: "text-orange-300", bg: "bg-orange-300/[0.12]" },
@@ -235,9 +235,9 @@ function NotificationRow({
             <p className={cn("truncate text-[15px] font-semibold leading-snug tracking-tight", n.is_read ? "text-white/70" : "text-white")}>
               {n.title}
             </p>
-            <span className="shrink-0 text-[12px] text-white/50 tabular-nums">{timeAgo(n.created_at)}</span>
+            <span className="shrink-0 text-[12px] t-soft tabular-nums">{timeAgo(n.created_at)}</span>
           </div>
-          <p className={cn("mt-0.5 line-clamp-2 text-[13px] leading-snug", n.is_read ? "text-white/50" : "text-white/74")}>
+          <p className={cn("mt-0.5 line-clamp-2 text-[13px] leading-snug", n.is_read ? "t-soft" : "text-white/74")}>
             {n.message}
           </p>
         </div>
@@ -352,7 +352,7 @@ function NotificationContent({
         ) : groups.length === 0 ? (
           <div className="flex flex-col items-center px-8 pt-20 text-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.06]">
-              <Bell className="h-8 w-8 text-white/56" />
+              <Bell className="h-8 w-8 t-soft" />
             </div>
             <p className="mt-5 text-[18px] font-bold text-white">Tudo em dia</p>
             <p className="mt-1 text-[14px] text-white/62">
@@ -362,7 +362,7 @@ function NotificationContent({
         ) : (
           groups.map((group) => (
             <section key={group.label} className="pt-5">
-              <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-white/56">{group.label}</h2>
+              <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide t-soft">{group.label}</h2>
               <div className="overflow-hidden rounded-[22px] border border-white/[0.08] willo-glass">
                 <AnimatePresence initial={false}>
                   {group.items.map((n, i) => (
@@ -377,7 +377,7 @@ function NotificationContent({
         )}
 
         {groups.length > 0 && (
-          <p className="select-none pt-5 text-center text-[12px] text-white/45">
+          <p className="select-none pt-5 text-center text-[12px] t-softer">
             {unreadCount > 0 ? "Deslize para a direita para marcar como lida, ou para a esquerda para excluir" : "Deslize para a esquerda para excluir"}
           </p>
         )}

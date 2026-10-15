@@ -69,8 +69,8 @@ function Row({ icon: Icon, label, value, danger = false, onClick }: {
         <Icon className={cn("h-[18px] w-[18px]", danger ? "text-red-400" : "text-white/80")} strokeWidth={2} />
       </span>
       <span className={cn("min-w-0 flex-1 truncate text-[15px] font-medium", danger ? "text-red-400" : "text-white")}>{label}</span>
-      {value && <span className="shrink-0 text-[13.5px] text-white/56">{value}</span>}
-      {!danger && <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />}
+      {value && <span className="shrink-0 text-[13.5px] t-soft">{value}</span>}
+      {!danger && <ChevronRight className="h-4 w-4 shrink-0 t-faint" />}
     </button>
   );
 }
@@ -102,7 +102,7 @@ function ThemePicker() {
               // tint is a grey smudge, so there it is the primary colour instead.
               active
                 ? "bg-white/[0.12] text-white [html[data-theme=light]_&]:bg-primary [html[data-theme=light]_&]:text-primary-foreground"
-                : "bg-white/[0.04] text-white/55",
+                : "bg-white/[0.04] t-soft",
             )}
           >
             <o.icon className="h-[18px] w-[18px]" strokeWidth={2} />
@@ -117,7 +117,7 @@ function ThemePicker() {
 function Group({ title, children, delay = 0 }: { title: string; children: ReactNode; delay?: number }) {
   return (
     <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
-      <p className="mb-2 px-1 text-[12px] font-semibold text-white/56">{title}</p>
+      <p className="mb-2 px-1 text-[12px] font-semibold t-soft">{title}</p>
       <div className="divide-y divide-white/[0.06] overflow-hidden rounded-[22px] border border-white/[0.08] willo-glass">{children}</div>
     </motion.section>
   );
@@ -127,7 +127,7 @@ function Stat({ icon: Icon, value, label }: { icon?: typeof User; value: string;
   return (
     <div className="flex min-w-0 flex-col items-center px-1.5">
       <span className="flex items-center gap-1">
-        {Icon && <Icon className="h-4 w-4 shrink-0 text-amber-300" strokeWidth={2.2} />}
+        {Icon && <Icon className="h-4 w-4 shrink-0 text-willo-amber" strokeWidth={2.2} />}
         <span className="truncate text-[17px] font-bold leading-none tracking-tight text-white tabular-nums">{value}</span>
       </span>
       <span className="mt-1.5 truncate text-[11.5px] text-white/62">{label}</span>
@@ -403,7 +403,7 @@ const Configuracoes = () => {
               )}
             </span>
           </span>
-          <span className="absolute bottom-0.5 right-0.5 flex h-8 w-8 items-center justify-center rounded-full border-[3px] border-[#111111] bg-white text-[#0B0B0B]">
+          <span className="absolute bottom-0.5 right-0.5 flex h-8 w-8 items-center justify-center rounded-full border-[3px] border-[#111111] willo-invert">
             {uploadingAvatar ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" strokeWidth={2.4} />}
           </span>
         </button>
@@ -471,7 +471,7 @@ const Configuracoes = () => {
         <LogOut className="h-4 w-4" /> Sair da conta
       </motion.button>
 
-      <p className="text-center text-[11.5px] text-white/38">Willo · seu dinheiro, organizado</p>
+      <p className="text-center text-[11.5px] t-faint">Willo · seu dinheiro, organizado</p>
 
       {/* ═══ Edit profile ═══ */}
       <BottomSheet
@@ -560,7 +560,7 @@ const Configuracoes = () => {
                 </div>
                 <p className="mt-1.5 text-[12px]">
                   <span className="font-semibold" style={{ color: strength.hex }}>{strength.label}</span>
-                  <span className="text-white/56"> · {strength.hint}</span>
+                  <span className="t-soft"> · {strength.hint}</span>
                 </p>
               </motion.div>
             )}
@@ -595,7 +595,7 @@ const Configuracoes = () => {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[15px] font-medium text-white">{c.name}</span>
-                    <span className="block text-[12px] text-white/56">{c.code}</span>
+                    <span className="block text-[12px] t-soft">{c.code}</span>
                   </span>
                   {selected && <Check className="h-5 w-5 shrink-0 text-willo-green-ink" strokeWidth={2.5} />}
                 </button>

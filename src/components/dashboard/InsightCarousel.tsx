@@ -417,7 +417,7 @@ export default function InsightCarousel({
           >
             <span className="flex items-center gap-2">
               <Icon className="h-[15px] w-[15px] shrink-0" style={{ color: slide.accent }} strokeWidth={2.3} />
-              <span className="truncate text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/55">
+              <span className="truncate text-[10.5px] font-semibold uppercase tracking-[0.14em] t-soft">
                 {slide.label}
               </span>
             </span>
@@ -427,7 +427,7 @@ export default function InsightCarousel({
             </p>
 
             {slide.quip && (
-              <p className="mt-2.5 text-[13.5px] leading-snug text-white/45 [text-wrap:balance]">{slide.quip}</p>
+              <p className="mt-2.5 text-[13.5px] leading-snug t-softer [text-wrap:balance]">{slide.quip}</p>
             )}
           </motion.div>
         </AnimatePresence>

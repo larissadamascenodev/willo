@@ -36,7 +36,7 @@ const RaioX = () => {
   return (
     <div className="mx-auto max-w-lg pb-28">
       <header className="px-1 pt-1">
-        <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/56">
+        <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] t-soft">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-willo-green opacity-60" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-willo-green" />

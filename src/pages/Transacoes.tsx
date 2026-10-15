@@ -527,7 +527,7 @@ const Transacoes = () => {
             onClick={() => setShowFilters(!showFilters)}
             aria-label="Filtros"
             className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors ${
-              activeFiltersCount > 0 || showFilters ? "border-white bg-white text-[#0B0B0B]" : "border-white/[0.07] bg-white/[0.04] text-white/70"
+              activeFiltersCount > 0 || showFilters ? "willo-invert" : "border-white/[0.07] bg-white/[0.04] text-white/70"
             }`}
           >
             <SlidersHorizontal className="w-4 h-4" />
@@ -541,17 +541,17 @@ const Transacoes = () => {
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 t-soft" />
           <input
             type="text"
             placeholder="Buscar transação..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-11 w-full rounded-full border border-white/[0.07] bg-white/[0.04] pl-11 pr-10 text-[14px] text-white transition-colors placeholder:text-white/35 focus:border-white/25 focus:outline-none"
+            className="h-11 w-full rounded-full border border-white/[0.07] bg-white/[0.04] pl-11 pr-10 text-[14px] text-white transition-colors placeholder:t-faint focus:border-white/25 focus:outline-none"
           />
           {search && (
             <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2">
-              <X className="w-4 h-4 text-white/56" />
+              <X className="w-4 h-4 t-soft" />
             </button>
           )}
         </div>
@@ -582,7 +582,7 @@ const Transacoes = () => {
                   {["todos", "pago", "pendente"].map((s) => (
                     <button key={s} onClick={() => setFilterStatus(s)}
                       className={`px-3.5 py-1.5 rounded-full text-[12px] font-medium transition-all ${
-                        filterStatus === s ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/82 border border-white/[0.06]"
+                        filterStatus === s ? "willo-invert border" : "bg-white/[0.05] text-white/82 border border-white/[0.06]"
                       }`}
                     >
                       {s === "todos" ? "Todos" : s === "pago" ? "Pago" : "Pendente"}
@@ -598,13 +598,13 @@ const Transacoes = () => {
                   <div className="flex flex-wrap gap-1.5">
                     <button onClick={() => setFilterAccount("todos")}
                       className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
-                        filterAccount === "todos" ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/82 border border-white/[0.06]"
+                        filterAccount === "todos" ? "willo-invert border" : "bg-white/[0.05] text-white/82 border border-white/[0.06]"
                       }`}
                     >Todas</button>
                     {accounts.map((a) => (
                       <button key={a.id} onClick={() => setFilterAccount(a.id)}
                         className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
-                          filterAccount === a.id ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/82 border border-white/[0.06]"
+                          filterAccount === a.id ? "willo-invert border" : "bg-white/[0.05] text-white/82 border border-white/[0.06]"
                         }`}
                       >{a.name}</button>
                     ))}
@@ -619,13 +619,13 @@ const Transacoes = () => {
                   <div className="flex flex-wrap gap-1.5">
                     <button onClick={() => setFilterCategory("todos")}
                       className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
-                        filterCategory === "todos" ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/82 border border-white/[0.06]"
+                        filterCategory === "todos" ? "willo-invert border" : "bg-white/[0.05] text-white/82 border border-white/[0.06]"
                       }`}
                     >Todas</button>
                     {categories.map((c) => (
                       <button key={c} onClick={() => setFilterCategory(c)}
                         className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
-                          filterCategory === c ? "bg-white text-[#0B0B0B] border border-white" : "bg-white/[0.05] text-white/82 border border-white/[0.06]"
+                          filterCategory === c ? "willo-invert border" : "bg-white/[0.05] text-white/82 border border-white/[0.06]"
                         }`}
                       >{c}</button>
                     ))}
@@ -644,7 +644,7 @@ const Transacoes = () => {
         </div>
       ) : filtered.length === 0 && !(selectedMonth === new Date().getMonth() && selectedYear === new Date().getFullYear()) ? (
         <div className="rounded-[22px] border border-white/[0.08] willo-glass p-8 text-center">
-          <Layers className="w-6 h-6 text-white/38 mx-auto mb-2" />
+          <Layers className="w-6 h-6 t-faint mx-auto mb-2" />
           <p className="text-[14px] text-white/66">Nenhuma transação encontrada</p>
           {activeFiltersCount > 0 && (
             <button onClick={clearFilters} className="text-[13px] text-white mt-2 underline underline-offset-4">Limpar filtros</button>
@@ -669,11 +669,11 @@ const Transacoes = () => {
               <div key={date} className={gi > 0 ? "mt-5" : ""}>
                 {/* Date header */}
                 <div className="mb-2.5 flex items-baseline justify-between gap-3 px-1">
-                  <span className={`truncate text-[10.5px] font-semibold uppercase tracking-[0.13em] ${isToday ? "text-white" : "text-white/45"}`}>
+                  <span className={`truncate text-[10.5px] font-semibold uppercase tracking-[0.13em] ${isToday ? "text-white" : "t-softer"}`}>
                     {isToday ? `Hoje · ${label}` : label}
                   </span>
                   {txs.length > 0 && dayTotal.net !== 0 && (
-                    <span className={`shrink-0 text-[12px] font-semibold tabular-nums ${dayTotal.net > 0 ? "text-willo-green-ink" : "text-white/45"}`}>
+                    <span className={`shrink-0 text-[12px] font-semibold tabular-nums ${dayTotal.net > 0 ? "text-willo-green-ink" : "t-softer"}`}>
                       {dayTotal.net > 0 ? "+" : "−"}{fmt(Math.abs(dayTotal.net))}
                     </span>
                   )}
@@ -681,7 +681,7 @@ const Transacoes = () => {
 
                 {/* Transactions */}
                 {txs.length === 0 && (
-                  <div className="rounded-[22px] border border-dashed border-white/[0.09] py-5 text-center text-[13px] text-white/40">
+                  <div className="rounded-[22px] border border-dashed border-white/[0.09] py-5 text-center text-[13px] t-softer">
                     Nada registrado hoje
                   </div>
                 )}
@@ -724,7 +724,7 @@ const Transacoes = () => {
 
       {/* Count */}
       {!loading && filtered.length > 0 && (
-        <p className="text-center text-[12px] text-white/45 pt-2 pb-4">
+        <p className="text-center text-[12px] t-softer pt-2 pb-4">
           {filtered.length} transaç{filtered.length === 1 ? "ão" : "ões"} · {grouped.length} dia{grouped.length !== 1 && "s"}
         </p>
       )}

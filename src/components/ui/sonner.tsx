@@ -17,7 +17,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           description: "group-[.toast]:!text-white/70",
           success: "[&_[data-icon]]:!text-willo-green-ink",
           error: "[&_[data-icon]]:!text-red-400",
-          warning: "[&_[data-icon]]:!text-amber-300",
+          warning: "[&_[data-icon]]:!text-willo-amber",
           info: "[&_[data-icon]]:!text-sky-300",
           actionButton: "group-[.toast]:!rounded-full group-[.toast]:!bg-white group-[.toast]:!text-[#0B0B0B]",
           cancelButton: "group-[.toast]:!rounded-full group-[.toast]:!bg-white/10 group-[.toast]:!text-white",

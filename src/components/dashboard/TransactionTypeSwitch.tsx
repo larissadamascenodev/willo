@@ -42,7 +42,7 @@ export default function TransactionTypeSwitch({ value, onChange }: {
             <span
               className={cn(
                 "relative transform-gpu text-[13px] font-semibold transition-colors",
-                active ? "text-[#0B0B0B]" : "text-white/60",
+                active ? "text-[#0B0B0B]" : "t-soft",
               )}
             >
               {o.label}

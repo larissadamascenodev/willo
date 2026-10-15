@@ -43,13 +43,13 @@ const TxRow = ({ tx, customCategories }: { tx: Transaction; customCategories: Cu
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-medium text-white">{tx.name}</p>
-        <p className="truncate text-[12px] text-white/56">{subtitle}</p>
+        <p className="truncate text-[12px] t-soft">{subtitle}</p>
       </div>
       <div className="shrink-0 text-right">
         <p className={`text-[15px] font-semibold tabular-nums ${isReceita ? "text-willo-green-ink" : "text-white"}`}>
           {isReceita ? "+" : "−"}{fmt(tx.amount)}
         </p>
-        <p className={`text-[11px] ${isPending ? "text-amber-300/90" : "text-white/50"}`}>{statusLabel(tx)}</p>
+        <p className={`text-[11px] ${isPending ? "text-amber-300/90" : "t-soft"}`}>{statusLabel(tx)}</p>
       </div>
     </div>
   );
@@ -80,7 +80,7 @@ const TransacoesRecentes = memo(({ transactions, onVerTodas }: Props) => {
       {visible.length === 0 ? (
         <div className="flex flex-col items-center py-8 text-center">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.06]">
-            <Receipt className="h-5 w-5 text-white/56" />
+            <Receipt className="h-5 w-5 t-soft" />
           </span>
           <p className="mt-3 text-[14px] text-white/66">Nenhuma transação neste mês</p>
         </div>

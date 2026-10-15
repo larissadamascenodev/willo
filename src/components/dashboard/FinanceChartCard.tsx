@@ -243,7 +243,7 @@ function WeekBars({ data }: { data: Point[] }) {
       </div>
       <div className="mt-2 flex justify-between gap-[7px]">
         {data.map((d, i) => (
-          <span key={d.label} className={cn("flex-1 text-center text-[9.5px] uppercase tracking-[0.08em]", i === todayIdx ? "font-bold text-white" : "text-white/40")}>
+          <span key={d.label} className={cn("flex-1 text-center text-[9.5px] uppercase tracking-[0.08em]", i === todayIdx ? "font-bold text-white" : "t-softer")}>
             {d.label}
           </span>
         ))}
@@ -334,7 +334,7 @@ const FinanceChartCard = memo(() => {
               onClick={() => setView(key)}
               className={cn(
                 "relative pb-1.5 text-[13px] font-semibold tracking-tight transition-colors",
-                view === key ? "text-white" : "text-white/40",
+                view === key ? "text-white" : "t-softer",
               )}
             >
               {label}
@@ -378,7 +378,7 @@ const FinanceChartCard = memo(() => {
           <p className="truncate text-[32px] font-extrabold leading-none tracking-[-0.035em] tabular-nums text-white">
             {fmt(summary.value)}
           </p>
-          <p className="mt-2 text-[12px] text-white/50">{summary.caption}</p>
+          <p className="mt-2 text-[12px] t-soft">{summary.caption}</p>
         </div>
         {summary.delta !== null && (
           <span

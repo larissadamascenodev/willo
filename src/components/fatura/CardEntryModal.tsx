@@ -152,7 +152,7 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
                   <span
                     className={cn(
                       "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold",
-                      entry.status === "pago" ? "bg-willo-green/12 text-willo-green-ink" : "bg-amber-300/12 text-amber-300",
+                      entry.status === "pago" ? "bg-willo-green/12 text-willo-green-ink" : "bg-amber-300/12 text-willo-amber",
                     )}
                   >
                     {entry.status === "pago" ? <Check className="h-3 w-3" strokeWidth={3} /> : <Clock className="h-3 w-3" />}
@@ -170,12 +170,12 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
                 onClick={() => onEdit(entry.transactionId)}
                 className="flex w-full items-center gap-3 px-5 py-3.5 text-left active:bg-white/[0.03]"
               >
-                <Tag className="h-4 w-4 shrink-0 text-white/56" />
+                <Tag className="h-4 w-4 shrink-0 t-soft" />
                 <span className="shrink-0 text-[14px] text-white/70">Categoria</span>
                 <span className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
                   <CatIcon className="h-4 w-4 shrink-0" style={{ color: catHex }} />
                   <span className="truncate text-[14px] text-white">{entry.category}</span>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />
+                  <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
                 </span>
               </button>
               {isPlan && (
@@ -246,7 +246,7 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
 
 const Line = ({ icon: Icon, label, value }: { icon: ComponentType<{ className?: string }>; label: string; value: string }) => (
   <div className="flex items-center gap-3 px-5 py-3.5">
-    <Icon className="h-4 w-4 shrink-0 text-white/56" />
+    <Icon className="h-4 w-4 shrink-0 t-soft" />
     <span className="shrink-0 text-[14px] text-white/70">{label}</span>
     <span className="min-w-0 flex-1 truncate text-right text-[14px] text-white">{value}</span>
   </div>

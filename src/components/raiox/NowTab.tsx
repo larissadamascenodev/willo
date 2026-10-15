@@ -132,7 +132,7 @@ export function CurrentScenario({ data }: { data: RaioXData }) {
           <div className="mt-4 border-t border-white/[0.08] pt-3.5">
             <div className="flex items-center justify-between text-[12px] text-white/62">
               <span>Renda comprometida</span>
-              <span className={cn("font-bold tabular-nums", commitment.committedPct >= 0.6 ? "text-red-400" : commitment.committedPct >= 0.4 ? "text-amber-300" : "text-white")}>
+              <span className={cn("font-bold tabular-nums", commitment.committedPct >= 0.6 ? "text-red-400" : commitment.committedPct >= 0.4 ? "text-willo-amber" : "text-white")}>
                 {Math.round(commitment.committedPct * 100)}%
               </span>
             </div>
@@ -216,8 +216,8 @@ export function MonthComparison({ data }: { data: RaioXData }) {
                 <span className="flex shrink-0 items-center gap-2">
                   {c.hasBefore && (
                     <>
-                      <span className="text-[12px] text-white/50 tabular-nums">{brl(r.before)}</span>
-                      <ArrowUpRight className="h-3.5 w-3.5 rotate-45 text-white/38" />
+                      <span className="text-[12px] t-soft tabular-nums">{brl(r.before)}</span>
+                      <ArrowUpRight className="h-3.5 w-3.5 rotate-45 t-faint" />
                     </>
                   )}
                   <span className="text-[15px] font-bold text-white tabular-nums">{brl(r.now)}</span>

@@ -146,7 +146,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
                 onChange={(e) => setCustomName(e.target.value)}
                 placeholder="Nome da meta"
                 autoFocus
-                className="mt-3 h-12 w-full rounded-full bg-white/[0.06] px-4 text-[15px] text-white placeholder:text-white/45 focus:outline-none"
+                className="mt-3 h-12 w-full rounded-full bg-white/[0.06] px-4 text-[15px] text-white placeholder:t-softer focus:outline-none"
               />
             </motion.div>
           )}
@@ -162,7 +162,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
                 ) : preset ? (
                   <preset.icon className="h-7 w-7" style={{ color: preset.hex }} />
                 ) : (
-                  <Camera className="h-6 w-6 text-white/56" />
+                  <Camera className="h-6 w-6 t-soft" />
                 )}
                 {uploadingCover && (
                   <span className="absolute inset-0 flex items-center justify-center bg-black/50">
@@ -202,7 +202,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
                 onClick={() => setOpenEnded((v) => !v)}
                 className={cn(
                   "rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors",
-                  openEnded ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/74",
+                  openEnded ? "willo-invert" : "bg-white/[0.06] text-white/74",
                 )}
               >
                 Sem valor definido
@@ -219,8 +219,8 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
               <div className="rounded-[22px] border border-white/[0.08] willo-glass p-5">
                 <div className="flex flex-col items-center">
                   <label className="relative flex items-baseline gap-1.5">
-                    <span className="text-[22px] font-bold text-white/56">{currencySymbol()}</span>
-                    <span className={cn("text-[40px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "text-white/45" : "text-white")}>
+                    <span className="text-[22px] font-bold t-soft">{currencySymbol()}</span>
+                    <span className={cn("text-[40px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "t-softer" : "text-white")}>
                       {(cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                     <input
@@ -240,7 +240,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
                       onClick={() => setCents(v * 100)}
                       className={cn(
                         "rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
-                        cents === v * 100 ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/74",
+                        cents === v * 100 ? "willo-invert" : "bg-white/[0.06] text-white/74",
                       )}
                     >
                       {fmtShort(v)}

@@ -121,14 +121,14 @@ export default function Notinha({ lines, onOpen }: {
         } ${allSaved && onOpen ? "transition-transform active:scale-[0.985]" : ""}`}
       >
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/55">Notinha</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.22em] t-soft">Notinha</p>
           {allSaved && onOpen ? (
             <span className="flex items-center gap-1 text-[12px] font-semibold text-willo-green-ink">
               Ver comprovante
               <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2.6} />
             </span>
           ) : (
-            <span className="text-[12px] tabular-nums text-white/45">
+            <span className="text-[12px] tabular-nums t-softer">
               {lines.length} {lines.length === 1 ? "registro" : "registros"}
             </span>
           )}
@@ -155,12 +155,12 @@ export default function Notinha({ lines, onOpen }: {
                   }`}>
                     {line.name}
                   </p>
-                  <p className="truncate text-[12.5px] leading-tight text-white/42">{subtitleFor(line)}</p>
+                  <p className="truncate text-[12.5px] leading-tight t-softer">{subtitleFor(line)}</p>
                 </div>
                 <p className={`shrink-0 text-[16px] font-bold tabular-nums tracking-[-0.02em] ${
                   line.status === "saved"
                     ? line.type === "receita" ? "text-willo-green-ink" : "text-white"
-                    : "text-white/55"
+                    : "t-soft"
                 }`}>
                   {line.type === "receita" ? "+" : "−"}{fmt(line.amount)}
                 </p>

@@ -213,7 +213,7 @@ export default function FaturaDetailModal({ open, onClose, card, month, year, to
                   <div className="min-w-0">
                     <p className="truncate text-[17px] font-bold tracking-tight text-white">{card.cardName}</p>
                     {card.lastFourDigits && (
-                      <p className="text-[12px] tabular-nums text-white/56">•••• {card.lastFourDigits}</p>
+                      <p className="text-[12px] tabular-nums t-soft">•••• {card.lastFourDigits}</p>
                     )}
                   </div>
                 </div>
@@ -242,23 +242,23 @@ export default function FaturaDetailModal({ open, onClose, card, month, year, to
 
               <div className="mt-4 flex items-center gap-4 border-t border-white/[0.06] pt-4">
                 <span className="flex items-center gap-2 text-[12.5px] text-white/66">
-                  <CalendarClock className="h-4 w-4 shrink-0 text-white/50" />
+                  <CalendarClock className="h-4 w-4 shrink-0 t-soft" />
                   Fecha dia <span className="font-semibold text-white">{card.closingDay}</span>
                 </span>
                 <span className="h-3 w-px bg-white/10" />
                 <span className="flex items-center gap-2 text-[12.5px] text-white/66">
-                  <CalendarCheck className="h-4 w-4 shrink-0 text-white/50" />
+                  <CalendarCheck className="h-4 w-4 shrink-0 t-soft" />
                   Vence dia <span className="font-semibold text-white">{card.dueDay}</span>
                 </span>
               </div>
             </div>
 
             <div className="relative mt-4 px-5">
-              <p className="text-[12px] font-semibold uppercase tracking-wider text-white/50">Lançamentos recentes</p>
+              <p className="text-[12px] font-semibold uppercase tracking-wider t-soft">Lançamentos recentes</p>
               {loadingItems ? (
-                <p className="py-5 text-center text-[13px] text-white/50">Carregando…</p>
+                <p className="py-5 text-center text-[13px] t-soft">Carregando…</p>
               ) : recentItems.length === 0 && invoicePayments.length === 0 ? (
-                <p className="py-5 text-center text-[13px] text-white/50">Nenhum lançamento neste mês</p>
+                <p className="py-5 text-center text-[13px] t-soft">Nenhum lançamento neste mês</p>
               ) : (
                 <div className="mt-2.5 divide-y divide-white/[0.05] rounded-[18px] border border-white/[0.06] bg-white/[0.02]">
                   {!resolvedIsPaid && invoicePayments.map((payment) => (
@@ -268,7 +268,7 @@ export default function FaturaDetailModal({ open, onClose, card, month, year, to
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-[13.5px] text-white">Pagamento</span>
-                        <span className="block text-[11.5px] text-white/56">
+                        <span className="block text-[11.5px] t-soft">
                           {new Date(payment.paid_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
                         </span>
                       </span>
@@ -284,7 +284,7 @@ export default function FaturaDetailModal({ open, onClose, card, month, year, to
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[13.5px] text-white">{item.name}</span>
-                        <span className="block truncate text-[11.5px] text-white/56">
+                        <span className="block truncate text-[11.5px] t-soft">
                           {item.category}
                           {item.installment && <span className="ml-1.5 text-white/74">{item.installment}</span>}
                         </span>

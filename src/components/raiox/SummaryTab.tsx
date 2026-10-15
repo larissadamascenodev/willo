@@ -62,7 +62,7 @@ export function DailyLightCard({ data }: { data: RaioXData }) {
       </div>
       {light.allowance > 0 && (
         <div className="shrink-0 text-right">
-          <p className="text-[10px] text-white/56">Hoje</p>
+          <p className="text-[10px] t-soft">Hoje</p>
           <p className="text-[17px] font-extrabold tabular-nums text-white">{brl(Math.max(light.leftToday, 0))}</p>
         </div>
       )}
@@ -141,7 +141,7 @@ export function ScoreCard({ data }: { data: RaioXData }) {
           </svg>
           <div className="absolute inset-x-0 bottom-0 flex flex-col items-center">
             <motion.span className="text-[54px] font-extrabold leading-none tracking-tighter text-white tabular-nums">{shown}</motion.span>
-            <span className="mt-1 text-[11px] text-white/56">de {SCORE_MAX} pontos</span>
+            <span className="mt-1 text-[11px] t-soft">de {SCORE_MAX} pontos</span>
           </div>
         </div>
 
@@ -160,7 +160,7 @@ export function ScoreCard({ data }: { data: RaioXData }) {
             return (
               <div key={l.key} className="text-center">
                 <div className="h-1 rounded-full" style={{ background: active ? l.hex : `${l.hex}33` }} />
-                <p className={cn("mt-1 text-[9px]", active ? "font-semibold text-white" : "text-white/50")}>{l.label}</p>
+                <p className={cn("mt-1 text-[9px]", active ? "font-semibold text-white" : "t-soft")}>{l.label}</p>
               </div>
             );
           })}
@@ -174,7 +174,7 @@ export function ScoreCard({ data }: { data: RaioXData }) {
               const last = i === trend.length - 1;
               return (
                 <div key={i} className="flex flex-1 flex-col items-center">
-                  <span className={cn("mb-1 text-[9px] tabular-nums", last ? "font-bold text-white" : "text-white/56")}>{t.score}</span>
+                  <span className={cn("mb-1 text-[9px] tabular-nums", last ? "font-bold text-white" : "t-soft")}>{t.score}</span>
                   <motion.span
                     className="w-full max-w-[30px] rounded-[6px]"
                     style={{ background: last ? level.hex : `${level.hex}55` }}
@@ -183,7 +183,7 @@ export function ScoreCard({ data }: { data: RaioXData }) {
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.06, duration: 0.5 }}
                   />
-                  <span className={cn("mt-1 text-[9px]", last ? "text-white" : "text-white/56")}>{MONTHS_SHORT[t.month]}</span>
+                  <span className={cn("mt-1 text-[9px]", last ? "text-white" : "t-soft")}>{MONTHS_SHORT[t.month]}</span>
                 </div>
               );
             })}
@@ -219,7 +219,7 @@ export function ScoreCard({ data }: { data: RaioXData }) {
                     </div>
                     <p className="shrink-0 tabular-nums">
                       <span className="text-[17px] font-bold text-white">{p.points}</span>
-                      <span className="text-[12px] text-white/50">/{p.max}</span>
+                      <span className="text-[12px] t-soft">/{p.max}</span>
                     </p>
                   </div>
                   <Bar value={p.points / p.max} hex={hex} className="ml-[52px] mt-2" delay={0.05 * i} />
@@ -268,7 +268,7 @@ export function WeeklyCard({ data }: { data: RaioXData }) {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.05, duration: 0.45 }}
               />
-              <span className={cn("mt-1.5 text-[10px]", d.today ? "font-bold text-white" : "text-white/56")}>{d.label}</span>
+              <span className={cn("mt-1.5 text-[10px]", d.today ? "font-bold text-white" : "t-soft")}>{d.label}</span>
             </div>
           ))}
         </div>
@@ -332,7 +332,7 @@ export function RadarList({ data }: { data: RaioXData }) {
             onClick={() => { setFilter(f.key); setExpanded(false); }}
             className={cn(
               "flex h-9 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-semibold transition-colors",
-              filter === f.key ? "bg-white text-[#0B0B0B]" : "border border-white/[0.08] willo-glass text-white/82",
+              filter === f.key ? "willo-invert" : "border border-white/[0.08] willo-glass text-white/82",
             )}
           >
             {f.key !== "todos" && <span className="h-1.5 w-1.5 rounded-full" style={{ background: KIND[f.key].hex }} />}
@@ -438,7 +438,7 @@ export function GoalsCountdown({ data }: { data: RaioXData }) {
                 {g.monthsLeft !== null && (
                   <div className="shrink-0 text-right">
                     <p className="text-[20px] font-extrabold leading-none text-white tabular-nums">{g.monthsLeft}</p>
-                    <p className="text-[10px] text-white/56">{g.monthsLeft === 1 ? "mês" : "meses"}</p>
+                    <p className="text-[10px] t-soft">{g.monthsLeft === 1 ? "mês" : "meses"}</p>
                   </div>
                 )}
               </div>

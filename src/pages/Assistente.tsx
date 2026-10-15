@@ -121,7 +121,7 @@ export default function Assistente() {
           </span>
           <div className="min-w-0">
             <p className="text-[16px] font-bold leading-none text-white">Willo</p>
-            <p className="mt-1 text-[11.5px] text-white/45">Olha os seus números de verdade</p>
+            <p className="mt-1 text-[11.5px] t-softer">Olha os seus números de verdade</p>
           </div>
         </div>
       </div>
@@ -134,7 +134,7 @@ export default function Assistente() {
               <br />
               do seu dinheiro?
             </p>
-            <p className="mt-2 text-[13.5px] leading-snug text-white/50">
+            <p className="mt-2 text-[13.5px] leading-snug t-soft">
               Eu leio o que já está lançado no Willo. Posso analisar, comparar meses e simular
               uma compra antes de você fazer.
             </p>
@@ -193,18 +193,18 @@ export default function Assistente() {
               }
             }}
             placeholder="Pergunte sobre o seu dinheiro"
-            className="max-h-[120px] min-h-[36px] flex-1 resize-none bg-transparent py-2 text-[15px] text-white placeholder:text-white/35 focus:outline-none scrollbar-none"
+            className="max-h-[120px] min-h-[36px] flex-1 resize-none bg-transparent py-2 text-[15px] text-white placeholder:t-faint focus:outline-none scrollbar-none"
           />
           <button
             onClick={() => send(draft)}
             disabled={!draft.trim() || sending}
             aria-label="Enviar"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#0B0B0B] transition-opacity active:opacity-80 disabled:opacity-25"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full willo-invert transition-opacity active:opacity-80 disabled:opacity-25"
           >
             <ArrowUp className="h-5 w-5" strokeWidth={2.6} />
           </button>
         </div>
-        <p className="mt-2 px-1 text-center text-[11px] leading-snug text-white/30">
+        <p className="mt-2 px-1 text-center text-[11px] leading-snug t-faint">
           O Willo analisa e recomenda. Ainda não registra lançamentos.
         </p>
       </div>

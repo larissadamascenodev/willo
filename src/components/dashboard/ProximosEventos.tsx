@@ -12,11 +12,13 @@ interface Props {
   onEventClick?: (event: FinanceEvent) => void;
 }
 
+/* The accents come from the theme rather than from here: the lightness that makes a
+   status glow against black is the same lightness that makes it vanish on paper. */
 const STATUS_CONFIG = {
-  pago: { label: "Pago", accent: "80 84% 69%", Icon: Check },
-  pendente: { label: "Pendente", accent: "45 93% 64%", Icon: Clock },
-  atrasado: { label: "Atrasado", accent: "0 91% 71%", Icon: AlertTriangle },
-  recebido: { label: "Recebido", accent: "80 84% 69%", Icon: Check },
+  pago: { label: "Pago", accent: "var(--status-paid)", Icon: Check },
+  pendente: { label: "Pendente", accent: "var(--status-pending)", Icon: Clock },
+  atrasado: { label: "Atrasado", accent: "var(--status-late)", Icon: AlertTriangle },
+  recebido: { label: "Recebido", accent: "var(--status-paid)", Icon: Check },
 };
 
 const getStatusLabel = (status: string, type?: string) => {
@@ -84,7 +86,7 @@ const ProximosEventos = memo(({ events, selectedMonth, selectedYear, onVerTodos,
           if (isClickable && onEventClick) onEventClick(ev);
         }}
       >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: `hsl(${a} / 0.12)` }}>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: `hsl(${a} / var(--chip-fill))` }}>
           <StatusIcon className="h-4 w-4" style={{ color: `hsl(${a})` }} />
         </span>
 
@@ -99,7 +101,7 @@ const ProximosEventos = memo(({ events, selectedMonth, selectedYear, onVerTodos,
         {/* Amount + date */}
         <div className="shrink-0 text-right">
           <p className={`text-[15px] font-semibold tabular-nums ${isPaid ? "text-white/62" : "text-white"}`}>{fmt(ev.amount)}</p>
-          <p className="text-[12px] text-white/56">{fmtDate(ev._date)}</p>
+          <p className="text-[12px] t-soft">{fmtDate(ev._date)}</p>
         </div>
       </motion.div>
     );
@@ -119,7 +121,7 @@ const ProximosEventos = memo(({ events, selectedMonth, selectedYear, onVerTodos,
           {displayEvents.length > 0 ? (
             displayEvents.map((ev, idx) => renderEvent(ev, idx))
           ) : (
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-5 text-center text-[13px] text-white/56">
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-5 text-center text-[13px] t-soft">
               Nenhum evento este mês
             </motion.p>
           )}

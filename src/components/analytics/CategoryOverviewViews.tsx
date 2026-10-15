@@ -195,7 +195,7 @@ export function CategoryRows({ categories, onOpen }: {
               <span className="block text-[15px] text-white/62 tabular-nums">{cat.percentage}%</span>
             </span>
             <span className="text-[16px] font-medium text-white tabular-nums">{fmt(cat.amount)}</span>
-            <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />
+            <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
           </motion.button>
         );
       })}
@@ -255,7 +255,7 @@ export function GroupCards({ groups }: { groups: CategoryGroup[] }) {
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-[15px] text-white">{cat.name}</span>
-                            {g.categories.length > 1 && <span className="block text-[13px] text-white/56 tabular-nums">{share}% do grupo</span>}
+                            {g.categories.length > 1 && <span className="block text-[13px] t-soft tabular-nums">{share}% do grupo</span>}
                           </span>
                           <span className="text-[15px] text-white tabular-nums">{fmt(cat.amount)}</span>
                         </div>

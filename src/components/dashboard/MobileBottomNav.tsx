@@ -85,7 +85,7 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
                 <Icon
                   className={cn(
                     "relative w-5 h-5 transform-gpu transition-colors",
-                    isActive ? "text-white" : item.soon ? "text-white/38" : "text-white/62",
+                    isActive ? "text-white" : item.soon ? "t-faint" : "text-white/62",
                   )}
                   strokeWidth={isActive ? 2.25 : 2}
                 />

@@ -128,8 +128,8 @@ const CategoryLimitSheet = ({ open, onClose, initialCategory, spentByCategory = 
         <div className="mt-6 flex flex-col items-center">
           <span className="text-[13px] text-white/62">{category ? `Limite mensal para ${category}` : "Escolha uma categoria"}</span>
           <label className="relative mt-1 flex items-baseline gap-1.5">
-            <span className="text-[22px] font-bold text-white/56">{currencySymbol()}</span>
-            <span className={cn("text-[44px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "text-white/45" : "text-white")}>
+            <span className="text-[22px] font-bold t-soft">{currencySymbol()}</span>
+            <span className={cn("text-[44px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "t-softer" : "text-white")}>
               {amount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
             <input

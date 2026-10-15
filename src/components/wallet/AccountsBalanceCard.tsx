@@ -54,7 +54,7 @@ const AccountsBalanceCard = ({ accounts, onOpen, onAdd, savedTotal = 0 }: {
       {savedTotal > 0 && (
         <p className="mt-1 text-[13px] text-white/62">
           Patrimônio <span className="font-semibold text-white tabular-nums">{fmt(total + savedTotal)}</span>
-          <span className="text-white/50"> · {fmt(savedTotal)} guardados</span>
+          <span className="t-soft"> · {fmt(savedTotal)} guardados</span>
         </p>
       )}
 

@@ -159,7 +159,7 @@ export default function ScannerScreen({ open, onCapture, onManual, onClose }: {
                 <CameraOff className="h-6 w-6 text-white/70" />
               </span>
               <p className="text-[15px] font-semibold text-white">Não conseguimos abrir a câmera</p>
-              <p className="text-[13px] leading-snug text-white/60">
+              <p className="text-[13px] leading-snug t-soft">
                 Libere o acesso à câmera nas configurações, ou use a câmera do sistema e a galeria aqui embaixo.
               </p>
               <button

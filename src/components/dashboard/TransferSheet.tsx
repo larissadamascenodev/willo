@@ -144,21 +144,21 @@ export default function TransferBody({ onClose, onSuccess }: {
         <Avatar account={account} />
       ) : (
         <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
-          <Wallet className="h-4 w-4 text-white/60" />
+          <Wallet className="h-4 w-4 t-soft" />
         </span>
       )}
       <span className="min-w-0 flex-1">
-        <span className="block text-[11px] font-semibold uppercase tracking-[0.13em] text-white/40">{label}</span>
-        <span className={cn("mt-0.5 block truncate text-[15px]", account ? "font-medium text-white" : "text-white/45")}>
+        <span className="block text-[11px] font-semibold uppercase tracking-[0.13em] t-softer">{label}</span>
+        <span className={cn("mt-0.5 block truncate text-[15px]", account ? "font-medium text-white" : "t-softer")}>
           {account?.name ?? "Escolher conta"}
         </span>
       </span>
       {account && (
-        <span className="shrink-0 text-right text-[12.5px] tabular-nums text-white/45">
+        <span className="shrink-0 text-right text-[12.5px] tabular-nums t-softer">
           {money(Number(account.current_balance))}
         </span>
       )}
-      <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
+      <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
     </button>
   );
 
@@ -171,12 +171,12 @@ export default function TransferBody({ onClose, onSuccess }: {
             Valor da transferência
           </span>
           <div className="relative mt-2 flex items-baseline gap-2">
-            <span className="text-[24px] font-bold text-white/56">{currencySymbol()}</span>
+            <span className="text-[24px] font-bold t-soft">{currencySymbol()}</span>
             <motion.span
               key={amountCents}
               initial={{ scale: 1.04 }}
               animate={{ scale: 1 }}
-              className={cn("text-[52px] font-extrabold leading-none tracking-tight tabular-nums", amountCents === 0 ? "text-white/45" : "text-white")}
+              className={cn("text-[52px] font-extrabold leading-none tracking-tight tabular-nums", amountCents === 0 ? "t-softer" : "text-white")}
             >
               {cents(amountCents)}
             </motion.span>
@@ -218,7 +218,7 @@ export default function TransferBody({ onClose, onSuccess }: {
             <span className="shrink-0 text-[15px] text-white">Data</span>
             <span className="relative flex min-w-0 flex-1 items-center justify-end gap-2 text-right">
               <span className="text-[15px] text-white">{isToday ? "Hoje" : format(date, "dd/MM/yyyy")}</span>
-              <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
+              <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
               <input
                 type="date"
                 value={format(date, "yyyy-MM-dd")}
@@ -236,7 +236,7 @@ export default function TransferBody({ onClose, onSuccess }: {
           </p>
         )}
         {isInvestment && ready && (
-          <p className="mt-3 flex items-center gap-1.5 px-1 text-[12.5px] text-white/50">
+          <p className="mt-3 flex items-center gap-1.5 px-1 text-[12.5px] t-soft">
             <Check className="h-3.5 w-3.5 text-sky-400" /> Vai entrar como investimento.
           </p>
         )}
@@ -277,7 +277,7 @@ export default function TransferBody({ onClose, onSuccess }: {
                   <Avatar account={a} size={40} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[15px] font-medium text-white">{a.name}</span>
-                    <span className="block truncate text-[12.5px] tabular-nums text-white/45">
+                    <span className="block truncate text-[12.5px] tabular-nums t-softer">
                       {money(Number(a.current_balance))}
                       {taken ? " · já escolhida do outro lado" : ""}
                     </span>

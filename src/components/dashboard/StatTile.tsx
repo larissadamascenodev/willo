@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { chipFill, chipInk } from "@/lib/chipColor";
 
 /**
  * The summary tile. A dashboard of nothing but full-width cards reads as one long
@@ -19,10 +20,17 @@ import { cn } from "@/lib/utils";
 function TileBadge({ icon: Icon, accent, empty }: { icon: LucideIcon; accent: string; empty: boolean }) {
   return (
     <span
-      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/[0.07] ring-1"
-      style={{ ["--tw-ring-color" as string]: accent + (empty ? "22" : "3d") }}
+      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full ring-1"
+      style={{
+        background: chipFill(accent),
+        ["--tw-ring-color" as string]: accent + (empty ? "22" : "3d"),
+      }}
     >
-      <Icon className="h-[21px] w-[21px]" style={{ color: accent, opacity: empty ? 0.45 : 1 }} strokeWidth={2.1} />
+      <Icon
+        className="h-[21px] w-[21px]"
+        style={{ color: chipInk(accent), opacity: empty ? 0.45 : 1 }}
+        strokeWidth={2.1}
+      />
     </span>
   );
 }
@@ -36,7 +44,7 @@ function TileProgress({ progress, accent }: { progress: number; accent: string }
     <span className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] bg-white/[0.06]">
       <motion.span
         className="block h-full"
-        style={{ background: accent }}
+        style={{ background: chipInk(accent) }}
         initial={{ width: 0 }}
         animate={{ width: `${Math.min(Math.max(progress, 0), 1) * 100}%` }}
         transition={{ duration: 0.7, ease: "easeOut" }}
@@ -67,16 +75,16 @@ export function StatTile({ label, value, caption, icon, accent, progress, empty 
       </div>
 
       <div className="mt-4">
-        <p className="truncate text-[14px] font-medium text-white/50">{label}</p>
+        <p className="truncate text-[14px] font-medium t-soft">{label}</p>
         <p className={cn(
           "mt-0.5 truncate text-[23px] font-extrabold leading-tight tracking-[-0.035em] tabular-nums",
-          empty ? "text-white/35" : "text-white",
+          empty ? "t-faint" : "text-white",
         )}>
           {value}
         </p>
         {/* Two lines, not one truncated: "0 assinaturas ativas · por mês" says nothing
             useful when it is cut after the third word. */}
-        {caption && <p className="mt-1 line-clamp-2 text-[12px] leading-snug text-white/40">{caption}</p>}
+        {caption && <p className="mt-1 line-clamp-2 text-[12px] leading-snug t-softer">{caption}</p>}
       </div>
 
       {progress !== undefined && <TileProgress progress={progress} accent={accent} />}
@@ -102,7 +110,7 @@ export function StatTileWide({ label, icon, accent, columns, empty = false, onCl
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3">
           <TileBadge icon={icon} accent={accent} empty={empty} />
-          <p className="text-[14px] font-medium text-white/50">{label}</p>
+          <p className="text-[14px] font-medium t-soft">{label}</p>
         </div>
         <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-white/25" />
       </div>
@@ -110,17 +118,17 @@ export function StatTileWide({ label, icon, accent, columns, empty = false, onCl
       <div className="mt-4 grid gap-3" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}>
         {columns.map((col, i) => (
           <div key={col.label} className={cn("min-w-0", i > 0 && "border-l border-white/[0.07] pl-3")}>
-            <p className="truncate text-[11.5px] font-medium text-white/42">{col.label}</p>
+            <p className="truncate text-[11.5px] font-medium t-softer">{col.label}</p>
             <p className={cn(
               "mt-0.5 truncate text-[20px] font-extrabold leading-tight tracking-[-0.035em] tabular-nums",
-              empty ? "text-white/35"
+              empty ? "t-faint"
                 : col.tone === "in" ? "text-willo-green-ink"
-                : col.tone === "out" ? "text-[#F87171]"
+                : col.tone === "out" ? "text-destructive"
                 : "text-white",
             )}>
               {col.value}
             </p>
-            {col.caption && <p className="mt-1 truncate text-[11.5px] text-white/40">{col.caption}</p>}
+            {col.caption && <p className="mt-1 truncate text-[11.5px] t-softer">{col.caption}</p>}
           </div>
         ))}
       </div>

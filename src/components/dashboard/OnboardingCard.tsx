@@ -85,7 +85,7 @@ const OnboardingCard = ({ profile, onUpdateName, onGoToAccounts, onCreateTransac
         {nextStep && (
           <button
             onClick={nextStep.action}
-            className="mt-4 w-full flex items-center gap-3 rounded-full bg-white text-[#0B0B0B] p-1.5 pr-4 active:scale-[0.98] transition-transform shadow-[0_10px_30px_-14px_rgba(255,255,255,0.35)]"
+            className="mt-4 w-full flex items-center gap-3 rounded-full willo-invert p-1.5 pr-4 active:scale-[0.98] transition-transform shadow-[0_10px_30px_-14px_rgba(255,255,255,0.35)]"
           >
             <span className="w-9 h-9 rounded-full bg-[#0B0B0B] text-white flex items-center justify-center shrink-0">
               <nextStep.icon className="w-4 h-4" />
@@ -117,7 +117,7 @@ const OnboardingCard = ({ profile, onUpdateName, onGoToAccounts, onCreateTransac
                 )}>
                   {s.done ? <Check className="w-3 h-3" strokeWidth={3} /> : <StepIcon className="w-3 h-3" />}
                 </span>
-                <span className={cn("text-[12px] font-medium whitespace-nowrap", s.done ? "text-white/50 line-through" : "text-white/80")}>
+                <span className={cn("text-[12px] font-medium whitespace-nowrap", s.done ? "t-soft line-through" : "text-white/80")}>
                   {s.label}
                 </span>
               </button>

@@ -291,7 +291,7 @@ function DiscountWheel({ onAccept, onSkip }: { onAccept: () => void; onSkip: () 
                 {PRICES.desconto.off}% OFF
               </motion.p>
               <div className="mt-3 flex items-baseline justify-center gap-2.5">
-                <span className="text-[16px] font-semibold text-white/50 line-through">R$ {PRICES.mensal.total}/mês</span>
+                <span className="text-[16px] font-semibold t-soft line-through">R$ {PRICES.mensal.total}/mês</span>
                 <span className="text-[34px] font-extrabold tracking-tight" style={{ color: ACCENT }}>R$ {PRICES.desconto.perMonth}</span>
                 <span className="text-[15px] text-white/70">/mês</span>
               </div>
@@ -386,7 +386,7 @@ export default function Paywall({ name, onPurchase, onClose, offerDiscount = tru
           <button type="button" onClick={() => setPlansOpen(true)} className="mt-1 w-full py-3 text-[13px] font-semibold uppercase tracking-[0.2em] text-white/82">
             Ver todos os planos
           </button>
-          <p className="text-center text-[11px] text-white/45">Renova automaticamente. Cancele quando quiser.</p>
+          <p className="text-center text-[11px] t-softer">Renova automaticamente. Cancele quando quiser.</p>
         </motion.div>
       </div>
 
@@ -399,7 +399,7 @@ export default function Paywall({ name, onPurchase, onClose, offerDiscount = tru
         <div className="mt-5">
           <GlowButton variant="light" onClick={() => onPurchase(plan)}>Continuar</GlowButton>
         </div>
-        <p className="mt-3 text-center text-[11px] text-white/45">Renova automaticamente. Cancele quando quiser.</p>
+        <p className="mt-3 text-center text-[11px] t-softer">Renova automaticamente. Cancele quando quiser.</p>
         <div className="mt-3 flex items-center justify-center gap-2 text-[12.5px] text-white/66">
           <button type="button" onClick={onRestore ?? (() => toast("Nenhuma compra encontrada para restaurar."))} className="py-1">Restaurar</button>
           <span className="text-white/20">·</span>

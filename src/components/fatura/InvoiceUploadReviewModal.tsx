@@ -82,7 +82,7 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
     confidence >= 0.8
       ? { Icon: ShieldCheck, cls: "text-willo-green-ink bg-willo-green/10" }
       : confidence >= 0.5
-        ? { Icon: ShieldAlert, cls: "text-amber-300 bg-amber-300/10" }
+        ? { Icon: ShieldAlert, cls: "text-willo-amber bg-amber-300/10" }
         : { Icon: AlertTriangle, cls: "text-red-400 bg-red-400/10" };
   return (
     <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", tone.cls)}>
@@ -117,7 +117,7 @@ const Row = ({ icon: Icon, label, children, onClick }: {
   </div>
 );
 
-const inlineInput = "w-full min-w-0 bg-transparent text-right text-[15px] text-white placeholder:text-white/45 focus:outline-none";
+const inlineInput = "w-full min-w-0 bg-transparent text-right text-[15px] text-white placeholder:t-softer focus:outline-none";
 
 function CategoryPickerSheet({ open, selected, onSelect, onClose, customCategories, onCreateCategory }: {
   open: boolean;
@@ -146,12 +146,12 @@ function CategoryPickerSheet({ open, selected, onSelect, onClose, customCategori
           </button>
         </div>
         <div className="relative mt-4">
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 t-soft" />
           <input
             placeholder="Buscar categoria"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-11 w-full rounded-full bg-white/[0.06] pl-11 pr-4 text-[15px] text-white placeholder:text-white/45 focus:outline-none"
+            className="h-11 w-full rounded-full bg-white/[0.06] pl-11 pr-4 text-[15px] text-white placeholder:t-softer focus:outline-none"
           />
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2 pb-4">
@@ -237,7 +237,7 @@ function SingleItemReview({ item, onUpdate, accounts = [], showAccountSelector =
             key={t}
             type="button"
             onClick={() => onUpdate("type", t)}
-            className={cn("h-9 rounded-full text-[13px] font-semibold transition-colors", (isExpense ? "despesa" : "receita") === t ? "bg-white text-[#0B0B0B]" : "text-white/70")}
+            className={cn("h-9 rounded-full text-[13px] font-semibold transition-colors", (isExpense ? "despesa" : "receita") === t ? "willo-invert" : "text-white/70")}
           >
             {t === "despesa" ? "Despesa" : "Receita"}
           </button>
@@ -246,7 +246,7 @@ function SingleItemReview({ item, onUpdate, accounts = [], showAccountSelector =
 
       {/* Amount */}
       <label className="relative mt-5 flex items-baseline justify-center gap-2">
-        <span className="text-[24px] font-bold text-white/56">{currencySymbol()}</span>
+        <span className="text-[24px] font-bold t-soft">{currencySymbol()}</span>
         <input
           type="text"
           inputMode="numeric"
@@ -273,7 +273,7 @@ function SingleItemReview({ item, onUpdate, accounts = [], showAccountSelector =
         <Row icon={Tag} label="Categoria" onClick={() => setShowCategoryPicker(true)}>
           <CatIcon className="h-4 w-4 shrink-0" style={{ color: catHex }} />
           <span className="truncate text-[15px] capitalize text-white">{item.category || "Escolher"}</span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />
+          <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
         </Row>
         <Row icon={Clock} label="Data">
           <input
@@ -282,7 +282,7 @@ function SingleItemReview({ item, onUpdate, accounts = [], showAccountSelector =
             onChange={(e) => onUpdate("date", e.target.value)}
             className="bg-transparent text-right text-[15px] text-white [color-scheme:dark] focus:outline-none"
           />
-          {item.time && <span className="text-[13px] text-white/56">{item.time}</span>}
+          {item.time && <span className="text-[13px] t-soft">{item.time}</span>}
         </Row>
         {showAccountSelector && (
           <Row icon={Wallet} label="Conta">
@@ -300,7 +300,7 @@ function SingleItemReview({ item, onUpdate, accounts = [], showAccountSelector =
                 </SelectContent>
               </Select>
             ) : (
-              <span className="text-[13px] text-white/56">Cadastre uma conta</span>
+              <span className="text-[13px] t-soft">Cadastre uma conta</span>
             )}
           </Row>
         )}
@@ -313,7 +313,7 @@ function SingleItemReview({ item, onUpdate, accounts = [], showAccountSelector =
         </Row>
       </div>
 
-      <p className="mt-4 px-2 text-center text-[12px] text-white/50">Confira os dados antes de confirmar. Você pode editar tudo aqui.</p>
+      <p className="mt-4 px-2 text-center text-[12px] t-soft">Confira os dados antes de confirmar. Você pode editar tudo aqui.</p>
 
       <CategoryPickerSheet
         open={showCategoryPicker}
@@ -378,7 +378,7 @@ function ItemEditSheet({ item, onClose, onChange }: {
             <p className="text-[22px] font-extrabold tracking-tight text-white">Editar lançamento</p>
 
             <label className="relative mt-5 flex items-baseline justify-center gap-2">
-              <span className="text-[22px] font-bold text-white/56">{currencySymbol()}</span>
+              <span className="text-[22px] font-bold t-soft">{currencySymbol()}</span>
               <input
                 type="text"
                 inputMode="numeric"
@@ -391,7 +391,7 @@ function ItemEditSheet({ item, onClose, onChange }: {
               />
             </label>
             {isPlan && (
-              <p className="mt-2 text-center text-[12px] text-white/56">valor de cada parcela</p>
+              <p className="mt-2 text-center text-[12px] t-soft">valor de cada parcela</p>
             )}
 
             <div className="mt-6 divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.08] willo-glass">
@@ -401,7 +401,7 @@ function ItemEditSheet({ item, onClose, onChange }: {
               <Row icon={Tag} label="Categoria" onClick={() => setShowCategoryPicker(true)}>
                 <CatIcon className="h-4 w-4 shrink-0" style={{ color: catHex }} />
                 <span className="truncate text-[15px] text-white">{data.category || "Escolher"}</span>
-                <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />
+                <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
               </Row>
               <Row icon={Clock} label="Data da compra">
                 <input
@@ -436,7 +436,7 @@ function ItemEditSheet({ item, onClose, onChange }: {
               return (
                 <div className="mt-3 rounded-[18px] border border-white/[0.07] bg-white/[0.03] px-3.5 py-3">
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-[12.5px] text-white/55">
+                    <span className="text-[12.5px] t-soft">
                       Compra inteira · {total}x de {fmtMoney(data.amount)}
                     </span>
                     <span className="shrink-0 text-[13.5px] font-semibold tabular-nums text-white/75">
@@ -444,14 +444,14 @@ function ItemEditSheet({ item, onClose, onChange }: {
                     </span>
                   </div>
                   <div className="mt-1.5 flex items-baseline justify-between gap-3">
-                    <span className="text-[12.5px] text-white/55">
+                    <span className="text-[12.5px] t-soft">
                       Entra aqui · {remaining} parcela{remaining === 1 ? "" : "s"}, da {current}ª em diante
                     </span>
                     <span className="shrink-0 text-[13.5px] font-bold tabular-nums text-white">
                       {fmtMoney(data.amount * remaining)}
                     </span>
                   </div>
-                  <p className="mt-2 text-[11.5px] leading-snug text-white/40">
+                  <p className="mt-2 text-[11.5px] leading-snug t-softer">
                     As {current - 1} parcela{current - 1 === 1 ? "" : "s"} já cobrada{current - 1 === 1 ? "" : "s"} não
                     entra{current - 1 === 1 ? "" : "m"}, nem na fatura nem no limite do cartão.
                   </p>
@@ -565,10 +565,10 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
                 look like proof that the reading is wrong. */}
             {!carryIn && carried != null && declaredTotal != null && (
               <div className="mt-1.5 flex items-center justify-between text-[12.5px]">
-                <span className="text-white/45">
+                <span className="t-softer">
                   Total a pagar {carried < 0 ? "(desconta o que você já pagou)" : "(soma a fatura anterior)"}
                 </span>
-                <span className="tabular-nums text-white/55">{fmtMoney(declaredTotal)}</span>
+                <span className="tabular-nums t-soft">{fmtMoney(declaredTotal)}</span>
               </div>
             )}
             <div className="mt-2.5 flex items-center gap-2">
@@ -581,7 +581,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
                 </>
               ) : (
                 <>
-                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-300" />
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-willo-amber" />
                   <span className="text-[12.5px] leading-snug text-white/78">
                     {fmtMoney(Math.abs(gap!))} de diferença. {gap! < 0 ? "Algo pode não ter sido lido" : "Algo pode ter entrado duas vezes"}
                   </span>
@@ -597,7 +597,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
           what tells someone their statement was read wrong. */}
       {checks.length > 0 && (
         <div className="mt-2.5 rounded-[22px] border border-white/[0.08] willo-glass px-4 py-3.5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-white/45">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.13em] t-softer">
             Conferindo com a fatura
           </p>
           <div className="mt-2.5 space-y-2">
@@ -608,7 +608,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
                     <Check className="h-2.5 w-2.5 text-[#0B0B0B]" strokeWidth={4} />
                   </span>
                 ) : (
-                  <AlertTriangle className="h-[18px] w-[18px] shrink-0 text-amber-300" />
+                  <AlertTriangle className="h-[18px] w-[18px] shrink-0 text-willo-amber" />
                 )}
                 <span className="flex-1 text-[13px] text-white/70">{c.label}</span>
                 <span className="shrink-0 text-right">
@@ -616,7 +616,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
                     {fmtMoney(c.mine)}
                   </span>
                   {!c.ok && (
-                    <span className="block text-[11.5px] tabular-nums text-amber-300">
+                    <span className="block text-[11.5px] tabular-nums text-willo-amber">
                       fatura: {fmtMoney(c.printed)}
                     </span>
                   )}
@@ -625,7 +625,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
             ))}
           </div>
           {checks.some((c) => !c.ok) && (
-            <p className="mt-3 border-t border-white/[0.07] pt-2.5 text-[12px] leading-snug text-white/55">
+            <p className="mt-3 border-t border-white/[0.07] pt-2.5 text-[12px] leading-snug t-soft">
               Algo não fechou com o que está impresso. Vale olhar os lançamentos abaixo antes de
               confirmar, principalmente os parcelados e os estornos.
             </p>
@@ -639,21 +639,21 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
             <div className="rounded-[20px] border border-white/[0.08] willo-glass px-4 py-3">
               <Layers className="h-4 w-4 text-white/62" />
               <p className="mt-2 text-[19px] font-bold leading-none text-white tabular-nums">{allPlans.length}</p>
-              <p className="mt-1 text-[11.5px] text-white/56">parcelamentos</p>
+              <p className="mt-1 text-[11.5px] t-soft">parcelamentos</p>
             </div>
           )}
           {refunds.length > 0 && (
             <div className="rounded-[20px] border border-willo-green/15 bg-willo-green/[0.05] px-4 py-3">
               <RotateCcw className="h-4 w-4 text-willo-green-ink" />
               <p className="mt-2 text-[19px] font-bold leading-none text-white tabular-nums">{refunds.length}</p>
-              <p className="mt-1 text-[11.5px] text-white/56">estornos, viram crédito</p>
+              <p className="mt-1 text-[11.5px] t-soft">estornos, viram crédito</p>
             </div>
           )}
         </div>
       )}
 
       {plans.length > 0 && (
-        <p className="mt-3 px-1 text-[12.5px] leading-snug text-white/56">
+        <p className="mt-3 px-1 text-[12.5px] leading-snug t-soft">
           <span className="text-white/78">{plans.length} {plans.length === 1 ? "parcelamento já vinha de antes" : "parcelamentos já vinham de antes"}.</span>{" "}
           As parcelas pagas antes desta fatura não são lançadas. A cobrança continua daqui pra frente.
         </p>
@@ -690,7 +690,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
                 aria-label={item.selected ? "Desmarcar" : "Marcar"}
                 className={cn(
                   "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors",
-                  item.selected ? "border-white bg-white text-[#0B0B0B]" : "border-white/25",
+                  item.selected ? "willo-invert" : "border-white/25",
                 )}
               >
                 {item.selected && <Check className="h-3 w-3" strokeWidth={3} />}
@@ -712,7 +712,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
                     </span>
                   )}
                 </span>
-                <span className="mt-0.5 flex items-center gap-1 text-[11.5px] text-white/56">
+                <span className="mt-0.5 flex items-center gap-1 text-[11.5px] t-soft">
                   {day && <span className="shrink-0 tabular-nums">{day}</span>}
                   <span className="min-w-0 flex-1 truncate">{item.category}</span>
                   {item.confidence !== undefined && item.confidence < 0.8 && <ConfidenceBadge confidence={item.confidence} />}
@@ -721,14 +721,14 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
               <p className={cn("shrink-0 text-[14px] font-semibold tabular-nums", isIn || isRefund ? "text-willo-green-ink" : "text-white")}>
                 {isIn || isRefund ? "+" : "−"}{fmtMoney(Math.abs(item.amount))}
               </p>
-              <button type="button" onClick={() => removeItem(idx)} aria-label="Remover" className="-mr-1 shrink-0 p-1 text-white/38">
+              <button type="button" onClick={() => removeItem(idx)} aria-label="Remover" className="-mr-1 shrink-0 p-1 t-faint">
                 <X className="h-3.5 w-3.5" />
               </button>
             </motion.div>
           );
         })}
       </div>
-      <p className="mt-3 px-2 text-center text-[12px] text-white/50">Toque em um lançamento para editar nome, categoria e data.</p>
+      <p className="mt-3 px-2 text-center text-[12px] t-soft">Toque em um lançamento para editar nome, categoria e data.</p>
 
       <ItemEditSheet
         item={editing !== null && items[editing] ? { index: editing, data: items[editing] } : null}
@@ -813,7 +813,7 @@ export default function InvoiceUploadReviewModal({
                 afterwards it is two of everything and somebody has to delete by hand. */}
             {alreadyImported && (
               <div className="mt-3 flex items-start gap-2.5 rounded-[20px] border border-amber-300/25 bg-amber-300/[0.08] px-4 py-3">
-                <AlertTriangle className="mt-0.5 h-[18px] w-[18px] shrink-0 text-amber-300" />
+                <AlertTriangle className="mt-0.5 h-[18px] w-[18px] shrink-0 text-willo-amber" />
                 <p className="text-[13px] leading-snug text-white/82">
                   <span className="font-semibold text-white">Essa fatura já foi importada</span> em{" "}
                   {new Date(alreadyImported.createdAt).toLocaleDateString("pt-BR")}, com{" "}

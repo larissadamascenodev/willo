@@ -159,7 +159,7 @@ const GestaoFinanceira = () => {
           </div>
         ) : bankAccounts.length === 0 ? (
           <div className="rounded-[22px] willo-glass border border-white/[0.08] p-8 text-center">
-            <Landmark className="w-8 h-8 text-white/45 mx-auto mb-3" />
+            <Landmark className="w-8 h-8 t-softer mx-auto mb-3" />
             <p className="text-sm text-muted-foreground mb-1">Nenhuma conta cadastrada</p>
             <p className="text-xs text-muted-foreground/60 mb-4">Crie sua primeira conta para começar</p>
             <Button

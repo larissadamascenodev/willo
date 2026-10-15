@@ -117,13 +117,13 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[12px] text-white/50">Cartões de crédito</p>
+          <p className="text-[12px] t-soft">Cartões de crédito</p>
           {/* What you owe is the figure; the limit is context underneath it. The two
               used to share the row as equals, which made neither the headline. */}
           <p className="mt-1.5 truncate text-[32px] font-extrabold leading-none tracking-[-0.035em] tabular-nums text-white">
             {fmt(summary.invoiceTotal)}
           </p>
-          <p className={`mt-1.5 truncate text-[12px] ${summary.allPaid ? "text-white/50" : "text-amber-300/90"}`}>
+          <p className={`mt-1.5 truncate text-[12px] ${summary.allPaid ? "t-soft" : "text-amber-300/90"}`}>
             {summary.invoiceTotal === 0
               ? "Sem fatura este mês"
               : summary.allPaid
@@ -133,7 +133,7 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
                   : "A pagar"}
           </p>
         </div>
-        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-white/35" />
+        <ChevronRight className="mt-1 h-4 w-4 shrink-0 t-faint" />
       </div>
 
       {/* The limit as a bar rather than a ring: a 52px ring reading "15%" never said
@@ -146,7 +146,7 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
           transition={{ duration: 0.7, ease: "easeOut" }}
         />
       </div>
-      <p className="mt-2.5 text-[12.5px] text-white/55">
+      <p className="mt-2.5 text-[12.5px] t-soft">
         <span className="font-semibold text-white tabular-nums">{fmt(summary.available)}</span> livres
         {" "}de <span className="tabular-nums">{fmt(summary.limit)}</span>
       </p>
@@ -156,12 +156,12 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
           <div key={card.id} className={`flex items-center gap-2.5 py-2.5 ${i > 0 ? "border-t border-white/[0.05]" : ""}`}>
             <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: cardHex(card.color) }} />
             <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-white">{card.name}</span>
-            <span className="shrink-0 whitespace-nowrap text-[11.5px] text-white/45 tabular-nums">
+            <span className="shrink-0 whitespace-nowrap text-[11.5px] t-softer tabular-nums">
               {invoice?.isPaid ? "paga" : due.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
             </span>
             <span
               className={`w-[88px] shrink-0 text-right text-[13.5px] font-bold tabular-nums ${
-                invoice?.isPaid ? "text-white/45 line-through" : "text-white"
+                invoice?.isPaid ? "t-softer line-through" : "text-white"
               }`}
             >
               {fmt(invoice?.total ?? 0)}

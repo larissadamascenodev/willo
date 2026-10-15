@@ -103,11 +103,11 @@ const AccountCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClo
               {name.trim() ? initials(name) : <TypeIcon className="h-5 w-5" />}
             </motion.span>
             <div className="min-w-0 flex-1">
-              <p className={cn("truncate text-[17px] font-semibold", name.trim() ? "text-white" : "text-white/45")}>{name.trim() || "Nome da conta"}</p>
+              <p className={cn("truncate text-[17px] font-semibold", name.trim() ? "text-white" : "t-softer")}>{name.trim() || "Nome da conta"}</p>
               <p className="text-[13px] text-white/62">{TYPES.find((t) => t.value === type)!.label}</p>
             </div>
           </div>
-          <p className="relative mt-4 text-[12px] text-white/56">Saldo de hoje</p>
+          <p className="relative mt-4 text-[12px] t-soft">Saldo de hoje</p>
           <p className={cn("relative text-[28px] font-extrabold leading-tight tracking-tight tabular-nums", negative && cents > 0 ? "text-red-400" : "text-white")}>
             {negative && cents > 0 ? "−" : ""}{currencySymbol()} {plain(cents)}
           </p>
@@ -164,7 +164,7 @@ const AccountCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClo
             </button>
           </div>
         </MoneyField>
-        <p className="mt-2 px-1 text-[12px] text-white/50">Use o saldo que aparece no app do banco agora. A partir daqui, o Willo acompanha.</p>
+        <p className="mt-2 px-1 text-[12px] t-soft">Use o saldo que aparece no app do banco agora. A partir daqui, o Willo acompanha.</p>
 
         {bank ? (
           <p className="mt-6 flex items-center gap-2 px-1 text-[13px] text-white/62">

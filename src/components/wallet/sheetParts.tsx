@@ -18,7 +18,7 @@ export const PillInput = forwardRef<HTMLInputElement, React.InputHTMLAttributes<
     ref={ref}
     {...props}
     className={cn(
-      "h-12 w-full rounded-full border border-white/[0.06] willo-glass-inset px-4 text-[15px] text-white placeholder:text-white/45 focus:border-white/25 focus:outline-none",
+      "h-12 w-full rounded-full border border-white/[0.06] willo-glass-inset px-4 text-[15px] text-white placeholder:t-softer focus:border-white/25 focus:outline-none",
       props.className,
     )}
   />
@@ -93,8 +93,8 @@ export function MoneyField({ cents, onChange, chips, negative = false, children 
   return (
     <div className="rounded-[22px] border border-white/[0.08] willo-glass p-5">
       <label className="relative mx-auto flex w-fit items-baseline gap-1.5">
-        <span className="text-[20px] font-bold text-white/56">{negative ? `−${currencySymbol()}` : currencySymbol()}</span>
-        <span className={cn("text-[40px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "text-white/45" : negative ? "text-red-400" : "text-white")}>
+        <span className="text-[20px] font-bold t-soft">{negative ? `−${currencySymbol()}` : currencySymbol()}</span>
+        <span className={cn("text-[40px] font-extrabold leading-none tracking-tight tabular-nums", cents === 0 ? "t-softer" : negative ? "text-red-400" : "text-white")}>
           {(cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
         <input
@@ -114,7 +114,7 @@ export function MoneyField({ cents, onChange, chips, negative = false, children 
               onClick={() => onChange(v * 100)}
               className={cn(
                 "rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
-                cents === v * 100 ? "bg-white text-[#0B0B0B]" : "bg-white/[0.06] text-white/74",
+                cents === v * 100 ? "willo-invert" : "bg-white/[0.06] text-white/74",
               )}
             >
               {fmtShort(v)}
@@ -140,7 +140,7 @@ export function DayGrid({ value, onChange, mark }: { value: number; onChange: (d
             onClick={() => onChange(d)}
             className={cn(
               "relative flex h-10 items-center justify-center rounded-full text-[14px] font-semibold tabular-nums transition-colors",
-              selected ? "bg-white text-[#0B0B0B]" : "text-white/82 active:bg-white/10",
+              selected ? "willo-invert" : "text-white/82 active:bg-white/10",
             )}
           >
             {d}

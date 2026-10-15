@@ -119,7 +119,7 @@ function CategoriesAndLeaks({ data }: { data: RaioXData }) {
                   </div>
                   <div className="ml-12 mt-2 space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="w-10 shrink-0 text-[10px] text-white/50">média</span>
+                      <span className="w-10 shrink-0 text-[10px] t-soft">média</span>
                       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
                         <div className="h-full rounded-full bg-white/30" style={{ width: `${(c.average / scale) * 100}%` }} />
                       </div>
@@ -153,7 +153,7 @@ function CategoriesAndLeaks({ data }: { data: RaioXData }) {
             {drains.slice(0, 5).map((d) => (
               <div key={d.id} className="flex items-start gap-3">
                 <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-300/10">
-                  <d.Icon className="h-4 w-4 text-amber-300" />
+                  <d.Icon className="h-4 w-4 text-willo-amber" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14px] text-white">{d.title}</p>
@@ -216,7 +216,7 @@ function CashFlowReading({ data }: { data: RaioXData }) {
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[12px] text-white/62">Comprometido do que entrou</p>
-            <p className={cn("truncate text-[32px] font-extrabold leading-tight tracking-tight tabular-nums", burn >= 1 ? "text-red-400" : burn >= 0.85 ? "text-amber-300" : "text-white")}>
+            <p className={cn("truncate text-[32px] font-extrabold leading-tight tracking-tight tabular-nums", burn >= 1 ? "text-red-400" : burn >= 0.85 ? "text-willo-amber" : "text-white")}>
               {Math.round(Math.min(burn, 9.99) * 100)}%
             </p>
           </div>

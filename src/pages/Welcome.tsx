@@ -28,7 +28,7 @@ const Welcome = () => {
           className="flex flex-col items-center gap-3"
         >
           <img src={wordmarkOnDark} alt="Willo" className="h-6 w-auto animate-pulse" style={{ filter: "brightness(0) invert(1)" }} />
-          <span className="text-white/56 text-sm">Carregando...</span>
+          <span className="t-soft text-sm">Carregando...</span>
         </motion.div>
       </div>
     );

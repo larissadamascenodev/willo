@@ -196,7 +196,7 @@ const CardCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClose:
             </motion.div>
           )}
         </AnimatePresence>
-        <p className="mt-2 px-1 text-[12px] leading-snug text-white/50">
+        <p className="mt-2 px-1 text-[12px] leading-snug t-soft">
           Compras feitas depois do dia {closing} entram na fatura seguinte. Confira as datas no app do seu banco.
         </p>
 

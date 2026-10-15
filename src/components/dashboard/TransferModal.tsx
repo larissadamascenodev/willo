@@ -278,7 +278,7 @@ const TransferModal = ({ open, onClose, onSuccess }: Props) => {
                           <div className="flex items-center gap-2">
                             <span>{acc.name}</span>
                             {acc.type === "investment" && (
-                              <span className="text-[9px] bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded-full">Investimento</span>
+                              <span className="text-[9px] bg-amber-500/15 text-willo-amber px-1.5 py-0.5 rounded-full">Investimento</span>
                             )}
                           </div>
                         </SelectItem>
@@ -306,7 +306,7 @@ const TransferModal = ({ open, onClose, onSuccess }: Props) => {
                     animate={{ opacity: 1, y: 0 }}
                     className="rounded-xl bg-amber-500/[0.08] border border-amber-500/20 p-3 text-center"
                   >
-                    <p className="text-xs text-amber-400 font-medium">
+                    <p className="text-xs text-willo-amber font-medium">
                       💰 Será registrado como investimento
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-1">

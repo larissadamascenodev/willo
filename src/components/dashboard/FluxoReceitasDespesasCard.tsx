@@ -74,12 +74,12 @@ const FluxoReceitasDespesasCard = memo(({ receitas, despesas, month, isCurrentMo
         className="flex w-full items-center justify-between gap-3 text-left"
       >
         <p className="truncate text-[14px] text-white/66">
-          Receitas e despesas <span className="text-white/35">·</span> {isCurrentMonth ? "este mês" : "no mês"}
+          Receitas e despesas <span className="t-faint">·</span> {isCurrentMonth ? "este mês" : "no mês"}
         </p>
-        <ChevronRight className="h-4 w-4 shrink-0 text-white/35" />
+        <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
       </button>
 
-      <p className="mt-2 text-[13px] leading-snug text-white/55">{verdict}</p>
+      <p className="mt-2 text-[13px] leading-snug t-soft">{verdict}</p>
 
       <div className="mt-3.5 space-y-3.5">
         <Flow label="Entrada" amount={receitas} tone="receita" sign="" to="/detalhe/receitas" delay={0.05} />

@@ -23,7 +23,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         nav_button_next: "absolute right-0",
         table: "w-full border-collapse mt-1",
         head_row: "flex",
-        head_cell: "text-white/50 rounded-md w-10 font-semibold text-[11px] uppercase",
+        head_cell: "t-soft rounded-md w-10 font-semibold text-[11px] uppercase",
         row: "flex w-full mt-1",
         cell: "h-10 w-10 text-center text-[14px] p-0 relative focus-within:relative focus-within:z-20",
         day: "h-10 w-10 p-0 font-medium text-[14px] text-white/85 aria-selected:opacity-100 rounded-full hover:bg-white/[0.08] active:scale-95 transition-transform",

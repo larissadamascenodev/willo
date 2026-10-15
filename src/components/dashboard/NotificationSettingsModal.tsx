@@ -99,7 +99,7 @@ export default function NotificationSettingsModal({ open, onOpenChange }: Props)
 
         {loading || !settings ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="h-5 w-5 animate-spin text-white/56" />
+            <Loader2 className="h-5 w-5 animate-spin t-soft" />
           </div>
         ) : (
           <div className="mt-5 divide-y divide-white/[0.06] overflow-hidden rounded-[22px] border border-white/[0.08] willo-glass">
@@ -128,7 +128,7 @@ export default function NotificationSettingsModal({ open, onOpenChange }: Props)
                                 key={opt.value}
                                 type="button"
                                 onClick={() => setSettings({ ...settings, bill_due_days_before: opt.value })}
-                                className={cn("h-9 rounded-full text-[12.5px] font-semibold transition-colors", selected ? "bg-white text-[#0B0B0B]" : "text-white/70")}
+                                className={cn("h-9 rounded-full text-[12.5px] font-semibold transition-colors", selected ? "willo-invert" : "text-white/70")}
                               >
                                 {opt.label}
                               </button>

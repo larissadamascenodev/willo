@@ -136,7 +136,7 @@ export default function GmailConnection() {
           <p className="text-[14px] font-semibold text-white">
             {status.connected ? "Gmail conectado" : "Conectar o Gmail"}
           </p>
-          <p className="mt-0.5 truncate text-[12px] text-white/48">
+          <p className="mt-0.5 truncate text-[12px] t-softer">
             {status.connected
               ? status.email
               : status.configurado
@@ -151,7 +151,7 @@ export default function GmailConnection() {
             onClick={() => setConfirmOff((v) => !v)}
             disabled={busy}
             aria-label="Desconectar o Gmail"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-white/60 active:opacity-60 disabled:opacity-40"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] t-soft active:opacity-60 disabled:opacity-40"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
           </button>
@@ -203,7 +203,7 @@ export default function GmailConnection() {
       </AnimatePresence>
 
       {!status.connected && status.configurado && (
-        <p className="mt-2.5 text-[11.5px] leading-snug text-white/35">
+        <p className="mt-2.5 text-[11.5px] leading-snug t-faint">
           O Willo pede permissão só de leitura. Ele não envia, não apaga e não altera nada no seu email.
         </p>
       )}

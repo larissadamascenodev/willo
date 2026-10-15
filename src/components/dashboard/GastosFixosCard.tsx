@@ -137,7 +137,7 @@ const GastosFixosCard = memo(({ compact = false }: { compact?: boolean }) => {
     return (
       <div className="rounded-[22px] border border-white/[0.08] willo-glass p-4">
         <h2 className="text-[16px] font-semibold text-white">Gastos e receitas fixas</h2>
-        <p className="text-[12px] text-white/56">Contas fixas e assinaturas do mês</p>
+        <p className="text-[12px] t-soft">Contas fixas e assinaturas do mês</p>
         <div className="mt-4 flex items-center gap-3 rounded-[16px] bg-white/[0.04] px-3.5 py-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
             <Repeat className="h-4 w-4 text-white/66" />
@@ -178,12 +178,12 @@ const GastosFixosCard = memo(({ compact = false }: { compact?: boolean }) => {
         <div className="flex items-start justify-between gap-3 px-4 pt-4">
           <div>
             <h2 className="text-[16px] font-semibold text-white">Gastos e receitas fixas</h2>
-            <p className="text-[12px] text-white/56">
+            <p className="text-[12px] t-soft">
               {paidCount} de {filtered.length} {activeTab === "receita" ? "recebidas" : "pagas"} este mês
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[11px] text-white/56">Total/mês</p>
+            <p className="text-[11px] t-soft">Total/mês</p>
             <p className={`text-[17px] font-bold tabular-nums ${activeTab === "receita" ? "text-willo-green-ink" : "text-white"}`}>{fmt(total)}</p>
           </div>
         </div>
@@ -246,7 +246,7 @@ const GastosFixosCard = memo(({ compact = false }: { compact?: boolean }) => {
                   <BrandIcon name={sub.name} category={sub.category} brand={brand} customCategories={customCats} />
                   <div className="min-w-0 flex-1">
                     <p className={`truncate text-[15px] font-medium ${sub.isPaidThisMonth ? "text-white/70" : "text-white"}`}>{sub.name}</p>
-                    <p className={`text-[12px] ${dueSoon ? "text-amber-300/90" : "text-white/56"}`}>
+                    <p className={`text-[12px] ${dueSoon ? "text-amber-300/90" : "t-soft"}`}>
                       {sub.isPaidThisMonth
                         ? activeTab === "receita" ? "Recebido este mês" : "Pago este mês"
                         : `Dia ${sub.dueDay} · ${days === 0 ? "hoje" : days === 1 ? "amanhã" : `em ${days} dias`}`}
@@ -265,7 +265,7 @@ const GastosFixosCard = memo(({ compact = false }: { compact?: boolean }) => {
                 </motion.button>
               );
             }) : (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-6 text-center text-[13px] text-white/56">
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-6 text-center text-[13px] t-soft">
                 Nenhuma {activeTab === "receita" ? "receita recorrente" : "despesa recorrente"}
               </motion.p>
             )}
@@ -316,7 +316,7 @@ const GastosFixosCard = memo(({ compact = false }: { compact?: boolean }) => {
                   onClick={() => handleEdit(selectedSub)}
                   className="w-full flex items-center gap-3 rounded-[20px] bg-white/[0.05] hover:bg-white/[0.08] px-4 py-3.5 text-left transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-full bg-white text-[#0B0B0B] flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-full willo-invert flex items-center justify-center shrink-0">
                     <Pencil className="w-4 h-4" />
                   </div>
                   <div>

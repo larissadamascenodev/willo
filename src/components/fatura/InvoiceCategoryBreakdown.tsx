@@ -31,7 +31,7 @@ export default function InvoiceCategoryBreakdown({ categories, total }: Props) {
   return (
     <div className="mt-4 rounded-[22px] border border-white/[0.08] willo-glass p-5">
       <div className="flex items-baseline justify-between">
-        <p className="text-[12px] font-semibold uppercase tracking-wider text-white/50">Gastos por categoria</p>
+        <p className="text-[12px] font-semibold uppercase tracking-wider t-soft">Gastos por categoria</p>
         <p className="text-[13px] font-semibold text-white tabular-nums">{formatCurrency(total)}</p>
       </div>
 
@@ -88,7 +88,7 @@ export default function InvoiceCategoryBreakdown({ categories, total }: Props) {
                         style={{ background: `hsl(${color})` }}
                       />
                     </span>
-                    <span className="shrink-0 text-[11px] tabular-nums text-white/50">
+                    <span className="shrink-0 text-[11px] tabular-nums t-soft">
                       {cat.percentage.toFixed(0)}% · {cat.count} {cat.count === 1 ? "compra" : "compras"}
                     </span>
                   </div>

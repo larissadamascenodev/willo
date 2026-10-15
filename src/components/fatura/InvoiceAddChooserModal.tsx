@@ -40,7 +40,7 @@ const OptionRow = ({ option, index }: { option: Option; index: number }) => (
       <span className="block text-[15px] font-semibold text-white">{option.label}</span>
       <span className="block text-[12.5px] leading-snug text-white/62">{option.description}</span>
     </span>
-    <ChevronRight className="h-4 w-4 shrink-0 text-white/38" />
+    <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
   </motion.button>
 );
 
@@ -159,7 +159,7 @@ export default function InvoiceAddChooserModal({ open, onClose, onManual, onScan
         </AnimatePresence>
 
         {inScanStep && (
-          <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-[12px] text-white/45">
+          <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-[12px] t-softer">
             <Sparkles className="h-3.5 w-3.5" /> Você confere tudo antes de importar
           </p>
         )}

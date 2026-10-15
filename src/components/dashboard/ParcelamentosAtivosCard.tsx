@@ -127,9 +127,9 @@ const ParcelamentosAtivosCard = ({ compact = false }: { compact?: boolean }) => 
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-[16px] font-semibold text-white">Parcelamentos</h3>
-            <p className="text-[12px] text-white/56">Compras parceladas no cartão e na conta</p>
+            <p className="text-[12px] t-soft">Compras parceladas no cartão e na conta</p>
           </div>
-          <ChevronRight className="h-4 w-4 text-white/45" />
+          <ChevronRight className="h-4 w-4 t-softer" />
         </div>
         <div className="mt-4 flex items-center gap-3 rounded-[16px] bg-white/[0.04] px-3.5 py-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
@@ -169,11 +169,11 @@ const ParcelamentosAtivosCard = ({ compact = false }: { compact?: boolean }) => 
       <button onClick={() => navigate("/parcelamentos")} className="flex w-full items-center justify-between">
         <div className="text-left">
           <h3 className="text-[16px] font-semibold text-white">Parcelamentos</h3>
-          <p className="text-[12px] text-white/56">
+          <p className="text-[12px] t-soft">
             {items.length} {items.length === 1 ? "compra parcelada" : "compras parceladas"}
           </p>
         </div>
-        <ChevronRight className="h-4 w-4 text-white/45" />
+        <ChevronRight className="h-4 w-4 t-softer" />
       </button>
 
       {/* Summary */}
