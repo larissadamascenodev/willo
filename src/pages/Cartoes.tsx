@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { CreditCard, Plus } from "lucide-react";
@@ -29,6 +29,9 @@ import {
  * Every figure is the open invoice, the one still to be paid. A credit card is a bill,
  * not a history.
  */
+
+/** How far the page scrolls before the pinned summary has fully receded. */
+const PIN_TRAVEL = 150;
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
@@ -106,9 +109,58 @@ const Cartoes = () => {
     };
   }, [rows, items]);
 
+  /* The summary does not scroll. It stays where it is and recedes — blurring,
+     dimming, sinking a little — while the cards travel up over it, the way the home
+     screen's greeting behaves under its own cards. */
+  const summaryRef = useRef<HTMLDivElement>(null);
+  const [summaryHeight, setSummaryHeight] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  const markerRef = useRef<HTMLDivElement>(null);
+  const [summaryTop, setSummaryTop] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = summaryRef.current;
+    if (!el) return;
+    /* Where the block would have sat if it still scrolled, read off a marker left in
+       the flow. Guessing the number — the back row's height plus the safe area —
+       drifts the moment either changes, and the gap shows. */
+    const measure = () => {
+      setSummaryHeight(el.offsetHeight);
+      const marker = markerRef.current;
+      if (marker) setSummaryTop(marker.getBoundingClientRect().top + window.scrollY);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [loading, rows.length]);
+
+  useEffect(() => {
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        setProgress(Math.min(Math.max(window.scrollY / PIN_TRAVEL, 0), 1));
+      });
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
+
   return (
     <div className="mx-auto max-w-lg pb-28 pt-4">
-      <div className="flex h-11 items-center">
+      {/* Over the pinned summary as it leaves, like the cards. */}
+      <div className="relative z-20 flex h-11 items-center">
         {/* Cartões is a page off the dashboard, and that is where back goes. */}
         <BackButton to="/" />
       </div>
@@ -136,6 +188,21 @@ const Cartoes = () => {
         </div>
       ) : (
         <>
+          {/* ══ Pinned: what everything adds up to ══ */}
+          <div ref={markerRef} aria-hidden="true" />
+          <div
+            ref={summaryRef}
+            className="fixed inset-x-0 z-10 mx-auto max-w-lg px-4"
+            style={{
+              top: summaryTop,
+              filter: progress > 0.001 ? `blur(${(progress * 12).toFixed(2)}px)` : undefined,
+              opacity: 1 - progress * 0.8,
+              transform: `scale(${1 - progress * 0.03})`,
+              transformOrigin: "50% 0%",
+              willChange: "filter, opacity, transform",
+              pointerEvents: progress > 0.4 ? "none" : undefined,
+            }}
+          >
           {/* ══ The figure itself, with nothing drawn around it ══ */}
           <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -208,8 +275,11 @@ const Cartoes = () => {
               <motion.span
                 className="h-full rounded-full"
                 style={{
-                  background: `linear-gradient(180deg, ${FREE_LIMIT_HEX} 0%, ${FREE_LIMIT_HEX} 55%, rgb(0 0 0 / 0.14) 100%)`,
-                  boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.35)",
+                  /* Flat, with light only on the top edge. The gradient used to end in
+                     black, which dirtied the bottom of a seven-pixel bar and made the
+                     green look switched off. */
+                  background: FREE_LIMIT_HEX,
+                  boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.45)",
                   minWidth: sums.disponivel > 0 ? 6 : 0,
                 }}
                 initial={{ width: 0 }}
@@ -249,9 +319,13 @@ const Cartoes = () => {
               Limite total {fmt(sums.limite)}
             </p>
           </motion.div>
+          </div>
+
+          {/* The room the pinned block takes, so the cards begin under it. */}
+          <div aria-hidden="true" style={{ height: summaryHeight }} />
 
           {/* ══ The cards ══ */}
-          <div className="mt-5 space-y-3">
+          <div className="relative z-20 mt-6 space-y-3">
             {rows.map((r, i) => (
               <CardFaceTile
                 key={r.card.id}

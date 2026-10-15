@@ -2,6 +2,8 @@ import { motion } from "framer-motion";
 import { useLongPress } from "@/hooks/useLongPress";
 import { getCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
+import { shade, withAlpha } from "@/lib/tone";
+import BankMark from "./BankMark";
 
 /**
  * One card, as an object you recognise.
@@ -24,57 +26,11 @@ const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curren
  * first and sank into the ground: on a near-black page a neutral has to be lit to be
  * seen at all. So the dim half is white held back, and the half that matters — the
  * room you still have — is the green this app says every good number in.
- * Red is kept for having none left.
  */
 export const USED_LIMIT_HEX = "rgb(255 255 255 / 0.42)";
 export const FREE_LIMIT_HEX = "#C8F36D";
 
-/**
- * …except on a card that is itself green. PicPay and Inter bring their own greens, and
- * two greens side by side on one rule say nothing — so when the bank's hue comes near
- * ours, what is left is drawn in white instead. The rule still reads as a pair; only
- * which pair changes.
- */
-export function freeToneFor(cardHex: string) {
-  const n = cardHex.replace("#", "");
-  const full = n.length === 3 ? n.split("").map((c) => c + c).join("") : n;
-  const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) / 255);
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  if (max === min) return FREE_LIMIT_HEX;
-  const d = max - min;
-  const hue =
-    (max === r ? ((g - b) / d + (g < b ? 6 : 0)) : max === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60;
-  const apart = Math.abs(hue - 80);
-  return Math.min(apart, 360 - apart) < 85 ? "#FFFFFF" : FREE_LIMIT_HEX;
-}
-
-/**
- * Mixes a hex colour towards white (amount > 0) or black (amount < 0).
- *
- * Inside a single card, light and dark of the bank's own colour are the pair: used
- * against free, this invoice against the ones still coming. Two tones of one hue agree
- * with any bank — which a second hue, however well chosen, does not.
- */
-export function shade(hex: string, amount: number) {
-  const n = hex.replace("#", "");
-  const full = n.length === 3 ? n.split("").map((c) => c + c).join("") : n;
-  const to = amount < 0 ? 0 : 255;
-  const t = Math.min(Math.abs(amount), 1);
-  const mix = (c: number) => Math.round(c + (to - c) * t);
-  const [r, g, b] = [0, 2, 4].map((i) => mix(parseInt(full.slice(i, i + 2), 16)));
-  return `rgb(${r} ${g} ${b})`;
-}
-
-/** The same colour at a given opacity, whether it arrived as #hex or as rgb(). */
-export function withAlpha(color: string, alpha: number) {
-  const parsed = color.match(/rgba?\((\d+)[\s,]+(\d+)[\s,]+(\d+)/);
-  if (parsed) return `rgb(${parsed[1]} ${parsed[2]} ${parsed[3]} / ${alpha})`;
-  const n = color.replace("#", "");
-  const full = n.length === 3 ? n.split("").map((c) => c + c).join("") : n;
-  const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
-  return `rgb(${r} ${g} ${b} / ${alpha})`;
-}
+export { shade, withAlpha } from "@/lib/tone";
 
 /**
  * The badge that says where an invoice stands, in the card's own colour: a light
@@ -130,40 +86,25 @@ export default function CardFaceTile({
       onPointerLeave={press.onPointerLeave}
       onContextMenu={(e) => e.preventDefault()}
       onClick={press.guard(onOpen)}
-      style={{ boxShadow: "0 24px 50px -32px rgb(0 0 0 / 0.95), inset 0 1px 0 rgb(255 255 255 / 0.07)" }}
-      className="relative cursor-pointer overflow-hidden rounded-[24px] border border-white/[0.09] willo-glass px-[18px] pb-[18px] pt-[17px] transition-transform duration-200 active:scale-[0.985]"
+      style={{
+        background: "rgba(255, 255, 255, 0.055)",
+        backdropFilter: "blur(26px) saturate(140%)",
+        WebkitBackdropFilter: "blur(26px) saturate(140%)",
+        boxShadow: "0 24px 50px -32px rgb(0 0 0 / 0.95), inset 0 1px 0 rgb(255 255 255 / 0.08)",
+      }}
+      className="relative cursor-pointer overflow-hidden rounded-[24px] border border-white/[0.10] px-[18px] pb-[18px] pt-[17px] transition-transform duration-200 active:scale-[0.985]"
     >
-      {/* The card's colour as light inside the glass, never as a field of paint */}
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute -left-16 -top-24 h-52 w-60 rounded-full blur-[52px]"
-        style={{ background: hex, opacity: 0.26 }}
-      />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute -bottom-20 -right-14 h-44 w-44 rounded-full blur-[54px]"
-        style={{ background: hex, opacity: 0.12 }}
-      />
+      {/* Glass and nothing else. The bank's colour appears three times — on its mark,
+          on the limit rule and on the two figures under it — and those three are
+          enough to tell one card from another without painting the whole thing. */}
       <span
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-6 top-0 h-px"
-        style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)" }}
+        style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)" }}
       />
 
       <div className="relative flex items-center gap-3">
-        {/* the chip, in the bank's colour */}
-        <span
-          className="relative flex h-[30px] w-[38px] shrink-0 overflow-hidden rounded-[8px]"
-          style={{
-            background: `linear-gradient(145deg, ${shade(hex, 0.22)} 0%, ${hex} 58%, ${shade(hex, -0.28)} 100%)`,
-            boxShadow: `0 8px 20px -10px ${hex}, inset 0 1px 0 rgb(255 255 255 / 0.35)`,
-          }}
-        >
-          <span className="absolute inset-x-[6px] top-1/2 h-px -translate-y-1/2 bg-black/25" />
-          <span className="absolute inset-y-[6px] left-1/2 w-px -translate-x-1/2 bg-black/25" />
-          <span className="absolute inset-y-[6px] left-[11px] w-px bg-black/15" />
-          <span className="absolute inset-y-[6px] right-[11px] w-px bg-black/15" />
-        </span>
+        <BankMark name={card.name} hex={hex} />
 
         <div className="min-w-0 flex-1">
           <p className="truncate text-[16px] font-bold tracking-[-0.01em] text-white">{card.name}</p>
@@ -199,14 +140,11 @@ export default function CardFaceTile({
         {owed > 0 ? status.label : "Sem fatura em aberto"}
       </p>
 
-      {/* The same two tones as everywhere else: what is spent in the card's own
-          colour, what is left in the green this app says every good number in. */}
+      {/* The card's colour for what is spent, its lighter tone for what is left. */}
       <div className="relative mt-4 flex h-[7px] gap-[3px]">
         <motion.span
           className="h-full rounded-full"
           style={{
-            /* A limit entirely spent is a bar entirely filled. Red says something
-               went wrong, and nothing went wrong — the card is simply full. */
             background: hex,
             boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.25)",
             minWidth: card.used > 0 ? 6 : 0,
@@ -230,7 +168,7 @@ export default function CardFaceTile({
 
       <div className="relative mt-2 flex items-baseline justify-between gap-3">
         <span className="truncate text-[11.5px] t-softer">
-          Usado <span className="font-semibold tabular-nums text-white/75">{fmt(card.used)}</span>
+          Usado <span className="font-semibold tabular-nums" style={{ color: hex }}>{fmt(card.used)}</span>
         </span>
         <span className="shrink-0 truncate text-[11.5px] t-softer">
           Disponível{" "}
@@ -244,4 +182,5 @@ export default function CardFaceTile({
       </div>
     </motion.div>
   );
+
 }
