@@ -49,6 +49,23 @@ export function freeToneFor(cardHex: string) {
   return Math.min(apart, 360 - apart) < 85 ? "#FFFFFF" : FREE_LIMIT_HEX;
 }
 
+/**
+ * Mixes a hex colour towards white (amount > 0) or black (amount < 0).
+ *
+ * Inside a single card, light and dark of the bank's own colour are the pair: used
+ * against free, this invoice against the ones still coming. Two tones of one hue agree
+ * with any bank — which a second hue, however well chosen, does not.
+ */
+export function shade(hex: string, amount: number) {
+  const n = hex.replace("#", "");
+  const full = n.length === 3 ? n.split("").map((c) => c + c).join("") : n;
+  const to = amount < 0 ? 0 : 255;
+  const t = Math.min(Math.abs(amount), 1);
+  const mix = (c: number) => Math.round(c + (to - c) * t);
+  const [r, g, b] = [0, 2, 4].map((i) => mix(parseInt(full.slice(i, i + 2), 16)));
+  return `rgb(${r} ${g} ${b})`;
+}
+
 export interface CardFace {
   id: string;
   name: string;
@@ -76,7 +93,7 @@ export default function CardFaceTile({
   const press = useLongPress(onHold);
   const usedPct = card.limit > 0 ? Math.min((card.used / card.limit) * 100, 100) : 0;
   const available = Math.max(card.limit - card.used, 0);
-  const freeTone = freeToneFor(hex);
+  const freeTone = shade(hex, 0.58);
 
   return (
     <motion.div

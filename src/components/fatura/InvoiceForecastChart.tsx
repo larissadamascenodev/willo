@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import { MONTH_SHORT, formatCurrency } from "@/pages/FaturaCartao";
 import type { Invoice } from "@/services/invoiceService";
 import { cn } from "@/lib/utils";
+import { shade } from "@/components/wallet/CardFaceTile";
 
 /**
  * What this card is about to ask for.
@@ -26,6 +27,8 @@ interface Props {
   onSelect: (month: number, year: number) => void;
   /** Closing day, so "open" follows the billing cycle and not the calendar. */
   closingDay?: number | null;
+  /** The card's own colour: this strip is about one card, so it wears it. */
+  hex: string;
 }
 
 type Status = "paga" | "aberta" | "futura";
@@ -44,7 +47,7 @@ function short(v: number) {
 }
 
 export default function InvoiceForecastChart({
-  invoices, selectedMonth, selectedYear, onSelect, closingDay,
+  invoices, selectedMonth, selectedYear, onSelect, closingDay, hex,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -109,7 +112,7 @@ export default function InvoiceForecastChart({
     const el = scrollRef.current;
     const bar = el?.querySelector<HTMLElement>(`[data-period="${openPeriod}"]`);
     if (!el || !bar) return;
-    el.scrollLeft = bar.offsetLeft - 16;
+    el.scrollLeft = bar.offsetLeft;
     parked.current = true;
   }, [bars, openPeriod]);
 
@@ -158,13 +161,14 @@ export default function InvoiceForecastChart({
 
       <div
         ref={scrollRef}
-        className="-mx-4 mt-5 flex select-none items-end gap-2 overflow-x-auto px-4 pb-1 scrollbar-none"
+        className="mt-5 flex select-none items-end gap-2 overflow-x-auto pb-1 scrollbar-none"
         style={{
           cursor: dragging ? "grabbing" : "grab",
-          /* The months either side of the window are pulled, not cut: a bar sliced in
-             half at the edge reads as a drawing mistake rather than as more to come. */
-          maskImage: "linear-gradient(90deg, transparent 0, #000 15px, #000 calc(100% - 15px), transparent 100%)",
-          WebkitMaskImage: "linear-gradient(90deg, transparent 0, #000 15px, #000 calc(100% - 15px), transparent 100%)",
+          /* Only the far side fades, to say there is more ahead. The near side is a
+             hard edge: the open invoice is parked flush against it, and a sliver of
+             last month peeking out from behind it reads as a drawing mistake. */
+          maskImage: "linear-gradient(90deg, #000 calc(100% - 18px), transparent 100%)",
+          WebkitMaskImage: "linear-gradient(90deg, #000 calc(100% - 18px), transparent 100%)",
         }}
         onMouseDown={onDown}
         onMouseMove={onMove}
@@ -190,26 +194,39 @@ export default function InvoiceForecastChart({
                 {short(bar.amount)}
               </span>
 
-              <span className="flex h-[96px] w-full items-end">
+              <span className="relative flex h-[96px] w-full items-end">
                 <motion.span
                   initial={{ height: 0 }}
                   animate={{ height }}
                   transition={{ duration: 0.45, ease: "easeOut" }}
-                  className={cn(
-                    "w-full rounded-[9px]",
-                    bar.status === "paga" && "bg-gradient-to-t from-willo-green/55 to-willo-green",
-                    bar.status === "aberta" && "bg-gradient-to-t from-white/55 to-white",
-                    bar.status === "futura" && "bg-gradient-to-t from-white/[0.10] to-white/[0.30]",
-                    !isSelected && (isPast ? "opacity-35" : "opacity-60"),
-                  )}
+                  className="w-full rounded-[9px]"
+                  style={{
+                    /* Settled and open invoices are the card's colour at full strength;
+                       the ones still to come are the same colour, lighter. One hue, so
+                       any bank's card reads the same way. */
+                    background: bar.status === "futura" ? shade(hex, 0.55) : hex,
+                    boxShadow: isSelected ? `0 8px 22px -10px ${hex}` : undefined,
+                    opacity: isSelected ? 1 : isPast ? 0.45 : 0.72,
+                  }}
                 />
+                {/* A settled month wears its tick, so paid and open are never the
+                    same thing drawn in the same colour. */}
+                {bar.status === "paga" && bar.amount > 0 && (
+                  <span className="absolute inset-x-0 bottom-1.5 flex justify-center">
+                    <span
+                      className="flex h-[17px] w-[17px] items-center justify-center rounded-full"
+                      style={{ background: "rgb(0 0 0 / 0.35)" }}
+                    >
+                      <Check className="h-[11px] w-[11px] text-white" strokeWidth={3.4} />
+                    </span>
+                  </span>
+                )}
               </span>
 
               <span className={cn(
-                "flex items-center gap-1 text-[11px] tabular-nums transition-colors",
+                "text-[11px] tabular-nums transition-colors",
                 isSelected ? "font-bold text-white" : isPast ? "t-faint" : "t-soft",
               )}>
-                {bar.status === "paga" && <Check className="h-2.5 w-2.5 shrink-0 text-willo-green-ink" strokeWidth={3.5} />}
                 {MONTH_SHORT[bar.month - 1]}
               </span>
             </button>
@@ -219,13 +236,19 @@ export default function InvoiceForecastChart({
 
       <div className="mt-3 flex items-center gap-4 text-[11px] t-softer">
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-[3px] bg-willo-green/70" /> Paga
+          <span
+            className="flex h-3 w-3 items-center justify-center rounded-[3px]"
+            style={{ background: hex }}
+          >
+            <Check className="h-2 w-2 text-white" strokeWidth={4} />
+          </span>
+          Paga
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-[3px] bg-white/85" /> Em aberto
+          <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: hex }} /> Em aberto
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-[3px] bg-white/[0.22]" /> A vencer
+          <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: shade(hex, 0.55) }} /> A vencer
         </span>
       </div>
     </motion.section>

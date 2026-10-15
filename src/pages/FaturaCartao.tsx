@@ -3,9 +3,8 @@ import { importStatement } from "@/services/invoiceImport";
 import { processScanFile } from "@/lib/scanUpload";
 import { motion } from "framer-motion";
 import {
-  Plus, MoreVertical,
-  CalendarClock, CalendarCheck, Wallet,
-  Pencil, Undo2, Check,
+  Plus, MoreVertical, ChevronLeft, ChevronRight, Search, X,
+  Wallet, Pencil, Undo2, Check,
 } from "lucide-react";
 import BackButton from "@/components/shared/BackButton";
 import {
@@ -19,12 +18,13 @@ import { getInvoices, getInvoiceItems, getInvoicePayments, payInvoice, undoInvoi
 import { getAccounts, getCreditCards, createTransaction, updateTransaction, deleteTransaction, getTransactionById } from "@/services/transactionService";
 import type { RecurrenceScope } from "@/components/fatura/RecurrenceActionModal";
 import { cn } from "@/lib/utils";
+import { readInvoice } from "@/lib/invoice/readModel";
 import { colorFor } from "@/lib/banks";
 import InvoiceTransactionList from "@/components/fatura/InvoiceTransactionList";
 import InvoicePayModal from "@/components/fatura/InvoicePayModal";
 import InvoiceForecastChart from "@/components/fatura/InvoiceForecastChart";
 import InvoiceRecentCard from "@/components/fatura/InvoiceRecentCard";
-import { freeToneFor } from "@/components/wallet/CardFaceTile";
+import { shade } from "@/components/wallet/CardFaceTile";
 import CardEntryModal from "@/components/fatura/CardEntryModal";
 import InvoiceAddChooserModal from "@/components/fatura/InvoiceAddChooserModal";
 import InvoiceScanScreen from "@/components/fatura/InvoiceScanScreen";
@@ -141,6 +141,7 @@ const FaturaCartao = () => {
   const [tab, setTab] = useState<"geral" | "parcelados">("geral");
   const [showAddChooser, setShowAddChooser] = useState(false);
   const [recentEntry, setRecentEntry] = useState<EnrichedItem | null>(null);
+  const [entrySearch, setEntrySearch] = useState("");
 
   const currentInvoice = useMemo(
     () => invoices.find((i) => i.month === selectedMonth && i.year === selectedYear),
@@ -555,6 +556,40 @@ const FaturaCartao = () => {
     return { line, overdue: toDue < 0 && outstanding > 0 };
   }, [card, selectedMonth, selectedYear, total, outstanding]);
 
+  /** Stepping between this card's invoices, the way a month selector does. */
+  const stepMonth = (delta: number) => {
+    const d = new Date(selectedYear, selectedMonth - 1 + delta, 1);
+    setSelectedMonth(d.getMonth() + 1);
+    setSelectedYear(d.getFullYear());
+  };
+
+  /* What the invoice is made of: the part that is instalments of earlier purchases,
+     and the part bought outright this month. Refunds are counted apart, because they
+     belong to neither and would quietly shrink whichever one they were added to. */
+  const split = useMemo(() => {
+    const { lines } = readInvoice(items);
+    let parcelado = 0;
+    let avista = 0;
+    let estornos = 0;
+    for (const line of lines) {
+      if (line.amount < 0) estornos += 1;
+      else if (line.kind === "parcelado") parcelado += line.amount;
+      else avista += line.amount;
+    }
+    return { parcelado, avista, estornos, total: parcelado + avista };
+  }, [items]);
+
+  /** The search runs on the rows, so the list keeps deciding what each one is. */
+  const searchedItems = useMemo(() => {
+    const q = entrySearch.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(
+      (i) =>
+        i.transaction_name.toLowerCase().includes(q) ||
+        (i.transaction_category ?? "").toLowerCase().includes(q),
+    );
+  }, [items, entrySearch]);
+
   const invoiceStatus = useMemo(() => {
     if (!currentInvoice) return null;
     // Only show "paid" if truly no outstanding balance
@@ -610,41 +645,166 @@ const FaturaCartao = () => {
             </button>
           </div>
 
-          {/* Which invoice this list belongs to — the one thing a bare list cannot say. */}
-          <div className="px-1">
-            <p className="text-[12.5px] t-softer">{card?.name}</p>
-            <p className="mt-0.5 text-[25px] font-extrabold leading-tight tracking-[-0.03em] text-white">
-              Fatura de {MONTH_NAMES[selectedMonth - 1]}
-            </p>
-            <p className="mt-1 text-[13px] t-soft tabular-nums">
-              {formatCurrency(headline)}
-              <span className="text-white/20"> · </span>
-              {items.length} lançament{items.length === 1 ? "o" : "os"}
-            </p>
+          {/* Title and the month it belongs to, the way Transações carries its own. */}
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-[26px] font-extrabold tracking-[-0.03em] text-white">Lançamentos</h1>
+            <div className="flex shrink-0 items-center gap-1 rounded-full border border-white/[0.08] willo-glass px-1 py-1">
+              <button
+                type="button"
+                aria-label="Fatura anterior"
+                onClick={() => stepMonth(-1)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 active:bg-white/[0.06]"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="min-w-[58px] text-center text-[13px] font-semibold text-white">
+                {MONTH_SHORT[selectedMonth - 1]}
+                <span className="t-softer"> {String(selectedYear).slice(2)}</span>
+              </span>
+              <button
+                type="button"
+                aria-label="Próxima fatura"
+                onClick={() => stepMonth(1)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 active:bg-white/[0.06]"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
-          <div className="isolate grid grid-cols-2 rounded-full border border-white/[0.08] willo-glass p-1">
-            {([["geral", "Todos"], ["parcelados", "Parcelados"]] as const).map(([key, label]) => (
-              <button key={key} type="button" onClick={() => setTab(key)} className="relative h-10 rounded-full text-[14px] font-medium">
-                {tab === key && (
-                  <motion.span layoutId="entries-tab" className="pointer-events-none absolute inset-0 z-0 rounded-full willo-invert" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
-                )}
-                <span className={cn("relative z-10 transform-gpu", tab === key ? "willo-on-invert" : "text-white/82")}>{label}</span>
-              </button>
-            ))}
+          {/* What this invoice is made of, before the lines themselves. */}
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="relative overflow-hidden rounded-[24px] border border-white/[0.08] willo-glass px-5 pb-4 pt-4"
+          >
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-14 -top-20 h-44 w-44 rounded-full blur-[56px]"
+              style={{ background: cardHex, opacity: 0.22 }}
+            />
+
+            <div className="relative flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-[12.5px] t-softer">
+                  {card?.name} · Fatura de {MONTH_NAMES[selectedMonth - 1]}
+                </p>
+                <p className="mt-1 truncate text-[30px] font-extrabold leading-none tracking-[-0.035em] text-white tabular-nums">
+                  {formatCurrency(headline)}
+                </p>
+              </div>
+              {statusChip && (
+                <span
+                  className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold"
+                  style={{ background: `${statusChip.hex}1F`, color: statusChip.hex }}
+                >
+                  {statusChip.label}
+                </span>
+              )}
+            </div>
+
+            {/* The invoice split the way a card bill actually splits: what you are
+                still paying off, and what you spent this month. */}
+            <div className="relative mt-4 flex h-2 gap-[3px]">
+              <motion.span
+                className="h-full rounded-full"
+                style={{ background: cardHex, minWidth: split.parcelado > 0 ? 6 : 0 }}
+                initial={{ width: 0 }}
+                animate={{ width: `${split.total > 0 ? (split.parcelado / split.total) * 100 : 0}%` }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+              />
+              <motion.span
+                className="h-full rounded-full"
+                style={{ background: shade(cardHex, 0.58), minWidth: split.avista > 0 ? 6 : 0 }}
+                initial={{ width: 0 }}
+                animate={{ width: `${split.total > 0 ? (split.avista / split.total) * 100 : 100}%` }}
+                transition={{ duration: 0.6, delay: 0.08, ease: "easeOut" }}
+              />
+            </div>
+
+            <div className="relative mt-3.5 grid grid-cols-2 gap-4">
+              <div>
+                <p className="flex items-center gap-1.5 text-[11.5px] t-softer">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: cardHex }} />
+                  Parcelado
+                </p>
+                <p className="mt-1 truncate text-[15px] font-bold tabular-nums text-white">
+                  {formatCurrency(split.parcelado)}
+                </p>
+              </div>
+              <div>
+                <p className="flex items-center gap-1.5 text-[11.5px] t-softer">
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ background: shade(cardHex, 0.58) }}
+                  />
+                  À vista
+                </p>
+                <p className="mt-1 truncate text-[15px] font-bold tabular-nums text-white">
+                  {formatCurrency(split.avista)}
+                </p>
+              </div>
+            </div>
+
+            <p className="relative mt-3 text-[11.5px] tabular-nums t-faint">
+              {items.length} lançament{items.length === 1 ? "o" : "os"}
+              {split.estornos > 0 && ` · ${split.estornos} estorno${split.estornos === 1 ? "" : "s"}`}
+            </p>
+          </motion.section>
+
+          {/* Which lines, and finding one among forty */}
+          <div className="space-y-3">
+            <div className="isolate grid grid-cols-2 rounded-full border border-white/[0.08] willo-glass p-1">
+              {([["geral", "Todos"], ["parcelados", "Parcelados"]] as const).map(([key, label]) => (
+                <button key={key} type="button" onClick={() => setTab(key)} className="relative h-10 rounded-full text-[14px] font-medium">
+                  {tab === key && (
+                    <motion.span layoutId="entries-tab" className="pointer-events-none absolute inset-0 z-0 rounded-full willo-invert" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
+                  )}
+                  <span className={cn("relative z-10 transform-gpu", tab === key ? "willo-on-invert" : "text-white/82")}>{label}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 t-soft" />
+              <input
+                type="text"
+                placeholder="Buscar lançamento..."
+                value={entrySearch}
+                onChange={(e) => setEntrySearch(e.target.value)}
+                className="h-11 w-full rounded-full border border-white/[0.07] bg-white/[0.04] pl-11 pr-10 text-[14px] text-white transition-colors placeholder:t-faint focus:border-white/25 focus:outline-none"
+              />
+              {entrySearch && (
+                <button
+                  type="button"
+                  onClick={() => setEntrySearch("")}
+                  aria-label="Limpar busca"
+                  className="absolute right-4 top-1/2 -translate-y-1/2"
+                >
+                  <X className="h-4 w-4 t-soft" />
+                </button>
+              )}
+            </div>
           </div>
 
           <InvoiceTransactionList
-            items={items}
+            items={searchedItems}
             filter={tab === "parcelados" ? "parcelados" : "todos"}
             cardName={card?.name}
             invoiceMonth={selectedMonth}
             invoiceYear={selectedYear}
-            payments={payments}
+            payments={entrySearch ? [] : payments}
             isPaid={invoiceStatus === "paid"}
             onEditItem={handleEditItem}
             onDeleteItem={handleDeleteItem}
           />
+
+          {searchedItems.length > 0 && (
+            <p className="pb-2 pt-1 text-center text-[12px] t-softer">
+              {searchedItems.length} de {items.length} lançamentos
+            </p>
+          )}
         </div>
       ) : (
         <div className="space-y-6">
@@ -759,7 +919,7 @@ const FaturaCartao = () => {
               <motion.span
                 className="h-full rounded-full"
                 style={{
-                  background: freeToneFor(cardHex),
+                  background: shade(cardHex, 0.58),
                   boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.35)",
                   minWidth: availableLimit > 0 ? 6 : 0,
                 }}
@@ -781,12 +941,12 @@ const FaturaCartao = () => {
               </div>
               <div>
                 <p className="flex items-center gap-1.5 text-[11.5px] t-softer">
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: freeToneFor(cardHex) }} />
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: shade(cardHex, 0.58) }} />
                   Disponível
                 </p>
                 <p
                   className="mt-1 truncate text-[16px] font-bold tabular-nums"
-                  style={{ color: availableLimit > 0 ? freeToneFor(cardHex) : "#F87171" }}
+                  style={{ color: availableLimit > 0 ? shade(cardHex, 0.58) : "#F87171" }}
                 >
                   {formatCurrency(availableLimit)}
                 </p>
@@ -832,6 +992,7 @@ const FaturaCartao = () => {
             selectedYear={selectedYear}
             onSelect={(m, y) => { setSelectedMonth(m); setSelectedYear(y); }}
             closingDay={card?.closing_day}
+            hex={cardHex}
           />
 
           <InvoiceRecentCard
