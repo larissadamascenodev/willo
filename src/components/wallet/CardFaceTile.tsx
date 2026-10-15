@@ -66,6 +66,16 @@ export function shade(hex: string, amount: number) {
   return `rgb(${r} ${g} ${b})`;
 }
 
+/** The same colour at a given opacity, whether it arrived as #hex or as rgb(). */
+export function withAlpha(color: string, alpha: number) {
+  const parsed = color.match(/rgba?\((\d+)[\s,]+(\d+)[\s,]+(\d+)/);
+  if (parsed) return `rgb(${parsed[1]} ${parsed[2]} ${parsed[3]} / ${alpha})`;
+  const n = color.replace("#", "");
+  const full = n.length === 3 ? n.split("").map((c) => c + c).join("") : n;
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
+  return `rgb(${r} ${g} ${b} / ${alpha})`;
+}
+
 export interface CardFace {
   id: string;
   name: string;
@@ -132,7 +142,7 @@ export default function CardFaceTile({
         <span
           className="relative flex h-[30px] w-[38px] shrink-0 overflow-hidden rounded-[8px]"
           style={{
-            background: `linear-gradient(145deg, color-mix(in srgb, ${hex}, #fff 22%) 0%, ${hex} 58%, color-mix(in srgb, ${hex}, #000 28%) 100%)`,
+            background: `linear-gradient(145deg, ${shade(hex, 0.22)} 0%, ${hex} 58%, ${shade(hex, -0.28)} 100%)`,
             boxShadow: `0 8px 20px -10px ${hex}, inset 0 1px 0 rgb(255 255 255 / 0.35)`,
           }}
         >

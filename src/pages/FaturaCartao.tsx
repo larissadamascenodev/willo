@@ -1026,6 +1026,8 @@ const FaturaCartao = () => {
       {/* What "add to this card" can mean */}
       <InvoiceAddChooserModal
         open={showAddChooser}
+        cardName={card?.name}
+        hex={cardHex}
         onClose={() => setShowAddChooser(false)}
         onManual={() => { setShowAddChooser(false); setShowManualAdd(true); }}
         onScan={(file, mode) => { setShowAddChooser(false); void handleFileUpload(file, mode); }}
