@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, CalendarCheck, CalendarClock, Nfc } from "lucide-react";
 import { toast } from "sonner";
@@ -93,6 +93,7 @@ function CardPreview({ name, digits, limitCents, closing, due, hex, showDates }:
 const CardCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated?: () => void }) => {
   const { user } = useAuth();
   const nameRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState<1 | 2>(1);
   const [name, setName] = useState("");
   const [digits, setDigits] = useState("");
@@ -118,6 +119,13 @@ const CardCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClose:
     setColor(PALETTE[0].hex);
     setSaving(false);
   }, [open]);
+
+  /* Changing step leaves the scroll where the last one ended, which lands you
+     halfway down a shorter form with the card cut off above. */
+  useLayoutEffect(() => {
+    const box = bodyRef.current?.closest(".overflow-y-auto") as HTMLElement | null;
+    box?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [step]);
 
   const bank = bankFor(name);
   const hex = color;
@@ -207,7 +215,7 @@ const CardCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClose:
         )
       }
     >
-      <div className="relative px-5 pb-4">
+      <div ref={bodyRef} className="relative px-5 pb-4">
         {/* The card's own light washing the sheet, so the panel is never plain grey */}
         <span
           aria-hidden="true"
@@ -252,12 +260,17 @@ const CardCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClose:
           />
         </div>
 
+        {/* The step is clipped here rather than only at the sheet's edge, so the few
+            pixels it travels never widen the scroll box in the first place. The
+            negative margin puts this box's edge at the panel's, which is where the
+            strip of banks is meant to run out to. */}
+        <div className="-mx-5 overflow-hidden px-5">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={step}
-            initial={{ opacity: 0, x: step === 2 ? 28 : -28 }}
+            initial={{ opacity: 0, x: step === 2 ? 18 : -18 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: step === 2 ? -28 : 28 }}
+            exit={{ opacity: 0, x: step === 2 ? -18 : 18 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="relative"
           >
@@ -341,6 +354,7 @@ const CardCreateSheet = ({ open, onClose, onCreated }: { open: boolean; onClose:
             )}
           </motion.div>
         </AnimatePresence>
+        </div>
       </div>
     </BottomSheet>
   );

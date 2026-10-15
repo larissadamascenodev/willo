@@ -28,7 +28,7 @@ PillInput.displayName = "PillInput";
 /** Horizontal strip of common banks; tapping one fills name and color. "Outro" clears them. */
 export function BankChips({ selectedId, onPick, onOther }: { selectedId: string | null; onPick: (b: Bank) => void; onOther: () => void }) {
   return (
-    <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 scrollbar-hide">
+    <div className="-mx-5 flex gap-2 overflow-x-auto overscroll-x-contain px-5 pb-1 scrollbar-hide">
       {BANKS.map((b) => {
         const selected = selectedId === b.id;
         return (

@@ -80,7 +80,12 @@ const BottomSheet = ({
         <div className="shrink-0 pt-5" />
       )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-none">
+      {/* Sideways is clipped, never scrolled. A child that animates in from the right —
+          a step sliding into place — briefly sticks out past the panel, and a scroll
+          box with anything past its edge becomes draggable in that direction: the
+          whole sheet could be pulled off to one side, and a strip of chips reaching
+          its own end chained its scroll into the panel behind it. */}
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-none">
         {children}
       </div>
 
