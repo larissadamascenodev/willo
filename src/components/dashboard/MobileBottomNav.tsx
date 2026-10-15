@@ -21,33 +21,58 @@ export const navItems: {
   { icon: Sparkles, label: "Agentes", path: "/assistente" },
 ];
 
+const openQuickEntry = () => window.dispatchEvent(new CustomEvent("open-registro-rapido"));
+
 const MobileBottomNav = memo(() => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Folded once the page has moved enough that the bar would be in the way. The
+  // threshold is generous so a thumb twitch does not make the row flap.
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    const read = () => setCollapsed(window.scrollY > 90);
+    read();
+    window.addEventListener("scroll", read, { passive: true });
+    return () => window.removeEventListener("scroll", read);
+  }, []);
+
   return (
     <>
-      {/* The bar that invites, above the bar that navigates: writing down what you spent
-          is the thing people come back to do, so it is a line waiting for a sentence
-          rather than an icon you have to recognise. */}
+      {/* The bar that invites, above the bar that navigates — until you start reading.
+          At the top of a screen there is room for an open invitation across the full
+          width. Once the page is moving, that row is a thing in the way, so it folds
+          into the nav between Início and Willo and the middle stops competing with it.
+          Scrolling back up unfolds it. */}
       <div
         className="fixed bottom-0 left-0 right-0 z-50 px-5 md:hidden"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}
       >
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent("open-registro-rapido"))}
-          className="willo-float mb-2.5 flex h-[46px] w-full items-center gap-2.5 rounded-full pl-3.5 pr-4 text-left active:scale-[0.99] transition-transform"
-        >
-          <RegistroRapidoIcon className="h-[19px] w-[19px] shrink-0 text-willo-green-ink" />
-          <span className="min-w-0 flex-1 truncate text-[14.5px] t-soft">Registro rápido</span>
-          <Mic className="h-[17px] w-[17px] shrink-0 t-faint" strokeWidth={2.1} />
-        </button>
+        <AnimatePresence initial={false}>
+          {!collapsed && (
+            <motion.button
+              key="quick-bar"
+              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+              animate={{ opacity: 1, height: 46, marginBottom: 10 }}
+              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 34 }}
+              onClick={openQuickEntry}
+              className="willo-float flex w-full items-center gap-2.5 overflow-hidden rounded-full pl-3.5 pr-4 text-left"
+            >
+              <RegistroRapidoIcon className="h-[19px] w-[19px] shrink-0 text-willo-green-ink" />
+              <span className="min-w-0 flex-1 truncate text-[14.5px] t-soft">Registro rápido</span>
+              <Mic className="h-[17px] w-[17px] shrink-0 t-faint" strokeWidth={2.1} />
+            </motion.button>
+          )}
+        </AnimatePresence>
 
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center gap-3">
           <BottomNavBar
             activePath={location.pathname}
+            collapsed={collapsed}
             onNavigate={(path) => navigate(path)}
             onPlus={() => navigate("/assistente")}
+            onQuickEntry={openQuickEntry}
           />
         </div>
       </div>
@@ -62,20 +87,31 @@ MobileBottomNav.displayName = "MobileBottomNav";
  * it to the bottom of the screen; the welcome showcase draws it inside its
  * phone so both always look exactly the same.
  */
-export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus }: {
+export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, onNavigate, onPlus, onQuickEntry }: {
   activePath: string;
   plusOpen?: boolean;
+  /** Folded: Início keeps its place, the quick entry takes the rest of the row. */
+  collapsed?: boolean;
   onNavigate?: (path: string) => void;
   onPlus?: () => void;
+  onQuickEntry?: () => void;
 }) {
+  const shown = collapsed ? navItems.slice(0, 1) : navItems;
   return (
     <>
       {/* isolate keeps the sliding pill from compositing above the icons: WebKit
           promotes a layoutId element to its own layer and paints it over
           non-composited siblings whatever the z-index says. */}
-      <nav className="willo-float flex-1 max-w-[250px] rounded-full [isolation:isolate]">
+      <motion.nav
+        layout
+        transition={{ type: "spring", stiffness: 380, damping: 34 }}
+        className={cn(
+          "willo-float rounded-full [isolation:isolate]",
+          collapsed ? "flex-1" : "flex-1 max-w-[250px]",
+        )}
+      >
         <div className="flex items-center justify-around h-[58px] px-1.5">
-          {navItems.map((item) => {
+          {shown.map((item) => {
             const Icon = item.icon;
             const isActive = !!item.path && activePath === item.path;
             return (
@@ -88,7 +124,11 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
                 }}
                 aria-label={item.soon ? `${item.label} — em breve` : item.label}
                 aria-current={isActive ? "page" : undefined}
-                className="relative flex items-center justify-center h-11 flex-1 mx-0.5 rounded-full"
+                className={cn(
+                  "relative mx-0.5 flex h-11 items-center justify-center rounded-full",
+                  // Folded, Início holds its own width so the invitation gets the room.
+                  collapsed ? "w-11 shrink-0" : "flex-1",
+                )}
               >
                 {isActive && (
                   <motion.span
@@ -110,18 +150,28 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
               </button>
             );
           })}
+
+          {/* Folded, the invitation rides inside the nav, between Início and Willo. */}
+          {collapsed && (
+            <motion.button
+              layout
+              onClick={onQuickEntry}
+              className="ml-1 flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full bg-white/[0.07] pl-3 pr-3.5 text-left"
+            >
+              <RegistroRapidoIcon className="h-[17px] w-[17px] shrink-0 text-willo-green-ink" />
+              <span className="min-w-0 flex-1 truncate text-[13.5px] t-soft">Registro rápido</span>
+              <Mic className="h-[15px] w-[15px] shrink-0 t-faint" strokeWidth={2.1} />
+            </motion.button>
+          )}
         </div>
-      </nav>
+      </motion.nav>
 
       <button
         onClick={onPlus}
         aria-label="Willo"
-        className={cn(
-          "relative w-[58px] h-[58px] rounded-full flex items-center justify-center shrink-0 transition-colors",
-          plusOpen ? "bg-white" : "willo-float",
-        )}
+        className="relative flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
       >
-        <BotMark size={34} />
+        <BotMark size={50} />
       </button>
     </>
   );
