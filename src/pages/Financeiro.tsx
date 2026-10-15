@@ -40,7 +40,7 @@ export default function Financeiro({ initialTab = "fluxo" }: { initialTab?: Tool
 
   return (
     <div className="mx-auto max-w-lg pb-28">
-      <PageHeader title="Financeiro" subtitle={active.subtitle} />
+      <PageHeader />
 
       <div className="mt-5 flex isolate rounded-full border border-white/[0.08] willo-glass p-1">
         {TOOLS.map((t) => (

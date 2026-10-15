@@ -136,12 +136,6 @@ const GestaoFinanceira = () => {
 
   return (
     <div className="pt-2 pb-8 space-y-6">
-      {/* ═══════ Page Header ═══════ */}
-      <div className="pt-1">
-        <h1 className="text-[23px] font-extrabold leading-tight tracking-tight text-white">Carteira</h1>
-        <p className="text-[13px] t-soft">Suas contas, a reserva e os cofrinhos</p>
-      </div>
-
       {/* ═══════ Contas ═══════ */}
       <section>
         <div className={cn("flex items-center justify-between mb-3 px-1", bankAccounts.length > 0 && "hidden sm:flex")}>

@@ -56,12 +56,6 @@ const PAGES_WITHOUT_BACK = new Set([
   "/configuracoes",
 ]);
 
-/**
- * Of those, the ones that open on a card rather than on a heading. Floating the arrow
- * works by letting a heading's text come up beside it; a full-width card has no text to
- * wrap, so it just gets shoved over. These keep the arrow on its own line.
- */
-const PAGES_CARD_FIRST = new Set(["/configuracoes"]);
 
 const DashboardLayout = () => {
   useSwipeBack();
@@ -390,16 +384,10 @@ const DashboardLayout = () => {
               title the page had put at its own top edge. The pages that draw their own
               are excluded, so there is exactly one. */}
           {PAGES_WITHOUT_BACK.has(location.pathname) && (
-            /* Floated rather than stacked, so the page's own title comes up beside it
-               instead of under it. A row for the arrow and a row for the heading was
-               two rows of chrome before anything on the page had been said. */
-            <div
-              className={
-                PAGES_CARD_FIRST.has(location.pathname)
-                  ? "mb-2 flex md:hidden"
-                  : "float-left mr-3 mt-0.5 md:hidden"
-              }
-            >
+            /* On its own line. It was floated so a page's heading could come up beside
+               it; with the headings gone there is nothing to come up, and a float would
+               only shove the first card sideways. */
+            <div className="mb-2 flex md:hidden">
               <BackButton />
             </div>
           )}

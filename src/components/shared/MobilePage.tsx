@@ -4,34 +4,24 @@ import BackButton from "@/components/shared/BackButton";
 import { cn } from "@/lib/utils";
 
 /**
- * The way back and what you are looking at, on one line.
+ * The way back, and whatever the page keeps on that line with it.
  *
- * It used to be two: a chevron on its own row and a large heading under it, which is
- * two rows of chrome before the page has said anything. The arrow and the title sit
- * together now, and the title is sized to lead a row rather than to own one.
+ * No heading. It used to carry a 28px title and a subtitle on rows of their own, which
+ * is three rows of chrome before the page says anything — and the title was almost
+ * always repeating the first card underneath it. The content names itself; this is just
+ * the way out.
  */
-export function PageHeader({ title, subtitle, action, onBack }: {
-  title: string;
-  subtitle?: ReactNode;
+export function PageHeader({ action, onBack }: {
   action?: ReactNode;
   onBack?: () => void;
 }) {
   return (
-    <div style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 6px)" }}>
-      <div className="flex items-start gap-3">
-        <BackButton onClick={onBack} className="mt-0.5" />
-        <motion.div
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="min-w-0 flex-1"
-        >
-          <h1 className="truncate text-[23px] font-extrabold leading-tight tracking-tight text-white">
-            {title}
-          </h1>
-          {subtitle && <p className="text-[13px] t-soft">{subtitle}</p>}
-        </motion.div>
-        {action}
-      </div>
+    <div
+      className="flex items-center justify-between"
+      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 6px)" }}
+    >
+      <BackButton onClick={onBack} />
+      {action}
     </div>
   );
 }

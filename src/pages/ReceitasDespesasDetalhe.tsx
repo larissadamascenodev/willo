@@ -193,7 +193,7 @@ const ReceitasDespesasDetalhe = () => {
 
   return (
     <div className="mx-auto max-w-lg pb-28">
-      <PageHeader title={isReceita ? "Receitas" : "Despesas"} subtitle={monthLabel} />
+      <PageHeader />
 
       {/* Hero */}
       <motion.section

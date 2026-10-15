@@ -43,11 +43,7 @@ const RaioX = () => {
           </span>
           Análise em tempo real
         </p>
-        <h1 className="mt-0.5 flex items-center gap-2 text-[23px] font-extrabold leading-tight tracking-tight text-white">
-          Raio-X
-          <BrainCircuit className="h-[19px] w-[19px] text-willo-green-ink" />
-        </h1>
-        <p className="mt-1 text-[13px] t-soft">O cérebro do seu dinheiro: o que você faz certo, o que dá pra melhorar.</p>
+
       </header>
 
       {!data ? (

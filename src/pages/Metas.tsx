@@ -103,8 +103,6 @@ const Metas = () => {
   return (
     <div className="mx-auto max-w-lg pb-28 md:max-w-5xl">
       <PageHeader
-        title="Metas"
-        subtitle="Junte dinheiro para o que importa"
         action={
           <button
             onClick={() => setShowCreateModal(true)}

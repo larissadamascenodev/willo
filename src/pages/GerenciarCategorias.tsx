@@ -165,8 +165,6 @@ export default function GerenciarCategorias() {
   return (
     <div className="min-h-screen px-4 pb-28">
       <PageHeader
-        title="Categorias"
-        subtitle="Organize como seus gastos são agrupados"
         action={
           <button
             onClick={() => setShowCreateModal(true)}
