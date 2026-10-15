@@ -404,7 +404,7 @@
      towards white is fading towards the page. On paper it stays much closer to full,
      which reads as the same degree of "not this one". */
   .chart-dim { opacity: 0.45; }
-  [data-theme="light"] .chart-dim { opacity: 0.66; }
+  [data-theme="light"] .chart-dim { opacity: 0.78; }
 
   /* A bar that has not happened yet: an outline rather than a fill. The dark version
      is a whisper of white; on paper a whisper of ink is invisible, so it firms up. */
@@ -413,8 +413,8 @@
     background-color: rgb(var(--ink) / 0.04);
   }
   [data-theme="light"] .chart-ghost {
-    border-color: rgb(var(--ink) / 0.34);
-    background-color: rgb(var(--ink) / 0.06);
+    border-color: rgb(var(--ink) / 0.42);
+    background-color: rgb(var(--ink) / 0.10);
   }
 
   /* The inverted pill: a chosen filter, a primary button, a selected tab.
@@ -432,6 +432,13 @@
     color: hsl(var(--primary-foreground));
     border-color: hsl(var(--primary));
   }
+
+  /* The label riding on an inverted pill. In a segmented control the pill that slides
+     and the word that sits on it are two separate elements, so the word cannot inherit
+     the pill's colour — it has to be told the same story. Without this the pill turns
+     near-black on paper and the near-black word disappears into it. */
+  .willo-on-invert { color: #0B0B0B; }
+  [data-theme="light"] .willo-on-invert { color: hsl(var(--primary-foreground)); }
 
   /* Secondary type, in a way that survives turning the lights on.
      A tint of ink reads the same to the eye on either ground only if the alpha moves:

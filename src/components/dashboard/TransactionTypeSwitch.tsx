@@ -36,13 +36,13 @@ export default function TransactionTypeSwitch({ value, onChange }: {
               <motion.span
                 layoutId="willo-entry-type"
                 transition={{ type: "spring", stiffness: 420, damping: 36 }}
-                className="absolute inset-0 rounded-full bg-white"
+                className="absolute inset-0 rounded-full willo-invert"
               />
             )}
             <span
               className={cn(
                 "relative transform-gpu text-[13px] font-semibold transition-colors",
-                active ? "text-[#0B0B0B]" : "t-soft",
+                active ? "willo-on-invert" : "t-soft",
               )}
             >
               {o.label}

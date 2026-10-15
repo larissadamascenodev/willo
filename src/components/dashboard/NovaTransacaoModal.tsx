@@ -106,12 +106,12 @@ function SegmentedControl<T extends string>({ id, value, options, onChange }: {
               <motion.span
                 layoutId={`seg-${id}`}
                 transition={{ type: "spring", stiffness: 420, damping: 36 }}
-                className="absolute inset-0 rounded-full bg-white"
+                className="absolute inset-0 rounded-full willo-invert"
               />
             )}
             <span className={cn(
               "relative flex transform-gpu items-center justify-center gap-1.5 text-[13.5px] font-semibold transition-colors",
-              active ? "text-[#0B0B0B]" : "t-soft",
+              active ? "willo-on-invert" : "t-soft",
             )}>
               {Icon && <Icon className="h-4 w-4" />}
               {o.label}
@@ -140,10 +140,10 @@ function MiniSegmented<T extends string>({ id, value, options, onChange }: {
               <motion.span
                 layoutId={`mini-${id}`}
                 transition={{ type: "spring", stiffness: 420, damping: 36 }}
-                className="absolute inset-0 rounded-full bg-white"
+                className="absolute inset-0 rounded-full willo-invert"
               />
             )}
-            <span className={cn("relative transform-gpu transition-colors", active ? "text-[#0B0B0B]" : "text-white/66")}>{o.label}</span>
+            <span className={cn("relative transform-gpu transition-colors", active ? "willo-on-invert" : "text-white/66")}>{o.label}</span>
           </button>
         );
       })}
@@ -212,7 +212,7 @@ const PickRow = ({ selected, onClick, hex, initials: ini, icon: Icon, title, sub
       "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
       selected ? "border-white bg-white" : "border-white/20",
     )}>
-      {selected && <Check className="h-3 w-3 text-[#0B0B0B]" strokeWidth={3.4} />}
+      {selected && <Check className="h-3 w-3 willo-on-invert" strokeWidth={3.4} />}
     </span>
   </button>
 );
@@ -956,7 +956,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                       <button
                         type="button"
                         onClick={() => { onClose(); navigate("/gestao"); }}
-                        className="h-10 rounded-full bg-white px-5 text-[13px] font-semibold text-[#0B0B0B]"
+                        className="h-10 rounded-full bg-white px-5 text-[13px] font-semibold willo-on-invert"
                       >
                         Adicionar conta
                       </button>
@@ -984,7 +984,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                             onChange={(e) => setNewAccountName(e.target.value)}
                             className="h-11 min-w-0 flex-1 rounded-full bg-white/[0.06] px-4 text-[14px] text-white placeholder:t-faint focus:outline-none"
                           />
-                          <button type="button" onClick={handleCreateAccount} disabled={!newAccountName.trim()} className="h-11 shrink-0 rounded-full bg-white px-4 text-[13px] font-semibold text-[#0B0B0B] disabled:opacity-40">
+                          <button type="button" onClick={handleCreateAccount} disabled={!newAccountName.trim()} className="h-11 shrink-0 rounded-full bg-white px-4 text-[13px] font-semibold willo-on-invert disabled:opacity-40">
                             Criar
                           </button>
                           <button type="button" onClick={() => { setShowNewAccount(false); setNewAccountName(""); }} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-white/70">
@@ -1028,7 +1028,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                           </label>
                         </div>
                         <div className="flex gap-2 pt-0.5">
-                          <button type="button" onClick={handleCreateCreditCard} disabled={!newCardName.trim() || !newCardLimit} className="h-11 flex-1 rounded-full bg-white text-[13px] font-semibold text-[#0B0B0B] disabled:opacity-40">
+                          <button type="button" onClick={handleCreateCreditCard} disabled={!newCardName.trim() || !newCardLimit} className="h-11 flex-1 rounded-full bg-white text-[13px] font-semibold willo-on-invert disabled:opacity-40">
                             Cadastrar
                           </button>
                           <button type="button" onClick={() => { setShowNewCard(false); setNewCardName(""); setNewCardLimit(""); }} className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06] text-white/70">
@@ -1182,7 +1182,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                 type="submit"
                 form="nova-transacao-form"
                 disabled={submitting || amountCents === 0}
-                className="h-14 w-full rounded-full bg-white text-[16px] font-bold text-[#0B0B0B] shadow-[0_10px_30px_-12px_rgba(255,255,255,0.35)] transition-opacity disabled:opacity-35"
+                className="h-14 w-full rounded-full bg-white text-[16px] font-bold willo-on-invert shadow-[0_10px_30px_-12px_rgba(255,255,255,0.35)] transition-opacity disabled:opacity-35"
               >
                 {submitting ? "Salvando..." : isEditMode ? "Salvar alterações" : isReceita ? "Adicionar receita" : "Adicionar despesa"}
               </button>
@@ -1303,7 +1303,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                     <button
                       type="button"
                       onClick={() => setShowCategoryCreate(true)}
-                      className="mt-3 rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-[#0B0B0B]"
+                      className="mt-3 rounded-full bg-white px-4 py-2 text-[13px] font-semibold willo-on-invert"
                     >
                       Criar “{categorySearch.trim()}”
                     </button>

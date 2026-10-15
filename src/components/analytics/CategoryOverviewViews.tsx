@@ -77,11 +77,11 @@ export function ViewToggle<T extends string>({ value, options, onChange }: {
           {value === o.key && (
             <motion.span
               layoutId="category-view-toggle"
-              className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white"
+              className="pointer-events-none absolute inset-0 z-0 rounded-full willo-invert"
               transition={{ type: "spring", stiffness: 420, damping: 34 }}
             />
           )}
-          <span className={cn("relative z-10 transform-gpu transition-colors", value === o.key ? "text-[#0B0B0B]" : "text-white")}>{o.label}</span>
+          <span className={cn("relative z-10 transform-gpu transition-colors", value === o.key ? "willo-on-invert" : "text-white")}>{o.label}</span>
         </button>
       ))}
     </div>

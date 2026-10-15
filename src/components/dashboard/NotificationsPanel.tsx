@@ -195,7 +195,7 @@ function NotificationRow({
     <div className="relative overflow-hidden">
       {canMarkRead && (
         <motion.div style={{ opacity: readOpacity }} className="absolute inset-y-0 left-0 flex w-24 items-center justify-center bg-white">
-          <div className="flex flex-col items-center gap-0.5 text-[#0B0B0B]">
+          <div className="flex flex-col items-center gap-0.5 willo-on-invert">
             <Check className="h-4 w-4" strokeWidth={3} />
             <span className="text-[10px] font-bold">Lida</span>
           </div>
@@ -313,7 +313,7 @@ function NotificationContent({
         <div className="mt-4 flex items-end justify-between gap-3">
           <h1 className="text-[32px] font-extrabold leading-none tracking-tight text-white">Notificações</h1>
           {unreadCount > 0 && (
-            <span className="mb-1 shrink-0 rounded-full bg-white px-2.5 py-0.5 text-[12px] font-bold tabular-nums text-[#0B0B0B]">
+            <span className="mb-1 shrink-0 rounded-full bg-white px-2.5 py-0.5 text-[12px] font-bold tabular-nums willo-on-invert">
               {unreadCount} {unreadCount === 1 ? "nova" : "novas"}
             </span>
           )}
@@ -326,11 +326,11 @@ function NotificationContent({
               {filter === key && (
                 <motion.span
                   layoutId={`notif-seg-${variant}`}
-                  className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white shadow-[0_4px_14px_-6px_rgba(255,255,255,0.4)]"
+                  className="pointer-events-none absolute inset-0 z-0 rounded-full willo-invert shadow-[0_4px_14px_-6px_rgba(255,255,255,0.4)]"
                   transition={{ type: "spring", stiffness: 420, damping: 34 }}
                 />
               )}
-              <span className={cn("relative z-10 transform-gpu transition-colors", filter === key ? "text-[#0B0B0B]" : "text-white/70")}>
+              <span className={cn("relative z-10 transform-gpu transition-colors", filter === key ? "willo-on-invert" : "text-white/70")}>
                 {label}
               </span>
             </button>

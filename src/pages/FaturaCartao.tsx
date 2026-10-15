@@ -825,7 +825,7 @@ const FaturaCartao = () => {
           <button
             type="button"
             onClick={() => setShowPayModal(true)}
-            className="relative mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-full bg-white text-[15px] font-bold text-[#0B0B0B] active:scale-[0.99]"
+            className="relative mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-full bg-white text-[15px] font-bold willo-on-invert active:scale-[0.99]"
           >
             <Wallet className="h-4 w-4" />
             Pagar fatura · {formatCurrency(outstanding)}
@@ -850,9 +850,9 @@ const FaturaCartao = () => {
         {([["geral", "Geral"], ["parcelados", "Compras parceladas"]] as const).map(([key, label]) => (
           <button key={key} type="button" onClick={() => setTab(key)} className="relative h-10 rounded-full text-[14px] font-medium">
             {tab === key && (
-              <motion.span layoutId="fatura-tab" className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
+              <motion.span layoutId="fatura-tab" className="pointer-events-none absolute inset-0 z-0 rounded-full willo-invert" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
             )}
-            <span className={cn("relative z-10 transform-gpu", tab === key ? "text-[#0B0B0B]" : "text-white/82")}>{label}</span>
+            <span className={cn("relative z-10 transform-gpu", tab === key ? "willo-on-invert" : "text-white/82")}>{label}</span>
           </button>
         ))}
       </div>

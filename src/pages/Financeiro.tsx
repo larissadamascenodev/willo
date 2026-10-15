@@ -49,13 +49,13 @@ export default function Financeiro({ initialTab = "fluxo" }: { initialTab?: Tool
             onClick={() => setTool(t.key)}
             className={cn(
               "relative min-w-0 flex-1 rounded-full px-1 py-2 text-[12.5px] font-semibold tracking-tight transition-colors",
-              tool === t.key ? "text-[#0B0B0B]" : "text-white/70",
+              tool === t.key ? "willo-on-invert" : "text-white/70",
             )}
           >
             {tool === t.key && (
               <motion.span
                 layoutId="financeiro-tool"
-                className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white"
+                className="pointer-events-none absolute inset-0 z-0 rounded-full willo-invert"
                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
               />
             )}
@@ -285,9 +285,9 @@ function RealizadoPanel() {
         {PERIODS.map((p) => (
           <button key={p.key} onClick={() => setPeriod(p.key)} className="relative h-10 rounded-full text-[13.5px] font-semibold">
             {period === p.key && (
-              <motion.span layoutId="cashflow-period" className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
+              <motion.span layoutId="cashflow-period" className="pointer-events-none absolute inset-0 z-0 rounded-full willo-invert" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
             )}
-            <span className={cn("relative z-10 transform-gpu transform-gpu", period === p.key ? "text-[#0B0B0B]" : "text-white")}>{p.label}</span>
+            <span className={cn("relative z-10 transform-gpu transform-gpu", period === p.key ? "willo-on-invert" : "text-white")}>{p.label}</span>
           </button>
         ))}
       </div>
@@ -665,7 +665,7 @@ function FuturoPanel() {
         </span>
         <p className="mt-5 text-[18px] font-bold text-white">Ainda sem dados suficientes</p>
         <p className="mt-1 text-[14px] text-white/62">Adicione transações para ver suas projeções.</p>
-        <button onClick={() => navigate("/transacoes")} className="mt-5 h-11 rounded-full bg-white px-6 text-[14px] font-semibold text-[#0B0B0B]">
+        <button onClick={() => navigate("/transacoes")} className="mt-5 h-11 rounded-full bg-white px-6 text-[14px] font-semibold willo-on-invert">
           Ver transações
         </button>
       </div>

@@ -159,11 +159,11 @@ function Segmented<T extends string>({
           {value === o.key && (
             <motion.span
               layoutId={`seg-${id}`}
-              className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white"
+              className="pointer-events-none absolute inset-0 z-0 rounded-full willo-invert"
               transition={{ type: "spring", stiffness: 420, damping: 34 }}
             />
           )}
-          <span className={cn("relative z-10 transform-gpu transition-colors", value === o.key ? "text-[#0B0B0B]" : "text-white/66")}>
+          <span className={cn("relative z-10 transform-gpu transition-colors", value === o.key ? "willo-on-invert" : "text-white/66")}>
             {o.label}
           </span>
         </button>
@@ -195,7 +195,7 @@ function LineChart({ data, id }: { data: Point[]; id: string }) {
             cursor={{ stroke: "rgba(255,255,255,0.18)", strokeWidth: 1 }}
             content={({ active, payload }) =>
               active && payload?.length ? (
-                <div className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#0B0B0B] shadow-lg">
+                <div className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold willo-on-invert shadow-lg">
                   {payload[0].payload.label} · {fmt(Number(payload[0].value))}
                 </div>
               ) : null

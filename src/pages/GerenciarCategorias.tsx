@@ -170,7 +170,7 @@ export default function GerenciarCategorias() {
         action={
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex h-9 items-center gap-1.5 rounded-full bg-white px-3.5 text-[13px] font-semibold text-[#0B0B0B] active:scale-95 transition-transform"
+            className="flex h-9 items-center gap-1.5 rounded-full bg-white px-3.5 text-[13px] font-semibold willo-on-invert active:scale-95 transition-transform"
           >
             <Plus className="h-4 w-4" strokeWidth={2.5} />
             Nova
@@ -186,13 +186,13 @@ export default function GerenciarCategorias() {
             onClick={() => setTab(t)}
             className={cn(
               "relative flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors",
-              tab === t ? "text-[#0B0B0B]" : "text-white/70",
+              tab === t ? "willo-on-invert" : "text-white/70",
             )}
           >
             {tab === t && (
               <motion.span
                 layoutId="cat-tab"
-                className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white"
+                className="pointer-events-none absolute inset-0 z-0 rounded-full willo-invert"
                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
               />
             )}
@@ -220,7 +220,7 @@ export default function GerenciarCategorias() {
           <p className="text-[14px] text-white/70">Nenhuma categoria por aqui</p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="mt-4 rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-[#0B0B0B]"
+            className="mt-4 rounded-full bg-white px-4 py-2 text-[13px] font-semibold willo-on-invert"
           >
             Criar a primeira
           </button>
@@ -350,7 +350,7 @@ export default function GerenciarCategorias() {
                 </button>
                 <button
                   onClick={() => handleDelete(confirmDeleteCat)}
-                  className="flex-1 rounded-full bg-[#F87171] py-2.5 text-[14px] font-semibold text-[#0B0B0B]"
+                  className="flex-1 rounded-full bg-[#F87171] py-2.5 text-[14px] font-semibold willo-on-invert"
                 >
                   Excluir
                 </button>

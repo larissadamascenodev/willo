@@ -212,11 +212,11 @@ const GastosFixosCard = memo(({ compact = false }: { compact?: boolean }) => {
                 {activeTab === tab && (
                   <motion.span
                     layoutId="recorrentes-tab"
-                    className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white"
+                    className="pointer-events-none absolute inset-0 z-0 rounded-full willo-invert"
                     transition={{ type: "spring", stiffness: 420, damping: 34 }}
                   />
                 )}
-                <span className={`relative z-10 transition-colors ${activeTab === tab ? "text-[#0B0B0B]" : "text-white/70"}`}>
+                <span className={`relative z-10 transition-colors ${activeTab === tab ? "willo-on-invert" : "text-white/70"}`}>
                   {tab === "despesa" ? "Despesas" : "Receitas"} ({tab === "despesa" ? despesaCount : receitaCount})
                 </span>
               </button>
@@ -256,7 +256,7 @@ const GastosFixosCard = memo(({ compact = false }: { compact?: boolean }) => {
                     <p className={`text-[15px] font-semibold tabular-nums ${sub.isPaidThisMonth ? "text-white/70" : "text-white"}`}>{fmt(sub.amount)}</p>
                     <span
                       className={`flex h-5 w-5 items-center justify-center rounded-full ${
-                        sub.isPaidThisMonth ? "bg-willo-green text-[#0B0B0B]" : "border border-white/15"
+                        sub.isPaidThisMonth ? "bg-willo-green willo-on-invert" : "border border-white/15"
                       }`}
                     >
                       {sub.isPaidThisMonth && <Check className="h-3 w-3" strokeWidth={3} />}

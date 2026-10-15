@@ -171,7 +171,7 @@ const NoCardsState = ({ onAdd }: { onAdd: () => void }) => (
     </p>
     <button
       onClick={onAdd}
-      className="mt-4 flex h-[50px] w-full items-center justify-center gap-2 rounded-[18px] bg-white text-[15px] font-semibold text-[#0B0B0B] active:opacity-80"
+      className="mt-4 flex h-[50px] w-full items-center justify-center gap-2 rounded-[18px] bg-white text-[15px] font-semibold willo-on-invert active:opacity-80"
     >
       <Plus className="h-[18px] w-[18px]" strokeWidth={2.4} /> Adicionar cartão
     </button>
@@ -251,8 +251,8 @@ const Cartoes = () => {
       <div className="mt-2 grid grid-cols-3 isolate rounded-full border border-white/[0.08] willo-glass p-1">
         {([["cartoes", "Cartões"], ["faturas", "Faturas"], ["parcelas", "Parcelas"]] as const).map(([key, label]) => (
           <button key={key} onClick={() => { setTab(key); setSelectedKey(currentKey); }} className="relative h-11 rounded-full text-[15px] font-medium">
-            {tab === key && <motion.span layoutId="cards-tab" className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
-            <span className={cn("relative z-10 transform-gpu transform-gpu", tab === key ? "text-[#0B0B0B]" : "text-white")}>{label}</span>
+            {tab === key && <motion.span layoutId="cards-tab" className="pointer-events-none absolute inset-0 z-0 rounded-full willo-invert" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
+            <span className={cn("relative z-10 transform-gpu transform-gpu", tab === key ? "willo-on-invert" : "text-white")}>{label}</span>
           </button>
         ))}
       </div>

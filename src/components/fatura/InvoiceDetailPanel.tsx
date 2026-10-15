@@ -470,7 +470,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
           <button
             type="button"
             onClick={() => setPayOpen(true)}
-            className="flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-full bg-white text-[15px] font-bold text-[#0B0B0B] active:scale-[0.99]"
+            className="flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-full bg-white text-[15px] font-bold willo-on-invert active:scale-[0.99]"
           >
             <Wallet className="h-4 w-4" /> Pagar fatura
           </button>
@@ -549,11 +549,11 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
                   {view === key && (
                     <motion.span
                       layoutId="invoice-items-view"
-                      className="pointer-events-none absolute inset-0 rounded-full bg-white"
+                      className="pointer-events-none absolute inset-0 rounded-full willo-invert"
                       transition={{ type: "spring", stiffness: 420, damping: 34 }}
                     />
                   )}
-                  <span className={cn("relative transform-gpu transition-colors", view === key ? "text-[#0B0B0B]" : "text-white/66")}>
+                  <span className={cn("relative transform-gpu transition-colors", view === key ? "willo-on-invert" : "text-white/66")}>
                     {label} {n}
                   </span>
                 </button>

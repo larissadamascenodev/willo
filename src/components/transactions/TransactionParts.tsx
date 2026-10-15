@@ -120,11 +120,11 @@ export const TransactionTabs = ({ value, onChange, layoutId = "tx-tab-pill" }: {
         {value === tab.key && (
           <motion.span
             layoutId={layoutId}
-            className="pointer-events-none absolute inset-0 z-0 rounded-full bg-white"
+            className="pointer-events-none absolute inset-0 z-0 rounded-full willo-invert"
             transition={{ type: "spring", stiffness: 420, damping: 34 }}
           />
         )}
-        <span className={`relative z-10 transform-gpu transition-colors ${value === tab.key ? "text-[#0B0B0B]" : "t-soft"}`}>{tab.label}</span>
+        <span className={`relative z-10 transform-gpu transition-colors ${value === tab.key ? "willo-on-invert" : "t-soft"}`}>{tab.label}</span>
       </button>
     ))}
   </div>
