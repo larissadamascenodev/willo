@@ -106,7 +106,7 @@ const MobileBottomNav = memo(() => {
                     exit={{ opacity: 0, scale: 0.94 }}
                     transition={EASE}
                     onClick={openQuickEntry}
-                    className="willo-float flex h-[58px] min-w-0 flex-1 items-center gap-2 rounded-full pl-3.5 pr-4 text-left"
+                    className="willo-float flex h-[50px] min-w-0 flex-1 items-center gap-2 rounded-full pl-3.5 pr-4 text-left"
                   >
                     <QuickEntryContent compact />
                   </motion.button>
@@ -138,6 +138,11 @@ export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, 
   onPlus?: () => void;
 }) {
   const shown = collapsed ? navItems.slice(0, 1) : navItems;
+  /* The row is a budget. Open, the ends can afford to be big and the icons grow to fill
+     the pill edge to edge; folded, the invitation needs the middle, so the two ends give
+     up height and width to pay for it. Spreading icons that stayed one size just left
+     margins at both ends of the pill, which is the version that looks unfinished. */
+  const end = collapsed ? 50 : 58;
   return (
     <>
       {/* isolate keeps the sliding pill from compositing above the icons: WebKit
@@ -146,14 +151,15 @@ export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, 
       <motion.nav
         layout
         transition={EASE}
+        style={collapsed ? { width: end } : undefined}
         className={cn(
           "willo-float rounded-full [isolation:isolate]",
           // Folded it is a single round button, the same size as Willo on the other
           // end, so the row reads as three separate things rather than one slab.
-          collapsed ? "w-[58px] shrink-0" : "flex-1",
+          collapsed ? "shrink-0" : "flex-1",
         )}
       >
-        <div className="flex h-[58px] items-center justify-center gap-1 px-2">
+        <div className="flex items-center justify-around px-1.5" style={{ height: end }}>
           {shown.map((item) => {
             const Icon = item.icon;
             const isActive = !!item.path && activePath === item.path;
@@ -167,7 +173,10 @@ export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, 
                 }}
                 aria-label={item.soon ? `${item.label} — em breve` : item.label}
                 aria-current={isActive ? "page" : undefined}
-                className="relative flex h-11 w-14 shrink-0 items-center justify-center rounded-full"
+                className={cn(
+                  "relative flex items-center justify-center rounded-full",
+                  collapsed ? "h-full w-full" : "mx-0.5 h-11 flex-1",
+                )}
               >
                 {/* A highlight behind the icon only while the nav is a long pill.
                     Folded, the nav IS a circle, so a circle inside it is a second ring
@@ -181,7 +190,8 @@ export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, 
                 )}
                 <Icon
                   className={cn(
-                    "relative w-5 h-5 transform-gpu transition-colors",
+                    "relative transform-gpu transition-colors",
+                    collapsed ? "h-[21px] w-[21px]" : "h-6 w-6",
                     // Where you are is the one place the house colour belongs here.
                     isActive ? "text-willo-green" : item.soon ? "t-faint" : "text-white/45",
                   )}
@@ -201,11 +211,12 @@ export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, 
       <button
         onClick={onPlus}
         aria-label="Willo"
-        className="relative flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
+        style={{ width: end, height: end }}
+        className="relative flex shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
       >
         {/* Filling the button, so the only gap in the row is the one between the two
             pieces of glass rather than a ring of page showing around him. */}
-        <BotMark size={58} />
+        <BotMark size={end} />
       </button>
     </>
   );
