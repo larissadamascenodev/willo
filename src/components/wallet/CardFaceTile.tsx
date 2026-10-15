@@ -17,16 +17,18 @@ import { cn } from "@/lib/utils";
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 /**
- * Spent and free, as two neutral tones.
+ * Spent and free, in the two colours the app owns.
  *
- * A wallet holds a Nubank and an Inter and a Caixa, and no single hue sits well beside
- * all three — so anything that speaks for the cards as a group is neutral, and the
- * bank colour is kept for the card it belongs to. The pairing is what carries the
- * meaning: what is gone is the dimmer of the two, what is left is the brighter.
+ * A wallet holds a Nubank and an Inter and a Caixa, and no single bank hue sits well
+ * beside all three — so anything speaking for the cards as a group uses Willo's own
+ * colours instead, and the bank colour stays on the card it belongs to. Grey was tried
+ * first and sank into the ground: on a near-black page a neutral has to be lit to be
+ * seen at all. So the dim half is white held back, and the half that matters — the
+ * room you still have — is the green this app says every good number in.
  * Red is kept for having none left.
  */
-export const USED_LIMIT_HEX = "#6C6C79";
-export const FREE_LIMIT_HEX = "#DADBE4";
+export const USED_LIMIT_HEX = "rgb(255 255 255 / 0.42)";
+export const FREE_LIMIT_HEX = "#C8F36D";
 
 export interface CardFace {
   id: string;

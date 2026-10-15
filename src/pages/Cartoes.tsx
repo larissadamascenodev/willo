@@ -193,7 +193,7 @@ const Cartoes = () => {
                     key={r.card.id}
                     className="h-full rounded-full"
                     style={{
-                      background: `linear-gradient(180deg, color-mix(in srgb, ${USED_LIMIT_HEX}, #fff 14%) 0%, ${USED_LIMIT_HEX} 60%, rgb(0 0 0 / 0.18) 100%)`,
+                      background: USED_LIMIT_HEX,
                       boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.16)",
                       minWidth: 6,
                     }}
@@ -236,7 +236,7 @@ const Cartoes = () => {
                 </p>
                 <p
                   className="mt-1 truncate text-[16px] font-bold tabular-nums"
-                  style={{ color: sums.disponivel > 0 ? "#FFFFFF" : "#F87171" }}
+                  style={{ color: sums.disponivel > 0 ? FREE_LIMIT_HEX : "#F87171" }}
                 >
                   {fmt(sums.disponivel)}
                 </p>
