@@ -8,9 +8,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getAccounts } from "@/services/transactionService";
 import { supabase } from "@/integrations/supabase/client";
 import { colorFor } from "@/lib/banks";
+import { shade } from "@/lib/tone";
 import { getCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
-import AccountTile from "@/components/wallet/AccountTile";
+import BankMark from "@/components/wallet/BankMark";
 import AccountCreateSheet from "@/components/wallet/AccountCreateSheet";
 import ReserveAndPots from "@/components/wallet/ReserveAndPots";
 import { fetchGoals, type Goal } from "@/services/goalService";
@@ -18,11 +19,13 @@ import { fetchGoals, type Goal } from "@/services/goalService";
 /**
  * Contas.
  *
- * The same shape the wallet has, because it answers the same two questions in the
- * same order: what does all of this add up to, and which account do I want. The total
- * stands alone at the top and stays there while the accounts travel up over it; each
- * account is glass with its bank's colour on its mark and on the share rule, so four
- * banks read as four marks rather than four coloured panels.
+ * A balance is one number and a name. It does not need a panel around it, a shadow
+ * under it or a figure repeated twice — so the accounts are lines, one each, and the
+ * only thing drawn is the bar that splits the total between them, each share in its
+ * bank's colour. The total stays at the top while the lines travel up over it.
+ *
+ * Cards were tried first. Four of them is four hundred pixels of frame around eight
+ * numbers, and the page said less the taller it got.
  */
 
 interface Account {
@@ -251,28 +254,83 @@ const GestaoFinanceira = () => {
           {/* The room the pinned block takes, so the accounts begin under it. */}
           <div aria-hidden="true" style={{ height: summaryHeight }} />
 
-          {/* ══ The accounts ══ */}
-          <div className="relative z-20 mt-6 space-y-3">
-            {rows.map((r, i) => (
-              <AccountTile
-                key={r.account.id}
-                index={i}
-                hex={r.hex}
-                share={positive > 0 ? Math.max(r.balance, 0) / positive : 0}
-                account={{
-                  id: r.account.id,
-                  name: r.account.name,
-                  typeLabel: r.typeLabel,
-                  balance: r.balance,
-                  isDefault: r.account.is_default,
-                }}
-                onOpen={() => navigate(`/conta/${r.account.id}`)}
-              />
-            ))}
+          {/* ══ The accounts, one line each ══ */}
+          <div className="relative z-20 mt-6">
+            {/* One bar split the way the money is, each share in its bank's colour. */}
+            <div className="mb-1 flex h-2 gap-[3px] px-1">
+              {positive > 0 ? (
+                rows
+                  .filter((r) => r.balance > 0)
+                  .map((r, i) => (
+                    <motion.span
+                      key={r.account.id}
+                      className="h-full rounded-full"
+                      style={{
+                        background: r.hex,
+                        boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.25)",
+                        minWidth: 6,
+                      }}
+                      initial={{ flexGrow: 0 }}
+                      animate={{ flexGrow: r.balance / positive }}
+                      transition={{ duration: 0.6, delay: 0.05 * i, ease: "easeOut" }}
+                    />
+                  ))
+              ) : (
+                <span className="h-full flex-1 rounded-full bg-white/[0.08]" />
+              )}
+            </div>
+
+            <div className="divide-y divide-white/[0.06]">
+              {rows.map((r, i) => {
+                const share = positive > 0 ? Math.max(r.balance, 0) / positive : 0;
+                return (
+                  <motion.button
+                    key={r.account.id}
+                    type="button"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.04 + i * 0.05, duration: 0.35 }}
+                    onClick={() => navigate(`/conta/${r.account.id}`)}
+                    className="flex w-full items-center gap-3.5 px-1 py-4 text-left transition-opacity active:opacity-60"
+                  >
+                    <BankMark name={r.account.name} hex={r.hex} size={40} />
+
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2">
+                        <span className="truncate text-[15.5px] font-semibold text-white">
+                          {r.account.name}
+                        </span>
+                        {r.account.is_default && (
+                          <span className="shrink-0 rounded-full bg-white/[0.08] px-2 py-0.5 text-[10px] font-bold t-soft">
+                            Principal
+                          </span>
+                        )}
+                      </span>
+                      <span className="mt-0.5 block truncate text-[12px] t-softer">{r.typeLabel}</span>
+                    </span>
+
+                    <span className="shrink-0 text-right">
+                      <span className={cn(
+                        "block text-[15.5px] font-bold tabular-nums",
+                        r.balance < 0 ? "text-red-400" : r.balance > 0 ? "text-white" : "t-softer",
+                      )}>
+                        {fmt(r.balance)}
+                      </span>
+                      <span
+                        className="mt-0.5 block text-[12px] tabular-nums"
+                        style={{ color: share > 0 ? shade(r.hex, 0.58) : "rgb(255 255 255 / 0.35)" }}
+                      >
+                        {Math.round(share * 100)}%
+                      </span>
+                    </span>
+                  </motion.button>
+                );
+              })}
+            </div>
 
             <button
               onClick={() => setShowAddAccount(true)}
-              className="flex h-[54px] w-full items-center justify-center gap-2 rounded-[20px] border border-dashed border-white/20 text-[14.5px] font-semibold text-white/82 active:opacity-70"
+              className="mt-3 flex h-[52px] w-full items-center justify-center gap-2 rounded-[20px] border border-dashed border-white/[0.16] text-[14.5px] font-semibold text-white/80 active:opacity-70"
             >
               <Plus className="h-[18px] w-[18px]" strokeWidth={2.4} /> Adicionar conta
             </button>
