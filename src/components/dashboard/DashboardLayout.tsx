@@ -56,6 +56,9 @@ const PAGES_WITHOUT_BACK = new Set([
   "/configuracoes",
 ]);
 
+/** Screens that stand on the sky rather than on the working charcoal. */
+const SKY_PAGES = new Set(["/", "/cartoes"]);
+
 
 const DashboardLayout = () => {
   useSwipeBack();
@@ -367,9 +370,11 @@ const DashboardLayout = () => {
         <OnboardingFlow onComplete={handleOnboardingComplete} onRefetch={refetchProfile} />
       )}
       <div
-        // Only the home gets the sky. It is the one screen whose top is a greeting over open
-        // space; everywhere else a picture would sit behind a working header.
-        className={`willo-bg min-h-screen text-foreground${location.pathname === "/" ? " willo-sky" : ""}`}
+        // The home and the wallet get the sky. Both are screens you arrive at rather than
+        // work in, and the cards sit badly on flat charcoal — a grey ground beside a
+        // purple card reads as something unfinished. Everywhere else a picture would sit
+        // behind a working header.
+        className={`willo-bg min-h-screen text-foreground${SKY_PAGES.has(location.pathname) ? " willo-sky" : ""}`}
         style={showOnboarding ? { display: "none" } : undefined}
       >
         {/* Only the home pins a header for content to dissolve under. On every other

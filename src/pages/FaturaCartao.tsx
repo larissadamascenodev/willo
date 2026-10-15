@@ -24,7 +24,7 @@ import InvoiceTransactionList from "@/components/fatura/InvoiceTransactionList";
 import InvoicePayModal from "@/components/fatura/InvoicePayModal";
 import InvoiceForecastChart from "@/components/fatura/InvoiceForecastChart";
 import InvoiceRecentCard from "@/components/fatura/InvoiceRecentCard";
-import { shade } from "@/components/wallet/CardFaceTile";
+import { shade, statusPill } from "@/components/wallet/CardFaceTile";
 import CardEntryModal from "@/components/fatura/CardEntryModal";
 import InvoiceAddChooserModal from "@/components/fatura/InvoiceAddChooserModal";
 import InvoiceScanScreen from "@/components/fatura/InvoiceScanScreen";
@@ -545,13 +545,16 @@ const FaturaCartao = () => {
     const toDue = days(due);
     const plural = (n: number) => `${n} dia${n === 1 ? "" : "s"}`;
 
+    /* While the invoice is open, the only date you can act on is the closing one —
+       it is the deadline for what still goes on this bill. Once it shuts, the question
+       changes to when it has to be paid, and so does the line. */
     const line =
       total > 0 && outstanding <= 0 ? "Fatura paga"
+      : toClose > 0 ? (toClose === 1 ? "Fecha amanhã" : `Fecha em ${plural(toClose)}`)
       : toDue < 0 ? `Venceu há ${plural(Math.abs(toDue))}`
       : toDue === 0 ? "Vence hoje"
-      : toClose > 0
-        ? `Vence em ${plural(toDue)} · fecha dia ${card.closing_day}`
-        : `Vence em ${plural(toDue)} · fatura fechada`;
+      : toDue === 1 ? "Vence amanhã"
+      : `Vence em ${plural(toDue)}`;
 
     return { line, overdue: toDue < 0 && outstanding > 0 };
   }, [card, selectedMonth, selectedYear, total, outstanding]);
@@ -614,10 +617,15 @@ const FaturaCartao = () => {
   const cardColor = card?.color || "hsl(150 100% 45%)";
 
   const cardHex = colorFor(card?.name ?? "", card?.color, "#3A3A3F");
+  /* Paid is the app's green wherever it appears; open and closed belong to the card,
+     so they are its colour — a translucent fill with a deeper edge of the same hue. */
   const statusChip =
-    invoiceStatus === "paid" ? { label: "Paga", hex: "#C8F36D" }
-      : invoiceStatus === "closed" ? { label: "Fechada", hex: "#FCD34D" }
-        : invoiceStatus === "open" ? { label: "Aberta", hex: "#FFFFFF" }
+    invoiceStatus === "paid"
+      ? { label: "Paga", style: { background: "rgb(200 243 109 / 0.12)", color: "#C8F36D" } }
+      : invoiceStatus === "closed"
+        ? { label: "Fechada", style: statusPill(cardHex, true) }
+        : invoiceStatus === "open"
+          ? { label: "Aberta", style: statusPill(cardHex) }
           : null;
 
   /* Two views, one set of figures. The whole list of entries is this same screen with
@@ -697,7 +705,7 @@ const FaturaCartao = () => {
               {statusChip && (
                 <span
                   className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold"
-                  style={{ background: `${statusChip.hex}1F`, color: statusChip.hex }}
+                  style={statusChip.style}
                 >
                   {statusChip.label}
                 </span>
@@ -877,7 +885,7 @@ const FaturaCartao = () => {
               {statusChip && (
                 <span
                   className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold"
-                  style={{ background: `${statusChip.hex}1F`, color: statusChip.hex }}
+                  style={statusChip.style}
                 >
                   {statusChip.label}
                 </span>
@@ -911,7 +919,7 @@ const FaturaCartao = () => {
               <motion.span
                 className="h-full rounded-full"
                 style={{
-                  background: isOverLimit ? "#F87171" : cardHex,
+                  background: cardHex,
                   boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.25)",
                   minWidth: usedLimit > 0 ? 6 : 0,
                 }}
@@ -949,7 +957,9 @@ const FaturaCartao = () => {
                 </p>
                 <p
                   className="mt-1 truncate text-[16px] font-bold tabular-nums"
-                  style={{ color: availableLimit > 0 ? shade(cardHex, 0.58) : "#F87171" }}
+                  style={{
+                    color: availableLimit > 0 ? shade(cardHex, 0.58) : "rgb(255 255 255 / 0.55)",
+                  }}
                 >
                   {formatCurrency(availableLimit)}
                 </p>

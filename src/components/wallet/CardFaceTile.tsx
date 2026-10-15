@@ -76,6 +76,19 @@ export function withAlpha(color: string, alpha: number) {
   return `rgb(${r} ${g} ${b} / ${alpha})`;
 }
 
+/**
+ * The badge that says where an invoice stands, in the card's own colour: a light
+ * translucent fill with a deeper edge of the same hue. Grey said nothing and agreed
+ * with nothing; this belongs to the card it sits on, whichever bank that is.
+ */
+export function statusPill(hex: string, strong = false) {
+  return {
+    background: withAlpha(hex, strong ? 0.26 : 0.16),
+    boxShadow: `inset 0 0 0 1px ${withAlpha(shade(hex, -0.28), 0.95)}`,
+    color: shade(hex, 0.66),
+  };
+}
+
 export interface CardFace {
   id: string;
   name: string;
@@ -162,18 +175,18 @@ export default function CardFaceTile({
         </div>
 
         {/* Where the invoice stands, as a mark rather than a sentence. */}
-        <span
-          className={cn(
-            "shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-bold",
-            owed <= 0
-              ? "bg-willo-green/12 text-willo-green-ink"
-              : status.isClosed
-                ? "bg-white/[0.10] text-white/85"
-                : "bg-white/[0.06] text-white/62",
-          )}
-        >
-          {owed <= 0 ? "Em dia" : status.isClosed ? "Fechada" : "Aberta"}
-        </span>
+        {owed <= 0 ? (
+          <span className="shrink-0 rounded-full bg-willo-green/12 px-2.5 py-1 text-[10.5px] font-bold text-willo-green-ink">
+            Em dia
+          </span>
+        ) : (
+          <span
+            className="shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-bold"
+            style={statusPill(hex, status.isClosed)}
+          >
+            {status.isClosed ? "Fechada" : "Aberta"}
+          </span>
+        )}
       </div>
 
       <p className={cn(
@@ -192,7 +205,9 @@ export default function CardFaceTile({
         <motion.span
           className="h-full rounded-full"
           style={{
-            background: usedPct >= 100 ? "#F87171" : hex,
+            /* A limit entirely spent is a bar entirely filled. Red says something
+               went wrong, and nothing went wrong — the card is simply full. */
+            background: hex,
             boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.25)",
             minWidth: card.used > 0 ? 6 : 0,
           }}
@@ -221,7 +236,7 @@ export default function CardFaceTile({
           Disponível{" "}
           <span
             className="font-semibold tabular-nums"
-            style={{ color: available > 0 ? freeTone : "#F87171" }}
+            style={{ color: available > 0 ? freeTone : "rgb(255 255 255 / 0.55)" }}
           >
             {fmt(available)}
           </span>
