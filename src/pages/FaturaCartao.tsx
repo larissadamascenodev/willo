@@ -20,10 +20,11 @@ import { getAccounts, getCreditCards, createTransaction, updateTransaction, dele
 import type { RecurrenceScope } from "@/components/fatura/RecurrenceActionModal";
 import { cn } from "@/lib/utils";
 import { colorFor } from "@/lib/banks";
-import InvoiceCategoryBreakdown from "@/components/fatura/InvoiceCategoryBreakdown";
 import InvoiceTransactionList from "@/components/fatura/InvoiceTransactionList";
 import InvoicePayModal from "@/components/fatura/InvoicePayModal";
 import InvoiceForecastChart from "@/components/fatura/InvoiceForecastChart";
+import InvoiceRecentCard from "@/components/fatura/InvoiceRecentCard";
+import CardEntryModal from "@/components/fatura/CardEntryModal";
 import InvoiceAddChooserModal from "@/components/fatura/InvoiceAddChooserModal";
 import InvoiceScanScreen from "@/components/fatura/InvoiceScanScreen";
 import { invoicePeriodIndex } from "@/lib/installments";
@@ -138,6 +139,7 @@ const FaturaCartao = () => {
   const [showEditCard, setShowEditCard] = useState(false);
   const [tab, setTab] = useState<"geral" | "parcelados">("geral");
   const [showAddChooser, setShowAddChooser] = useState(false);
+  const [recentEntry, setRecentEntry] = useState<EnrichedItem | null>(null);
 
   const currentInvoice = useMemo(
     () => invoices.find((i) => i.month === selectedMonth && i.year === selectedYear),
@@ -520,6 +522,50 @@ const FaturaCartao = () => {
     return { text: `Vence em ${diffDays} dias`, overdue: false };
   }, [card, selectedMonth, selectedYear, userStartDate]);
 
+  /**
+   * Where this invoice is in its month: when it closed (or closes), when it is due, and
+   * where today sits between the two. The strip is drawn from the previous closing to
+   * the due date, because that whole stretch is one cycle — the part before the notch
+   * is still collecting purchases, the part after it is waiting to be paid.
+   */
+  const cycle = useMemo(() => {
+    if (!card) return null;
+    const dayIn = (y: number, m: number, d: number) =>
+      new Date(y, m - 1, Math.min(d, new Date(y, m, 0).getDate()));
+
+    const closing = dayIn(selectedYear, selectedMonth, card.closing_day);
+    let due = dayIn(selectedYear, selectedMonth, card.due_day);
+    if (due <= closing) due = dayIn(selectedYear, selectedMonth + 1, card.due_day);
+    const start = dayIn(selectedYear, selectedMonth - 1, card.closing_day);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const span = Math.max(due.getTime() - start.getTime(), 1);
+    const at = (d: Date) => Math.min(Math.max((d.getTime() - start.getTime()) / span, 0), 1) * 100;
+    const days = (d: Date) => Math.round((d.getTime() - today.getTime()) / 86_400_000);
+
+    const toClose = days(closing);
+    const toDue = days(due);
+    const label = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+
+    const sentence =
+      total > 0 && outstanding <= 0 ? "Fatura paga."
+      : toDue < 0 ? `Venceu há ${Math.abs(toDue)} dia${Math.abs(toDue) === 1 ? "" : "s"}.`
+      : toClose > 0
+        ? `Ainda aberta: fecha em ${toClose} dia${toClose === 1 ? "" : "s"} e vence em ${toDue}.`
+        : toDue === 0 ? "Fechada. Vence hoje."
+        : `Fechada. Vence em ${toDue} dia${toDue === 1 ? "" : "s"}.`;
+
+    return {
+      closingLabel: label(closing),
+      dueLabel: label(due),
+      closingPct: at(closing),
+      pct: at(today),
+      overdue: toDue < 0 && outstanding > 0,
+      sentence,
+    };
+  }, [card, selectedMonth, selectedYear, total, outstanding]);
+
   const invoiceStatus = useMemo(() => {
     if (!currentInvoice) return null;
     // Only show "paid" if truly no outstanding balance
@@ -532,25 +578,6 @@ const FaturaCartao = () => {
     return "open";
   }, [currentInvoice, card, selectedMonth, selectedYear, outstanding]);
 
-  const categoryBreakdown = useMemo(() => {
-    if (items.length === 0) return [];
-    const map = new Map<string, { total: number; count: number }>();
-    items.forEach((item) => {
-      const cat = item.transaction_category || "Outros";
-      const existing = map.get(cat) || { total: 0, count: 0 };
-      existing.total += Number(item.amount);
-      existing.count += 1;
-      map.set(cat, existing);
-    });
-    return Array.from(map.entries())
-      .map(([category, data]) => ({
-        category,
-        total: data.total,
-        count: data.count,
-        percentage: total > 0 ? (data.total / total) * 100 : 0,
-      }))
-      .sort((a, b) => b.total - a.total);
-  }, [items, total]);
 
   if (loading) {
     return (
@@ -569,17 +596,17 @@ const FaturaCartao = () => {
         : invoiceStatus === "open" ? { label: "Aberta", hex: "#FFFFFF" }
           : null;
 
-  /* Two views, one set of figures. The full list of entries is the same screen with the
-     panel folded away: it reads the same invoice, the same items and the same handlers,
-     so there is no second place for the numbers to disagree. */
+  /* Two views, one set of figures. The whole list of entries is this same screen with
+     the panel folded away: it reads the same invoice, the same items and the same
+     handlers, so there is no second place for the numbers to disagree. */
   const onEntries = location.pathname.endsWith("/lancamentos");
   const monthQuery = `?month=${selectedMonth}&year=${selectedYear}`;
   const headline = paidAmount > 0 && outstanding > 0 ? outstanding : total;
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 pb-28 pt-2">
+    <div className="mx-auto max-w-lg pb-28 pt-2">
       {onEntries ? (
-        <>
+        <div className="space-y-4">
           <div className="flex h-11 items-center justify-between">
             <BackButton to={`/fatura/${cardId}${monthQuery}`} />
             <button
@@ -595,7 +622,7 @@ const FaturaCartao = () => {
           {/* Which invoice this list belongs to — the one thing a bare list cannot say. */}
           <div className="px-1">
             <p className="text-[12.5px] t-softer">{card?.name}</p>
-            <p className="mt-0.5 text-[24px] font-extrabold leading-tight tracking-[-0.03em] text-white">
+            <p className="mt-0.5 text-[25px] font-extrabold leading-tight tracking-[-0.03em] text-white">
               Fatura de {MONTH_NAMES[selectedMonth - 1]}
             </p>
             <p className="mt-1 text-[13px] t-soft tabular-nums">
@@ -618,7 +645,6 @@ const FaturaCartao = () => {
 
           <InvoiceTransactionList
             items={items}
-            hideHeader
             filter={tab === "parcelados" ? "parcelados" : "todos"}
             cardName={card?.name}
             invoiceMonth={selectedMonth}
@@ -628,10 +654,9 @@ const FaturaCartao = () => {
             onEditItem={handleEditItem}
             onDeleteItem={handleDeleteItem}
           />
-        </>
+        </div>
       ) : (
-        <>
-          {/* Header — back + card options */}
+        <div className="space-y-4">
           <div className="flex h-11 items-center justify-between">
             <BackButton to="/cartoes" />
             <DropdownMenu>
@@ -670,27 +695,21 @@ const FaturaCartao = () => {
             </DropdownMenu>
           </div>
 
-          {/* ===== The card: who it is, what it asks for, what is left of it ===== */}
-          <motion.section
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-            className="relative overflow-hidden rounded-[26px] border border-white/[0.08] willo-glass p-5"
-          >
-            <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full blur-[70px]" style={{ background: cardHex, opacity: 0.3 }} />
-
-            <div className="relative flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px]" style={{ background: cardHex, boxShadow: `0 8px 20px -10px ${cardHex}` }}>
-                  <span className="h-[8px] w-[12px] rounded-[2px] bg-white/85" />
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-[16px] font-bold text-white">{card?.name}</p>
-                  {card?.last_four_digits && (
-                    <p className="text-[12px] tabular-nums t-soft">•••• {card.last_four_digits}</p>
-                  )}
-                </div>
-              </div>
+          {/* ── Who this is, and what it is asking for ── */}
+          <div className="px-1">
+            <div className="flex items-center gap-2.5">
+              <span
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px]"
+                style={{ background: cardHex }}
+              >
+                <span className="h-[6px] w-[9px] rounded-[1.5px] bg-white/85" />
+              </span>
+              <p className="min-w-0 flex-1 truncate text-[15px] font-semibold text-white">
+                {card?.name}
+                {card?.last_four_digits && (
+                  <span className="t-softer tabular-nums"> · ••••{card.last_four_digits}</span>
+                )}
+              </p>
               {statusChip && (
                 <span
                   className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold"
@@ -701,99 +720,132 @@ const FaturaCartao = () => {
               )}
             </div>
 
-            {/* The invoice in focus: what is still owed, never the leftover of a figure
-                that has already been partly paid. */}
-            <div className="relative mt-5">
-              <p className="text-[12px] text-white/62">Fatura de {MONTH_NAMES[selectedMonth - 1]}</p>
-              <p className="text-[36px] font-extrabold leading-tight tracking-[-0.035em] text-white tabular-nums">
-                {formatCurrency(headline)}
+            <p className="mt-5 text-[13px] text-white/62">Fatura de {MONTH_NAMES[selectedMonth - 1]}</p>
+            {/* What is still owed, never the leftover of a figure already part paid. */}
+            <p className="mt-0.5 text-[40px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">
+              {formatCurrency(headline)}
+            </p>
+            {paidAmount > 0 && outstanding > 0 ? (
+              <p className="mt-2 text-[12.5px] t-soft tabular-nums">
+                <span className="text-willo-green-ink">{formatCurrency(paidAmount)} já pagos</span> de{" "}
+                {formatCurrency(total)}
               </p>
-              {total > 0 && outstanding <= 0 ? (
-                <p className="flex items-center gap-1.5 text-[13px] font-medium text-willo-green-ink">
-                  <Check className="h-3.5 w-3.5" strokeWidth={3} /> Paga
+            ) : total > 0 && outstanding <= 0 ? (
+              <p className="mt-2 flex items-center gap-1.5 text-[13px] font-medium text-willo-green-ink">
+                <Check className="h-3.5 w-3.5" strokeWidth={3} /> Fatura paga
+              </p>
+            ) : null}
+          </div>
+
+          {/* ── The cycle, then the limit: the two things that bound this invoice ── */}
+          <motion.section
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="rounded-[24px] border border-white/[0.08] willo-glass px-5 pb-5 pt-4"
+          >
+            {cycle && (
+              <>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-[11.5px] font-semibold uppercase tracking-[0.12em] t-softer">Fecha</span>
+                  <span className="text-[11.5px] font-semibold uppercase tracking-[0.12em] t-softer">Vence</span>
+                </div>
+                <div className="mt-1 flex items-baseline justify-between gap-3">
+                  <span className="text-[15px] font-bold text-white">{cycle.closingLabel}</span>
+                  <span className={cn("text-[15px] font-bold", cycle.overdue ? "text-red-400" : "text-white")}>
+                    {cycle.dueLabel}
+                  </span>
+                </div>
+
+                {/* Where today sits between the two dates. */}
+                <div className="relative mt-3 h-[6px] rounded-full bg-white/[0.08]">
+                  <motion.span
+                    className="absolute inset-y-0 left-0 rounded-full bg-white/35"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${cycle.pct}%` }}
+                    transition={{ duration: 0.7, ease: "easeOut" }}
+                  />
+                  {/* the closing day, as a notch on the way to the due date */}
+                  <span
+                    className="absolute top-1/2 h-[12px] w-px -translate-y-1/2 bg-white/35"
+                    style={{ left: `${cycle.closingPct}%` }}
+                  />
+                  <motion.span
+                    className="absolute top-1/2 h-[13px] w-[13px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[#0B0C10] bg-white"
+                    initial={{ left: 0 }}
+                    animate={{ left: `${cycle.pct}%` }}
+                    transition={{ duration: 0.7, ease: "easeOut" }}
+                  />
+                </div>
+
+                <p className={cn("mt-3 text-[13px]", cycle.overdue ? "text-red-400" : "t-soft")}>
+                  {cycle.sentence}
                 </p>
-              ) : dueInfo && outstanding > 0 ? (
-                <p className={cn("text-[13px]", dueInfo.overdue ? "text-red-400" : "text-white/62")}>{dueInfo.text}</p>
-              ) : null}
-              {paidAmount > 0 && outstanding > 0 && (
-                <p className="mt-1 text-[12px] t-softer tabular-nums">
-                  {formatCurrency(paidAmount)} já pagos de {formatCurrency(total)}
-                </p>
-              )}
+
+                <div className="my-4 h-px bg-white/[0.07]" />
+              </>
+            )}
+
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-[13px] text-white/66">Limite</span>
+              <span className={cn(
+                "text-[12.5px] font-semibold tabular-nums",
+                isOverLimit ? "text-red-400" : usedPct >= 80 ? "text-willo-amber" : "text-white/72",
+              )}>
+                {usedPct.toFixed(0)}% usado
+              </span>
             </div>
 
-            <div className="relative mt-4 flex items-center gap-4 border-t border-white/[0.06] pt-4">
-              <span className="flex items-center gap-2 text-[12.5px] text-white/66">
-                <CalendarClock className="h-4 w-4 shrink-0 t-soft" />
-                Fecha dia <span className="font-semibold text-white">{card?.closing_day}</span>
-              </span>
-              <span className="h-3 w-px bg-white/10" />
-              <span className="flex items-center gap-2 text-[12.5px] text-white/66">
-                <CalendarCheck className="h-4 w-4 shrink-0 t-soft" />
-                Vence dia <span className="font-semibold text-white">{card?.due_day}</span>
-              </span>
+            <div className="mt-2.5 h-[10px] overflow-hidden rounded-full bg-white/[0.07]">
+              <motion.span
+                className="block h-full rounded-full"
+                style={{ background: isOverLimit ? "#F87171" : usedPct >= 80 ? "#FBBF24" : cardHex }}
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(usedPct, 100)}%` }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+              />
             </div>
 
-            <div className="relative mt-5 border-t border-white/[0.06] pt-4">
-              <div className="flex items-baseline justify-between">
-                <span className="text-[12px] text-white/62">Limite usado</span>
-                <span className={cn("text-[12.5px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-white/82")}>
-                  {usedPct.toFixed(0)}%
+            <div className="mt-3 flex items-baseline justify-between gap-3">
+              <span className="truncate text-[12.5px] t-soft">
+                Usado <span className="font-semibold tabular-nums text-white">{formatCurrency(usedLimit)}</span>
+              </span>
+              <span className="shrink-0 truncate text-[12.5px] t-soft">
+                Disponível{" "}
+                <span className={cn(
+                  "font-semibold tabular-nums",
+                  availableLimit > 0 ? "text-willo-green-ink" : "text-red-400",
+                )}>
+                  {formatCurrency(availableLimit)}
                 </span>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.07]">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(usedPct, 100)}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                  className="h-full rounded-full"
-                  style={{ background: isOverLimit ? "#F87171" : cardHex }}
-                />
-              </div>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <p className="text-[11.5px] t-soft">Usado</p>
-                  <p className="text-[14px] font-semibold text-white tabular-nums">{formatCurrency(usedLimit)}</p>
-                </div>
-                <div className="border-x border-white/[0.06]">
-                  <p className="text-[11.5px] t-soft">Disponível</p>
-                  {/* Nothing left is not good news, so it is not written in green. */}
-                  <p className={cn(
-                    "text-[14px] font-semibold tabular-nums",
-                    isOverLimit ? "text-red-400" : availableLimit > 0 ? "text-willo-green-ink" : "text-white",
-                  )}>
-                    {formatCurrency(availableLimit)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[11.5px] t-soft">Total</p>
-                  <p className="text-[14px] font-semibold text-white tabular-nums">{formatCurrency(limitTotal)}</p>
-                </div>
-              </div>
+              </span>
             </div>
+            <p className="mt-1.5 text-[11.5px] t-faint tabular-nums">
+              Limite total {formatCurrency(limitTotal)}
+            </p>
+          </motion.section>
 
-            {/* The two things you came here to do. */}
-            <div className="relative mt-5 space-y-2.5">
-              {currentInvoice && outstanding > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowPayModal(true)}
-                  className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-white text-[15px] font-bold willo-on-invert active:scale-[0.99]"
-                >
-                  <Wallet className="h-4 w-4" />
-                  Pagar fatura · {formatCurrency(outstanding)}
-                </button>
-              )}
+          {/* ── The two things you came here to do ── */}
+          <div className="space-y-2.5">
+            {currentInvoice && outstanding > 0 && (
               <button
                 type="button"
-                onClick={() => setShowAddChooser(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-full border border-white/[0.14] willo-glass-control py-4 text-[14.5px] font-semibold text-white active:scale-[0.99]"
+                onClick={() => setShowPayModal(true)}
+                className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-white text-[15px] font-bold willo-on-invert active:scale-[0.99]"
               >
-                <Plus className="h-4 w-4" strokeWidth={2.4} />
-                Adicionar lançamentos
+                <Wallet className="h-4 w-4" />
+                Pagar fatura · {formatCurrency(outstanding)}
               </button>
-            </div>
-          </motion.section>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowAddChooser(true)}
+              className="flex h-13 w-full items-center justify-center gap-2 rounded-full border border-white/[0.14] willo-glass-control py-4 text-[14.5px] font-semibold text-white active:scale-[0.99]"
+            >
+              <Plus className="h-4 w-4" strokeWidth={2.4} />
+              Adicionar lançamento
+            </button>
+          </div>
 
           {/* What this card is about to ask for, month by month */}
           <InvoiceForecastChart
@@ -804,35 +856,30 @@ const FaturaCartao = () => {
             closingDay={card?.closing_day}
           />
 
-          {/* Only what was spent on this card, by category */}
-          {categoryBreakdown.length > 0 && (
-            <InvoiceCategoryBreakdown categories={categoryBreakdown} total={total} />
-          )}
-
-          {/* The newest few. The rest is one tap away, not stacked under the panel. */}
-          <div>
-            <div className="mb-2.5 flex items-baseline justify-between px-1">
-              <h2 className="text-[15px] font-bold text-white">Lançamentos recentes</h2>
-              {items.length > 0 && (
-                <span className="text-[12px] t-softer tabular-nums">{items.length}</span>
-              )}
-            </div>
-            <InvoiceTransactionList
-              items={items}
-              hideHeader
-              maxLines={4}
-              cardName={card?.name}
-              invoiceMonth={selectedMonth}
-              invoiceYear={selectedYear}
-              payments={payments}
-              isPaid={invoiceStatus === "paid"}
-              onSeeAll={items.length > 0 ? () => navigate(`/fatura/${cardId}/lancamentos${monthQuery}`) : undefined}
-              onEditItem={handleEditItem}
-              onDeleteItem={handleDeleteItem}
-            />
-          </div>
-        </>
+          <InvoiceRecentCard
+            items={items}
+            onSeeAll={() => navigate(`/fatura/${cardId}/lancamentos${monthQuery}`)}
+            onOpen={setRecentEntry}
+          />
+        </div>
       )}
+
+      {/* The same card Transações opens for a transaction. */}
+      <CardEntryModal
+        entry={recentEntry && {
+          transactionId: recentEntry.transaction_id,
+          name: recentEntry.transaction_name,
+          category: recentEntry.transaction_category,
+          amount: Number(recentEntry.amount),
+          date: recentEntry.transaction_date,
+          installmentNumber: recentEntry.installment_number,
+          totalInstallments: recentEntry.total_installments,
+        }}
+        cardName={card?.name}
+        onClose={() => setRecentEntry(null)}
+        onEdit={(id) => { setRecentEntry(null); void handleEditItem(id); }}
+        onDelete={(id) => { setRecentEntry(null); void handleDeleteItem(id); }}
+      />
 
       {/* What "add to this card" can mean */}
       <InvoiceAddChooserModal

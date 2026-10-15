@@ -20,29 +20,81 @@ import {
 /**
  * The wallet.
  *
- * This screen used to open on three pills — Cartões, Faturas, Parcelas — which asked
- * which view you wanted before you had seen anything. Arriving here, there are only two
- * questions: what do all of these cards add up to, and which one do I want. So the
- * screen is a summary and then the cards themselves, each drawn as a card, because a
- * row of text can state a number but it cannot be recognised at a glance.
+ * Arriving here there are two questions, in this order: what do all of these add up
+ * to, and which card do I want. So the total is the first thing on the page, with
+ * nothing drawn around it, and under it one panel that breaks that total down — by
+ * card, against the limit, and into what is still coming in instalments. Then the
+ * cards themselves, as the way in.
  *
- * Every figure here is the open invoice — the one still to be paid. A credit card is a
- * bill, not a history.
+ * Every figure is the open invoice, the one still to be paid. A credit card is a bill,
+ * not a history.
  */
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
+const MONTH_SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
 interface CardRow {
   card: OverviewCard;
   hex: string;
-  /** The invoice that is open, and what it asks for in full. */
   open: OverviewInvoice | null;
   total: number;
   paid: number;
-  /** The part of that invoice that is instalments of earlier purchases. */
-  parcelado: number;
-  parcelas: number;
   status: { label: string; isClosed: boolean };
+}
+
+/** The share of the limit that is spent, drawn as an arc rather than another bar. */
+function LimitGauge({ pct, available, used, limit }: {
+  pct: number;
+  available: number;
+  used: number;
+  limit: number;
+}) {
+  const tone = pct >= 100 ? "#F87171" : pct >= 80 ? "#FBBF24" : "#FFFFFF";
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative">
+        <svg viewBox="0 0 160 88" className="w-[190px]" aria-hidden="true">
+          <path
+            d="M 12 80 A 68 68 0 0 1 148 80"
+            fill="none"
+            stroke="rgb(255 255 255 / 0.09)"
+            strokeWidth="11"
+            strokeLinecap="round"
+          />
+          <motion.path
+            d="M 12 80 A 68 68 0 0 1 148 80"
+            fill="none"
+            stroke={tone}
+            strokeWidth="11"
+            strokeLinecap="round"
+            pathLength={1}
+            initial={{ strokeDasharray: "0 1" }}
+            animate={{ strokeDasharray: `${Math.min(pct, 100) / 100} 1` }}
+            transition={{ duration: 0.9, ease: "easeOut" }}
+          />
+        </svg>
+
+        <div className="absolute inset-x-0 bottom-1 flex flex-col items-center">
+          <p className={cn(
+            "text-[22px] font-extrabold leading-none tracking-[-0.03em] tabular-nums",
+            available > 0 ? "text-white" : "text-red-400",
+          )}>
+            {fmt(available)}
+          </p>
+          <p className="mt-1 text-[11.5px] t-softer">disponível</p>
+        </div>
+      </div>
+
+      <div className="mt-1 flex w-full items-baseline justify-between gap-3">
+        <span className="truncate text-[11.5px] t-softer">
+          Usado <span className="font-semibold tabular-nums text-white/75">{fmt(used)}</span>
+        </span>
+        <span className="shrink-0 truncate text-[11.5px] t-softer">
+          Limite <span className="font-semibold tabular-nums text-white/75">{fmt(limit)}</span>
+        </span>
+      </div>
+    </div>
+  );
 }
 
 const Cartoes = () => {
@@ -66,12 +118,6 @@ const Cartoes = () => {
           )
           .sort((a, b) => monthKey(a.year, a.month) - monthKey(b.year, b.month))[0] ?? null;
 
-      const mine = open
-        ? installments.filter(
-            (i) => i.cardId === card.id && i.month === open.month && i.year === open.year,
-          )
-        : [];
-
       const item: CreditCardItem = {
         id: card.id, name: card.name, limit: card.limit, used_limit: card.used,
         closing_day: card.closingDay, due_day: card.dueDay,
@@ -84,46 +130,57 @@ const Cartoes = () => {
         open,
         total: open?.total ?? 0,
         paid: open?.paid ?? 0,
-        parcelado: mine.reduce((s, i) => s + i.amount, 0),
-        parcelas: mine.length,
         status: getInvoiceStatusLabel(
           item,
           open ? { amount: open.total, month: open.month, year: open.year, isPaid: open.isPaid } : undefined,
         ),
       };
     });
-  }, [cards, invoices, installments]);
+  }, [cards, invoices]);
 
   const sums = useMemo(() => {
     const now = new Date();
     const currentKey = monthKey(now.getFullYear(), now.getMonth() + 1);
+    const ahead = installments.filter((i) => monthKey(i.year, i.month) >= currentKey);
+
+    /* The strip starts at the invoice that is open, not at the calendar month: past the
+       closing day those are different, and an empty October at the head of the run says
+       nothing about what is coming. */
+    const openKeys = rows.map((r) => (r.open ? monthKey(r.open.year, r.open.month) : null));
+    const firstKey = Math.min(...openKeys.filter((k): k is number => k !== null), currentKey + 1);
+
+    /* What the next six invoices already carry in instalments, before a single new
+       purchase — the part of next month that is decided before it starts. */
+    const load = Array.from({ length: 6 }, (_, k) => {
+      const key = firstKey + k;
+      const y = Math.floor(key / 12);
+      const m = (key % 12) + 1;
+      return {
+        key,
+        label: MONTH_SHORT[m - 1],
+        amount: ahead
+          .filter((i) => monthKey(i.year, i.month) === key)
+          .reduce((s, i) => s + i.amount, 0),
+      };
+    });
 
     const faturas = rows.reduce((s, r) => s + r.total, 0);
     const pago = rows.reduce((s, r) => s + r.paid, 0);
-    const parcelado = rows.reduce((s, r) => s + r.parcelado, 0);
-    const parcelas = rows.reduce((s, r) => s + r.parcelas, 0);
-
-    /* Everything still to be charged in instalments, this invoice and every one after —
-       the figure a limit never shows you until it is gone. */
-    const aVencer = installments
-      .filter((i) => monthKey(i.year, i.month) >= currentKey)
-      .reduce((s, i) => s + i.amount, 0);
-    const compras = new Set(
-      installments.filter((i) => monthKey(i.year, i.month) >= currentKey).map((i) => i.groupId),
-    ).size;
-
     const limite = rows.reduce((s, r) => s + r.card.limit, 0);
     const usado = rows.reduce((s, r) => s + r.card.used, 0);
+    const lastKey = ahead.length ? Math.max(...ahead.map((i) => monthKey(i.year, i.month))) : null;
 
     return {
       faturas,
       pago,
       restante: Math.max(faturas - pago, 0),
-      parcelado,
-      parcelas,
-      avista: Math.max(faturas - parcelado, 0),
-      aVencer,
-      compras,
+      maior: Math.max(...rows.map((r) => r.total), 1),
+      aVencer: ahead.reduce((s, i) => s + i.amount, 0),
+      compras: new Set(ahead.map((i) => i.groupId)).size,
+      horizonte: lastKey === null
+        ? null
+        : `${MONTH_SHORT[lastKey % 12]}/${String(Math.floor(lastKey / 12)).slice(2)}`,
+      load,
       limite,
       usado,
       disponivel: Math.max(limite - usado, 0),
@@ -131,18 +188,19 @@ const Cartoes = () => {
     };
   }, [rows, installments]);
 
-  const withValue = rows.filter((r) => r.total > 0);
+  const maxLoad = Math.max(...sums.load.map((l) => l.amount), 1);
 
   return (
     <div className="mx-auto max-w-lg pb-28">
       <div className="flex h-11 items-center">
-        <BackButton />
+        {/* Cartões is a page off the dashboard, and that is where back goes. */}
+        <BackButton to="/" />
       </div>
 
       {loading ? (
-        <div className="mt-4 space-y-3">
-          <div className="h-[320px] animate-pulse rounded-[26px] border border-white/[0.08] willo-glass" />
-          <div className="h-[240px] animate-pulse rounded-[26px] border border-white/[0.08] willo-glass" />
+        <div className="mt-5 space-y-4">
+          <div className="h-[90px] animate-pulse rounded-[24px] bg-white/[0.04]" />
+          <div className="h-[420px] animate-pulse rounded-[24px] border border-white/[0.08] willo-glass" />
         </div>
       ) : cards.length === 0 ? (
         <div className="mt-4 overflow-hidden rounded-[26px] border border-white/[0.08] willo-glass px-5 pb-5 pt-6 text-center">
@@ -162,143 +220,121 @@ const Cartoes = () => {
         </div>
       ) : (
         <>
-          {/* ══ Everything, added up ══════════════════════════════ */}
-          <motion.section
-            initial={{ opacity: 0, y: 10 }}
+          {/* ══ The figure itself, with nothing drawn around it ══ */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            className="relative mt-4 overflow-hidden rounded-[26px] border border-white/[0.08] willo-glass p-5"
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="px-1 pt-3"
           >
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute -left-20 -top-24 h-56 w-64 rounded-full blur-[60px]"
-              style={{ background: rows[0]?.hex ?? "#8B5CF6", opacity: 0.22 }}
-            />
-
-            <div className="relative">
-              <p className="text-[13.5px] text-white/66">Total em faturas</p>
-              <p className="mt-1 truncate text-[34px] font-extrabold leading-none tracking-[-0.035em] text-white tabular-nums">
-                {fmt(sums.faturas)}
-              </p>
-              <p className="mt-2 text-[12.5px] t-soft">
-                {rows.length} {rows.length === 1 ? "cartão" : "cartões"}
-                {sums.pago > 0 && (
-                  <>
-                    <span className="text-white/25"> · </span>
-                    <span className="tabular-nums text-willo-green-ink">{fmt(sums.pago)} já pagos</span>
-                    <span className="text-white/25"> · </span>
-                    <span className="tabular-nums">restam {fmt(sums.restante)}</span>
-                  </>
-                )}
-              </p>
-            </div>
-
-            {/* The share each card takes of that total, in its own colour */}
-            <div className="relative mt-4 flex h-[8px] gap-[3px] overflow-hidden rounded-full">
-              {sums.faturas > 0 ? (
-                withValue.map((r, i) => (
-                  <motion.span
-                    key={r.card.id}
-                    className="h-full rounded-full"
-                    style={{ background: r.hex }}
-                    initial={{ flexGrow: 0 }}
-                    animate={{ flexGrow: r.total / sums.faturas }}
-                    transition={{ duration: 0.6, delay: 0.05 * i, ease: "easeOut" }}
-                  />
-                ))
-              ) : (
-                <span className="h-full flex-1 rounded-full bg-white/[0.08]" />
+            <p className="text-[13.5px] text-white/62">Total em faturas</p>
+            <p className="mt-1 truncate text-[40px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">
+              {fmt(sums.faturas)}
+            </p>
+            <p className="mt-2.5 text-[12.5px] t-soft">
+              {rows.length} {rows.length === 1 ? "cartão" : "cartões"}
+              {sums.pago > 0 && (
+                <>
+                  <span className="text-white/20"> · </span>
+                  <span className="tabular-nums text-willo-green-ink">{fmt(sums.pago)} já pagos</span>
+                  <span className="text-white/20"> · </span>
+                  <span className="tabular-nums">restam {fmt(sums.restante)}</span>
+                </>
               )}
-            </div>
+            </p>
+          </motion.div>
 
-            {/* …and which card it is */}
-            <div className="relative mt-3.5 space-y-2.5">
-              {rows.map((r) => (
-                <div key={r.card.id} className="flex items-center gap-2.5">
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: r.hex }} />
-                  <p className="min-w-0 flex-1 truncate text-[13.5px] text-white/80">{r.card.name}</p>
-                  <p className="shrink-0 text-[13.5px] font-semibold tabular-nums text-white">{fmt(r.total)}</p>
-                  <p className="w-[38px] shrink-0 text-right text-[12px] tabular-nums t-softer">
-                    {sums.faturas > 0 ? Math.round((r.total / sums.faturas) * 100) : 0}%
-                  </p>
+          {/* ══ That total, taken apart ══ */}
+          <motion.section
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.06, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-5 rounded-[24px] border border-white/[0.08] willo-glass px-5 py-4"
+          >
+            {/* — por cartão — */}
+            <p className="text-[11.5px] font-semibold uppercase tracking-[0.12em] t-softer">Por cartão</p>
+            <div className="mt-3 space-y-3.5">
+              {rows.map((r, i) => (
+                <div key={r.card.id}>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0 truncate text-[14px] font-medium text-white">{r.card.name}</span>
+                    <span className="shrink-0 text-[14.5px] font-semibold tabular-nums text-white">
+                      {fmt(r.total)}
+                    </span>
+                  </div>
+                  <div className="mt-2 h-[6px] overflow-hidden rounded-full bg-white/[0.06]">
+                    <motion.span
+                      className="block h-full rounded-full"
+                      style={{ background: r.hex }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.max((r.total / sums.maior) * 100, r.total > 0 ? 4 : 0)}%` }}
+                      transition={{ duration: 0.6, delay: 0.08 + i * 0.07, ease: "easeOut" }}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
 
-            {/* What those invoices are made of */}
-            <div className="relative mt-4 grid grid-cols-2 gap-2.5 border-t border-white/[0.07] pt-4">
-              <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.03] px-3.5 py-3">
-                <p className="text-[11.5px] t-softer">Em parcelas</p>
-                <p className="mt-1 truncate text-[17px] font-bold leading-none text-white tabular-nums">
-                  {fmt(sums.parcelado)}
-                </p>
-                <p className="mt-1.5 text-[11.5px] t-faint tabular-nums">
-                  {sums.parcelas} {sums.parcelas === 1 ? "parcela" : "parcelas"}
-                </p>
-              </div>
-              <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.03] px-3.5 py-3">
-                <p className="text-[11.5px] t-softer">Em lançamentos</p>
-                <p className="mt-1 truncate text-[17px] font-bold leading-none text-white tabular-nums">
-                  {fmt(sums.avista)}
-                </p>
-                <p className="mt-1.5 text-[11.5px] t-faint">compras à vista</p>
-              </div>
-            </div>
-
-            {/* The part of the debt that has not reached an invoice yet */}
-            {sums.aVencer > 0 && (
-              <p className="relative mt-2.5 rounded-[18px] border border-white/[0.07] bg-white/[0.03] px-3.5 py-3 text-[12.5px] t-soft">
-                <span className="font-semibold tabular-nums text-white">{fmt(sums.aVencer)}</span> em
-                parcelas ainda a vencer, de {sums.compras}{" "}
-                {sums.compras === 1 ? "compra parcelada" : "compras parceladas"}
-              </p>
-            )}
-
-            {/* ── Limite, somando todos os cartões ── */}
-            <div className="relative mt-4 border-t border-white/[0.07] pt-4">
-              <div className="flex items-baseline justify-between">
-                <span className="text-[12.5px] text-white/66">Limite usado</span>
-                <span className={cn(
-                  "text-[12.5px] font-semibold tabular-nums",
-                  sums.usadoPct >= 100 ? "text-red-400" : sums.usadoPct >= 80 ? "text-willo-amber" : "text-white/82",
-                )}>
-                  {sums.usadoPct.toFixed(0)}%
-                </span>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.07]">
-                <motion.span
-                  className="block h-full rounded-full"
-                  style={{
-                    background: sums.usadoPct >= 100 ? "#F87171" : sums.usadoPct >= 80 ? "#FBBF24" : "#FFFFFF",
-                  }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${sums.usadoPct}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut", delay: 0.15 }}
+            {/* — limite, somando os cartões — */}
+            <div className="mt-5 border-t border-white/[0.07] pt-4">
+              <p className="text-[11.5px] font-semibold uppercase tracking-[0.12em] t-softer">Limite</p>
+              <div className="mt-1">
+                <LimitGauge
+                  pct={sums.usadoPct}
+                  available={sums.disponivel}
+                  used={sums.usado}
+                  limit={sums.limite}
                 />
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <p className="text-[11.5px] t-soft">Usado</p>
-                  <p className="text-[14px] font-semibold text-white tabular-nums">{fmt(sums.usado)}</p>
-                </div>
-                <div className="border-x border-white/[0.07]">
-                  <p className="text-[11.5px] t-soft">Disponível</p>
-                  <p className={cn(
-                    "text-[14px] font-semibold tabular-nums",
-                    sums.disponivel > 0 ? "text-willo-green-ink" : "text-red-400",
-                  )}>
-                    {fmt(sums.disponivel)}
+            </div>
+
+            {/* — o que já está comprometido em parcelas — */}
+            {sums.aVencer > 0 && (
+              <div className="mt-4 border-t border-white/[0.07] pt-4">
+                <div className="flex items-end justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11.5px] font-semibold uppercase tracking-[0.12em] t-softer">
+                      Parcelamentos
+                    </p>
+                    <p className="mt-1.5 truncate text-[21px] font-extrabold leading-none tracking-[-0.03em] text-white tabular-nums">
+                      {fmt(sums.aVencer)}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-right text-[11.5px] leading-tight t-faint">
+                    {sums.compras} {sums.compras === 1 ? "compra" : "compras"}
+                    {sums.horizonte && (
+                      <>
+                        <br />
+                        até {sums.horizonte}
+                      </>
+                    )}
                   </p>
                 </div>
-                <div>
-                  <p className="text-[11.5px] t-soft">Total</p>
-                  <p className="text-[14px] font-semibold text-white tabular-nums">{fmt(sums.limite)}</p>
+
+                {/* The next six months, as the instalments already owe them */}
+                <div className="mt-3.5 flex items-end gap-1.5">
+                  {sums.load.map((l, i) => (
+                    <div key={l.key} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+                      <span className="flex h-[38px] w-full items-end">
+                        <motion.span
+                          className={cn(
+                            "w-full rounded-[5px]",
+                            i === 0 ? "bg-white/80" : "bg-white/[0.18]",
+                          )}
+                          initial={{ height: 0 }}
+                          animate={{ height: `${l.amount > 0 ? Math.max((l.amount / maxLoad) * 100, 8) : 3}%` }}
+                          transition={{ duration: 0.5, delay: 0.1 + i * 0.04, ease: "easeOut" }}
+                        />
+                      </span>
+                      <span className="text-[10px] t-faint">{l.label}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
+            )}
           </motion.section>
 
-          {/* ══ The cards themselves ══════════════════════════════ */}
+          {/* ══ The cards ══ */}
           <div className="mt-5 space-y-3">
             {rows.map((r, i) => (
               <CardFaceTile
