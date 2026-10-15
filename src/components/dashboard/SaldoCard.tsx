@@ -24,11 +24,11 @@ const SaldoCard = memo(({ saldoAtual, saldoPrevisto, isFutureMonth, isPastMonth,
           <>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
-                <TrendingUp className="w-3.5 h-3.5 text-willo-green" />
+                <TrendingUp className="w-3.5 h-3.5 text-willo-green-ink" />
                 <span className="text-[10px] text-primary uppercase tracking-[0.15em] font-semibold">Saldo previsto</span>
               </div>
             </div>
-            <p className={`font-display ${mobile ? "text-3xl" : "text-4xl"} font-bold tracking-tight tabular-nums leading-none ${saldoAtual >= 0 ? "text-willo-green" : "text-destructive"} my-[7px]`}>
+            <p className={`font-display ${mobile ? "text-3xl" : "text-4xl"} font-bold tracking-tight tabular-nums leading-none ${saldoAtual >= 0 ? "text-willo-green-ink" : "text-destructive"} my-[7px]`}>
               {animatedSaldo}
             </p>
             <div className="mt-4 flex items-center gap-2">

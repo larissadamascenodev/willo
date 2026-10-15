@@ -115,7 +115,7 @@ export function InsightStep({ surplus, monthlySave, cut, onBack, onNext }: StepP
             <span className="text-[40px] font-extrabold leading-none tracking-tight text-white tabular-nums">{brl0(monthlySave)}</span>
             <span className="text-[12px] font-semibold uppercase tracking-[0.15em] text-white/62">/mês</span>
           </p>
-          <span className={cn("shrink-0 rounded-full px-3 py-1 text-[12px] font-semibold", cut > 0 ? "bg-[#F87171]/15 text-[#F87171]" : "bg-willo-green/15 text-willo-green")}>
+          <span className={cn("shrink-0 rounded-full px-3 py-1 text-[12px] font-semibold", cut > 0 ? "bg-[#F87171]/15 text-[#F87171]" : "bg-willo-green/15 text-willo-green-ink")}>
             {cut > 0 ? `−${brl0(cut)} nos gastos` : "Cabe na sua sobra"}
           </span>
         </div>

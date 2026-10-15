@@ -270,7 +270,7 @@ export default function InvoicePayModal({
                     <span className="text-[13px] text-white/55">Juros</span>
                     <span className={cn(
                       "text-[14px] font-semibold tabular-nums",
-                      installmentCalc.interest > 0 ? "text-amber-300" : "text-willo-green",
+                      installmentCalc.interest > 0 ? "text-amber-300" : "text-willo-green-ink",
                     )}>
                       {installmentCalc.interest > 0 ? formatCurrency(installmentCalc.interest) : "sem juros"}
                     </span>

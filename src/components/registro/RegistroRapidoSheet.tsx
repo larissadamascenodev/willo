@@ -482,7 +482,7 @@ export default function RegistroRapidoSheet({ open, onClose, onPhoto, onManual }
                 className={item.role === "user" ? "flex justify-end" : "flex justify-start"}
               >
                 <p className={item.role === "user"
-                  ? "max-w-[84%] rounded-[19px] rounded-br-[7px] bg-white px-3.5 py-2.5 text-[15px] font-medium leading-snug tracking-[-0.01em] text-[#0B0B0B]"
+                  ? "willo-bubble-me max-w-[84%] rounded-[19px] rounded-br-[7px] px-3.5 py-2.5 text-[15px] font-medium leading-snug tracking-[-0.01em]"
                   : "max-w-[84%] rounded-[19px] rounded-bl-[7px] border border-white/[0.09] bg-white/[0.06] px-3.5 py-2.5 text-[15px] leading-snug text-white/92"}
                 >
                   {item.text}

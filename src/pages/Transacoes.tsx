@@ -673,7 +673,7 @@ const Transacoes = () => {
                     {isToday ? `Hoje · ${label}` : label}
                   </span>
                   {txs.length > 0 && dayTotal.net !== 0 && (
-                    <span className={`shrink-0 text-[12px] font-semibold tabular-nums ${dayTotal.net > 0 ? "text-willo-green" : "text-white/45"}`}>
+                    <span className={`shrink-0 text-[12px] font-semibold tabular-nums ${dayTotal.net > 0 ? "text-willo-green-ink" : "text-white/45"}`}>
                       {dayTotal.net > 0 ? "+" : "−"}{fmt(Math.abs(dayTotal.net))}
                     </span>
                   )}

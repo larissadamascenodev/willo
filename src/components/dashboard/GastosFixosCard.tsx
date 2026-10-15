@@ -184,7 +184,7 @@ const GastosFixosCard = memo(({ compact = false }: { compact?: boolean }) => {
           </div>
           <div className="text-right">
             <p className="text-[11px] text-white/56">Total/mês</p>
-            <p className={`text-[17px] font-bold tabular-nums ${activeTab === "receita" ? "text-willo-green" : "text-white"}`}>{fmt(total)}</p>
+            <p className={`text-[17px] font-bold tabular-nums ${activeTab === "receita" ? "text-willo-green-ink" : "text-white"}`}>{fmt(total)}</p>
           </div>
         </div>
 

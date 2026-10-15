@@ -222,7 +222,7 @@ function CashFlowReading({ data }: { data: RaioXData }) {
           </div>
           <div className="shrink-0 text-right text-[12px] text-white/62">
             Resultado do mês
-            <span className={cn("block text-[16px] font-bold tabular-nums", f.net < 0 ? "text-red-400" : "text-willo-green")}>{brl(f.net)}</span>
+            <span className={cn("block text-[16px] font-bold tabular-nums", f.net < 0 ? "text-red-400" : "text-willo-green-ink")}>{brl(f.net)}</span>
           </div>
         </div>
 

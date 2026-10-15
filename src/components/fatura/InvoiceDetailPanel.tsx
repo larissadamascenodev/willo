@@ -378,7 +378,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <p className="truncate text-[14px] text-white">{row.category}</p>
-            <p className={cn("shrink-0 text-[14px] font-semibold tabular-nums", row.total < 0 ? "text-willo-green" : "text-white")}>
+            <p className={cn("shrink-0 text-[14px] font-semibold tabular-nums", row.total < 0 ? "text-willo-green-ink" : "text-white")}>
               {formatCurrency(row.total)}
             </p>
           </div>
@@ -429,7 +429,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
           </div>
           <div className="border-x border-white/[0.06]">
             <p className="text-[11.5px] text-white/50">Disponível</p>
-            <p className={cn("mt-0.5 text-[14px] font-semibold tabular-nums", available < 0 ? "text-red-400" : "text-willo-green")}>
+            <p className={cn("mt-0.5 text-[14px] font-semibold tabular-nums", available < 0 ? "text-red-400" : "text-willo-green-ink")}>
               {formatCurrency(available)}
             </p>
           </div>
@@ -657,7 +657,7 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
                 {refunds.map((r) => (
                   <div key={r.category} className="flex items-baseline justify-between gap-3">
                     <span className="truncate text-[14px] text-white/75">{r.category}</span>
-                    <span className="shrink-0 text-[14px] font-semibold tabular-nums text-willo-green">
+                    <span className="shrink-0 text-[14px] font-semibold tabular-nums text-willo-green-ink">
                       {formatCurrency(r.total)}
                     </span>
                   </div>

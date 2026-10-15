@@ -144,7 +144,7 @@ const CategoryLimitSheet = ({ open, onClose, initialCategory, spentByCategory = 
             <span className="mt-2 text-[12px] text-white/62 tabular-nums">
               Gasto este mês: {fmt(spent)}
               {amount > 0 && (
-                <span className={spent > amount ? "text-red-400" : "text-willo-green"}>
+                <span className={spent > amount ? "text-red-400" : "text-willo-green-ink"}>
                   {" "}· {spent > amount ? `${fmt(spent - amount)} acima` : `${fmt(amount - spent)} livre`}
                 </span>
               )}

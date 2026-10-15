@@ -113,7 +113,7 @@ export function DeltaChip({ income, spending }: { income: number; spending: numb
       animate={{ opacity: 1, y: 0 }}
       className={cn(
         "rounded-full px-3 py-1 text-[12px] font-semibold tabular-nums",
-        ok ? "bg-willo-green/15 text-willo-green" : "bg-[#F87171]/15 text-[#F87171]",
+        ok ? "bg-willo-green/15 text-willo-green-ink" : "bg-[#F87171]/15 text-[#F87171]",
       )}
     >
       {ok ? `Sobram ${money(diff)} por mês` : `Faltam ${money(-diff)} por mês`}

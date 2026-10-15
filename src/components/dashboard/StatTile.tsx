@@ -114,7 +114,7 @@ export function StatTileWide({ label, icon, accent, columns, empty = false, onCl
             <p className={cn(
               "mt-0.5 truncate text-[20px] font-extrabold leading-tight tracking-[-0.035em] tabular-nums",
               empty ? "text-white/35"
-                : col.tone === "in" ? "text-willo-green"
+                : col.tone === "in" ? "text-willo-green-ink"
                 : col.tone === "out" ? "text-[#F87171]"
                 : "text-white",
             )}>

@@ -61,7 +61,7 @@ export default function Confirmado({ text }: { text: string }) {
         </span>
 
         <motion.span
-          className="text-[14.5px] font-semibold tracking-[-0.01em] text-willo-green"
+          className="text-[14.5px] font-semibold tracking-[-0.01em] text-willo-green-ink"
           initial={{ opacity: 0, x: -4 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.16, duration: 0.26 }}

@@ -29,10 +29,10 @@ const SaldoWalletCarousel = memo(({ saldoAtual, saldoPrevisto, isFutureMonth, is
         {isFutureMonth ? (
           <>
             <div className="flex items-center gap-1.5 mb-2">
-              <TrendingUp className="w-3.5 h-3.5 text-willo-green" />
+              <TrendingUp className="w-3.5 h-3.5 text-willo-green-ink" />
               <span className="text-[10px] text-primary uppercase tracking-[0.15em] font-semibold">Saldo previsto</span>
             </div>
-            <p className={`font-display text-3xl font-bold tracking-tight tabular-nums leading-none ${saldoAtual >= 0 ? "text-willo-green" : "text-destructive"} my-[7px]`}>
+            <p className={`font-display text-3xl font-bold tracking-tight tabular-nums leading-none ${saldoAtual >= 0 ? "text-willo-green-ink" : "text-destructive"} my-[7px]`}>
               {animatedSaldo}
             </p>
             <div className="mt-4 flex items-center gap-2">

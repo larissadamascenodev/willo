@@ -19,7 +19,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 const CATEGORY_CONFIG: Record<string, { icon: typeof Bell; className: string; bg: string }> = {
   vencimento: { icon: AlertTriangle, className: "text-amber-300", bg: "bg-amber-300/[0.12]" },
   fatura: { icon: CreditCard, className: "text-red-400", bg: "bg-red-400/[0.12]" },
-  meta: { icon: Target, className: "text-willo-green", bg: "bg-willo-green/[0.12]" },
+  meta: { icon: Target, className: "text-willo-green-ink", bg: "bg-willo-green/[0.12]" },
   saldo: { icon: Wallet, className: "text-orange-300", bg: "bg-orange-300/[0.12]" },
   geral: { icon: Info, className: "text-white/80", bg: "bg-white/[0.08]" },
 };

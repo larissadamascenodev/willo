@@ -164,7 +164,7 @@ const TransacoesAnalytics = () => {
             <ArrowUpRight className="w-3.5 h-3.5 text-primary" />
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Receitas</span>
           </div>
-          <p className="text-base font-bold text-willo-green tabular-nums leading-none mb-2">{fmt(totals.receitas)}</p>
+          <p className="text-base font-bold text-willo-green-ink tabular-nums leading-none mb-2">{fmt(totals.receitas)}</p>
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-[9px] text-muted-foreground/60">Recebido</span>

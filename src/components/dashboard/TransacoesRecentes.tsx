@@ -7,6 +7,7 @@ import { getCategoryIcon, getCategoryHexColor } from "@/lib/categoryUtils";
 import type { Transaction } from "@/types/finance";
 
 import { getCurrency } from "@/lib/currency";
+import { chipFill, chipInk } from "@/lib/chipColor";
 interface Props {
   transactions: Transaction[];
   onVerTodas?: () => void;
@@ -36,8 +37,8 @@ const TxRow = ({ tx, customCategories }: { tx: Transaction; customCategories: Cu
 
   return (
     <div className="flex items-center gap-3 py-3">
-      <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: `${hex}1F` }}>
-        <Icon className="h-[18px] w-[18px]" style={{ color: hex }} />
+      <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: chipFill(hex) }}>
+        <Icon className="h-[18px] w-[18px]" style={{ color: chipInk(hex) }} />
         {isPending && <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-[#141414] bg-amber-300" />}
       </span>
       <div className="min-w-0 flex-1">
@@ -45,7 +46,7 @@ const TxRow = ({ tx, customCategories }: { tx: Transaction; customCategories: Cu
         <p className="truncate text-[12px] text-white/56">{subtitle}</p>
       </div>
       <div className="shrink-0 text-right">
-        <p className={`text-[15px] font-semibold tabular-nums ${isReceita ? "text-willo-green" : "text-white"}`}>
+        <p className={`text-[15px] font-semibold tabular-nums ${isReceita ? "text-willo-green-ink" : "text-white"}`}>
           {isReceita ? "+" : "−"}{fmt(tx.amount)}
         </p>
         <p className={`text-[11px] ${isPending ? "text-amber-300/90" : "text-white/50"}`}>{statusLabel(tx)}</p>

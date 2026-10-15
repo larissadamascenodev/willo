@@ -126,8 +126,8 @@ function Trajectory({ answers, plan }: { answers: OnboardingAnswers; plan: Onboa
           <p className="text-[20px] font-extrabold text-white">R$ 0</p>
         </div>
         <div className="text-right">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-willo-green">{debt ? "Dívida quitada" : "Objetivo"}</p>
-          <p className="text-[20px] font-extrabold text-willo-green tabular-nums">{brl0(answers.target)}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-willo-green-ink">{debt ? "Dívida quitada" : "Objetivo"}</p>
+          <p className="text-[20px] font-extrabold text-willo-green-ink tabular-nums">{brl0(answers.target)}</p>
         </div>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="mt-2 w-full">
@@ -171,7 +171,7 @@ export default function ResultStep({ answers, plan, onNext }: { answers: Onboard
           animate={{ opacity: 1, y: 0 }}
           className="mx-auto flex w-fit items-center gap-2 rounded-full border border-white/[0.1] bg-white/[0.05] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/74"
         >
-          <Check className="h-3.5 w-3.5 text-willo-green" strokeWidth={3} /> Análise concluída
+          <Check className="h-3.5 w-3.5 text-willo-green-ink" strokeWidth={3} /> Análise concluída
         </motion.p>
         <h1 className="mt-4 text-center text-[27px] leading-tight tracking-tight text-white">
           <span className="font-light">{name ? `${name}, este é o seu` : "Este é o seu"} </span>

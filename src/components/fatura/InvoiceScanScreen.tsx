@@ -165,7 +165,7 @@ function FoundList({ items, onDone }: { items: ExtractedItem[]; onDone: () => vo
           {refunds > 0 && (
             <motion.span
               layout
-              className="inline-flex items-center gap-1.5 rounded-full border border-willo-green/20 bg-willo-green/[0.08] px-3 py-1.5 text-[12px] text-willo-green"
+              className="inline-flex items-center gap-1.5 rounded-full border border-willo-green/20 bg-willo-green/[0.08] px-3 py-1.5 text-[12px] text-willo-green-ink"
             >
               <RotateCcw className="h-3 w-3" /> {refunds}
             </motion.span>
@@ -204,7 +204,7 @@ function FoundList({ items, onDone }: { items: ExtractedItem[]; onDone: () => vo
                       {isRefund && " · estorno"}
                     </span>
                   </span>
-                  <span className={`shrink-0 text-[14px] font-semibold tabular-nums ${isRefund ? "text-willo-green" : "text-white"}`}>
+                  <span className={`shrink-0 text-[14px] font-semibold tabular-nums ${isRefund ? "text-willo-green-ink" : "text-white"}`}>
                     {isRefund ? "+" : ""}{fmt(Math.abs(item.amount))}
                   </span>
                 </motion.div>

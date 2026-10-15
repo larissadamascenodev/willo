@@ -123,7 +123,7 @@ export default function Notinha({ lines, onOpen }: {
         <div className="flex items-center justify-between gap-3">
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/55">Notinha</p>
           {allSaved && onOpen ? (
-            <span className="flex items-center gap-1 text-[12px] font-semibold text-willo-green">
+            <span className="flex items-center gap-1 text-[12px] font-semibold text-willo-green-ink">
               Ver comprovante
               <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2.6} />
             </span>
@@ -159,7 +159,7 @@ export default function Notinha({ lines, onOpen }: {
                 </div>
                 <p className={`shrink-0 text-[16px] font-bold tabular-nums tracking-[-0.02em] ${
                   line.status === "saved"
-                    ? line.type === "receita" ? "text-willo-green" : "text-white"
+                    ? line.type === "receita" ? "text-willo-green-ink" : "text-white"
                     : "text-white/55"
                 }`}>
                   {line.type === "receita" ? "+" : "−"}{fmt(line.amount)}
@@ -177,7 +177,7 @@ export default function Notinha({ lines, onOpen }: {
             className="border-t border-dashed border-white/[0.13] pt-3"
           >
             <div className="flex items-center justify-between gap-3">
-              <p className="flex items-center gap-1.5 text-[13px] font-semibold text-willo-green">
+              <p className="flex items-center gap-1.5 text-[13px] font-semibold text-willo-green-ink">
                 <Check className="h-3.5 w-3.5" strokeWidth={3} />
                 Salvo no Willo
               </p>

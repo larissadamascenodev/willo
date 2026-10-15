@@ -27,7 +27,16 @@ export default {
            instead of a soft light one. */
         white: "rgb(var(--ink) / <alpha-value>)",
         black: "rgb(var(--paper) / <alpha-value>)",
-        "willo-green": "#C8F36D",
+        /* Two greens, because one cannot do both jobs. As a fill it has to stay bright
+           enough to read as the house colour; as text on paper that same brightness is
+           unreadable, so the ink version goes deep. On a dark ground they are the same
+           colour. */
+        "willo-green": "rgb(var(--brand-green) / <alpha-value>)",
+        "willo-green-ink": "rgb(var(--brand-green-ink) / <alpha-value>)",
+        /* Text and glyphs that sit on a coloured fill — a bank's own purple, a category
+           chip — stay white on both themes. They are on the brand's ground, not on the
+           app's, so they must not follow the theme. */
+        "on-color": "#ffffff",
         "willo-black": "#0B0B0B",
         "willo-off-white": "#F8F7EE",
         "willo-caramel": "#B9804F",

@@ -122,7 +122,7 @@ const SaldoContasCard = memo(({ saldoPrevisto }: { saldoPrevisto?: number }) => 
           return (
             <div key={a.id} className="flex items-center gap-3">
               <span
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[12.5px] font-bold text-white"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[12.5px] font-bold text-on-color"
                 style={{ background: a.hex }}
               >
                 {initials(a.name)}

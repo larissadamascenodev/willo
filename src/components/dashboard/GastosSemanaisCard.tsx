@@ -174,7 +174,7 @@ const GastosSemanaisCard = memo(() => {
             <div className="flex items-baseline gap-2 mt-0.5">
               <p className="text-lg font-bold text-foreground tabular-nums">{fmt(total)}</p>
               {variation !== null && (
-                <span className={`text-xs font-semibold ${variation > 0 ? "text-willo-green" : "text-emerald-400"}`}>
+                <span className={`text-xs font-semibold ${variation > 0 ? "text-willo-green-ink" : "text-emerald-400"}`}>
                   {variation > 0 ? "↑" : "↓"}{Math.abs(variation)}%
                 </span>
               )}

@@ -48,7 +48,7 @@ const SetupIntro = ({ icon: Icon, title, text, bullets, action, onAction, onSkip
           className="flex items-center gap-3"
         >
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-willo-green/15">
-            <Check className="h-3.5 w-3.5 text-willo-green" strokeWidth={3} />
+            <Check className="h-3.5 w-3.5 text-willo-green-ink" strokeWidth={3} />
           </span>
           <span className="text-[14px] text-white/82">{b}</span>
         </motion.div>

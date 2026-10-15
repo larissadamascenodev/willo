@@ -210,7 +210,7 @@ const GoalCreateModal = ({ open, onClose, onSubmit, initialPresetId, existingNam
             </div>
             {openEnded ? (
               <div className="flex items-center gap-3 rounded-[22px] border border-white/[0.08] willo-glass px-4 py-4">
-                <PiggyBank className="h-5 w-5 shrink-0 text-willo-green" />
+                <PiggyBank className="h-5 w-5 shrink-0 text-willo-green-ink" />
                 <p className="text-[13px] leading-snug text-white/74">
                   Você vai só guardando, sem um alvo. Dá para definir um valor depois, quando quiser.
                 </p>

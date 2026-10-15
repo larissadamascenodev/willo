@@ -282,7 +282,7 @@ const TransactionsScreen = ({ rows, spent }: { rows: TransactionRow[]; spent: nu
               <div key={date} className={gi > 0 ? "mt-5" : ""}>
                 <div className="mb-2 flex items-center justify-between px-1">
                   <span className={`text-[13px] font-semibold ${isToday ? "text-white" : "text-white/66"}`}>{isToday ? `Hoje, ${label}` : label}</span>
-                  <span className={`text-[12px] tabular-nums ${net > 0 ? "text-willo-green" : "text-white/62"}`}>
+                  <span className={`text-[12px] tabular-nums ${net > 0 ? "text-willo-green-ink" : "text-white/62"}`}>
                     {net > 0 ? "+" : "−"}R$ {Math.abs(net).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -358,7 +358,7 @@ export const RaioXScreen = () => (
       </p>
       <h1 className="mt-1 flex items-center gap-2 text-[30px] font-extrabold leading-none tracking-tight text-white">
         Raio-X
-        <BrainCircuit className="h-6 w-6 text-willo-green" />
+        <BrainCircuit className="h-6 w-6 text-willo-green-ink" />
       </h1>
       <p className="mt-1.5 text-[14px] text-white/62">O cérebro do seu dinheiro: o que você faz certo, o que dá pra melhorar.</p>
     </header>

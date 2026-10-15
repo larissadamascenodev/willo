@@ -249,7 +249,7 @@ export function WeeklyCard({ data }: { data: RaioXData }) {
             <p className="truncate text-[26px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{brl(weekly.spent)}</p>
           </div>
           {weekly.change !== null && (
-            <span className={cn("flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold tabular-nums", up ? "bg-red-400/15 text-red-400" : "bg-willo-green/15 text-willo-green")}>
+            <span className={cn("flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold tabular-nums", up ? "bg-red-400/15 text-red-400" : "bg-willo-green/15 text-willo-green-ink")}>
               {up ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
               {up ? "+" : ""}{Math.round(weekly.change * 100)}%
             </span>

@@ -261,7 +261,7 @@ export const TransactionListItem = ({
 
         {/* Amount + status tag */}
         <div className="shrink-0 text-right">
-          <p className={cn("text-[14.5px] font-semibold tabular-nums", isReceita ? "text-willo-green" : "text-white")}>
+          <p className={cn("text-[14.5px] font-semibold tabular-nums", isReceita ? "text-willo-green-ink" : "text-white")}>
             {isReceita ? "+" : "−"}{fmt(tx.amount)}
           </p>
           <span className={cn("mt-0.5 block text-[11.5px]", isPending ? "text-amber-300/90" : "text-white/40")}>

@@ -31,7 +31,7 @@ export function SavedToastCard({ items, onOpen }: { items: ScanResultItem[]; onO
         </p>
         <p className="truncate text-[12px] text-white/66">
           {single ? `${single.merchant || single.description} · ` : ""}
-          <span className={isIncome ? "text-willo-green" : "text-white/80"}>{isIncome ? "+" : "−"}{fmt(total)}</span>
+          <span className={isIncome ? "text-willo-green-ink" : "text-white/80"}>{isIncome ? "+" : "−"}{fmt(total)}</span>
           {otherMonth && date ? ` · em ${date.toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(".", "")}` : ""}
         </p>
       </div>

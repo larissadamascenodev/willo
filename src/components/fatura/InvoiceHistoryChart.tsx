@@ -122,7 +122,7 @@ export default function InvoiceHistoryChart({ invoices, selectedMonth, selectedY
           <span
             className={cn(
               "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-semibold",
-              selected.status === "paga" && "bg-willo-green/12 text-willo-green",
+              selected.status === "paga" && "bg-willo-green/12 text-willo-green-ink",
               selected.status === "aberta" && "bg-white/[0.08] text-white",
               selected.status === "futura" && "bg-white/[0.05] text-white/66",
             )}

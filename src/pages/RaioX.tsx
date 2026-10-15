@@ -45,7 +45,7 @@ const RaioX = () => {
         </p>
         <h1 className="mt-1 flex items-center gap-2 text-[30px] font-extrabold leading-none tracking-tight text-white">
           Raio-X
-          <BrainCircuit className="h-6 w-6 text-willo-green" />
+          <BrainCircuit className="h-6 w-6 text-willo-green-ink" />
         </h1>
         <p className="mt-1.5 text-[14px] text-white/62">O cérebro do seu dinheiro: o que você faz certo, o que dá pra melhorar.</p>
       </header>

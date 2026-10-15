@@ -70,7 +70,7 @@ const FinanceOverviewCard = ({ receitas, despesas, saldoPrevisto, nextMonthBalan
         <p
           className={cn(
             "truncate text-[34px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
-            balanco < 0 ? "text-red-400" : "text-willo-green",
+            balanco < 0 ? "text-red-400" : "text-willo-green-ink",
           )}
         >
           {balanco > 0 ? "+" : ""}{compact(balanco)}
@@ -90,7 +90,7 @@ const FinanceOverviewCard = ({ receitas, despesas, saldoPrevisto, nextMonthBalan
           className="mt-4 flex items-center justify-between gap-2 border-t border-white/[0.07] pt-3"
         >
           <span className="truncate text-[12.5px] text-white/55">Em {nextLabel}</span>
-          <span className={cn("flex shrink-0 items-center gap-1.5 text-[13px] font-semibold tabular-nums", trendUp ? "text-willo-green" : "text-red-400")}>
+          <span className={cn("flex shrink-0 items-center gap-1.5 text-[13px] font-semibold tabular-nums", trendUp ? "text-willo-green-ink" : "text-red-400")}>
             <TrendingUp className={cn("h-3.5 w-3.5", !trendUp && "rotate-180")} strokeWidth={2.4} />
             {compact(nextMonthBalance)}
           </span>

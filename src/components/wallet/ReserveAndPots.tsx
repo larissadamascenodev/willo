@@ -65,7 +65,7 @@ const ReserveAndPots = ({ goals, essentialMonthly = 0, onCreated }: Props) => {
         >
           <div className="flex items-center justify-between">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-willo-green/15">
-              <ShieldCheck className="h-[18px] w-[18px] text-willo-green" />
+              <ShieldCheck className="h-[18px] w-[18px] text-willo-green-ink" />
             </span>
             {reserve ? <ChevronRight className="h-4 w-4 text-white/38" /> : <Plus className="h-4 w-4 text-white/56" />}
           </div>

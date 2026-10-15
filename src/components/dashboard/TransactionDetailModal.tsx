@@ -145,7 +145,7 @@ const TransactionDetailModal = ({
     }, "Transação excluída");
 
   const statusChip = isPaid
-    ? { label: isReceita ? "Recebido" : "Pago", cls: "bg-willo-green/12 text-willo-green", Icon: Check }
+    ? { label: isReceita ? "Recebido" : "Pago", cls: "bg-willo-green/12 text-willo-green-ink", Icon: Check }
     : { label: "Pendente", cls: "bg-amber-300/12 text-amber-300", Icon: Clock };
 
   return (

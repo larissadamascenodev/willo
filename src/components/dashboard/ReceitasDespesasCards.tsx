@@ -33,10 +33,10 @@ const ReceitasDespesasCards = memo(({
         }}
       >
         <div className="flex items-center gap-1 mb-0.5">
-          <ArrowUpRight className={`${mobile ? "w-3 h-3" : "w-3.5 h-3.5"} text-willo-green`} />
+          <ArrowUpRight className={`${mobile ? "w-3 h-3" : "w-3.5 h-3.5"} text-willo-green-ink`} />
           <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Receitas</span>
         </div>
-        <p className={`font-display ${mobile ? "text-base" : "text-xl"} font-bold text-willo-green tabular-nums leading-none`}>
+        <p className={`font-display ${mobile ? "text-base" : "text-xl"} font-bold text-willo-green-ink tabular-nums leading-none`}>
           {animatedReceitas}
         </p>
       </button>

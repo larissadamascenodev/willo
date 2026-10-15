@@ -216,7 +216,7 @@ const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profi
                       >
                         <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-card/95 border-l border-t border-border/15" />
                         <button onClick={() => handleTransacaoOption("receita")} className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors">
-                          <TrendingUp className="w-3.5 h-3.5 text-willo-green" />
+                          <TrendingUp className="w-3.5 h-3.5 text-willo-green-ink" />
                           <span className="text-[11px] font-medium text-foreground whitespace-nowrap">Receita</span>
                         </button>
                         <button onClick={() => handleTransacaoOption("despesa")} className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-destructive/10 transition-colors">

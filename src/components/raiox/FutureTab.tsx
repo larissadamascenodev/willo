@@ -97,7 +97,7 @@ export function PressureCalendar({ data }: { data: RaioXData }) {
                 {selected.items.map((i, k) => (
                   <div key={k} className="flex items-center justify-between gap-3 text-[13px]">
                     <span className="min-w-0 truncate text-white/82">{i.name}</span>
-                    <span className={cn("shrink-0 font-semibold tabular-nums", i.type === "receita" ? "text-willo-green" : "text-white")}>
+                    <span className={cn("shrink-0 font-semibold tabular-nums", i.type === "receita" ? "text-willo-green-ink" : "text-white")}>
                       {i.type === "receita" ? "+" : "−"}{brlCents(i.amount)}
                     </span>
                   </div>
@@ -161,7 +161,7 @@ export function SmartInvoice({ data }: { data: RaioXData }) {
         <div className="mt-2 grid grid-cols-2 gap-2">
           <div className="rounded-[16px] bg-willo-green/[0.08] px-3 py-2.5">
             <p className="truncate text-[11px] text-white/70">Limite seguro</p>
-            <p className="truncate text-[17px] font-bold text-willo-green tabular-nums">{brl(inv.safeForNewPurchases)}</p>
+            <p className="truncate text-[17px] font-bold text-willo-green-ink tabular-nums">{brl(inv.safeForNewPurchases)}</p>
           </div>
           <div className="rounded-[16px] bg-white/[0.04] px-3 py-2.5">
             <p className="truncate text-[11px] text-white/62">% da renda</p>
@@ -239,7 +239,7 @@ export function Surplus({ data }: { data: RaioXData }) {
     <Section icon={Sparkles} title="Sobra inteligente">
       <Card className="p-5">
         <p className="text-[13px] text-white/66">Você deve terminar o mês com</p>
-        <p className="truncate text-[30px] font-extrabold leading-tight tracking-tight text-willo-green tabular-nums">{brl(s.surplus)} livres</p>
+        <p className="truncate text-[30px] font-extrabold leading-tight tracking-tight text-willo-green-ink tabular-nums">{brl(s.surplus)} livres</p>
         <p className="mt-1 text-[13px] text-white/70">Sugestão de destino para essa sobra:</p>
 
         <div className="mt-3 space-y-2">

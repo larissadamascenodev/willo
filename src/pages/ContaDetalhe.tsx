@@ -271,7 +271,7 @@ const ContaDetalhe = () => {
               </div>
               <span className="text-[9px] text-muted-foreground uppercase tracking-widest font-medium">Receitas</span>
             </div>
-            <p className="text-lg font-extrabold text-willo-green tabular-nums">{formatCurrency(totalReceitas)}</p>
+            <p className="text-lg font-extrabold text-willo-green-ink tabular-nums">{formatCurrency(totalReceitas)}</p>
           </div>
           <div
             className="rounded-2xl border border-border/10 p-4"

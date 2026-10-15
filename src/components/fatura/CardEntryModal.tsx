@@ -152,7 +152,7 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
                   <span
                     className={cn(
                       "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold",
-                      entry.status === "pago" ? "bg-willo-green/12 text-willo-green" : "bg-amber-300/12 text-amber-300",
+                      entry.status === "pago" ? "bg-willo-green/12 text-willo-green-ink" : "bg-amber-300/12 text-amber-300",
                     )}
                   >
                     {entry.status === "pago" ? <Check className="h-3 w-3" strokeWidth={3} /> : <Clock className="h-3 w-3" />}

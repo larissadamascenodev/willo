@@ -250,7 +250,7 @@ function CutSimulator({ data }: { data: RaioXData }) {
           {[3, 6, 12].map((m) => (
             <div key={m} className="rounded-[16px] bg-willo-green/[0.08] px-2 py-2.5 text-center">
               <p className="text-[10px] text-white/66">{m === 12 ? "1 ano" : `${m} meses`}</p>
-              <p className="truncate text-[15px] font-extrabold text-willo-green tabular-nums">+{brl(effectiveCut * m)}</p>
+              <p className="truncate text-[15px] font-extrabold text-willo-green-ink tabular-nums">+{brl(effectiveCut * m)}</p>
             </div>
           ))}
         </div>
@@ -263,7 +263,7 @@ function CutSimulator({ data }: { data: RaioXData }) {
           </div>
           <div className="rounded-[16px] border border-willo-green/25 bg-willo-green/[0.08] p-3">
             <p className="truncate text-[11px] text-white/74">Se ajustar</p>
-            <p className={cn("truncate text-[17px] font-bold tabular-nums", adjust12 < 0 ? "text-red-400" : "text-willo-green")}>{brl(adjust12)}</p>
+            <p className={cn("truncate text-[17px] font-bold tabular-nums", adjust12 < 0 ? "text-red-400" : "text-willo-green-ink")}>{brl(adjust12)}</p>
           </div>
         </div>
         <div className="mt-3">

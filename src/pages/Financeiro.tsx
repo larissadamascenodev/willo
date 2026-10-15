@@ -195,7 +195,7 @@ function CashFlowEntryRow({ entry, hidden }: { entry: CashFlowEntry; hidden: boo
           {entry.accountName ? ` · ${entry.accountName}` : ""}
         </p>
       </div>
-      <p className={cn("shrink-0 text-[15px] font-semibold tabular-nums", isIn ? "text-willo-green" : "text-[#F87171]")}>
+      <p className={cn("shrink-0 text-[15px] font-semibold tabular-nums", isIn ? "text-willo-green-ink" : "text-[#F87171]")}>
         {hidden ? `${currencySymbol()} ••••` : `${isIn ? "+" : "-"}${fmt(entry.amount)}`}
       </p>
     </div>
@@ -363,7 +363,7 @@ function BalancoMensalSection({ onOpenProjecoes }: { onOpenProjecoes: () => void
 
         <p className={cn(
           "mt-3.5 truncate text-[42px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
-          current.sobra < 0 ? "text-red-400" : "text-willo-green",
+          current.sobra < 0 ? "text-red-400" : "text-willo-green-ink",
         )}>
           {current.sobra > 0 ? "+" : ""}{compact(current.sobra)}
         </p>
@@ -524,7 +524,7 @@ function MonthBalanceSheet({ row, data, onClose, onSeeProjections }: {
     <section className="rounded-[22px] border border-white/[0.08] willo-glass px-4 pb-3.5 pt-3.5">
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.13em] text-white/45">{title}</p>
-        <p className={cn("text-[14px] font-bold tabular-nums", tone === "in" ? "text-willo-green" : "text-red-400")}>
+        <p className={cn("text-[14px] font-bold tabular-nums", tone === "in" ? "text-willo-green-ink" : "text-red-400")}>
           {tone === "out" ? "−" : ""}{compact(total)}
         </p>
       </div>
@@ -558,7 +558,7 @@ function MonthBalanceSheet({ row, data, onClose, onSeeProjections }: {
           </p>
           <p className={cn(
             "mt-2 px-1 text-[34px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
-            row.sobra < 0 ? "text-red-400" : "text-willo-green",
+            row.sobra < 0 ? "text-red-400" : "text-willo-green-ink",
           )}>
             {row.sobra > 0 ? "+" : ""}{compact(row.sobra)}
           </p>
@@ -685,7 +685,7 @@ function FuturoPanel() {
         <p className="text-[12px] text-white/50">{current.name} fecha com</p>
         <p className={cn(
           "mt-1.5 truncate text-[40px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
-          current.fecha < 0 ? "text-red-400" : "text-willo-green",
+          current.fecha < 0 ? "text-red-400" : "text-willo-green-ink",
         )}>
           {current.fecha > 0 ? "+" : ""}{compact(current.fecha)}
         </p>
@@ -759,7 +759,7 @@ function FuturoPanel() {
                 {[
                   { k: "Entra", v: r.income, cls: "text-white" },
                   { k: "Sai", v: -r.expense, cls: "text-white" },
-                  { k: "Sobra", v: r.sobra, cls: r.sobra < 0 ? "text-red-400" : "text-willo-green" },
+                  { k: "Sobra", v: r.sobra, cls: r.sobra < 0 ? "text-red-400" : "text-willo-green-ink" },
                 ].map(({ k, v, cls }) => (
                   <span key={k} className="min-w-0 flex-1">
                     <span className="block text-[10px] font-semibold uppercase tracking-[0.11em] text-white/35">{k}</span>
@@ -824,7 +824,7 @@ function FuturoPanel() {
               <p className="mt-5 text-[12.5px] text-white/50">Previsão de fechar com</p>
               <p className={cn(
                 "mt-2 truncate text-[40px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
-                openMonth.fecha < 0 ? "text-red-400" : "text-willo-green",
+                openMonth.fecha < 0 ? "text-red-400" : "text-willo-green-ink",
               )}>
                 {openMonth.fecha > 0 ? "+" : ""}{compact(openMonth.fecha)}
               </p>
@@ -866,7 +866,7 @@ function MonthBreakdown({ row, prevName, carry = true }: {
         className={cn(
           "shrink-0 text-right text-[14px] tabular-nums",
           strong ? "font-bold" : "font-semibold",
-          tone === "result" ? (v < 0 ? "text-red-400" : "text-willo-green") : "text-white",
+          tone === "result" ? (v < 0 ? "text-red-400" : "text-willo-green-ink") : "text-white",
         )}
       >
         {v > 0 && tone === "result" ? "+" : ""}{compact(v)}
@@ -897,7 +897,7 @@ function MonthBreakdown({ row, prevName, carry = true }: {
         <span className="text-[13.5px] font-semibold text-white">{totalLabel}</span>
         <span className={cn(
           "shrink-0 text-[19px] font-extrabold tracking-[-0.02em] tabular-nums",
-          total < 0 ? "text-red-400" : "text-willo-green",
+          total < 0 ? "text-red-400" : "text-willo-green-ink",
         )}>
           {total > 0 ? "+" : ""}{compact(total)}
         </span>
@@ -923,7 +923,7 @@ function ProjectionBars({ rows, selectedIdx, onSelect }: {
         {selected && (
           <span className={cn(
             "inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11.5px] font-semibold tabular-nums",
-            selected.fecha < 0 ? "bg-red-400/15 text-red-300" : "bg-willo-green/12 text-willo-green",
+            selected.fecha < 0 ? "bg-red-400/15 text-red-300" : "bg-willo-green/12 text-willo-green-ink",
           )}>
             {selected.short} · {compact(selected.fecha)}
           </span>

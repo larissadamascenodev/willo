@@ -154,7 +154,7 @@ export default function HistoricoPanel({ open, onClose }: { open: boolean; onClo
                       const signed = row.type === "receita" ? Number(row.amount) : -Number(row.amount);
                       return (
                         <p className={`shrink-0 text-[15px] font-bold tabular-nums ${
-                          signed >= 0 ? "text-willo-green" : "text-white"
+                          signed >= 0 ? "text-willo-green-ink" : "text-white"
                         }`}>
                           {signed >= 0 ? "+" : "−"}{fmt(Math.abs(signed))}
                         </p>

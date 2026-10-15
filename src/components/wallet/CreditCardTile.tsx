@@ -186,7 +186,7 @@ export const CreditCardTile = ({ card, idx, invoiceInfo, navigate, extraClass, o
           Usado <span className="font-semibold tabular-nums text-white/75">{formatCurrency(usedValue)}</span>
         </span>
         <span className="shrink-0 truncate text-[11.5px] text-white/45">
-          Disponível <span className={cn("font-semibold tabular-nums", available > 0 ? "text-willo-green" : "text-red-400")}>
+          Disponível <span className={cn("font-semibold tabular-nums", available > 0 ? "text-willo-green-ink" : "text-red-400")}>
             {formatCurrency(available)}
           </span>
         </span>

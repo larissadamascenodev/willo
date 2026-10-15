@@ -766,7 +766,7 @@ const FaturaCartao = () => {
             {formatCurrency(paidAmount > 0 && outstanding > 0 ? outstanding : total)}
           </p>
           {total > 0 && outstanding <= 0 ? (
-            <p className="flex items-center gap-1.5 text-[13px] font-medium text-willo-green">
+            <p className="flex items-center gap-1.5 text-[13px] font-medium text-willo-green-ink">
               <Check className="h-3.5 w-3.5" strokeWidth={3} /> Paga
             </p>
           ) : dueInfo && outstanding > 0 ? (
@@ -811,7 +811,7 @@ const FaturaCartao = () => {
             </div>
             <div className="border-x border-white/[0.06]">
               <p className="text-[11.5px] text-white/56">Disponível</p>
-              <p className={cn("text-[14px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-willo-green")}>{formatCurrency(availableLimit)}</p>
+              <p className={cn("text-[14px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-willo-green-ink")}>{formatCurrency(availableLimit)}</p>
             </div>
             <div>
               <p className="text-[11.5px] text-white/56">Total</p>

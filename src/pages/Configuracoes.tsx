@@ -597,7 +597,7 @@ const Configuracoes = () => {
                     <span className="block truncate text-[15px] font-medium text-white">{c.name}</span>
                     <span className="block text-[12px] text-white/56">{c.code}</span>
                   </span>
-                  {selected && <Check className="h-5 w-5 shrink-0 text-willo-green" strokeWidth={2.5} />}
+                  {selected && <Check className="h-5 w-5 shrink-0 text-willo-green-ink" strokeWidth={2.5} />}
                 </button>
               );
             })}
@@ -641,7 +641,7 @@ const Configuracoes = () => {
                     <p key={t} className="flex items-center gap-2 text-white/82"><span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" /> {t}</p>
                   ))}
                   {resetMode === "transactions" && (
-                    <p className="flex items-center gap-2 pt-1 text-white/82"><Check className="h-3.5 w-3.5 shrink-0 text-willo-green" strokeWidth={3} /> Contas, cartões e perfil ficam</p>
+                    <p className="flex items-center gap-2 pt-1 text-white/82"><Check className="h-3.5 w-3.5 shrink-0 text-willo-green-ink" strokeWidth={3} /> Contas, cartões e perfil ficam</p>
                   )}
                 </div>
 

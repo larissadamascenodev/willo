@@ -147,7 +147,7 @@ export function MetasResumoView({ goals, loading = false, compact = false }: { g
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <p className="truncate text-[14px] font-medium text-white">{goal.name}</p>
-                  <span className={`shrink-0 text-[12px] font-semibold tabular-nums ${done ? "text-willo-green" : "text-white/82"}`}>
+                  <span className={`shrink-0 text-[12px] font-semibold tabular-nums ${done ? "text-willo-green-ink" : "text-white/82"}`}>
                     {Math.round(progress * 100)}%
                   </span>
                 </div>

@@ -227,7 +227,7 @@ const Metas = () => {
                         <span className="font-bold text-white">{fmt(goal.current_amount)}</span>
                         <span className="text-white/56"> de {fmt(goal.target_amount)}</span>
                       </p>
-                      <span className={`text-[13px] font-semibold tabular-nums ${isComplete ? "text-willo-green" : "text-white"}`}>{Math.round(progress * 100)}%</span>
+                      <span className={`text-[13px] font-semibold tabular-nums ${isComplete ? "text-willo-green-ink" : "text-white"}`}>{Math.round(progress * 100)}%</span>
                     </div>
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.08]">
                       <motion.div

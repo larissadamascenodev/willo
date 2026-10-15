@@ -384,7 +384,7 @@ const FinanceChartCard = memo(() => {
           <span
             className={cn(
               "shrink-0 rounded-full px-2.5 py-1 text-[11.5px] font-bold tabular-nums",
-              summary.delta >= 0 ? "bg-willo-green/15 text-willo-green" : "bg-red-500/15 text-red-400",
+              summary.delta >= 0 ? "bg-willo-green/15 text-willo-green-ink" : "bg-red-500/15 text-red-400",
             )}
           >
             {summary.delta >= 0 ? "+" : "−"}{fmt(Math.abs(summary.delta))}

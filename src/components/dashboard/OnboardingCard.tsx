@@ -113,7 +113,7 @@ const OnboardingCard = ({ profile, onUpdateName, onGoToAccounts, onCreateTransac
               >
                 <span className={cn(
                   "w-6 h-6 rounded-full flex items-center justify-center",
-                  s.done ? "bg-willo-green/15 text-willo-green" : "bg-white/[0.08] text-white/82"
+                  s.done ? "bg-willo-green/15 text-willo-green-ink" : "bg-white/[0.08] text-white/82"
                 )}>
                   {s.done ? <Check className="w-3 h-3" strokeWidth={3} /> : <StepIcon className="w-3 h-3" />}
                 </span>

@@ -80,7 +80,7 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
   const pct = Math.round(confidence * 100);
   const tone =
     confidence >= 0.8
-      ? { Icon: ShieldCheck, cls: "text-willo-green bg-willo-green/10" }
+      ? { Icon: ShieldCheck, cls: "text-willo-green-ink bg-willo-green/10" }
       : confidence >= 0.5
         ? { Icon: ShieldAlert, cls: "text-amber-300 bg-amber-300/10" }
         : { Icon: AlertTriangle, cls: "text-red-400 bg-red-400/10" };
@@ -577,7 +577,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-willo-green">
                     <Check className="h-3 w-3 text-[#0B0B0B]" strokeWidth={3.5} />
                   </span>
-                  <span className="text-[12.5px] font-medium text-willo-green">A conta fecha com a fatura</span>
+                  <span className="text-[12.5px] font-medium text-willo-green-ink">A conta fecha com a fatura</span>
                 </>
               ) : (
                 <>
@@ -644,7 +644,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
           )}
           {refunds.length > 0 && (
             <div className="rounded-[20px] border border-willo-green/15 bg-willo-green/[0.05] px-4 py-3">
-              <RotateCcw className="h-4 w-4 text-willo-green" />
+              <RotateCcw className="h-4 w-4 text-willo-green-ink" />
               <p className="mt-2 text-[19px] font-bold leading-none text-white tabular-nums">{refunds.length}</p>
               <p className="mt-1 text-[11.5px] text-white/56">estornos, viram crédito</p>
             </div>
@@ -707,7 +707,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
                     </span>
                   )}
                   {isRefund && (
-                    <span className="shrink-0 rounded-full bg-willo-green/12 px-1.5 py-0.5 text-[10.5px] font-semibold text-willo-green">
+                    <span className="shrink-0 rounded-full bg-willo-green/12 px-1.5 py-0.5 text-[10.5px] font-semibold text-willo-green-ink">
                       estorno
                     </span>
                   )}
@@ -718,7 +718,7 @@ function MultiItemReview({ items, setItems, avgConfidence, message, declaredTota
                   {item.confidence !== undefined && item.confidence < 0.8 && <ConfidenceBadge confidence={item.confidence} />}
                 </span>
               </button>
-              <p className={cn("shrink-0 text-[14px] font-semibold tabular-nums", isIn || isRefund ? "text-willo-green" : "text-white")}>
+              <p className={cn("shrink-0 text-[14px] font-semibold tabular-nums", isIn || isRefund ? "text-willo-green-ink" : "text-white")}>
                 {isIn || isRefund ? "+" : "−"}{fmtMoney(Math.abs(item.amount))}
               </p>
               <button type="button" onClick={() => removeItem(idx)} aria-label="Remover" className="-mr-1 shrink-0 p-1 text-white/38">

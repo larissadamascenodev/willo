@@ -213,7 +213,7 @@ const ReceitasDespesasDetalhe = () => {
             <p className="truncate text-[30px] font-extrabold leading-tight tracking-tight tabular-nums text-white">{fmt(total)}</p>
           </div>
           {trend !== 0 && (
-            <span className={cn("flex shrink-0 items-center gap-1 rounded-full bg-white/[0.08] px-2.5 py-1.5 text-[12px] font-semibold tabular-nums", trendPositive ? "text-willo-green" : "text-red-400")}>
+            <span className={cn("flex shrink-0 items-center gap-1 rounded-full bg-white/[0.08] px-2.5 py-1.5 text-[12px] font-semibold tabular-nums", trendPositive ? "text-willo-green-ink" : "text-red-400")}>
               {trendPositive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
               {trend > 0 ? "+" : ""}{trend}%
             </span>

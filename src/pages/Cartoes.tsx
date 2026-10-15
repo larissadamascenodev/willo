@@ -128,7 +128,7 @@ type MonthStatus = "paga" | "aberta" | "fechada" | "proxima" | "atrasada" | "vaz
 const MonthTag = ({ status }: { status: MonthStatus }) => {
   if (status === "vazia") return null;
   const map = {
-    paga: { label: "Paga", cls: "bg-willo-green/15 text-willo-green", icon: true },
+    paga: { label: "Paga", cls: "bg-willo-green/15 text-willo-green-ink", icon: true },
     aberta: { label: "Fatura aberta", cls: "bg-white/[0.08] text-white/75", icon: false },
     fechada: { label: "Fechada, a pagar", cls: "bg-amber-300/15 text-amber-300", icon: false },
     proxima: { label: "Ainda vai fechar", cls: "bg-white/[0.06] text-white/55", icon: false },

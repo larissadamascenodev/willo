@@ -4,11 +4,13 @@ import botSrc from "@/assets/willo-bot.webp";
 /**
  * Willo himself.
  *
- * The artwork arrives on its own near-black ground with the glow painted into it, so
- * it is composited with `screen`: black goes to nothing and only the rim light
- * survives, which means he sits on whatever is behind him without a visible plate
- * around his head. A circular mask would clip the corners of a rounded-square head, so
- * the frame is a rounded square too.
+ * The artwork arrives on its own near-black ground with the glow painted into it. On a
+ * dark screen it is composited with `screen`, so the black goes to nothing and only the
+ * rim light survives and he sits on whatever is behind him. On paper that same blend
+ * erases him entirely — screen against white is white — so there he keeps his own night
+ * as a small plate, which is how the brand sheet draws him anyway. Both live in CSS,
+ * because only CSS can see which theme is on. A circular mask would clip the corners of
+ * a rounded-square head, so the frame is a rounded square too.
  *
  * Two states, and the difference between them is the point: idle he just sits there,
  * working he breathes and the room picks up his colours — so "the app is doing
@@ -42,8 +44,8 @@ export default function BotMark({ working = false, size = 34 }: {
         alt=""
         aria-hidden="true"
         draggable={false}
-        className="relative h-full w-full select-none rounded-[26%] object-cover"
-        style={{ mixBlendMode: "screen", opacity: working ? 1 : 0.88 }}
+        className="willo-bot-img relative h-full w-full select-none rounded-[26%] object-cover"
+        style={{ opacity: working ? 1 : 0.92 }}
         animate={working ? { y: [0, -1.8, 0], scale: [1, 1.04, 1] } : { y: 0, scale: 1 }}
         transition={working
           ? { duration: 1.7, repeat: Infinity, ease: "easeInOut" }

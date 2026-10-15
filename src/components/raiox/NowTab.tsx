@@ -27,7 +27,7 @@ export function Why({ reasons, label = "Por quê?" }: { reasons: Reason[]; label
               {reasons.map((r) => (
                 <div key={r.label} className="flex items-center justify-between gap-3 text-[12.5px]">
                   <span className="min-w-0 truncate text-white/74">{r.label}</span>
-                  <span className={cn("shrink-0 font-semibold tabular-nums", r.amount < 0 ? "text-red-400" : "text-willo-green")}>
+                  <span className={cn("shrink-0 font-semibold tabular-nums", r.amount < 0 ? "text-red-400" : "text-willo-green-ink")}>
                     {r.amount < 0 ? "−" : "+"}{brl(Math.abs(r.amount))}
                   </span>
                 </div>
@@ -74,7 +74,7 @@ export function CurrentScenario({ data }: { data: RaioXData }) {
           </div>
           <div className="shrink-0 text-right">
             <p className="text-[12px] text-white/66">Deve sobrar</p>
-            <p className={cn("truncate text-[22px] font-extrabold leading-tight tracking-tight tabular-nums", negative ? "text-red-400" : "text-willo-green")}>
+            <p className={cn("truncate text-[22px] font-extrabold leading-tight tracking-tight tabular-nums", negative ? "text-red-400" : "text-willo-green-ink")}>
               {brl(forecast.endBalance)}
             </p>
           </div>
@@ -222,7 +222,7 @@ export function MonthComparison({ data }: { data: RaioXData }) {
                   )}
                   <span className="text-[15px] font-bold text-white tabular-nums">{brl(r.now)}</span>
                   {c.hasBefore && Math.abs(diff) >= 1 && (
-                    <span className={cn("flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums", good ? "bg-willo-green/15 text-willo-green" : "bg-red-400/15 text-red-400")}>
+                    <span className={cn("flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums", good ? "bg-willo-green/15 text-willo-green-ink" : "bg-red-400/15 text-red-400")}>
                       {diff > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
                       {brl(Math.abs(diff))}
                     </span>
@@ -240,7 +240,7 @@ export function MonthComparison({ data }: { data: RaioXData }) {
               {c.categories.map((cat) => (
                 <div key={cat.name} className="flex items-center justify-between gap-3 text-[13px]">
                   <span className="min-w-0 truncate text-white/85">{cat.name}</span>
-                  <span className={cn("shrink-0 font-semibold tabular-nums", cat.diff > 0 ? "text-red-400" : "text-willo-green")}>
+                  <span className={cn("shrink-0 font-semibold tabular-nums", cat.diff > 0 ? "text-red-400" : "text-willo-green-ink")}>
                     {cat.diff > 0 ? "+" : "−"}{brl(Math.abs(cat.diff))}
                   </span>
                 </div>
