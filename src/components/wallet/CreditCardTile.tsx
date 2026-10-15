@@ -107,7 +107,8 @@ export const CreditCardTile = ({ card, idx, invoiceInfo, navigate, extraClass, o
   const available = Math.max(limitValue - usedValue, 0);
   const status = getInvoiceStatusLabel(card, invoiceInfo);
   const invoiceAmount = invoiceInfo?.amount || 0;
-  const hex = TILE_HEX[card.color ?? "violet"] ?? TILE_HEX.violet;
+  const hex =
+    card.color?.startsWith("#") ? card.color : TILE_HEX[card.color ?? "violet"] ?? TILE_HEX.violet;
   const tight = usedPct >= 80;
 
   return (

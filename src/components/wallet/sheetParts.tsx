@@ -57,17 +57,24 @@ export function BankChips({ selectedId, onPick, onOther }: { selectedId: string 
   );
 }
 
-/** Palette swatches. */
-export function ColorPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+/**
+ * Palette swatches.
+ *
+ * It speaks hex, both ways: a colour chosen by hand has to be stored as itself, or a
+ * card named after a bank goes on wearing the bank's colour no matter what was picked.
+ * A palette name still selects correctly, because every card saved before this holds
+ * one.
+ */
+export function ColorPicker({ value, onChange }: { value: string; onChange: (hex: string) => void }) {
   return (
     <div className="flex justify-between px-1">
       {PALETTE.map((c) => {
-        const selected = value === c.value;
+        const selected = value === c.hex || value === c.value;
         return (
           <button
             key={c.value}
             type="button"
-            onClick={() => onChange(c.value)}
+            onClick={() => onChange(c.hex)}
             aria-label={c.value}
             className={cn("flex h-9 w-9 items-center justify-center rounded-full transition-transform", selected ? "scale-110 ring-2 ring-white ring-offset-2 ring-offset-[#111111]" : "opacity-70")}
             style={{ background: c.hex }}

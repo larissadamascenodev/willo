@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { currencySymbol } from "@/lib/currency";
 import { ColorPicker, DayGrid, MoneyField, PillInput, SectionLabel, SheetAction } from "@/components/wallet/sheetParts";
+import { colorFor } from "@/lib/banks";
 
 interface Props {
   open: boolean;
@@ -255,7 +256,7 @@ export default function CreditCardEditModal({ open, onClose, card, onUpdated, on
                   limitCents={limitCents}
                   closing={closingDay}
                   due={dueDay}
-                  hex={color}
+                  hex={colorFor(name, color, DEFAULT_HEX)}
                 />
               </div>
 

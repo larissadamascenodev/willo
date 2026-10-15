@@ -181,7 +181,8 @@ export const CARD_HEX: Record<string, string> = {
   violet: "#8B5CF6", emerald: "#10B981", sky: "#0EA5E9", amber: "#F59E0B", rose: "#F43F5E",
   cyan: "#06B6D4", fuchsia: "#D946EF", lime: "#84CC16", purple: "#8A05BE", orange: "#F97316",
 };
-export const cardHex = (color: string | null) => CARD_HEX[color ?? ""] ?? "#8B5CF6";
+export const cardHex = (color: string | null) =>
+  color && color.startsWith("#") ? color : CARD_HEX[color ?? ""] ?? "#8B5CF6";
 
 export const monthKey = (year: number, month: number) => year * 12 + (month - 1);
 

@@ -45,9 +45,24 @@ export const COLOR_HEX: Record<string, string> = {
 
 export const bankFor = (name: string) => BANKS.find((b) => b.match.test(name));
 
-/** The color an account or card shows: the bank's brand color, else its palette color. */
+/**
+ * The colour an account or card shows.
+ *
+ * A colour picked by hand wins, which is why it is stored as a hex: naming a card
+ * "Nubank" used to pin it to Nubank purple for ever, and changing the colour in the
+ * edit screen appeared to do nothing at all. Without an explicit choice the bank's own
+ * brand colour is the best guess, and a palette name is still understood, because
+ * that is how every card created before this was saved.
+ */
 export function colorFor(name: string, color: string | null | undefined, fallback = "#6B7280") {
+  if (color && color.startsWith("#")) return color;
   return bankFor(name)?.hex ?? COLOR_HEX[color ?? ""] ?? fallback;
+}
+
+/** The same, for the places that only ever had the stored colour to go on. */
+export function hexFor(color: string | null | undefined, fallback = "#8B5CF6") {
+  if (color && color.startsWith("#")) return color;
+  return COLOR_HEX[color ?? ""] ?? fallback;
 }
 
 export function initials(name: string) {
