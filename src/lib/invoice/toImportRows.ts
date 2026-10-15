@@ -1,4 +1,5 @@
 import { invoiceAnchorDate } from "@/lib/installments";
+import { resolveReceiptDate } from "@/lib/receiptDate";
 import { toReais } from "./money";
 import type { InvoiceImportResult } from "./types";
 
@@ -45,7 +46,12 @@ export function toImportRows(result: InvoiceImportResult, invoicePeriod: number)
       rows.push({
         description: op.description,
         amount: toReais(op.amountThisInvoice),
-        date: event?.date ?? invoiceAnchorDate(invoicePeriod),
+        /* The one date here that comes from the page rather than from the invoice's own
+           period, so the one that can carry a year the reader invented. A wrong year is
+           silent — the row looks ordinary and lands in an invoice years away, reducing
+           nothing and refunding no limit — so it is checked here, where every caller
+           passes, rather than at each of the three screens that write these rows. */
+        date: event?.date ? resolveReceiptDate(event.date) : invoiceAnchorDate(invoicePeriod),
         category: op.appCategory ?? null,
         installments: null,
         installmentCurrent: null,

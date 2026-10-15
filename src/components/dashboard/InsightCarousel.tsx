@@ -347,7 +347,7 @@ export default function InsightCarousel({
     if (index >= count) setIndex(0);
   }, [count, index]);
 
-  if (count === 0) return <div className="h-[196px]" aria-hidden="true" />;
+  if (count === 0) return <div className="h-[160px]" aria-hidden="true" />;
 
   const slide = slides[Math.min(index, count - 1)];
   const Icon = slide.icon;
@@ -387,7 +387,10 @@ export default function InsightCarousel({
         </div>
       )}
 
-      <div className="relative mt-5 h-[168px]">
+      {/* Fixed so slides of different lengths do not make the page jump as they turn,
+          but sized to the longest one rather than generously — the slack was showing as
+          a band of empty screen under every short insight. */}
+      <div className="relative mt-4 h-[138px]">
         <AnimatePresence initial={false} mode="wait" custom={dir}>
           <motion.div
             key={slide.id}

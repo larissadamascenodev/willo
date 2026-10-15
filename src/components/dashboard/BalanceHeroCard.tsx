@@ -164,9 +164,12 @@ const BalanceHeroCard = ({ topInset = 0, slot, pinned = true }: Props) => {
         {/* Whatever the page is reading out, straight onto the background — no card,
             so there is no edge across the top of the screen to read as a seam. The
             section pills sit last, landing directly above the first card. */}
-        {slot ?? <div className="h-[196px]" aria-hidden="true" />}
+        {slot ?? <div className="h-[160px]" aria-hidden="true" />}
 
-        <div className="mt-8 pb-5">
+        {/* Tight under whatever is being read out. The pills were sitting a full line
+            below it and a hair above the first card, which left a band of nothing in the
+            middle of the screen doing no work. */}
+        <div className="mt-3 pb-4">
           <HomeSectionTabs />
         </div>
       </div>

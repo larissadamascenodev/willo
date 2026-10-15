@@ -242,8 +242,9 @@ const DashboardLayout = () => {
             type: (item.type as "receita" | "despesa") || "despesa",
             amount: item.amount,
             category: item.category || "outros",
-            // Already sanitized when scanned; keep whatever the person set while editing
-            date: item.date || getSafeTransactionDate(null),
+            // Sanitised again on the way out: the person can edit this date in the
+            // review screen, and the value that arrives here is whatever survived that.
+            date: getSafeTransactionDate(item.date),
             time: item.time || null,
             status: "pago",
             account_id: item.account_id || scanAccountId,

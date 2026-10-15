@@ -156,3 +156,21 @@ describe("o que o caminho antigo não sabia fazer", () => {
     expect(rows).toHaveLength(0);
   });
 });
+
+describe("o ano que o leitor inventa", () => {
+  it("uma compra avulsa lida com ano errado é trazida para o ano que cabe", () => {
+    const rows = newPath([
+      { description: "Shein", amount: 56.22, installment_current: null, installment_total: null, date: "2024-10-09" },
+    ]);
+    // Dois anos atrás não é papel velho, é ano errado: o dia e o mês ficam.
+    expect(rows[0].date.slice(5)).toBe("10-09");
+    expect(Number(rows[0].date.slice(0, 4))).toBeGreaterThanOrEqual(new Date().getFullYear() - 1);
+  });
+
+  it("uma data do próprio período da fatura passa intacta", () => {
+    const rows = newPath([
+      { description: "Uber", amount: 18.95, installment_current: null, installment_total: null, date: "2026-10-02" },
+    ]);
+    expect(rows[0].date).toBe("2026-10-02");
+  });
+});

@@ -31,10 +31,12 @@ const NAV_ITEMS = [
 
 /** Routes that keep the app header; every other screen shows a back bar instead. */
 // Home is left out: BalanceHeroCard draws its own top row there.
-/* Who is signed in is the home's business. On a page it was a second identity banner
-   above content that had its own title, and on a section it says nothing you did not
-   already know from being there. */
-const SHOWS_PROFILE = ["/"];
+/* Nowhere, on mobile.
+   The home already has this header — BalanceHeroCard draws the avatar, the bell, and
+   the name that arrives once you have scrolled past the greeting — so rendering it here
+   too put two of each on the one screen that wanted one. Every other screen does not
+   want it at all. */
+const SHOWS_PROFILE: string[] = [];
 
 const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profile?: { display_name: string | null; avatar_url?: string | null } | null; streak?: number; streakDates?: string[] }) => {
   const { signOut, user } = useAuth();
@@ -47,15 +49,6 @@ const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profi
   const plan = "Free";
   const [menuOpen, setMenuOpen] = useState(false);
 
-  /* Far enough down that "Boa tarde, Larissa." has left the screen. Below that the
-     greeting is holding the name and the header does not need to. */
-  const [pastGreeting, setPastGreeting] = useState(false);
-  useEffect(() => {
-    const read = () => setPastGreeting(window.scrollY > 120);
-    read();
-    window.addEventListener("scroll", read, { passive: true });
-    return () => window.removeEventListener("scroll", read);
-  }, []);
   const [transacaoMenuOpen, setTransacaoMenuOpen] = useState(false);
   const [streakOpen, setStreakOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -347,14 +340,10 @@ const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profi
                 initial
               )}
             </span>
-            {/* The name arrives only once the greeting has gone past. At the top of the
-                page "Boa tarde, Larissa." is already on screen, and saying it twice in
-                the same breath is the duplication — the avatar alone is enough while
-                the greeting is holding the name. */}
             <motion.span
-              initial={false}
-              animate={{ opacity: pastGreeting ? 1 : 0, x: pastGreeting ? 0 : -6 }}
-              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.12, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
               className="min-w-0 truncate text-[16px] font-semibold tracking-tight text-white"
             >
               {profile?.display_name?.split(" ")[0] ?? ""}
