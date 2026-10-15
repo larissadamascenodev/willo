@@ -6,7 +6,7 @@ import BackButton from "@/components/shared/BackButton";
 import HoldActions from "@/components/shared/HoldActions";
 import CardCreateSheet from "@/components/wallet/CardCreateSheet";
 import CreditCardEditModal from "@/components/fatura/CreditCardEditModal";
-import CardFaceTile from "@/components/wallet/CardFaceTile";
+import CardFaceTile, { FREE_LIMIT_HEX, USED_LIMIT_HEX } from "@/components/wallet/CardFaceTile";
 import { getInvoiceStatusLabel, type CreditCardItem } from "@/components/wallet/CreditCardTile";
 import { getCreditCards } from "@/services/transactionService";
 import { colorFor } from "@/lib/banks";
@@ -95,7 +95,6 @@ const Cartoes = () => {
 
     return {
       faturas: rows.reduce((s, r) => s + r.total, 0),
-      maior: Math.max(...rows.map((r) => r.total), 1),
       lancamentos: lines.length,
       parcelados: lines.filter((i) => i.isParcelado).length,
       limite,
@@ -140,13 +139,20 @@ const Cartoes = () => {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="px-1 pt-3"
+            className="relative px-1 pt-3"
           >
-            <p className="text-[13.5px] text-white/62">Total em faturas</p>
-            <p className="mt-1 truncate text-[40px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">
+            {/* The wallet's own light, behind the figure rather than around it — the
+                page keeps its depth without the total being put in a box. */}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -left-10 -top-8 h-44 w-72 rounded-full blur-[64px]"
+              style={{ background: "#8B93A8", opacity: 0.16 }}
+            />
+            <p className="relative text-[13.5px] text-white/62">Total em faturas</p>
+            <p className="relative mt-1 truncate text-[40px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">
               {fmt(sums.faturas)}
             </p>
-            <p className="mt-2.5 text-[12.5px] t-soft tabular-nums">
+            <p className="relative mt-2.5 text-[12.5px] t-soft tabular-nums">
               {sums.lancamentos} {sums.lancamentos === 1 ? "lançamento" : "lançamentos"}
               {sums.parcelados > 0 && (
                 <>
@@ -157,93 +163,90 @@ const Cartoes = () => {
             </p>
           </motion.div>
 
-          {/* ══ That total, taken apart ══ */}
-          <motion.section
-            initial={{ opacity: 0, y: 12 }}
+          {/* ══ The limit, loose on the page under the total ══
+              What each card is spending is on the card itself, a few lines down — the
+              only thing the sum of them needs to say is how much room is left. */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.06, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-5 rounded-[24px] border border-white/[0.08] willo-glass px-5 py-4"
+            className="mt-7 px-1"
           >
-            {/* — por cartão — */}
-            <p className="text-[11.5px] font-semibold uppercase tracking-[0.12em] t-softer">Por cartão</p>
-            <div className="mt-3 space-y-3.5">
-              {rows.map((r, i) => (
-                <div key={r.card.id}>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="min-w-0 truncate text-[14px] font-medium text-white">{r.card.name}</span>
-                    <span className="shrink-0 text-[14.5px] font-semibold tabular-nums text-white">
-                      {fmt(r.total)}
-                    </span>
-                  </div>
-                  <div className="mt-2 h-[6px] overflow-hidden rounded-full bg-white/[0.06]">
-                    <motion.span
-                      className="block h-full rounded-full"
-                      style={{ background: r.hex }}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.max((r.total / sums.maior) * 100, r.total > 0 ? 4 : 0)}%` }}
-                      transition={{ duration: 0.6, delay: 0.08 + i * 0.07, ease: "easeOut" }}
-                    />
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-[11.5px] font-semibold uppercase tracking-[0.12em] t-softer">Limite</span>
+              <span className={cn(
+                "text-[12px] font-semibold tabular-nums",
+                sums.usadoPct >= 100 ? "text-red-400" : "t-softer",
+              )}>
+                {sums.usadoPct.toFixed(0)}% usado
+              </span>
             </div>
 
-            {/* — limite, somando os cartões — */}
-            <div className="mt-5 border-t border-white/[0.07] pt-4">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="text-[11.5px] font-semibold uppercase tracking-[0.12em] t-softer">Limite</span>
-                <span className={cn(
-                  "text-[12px] font-semibold tabular-nums",
-                  sums.usadoPct >= 100 ? "text-red-400" : sums.usadoPct >= 80 ? "text-willo-amber" : "t-softer",
-                )}>
-                  {sums.usadoPct.toFixed(0)}% usado
-                </span>
-              </div>
+            {/* One bar split the way the limit itself is split: each card's share of
+                what is spent, in its own colour, and what is still free at the end. */}
+            <div className="mt-3 flex h-2.5 gap-[3px]">
+              {rows.map((r, i) => {
+                const pct = sums.limite > 0 ? (r.card.used / sums.limite) * 100 : 0;
+                if (pct < 0.5) return null;
+                return (
+                  <motion.span
+                    key={r.card.id}
+                    className="h-full rounded-full"
+                    style={{
+                      background: `linear-gradient(180deg, color-mix(in srgb, ${USED_LIMIT_HEX}, #fff 14%) 0%, ${USED_LIMIT_HEX} 60%, rgb(0 0 0 / 0.18) 100%)`,
+                      boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.16)",
+                      minWidth: 6,
+                    }}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ duration: 0.6, delay: 0.1 + i * 0.06, ease: "easeOut" }}
+                  />
+                );
+              })}
+              <motion.span
+                className="h-full rounded-full"
+                style={{
+                  background: `linear-gradient(180deg, ${FREE_LIMIT_HEX} 0%, ${FREE_LIMIT_HEX} 55%, rgb(0 0 0 / 0.14) 100%)`,
+                  boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.35)",
+                  minWidth: sums.disponivel > 0 ? 6 : 0,
+                }}
+                initial={{ width: 0 }}
+                animate={{
+                  width: `${sums.limite > 0 ? (sums.disponivel / sums.limite) * 100 : 100}%`,
+                }}
+                transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+              />
+            </div>
 
-              {/* One bar split the way the limit itself is split: each card's share of
-                  what is spent, in its own colour, and what is left at the end. */}
-              <div className="mt-3 flex h-2 gap-[3px]">
-                {rows.map((r, i) => {
-                  const pct = sums.limite > 0 ? (r.card.used / sums.limite) * 100 : 0;
-                  if (pct < 0.5) return null;
-                  return (
-                    <motion.span
-                      key={r.card.id}
-                      className="h-full rounded-full"
-                      style={{ background: r.hex, minWidth: 6 }}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
-                      transition={{ duration: 0.6, delay: 0.1 + i * 0.06, ease: "easeOut" }}
-                    />
-                  );
-                })}
-                <motion.span
-                  className="h-full rounded-full bg-white/[0.08]"
-                  initial={{ width: 0 }}
-                  animate={{
-                    width: `${sums.limite > 0 ? (sums.disponivel / sums.limite) * 100 : 100}%`,
-                  }}
-                  transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
-                />
+            {/* Two columns, so the figures are not read as one sentence. */}
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div>
+                <p className="flex items-center gap-1.5 text-[11.5px] t-softer">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: USED_LIMIT_HEX }} />
+                  Usado
+                </p>
+                <p className="mt-1 truncate text-[16px] font-bold tabular-nums text-white/72">
+                  {fmt(sums.usado)}
+                </p>
               </div>
-
-              <div className="mt-3 flex items-baseline justify-between gap-3">
-                <span className="truncate text-[12.5px] t-soft tabular-nums">
-                  Usado <span className="font-semibold text-white">{fmt(sums.usado)}</span> de{" "}
-                  {fmt(sums.limite)}
-                </span>
-                <span className="shrink-0 text-[12.5px] t-soft">
-                  Disponível{" "}
-                  <span className={cn(
-                    "font-semibold tabular-nums",
-                    sums.disponivel > 0 ? "text-willo-green-ink" : "text-red-400",
-                  )}>
-                    {fmt(sums.disponivel)}
-                  </span>
-                </span>
+              <div>
+                <p className="flex items-center gap-1.5 text-[11.5px] t-softer">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: FREE_LIMIT_HEX }} />
+                  Disponível
+                </p>
+                <p
+                  className="mt-1 truncate text-[16px] font-bold tabular-nums"
+                  style={{ color: sums.disponivel > 0 ? "#FFFFFF" : "#F87171" }}
+                >
+                  {fmt(sums.disponivel)}
+                </p>
               </div>
             </div>
-          </motion.section>
+
+            <p className="mt-3 text-[11.5px] tabular-nums t-faint">
+              Limite total {fmt(sums.limite)}
+            </p>
+          </motion.div>
 
           {/* ══ The cards ══ */}
           <div className="mt-5 space-y-3">

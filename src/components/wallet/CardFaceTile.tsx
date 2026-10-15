@@ -16,6 +16,18 @@ import { cn } from "@/lib/utils";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
+/**
+ * Spent and free, as two neutral tones.
+ *
+ * A wallet holds a Nubank and an Inter and a Caixa, and no single hue sits well beside
+ * all three — so anything that speaks for the cards as a group is neutral, and the
+ * bank colour is kept for the card it belongs to. The pairing is what carries the
+ * meaning: what is gone is the dimmer of the two, what is left is the brighter.
+ * Red is kept for having none left.
+ */
+export const USED_LIMIT_HEX = "#6C6C79";
+export const FREE_LIMIT_HEX = "#DADBE4";
+
 export interface CardFace {
   id: string;
   name: string;
@@ -44,7 +56,6 @@ export default function CardFaceTile({
   const press = useLongPress(onHold);
   const usedPct = card.limit > 0 ? Math.min((card.used / card.limit) * 100, 100) : 0;
   const available = Math.max(card.limit - card.used, 0);
-  const tight = usedPct >= 80;
 
   return (
     <motion.div
@@ -58,6 +69,7 @@ export default function CardFaceTile({
       onPointerLeave={press.onPointerLeave}
       onContextMenu={(e) => e.preventDefault()}
       onClick={press.guard(onOpen)}
+      style={{ boxShadow: "0 24px 50px -32px rgb(0 0 0 / 0.95), inset 0 1px 0 rgb(255 255 255 / 0.07)" }}
       className="relative cursor-pointer overflow-hidden rounded-[24px] border border-white/[0.09] willo-glass px-[18px] pb-[18px] pt-[17px] transition-transform duration-200 active:scale-[0.985]"
     >
       {/* The card's colour as light inside the glass, never as a field of paint */}
@@ -65,6 +77,11 @@ export default function CardFaceTile({
         aria-hidden="true"
         className="pointer-events-none absolute -left-16 -top-24 h-52 w-60 rounded-full blur-[52px]"
         style={{ background: hex, opacity: 0.26 }}
+      />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-20 -right-14 h-44 w-44 rounded-full blur-[54px]"
+        style={{ background: hex, opacity: 0.12 }}
       />
       <span
         aria-hidden="true"
@@ -76,7 +93,10 @@ export default function CardFaceTile({
         {/* the chip, in the bank's colour */}
         <span
           className="relative flex h-[30px] w-[38px] shrink-0 overflow-hidden rounded-[8px]"
-          style={{ background: hex, boxShadow: `0 8px 20px -10px ${hex}` }}
+          style={{
+            background: `linear-gradient(145deg, color-mix(in srgb, ${hex}, #fff 22%) 0%, ${hex} 58%, color-mix(in srgb, ${hex}, #000 28%) 100%)`,
+            boxShadow: `0 8px 20px -10px ${hex}, inset 0 1px 0 rgb(255 255 255 / 0.35)`,
+          }}
         >
           <span className="absolute inset-x-[6px] top-1/2 h-px -translate-y-1/2 bg-black/25" />
           <span className="absolute inset-y-[6px] left-1/2 w-px -translate-x-1/2 bg-black/25" />
@@ -110,10 +130,16 @@ export default function CardFaceTile({
         {fmt(owed)}
       </p>
 
-      <div className="relative mt-4 h-[5px] overflow-hidden rounded-full bg-white/[0.09]">
+      <div
+        className="relative mt-4 h-[6px] overflow-hidden rounded-full bg-white/[0.07]"
+        style={{ boxShadow: "inset 0 1px 1px rgb(0 0 0 / 0.35)" }}
+      >
         <motion.span
           className="block h-full rounded-full"
-          style={{ background: usedPct >= 100 ? "#F87171" : tight ? "#FBBF24" : hex }}
+          style={{
+            background: usedPct >= 100 ? "#F87171" : hex,
+            boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.30)",
+          }}
           initial={{ width: 0 }}
           animate={{ width: `${usedPct}%` }}
           transition={{ duration: 0.75, ease: "easeOut", delay: 0.1 + index * 0.07 }}
@@ -126,10 +152,10 @@ export default function CardFaceTile({
         </span>
         <span className="shrink-0 truncate text-[11.5px] t-softer">
           Disponível{" "}
-          <span className={cn(
-            "font-semibold tabular-nums",
-            available > 0 ? "text-willo-green-ink" : "text-red-400",
-          )}>
+          <span
+            className="font-semibold tabular-nums"
+            style={{ color: available > 0 ? FREE_LIMIT_HEX : "#F87171" }}
+          >
             {fmt(available)}
           </span>
         </span>
