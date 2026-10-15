@@ -474,9 +474,25 @@
   [data-theme="light"] .willo-glass,
   [data-theme="light"] .willo-glass-inset,
   [data-theme="light"] .willo-glass-chip {
-    background-color: #ffffff;
-    border-color: rgba(18, 18, 22, 0.06);
+    /* Not quite white. A solid card cuts a hole in the sky behind it; leaving a little
+       of the ground showing through is what keeps the whole screen one picture instead
+       of a stack of paper on top of a photograph. The blur is what makes the
+       translucency read as a surface rather than as a card that failed to load. */
+    background-color: rgba(255, 255, 255, 0.76);
+    backdrop-filter: blur(18px) saturate(1.3);
+    -webkit-backdrop-filter: blur(18px) saturate(1.3);
+    border-color: rgba(18, 18, 22, 0.05);
     box-shadow: var(--shadow-card);
+  }
+
+  /* Nested inside one of those, a second blur samples the already blurred parent and
+     turns the stack to mud, so it only tints. */
+  [data-theme="light"] .willo-glass .willo-glass-inset,
+  [data-theme="light"] .willo-glass .willo-glass-chip {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background-color: rgba(255, 255, 255, 0.62);
+    box-shadow: none;
   }
 
   [data-theme="light"] .willo-glass-strong {

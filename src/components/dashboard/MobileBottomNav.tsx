@@ -1,6 +1,8 @@
 import { memo, useCallback, useEffect, useState } from "react";
 import { Home, ArrowLeftRight, Plus, TrendingUp, TrendingDown, Camera, Sparkles } from "lucide-react";
 import RegistroRapidoIcon from "@/components/registro/RegistroRapidoIcon";
+import BotMark from "@/components/registro/BotMark";
+import { Mic } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -16,7 +18,7 @@ export const navItems: {
 }[] = [
   { icon: Home, label: "Início", path: "/" },
   { icon: ArrowLeftRight, label: "Transações", path: "/transacoes" },
-  { icon: Sparkles, label: "Assistente", path: "/assistente" },
+  { icon: Sparkles, label: "Agentes", path: "/assistente" },
 ];
 
 const MobileBottomNav = memo(() => {
@@ -25,16 +27,29 @@ const MobileBottomNav = memo(() => {
 
   return (
     <>
-      {/* Bottom Nav Bar — pill (Início/Transações/Assistente) + separate quick-entry button */}
+      {/* The bar that invites, above the bar that navigates: writing down what you spent
+          is the thing people come back to do, so it is a line waiting for a sentence
+          rather than an icon you have to recognise. */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-center gap-3 px-5 md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-50 px-5 md:hidden"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}
       >
-        <BottomNavBar
-          activePath={location.pathname}
-          onNavigate={(path) => navigate(path)}
-          onPlus={() => window.dispatchEvent(new CustomEvent("open-registro-rapido"))}
-        />
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent("open-registro-rapido"))}
+          className="willo-float mb-2.5 flex h-[46px] w-full items-center gap-2.5 rounded-full pl-3.5 pr-4 text-left active:scale-[0.99] transition-transform"
+        >
+          <RegistroRapidoIcon className="h-[19px] w-[19px] shrink-0 text-willo-green-ink" />
+          <span className="min-w-0 flex-1 truncate text-[14.5px] t-soft">Registro rápido</span>
+          <Mic className="h-[17px] w-[17px] shrink-0 t-faint" strokeWidth={2.1} />
+        </button>
+
+        <div className="flex items-center justify-center gap-3">
+          <BottomNavBar
+            activePath={location.pathname}
+            onNavigate={(path) => navigate(path)}
+            onPlus={() => navigate("/assistente")}
+          />
+        </div>
       </div>
     </>
   );
@@ -100,13 +115,13 @@ export function BottomNavBar({ activePath, plusOpen = false, onNavigate, onPlus 
 
       <button
         onClick={onPlus}
-        aria-label="Registro rápido"
+        aria-label="Willo"
         className={cn(
           "relative w-[58px] h-[58px] rounded-full flex items-center justify-center shrink-0 transition-colors",
           plusOpen ? "bg-white" : "willo-float",
         )}
       >
-        <RegistroRapidoIcon className={cn("w-[25px] h-[25px]", plusOpen ? "text-[#0B0B0B]" : "text-white")} />
+        <BotMark size={34} />
       </button>
     </>
   );
