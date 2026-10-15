@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Home, ArrowLeftRight, Plus, TrendingUp, TrendingDown, Camera, Sparkles } from "lucide-react";
 import RegistroRapidoIcon from "@/components/registro/RegistroRapidoIcon";
 import BotMark from "@/components/registro/BotMark";
@@ -24,8 +24,13 @@ export const navItems: {
 const openQuickEntry = () => window.dispatchEvent(new CustomEvent("open-registro-rapido"));
 
 /* One curve for the whole fold, slow out of the gate and settling rather than snapping.
-   A spring here read as a flinch every time the page moved. */
-const EASE = { duration: 0.42, ease: [0.22, 1, 0.36, 1] } as const;
+   A spring here read as a flinch every time the page moved, and the first eased version
+   was still quick enough that the bar looked dropped rather than folded. */
+const EASE = { duration: 0.58, ease: [0.32, 0.72, 0, 1] } as const;
+
+/* The bar overhead leaves a little later than the row rearranges, so the two movements
+   read as one thing handing over rather than as two things firing at once. */
+const EASE_BAR = { duration: 0.5, ease: [0.32, 0.72, 0, 1], delay: 0.04 } as const;
 
 /** The invitation itself, in whichever shape the row is currently wearing. */
 function QuickEntryContent({ compact = false }: { compact?: boolean }) {
@@ -52,6 +57,23 @@ const MobileBottomNav = memo(() => {
   // Folded once the page has moved enough that the bar would be in the way. The
   // threshold is generous so a thumb twitch does not make the row flap.
   const [collapsed, setCollapsed] = useState(false);
+
+  /* The row animates real widths, not a layout projection.
+     Framer's `layout` moves a box by scaling it, and a box that goes from 267px to 50px
+     gets scaleX 0.19 while its height barely moves — so every icon inside is squashed
+     flat on the way down and stretched wide on the way back. Measuring the row once and
+     animating width in pixels costs one observer and distorts nothing. */
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [rowWidth, setRowWidth] = useState(0);
+  useEffect(() => {
+    const el = rowRef.current;
+    if (!el) return;
+    const read = () => setRowWidth(el.getBoundingClientRect().width);
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   useEffect(() => {
     const read = () => setCollapsed(window.scrollY > 90);
     read();
@@ -77,7 +99,7 @@ const MobileBottomNav = memo(() => {
               initial={{ opacity: 0, height: 0, marginBottom: 0 }}
               animate={{ opacity: 1, height: 46, marginBottom: 10 }}
               exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-              transition={EASE}
+              transition={EASE_BAR}
               onClick={openQuickEntry}
               className="willo-float flex w-full items-center gap-2.5 overflow-hidden rounded-full pl-3.5 pr-4 text-left"
             >
@@ -89,29 +111,31 @@ const MobileBottomNav = memo(() => {
         {/* Three separate things, the way the reference has them: Início on one end,
             Willo on the other, and the invitation between — its own piece of glass
             rather than a slot carved out of one long bar. */}
-        <div className="flex items-center gap-2.5">
+        <div ref={rowRef} className="flex items-center gap-2.5">
           <BottomNavBar
+            rowWidth={rowWidth}
             activePath={location.pathname}
             collapsed={collapsed}
             onNavigate={(path) => navigate(path)}
             onPlus={() => navigate("/assistente")}
             middle={
-              <AnimatePresence initial={false}>
-                {collapsed && (
-                  <motion.button
-                    key="quick-inline"
-                    layout
-                    initial={{ opacity: 0, scale: 0.94 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.94 }}
-                    transition={EASE}
-                    onClick={openQuickEntry}
-                    className="willo-float flex h-[50px] min-w-0 flex-1 items-center gap-2 rounded-full pl-3.5 pr-4 text-left"
-                  >
-                    <QuickEntryContent compact />
-                  </motion.button>
-                )}
-              </AnimatePresence>
+              <motion.button
+                /* Always mounted, and it is the width that opens and closes. Mounting it
+                   on arrival meant it had to fade in from nothing while the nav was
+                   still shrinking, which is the part that looked dropped. */
+                animate={{
+                  width: collapsed ? Math.max(rowWidth - 2 * 10 - 50 - 50, 0) : 0,
+                  opacity: collapsed ? 1 : 0,
+                }}
+                initial={false}
+                transition={EASE}
+                onClick={openQuickEntry}
+                aria-hidden={!collapsed}
+                style={{ pointerEvents: collapsed ? "auto" : "none" }}
+                className="willo-float flex h-[50px] shrink-0 items-center gap-2 overflow-hidden rounded-full pl-3.5 pr-4 text-left"
+              >
+                <QuickEntryContent compact />
+              </motion.button>
             }
           />
         </div>
@@ -127,9 +151,11 @@ MobileBottomNav.displayName = "MobileBottomNav";
  * it to the bottom of the screen; the welcome showcase draws it inside its
  * phone so both always look exactly the same.
  */
-export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, middle, onNavigate, onPlus }: {
+export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, rowWidth = 0, middle, onNavigate, onPlus }: {
   activePath: string;
   plusOpen?: boolean;
+  /** Measured width of the row, so the pieces can animate in pixels rather than scale. */
+  rowWidth?: number;
   /** Folded: the nav shrinks to Início alone and `middle` takes the room it gave up. */
   collapsed?: boolean;
   /** Sits between the nav and Willo, as its own thing rather than inside either. */
@@ -143,23 +169,21 @@ export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, 
      up height and width to pay for it. Spreading icons that stayed one size just left
      margins at both ends of the pill, which is the version that looks unfinished. */
   const end = collapsed ? 50 : 58;
+  const GAP = 10;
+  // Open, the nav takes everything Willo does not. Folded, it is a circle like him.
+  const navWidth = rowWidth > 0 ? (collapsed ? end : rowWidth - GAP - end) : undefined;
   return (
     <>
       {/* isolate keeps the sliding pill from compositing above the icons: WebKit
           promotes a layoutId element to its own layer and paints it over
           non-composited siblings whatever the z-index says. */}
       <motion.nav
-        layout
+        animate={navWidth !== undefined ? { width: navWidth, height: end } : undefined}
         transition={EASE}
-        style={collapsed ? { width: end } : undefined}
-        className={cn(
-          "willo-float rounded-full [isolation:isolate]",
-          // Folded it is a single round button, the same size as Willo on the other
-          // end, so the row reads as three separate things rather than one slab.
-          collapsed ? "shrink-0" : "flex-1",
-        )}
+        style={navWidth === undefined ? { height: end } : undefined}
+        className="willo-float shrink-0 overflow-hidden rounded-full [isolation:isolate]"
       >
-        <div className="flex items-center justify-around px-1.5" style={{ height: end }}>
+        <div className="flex h-full items-center justify-around px-1.5">
           {shown.map((item) => {
             const Icon = item.icon;
             const isActive = !!item.path && activePath === item.path;
@@ -182,21 +206,19 @@ export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, 
                     Folded, the nav IS a circle, so a circle inside it is a second ring
                     around the same thing. There the colour says it alone. */}
                 {isActive && !collapsed && (
-                  <motion.span
-                    layoutId="willo-nav-active"
-                    transition={EASE}
-                    className="absolute inset-0 rounded-full bg-white/[0.10]"
-                  />
+                  <span className="absolute inset-0 rounded-full bg-white/[0.10]" />
                 )}
+                <span className="relative flex">
                 <Icon
                   className={cn(
-                    "relative transform-gpu transition-colors",
-                    collapsed ? "h-[21px] w-[21px]" : "h-6 w-6",
+                    "transform-gpu transition-colors",
+                    collapsed ? "h-[21px] w-[21px]" : "h-[23px] w-[23px]",
                     // Where you are is the one place the house colour belongs here.
                     isActive ? "text-willo-green" : item.soon ? "t-faint" : "text-white/45",
                   )}
                   strokeWidth={isActive ? 2.25 : 2}
                 />
+                </span>
                 {item.soon && (
                   <span className="absolute -top-0.5 right-1.5 h-1.5 w-1.5 rounded-full bg-willo-green" />
                 )}
@@ -211,8 +233,8 @@ export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, 
       <button
         onClick={onPlus}
         aria-label="Willo"
-        style={{ width: end, height: end }}
-        className="relative flex shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
+        style={{ width: end, height: end, transition: "width .58s, height .58s" }}
+        className="relative flex shrink-0 items-center justify-center rounded-full active:scale-95"
       >
         {/* Filling the button, so the only gap in the row is the one between the two
             pieces of glass rather than a ring of page showing around him. */}
