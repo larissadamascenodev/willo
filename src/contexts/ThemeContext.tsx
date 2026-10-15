@@ -14,6 +14,16 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
  * it has drawn anything.
  */
 
+/**
+ * The light theme is built but not yet finished — several screens have not been
+ * through it. Until they have, the app stays dark whatever is stored or whatever the
+ * phone says, and the picker is hidden.
+ *
+ * This is the only line to change to bring it back: nothing else was removed, and a
+ * device that already chose light keeps that choice, waiting.
+ */
+export const LIGHT_THEME_ENABLED = false;
+
 export type ThemeChoice = "system" | "light" | "dark";
 export type ResolvedTheme = "light" | "dark";
 
@@ -60,7 +70,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => mq.removeEventListener("change", onChange);
   }, []);
 
-  const theme: ResolvedTheme = choice === "system" ? systemTheme : choice;
+  const resolved: ResolvedTheme = choice === "system" ? systemTheme : choice;
+  const theme: ResolvedTheme = LIGHT_THEME_ENABLED ? resolved : "dark";
 
   useEffect(() => {
     const root = document.documentElement;

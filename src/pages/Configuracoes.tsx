@@ -6,7 +6,7 @@ import {
   HelpCircle, Loader2, Lock, LogOut, Pencil, ShieldCheck, Shuffle, Sparkles, Trash2, User, UserX,
   Sun, Moon, SunMoon,
 } from "lucide-react";
-import { useTheme, type ThemeChoice } from "@/contexts/ThemeContext";
+import { useTheme, LIGHT_THEME_ENABLED, type ThemeChoice } from "@/contexts/ThemeContext";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -436,9 +436,12 @@ const Configuracoes = () => {
         <Row icon={Bell} label="Lembretes e alertas" onClick={() => setNotifOpen(true)} />
       </Group>
 
-      <Group title="Aparência" delay={0.09}>
-        <ThemePicker />
-      </Group>
+      {/* Hidden until the light theme has been through every screen. */}
+      {LIGHT_THEME_ENABLED && (
+        <Group title="Aparência" delay={0.09}>
+          <ThemePicker />
+        </Group>
+      )}
 
       <Group title="Preferências" delay={0.1}>
         <Row icon={Globe} label="Moeda" value={`${getCurrency()} · ${currencySymbol()}`} onClick={() => setSheet("currency")} />
