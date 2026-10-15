@@ -808,7 +808,23 @@ const FaturaCartao = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="flex h-11 items-center justify-between">
+          {/* The card names itself between the two controls: it is what the whole
+              screen is about, so it sits where a title sits. */}
+          <div className="relative flex h-11 items-center justify-between">
+            <div className="pointer-events-none absolute inset-x-14 flex items-center justify-center gap-2">
+              <span
+                className="flex h-[18px] w-[24px] shrink-0 items-center justify-center rounded-[5px]"
+                style={{ background: cardHex, boxShadow: `0 6px 14px -8px ${cardHex}` }}
+              >
+                <span className="h-[4px] w-[6px] rounded-[1px] bg-white/85" />
+              </span>
+              <p className="truncate text-[14.5px] font-semibold text-white">
+                {card?.name}
+                {card?.last_four_digits && (
+                  <span className="t-softer tabular-nums"> ••••{card.last_four_digits}</span>
+                )}
+              </p>
+            </div>
             <BackButton to="/cartoes" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -846,7 +862,7 @@ const FaturaCartao = () => {
             </DropdownMenu>
           </div>
 
-          {/* ── Who this is, and what it asks for ── */}
+          {/* ── What it asks for ── */}
           <div className="relative px-1">
             <span
               aria-hidden="true"
@@ -854,18 +870,9 @@ const FaturaCartao = () => {
               style={{ background: cardHex, opacity: 0.22 }}
             />
 
-            <div className="relative flex items-center gap-2.5">
-              <span
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px]"
-                style={{ background: cardHex, boxShadow: `0 6px 16px -8px ${cardHex}` }}
-              >
-                <span className="h-[6px] w-[9px] rounded-[1.5px] bg-white/85" />
-              </span>
-              <p className="min-w-0 flex-1 truncate text-[15px] font-semibold text-white">
-                {card?.name}
-                {card?.last_four_digits && (
-                  <span className="t-softer tabular-nums"> · ••••{card.last_four_digits}</span>
-                )}
+            <div className="relative flex items-center justify-between gap-3">
+              <p className="text-[13px] text-white/62">
+                Fatura de {MONTH_NAMES[selectedMonth - 1]}
               </p>
               {statusChip && (
                 <span
@@ -876,10 +883,6 @@ const FaturaCartao = () => {
                 </span>
               )}
             </div>
-
-            <p className="relative mt-6 text-[13px] text-white/62">
-              Fatura de {MONTH_NAMES[selectedMonth - 1]}
-            </p>
             <p className="relative mt-1 text-[42px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">
               {formatCurrency(headline)}
             </p>

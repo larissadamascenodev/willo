@@ -112,7 +112,10 @@ export default function InvoiceForecastChart({
     const el = scrollRef.current;
     const bar = el?.querySelector<HTMLElement>(`[data-period="${openPeriod}"]`);
     if (!el || !bar) return;
-    el.scrollLeft = bar.offsetLeft;
+    /* Measured between the two boxes rather than from offsetLeft: offsetLeft counts
+       from the nearest positioned ancestor, which here is the page — so it carried the
+       page gutter into the number and scrolled a slice of the open month off screen. */
+    el.scrollLeft += bar.getBoundingClientRect().left - el.getBoundingClientRect().left;
     parked.current = true;
   }, [bars, openPeriod]);
 
