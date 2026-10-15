@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronRight, CreditCard, Plus } from "lucide-react";
+import { CreditCard, Plus } from "lucide-react";
 import BackButton from "@/components/shared/BackButton";
 import HoldActions from "@/components/shared/HoldActions";
 import CardCreateSheet from "@/components/wallet/CardCreateSheet";
 import CreditCardEditModal from "@/components/fatura/CreditCardEditModal";
+import CardFaceTile from "@/components/wallet/CardFaceTile";
 import { getInvoiceStatusLabel, type CreditCardItem } from "@/components/wallet/CreditCardTile";
 import { getCreditCards } from "@/services/transactionService";
-import { useLongPress } from "@/hooks/useLongPress";
 import { colorFor } from "@/lib/banks";
 import { getCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
@@ -18,16 +18,16 @@ import {
 } from "@/hooks/useCardsOverview";
 
 /**
- * Every card, on one panel.
+ * The wallet.
  *
  * This screen used to open on three pills — Cartões, Faturas, Parcelas — which asked
- * which view you wanted before you had seen anything, and then answered with a month
- * for whichever card the filter happened to be on. But the question on arriving is
- * always the same one: which card. So the screen is the answer to that and nothing
- * else, and everything about a card now lives inside the card.
+ * which view you wanted before you had seen anything. Arriving here, there are only two
+ * questions: what do all of these cards add up to, and which one do I want. So the
+ * screen is a summary and then the cards themselves, each drawn as a card, because a
+ * row of text can state a number but it cannot be recognised at a glance.
  *
- * The figure on a row is what that card is asking for now, not what it has spent since
- * it was created: a credit card is a bill, and the bill is the open invoice.
+ * Every figure here is the open invoice — the one still to be paid. A credit card is a
+ * bill, not a history.
  */
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
@@ -35,105 +35,19 @@ const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curren
 interface CardRow {
   card: OverviewCard;
   hex: string;
-  /** What the open invoice still asks for. */
-  owed: number;
-  /** The invoice that figure came from, for the status line. */
+  /** The invoice that is open, and what it asks for in full. */
   open: OverviewInvoice | null;
-  available: number;
-  usedPct: number;
-}
-
-/** One card. Tap opens it; hold edits or removes it. */
-function CardLine({ row, index, onOpen, onHold }: {
-  row: CardRow;
-  index: number;
-  onOpen: () => void;
-  onHold: () => void;
-}) {
-  const press = useLongPress(onHold);
-  const { card, hex, owed, open, available, usedPct } = row;
-
-  const item: CreditCardItem = {
-    id: card.id,
-    name: card.name,
-    limit: card.limit,
-    used_limit: card.used,
-    closing_day: card.closingDay,
-    due_day: card.dueDay,
-    color: card.color,
-    last_four_digits: card.lastFour,
-  };
-  const status = getInvoiceStatusLabel(
-    item,
-    open ? { amount: owed, month: open.month, year: open.year, isPaid: open.isPaid } : undefined,
-  );
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.05 + index * 0.05, duration: 0.3 }}
-      onPointerDown={press.onPointerDown}
-      onPointerMove={press.onPointerMove}
-      onPointerUp={press.onPointerUp}
-      onPointerCancel={press.onPointerCancel}
-      onPointerLeave={press.onPointerLeave}
-      onContextMenu={(e) => e.preventDefault()}
-      onClick={press.guard(onOpen)}
-      className="cursor-pointer px-4 py-3.5 transition-colors active:bg-white/[0.03]"
-    >
-      <div className="flex items-center gap-3">
-        {/* The chip, in the bank's own colour: two cards are told apart without reading. */}
-        <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px]"
-          style={{ background: hex, boxShadow: `0 8px 18px -10px ${hex}` }}
-        >
-          <span className="h-[8px] w-[12px] rounded-[2px] bg-white/85" />
-        </span>
-
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-semibold text-white">{card.name}</p>
-          <p className="truncate text-[11.5px] t-softer">
-            {open?.isPaid ? "Fatura paga" : status.isClosed ? "Fatura fechada" : "Fatura aberta"}
-            <span className="text-white/25"> · </span>
-            <span className={cn(status.isClosed && !open?.isPaid && "font-semibold text-amber-300/90")}>
-              {status.label.toLowerCase()}
-            </span>
-          </p>
-        </div>
-
-        <div className="shrink-0 text-right">
-          <p className={cn(
-            "text-[15px] font-bold tabular-nums",
-            owed > 0 ? "text-white" : "t-softer",
-          )}>
-            {fmt(owed)}
-          </p>
-          <p className="text-[11.5px] t-softer tabular-nums">
-            {fmt(available)} <span className="t-faint">livres</span>
-          </p>
-        </div>
-
-        <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
-      </div>
-
-      {/* How much of the card is already spoken for. */}
-      <div className="mt-2.5 h-[4px] overflow-hidden rounded-full bg-white/[0.08]">
-        <motion.span
-          className="block h-full rounded-full"
-          style={{ background: usedPct >= 100 ? "#F87171" : usedPct >= 80 ? "#FBBF24" : hex }}
-          initial={{ width: 0 }}
-          animate={{ width: `${usedPct}%` }}
-          transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 + index * 0.05 }}
-        />
-      </div>
-    </motion.div>
-  );
+  total: number;
+  paid: number;
+  /** The part of that invoice that is instalments of earlier purchases. */
+  parcelado: number;
+  parcelas: number;
+  status: { label: string; isClosed: boolean };
 }
 
 const Cartoes = () => {
   const navigate = useNavigate();
-  const { cards, invoices, loading, refresh } = useCardsOverview();
+  const { cards, invoices, installments, loading, refresh } = useCardsOverview();
   const [showAddCard, setShowAddCard] = useState(false);
   const [heldCard, setHeldCard] = useState<OverviewCard | null>(null);
   const [editingCard, setEditingCard] = useState<any | null>(null);
@@ -143,33 +57,81 @@ const Cartoes = () => {
     const currentKey = monthKey(now.getFullYear(), now.getMonth() + 1);
 
     return cards.map((card) => {
-      /* The invoice that is actually open: the earliest from this month on that still
-         owes something. Not the calendar month — past the closing day those differ. */
+      /* The invoice actually open: the earliest from this month on that still owes
+         something. Not the calendar month — past the closing day those differ. */
       const open =
         invoices
           .filter(
-            (i) =>
-              i.cardId === card.id &&
-              !i.isPaid &&
-              i.total > 0 &&
-              monthKey(i.year, i.month) >= currentKey,
+            (i) => i.cardId === card.id && !i.isPaid && i.total > 0 && monthKey(i.year, i.month) >= currentKey,
           )
           .sort((a, b) => monthKey(a.year, a.month) - monthKey(b.year, b.month))[0] ?? null;
+
+      const mine = open
+        ? installments.filter(
+            (i) => i.cardId === card.id && i.month === open.month && i.year === open.year,
+          )
+        : [];
+
+      const item: CreditCardItem = {
+        id: card.id, name: card.name, limit: card.limit, used_limit: card.used,
+        closing_day: card.closingDay, due_day: card.dueDay,
+        color: card.color, last_four_digits: card.lastFour,
+      };
 
       return {
         card,
         hex: colorFor(card.name, card.color, "#8B5CF6"),
-        owed: open ? Math.max(open.total - open.paid, 0) : 0,
         open,
-        available: Math.max(card.limit - card.used, 0),
-        usedPct: card.limit > 0 ? Math.min((card.used / card.limit) * 100, 100) : 0,
+        total: open?.total ?? 0,
+        paid: open?.paid ?? 0,
+        parcelado: mine.reduce((s, i) => s + i.amount, 0),
+        parcelas: mine.length,
+        status: getInvoiceStatusLabel(
+          item,
+          open ? { amount: open.total, month: open.month, year: open.year, isPaid: open.isPaid } : undefined,
+        ),
       };
     });
-  }, [cards, invoices]);
+  }, [cards, invoices, installments]);
 
-  const totalOwed = rows.reduce((s, r) => s + r.owed, 0);
-  const totalLimit = rows.reduce((s, r) => s + r.card.limit, 0);
-  const totalAvailable = rows.reduce((s, r) => s + r.available, 0);
+  const sums = useMemo(() => {
+    const now = new Date();
+    const currentKey = monthKey(now.getFullYear(), now.getMonth() + 1);
+
+    const faturas = rows.reduce((s, r) => s + r.total, 0);
+    const pago = rows.reduce((s, r) => s + r.paid, 0);
+    const parcelado = rows.reduce((s, r) => s + r.parcelado, 0);
+    const parcelas = rows.reduce((s, r) => s + r.parcelas, 0);
+
+    /* Everything still to be charged in instalments, this invoice and every one after —
+       the figure a limit never shows you until it is gone. */
+    const aVencer = installments
+      .filter((i) => monthKey(i.year, i.month) >= currentKey)
+      .reduce((s, i) => s + i.amount, 0);
+    const compras = new Set(
+      installments.filter((i) => monthKey(i.year, i.month) >= currentKey).map((i) => i.groupId),
+    ).size;
+
+    const limite = rows.reduce((s, r) => s + r.card.limit, 0);
+    const usado = rows.reduce((s, r) => s + r.card.used, 0);
+
+    return {
+      faturas,
+      pago,
+      restante: Math.max(faturas - pago, 0),
+      parcelado,
+      parcelas,
+      avista: Math.max(faturas - parcelado, 0),
+      aVencer,
+      compras,
+      limite,
+      usado,
+      disponivel: Math.max(limite - usado, 0),
+      usadoPct: limite > 0 ? Math.min((usado / limite) * 100, 100) : 0,
+    };
+  }, [rows, installments]);
+
+  const withValue = rows.filter((r) => r.total > 0);
 
   return (
     <div className="mx-auto max-w-lg pb-28">
@@ -178,9 +140,12 @@ const Cartoes = () => {
       </div>
 
       {loading ? (
-        <div className="mt-4 h-[280px] animate-pulse rounded-[24px] border border-white/[0.08] willo-glass" />
+        <div className="mt-4 space-y-3">
+          <div className="h-[320px] animate-pulse rounded-[26px] border border-white/[0.08] willo-glass" />
+          <div className="h-[240px] animate-pulse rounded-[26px] border border-white/[0.08] willo-glass" />
+        </div>
       ) : cards.length === 0 ? (
-        <div className="mt-4 overflow-hidden rounded-[24px] border border-white/[0.08] willo-glass px-5 pb-5 pt-6 text-center">
+        <div className="mt-4 overflow-hidden rounded-[26px] border border-white/[0.08] willo-glass px-5 pb-5 pt-6 text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04]">
             <CreditCard className="h-[22px] w-[22px] text-white/70" strokeWidth={2} />
           </div>
@@ -196,67 +161,175 @@ const Cartoes = () => {
           </button>
         </div>
       ) : (
-        <motion.section
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-4 overflow-hidden rounded-[24px] border border-white/[0.08] willo-glass"
-        >
-          <div className="px-4 pb-3.5 pt-4">
-            <p className="text-[14px] text-white/66">Em faturas abertas</p>
-            <p className="mt-1 truncate text-[30px] font-extrabold leading-none tracking-[-0.03em] text-white tabular-nums">
-              {fmt(totalOwed)}
-            </p>
-            <p className="mt-2 text-[12.5px] t-soft">
-              {rows.length} {rows.length === 1 ? "cartão" : "cartões"}
-              <span className="text-white/25"> · </span>
-              <span className="tabular-nums">{fmt(totalAvailable)}</span> de limite livre
-            </p>
+        <>
+          {/* ══ Everything, added up ══════════════════════════════ */}
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            className="relative mt-4 overflow-hidden rounded-[26px] border border-white/[0.08] willo-glass p-5"
+          >
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -left-20 -top-24 h-56 w-64 rounded-full blur-[60px]"
+              style={{ background: rows[0]?.hex ?? "#8B5CF6", opacity: 0.22 }}
+            />
 
-            {/* One bar split by card: the share each one takes of what is owed. */}
-            <div className="mt-3.5 flex h-[7px] gap-[3px] overflow-hidden rounded-full">
-              {totalOwed > 0 ? (
-                rows.filter((r) => r.owed > 0).map((r, i) => (
+            <div className="relative">
+              <p className="text-[13.5px] text-white/66">Total em faturas</p>
+              <p className="mt-1 truncate text-[34px] font-extrabold leading-none tracking-[-0.035em] text-white tabular-nums">
+                {fmt(sums.faturas)}
+              </p>
+              <p className="mt-2 text-[12.5px] t-soft">
+                {rows.length} {rows.length === 1 ? "cartão" : "cartões"}
+                {sums.pago > 0 && (
+                  <>
+                    <span className="text-white/25"> · </span>
+                    <span className="tabular-nums text-willo-green-ink">{fmt(sums.pago)} já pagos</span>
+                    <span className="text-white/25"> · </span>
+                    <span className="tabular-nums">restam {fmt(sums.restante)}</span>
+                  </>
+                )}
+              </p>
+            </div>
+
+            {/* The share each card takes of that total, in its own colour */}
+            <div className="relative mt-4 flex h-[8px] gap-[3px] overflow-hidden rounded-full">
+              {sums.faturas > 0 ? (
+                withValue.map((r, i) => (
                   <motion.span
                     key={r.card.id}
                     className="h-full rounded-full"
                     style={{ background: r.hex }}
                     initial={{ flexGrow: 0 }}
-                    animate={{ flexGrow: r.owed / totalOwed }}
-                    transition={{ duration: 0.6, delay: 0.04 * i, ease: "easeOut" }}
+                    animate={{ flexGrow: r.total / sums.faturas }}
+                    transition={{ duration: 0.6, delay: 0.05 * i, ease: "easeOut" }}
                   />
                 ))
               ) : (
                 <span className="h-full flex-1 rounded-full bg-white/[0.08]" />
               )}
             </div>
-          </div>
 
-          <div className="divide-y divide-white/[0.06] border-t border-white/[0.06]">
-            {rows.map((row, i) => (
-              <CardLine
-                key={row.card.id}
-                row={row}
+            {/* …and which card it is */}
+            <div className="relative mt-3.5 space-y-2.5">
+              {rows.map((r) => (
+                <div key={r.card.id} className="flex items-center gap-2.5">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: r.hex }} />
+                  <p className="min-w-0 flex-1 truncate text-[13.5px] text-white/80">{r.card.name}</p>
+                  <p className="shrink-0 text-[13.5px] font-semibold tabular-nums text-white">{fmt(r.total)}</p>
+                  <p className="w-[38px] shrink-0 text-right text-[12px] tabular-nums t-softer">
+                    {sums.faturas > 0 ? Math.round((r.total / sums.faturas) * 100) : 0}%
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* What those invoices are made of */}
+            <div className="relative mt-4 grid grid-cols-2 gap-2.5 border-t border-white/[0.07] pt-4">
+              <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.03] px-3.5 py-3">
+                <p className="text-[11.5px] t-softer">Em parcelas</p>
+                <p className="mt-1 truncate text-[17px] font-bold leading-none text-white tabular-nums">
+                  {fmt(sums.parcelado)}
+                </p>
+                <p className="mt-1.5 text-[11.5px] t-faint tabular-nums">
+                  {sums.parcelas} {sums.parcelas === 1 ? "parcela" : "parcelas"}
+                </p>
+              </div>
+              <div className="rounded-[18px] border border-white/[0.07] bg-white/[0.03] px-3.5 py-3">
+                <p className="text-[11.5px] t-softer">Em lançamentos</p>
+                <p className="mt-1 truncate text-[17px] font-bold leading-none text-white tabular-nums">
+                  {fmt(sums.avista)}
+                </p>
+                <p className="mt-1.5 text-[11.5px] t-faint">compras à vista</p>
+              </div>
+            </div>
+
+            {/* The part of the debt that has not reached an invoice yet */}
+            {sums.aVencer > 0 && (
+              <p className="relative mt-2.5 rounded-[18px] border border-white/[0.07] bg-white/[0.03] px-3.5 py-3 text-[12.5px] t-soft">
+                <span className="font-semibold tabular-nums text-white">{fmt(sums.aVencer)}</span> em
+                parcelas ainda a vencer, de {sums.compras}{" "}
+                {sums.compras === 1 ? "compra parcelada" : "compras parceladas"}
+              </p>
+            )}
+
+            {/* ── Limite, somando todos os cartões ── */}
+            <div className="relative mt-4 border-t border-white/[0.07] pt-4">
+              <div className="flex items-baseline justify-between">
+                <span className="text-[12.5px] text-white/66">Limite usado</span>
+                <span className={cn(
+                  "text-[12.5px] font-semibold tabular-nums",
+                  sums.usadoPct >= 100 ? "text-red-400" : sums.usadoPct >= 80 ? "text-willo-amber" : "text-white/82",
+                )}>
+                  {sums.usadoPct.toFixed(0)}%
+                </span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.07]">
+                <motion.span
+                  className="block h-full rounded-full"
+                  style={{
+                    background: sums.usadoPct >= 100 ? "#F87171" : sums.usadoPct >= 80 ? "#FBBF24" : "#FFFFFF",
+                  }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${sums.usadoPct}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut", delay: 0.15 }}
+                />
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <p className="text-[11.5px] t-soft">Usado</p>
+                  <p className="text-[14px] font-semibold text-white tabular-nums">{fmt(sums.usado)}</p>
+                </div>
+                <div className="border-x border-white/[0.07]">
+                  <p className="text-[11.5px] t-soft">Disponível</p>
+                  <p className={cn(
+                    "text-[14px] font-semibold tabular-nums",
+                    sums.disponivel > 0 ? "text-willo-green-ink" : "text-red-400",
+                  )}>
+                    {fmt(sums.disponivel)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11.5px] t-soft">Total</p>
+                  <p className="text-[14px] font-semibold text-white tabular-nums">{fmt(sums.limite)}</p>
+                </div>
+              </div>
+            </div>
+          </motion.section>
+
+          {/* ══ The cards themselves ══════════════════════════════ */}
+          <div className="mt-5 space-y-3">
+            {rows.map((r, i) => (
+              <CardFaceTile
+                key={r.card.id}
                 index={i}
-                onOpen={() => navigate(`/fatura/${row.card.id}`)}
-                onHold={() => setHeldCard(row.card)}
+                hex={r.hex}
+                card={{
+                  id: r.card.id,
+                  name: r.card.name,
+                  lastFour: r.card.lastFour,
+                  closingDay: r.card.closingDay,
+                  dueDay: r.card.dueDay,
+                  limit: r.card.limit,
+                  used: r.card.used,
+                }}
+                owed={r.total}
+                status={r.status}
+                isPaid={!!r.open?.isPaid || (!r.open && r.total === 0)}
+                onOpen={() => navigate(`/fatura/${r.card.id}`)}
+                onHold={() => setHeldCard(r.card)}
               />
             ))}
+
+            <button
+              onClick={() => setShowAddCard(true)}
+              className="flex h-[54px] w-full items-center justify-center gap-2 rounded-[20px] border border-dashed border-white/20 text-[14.5px] font-semibold text-white/82 active:opacity-70"
+            >
+              <Plus className="h-[18px] w-[18px]" strokeWidth={2.4} /> Adicionar cartão
+            </button>
           </div>
-
-          <button
-            onClick={() => setShowAddCard(true)}
-            className="flex h-[52px] w-full items-center justify-center gap-2 border-t border-white/[0.06] text-[14.5px] font-semibold text-white/82 active:bg-white/[0.03]"
-          >
-            <Plus className="h-[17px] w-[17px]" strokeWidth={2.4} /> Adicionar cartão
-          </button>
-        </motion.section>
-      )}
-
-      {totalLimit > 0 && (
-        <p className="mt-3 px-1 text-[12px] t-faint tabular-nums">
-          Limite total {fmt(totalLimit)} · usado {fmt(Math.max(totalLimit - totalAvailable, 0))}
-        </p>
+        </>
       )}
 
       <CardCreateSheet open={showAddCard} onClose={() => setShowAddCard(false)} onCreated={refresh} />
