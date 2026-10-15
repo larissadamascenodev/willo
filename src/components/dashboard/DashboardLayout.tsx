@@ -43,19 +43,25 @@ interface ScanAccountOption {
 }
 
 /**
- * Pages that drew no way back of their own. With the nav gone from pages, these had no
- * exit at all, so the layout supplies one. The rest already have theirs.
+ * Pages that draw no way back of their own. With the nav gone from pages, these had no
+ * exit at all, so the layout supplies one.
+ *
+ * Everything else has its own: either a BackButton placed by the page, or the shared
+ * PageHeader, which four of them use. Adding the layout's on top of those was what put
+ * two arrows side by side on Metas.
  */
 const PAGES_WITHOUT_BACK = new Set([
-  "/metas",
   "/bot-finance",
-  "/bot-finance/projecoes",
-  "/bot-finance/balanco",
-  "/fluxo-de-caixa",
   "/gestao",
   "/configuracoes",
-  "/categorias",
 ]);
+
+/**
+ * Of those, the ones that open on a card rather than on a heading. Floating the arrow
+ * works by letting a heading's text come up beside it; a full-width card has no text to
+ * wrap, so it just gets shoved over. These keep the arrow on its own line.
+ */
+const PAGES_CARD_FIRST = new Set(["/configuracoes"]);
 
 const DashboardLayout = () => {
   useSwipeBack();
@@ -384,7 +390,16 @@ const DashboardLayout = () => {
               title the page had put at its own top edge. The pages that draw their own
               are excluded, so there is exactly one. */}
           {PAGES_WITHOUT_BACK.has(location.pathname) && (
-            <div className="mb-1 flex md:hidden">
+            /* Floated rather than stacked, so the page's own title comes up beside it
+               instead of under it. A row for the arrow and a row for the heading was
+               two rows of chrome before anything on the page had been said. */
+            <div
+              className={
+                PAGES_CARD_FIRST.has(location.pathname)
+                  ? "mb-2 flex md:hidden"
+                  : "float-left mr-3 mt-0.5 md:hidden"
+              }
+            >
               <BackButton />
             </div>
           )}

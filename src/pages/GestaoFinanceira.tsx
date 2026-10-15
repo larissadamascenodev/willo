@@ -138,8 +138,8 @@ const GestaoFinanceira = () => {
     <div className="pt-2 pb-8 space-y-6">
       {/* ═══════ Page Header ═══════ */}
       <div className="pt-1">
-        <h1 className="text-[28px] font-extrabold tracking-tight text-white">Carteira</h1>
-        <p className="text-[14px] text-white/62">Suas contas, a reserva e os cofrinhos</p>
+        <h1 className="text-[23px] font-extrabold leading-tight tracking-tight text-white">Carteira</h1>
+        <p className="text-[13px] t-soft">Suas contas, a reserva e os cofrinhos</p>
       </div>
 
       {/* ═══════ Contas ═══════ */}

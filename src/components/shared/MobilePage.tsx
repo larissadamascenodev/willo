@@ -1,29 +1,37 @@
 import type { ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronLeft } from "lucide-react";
+import BackButton from "@/components/shared/BackButton";
 import { cn } from "@/lib/utils";
 
-/** Discreet back chevron, large title and optional subtitle/right action — shared by detail pages. */
+/**
+ * The way back and what you are looking at, on one line.
+ *
+ * It used to be two: a chevron on its own row and a large heading under it, which is
+ * two rows of chrome before the page has said anything. The arrow and the title sit
+ * together now, and the title is sized to lead a row rather than to own one.
+ */
 export function PageHeader({ title, subtitle, action, onBack }: {
   title: string;
   subtitle?: ReactNode;
   action?: ReactNode;
   onBack?: () => void;
 }) {
-  const navigate = useNavigate();
   return (
     <div style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 6px)" }}>
-      <div className="flex h-11 items-center justify-between">
-        <button onClick={onBack ?? (() => navigate(-1))} aria-label="Voltar" className="-ml-2 flex h-10 items-center text-white/82 active:opacity-60">
-          <ChevronLeft className="h-7 w-7" strokeWidth={2.25} />
-        </button>
+      <div className="flex items-start gap-3">
+        <BackButton onClick={onBack} className="mt-0.5" />
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="min-w-0 flex-1"
+        >
+          <h1 className="truncate text-[23px] font-extrabold leading-tight tracking-tight text-white">
+            {title}
+          </h1>
+          {subtitle && <p className="text-[13px] t-soft">{subtitle}</p>}
+        </motion.div>
         {action}
       </div>
-      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-1">
-        <h1 className="text-[28px] font-extrabold tracking-tight text-white">{title}</h1>
-        {subtitle && <p className="text-[14px] text-white/62">{subtitle}</p>}
-      </motion.div>
     </div>
   );
 }
