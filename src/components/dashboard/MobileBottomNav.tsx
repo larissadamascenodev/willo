@@ -150,10 +150,10 @@ export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, 
           "willo-float rounded-full [isolation:isolate]",
           // Folded it is a single round button, the same size as Willo on the other
           // end, so the row reads as three separate things rather than one slab.
-          collapsed ? "w-[58px] shrink-0" : "flex-1 max-w-[250px]",
+          collapsed ? "w-[58px] shrink-0" : "flex-1",
         )}
       >
-        <div className="flex items-center justify-around h-[58px] px-1.5">
+        <div className="flex h-[58px] items-center justify-center gap-1 px-2">
           {shown.map((item) => {
             const Icon = item.icon;
             const isActive = !!item.path && activePath === item.path;
@@ -167,22 +167,23 @@ export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, 
                 }}
                 aria-label={item.soon ? `${item.label} — em breve` : item.label}
                 aria-current={isActive ? "page" : undefined}
-                className={cn(
-                  "relative mx-0.5 flex h-11 items-center justify-center rounded-full",
-                  collapsed ? "w-11 shrink-0" : "flex-1",
-                )}
+                className="relative flex h-11 w-14 shrink-0 items-center justify-center rounded-full"
               >
-                {isActive && (
+                {/* A highlight behind the icon only while the nav is a long pill.
+                    Folded, the nav IS a circle, so a circle inside it is a second ring
+                    around the same thing. There the colour says it alone. */}
+                {isActive && !collapsed && (
                   <motion.span
                     layoutId="willo-nav-active"
-                    transition={{ type: "spring", stiffness: 420, damping: 36 }}
-                    className="absolute inset-0 rounded-full bg-white/[0.18]"
+                    transition={EASE}
+                    className="absolute inset-0 rounded-full bg-white/[0.10]"
                   />
                 )}
                 <Icon
                   className={cn(
                     "relative w-5 h-5 transform-gpu transition-colors",
-                    isActive ? "text-white" : item.soon ? "t-faint" : "text-white/62",
+                    // Where you are is the one place the house colour belongs here.
+                    isActive ? "text-willo-green" : item.soon ? "t-faint" : "text-white/45",
                   )}
                   strokeWidth={isActive ? 2.25 : 2}
                 />
@@ -202,7 +203,9 @@ export function BottomNavBar({ activePath, plusOpen = false, collapsed = false, 
         aria-label="Willo"
         className="relative flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-full transition-transform active:scale-95"
       >
-        <BotMark size={50} />
+        {/* Filling the button, so the only gap in the row is the one between the two
+            pieces of glass rather than a ring of page showing around him. */}
+        <BotMark size={58} />
       </button>
     </>
   );
