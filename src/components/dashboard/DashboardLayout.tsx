@@ -52,12 +52,11 @@ interface ScanAccountOption {
  */
 const PAGES_WITHOUT_BACK = new Set([
   "/bot-finance",
-  "/gestao",
   "/configuracoes",
 ]);
 
 /** Screens that stand on the sky rather than on the working charcoal. */
-const SKY_PAGES = new Set(["/", "/cartoes"]);
+const SKY_PAGES = new Set(["/", "/cartoes", "/gestao"]);
 
 
 const DashboardLayout = () => {

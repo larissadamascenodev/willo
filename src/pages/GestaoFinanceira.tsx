@@ -1,22 +1,30 @@
-import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { CreditCard, Plus, X, Landmark, Banknote, Vault, ChevronRight, Wallet, Brain, Calendar, CalendarClock } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { Landmark, Plus, Banknote, Vault, PiggyBank } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { getCachedDashboardData, buildDashboardCacheKey } from "@/services/dashboardData";
 import { toast } from "sonner";
+import BackButton from "@/components/shared/BackButton";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAccounts } from "@/services/transactionService";
 import { supabase } from "@/integrations/supabase/client";
+import { colorFor } from "@/lib/banks";
+import { getCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
-import AccountsBalanceCard from "@/components/wallet/AccountsBalanceCard";
+import AccountTile from "@/components/wallet/AccountTile";
 import AccountCreateSheet from "@/components/wallet/AccountCreateSheet";
 import ReserveAndPots from "@/components/wallet/ReserveAndPots";
-import { getAccent } from "@/components/wallet/CreditCardTile";
 import { fetchGoals, type Goal } from "@/services/goalService";
-import AIFinancialWizardModal from "@/components/shared/AIFinancialWizardModal";
 
-import { getCurrency } from "@/lib/currency";
+/**
+ * Contas.
+ *
+ * The same shape the wallet has, because it answers the same two questions in the
+ * same order: what does all of this add up to, and which account do I want. The total
+ * stands alone at the top and stays there while the accounts travel up over it; each
+ * account is glass with its bank's colour on its mark and on the share rule, so four
+ * banks read as four marks rather than four coloured panels.
+ */
+
 interface Account {
   id: string;
   name: string;
@@ -27,54 +35,34 @@ interface Account {
   color: string | null;
 }
 
-interface InvoiceData {
-  credit_card_id: string;
-  total_amount: number;
-  is_paid: boolean;
-  month: number;
-  year: number;
-  paid_amount?: number;
-}
-
 const ACCOUNT_TYPE_LABELS: Record<string, { label: string; icon: typeof Landmark }> = {
   cash: { label: "Dinheiro", icon: Banknote },
   checking: { label: "Conta corrente", icon: Landmark },
   savings: { label: "Poupança", icon: Vault },
+  investment: { label: "Investimento", icon: PiggyBank },
 };
 
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
-}
+const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
-const GOAL_COLORS = [
-  "hsl(40 90% 55%)",
-  "hsl(150 100% 45%)",
-  "hsl(210 80% 55%)",
-  "hsl(330 80% 55%)",
-  "hsl(270 70% 60%)",
-  "hsl(180 70% 50%)",
-];
+/** How far the page scrolls before the pinned total has fully receded. */
+const PIN_TRAVEL = 150;
 
 const GestaoFinanceira = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const warmDashboardData = getCachedDashboardData(buildDashboardCacheKey(user?.id, new Date().getMonth(), new Date().getFullYear()));
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [loading, setLoading] = useState(() => !warmDashboardData);
-
-
+  const [loading, setLoading] = useState(true);
+  const [showAddAccount, setShowAddAccount] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [showAddAccount, setShowAddAccount] = useState(false);
-
   // Opened as a shortcut from the dashboard's "Complete sua conta" card —
-  // /gestao?abrir=conta opens the account modal right away.
+  // /gestao?abrir=conta opens the account sheet right away.
   useEffect(() => {
     const abrir = searchParams.get("abrir");
     if (!abrir) return;
     if (abrir === "conta") setShowAddAccount(true);
-    // Cards moved to their own section, so an old link to add one goes there.
+    // Cards have their own screen, so an old link to add one goes there.
     if (abrir === "cartao") navigate("/cartoes", { replace: true });
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -84,27 +72,18 @@ const GestaoFinanceira = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // Add menu state
-  const [showAddMenu, setShowAddMenu] = useState(false);
-  const [showAIWizard, setShowAIWizard] = useState<"meta" | null>(null);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!user) return;
     try {
-      const [accs, goalsData] = await Promise.all([
-        getAccounts(),
-        fetchGoals(),
-      ]);
+      const [accs, goalsData] = await Promise.all([getAccounts(), fetchGoals()]);
       setAccounts(accs as unknown as Account[]);
       setGoals(goalsData);
-      setLoading(false);
-
     } catch {
       toast.error("Erro ao carregar dados");
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -114,165 +93,206 @@ const GestaoFinanceira = () => {
 
     const channel = supabase
       .channel("gestao-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "credit_cards", filter: `user_id=eq.${user.id}` }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "invoices", filter: `user_id=eq.${user.id}` }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "accounts", filter: `user_id=eq.${user.id}` }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "goals", filter: `user_id=eq.${user.id}` }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "accounts", filter: `user_id=eq.${user.id}` }, fetchData)
+      .on("postgres_changes", { event: "*", schema: "public", table: "goals", filter: `user_id=eq.${user.id}` }, fetchData)
       .subscribe();
 
     return () => {
       window.removeEventListener("finance-data-changed", onChange);
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, fetchData]);
 
-  // ═══════ Computed values ═══════
-  const bankAccounts = accounts.filter(a => a.type !== "investment");
+  const rows = useMemo(
+    () =>
+      accounts
+        .map((a) => ({
+          account: a,
+          balance: Number(a.current_balance) || 0,
+          hex: colorFor(a.name, a.color, "#6B7280"),
+          typeLabel: (ACCOUNT_TYPE_LABELS[a.type] ?? ACCOUNT_TYPE_LABELS.checking).label,
+        }))
+        .sort((a, b) => b.balance - a.balance),
+    [accounts],
+  );
 
-  const saldoDisponivel = bankAccounts.reduce((s, a) => s + Number(a.current_balance), 0);
-  const totalMetas = goals.reduce((s, g) => s + g.current_amount, 0);
-  const patrimonioTotal = saldoDisponivel + totalMetas;
+  const saldo = rows.reduce((s, r) => s + r.balance, 0);
+  /* Only what is actually in hand can take up room on a share rule; an account in the
+     red still gets its tile, so the list stays the whole truth. */
+  const positive = rows.reduce((s, r) => s + Math.max(r.balance, 0), 0);
+  const guardado = goals.reduce((s, g) => s + Number(g.current_amount), 0);
 
+  /* The total does not scroll: it stays and recedes while the accounts travel over it. */
+  const markerRef = useRef<HTMLDivElement>(null);
+  const summaryRef = useRef<HTMLDivElement>(null);
+  const [summaryHeight, setSummaryHeight] = useState(0);
+  const [summaryTop, setSummaryTop] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = summaryRef.current;
+    if (!el) return;
+    const measure = () => {
+      setSummaryHeight(el.offsetHeight);
+      const marker = markerRef.current;
+      if (marker) setSummaryTop(marker.getBoundingClientRect().top + window.scrollY);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [loading, rows.length, guardado]);
+
+  useEffect(() => {
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        setProgress(Math.min(Math.max(window.scrollY / PIN_TRAVEL, 0), 1));
+      });
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
 
   return (
-    <div className="pt-2 pb-8 space-y-6">
-      {/* ═══════ Contas ═══════ */}
-      <section>
-        <div className={cn("flex items-center justify-between mb-3 px-1", bankAccounts.length > 0 && "hidden sm:flex")}>
-          <h2 className="text-[18px] font-bold text-white">Contas</h2>
-          <button onClick={() => setShowAddAccount(true)} aria-label="Adicionar conta" className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.08] willo-glass text-white active:scale-95 transition-transform">
-            <Plus className="w-4 h-4" />
+    <div className="mx-auto max-w-lg pb-28 pt-4">
+      {/* Over the pinned total as it leaves, like the accounts. */}
+      <div className="relative z-20 flex h-11 items-center justify-between">
+        <BackButton to="/" />
+        <button
+          type="button"
+          onClick={() => setShowAddAccount(true)}
+          aria-label="Adicionar conta"
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.10] bg-white/[0.07] text-white active:scale-95"
+        >
+          <Plus className="h-[18px] w-[18px]" strokeWidth={2.4} />
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="mt-5 space-y-4">
+          <div className="h-[96px] animate-pulse rounded-[24px] bg-white/[0.04]" />
+          <div className="h-[170px] animate-pulse rounded-[24px] border border-white/[0.08] willo-glass" />
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="mt-4 overflow-hidden rounded-[26px] border border-white/[0.08] willo-glass px-5 pb-5 pt-6 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04]">
+            <Landmark className="h-[22px] w-[22px] text-white/70" strokeWidth={2} />
+          </div>
+          <p className="mt-3.5 text-[17px] font-bold text-white">Nenhuma conta cadastrada</p>
+          <p className="mx-auto mt-1.5 max-w-[16rem] text-[13.5px] leading-snug t-soft">
+            Cadastre uma conta para acompanhar o saldo e o que entra e sai dela.
+          </p>
+          <button
+            onClick={() => setShowAddAccount(true)}
+            className="mt-4 flex h-[50px] w-full items-center justify-center gap-2 rounded-[18px] bg-white text-[15px] font-semibold willo-on-invert active:opacity-80"
+          >
+            <Plus className="h-[18px] w-[18px]" strokeWidth={2.4} /> Adicionar conta
           </button>
         </div>
-
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {[1, 2].map((i) => (
-              <div key={i} className="h-44 rounded-[22px] willo-glass animate-pulse" />
-            ))}
-          </div>
-        ) : bankAccounts.length === 0 ? (
-          <div className="rounded-[22px] willo-glass border border-white/[0.08] p-8 text-center">
-            <Landmark className="w-8 h-8 t-softer mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground mb-1">Nenhuma conta cadastrada</p>
-            <p className="text-xs text-muted-foreground/60 mb-4">Crie sua primeira conta para começar</p>
-            <Button
-              onClick={() => setShowAddAccount(true)}
-              size="sm"
-              className="h-10 px-5 willo-pill"
+      ) : (
+        <>
+          {/* ══ Pinned: everything you hold ══ */}
+          <div ref={markerRef} aria-hidden="true" />
+          <div
+            ref={summaryRef}
+            className="fixed inset-x-0 z-10 mx-auto max-w-lg px-4"
+            style={{
+              top: summaryTop,
+              filter: progress > 0.001 ? `blur(${(progress * 12).toFixed(2)}px)` : undefined,
+              opacity: 1 - progress * 0.8,
+              transform: `scale(${1 - progress * 0.03})`,
+              transformOrigin: "50% 0%",
+              willChange: "filter, opacity, transform",
+              pointerEvents: progress > 0.4 ? "none" : undefined,
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              className="relative px-1 pt-3"
             >
-              <Plus className="w-4 h-4 mr-1" /> Criar Conta
-            </Button>
-          </div>
-        ) : (
-          <>
-            {/* Mobile: total + accounts in one card */}
-            <div className="sm:hidden">
-              <AccountsBalanceCard
-                accounts={bankAccounts}
-                onOpen={(id) => navigate(`/conta/${id}`)}
-                onAdd={() => setShowAddAccount(true)}
-                savedTotal={totalMetas}
+              {/* The page's own light, behind the figure rather than around it. */}
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute -left-10 -top-8 h-44 w-72 rounded-full blur-[64px]"
+                style={{ background: "#8B93A8", opacity: 0.16 }}
               />
-            </div>
+              <p className="relative text-[13.5px] text-white/62">Saldo em contas</p>
+              <p className={cn(
+                "relative mt-1 truncate text-[40px] font-extrabold leading-none tracking-[-0.04em] tabular-nums",
+                saldo < 0 ? "text-red-400" : "text-white",
+              )}>
+                {fmt(saldo)}
+              </p>
+              <p className="relative mt-2.5 text-[12.5px] t-soft">
+                {rows.length} {rows.length === 1 ? "conta" : "contas"}
+                {guardado > 0 && (
+                  <>
+                    <span className="text-white/20"> · </span>
+                    <span className="tabular-nums text-willo-green-ink">{fmt(guardado)}</span> guardado
+                  </>
+                )}
+              </p>
+            </motion.div>
+          </div>
 
-            {/* Desktop grid */}
-            <div className="hidden sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {bankAccounts.map((acc, idx) => {
-                const typeInfo = ACCOUNT_TYPE_LABELS[acc.type] ?? ACCOUNT_TYPE_LABELS.checking;
-                const Icon = typeInfo.icon;
-                const balance = Number(acc.current_balance);
-                const accent = getAccent(acc.color);
+          {/* The room the pinned block takes, so the accounts begin under it. */}
+          <div aria-hidden="true" style={{ height: summaryHeight }} />
 
-                return (
-                  <motion.div
-                    key={acc.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.06 }}
-                    onClick={() => navigate(`/conta/${acc.id}`)}
-                    className="relative rounded-[22px] overflow-hidden cursor-pointer group border border-white/[0.08] willo-glass hover:border-white/15 transition-all duration-300 active:scale-[0.98]"
-                  >
-                    <div className="p-4 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", accent.iconBg)}>
-                            <Icon className={cn("w-4 h-4", accent.dot.replace("bg-", "text-"))} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-foreground leading-tight">{acc.name}</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">{typeInfo.label}</p>
-                          </div>
-                        </div>
-                        {acc.is_default ? (
-                          <span className="text-[8px] bg-primary/10 text-primary px-2.5 py-1 rounded-lg font-bold uppercase tracking-wider">
-                            Principal
-                          </span>
-                        ) : (
-                          <ChevronRight className="w-4 h-4 text-muted-foreground/25 group-hover:text-primary transition-colors" />
-                        )}
-                      </div>
-                      <div className="h-px bg-border/10" />
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <div className={cn("w-1.5 h-1.5 rounded-full", balance >= 0 ? "bg-willo-green" : "bg-destructive")} />
-                          <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-medium">Saldo disponível</p>
-                        </div>
-                        <p className={cn("text-2xl font-extrabold tabular-nums tracking-tight", balance >= 0 ? "text-foreground" : "text-destructive")}>
-                          {formatCurrency(balance)}
-                        </p>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-              <motion.button
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: bankAccounts.length * 0.05 }}
-                onClick={() => setShowAddAccount(true)}
-                className="rounded-[22px] p-4 min-h-[148px] flex flex-col items-center justify-center gap-2 border border-dashed border-white/15 hover:border-white/30 bg-transparent transition-all duration-300 cursor-pointer"
-              >
-                <div className="w-10 h-10 rounded-full bg-white/[0.08] flex items-center justify-center">
-                  <Plus className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xs text-white/74 font-medium">Adicionar conta</span>
-              </motion.button>
-            </div>
-          </>
-        )}
-      </section>
+          {/* ══ The accounts ══ */}
+          <div className="relative z-20 mt-6 space-y-3">
+            {rows.map((r, i) => (
+              <AccountTile
+                key={r.account.id}
+                index={i}
+                hex={r.hex}
+                share={positive > 0 ? Math.max(r.balance, 0) / positive : 0}
+                account={{
+                  id: r.account.id,
+                  name: r.account.name,
+                  typeLabel: r.typeLabel,
+                  balance: r.balance,
+                  isDefault: r.account.is_default,
+                }}
+                onOpen={() => navigate(`/conta/${r.account.id}`)}
+              />
+            ))}
 
-      {/* ═══════ Reserva e cofrinhos ═══════ */}
-      <section>
-        <div className="mb-3 flex items-center justify-between px-1">
-          <h2 className="text-[18px] font-bold text-white">Guardado</h2>
-          <p className="text-[13px] text-white/62 tabular-nums">{totalMetas.toLocaleString("pt-BR", { style: "currency", currency: getCurrency(), maximumFractionDigits: 0 })}</p>
-        </div>
-        <ReserveAndPots goals={goals} onCreated={fetchData} />
-      </section>
+            <button
+              onClick={() => setShowAddAccount(true)}
+              className="flex h-[54px] w-full items-center justify-center gap-2 rounded-[20px] border border-dashed border-white/20 text-[14.5px] font-semibold text-white/82 active:opacity-70"
+            >
+              <Plus className="h-[18px] w-[18px]" strokeWidth={2.4} /> Adicionar conta
+            </button>
 
+            {/* ══ What is put away ══ */}
+            <section className="pt-5">
+              <div className="mb-2.5 flex items-baseline justify-between px-1">
+                <h2 className="text-[15px] font-bold text-white">Guardado</h2>
+                <p className="text-[13px] tabular-nums t-soft">{fmt(guardado)}</p>
+              </div>
+              <ReserveAndPots goals={goals} onCreated={fetchData} />
+            </section>
+          </div>
+        </>
+      )}
 
-      {/* AI Financial Wizard */}
-      <AIFinancialWizardModal
-        open={!!showAIWizard}
-        onClose={() => setShowAIWizard(null)}
-        type="meta"
-        onConfirm={async (plan, objective) => {
-          if (!user) return;
-          try {
-            const { createGoal } = await import("@/services/goalService");
-            await createGoal({
-              name: objective,
-              target_amount: plan.monthly_contribution * plan.estimated_months,
-              monthly_contribution: plan.monthly_contribution,
-            }, user.id);
-            toast.success("Meta criada com IA! 🤖🎯");
-            fetchData();
-          } catch {
-            toast.error("Erro ao criar com IA");
-          }
-        }}
+      <AccountCreateSheet
+        open={showAddAccount}
+        onClose={() => setShowAddAccount(false)}
+        onCreated={fetchData}
       />
     </div>
   );
