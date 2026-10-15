@@ -1,18 +1,17 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { importStatement } from "@/services/invoiceImport";
 import { processScanFile } from "@/lib/scanUpload";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft,
-  Plus, MoreVertical, CreditCard,
-  CalendarClock, CalendarCheck, Wallet, Shield,
-  Pencil, Trash2, Undo2, Check,
+import { motion } from "framer-motion";
+import {
+  Plus, MoreVertical,
+  CalendarClock, CalendarCheck, Wallet,
+  Pencil, Undo2, Check,
 } from "lucide-react";
 import BackButton from "@/components/shared/BackButton";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,12 +23,9 @@ import { colorFor } from "@/lib/banks";
 import InvoiceCategoryBreakdown from "@/components/fatura/InvoiceCategoryBreakdown";
 import InvoiceTransactionList from "@/components/fatura/InvoiceTransactionList";
 import InvoicePayModal from "@/components/fatura/InvoicePayModal";
-import InvoiceHistoryChart from "@/components/fatura/InvoiceHistoryChart";
+import InvoiceForecastChart from "@/components/fatura/InvoiceForecastChart";
+import InvoiceAddChooserModal from "@/components/fatura/InvoiceAddChooserModal";
 import InvoiceScanScreen from "@/components/fatura/InvoiceScanScreen";
-import InstallmentPurchaseCard from "@/components/installments/InstallmentPurchaseCard";
-import SinglePurchaseCard from "@/components/fatura/SinglePurchaseCard";
-import CardEntryModal, { type CardEntry } from "@/components/fatura/CardEntryModal";
-import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import { invoicePeriodIndex } from "@/lib/installments";
 import { statementCarryLine } from "@/lib/statementCarry";
 import { findPreviousImport, hashFile, recordImport, type PreviousImport } from "@/services/invoiceImports";
@@ -97,6 +93,7 @@ const EmptyTab = ({ label }: { label: string }) => (
 const FaturaCartao = () => {
   const navigate = useNavigate();
   const { cardId } = useParams<{ cardId: string }>();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
 
@@ -117,7 +114,6 @@ const FaturaCartao = () => {
   const [paying, setPaying] = useState(false);
   const [userStartDate, setUserStartDate] = useState<Date | null>(null);
   const [showPayModal, setShowPayModal] = useState(false);
-  const uploadRef = useRef<HTMLInputElement>(null);
   const [showManualAdd, setShowManualAdd] = useState(false);
   const [payAccountId, setPayAccountId] = useState("");
   const [uploadProcessing, setUploadProcessing] = useState(false);
@@ -141,7 +137,7 @@ const FaturaCartao = () => {
   const [editingTransaction, setEditingTransaction] = useState<EditTransactionData | null>(null);
   const [showEditCard, setShowEditCard] = useState(false);
   const [tab, setTab] = useState<"geral" | "parcelados">("geral");
-  const [entry, setEntry] = useState<CardEntry | null>(null);
+  const [showAddChooser, setShowAddChooser] = useState(false);
 
   const currentInvoice = useMemo(
     () => invoices.find((i) => i.month === selectedMonth && i.year === selectedYear),
@@ -391,33 +387,6 @@ const FaturaCartao = () => {
     }
   };
 
-  // Newest purchase first, which is how the statement itself reads
-  const sortedItems = useMemo(
-    () => [...items].sort((a, b) => {
-      const byDate = (b.transaction_date ?? "").localeCompare(a.transaction_date ?? "");
-      return byDate !== 0 ? byDate : (b.id ?? "").localeCompare(a.id ?? "");
-    }),
-    [items],
-  );
-  const installmentItems = useMemo<ActiveInstallmentItem[]>(
-    () => sortedItems
-      .filter((i) => i.total_installments > 1)
-      .map((i) => ({
-        id: i.transaction_id,
-        name: i.transaction_name,
-        category: i.transaction_category,
-        amount: Number(i.amount),
-        installment_current: i.installment_number,
-        installments: i.total_installments,
-        payment_method: "cartao",
-        date: i.transaction_date,
-        credit_card_id: cardId ?? null,
-        isOverdue: false,
-        dueDate: null,
-      })),
-    [sortedItems, cardId],
-  );
-
   const total = currentInvoice ? Number(currentInvoice.total_amount) : 0;
   const paidAmount = currentInvoice ? Number((currentInvoice as any).paid_amount ?? 0) : 0;
   const outstanding = Math.max(0, total - paidAmount);
@@ -426,16 +395,6 @@ const FaturaCartao = () => {
   const availableLimit = limitTotal - usedLimit;
   const usedPct = limitTotal > 0 ? Math.min((usedLimit / limitTotal) * 100, 100) : 0;
   const isOverLimit = usedLimit > limitTotal;
-
-  const openEntry = (item: EnrichedItem) => setEntry({
-    transactionId: item.transaction_id,
-    name: item.transaction_name,
-    category: item.transaction_category,
-    amount: Number(item.amount),
-    date: item.transaction_date,
-    installmentNumber: item.installment_number,
-    totalInstallments: item.total_installments,
-  });
 
   // Read a whole statement, or a single purchase, with the AI
   const handleFileUpload = async (file: File, mode: "invoice" | "single") => {
@@ -610,288 +569,278 @@ const FaturaCartao = () => {
         : invoiceStatus === "open" ? { label: "Aberta", hex: "#FFFFFF" }
           : null;
 
+  /* Two views, one set of figures. The full list of entries is the same screen with the
+     panel folded away: it reads the same invoice, the same items and the same handlers,
+     so there is no second place for the numbers to disagree. */
+  const onEntries = location.pathname.endsWith("/lancamentos");
+  const monthQuery = `?month=${selectedMonth}&year=${selectedYear}`;
+  const headline = paidAmount > 0 && outstanding > 0 ? outstanding : total;
+
   return (
-    <div className="space-y-5 pb-24 pt-2">
-      {/* Header — back + menu */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => navigate("/gestao")}
-          aria-label="Voltar"
-          className="hidden"
-        >
-          <ChevronLeft className="h-6 w-6" strokeWidth={2.25} />
-        </button>
-        <BackButton to="/gestao" />
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => uploadRef.current?.click()}
-            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.08] willo-glass px-3.5 text-[13px] font-semibold text-white active:scale-95"
-          >
-            <Plus className="h-3.5 w-3.5" /> Lançamento
-          </button>
-          <input
-            ref={uploadRef}
-            type="file"
-            accept=".pdf,.csv,.xls,.xlsx,image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              e.target.value = "";
-              if (file) handleFileUpload(file, "invoice");
-            }}
-          />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button aria-label="Opções do cartão" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-white/82 transition-colors hover:text-white">
-              <MoreVertical className="h-4 w-4" />
+    <div className="mx-auto max-w-lg space-y-4 pb-28 pt-2">
+      {onEntries ? (
+        <>
+          <div className="flex h-11 items-center justify-between">
+            <BackButton to={`/fatura/${cardId}${monthQuery}`} />
+            <button
+              type="button"
+              onClick={() => setShowAddChooser(true)}
+              aria-label="Adicionar lançamento"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.07] text-white/82 ring-1 ring-white/10 active:scale-95"
+            >
+              <Plus className="h-[18px] w-[18px]" strokeWidth={2.4} />
             </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[190px]">
-            <DropdownMenuItem onClick={() => setShowEditCard(true)} className="gap-2 text-[13px]">
-              <Pencil className="h-3.5 w-3.5" />
-              Editar cartão
-            </DropdownMenuItem>
-            {currentInvoice && Number(currentInvoice.paid_amount ?? 0) > 0 && (
-              <DropdownMenuItem
-                onClick={async () => {
-                  try {
-                    await undoInvoicePayment(currentInvoice.id);
-                    toast.success("Pagamento desfeito");
-                    const updated = await getInvoices(cardId!);
-                    setInvoices(updated);
-                    // Reload card to update used_limit
-                    const cards = await getCreditCards();
-                    const typedCards = cards as unknown as CreditCardInfo[];
-                    const foundCard = typedCards.find((c) => c.id === cardId);
-                    setCard(foundCard ?? null);
-                  } catch (err: any) {
-                    toast.error(err?.message ?? "Erro ao desfazer pagamento");
-                  }
-                }}
-                className="gap-2 text-[13px] text-destructive focus:text-destructive"
-              >
-                <Undo2 className="h-3.5 w-3.5" />
-                Desfazer pagamento
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        </div>
-      </div>
+          </div>
 
-      {/* Month + add */}
-      {/* ===== Invoice + limit ===== */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-        className="relative overflow-hidden rounded-[26px] border border-white/[0.08] willo-glass p-5"
-      >
-        <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full blur-[70px]" style={{ background: cardHex, opacity: 0.3 }} />
+          {/* Which invoice this list belongs to — the one thing a bare list cannot say. */}
+          <div className="px-1">
+            <p className="text-[12.5px] t-softer">{card?.name}</p>
+            <p className="mt-0.5 text-[24px] font-extrabold leading-tight tracking-[-0.03em] text-white">
+              Fatura de {MONTH_NAMES[selectedMonth - 1]}
+            </p>
+            <p className="mt-1 text-[13px] t-soft tabular-nums">
+              {formatCurrency(total)}
+              <span className="text-white/25"> · </span>
+              {items.length} lançament{items.length === 1 ? "o" : "os"}
+            </p>
+          </div>
 
-        {/* Card identity */}
-        <div className="relative flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px]" style={{ background: `${cardHex}26` }}>
-              <CreditCard className="h-[18px] w-[18px]" style={{ color: cardHex }} />
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-[16px] font-bold text-white">{card?.name}</p>
-              {card?.last_four_digits && (
-                <p className="text-[12px] tabular-nums t-soft">•••• {card.last_four_digits}</p>
+          <div className="isolate grid grid-cols-2 rounded-full border border-white/[0.08] willo-glass p-1">
+            {([["geral", "Todos"], ["parcelados", "Parcelados"]] as const).map(([key, label]) => (
+              <button key={key} type="button" onClick={() => setTab(key)} className="relative h-10 rounded-full text-[14px] font-medium">
+                {tab === key && (
+                  <motion.span layoutId="entries-tab" className="pointer-events-none absolute inset-0 z-0 rounded-full willo-invert" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
+                )}
+                <span className={cn("relative z-10 transform-gpu", tab === key ? "willo-on-invert" : "text-white/82")}>{label}</span>
+              </button>
+            ))}
+          </div>
+
+          <InvoiceTransactionList
+            items={items}
+            hideHeader
+            filter={tab === "parcelados" ? "parcelados" : "todos"}
+            cardName={card?.name}
+            invoiceMonth={selectedMonth}
+            invoiceYear={selectedYear}
+            payments={payments}
+            isPaid={invoiceStatus === "paid"}
+            onEditItem={handleEditItem}
+            onDeleteItem={handleDeleteItem}
+          />
+        </>
+      ) : (
+        <>
+          {/* Header — back + card options */}
+          <div className="flex h-11 items-center justify-between">
+            <BackButton to="/cartoes" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button aria-label="Opções do cartão" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.07] text-white/82 ring-1 ring-white/10 transition-colors hover:text-white">
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[190px]">
+                <DropdownMenuItem onClick={() => setShowEditCard(true)} className="gap-2 text-[13px]">
+                  <Pencil className="h-3.5 w-3.5" />
+                  Editar cartão
+                </DropdownMenuItem>
+                {currentInvoice && Number(currentInvoice.paid_amount ?? 0) > 0 && (
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      try {
+                        await undoInvoicePayment(currentInvoice.id);
+                        toast.success("Pagamento desfeito");
+                        const updated = await getInvoices(cardId!);
+                        setInvoices(updated);
+                        const cards = await getCreditCards();
+                        const typedCards = cards as unknown as CreditCardInfo[];
+                        setCard(typedCards.find((c) => c.id === cardId) ?? null);
+                      } catch (err: any) {
+                        toast.error(err?.message ?? "Erro ao desfazer pagamento");
+                      }
+                    }}
+                    className="gap-2 text-[13px] text-destructive focus:text-destructive"
+                  >
+                    <Undo2 className="h-3.5 w-3.5" />
+                    Desfazer pagamento
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* ===== The card: who it is, what it asks for, what is left of it ===== */}
+          <motion.section
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="relative overflow-hidden rounded-[26px] border border-white/[0.08] willo-glass p-5"
+          >
+            <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full blur-[70px]" style={{ background: cardHex, opacity: 0.3 }} />
+
+            <div className="relative flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px]" style={{ background: cardHex, boxShadow: `0 8px 20px -10px ${cardHex}` }}>
+                  <span className="h-[8px] w-[12px] rounded-[2px] bg-white/85" />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-[16px] font-bold text-white">{card?.name}</p>
+                  {card?.last_four_digits && (
+                    <p className="text-[12px] tabular-nums t-soft">•••• {card.last_four_digits}</p>
+                  )}
+                </div>
+              </div>
+              {statusChip && (
+                <span
+                  className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold"
+                  style={{ background: `${statusChip.hex}1F`, color: statusChip.hex }}
+                >
+                  {statusChip.label}
+                </span>
               )}
             </div>
-          </div>
-          {statusChip && (
-            <span
-              className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold"
-              style={{ background: `${statusChip.hex}1F`, color: statusChip.hex }}
-            >
-              {statusChip.label}
-            </span>
+
+            {/* The invoice in focus: what is still owed, never the leftover of a figure
+                that has already been partly paid. */}
+            <div className="relative mt-5">
+              <p className="text-[12px] text-white/62">Fatura de {MONTH_NAMES[selectedMonth - 1]}</p>
+              <p className="text-[36px] font-extrabold leading-tight tracking-[-0.035em] text-white tabular-nums">
+                {formatCurrency(headline)}
+              </p>
+              {total > 0 && outstanding <= 0 ? (
+                <p className="flex items-center gap-1.5 text-[13px] font-medium text-willo-green-ink">
+                  <Check className="h-3.5 w-3.5" strokeWidth={3} /> Paga
+                </p>
+              ) : dueInfo && outstanding > 0 ? (
+                <p className={cn("text-[13px]", dueInfo.overdue ? "text-red-400" : "text-white/62")}>{dueInfo.text}</p>
+              ) : null}
+              {paidAmount > 0 && outstanding > 0 && (
+                <p className="mt-1 text-[12px] t-softer tabular-nums">
+                  {formatCurrency(paidAmount)} já pagos de {formatCurrency(total)}
+                </p>
+              )}
+            </div>
+
+            <div className="relative mt-4 flex items-center gap-4 border-t border-white/[0.06] pt-4">
+              <span className="flex items-center gap-2 text-[12.5px] text-white/66">
+                <CalendarClock className="h-4 w-4 shrink-0 t-soft" />
+                Fecha dia <span className="font-semibold text-white">{card?.closing_day}</span>
+              </span>
+              <span className="h-3 w-px bg-white/10" />
+              <span className="flex items-center gap-2 text-[12.5px] text-white/66">
+                <CalendarCheck className="h-4 w-4 shrink-0 t-soft" />
+                Vence dia <span className="font-semibold text-white">{card?.due_day}</span>
+              </span>
+            </div>
+
+            <div className="relative mt-5 border-t border-white/[0.06] pt-4">
+              <div className="flex items-baseline justify-between">
+                <span className="text-[12px] text-white/62">Limite usado</span>
+                <span className={cn("text-[12.5px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-white/82")}>
+                  {usedPct.toFixed(0)}%
+                </span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.07]">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(usedPct, 100)}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="h-full rounded-full"
+                  style={{ background: isOverLimit ? "#F87171" : cardHex }}
+                />
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <p className="text-[11.5px] t-soft">Usado</p>
+                  <p className="text-[14px] font-semibold text-white tabular-nums">{formatCurrency(usedLimit)}</p>
+                </div>
+                <div className="border-x border-white/[0.06]">
+                  <p className="text-[11.5px] t-soft">Disponível</p>
+                  {/* Nothing left is not good news, so it is not written in green. */}
+                  <p className={cn(
+                    "text-[14px] font-semibold tabular-nums",
+                    isOverLimit ? "text-red-400" : availableLimit > 0 ? "text-willo-green-ink" : "text-white",
+                  )}>
+                    {formatCurrency(availableLimit)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11.5px] t-soft">Total</p>
+                  <p className="text-[14px] font-semibold text-white tabular-nums">{formatCurrency(limitTotal)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* The two things you came here to do. */}
+            <div className="relative mt-5 space-y-2.5">
+              {currentInvoice && outstanding > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowPayModal(true)}
+                  className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-white text-[15px] font-bold willo-on-invert active:scale-[0.99]"
+                >
+                  <Wallet className="h-4 w-4" />
+                  Pagar fatura · {formatCurrency(outstanding)}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowAddChooser(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-white/[0.14] willo-glass-control py-4 text-[14.5px] font-semibold text-white active:scale-[0.99]"
+              >
+                <Plus className="h-4 w-4" strokeWidth={2.4} />
+                Adicionar lançamentos
+              </button>
+            </div>
+          </motion.section>
+
+          {/* What this card is about to ask for, month by month */}
+          <InvoiceForecastChart
+            invoices={invoices}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            onSelect={(m, y) => { setSelectedMonth(m); setSelectedYear(y); }}
+            closingDay={card?.closing_day}
+          />
+
+          {/* Only what was spent on this card, by category */}
+          {categoryBreakdown.length > 0 && (
+            <InvoiceCategoryBreakdown categories={categoryBreakdown} total={total} />
           )}
-        </div>
 
-        {/* Invoice total — always what the statement was worth, never the leftover */}
-        <div className="relative mt-5">
-          <p className="text-[12px] text-white/62">Fatura de {MONTH_NAMES[selectedMonth - 1]}</p>
-          {/* Money already paid has left the account, so the headline is what is still owed */}
-          <p className="text-[36px] font-extrabold leading-tight tracking-tight text-white tabular-nums">
-            {formatCurrency(paidAmount > 0 && outstanding > 0 ? outstanding : total)}
-          </p>
-          {total > 0 && outstanding <= 0 ? (
-            <p className="flex items-center gap-1.5 text-[13px] font-medium text-willo-green-ink">
-              <Check className="h-3.5 w-3.5" strokeWidth={3} /> Paga
-            </p>
-          ) : dueInfo && outstanding > 0 ? (
-            <p className={cn("text-[13px]", dueInfo.overdue ? "text-red-400" : "text-white/62")}>{dueInfo.text}</p>
-          ) : null}
-        </div>
-
-        {/* Closing / due */}
-        <div className="relative mt-4 flex items-center gap-4 border-t border-white/[0.06] pt-4">
-          <span className="flex items-center gap-2 text-[12.5px] text-white/66">
-            <CalendarClock className="h-4 w-4 shrink-0 t-soft" />
-            Fecha dia <span className="font-semibold text-white">{card?.closing_day}</span>
-          </span>
-          <span className="h-3 w-px bg-white/10" />
-          <span className="flex items-center gap-2 text-[12.5px] text-white/66">
-            <CalendarCheck className="h-4 w-4 shrink-0 t-soft" />
-            Vence dia <span className="font-semibold text-white">{card?.due_day}</span>
-          </span>
-        </div>
-
-        {/* Limit */}
-        <div className="relative mt-5 border-t border-white/[0.06] pt-4">
-          <div className="flex items-baseline justify-between">
-            <span className="text-[12px] text-white/62">Limite usado</span>
-            <span className={cn("text-[12.5px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-white/82")}>
-              {usedPct.toFixed(0)}%
-            </span>
-          </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.07]">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min(usedPct, 100)}%` }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="h-full rounded-full"
-              style={{ background: isOverLimit ? "#F87171" : cardHex }}
+          {/* The newest few. The rest is one tap away, not stacked under the panel. */}
+          <div>
+            <div className="mb-2.5 flex items-baseline justify-between px-1">
+              <h2 className="text-[15px] font-bold text-white">Lançamentos recentes</h2>
+              {items.length > 0 && (
+                <span className="text-[12px] t-softer tabular-nums">{items.length}</span>
+              )}
+            </div>
+            <InvoiceTransactionList
+              items={items}
+              hideHeader
+              maxLines={4}
+              cardName={card?.name}
+              invoiceMonth={selectedMonth}
+              invoiceYear={selectedYear}
+              payments={payments}
+              isPaid={invoiceStatus === "paid"}
+              onSeeAll={items.length > 0 ? () => navigate(`/fatura/${cardId}/lancamentos${monthQuery}`) : undefined}
+              onEditItem={handleEditItem}
+              onDeleteItem={handleDeleteItem}
             />
           </div>
-          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-            <div>
-              <p className="text-[11.5px] t-soft">Usado</p>
-              <p className="text-[14px] font-semibold text-white tabular-nums">{formatCurrency(usedLimit)}</p>
-            </div>
-            <div className="border-x border-white/[0.06]">
-              <p className="text-[11.5px] t-soft">Disponível</p>
-              <p className={cn("text-[14px] font-semibold tabular-nums", isOverLimit ? "text-red-400" : "text-willo-green-ink")}>{formatCurrency(availableLimit)}</p>
-            </div>
-            <div>
-              <p className="text-[11.5px] t-soft">Total</p>
-              <p className="text-[14px] font-semibold text-white tabular-nums">{formatCurrency(limitTotal)}</p>
-            </div>
-          </div>
-        </div>
+        </>
+      )}
 
-        {/* Pay */}
-        {currentInvoice && outstanding > 0 && (
-          <button
-            type="button"
-            onClick={() => setShowPayModal(true)}
-            className="relative mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-full bg-white text-[15px] font-bold willo-on-invert active:scale-[0.99]"
-          >
-            <Wallet className="h-4 w-4" />
-            Pagar fatura · {formatCurrency(outstanding)}
-          </button>
-        )}
-      </motion.div>
-
-      <InvoiceHistoryChart
-        invoices={invoices}
-        selectedMonth={selectedMonth}
-        selectedYear={selectedYear}
-        onSelect={(m, y) => { setSelectedMonth(m); setSelectedYear(y); }}
-        userStartDate={userStartDate}
-        closingDay={card?.closing_day}
+      {/* What "add to this card" can mean */}
+      <InvoiceAddChooserModal
+        open={showAddChooser}
+        onClose={() => setShowAddChooser(false)}
+        onManual={() => { setShowAddChooser(false); setShowManualAdd(true); }}
+        onScan={(file, mode) => { setShowAddChooser(false); void handleFileUpload(file, mode); }}
       />
-      {categoryBreakdown.length > 0 && (
-        <InvoiceCategoryBreakdown categories={categoryBreakdown} total={total} />
-      )}
-
-      {/* ===== Geral / Parcelados / À vista ===== */}
-      <div className="mt-5 isolate grid grid-cols-2 rounded-full border border-white/[0.08] willo-glass p-1">
-        {([["geral", "Geral"], ["parcelados", "Compras parceladas"]] as const).map(([key, label]) => (
-          <button key={key} type="button" onClick={() => setTab(key)} className="relative h-10 rounded-full text-[14px] font-medium">
-            {tab === key && (
-              <motion.span layoutId="fatura-tab" className="pointer-events-none absolute inset-0 z-0 rounded-full willo-invert" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
-            )}
-            <span className={cn("relative z-10 transform-gpu", tab === key ? "willo-on-invert" : "text-white/82")}>{label}</span>
-          </button>
-        ))}
-      </div>
-
-      <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={tab}
-        initial={{ opacity: 0, x: 24 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -24 }}
-        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-      >
-      {tab === "geral" && (
-        <div className="mt-4 space-y-2.5">
-          {sortedItems.length === 0 ? (
-            <EmptyTab label="Nenhum lançamento nesta fatura." />
-          ) : (
-            sortedItems.map((item, i) =>
-              item.total_installments > 1 ? (
-                <InstallmentPurchaseCard
-                  key={item.id}
-                  index={i}
-                  customCats={[]}
-                  card={card ? { name: card.name, color: card.color } : undefined}
-                  onOpen={() => openEntry(item)}
-                  item={{
-                    id: item.transaction_id,
-                    name: item.transaction_name,
-                    category: item.transaction_category,
-                    amount: Number(item.amount),
-                    installment_current: item.installment_number,
-                    installments: item.total_installments,
-                    payment_method: "cartao",
-                    date: item.transaction_date,
-                    credit_card_id: cardId ?? null,
-                    isOverdue: false,
-                    dueDate: null,
-                  }}
-                />
-              ) : (
-                <SinglePurchaseCard
-                  key={item.id}
-                  index={i}
-                  customCats={[]}
-                  card={card ? { name: card.name, color: card.color } : undefined}
-                  onOpen={() => openEntry(item)}
-                  item={{
-                    id: item.id,
-                    name: item.transaction_name,
-                    category: item.transaction_category,
-                    amount: Number(item.amount),
-                    date: item.transaction_date,
-                  }}
-                />
-              ),
-            )
-          )}
-        </div>
-      )}
-
-      {tab === "parcelados" && (
-        <div className="mt-4 space-y-2.5">
-          {installmentItems.length === 0 ? (
-            <EmptyTab label="Nenhuma compra parcelada nesta fatura." />
-          ) : (
-            installmentItems.map((item, i) => {
-              const source = sortedItems.find((s) => s.transaction_id === item.id);
-              return (
-                <InstallmentPurchaseCard
-                  key={item.id}
-                  item={item}
-                  index={i}
-                  customCats={[]}
-                  card={card ? { name: card.name, color: card.color } : undefined}
-                  onOpen={source ? () => openEntry(source) : undefined}
-                />
-              );
-            })
-          )}
-        </div>
-      )}
-
-      </motion.div>
-      </AnimatePresence>
 
       {/* Pay Modal */}
       <InvoicePayModal
@@ -906,14 +855,6 @@ const FaturaCartao = () => {
       />
 
       {/* Add Chooser Modal */}
-
-      <CardEntryModal
-        entry={entry}
-        cardName={card?.name}
-        onClose={() => setEntry(null)}
-        onEdit={(id) => { setEntry(null); handleEditItem(id); }}
-        onDelete={(id) => { setEntry(null); handleDeleteItem(id); }}
-      />
 
       {/* Reading the statement: scan animation, then every line found */}
       <InvoiceScanScreen

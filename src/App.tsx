@@ -87,6 +87,8 @@ const App = () => (
               <Route path="/detalhe/:tipo" element={<ReceitasDespesasDetalhe />} />
               <Route path="/gestao" element={<GestaoFinanceira />} />
               <Route path="/fatura/:cardId" element={<FaturaCartao />} />
+              {/* The same screen with the panel folded away: one place reads the invoice. */}
+              <Route path="/fatura/:cardId/lancamentos" element={<FaturaCartao />} />
               <Route path="/conta/:accountId" element={<ContaDetalhe />} />
               
               <Route path="/bot-finance" element={<RaioX />} />

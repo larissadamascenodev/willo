@@ -113,7 +113,7 @@ const Index = () => {
                 onUpdateName={updateDisplayName}
                 onGoToAccounts={() => navigate("/gestao?abrir=conta")}
                 onCreateTransaction={handleNovaTransacao}
-                onGoToCard={() => navigate("/cartoes?aba=cartoes")}
+                onGoToCard={() => navigate("/cartoes")}
                 onCreateFixedExpense={handleNovaTransacao}
               />
             )}
@@ -161,7 +161,7 @@ const Index = () => {
               onUpdateName={updateDisplayName}
               onGoToAccounts={() => navigate("/gestao?abrir=conta")}
               onCreateTransaction={handleNovaTransacao}
-              onGoToCard={() => navigate("/cartoes?aba=cartoes")}
+              onGoToCard={() => navigate("/cartoes")}
               onCreateFixedExpense={handleNovaTransacao}
             />
           )}
@@ -212,7 +212,7 @@ const Index = () => {
               onUpdateName={updateDisplayName}
               onGoToAccounts={() => navigate("/gestao?abrir=conta")}
               onCreateTransaction={handleNovaTransacao}
-              onGoToCard={() => navigate("/cartoes?aba=cartoes")}
+              onGoToCard={() => navigate("/cartoes")}
               onCreateFixedExpense={handleNovaTransacao}
             />
           )}

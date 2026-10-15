@@ -1,276 +1,263 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Check, ChevronLeft, Clock, CreditCard } from "lucide-react";
+import { ChevronRight, CreditCard, Plus } from "lucide-react";
 import BackButton from "@/components/shared/BackButton";
-import { cn } from "@/lib/utils";
-import InvoiceDetailPanel from "@/components/fatura/InvoiceDetailPanel";
-import CreditCardEditModal from "@/components/fatura/CreditCardEditModal";
 import HoldActions from "@/components/shared/HoldActions";
-import { getCreditCards } from "@/services/transactionService";
 import CardCreateSheet from "@/components/wallet/CardCreateSheet";
-import { CreditCardTile, type CreditCardItem, type OpenInvoiceInfo } from "@/components/wallet/CreditCardTile";
-import { Plus } from "lucide-react";
-import { getCategoryIcon, getCategoryHexColor } from "@/lib/categoryUtils";
+import CreditCardEditModal from "@/components/fatura/CreditCardEditModal";
+import { getInvoiceStatusLabel, type CreditCardItem } from "@/components/wallet/CreditCardTile";
+import { getCreditCards } from "@/services/transactionService";
+import { useLongPress } from "@/hooks/useLongPress";
+import { colorFor } from "@/lib/banks";
+import { getCurrency } from "@/lib/currency";
+import { cn } from "@/lib/utils";
 import {
-  useCardsOverview, cardHex, invoiceDueDate, monthKey,
-  type OverviewCard, type OverviewInstallment, type OverviewInvoice,
+  useCardsOverview, monthKey,
+  type OverviewCard, type OverviewInvoice,
 } from "@/hooks/useCardsOverview";
 
-import { getCurrency } from "@/lib/currency";
-type Tab = "cartoes" | "faturas" | "parcelas";
-
-const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-const SHORT = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+/**
+ * Every card, on one panel.
+ *
+ * This screen used to open on three pills — Cartões, Faturas, Parcelas — which asked
+ * which view you wanted before you had seen anything, and then answered with a month
+ * for whichever card the filter happened to be on. But the question on arriving is
+ * always the same one: which card. So the screen is the answer to that and nothing
+ * else, and everything about a card now lives inside the card.
+ *
+ * The figure on a row is what that card is asking for now, not what it has spent since
+ * it was created: a credit card is a bill, and the bill is the open invoice.
+ */
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
-interface MonthSlot { key: number; year: number; month: number; label: string }
-
-function monthSlots(fromOffset: number, count: number): MonthSlot[] {
-  const now = new Date();
-  return Array.from({ length: count }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() + fromOffset + i, 1);
-    const month = d.getMonth() + 1;
-    const year = d.getFullYear();
-    return { key: monthKey(year, month), year, month, label: `${SHORT[month - 1]}${year !== now.getFullYear() ? `/${String(year).slice(2)}` : ""}` };
-  });
+interface CardRow {
+  card: OverviewCard;
+  hex: string;
+  /** What the open invoice still asks for. */
+  owed: number;
+  /** The invoice that figure came from, for the status line. */
+  open: OverviewInvoice | null;
+  available: number;
+  usedPct: number;
 }
 
-const keyLabel = (key: number) => {
-  const year = Math.floor(key / 12);
-  const month = key % 12;
-  return `${SHORT[month].charAt(0)}${SHORT[month].slice(1).toLowerCase()}/${String(year).slice(2)}`;
-};
-
-// ── Month bar strip (faturas) ────────────────────────────
-function MonthBars({ slots, values, selected, paidKeys, currentKey, onSelect }: {
-  slots: MonthSlot[];
-  values: number[];
-  selected: number;
-  /** Months whose statement is settled, so the strip can say so without being opened. */
-  paidKeys: Set<number>;
-  currentKey: number;
-  onSelect: (key: number) => void;
+/** One card. Tap opens it; hold edits or removes it. */
+function CardLine({ row, index, onOpen, onHold }: {
+  row: CardRow;
+  index: number;
+  onOpen: () => void;
+  onHold: () => void;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const max = Math.max(...values, 1);
-  const HEIGHT = 150;
+  const press = useLongPress(onHold);
+  const { card, hex, owed, open, available, usedPct } = row;
 
-  useEffect(() => {
-    const el = ref.current?.querySelector<HTMLElement>(`[data-key="${selected}"]`);
-    // Glide rather than jump: the strip moving under your finger is what tells you
-    // the months are a continuum and not a set of tabs.
-    el?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
-  }, [selected]);
+  const item: CreditCardItem = {
+    id: card.id,
+    name: card.name,
+    limit: card.limit,
+    used_limit: card.used,
+    closing_day: card.closingDay,
+    due_day: card.dueDay,
+    color: card.color,
+    last_four_digits: card.lastFour,
+  };
+  const status = getInvoiceStatusLabel(
+    item,
+    open ? { amount: owed, month: open.month, year: open.year, isPaid: open.isPaid } : undefined,
+  );
 
   return (
-    <div ref={ref} className="-mx-4 overflow-x-auto px-4 scrollbar-hide">
-      <div className="flex items-end gap-2" style={{ minWidth: slots.length * 60 }}>
-        {slots.map((slot, i) => {
-          const value = values[i];
-          const isSelected = slot.key === selected;
-          const isPaid = paidKeys.has(slot.key);
-          const isFuture = slot.key > currentKey;
-          return (
-            <button key={slot.key} data-key={slot.key} onClick={() => onSelect(slot.key)} className="flex w-[54px] shrink-0 flex-col items-center">
-              <div className="relative flex items-end justify-center" style={{ height: HEIGHT }}>
-                {value > 0 ? (
-                  <motion.span
-                    className="relative block w-9 overflow-hidden rounded-full"
-                    initial={{ height: 0 }}
-                    animate={{
-                      height: Math.max((value / max) * HEIGHT, 36),
-                      backgroundColor: isSelected
-                        ? "rgba(255,255,255,1)"
-                        : isFuture
-                          ? "rgba(255,255,255,0.14)"
-                          : "rgba(255,255,255,0.25)",
-                    }}
-                    transition={{
-                      height: { delay: i * 0.02, duration: 0.45, ease: "easeOut" },
-                      backgroundColor: { duration: 0.28, ease: "easeOut" },
-                    }}
-                  />
-                ) : (
-                  <motion.span
-                    className="block h-8 w-8 rounded-full border border-dashed"
-                    animate={{ borderColor: isSelected ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.25)" }}
-                    transition={{ duration: 0.28 }}
-                  />
-                )}
-              </div>
-              {/* Settled months say so beside their name: a tick on the label reads at a
-                  glance and leaves the bar alone, which the selection owns. */}
-              <motion.span
-                className="mt-3 flex items-center justify-center gap-1 text-[12px] tabular-nums"
-                animate={{
-                  color: isPaid && !isSelected
-                    ? "rgba(200,243,109,0.95)"
-                    : isSelected ? "rgba(255,255,255,1)" : isFuture ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.62)",
-                  fontWeight: isSelected || isPaid ? 600 : 400,
-                }}
-                transition={{ duration: 0.28 }}
-              >
-                {isPaid && <Check className="h-3 w-3 shrink-0" strokeWidth={3.4} />}
-                {slot.label}
-              </motion.span>
-            </button>
-          );
-        })}
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.05 + index * 0.05, duration: 0.3 }}
+      onPointerDown={press.onPointerDown}
+      onPointerMove={press.onPointerMove}
+      onPointerUp={press.onPointerUp}
+      onPointerCancel={press.onPointerCancel}
+      onPointerLeave={press.onPointerLeave}
+      onContextMenu={(e) => e.preventDefault()}
+      onClick={press.guard(onOpen)}
+      className="cursor-pointer px-4 py-3.5 transition-colors active:bg-white/[0.03]"
+    >
+      <div className="flex items-center gap-3">
+        {/* The chip, in the bank's own colour: two cards are told apart without reading. */}
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px]"
+          style={{ background: hex, boxShadow: `0 8px 18px -10px ${hex}` }}
+        >
+          <span className="h-[8px] w-[12px] rounded-[2px] bg-white/85" />
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] font-semibold text-white">{card.name}</p>
+          <p className="truncate text-[11.5px] t-softer">
+            {open?.isPaid ? "Fatura paga" : status.isClosed ? "Fatura fechada" : "Fatura aberta"}
+            <span className="text-white/25"> · </span>
+            <span className={cn(status.isClosed && !open?.isPaid && "font-semibold text-amber-300/90")}>
+              {status.label.toLowerCase()}
+            </span>
+          </p>
+        </div>
+
+        <div className="shrink-0 text-right">
+          <p className={cn(
+            "text-[15px] font-bold tabular-nums",
+            owed > 0 ? "text-white" : "t-softer",
+          )}>
+            {fmt(owed)}
+          </p>
+          <p className="text-[11.5px] t-softer tabular-nums">
+            {fmt(available)} <span className="t-faint">livres</span>
+          </p>
+        </div>
+
+        <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
       </div>
-    </div>
+
+      {/* How much of the card is already spoken for. */}
+      <div className="mt-2.5 h-[4px] overflow-hidden rounded-full bg-white/[0.08]">
+        <motion.span
+          className="block h-full rounded-full"
+          style={{ background: usedPct >= 100 ? "#F87171" : usedPct >= 80 ? "#FBBF24" : hex }}
+          initial={{ width: 0 }}
+          animate={{ width: `${usedPct}%` }}
+          transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 + index * 0.05 }}
+        />
+      </div>
+    </motion.div>
   );
 }
 
-type MonthStatus = "paga" | "aberta" | "fechada" | "proxima" | "atrasada" | "vazia";
-
-/** Where the selected month stands, said under its figure rather than guessed from it. */
-const MonthTag = ({ status }: { status: MonthStatus }) => {
-  if (status === "vazia") return null;
-  const map = {
-    paga: { label: "Paga", cls: "bg-willo-green/15 text-willo-green-ink", icon: true },
-    aberta: { label: "Em aberto", cls: "bg-white/[0.08] text-white/75", icon: false },
-    fechada: { label: "Fechada, a pagar", cls: "bg-amber-300/15 text-willo-amber", icon: false },
-    proxima: { label: "Próxima fatura", cls: "bg-white/[0.06] t-soft", icon: false },
-    atrasada: { label: "Em aberto", cls: "bg-amber-300/15 text-willo-amber", icon: false },
-  }[status];
-  return (
-    <motion.span
-      key={status}
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.26 }}
-      className={cn("mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold", map.cls)}
-    >
-      {map.icon && <Check className="h-3 w-3" strokeWidth={3.2} />}
-      {map.label}
-    </motion.span>
-  );
-};
-
-const EmptyState = ({ text }: { text: string }) => (
-  <div className="flex items-center gap-3 rounded-[20px] willo-glass px-4 py-4 text-[15px] text-white/62">
-    <Clock className="h-5 w-5 shrink-0" />
-    {text}
-  </div>
-);
-
-/**
- * What the tab shows with no cards at all, on every tab. It has to carry the add button
- * itself: deleting the last card used to leave a page with nothing to act on, because the
- * only "Adicionar cartão" lived inside the list this replaces.
- */
-const NoCardsState = ({ onAdd }: { onAdd: () => void }) => (
-  <div className="overflow-hidden rounded-[26px] border border-white/[0.08] willo-glass px-5 pb-5 pt-6 text-center">
-    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04]">
-      <CreditCard className="h-[22px] w-[22px] text-white/70" strokeWidth={2} />
-    </div>
-    <p className="mt-3.5 text-[17px] font-bold text-white">Nenhum cartão cadastrado</p>
-    <p className="mx-auto mt-1.5 max-w-[16rem] text-[13.5px] leading-snug t-soft">
-      Cadastre um cartão para acompanhar faturas, limite e parcelamentos.
-    </p>
-    <button
-      onClick={onAdd}
-      className="mt-4 flex h-[50px] w-full items-center justify-center gap-2 rounded-[18px] bg-white text-[15px] font-semibold willo-on-invert active:opacity-80"
-    >
-      <Plus className="h-[18px] w-[18px]" strokeWidth={2.4} /> Adicionar cartão
-    </button>
-  </div>
-);
-
-// ── Page ─────────────────────────────────────────────────
 const Cartoes = () => {
   const navigate = useNavigate();
-  const [params, setParams] = useSearchParams();
-  const tab = (params.get("aba") as Tab) || "faturas";
-  const setTab = (t: Tab) => setParams({ aba: t }, { replace: true });
-
-  const { cards, invoices, installments, loading, refresh } = useCardsOverview();
-  const [cardFilter, setCardFilter] = useState<string | null>(null);
+  const { cards, invoices, loading, refresh } = useCardsOverview();
   const [showAddCard, setShowAddCard] = useState(false);
-  // The card a long press is acting on, and the full row it needs to edit.
   const [heldCard, setHeldCard] = useState<OverviewCard | null>(null);
   const [editingCard, setEditingCard] = useState<any | null>(null);
 
-  const now = new Date();
-  const currentKey = monthKey(now.getFullYear(), now.getMonth() + 1);
-  /* The month the calendar is in is not the invoice you are living in. Past its closing
-     day, this month's invoice is shut and everything you spend lands on the next one —
-     so opening the screen on the calendar month showed "nenhuma fatura encontrada" for
-     a card that has one open right now. null until the invoices load, then the earliest
-     unpaid one from this month forward. */
-  const [selectedKey, setSelectedKey] = useState<number | null>(null);
+  const rows = useMemo<CardRow[]>(() => {
+    const now = new Date();
+    const currentKey = monthKey(now.getFullYear(), now.getMonth() + 1);
 
-  const cardById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
-  const visibleCards = cardFilter ? cards.filter((c) => c.id === cardFilter) : cards;
-  const filteredInvoices = cardFilter ? invoices.filter((i) => i.cardId === cardFilter) : invoices;
-  const filteredInstallments = cardFilter ? installments.filter((i) => i.cardId === cardFilter) : installments;
+    return cards.map((card) => {
+      /* The invoice that is actually open: the earliest from this month on that still
+         owes something. Not the calendar month — past the closing day those differ. */
+      const open =
+        invoices
+          .filter(
+            (i) =>
+              i.cardId === card.id &&
+              !i.isPaid &&
+              i.total > 0 &&
+              monthKey(i.year, i.month) >= currentKey,
+          )
+          .sort((a, b) => monthKey(a.year, a.month) - monthKey(b.year, b.month))[0] ?? null;
 
-  const invoiceSlots = useMemo(() => monthSlots(-3, 15), []);
+      return {
+        card,
+        hex: colorFor(card.name, card.color, "#8B5CF6"),
+        owed: open ? Math.max(open.total - open.paid, 0) : 0,
+        open,
+        available: Math.max(card.limit - card.used, 0),
+        usedPct: card.limit > 0 ? Math.min((card.used / card.limit) * 100, 100) : 0,
+      };
+    });
+  }, [cards, invoices]);
 
-  /** The invoice actually open: the first from this month on that still owes something. */
-  const openKey = useMemo(() => {
-    const owing = filteredInvoices
-      .filter((i) => !i.isPaid && i.total > 0 && monthKey(i.year, i.month) >= currentKey)
-      .map((i) => monthKey(i.year, i.month))
-      .sort((a, b) => a - b);
-    return owing[0] ?? currentKey;
-  }, [filteredInvoices, currentKey]);
-
-  const activeKey = selectedKey ?? openKey;
-  const selectedSlot =
-    invoiceSlots.find((s) => s.key === activeKey) ?? invoiceSlots.find((s) => s.key === currentKey)!;
-  const invoiceValues = invoiceSlots.map((s) =>
-    filteredInvoices.filter((i) => monthKey(i.year, i.month) === s.key).reduce((sum, i) => sum + i.total, 0),
-  );
-  const monthInvoices = filteredInvoices
-    .filter((i) => monthKey(i.year, i.month) === selectedSlot.key && i.total > 0)
-    .sort((a, b) => b.total - a.total);
-
-  const selectedCard = cardFilter ? cardById.get(cardFilter) ?? null : null;
-
-  // A month counts as settled when every statement it holds is, which for one card is
-  // simply that card's, and for the roll-up means nothing is still owed anywhere.
-  const paidKeys = useMemo(() => {
-    const byMonth = new Map<number, { total: number; open: number }>();
-    for (const inv of filteredInvoices) {
-      if (inv.total <= 0) continue;
-      const k = monthKey(inv.year, inv.month);
-      const prev = byMonth.get(k) ?? { total: 0, open: 0 };
-      byMonth.set(k, { total: prev.total + 1, open: prev.open + (inv.isPaid ? 0 : 1) });
-    }
-    return new Set([...byMonth.entries()].filter(([, v]) => v.open === 0).map(([k]) => k));
-  }, [filteredInvoices]);
-
-  const monthStatus: MonthStatus = (() => {
-    const hasValue = monthInvoices.length > 0;
-    if (hasValue && paidKeys.has(selectedSlot.key)) return "paga";
-    /* Measured against the invoice that is open, not against the calendar. Past the
-       closing day those are different months, and comparing with the calendar called
-       the open invoice "próxima" — the one thing it is not. */
-    if (selectedSlot.key > openKey) return "proxima";
-    if (selectedSlot.key < openKey) return hasValue ? "atrasada" : "vazia";
-    if (!hasValue) return "vazia";
-    return "aberta";
-  })();
+  const totalOwed = rows.reduce((s, r) => s + r.owed, 0);
+  const totalLimit = rows.reduce((s, r) => s + r.card.limit, 0);
+  const totalAvailable = rows.reduce((s, r) => s + r.available, 0);
 
   return (
     <div className="mx-auto max-w-lg pb-28">
-      {/* Nav */}
       <div className="flex h-11 items-center">
         <BackButton />
       </div>
 
-      {/* Tabs */}
-      <div className="mt-2 grid grid-cols-3 isolate rounded-full border border-white/[0.08] willo-glass p-1">
-        {([["cartoes", "Cartões"], ["faturas", "Faturas"], ["parcelas", "Parcelas"]] as const).map(([key, label]) => (
-          <button key={key} onClick={() => { setTab(key); setSelectedKey(null); }} className="relative h-11 rounded-full text-[15px] font-medium">
-            {tab === key && <motion.span layoutId="cards-tab" className="pointer-events-none absolute inset-0 z-0 rounded-full willo-invert" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
-            <span className={cn("relative z-10 transform-gpu transform-gpu", tab === key ? "willo-on-invert" : "text-white")}>{label}</span>
+      {loading ? (
+        <div className="mt-4 h-[280px] animate-pulse rounded-[24px] border border-white/[0.08] willo-glass" />
+      ) : cards.length === 0 ? (
+        <div className="mt-4 overflow-hidden rounded-[24px] border border-white/[0.08] willo-glass px-5 pb-5 pt-6 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04]">
+            <CreditCard className="h-[22px] w-[22px] text-white/70" strokeWidth={2} />
+          </div>
+          <p className="mt-3.5 text-[17px] font-bold text-white">Nenhum cartão cadastrado</p>
+          <p className="mx-auto mt-1.5 max-w-[16rem] text-[13.5px] leading-snug t-soft">
+            Cadastre um cartão para acompanhar faturas, limite e parcelamentos.
+          </p>
+          <button
+            onClick={() => setShowAddCard(true)}
+            className="mt-4 flex h-[50px] w-full items-center justify-center gap-2 rounded-[18px] bg-white text-[15px] font-semibold willo-on-invert active:opacity-80"
+          >
+            <Plus className="h-[18px] w-[18px]" strokeWidth={2.4} /> Adicionar cartão
           </button>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <motion.section
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="mt-4 overflow-hidden rounded-[24px] border border-white/[0.08] willo-glass"
+        >
+          <div className="px-4 pb-3.5 pt-4">
+            <p className="text-[14px] text-white/66">Em faturas abertas</p>
+            <p className="mt-1 truncate text-[30px] font-extrabold leading-none tracking-[-0.03em] text-white tabular-nums">
+              {fmt(totalOwed)}
+            </p>
+            <p className="mt-2 text-[12.5px] t-soft">
+              {rows.length} {rows.length === 1 ? "cartão" : "cartões"}
+              <span className="text-white/25"> · </span>
+              <span className="tabular-nums">{fmt(totalAvailable)}</span> de limite livre
+            </p>
+
+            {/* One bar split by card: the share each one takes of what is owed. */}
+            <div className="mt-3.5 flex h-[7px] gap-[3px] overflow-hidden rounded-full">
+              {totalOwed > 0 ? (
+                rows.filter((r) => r.owed > 0).map((r, i) => (
+                  <motion.span
+                    key={r.card.id}
+                    className="h-full rounded-full"
+                    style={{ background: r.hex }}
+                    initial={{ flexGrow: 0 }}
+                    animate={{ flexGrow: r.owed / totalOwed }}
+                    transition={{ duration: 0.6, delay: 0.04 * i, ease: "easeOut" }}
+                  />
+                ))
+              ) : (
+                <span className="h-full flex-1 rounded-full bg-white/[0.08]" />
+              )}
+            </div>
+          </div>
+
+          <div className="divide-y divide-white/[0.06] border-t border-white/[0.06]">
+            {rows.map((row, i) => (
+              <CardLine
+                key={row.card.id}
+                row={row}
+                index={i}
+                onOpen={() => navigate(`/fatura/${row.card.id}`)}
+                onHold={() => setHeldCard(row.card)}
+              />
+            ))}
+          </div>
+
+          <button
+            onClick={() => setShowAddCard(true)}
+            className="flex h-[52px] w-full items-center justify-center gap-2 border-t border-white/[0.06] text-[14.5px] font-semibold text-white/82 active:bg-white/[0.03]"
+          >
+            <Plus className="h-[17px] w-[17px]" strokeWidth={2.4} /> Adicionar cartão
+          </button>
+        </motion.section>
+      )}
+
+      {totalLimit > 0 && (
+        <p className="mt-3 px-1 text-[12px] t-faint tabular-nums">
+          Limite total {fmt(totalLimit)} · usado {fmt(Math.max(totalLimit - totalAvailable, 0))}
+        </p>
+      )}
 
       <CardCreateSheet open={showAddCard} onClose={() => setShowAddCard(false)} onCreated={refresh} />
 
@@ -294,8 +281,7 @@ const Cartoes = () => {
           if (!held) return;
           const all = (await getCreditCards()) as any[];
           const full = all.find((c) => c.id === held.id);
-          // Open straight on the confirmation: the menu already asked for Excluir, and
-          // showing the edit form first made the deletion take a second Excluir.
+          // Straight to the confirmation: the menu already asked for Excluir.
           if (full) setEditingCard({ ...full, __deleting: true });
         }}
       />
@@ -306,376 +292,20 @@ const Cartoes = () => {
           card={{
             id: editingCard.id,
             name: editingCard.name,
-            closing_day: editingCard.closing_day ?? editingCard.closingDay ?? 1,
-            due_day: editingCard.due_day ?? editingCard.dueDay ?? 10,
+            closing_day: editingCard.closing_day ?? 1,
+            due_day: editingCard.due_day ?? 10,
             limit: Number(editingCard.limit ?? 0),
             color: editingCard.color ?? null,
-            last_four_digits: editingCard.last_four_digits ?? editingCard.lastFour ?? null,
+            last_four_digits: editingCard.last_four_digits ?? null,
           }}
           startDeleting={!!editingCard.__deleting}
           onClose={() => setEditingCard(null)}
           onUpdated={() => { setEditingCard(null); refresh(); }}
-          onDeleted={() => { setEditingCard(null); setCardFilter(null); refresh(); }}
+          onDeleted={() => { setEditingCard(null); refresh(); }}
         />
       )}
-
-      {/* Which card you are looking at. A row rather than a sheet: switching cards is
-          the main gesture on this tab, and a sheet puts two taps in front of it. */}
-      {cards.length > 0 && (
-        <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
-          {[{ id: null as string | null, name: "Todos", color: null as string | null }, ...cards].map((c) => {
-            const active = cardFilter === c.id;
-            return (
-              <button
-                key={c.id ?? "all"}
-                onClick={() => { setCardFilter(c.id); setSelectedKey(null); }}
-                className={cn(
-                  "flex h-10 shrink-0 items-center gap-2 rounded-full border px-4 text-[14px] font-medium transition-colors",
-                  active ? "willo-invert" : "border-white/[0.14] willo-glass-control text-white/88",
-                )}
-              >
-                <CreditCard className="h-4 w-4" style={active ? undefined : { color: c.id ? cardHex(c.color) : undefined }} />
-                {c.name}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      <div className="mt-6">
-        {loading ? (
-          <div className="h-64 animate-pulse rounded-[22px] willo-glass" />
-        ) : cards.length === 0 ? (
-          <NoCardsState onAdd={() => setShowAddCard(true)} />
-        ) : tab === "cartoes" ? (
-          <CardsList
-            cards={visibleCards}
-            invoices={filteredInvoices}
-            onAdd={() => setShowAddCard(true)}
-            onHold={setHeldCard}
-            // Tapping a card used to push the statement page, which showed the same
-            // month from the same data as this tab. It now just selects the card here.
-            navigate={(to) => {
-              const match = /^\/fatura\/(.+)$/.exec(to);
-              if (match) {
-                setCardFilter(match[1]);
-                setSelectedKey(null);
-                setTab("faturas");
-              } else {
-                navigate(to);
-              }
-            }}
-          />
-        ) : tab === "parcelas" ? (
-          <InstallmentsOverview installments={filteredInstallments} cardById={cardById} currentKey={currentKey} />
-        ) : (
-          <>
-            <p className="mt-6 text-[15px] text-white/66">
-              {selectedCard ? `Fatura de ${MONTHS[selectedSlot.month - 1]}` : `Total em faturas em ${MONTHS[selectedSlot.month - 1]}`}
-            </p>
-            <motion.p
-              key={selectedSlot.key}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
-              className="text-[38px] font-extrabold leading-tight tracking-tight text-white tabular-nums"
-            >
-              {fmt(invoiceValues[invoiceSlots.findIndex((s) => s.key === selectedSlot.key)] ?? 0)}
-            </motion.p>
-            <MonthTag status={monthStatus} />
-            <div className="mt-5">
-              <MonthBars
-                slots={invoiceSlots}
-                values={invoiceValues}
-                selected={selectedSlot.key}
-                paidKeys={paidKeys}
-                currentKey={currentKey}
-                onSelect={setSelectedKey}
-              />
-            </div>
-            {selectedCard ? (
-              <InvoiceDetailPanel
-                card={selectedCard}
-                invoice={monthInvoices.find((i) => i.cardId === selectedCard.id) ?? null}
-                month={selectedSlot.month}
-                year={selectedSlot.year}
-                onChanged={refresh}
-              />
-            ) : (
-              <div className="mt-6">
-                {monthInvoices.length === 0 ? (
-                  <EmptyState text="Nenhuma fatura encontrada" />
-                ) : (
-                  <InvoiceList
-                    invoices={monthInvoices}
-                    cardById={cardById}
-                    onOpen={(id) => setCardFilter(id)}
-                  />
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
     </div>
   );
 };
-
-function InvoiceList({ invoices, cardById, onOpen }: {
-  invoices: OverviewInvoice[];
-  cardById: Map<string, OverviewCard>;
-  onOpen: (cardId: string) => void;
-}) {
-  return (
-    <div className="divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.08] willo-glass px-4">
-      {invoices.map((inv) => {
-        const card = cardById.get(inv.cardId);
-        if (!card) return null;
-        const due = invoiceDueDate(card, inv.year, inv.month);
-        return (
-          <button key={inv.id} onClick={() => onOpen(card.id)} className="flex w-full items-center gap-3 py-3.5 text-left">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: `${cardHex(card.color)}26` }}>
-              <CreditCard className="h-[18px] w-[18px]" style={{ color: cardHex(card.color) }} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[15px] font-medium text-white">{card.name}</span>
-              <span className={cn("block text-[12px]", inv.isPaid ? "t-soft" : "text-amber-300/90")}>
-                {inv.isPaid ? "Paga" : `Vence ${due.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`}
-              </span>
-            </span>
-            <span className={cn("text-[15px] font-semibold tabular-nums", inv.isPaid ? "text-white/62" : "text-white")}>{fmt(inv.total)}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── Parcelas: every active installment purchase across the cards ──
-interface InstallmentPurchase {
-  groupId: string;
-  name: string;
-  category: string;
-  cardId: string;
-  amount: number;
-  total: number;
-  current: number;
-  remaining: number;
-  lastKey: number;
-}
-
-function InstallmentsOverview({ installments, cardById, currentKey }: {
-  installments: OverviewInstallment[];
-  cardById: Map<string, OverviewCard>;
-  currentKey: number;
-}) {
-  const purchases = useMemo(() => {
-    const groups = new Map<string, OverviewInstallment[]>();
-    for (const it of installments) groups.set(it.groupId, [...(groups.get(it.groupId) ?? []), it]);
-
-    const list: InstallmentPurchase[] = [];
-    groups.forEach((items, groupId) => {
-      const upcoming = items.filter((i) => monthKey(i.year, i.month) >= currentKey);
-      if (upcoming.length === 0) return;
-      const first = items[0];
-      const thisMonth = items.find((i) => monthKey(i.year, i.month) === currentKey) ?? upcoming.sort((a, b) => a.number - b.number)[0];
-      const lastKey = Math.max(...items.map((i) => monthKey(i.year, i.month)));
-      list.push({
-        groupId,
-        name: first.name,
-        category: first.category,
-        cardId: first.cardId,
-        amount: thisMonth.amount,
-        total: first.total,
-        current: thisMonth.number,
-        remaining: first.total - thisMonth.number + 1,
-        lastKey,
-      });
-    });
-    return list.sort((a, b) => b.amount * b.remaining - a.amount * a.remaining);
-  }, [installments, currentKey]);
-
-  const monthly = purchases.reduce((s, p) => s + p.amount, 0);
-  const remainingTotal = purchases.reduce((s, p) => s + p.amount * p.remaining, 0);
-  const freeKey = purchases.length ? Math.max(...purchases.map((p) => p.lastKey)) : null;
-
-  if (purchases.length === 0) return <EmptyState text="Nenhuma parcela em andamento" />;
-
-  return (
-    <div>
-      <p className="text-[15px] text-white/66">Parcelado no cartão a pagar</p>
-      <p className="text-[38px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{fmt(remainingTotal)}</p>
-      <p className="text-[15px] text-white/66">
-        {purchases.length} {purchases.length === 1 ? "compra parcelada" : "compras parceladas"}
-      </p>
-
-      <div className="mt-5 grid grid-cols-2 rounded-[22px] border border-white/[0.08] willo-glass py-3.5">
-        <div className="px-4">
-          <p className="text-[12px] text-white/62">Por mês</p>
-          <p className="text-[18px] font-bold text-white tabular-nums">{fmt(monthly)}</p>
-        </div>
-        <div className="border-l border-white/[0.08] px-4">
-          <p className="text-[12px] text-white/62">Livre das parcelas</p>
-          <p className="text-[18px] font-bold text-white">{freeKey !== null ? keyLabel(freeKey + 1) : "—"}</p>
-        </div>
-      </div>
-
-      <div className="mt-4 space-y-2.5">
-        {purchases.map((p, i) => {
-          const Icon = getCategoryIcon(p.category);
-          const hex = getCategoryHexColor(p.category);
-          const card = cardById.get(p.cardId);
-          const paidPct = ((p.current - 1) / p.total) * 100;
-          return (
-            <motion.div
-              key={p.groupId}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.03 }}
-              className="rounded-[22px] border border-white/[0.08] willo-glass p-4"
-            >
-              <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ background: `${hex}1F` }}>
-                  <Icon className="h-[18px] w-[18px]" style={{ color: hex }} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[15px] font-medium text-white">{p.name}</p>
-                  <p className="flex items-center gap-1.5 truncate text-[12px] t-soft">
-                    {card && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: cardHex(card.color) }} />}
-                    {card?.name ?? "Cartão"}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[15px] font-semibold text-white tabular-nums">{fmt(p.amount)}</p>
-                  <p className="text-[11px] t-soft">por mês</p>
-                </div>
-              </div>
-              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
-                <motion.div
-                  className="h-full rounded-full bg-white"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${paidPct}%` }}
-                  transition={{ duration: 0.6, ease: "easeOut" }}
-                />
-              </div>
-              <div className="mt-1.5 flex justify-between text-[12px] text-white/62 tabular-nums">
-                <span>Parcela {p.current} de {p.total}</span>
-                <span>Faltam {fmt(p.amount * p.remaining)} · até {keyLabel(p.lastKey)}</span>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/**
- * Every card, one under the other. The tile is the one the wallet used to show —
- * name, open invoice, and the limit bar with both sides of it — so moving the cards
- * here changes where they live, not how they look.
- */
-function CardsList({ cards, invoices, onAdd, navigate, onHold }: {
-  cards: OverviewCard[];
-  invoices: OverviewInvoice[];
-  onAdd: () => void;
-  navigate: (to: string) => void;
-  onHold?: (card: OverviewCard) => void;
-}) {
-  const now = new Date();
-  const openByCard = new Map<string, OpenInvoiceInfo>();
-  for (const inv of invoices) {
-    if (inv.isPaid || inv.total <= 0) continue;
-    const prev = openByCard.get(inv.cardId);
-    const isEarlier = !prev || inv.year < prev.year || (inv.year === prev.year && inv.month < prev.month);
-    if (isEarlier) openByCard.set(inv.cardId, { amount: inv.total - inv.paid, month: inv.month, year: inv.year, isPaid: false });
-  }
-
-  return (
-    <div className="space-y-2.5">
-      {cards.map((c, idx) => {
-        const item: CreditCardItem = {
-          id: c.id,
-          name: c.name,
-          limit: c.limit,
-          used_limit: c.used,
-          closing_day: c.closingDay,
-          due_day: c.dueDay,
-          color: c.color,
-          last_four_digits: c.lastFour,
-        };
-        return (
-          <CreditCardTile
-            key={c.id}
-            card={item}
-            idx={idx}
-            invoiceInfo={openByCard.get(c.id)}
-            navigate={navigate}
-            onLongPress={onHold ? () => onHold(c) : undefined}
-          />
-        );
-      })}
-
-      <button
-        onClick={onAdd}
-        className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[20px] border border-dashed border-white/20 text-[15px] font-medium text-white/82 active:opacity-70"
-      >
-        <Plus className="h-[18px] w-[18px]" /> Adicionar cartão
-      </button>
-    </div>
-  );
-}
-
-function LimitsList({ cards }: { cards: OverviewCard[] }) {
-  const totalLimit = cards.reduce((s, c) => s + c.limit, 0);
-  const totalUsed = cards.reduce((s, c) => s + c.used, 0);
-  if (cards.length === 0) return <EmptyState text="Nenhum limite de cartão encontrado" />;
-
-  return (
-    <div>
-      <p className="text-[15px] text-white/66">Limite disponível</p>
-      <p className="text-[38px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{fmt(Math.max(totalLimit - totalUsed, 0))}</p>
-      <p className="text-[15px] text-white/66 tabular-nums">de {fmt(totalLimit)}</p>
-
-      <div className="mt-6 space-y-2.5">
-        {cards.map((c) => {
-          const pct = c.limit > 0 ? Math.min((c.used / c.limit) * 100, 100) : 0;
-          const hex = cardHex(c.color);
-          return (
-            <div key={c.id} className="rounded-[22px] border border-white/[0.08] willo-glass p-4">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: `${hex}26` }}>
-                  <CreditCard className="h-4 w-4" style={{ color: hex }} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[15px] font-medium text-white">{c.name}</p>
-                  {c.lastFour && <p className="text-[12px] t-soft tabular-nums">•••• {c.lastFour}</p>}
-                </div>
-                <p className="text-right">
-                  <span className="block text-[15px] font-semibold text-white tabular-nums">{fmt(Math.max(c.limit - c.used, 0))}</span>
-                  <span className="block text-[11px] t-soft">disponível</span>
-                </p>
-              </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.08]">
-                <motion.div
-                  className={cn("h-full rounded-full", pct >= 90 ? "bg-red-400" : pct >= 70 ? "bg-amber-300" : "bg-white")}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ duration: 0.6, ease: "easeOut" }}
-                />
-              </div>
-              <div className="mt-1.5 flex justify-between text-[12px] text-white/62 tabular-nums">
-                <span>{fmt(c.used)} usado</span>
-                <span>Limite {fmt(c.limit)}</span>
-              </div>
-              <p className="mt-2 text-[12px] t-soft">Fecha dia {c.closingDay} · vence dia {c.dueDay}</p>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 export default Cartoes;

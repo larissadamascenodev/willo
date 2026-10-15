@@ -112,7 +112,7 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
 
   return (
     <button
-      onClick={() => navigate("/cartoes?aba=faturas")}
+      onClick={() => navigate("/cartoes")}
       className="block w-full rounded-[22px] border border-white/[0.08] willo-glass px-[14px] pb-[14px] pt-3.5 text-left transition-transform active:scale-[0.99]"
     >
       <div className="flex items-start justify-between gap-3">

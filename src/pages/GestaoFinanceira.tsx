@@ -75,7 +75,7 @@ const GestaoFinanceira = () => {
     if (!abrir) return;
     if (abrir === "conta") setShowAddAccount(true);
     // Cards moved to their own section, so an old link to add one goes there.
-    if (abrir === "cartao") navigate("/cartoes?aba=cartoes", { replace: true });
+    if (abrir === "cartao") navigate("/cartoes", { replace: true });
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.delete("abrir");
