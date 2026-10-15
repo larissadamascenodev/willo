@@ -23,6 +23,11 @@ export interface SinglePurchase {
 /**
  * A one-off purchase, in the same language as the instalment card: the ring around the
  * category icon is simply complete, because there is nothing left to pay.
+ *
+ * Money coming back wears the same card, turned around. It was drawn exactly like a
+ * purchase with a minus in front of the figure, which is the one thing nobody reads —
+ * so here it says so in words, in green, with a plus, because to the person holding the
+ * card a refund is money arriving.
  */
 export default function SinglePurchaseCard({ item, index, customCats, card, onOpen }: {
   item: SinglePurchase;
@@ -31,6 +36,8 @@ export default function SinglePurchaseCard({ item, index, customCats, card, onOp
   card?: { name: string; color: string | null };
   onOpen?: () => void;
 }) {
+  // The direction of the money, which is the whole difference between these two cards.
+  const isRefund = item.amount < 0;
   const IconComp = getCategoryIcon(item.category, customCats);
   const catColor = getCategoryColor(item.category, customCats);
   const day = item.date
@@ -42,7 +49,9 @@ export default function SinglePurchaseCard({ item, index, customCats, card, onOp
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
-      className="overflow-hidden rounded-[20px] border border-white/[0.08] willo-glass"
+      className={`overflow-hidden rounded-[20px] border willo-glass ${
+        isRefund ? "border-willo-green/25" : "border-white/[0.08]"
+      }`}
     >
       <button type="button" onClick={onOpen} className="block w-full px-3.5 py-3 text-left">
         <div className="flex items-center gap-3">
@@ -65,8 +74,17 @@ export default function SinglePurchaseCard({ item, index, customCats, card, onOp
           </div>
 
           <div className="shrink-0 text-right">
-            <p className="text-[15px] font-bold text-white tabular-nums">{formatCurrency(item.amount)}</p>
-            <p className="text-[11px] t-soft">à vista</p>
+            <p
+              className={`text-[15px] font-bold tabular-nums ${
+                isRefund ? "text-willo-green-ink" : "text-white"
+              }`}
+            >
+              {isRefund ? "+" : ""}
+              {formatCurrency(Math.abs(item.amount))}
+            </p>
+            <p className={`text-[11px] ${isRefund ? "font-semibold text-willo-green-ink" : "t-soft"}`}>
+              {isRefund ? "estorno" : "à vista"}
+            </p>
           </div>
         </div>
 

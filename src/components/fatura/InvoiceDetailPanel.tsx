@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { importStatement } from "@/services/invoiceImport";
+import { readInvoice } from "@/lib/invoice/readModel";
 import type { PaymentMatchResult } from "@/services/importedPayments";
 import { AnimatePresence, motion } from "framer-motion";
 import { CalendarCheck, CalendarClock, ChevronRight, Layers, Plus, Wallet } from "lucide-react";
@@ -175,11 +176,20 @@ export default function InvoiceDetailPanel({ card, invoice, month, year, onChang
   const refunds = useMemo(() => categories.filter((c) => c.total < 0), [categories]);
 
   // Newest at the top: a statement is read backwards from the last thing you bought.
+  /* Order and meaning come from readInvoice, the same place the invoice page gets them,
+     so the two lists cannot disagree about what a line is or which comes first. The raw
+     rows are kept by id because the cards below still take the table's shape. */
+  const read = useMemo(() => readInvoice(items), [items]);
+  const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const sorted = useMemo(
-    () => [...items].sort((a, b) => (b.transaction_date ?? "").localeCompare(a.transaction_date ?? "")),
-    [items],
+    () => read.lines.map((l) => byId.get(l.id)!).filter(Boolean),
+    [read, byId],
   );
-  const parceladas = sorted.filter((i) => (i.total_installments ?? 1) > 1);
+  const kindOf = useMemo(
+    () => new Map(read.lines.map((l) => [l.id, l.kind])),
+    [read],
+  );
+  const parceladas = sorted.filter((i) => kindOf.get(i.id) === "parcelado");
   const shown = view === "geral" ? sorted : parceladas;
 
   const used = card.used;

@@ -51,6 +51,8 @@ export interface EnrichedItem {
   transaction_status: string;
   transaction_recurrence_type: string;
   transaction_parent_id: string | null;
+  /** Only used to break ties between lines bought on the same day. */
+  created_at?: string | null;
 }
 
 export interface CreditCardInfo {
