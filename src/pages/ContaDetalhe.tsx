@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, Landmark, Banknote, Vault, Pencil, Trash2, X, TrendingUp, TrendingDown, ChevronRight, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import BackButton from "@/components/shared/BackButton";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -184,13 +185,7 @@ const ContaDetalhe = () => {
     <div className="pt-2 pb-8 space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <button
-          onClick={() => navigate("/gestao")}
-          className="-ml-2 flex h-9 items-center gap-0.5 text-sm text-white/82 hover:text-white active:opacity-60 transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6" strokeWidth={2.25} />
-          Voltar
-        </button>
+        <BackButton to="/gestao" />
         <div className="flex items-center gap-2">
           <button
             onClick={() => setEditing(true)}

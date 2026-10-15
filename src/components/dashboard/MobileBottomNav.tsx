@@ -18,7 +18,7 @@ export const navItems: {
 }[] = [
   { icon: Home, label: "Início", path: "/" },
   { icon: ArrowLeftRight, label: "Transações", path: "/transacoes" },
-  { icon: Sparkles, label: "Agentes", path: "/assistente" },
+  { icon: Sparkles, label: "Agentes", path: "/agentes" },
 ];
 
 const openQuickEntry = () => window.dispatchEvent(new CustomEvent("open-registro-rapido"));
@@ -31,7 +31,7 @@ const openQuickEntry = () => window.dispatchEvent(new CustomEvent("open-registro
  * things — one returns, the other abandons — stacked on top of each other at the bottom
  * of the screen. Pages get a back arrow instead, which is the only thing they need.
  */
-export const NAV_SECTIONS = ["/", "/transacoes", "/assistente"];
+export const NAV_SECTIONS = ["/", "/transacoes", "/agentes", "/assistente"];
 
 export const isNavSection = (path: string) => NAV_SECTIONS.includes(path);
 
@@ -79,7 +79,18 @@ const MobileBottomNav = memo(() => {
   const [heldOpen, setHeldOpen] = useState(false);
   const collapsed = scrolledPast && !heldOpen;
 
-  // Pages are left alone; see NAV_SECTIONS.
+  useEffect(() => {
+    const read = () => {
+      setScrolledPast(window.scrollY > 90);
+      setHeldOpen(false);
+    };
+    read();
+    window.addEventListener("scroll", read, { passive: true });
+    return () => window.removeEventListener("scroll", read);
+  }, []);
+
+  // Pages are left alone; see NAV_SECTIONS. This runs after the hooks above, which all
+  // have to be reached on every render whatever the route is.
   if (!isNavSection(location.pathname)) return null;
 
   return (

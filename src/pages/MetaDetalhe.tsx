@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Sparkles, Clock, MoreVertical, Pencil, Trash2, ArrowDownLeft, ArrowUpRight, Target, ChevronDown, ChevronUp } from "lucide-react";
+import BackButton from "@/components/shared/BackButton";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -166,9 +167,7 @@ const MetaDetalhe = () => {
     <div className="pt-2 pb-8 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate("/metas")} className="-ml-2 flex h-9 items-center gap-0.5 text-sm text-white/82 hover:text-white active:opacity-60 transition-colors">
-          <ChevronLeft className="w-6 h-6" strokeWidth={2.25} /> Voltar
-        </button>
+        <BackButton to="/metas" />
         <div className="relative">
           <button onClick={() => setShowMenu(v => !v)} className="w-8 h-8 rounded-xl bg-muted/20 flex items-center justify-center hover:bg-muted/30 transition-colors">
             <MoreVertical className="w-4 h-4 text-muted-foreground" />

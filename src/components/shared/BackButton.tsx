@@ -13,9 +13,11 @@ import { cn } from "@/lib/utils";
  * It goes back in history by default rather than to a fixed route, because the same page
  * is reached from several places and the right answer is always "where you came from".
  */
-export default function BackButton({ to, className, style }: {
+export default function BackButton({ to, onClick, className, style }: {
   /** Overrides history, for a page that can be deep-linked into. */
   to?: string;
+  /** For a page whose parent owns what "back" means. */
+  onClick?: () => void;
   className?: string;
   style?: React.CSSProperties;
 }) {
@@ -23,7 +25,7 @@ export default function BackButton({ to, className, style }: {
   return (
     <button
       type="button"
-      onClick={() => (to ? navigate(to) : navigate(-1))}
+      onClick={() => (onClick ? onClick() : to ? navigate(to) : navigate(-1))}
       aria-label="Voltar"
       style={style}
       className={cn(

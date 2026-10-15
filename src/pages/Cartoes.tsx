@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Check, ChevronLeft, Clock, CreditCard } from "lucide-react";
+import BackButton from "@/components/shared/BackButton";
 import { cn } from "@/lib/utils";
 import InvoiceDetailPanel from "@/components/fatura/InvoiceDetailPanel";
 import CreditCardEditModal from "@/components/fatura/CreditCardEditModal";
@@ -242,9 +243,7 @@ const Cartoes = () => {
     <div className="mx-auto max-w-lg pb-28">
       {/* Nav */}
       <div className="flex h-11 items-center">
-        <button onClick={() => navigate(-1)} aria-label="Voltar" className="-ml-2 flex h-10 items-center text-white/82 active:opacity-60">
-          <ChevronLeft className="h-7 w-7" strokeWidth={2.25} />
-        </button>
+        <BackButton />
       </div>
 
       {/* Tabs */}

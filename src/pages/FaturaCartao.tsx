@@ -6,6 +6,7 @@ import { ChevronLeft,
   CalendarClock, CalendarCheck, Wallet, Shield,
   Pencil, Trash2, Undo2, Check,
 } from "lucide-react";
+import BackButton from "@/components/shared/BackButton";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -663,10 +664,11 @@ const FaturaCartao = () => {
         <button
           onClick={() => navigate("/gestao")}
           aria-label="Voltar"
-          className="-ml-2 flex h-9 w-9 items-center justify-center text-white/82 transition-colors hover:text-white active:opacity-60"
+          className="hidden"
         >
           <ChevronLeft className="h-6 w-6" strokeWidth={2.25} />
         </button>
+        <BackButton to="/gestao" />
         <div className="flex items-center gap-2">
           <button
             type="button"

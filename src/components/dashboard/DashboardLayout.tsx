@@ -386,19 +386,17 @@ const DashboardLayout = () => {
         )}
         <div className="w-full mx-auto px-4 md:px-6 lg:px-8 xl:px-12 pt-0 pb-24 md:pb-8">
           <DashboardHeader profile={profile} streak={streak} streakDates={streakDates} />
+          {/* A page has no nav, so it needs the one thing a page needs. In the flow
+              rather than floating: pinned to the corner it landed on top of whatever
+              title the page had put at its own top edge. The pages that draw their own
+              are excluded, so there is exactly one. */}
+          {PAGES_WITHOUT_BACK.has(location.pathname) && (
+            <div className="mb-1 flex md:hidden">
+              <BackButton />
+            </div>
+          )}
           <Outlet context={profileState} />
         </div>
-        {/* A page has no nav, so it needs the one thing a page needs. Drawn here rather
-            than in each page because it is the same button on all of them, and because
-            the pages that were missing it had no way out at all once the nav went.
-            The six that already draw their own keep it; this fills the gaps. */}
-        {!isNavSection(location.pathname) && PAGES_WITHOUT_BACK.has(location.pathname) && (
-          <BackButton
-            className="fixed left-5 z-40 md:hidden"
-            style={{ top: "calc(env(safe-area-inset-top, 0px) + 14px)" }}
-          />
-        )}
-
         <MobileBottomNav />
         <WelcomeToAppModal open={showWelcomeModal} onConfigure={handleConfigureNow} onSkip={dismissWelcomeModal} />
         <RegistroRapidoSheet

@@ -46,6 +46,16 @@ const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profi
   const email = user?.email ?? "";
   const plan = "Free";
   const [menuOpen, setMenuOpen] = useState(false);
+
+  /* Far enough down that "Boa tarde, Larissa." has left the screen. Below that the
+     greeting is holding the name and the header does not need to. */
+  const [pastGreeting, setPastGreeting] = useState(false);
+  useEffect(() => {
+    const read = () => setPastGreeting(window.scrollY > 120);
+    read();
+    window.addEventListener("scroll", read, { passive: true });
+    return () => window.removeEventListener("scroll", read);
+  }, []);
   const [transacaoMenuOpen, setTransacaoMenuOpen] = useState(false);
   const [streakOpen, setStreakOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -337,10 +347,14 @@ const DashboardHeader = memo(({ profile, streak = 0, streakDates = [] }: { profi
                 initial
               )}
             </span>
+            {/* The name arrives only once the greeting has gone past. At the top of the
+                page "Boa tarde, Larissa." is already on screen, and saying it twice in
+                the same breath is the duplication — the avatar alone is enough while
+                the greeting is holding the name. */}
             <motion.span
-              initial={{ opacity: 0, x: -6 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.12, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              initial={false}
+              animate={{ opacity: pastGreeting ? 1 : 0, x: pastGreeting ? 0 : -6 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
               className="min-w-0 truncate text-[16px] font-semibold tracking-tight text-white"
             >
               {profile?.display_name?.split(" ")[0] ?? ""}

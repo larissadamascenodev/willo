@@ -53,7 +53,7 @@ export default function BotMark({ working = false, size = 34 }: {
         viewBox="0 0 32 32"
         fill="none"
         className={`relative ${working ? "text-willo-green" : "text-white"}`}
-        style={{ width: size * 0.64, height: size * 0.64 }}
+        style={{ width: size * 0.66, height: size * 0.66 }}
         aria-hidden="true"
         animate={working ? { y: [0, -1.2, 0] } : { y: 0 }}
         transition={working ? { duration: 1.7, repeat: Infinity, ease: "easeInOut" } : { duration: 0.25 }}
@@ -61,12 +61,12 @@ export default function BotMark({ working = false, size = 34 }: {
         <defs>
           {/* The dollar is a hole in the eye, not a mark on top of it. */}
           <mask id={`${gid}-eye`}>
-            <rect x="17.4" y="12.4" width="5.2" height="8.4" rx="2.6" fill="#fff" />
+            <rect x="17.6" y="12.1" width="4.3" height="7.6" rx="2.15" fill="#fff" />
             <text
-              x="20"
-              y="19"
+              x="19.75"
+              y="18.5"
               textAnchor="middle"
-              fontSize="7.8"
+              fontSize="7"
               fontWeight="800"
               fill="#000"
               fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
@@ -76,27 +76,26 @@ export default function BotMark({ working = false, size = 34 }: {
           </mask>
         </defs>
 
-        {/* head */}
+        {/* The head, and nothing else. The artwork is a rounded square with two eyes:
+            the antenna was mine, and a stroke heavy enough to survive it made the whole
+            thing look like a clip-art robot. Thinner line, rounder corners, eyes with
+            room to breathe. */}
         <rect
-          x="2.7"
-          y="7.5"
-          width="26.6"
+          x="3.4"
+          y="6.6"
+          width="25.2"
           height="19.2"
-          rx="7.8"
+          rx="8.4"
           stroke="currentColor"
-          strokeWidth="2.6"
+          strokeWidth="2"
         />
-        {/* antenna */}
-        <path d="M16 7.5V4.4" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-        <circle cx="16" cy="2.8" r="1.7" fill="currentColor" />
-        {/* eyes — the right one wears the dollar */}
-        <rect x="9.4" y="12.4" width="5.2" height="8.4" rx="2.6" fill="currentColor" />
+        <rect x="10.1" y="12.1" width="4.3" height="7.6" rx="2.15" fill="currentColor" />
         <rect
-          x="17.4"
-          y="12.4"
-          width="5.2"
-          height="8.4"
-          rx="2.6"
+          x="17.6"
+          y="12.1"
+          width="4.3"
+          height="7.6"
+          rx="2.15"
           fill="currentColor"
           mask={`url(#${gid}-eye)`}
         />

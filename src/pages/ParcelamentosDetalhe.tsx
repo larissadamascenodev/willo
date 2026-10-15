@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronDown, CalendarClock, Check, Wallet, AlertTriangle } from "lucide-react";
+import BackButton from "@/components/shared/BackButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryUtils";
@@ -201,16 +202,12 @@ const ParcelamentosDetalhe = () => {
   );
   const maxProjection = Math.max(...projectionData.map((p) => p.value), 1);
 
-  const BackButton = (
-    <button onClick={() => navigate(-1)} aria-label="Voltar" className="-ml-2 flex h-10 items-center text-white/82 active:opacity-60">
-      <ChevronLeft className="h-7 w-7" strokeWidth={2.25} />
-    </button>
-  );
+  const backControl = <BackButton />;
 
   if (loading) {
     return (
       <div className="mx-auto max-w-lg space-y-4 pb-28">
-        {BackButton}
+        {backControl}
         <div className="h-40 animate-pulse rounded-[24px] willo-glass" />
         <div className="h-56 animate-pulse rounded-[24px] willo-glass" />
       </div>
@@ -220,7 +217,7 @@ const ParcelamentosDetalhe = () => {
   if (items.length === 0 || !stats) {
     return (
       <div className="mx-auto max-w-lg pb-28">
-        {BackButton}
+        {backControl}
         <h1 className="mt-2 text-[28px] font-extrabold tracking-tight text-white">Parcelamentos</h1>
         <div className="mt-8 flex flex-col items-center px-8 text-center">
           <span className="flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.05]">
@@ -237,7 +234,7 @@ const ParcelamentosDetalhe = () => {
 
   return (
     <div className="mx-auto max-w-lg select-none pb-28">
-      {BackButton}
+      {backControl}
 
       {/* Hero */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-2">

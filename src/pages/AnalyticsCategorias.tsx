@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Sparkles, TrendingUp, TrendingDown,
   AlertTriangle, Target, Brain, PieChart as PieChartIcon, Info, ShieldCheck,
   Repeat, ChevronLeft, Check, Plus,
 } from "lucide-react";
+import BackButton from "@/components/shared/BackButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMonth } from "@/contexts/MonthContext";
@@ -762,13 +763,7 @@ const EvolutionChart = ({ data, hexColor, currentMonth }: {
 // ── Page nav: discreet back · right slot ─────────────
 const PageNav = ({ onBack, children }: { onBack: () => void; children: React.ReactNode }) => (
   <div className="flex items-center justify-between gap-3">
-    <button
-      onClick={onBack}
-      className="-ml-2 flex h-10 items-center text-white/82 hover:text-white active:opacity-60 transition-colors"
-      aria-label="Voltar"
-    >
-      <ChevronLeft className="h-7 w-7" strokeWidth={2.25} />
-    </button>
+    <BackButton onClick={onBack} />
     <div className="flex min-w-0 justify-end">{children}</div>
   </div>
 );
