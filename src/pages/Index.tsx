@@ -16,6 +16,7 @@ import GastosPorCategoria from "@/components/dashboard/GastosPorCategoria";
 import FinanceChartCard from "@/components/dashboard/FinanceChartCard";
 import CardsOverviewSection from "@/components/dashboard/CardsOverviewSection";
 import { TileRow } from "@/components/dashboard/StatTile";
+import SectionTiles from "@/components/dashboard/SectionTiles";
 import InsightCarousel from "@/components/dashboard/InsightCarousel";
 import SaldoContasCard from "@/components/dashboard/SaldoContasCard";
 import FluxoReceitasDespesasCard from "@/components/dashboard/FluxoReceitasDespesasCard";
@@ -243,6 +244,9 @@ const Index = () => {
             <AssinaturasTile />
             <MetasResumoCard compact />
           </TileRow>
+
+          {/* The two screens that are not a summary of anything already on this page. */}
+          <SectionTiles />
 
           <GastosFixosCard compact />
 

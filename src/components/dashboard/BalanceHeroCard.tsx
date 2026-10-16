@@ -4,7 +4,6 @@ import { User, Bell, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useHiddenValues, setHiddenValues } from "@/hooks/useHiddenValues";
 import NotificationsPanel, { useNotifications } from "./NotificationsPanel";
-import HomeSectionTabs from "./HomeSectionTabs";
 import { useGreeting } from "./DashboardHeader";
 import { useProfile } from "@/hooks/useProfile";
 
@@ -166,12 +165,10 @@ const BalanceHeroCard = ({ topInset = 0, slot, pinned = true }: Props) => {
             section pills sit last, landing directly above the first card. */}
         {slot ?? <div className="h-[160px]" aria-hidden="true" />}
 
-        {/* Tight under whatever is being read out. The pills were sitting a full line
-            below it and a hair above the first card, which left a band of nothing in the
-            middle of the screen doing no work. */}
-        <div className="mt-3 pb-4">
-          <HomeSectionTabs />
-        </div>
+        {/* The pills that stood here have gone to the feed, as two tiles. The room
+            they took stays: it is the gap between what is being read out and the
+            first card, and closing it would pull the whole page up by a line. */}
+        <div className="mt-3 h-10 pb-4" aria-hidden="true" />
       </div>
 
       {/* Holds the room the pinned block would have taken, so the first card starts
