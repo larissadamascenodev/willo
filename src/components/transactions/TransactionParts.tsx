@@ -2,7 +2,9 @@ import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motio
 import { ArrowDownLeft, ArrowUpRight, CreditCard, Pencil, RefreshCw, Trash2, Wallet } from "lucide-react";
 import type { CustomCategory } from "@/services/categoryService";
 import { useLongPress } from "@/hooks/useLongPress";
-import { getCategoryColor, getCategoryIcon } from "@/lib/categoryUtils";
+import { getCategoryIcon, getCategoryHexColor } from "@/lib/categoryUtils";
+import { hexFor } from "@/lib/banks";
+import { chipFill, chipInk } from "@/lib/chipColor";
 import { getCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
@@ -50,7 +52,14 @@ export const formatDateHeader = (dateStr: string, today = new Date()) => {
   return { label, isToday };
 };
 
-/** Balance with income and expenses underneath (mobile header of Transações). */
+/**
+ * The month, read out on the page itself.
+ *
+ * There is no card around it: a figure this size is already the loudest thing on the
+ * screen, and a panel behind it only adds an edge for the eye to stop at. The two
+ * flows sit under it on one shared scale, so which side is bigger is answered before
+ * either number is read.
+ */
 export const TransactionsSummaryCard = ({ saldoAtual, saldoPrevisto, receitas, despesas, className }: {
   saldoAtual: number;
   saldoPrevisto: number;
@@ -61,36 +70,36 @@ export const TransactionsSummaryCard = ({ saldoAtual, saldoPrevisto, receitas, d
   <motion.div
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
-    className={cn("rounded-[22px] border border-white/[0.08] willo-glass px-4 pb-4 pt-3.5", className)}
+    className={cn("px-1", className)}
   >
     <p className="text-[11px] font-semibold uppercase tracking-[0.13em] t-softer">Saldo em contas</p>
     <p className={cn(
-      "mt-1.5 truncate text-[30px] font-extrabold leading-none tracking-[-0.03em] tabular-nums",
+      "mt-1.5 truncate text-[38px] font-extrabold leading-none tracking-[-0.04em] tabular-nums",
       saldoAtual < 0 ? "text-red-400" : "text-white",
     )}>
       {fmt(saldoAtual)}
     </p>
     {saldoPrevisto !== saldoAtual && (
-      <p className="mt-2 truncate text-[13px] t-soft">
+      <p className="mt-2.5 truncate text-[12.5px] t-soft">
         Previsto no fim do mês:{" "}
         <span className="font-semibold tabular-nums text-white/80">{fmt(saldoPrevisto)}</span>
       </p>
     )}
 
     {/* Both on one scale, the way the dashboard draws them, so the two pages agree */}
-    <div className="mt-4 space-y-3 border-t border-white/[0.07] pt-4">
+    <div className="mt-5 space-y-3.5">
       {([
         { label: "Entrada", value: receitas, tone: "in" as const },
         { label: "Saída", value: despesas, tone: "out" as const },
       ]).map(({ label, value, tone }, i) => (
         <div key={label}>
           <div className="flex items-baseline justify-between gap-3">
-            <span className="text-[13.5px] font-medium text-white">{label}</span>
-            <span className={cn("shrink-0 text-[14px] font-semibold tabular-nums", tone === "in" ? "text-white" : "text-red-400")}>
+            <span className="text-[13px] t-soft">{label}</span>
+            <span className={cn("shrink-0 text-[14.5px] font-bold tabular-nums", tone === "in" ? "text-white" : "text-red-400")}>
               {tone === "out" ? "−" : ""}{fmt(value)}
             </span>
           </div>
-          <div className="mt-1.5 h-[5px] overflow-hidden rounded-full bg-white/[0.06]">
+          <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-white/[0.07]">
             <motion.span
               className={cn("block h-full rounded-full", tone === "in" ? "bg-willo-green" : "bg-red-400")}
               initial={{ width: 0 }}
@@ -106,7 +115,7 @@ export const TransactionsSummaryCard = ({ saldoAtual, saldoPrevisto, receitas, d
 
 /** Todas / Receitas / Despesas. */
 export const TransactionTabs = ({ value, onChange, layoutId = "tx-tab-pill" }: { value: TabFilter; onChange: (v: TabFilter) => void; layoutId?: string }) => (
-  <div className="grid flex-1 grid-cols-3 isolate rounded-full border border-white/[0.07] bg-white/[0.04] p-1">
+  <div className="grid flex-1 grid-cols-3 isolate rounded-full border border-white/[0.06] bg-white/[0.035] p-1">
     {([
       { key: "todos" as TabFilter, label: "Todas" },
       { key: "receita" as TabFilter, label: "Receitas" },
@@ -115,7 +124,7 @@ export const TransactionTabs = ({ value, onChange, layoutId = "tx-tab-pill" }: {
       <button
         key={tab.key}
         onClick={() => onChange(tab.key)}
-        className="relative h-10 rounded-full text-[13.5px] font-semibold"
+        className="relative h-[38px] rounded-full text-[13px] font-semibold"
       >
         {value === tab.key && (
           <motion.span
@@ -160,35 +169,18 @@ export const TransactionListItem = ({
   const isInitialBalance = tx.id.startsWith("initial-balance-");
 
   let CatIcon = getCategoryIcon(tx.category, customCategories);
-  let catColor = getCategoryColor(tx.category, customCategories);
+  if (isFatura) CatIcon = CreditCard;
+  else if (isInitialBalance) CatIcon = Wallet;
 
-  if (isFatura) {
-    CatIcon = CreditCard;
-    const card = creditCards?.find((c: any) => c.id === tx.credit_card_id);
-    if (card?.color) {
-      // Convert hex to HSL for consistency
-      const hex = card.color;
-      const r = parseInt(hex.slice(1, 3), 16) / 255;
-      const g = parseInt(hex.slice(3, 5), 16) / 255;
-      const b = parseInt(hex.slice(5, 7), 16) / 255;
-      const max = Math.max(r, g, b), min = Math.min(r, g, b);
-      let h = 0, s = 0;
-      const l = (max + min) / 2;
-      if (max !== min) {
-        const d = max - min;
-        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-        if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-        else if (max === g) h = ((b - r) / d + 2) / 6;
-        else h = ((r - g) / d + 4) / 6;
-      }
-      catColor = `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-    } else {
-      catColor = "260 70% 60%"; // fallback purple
-    }
-  } else if (isInitialBalance) {
-    CatIcon = Wallet;
-    catColor = "210 80% 55%"; // blue
-  }
+  /* The disc takes the same colour the rest of the app gives this thing — the
+     category's own, the card's own, blue for an opening balance — so a row here and a
+     row inside an invoice are recognisably the same kind of object. */
+  const discHex = isFatura
+    ? hexFor(creditCards?.find((c: any) => c.id === tx.credit_card_id)?.color, "#A855F7")
+    : isInitialBalance
+      ? "#3B82F6"
+      : getCategoryHexColor(tx.category, customCategories);
+
   const isRecurring = tx.recurrence_type === "fixa" || (tx.installments && tx.installments > 1);
   const isPending = tx.status !== "pago";
 
@@ -225,7 +217,7 @@ export const TransactionListItem = ({
         dragElastic={0.3}
         onDragEnd={handleDragEnd}
         style={{ x }}
-        className="relative flex cursor-grab items-center gap-3.5 px-4 py-3.5 active:cursor-grabbing willo-glass"
+        className="relative flex cursor-grab items-center gap-3.5 px-4 py-3.5 active:cursor-grabbing"
         onPointerDownCapture={onLongPress ? press.onPointerDown : undefined}
         onPointerMove={onLongPress ? press.onPointerMove : undefined}
         onPointerUp={onLongPress ? press.onPointerUp : undefined}
@@ -239,16 +231,16 @@ export const TransactionListItem = ({
         {/* The pending dot is gone: the status is already written under the amount,
             and a bare dot on the icon says nothing on its own. */}
         <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-          style={{ background: `hsl(${catColor} / 0.15)` }}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+          style={{ background: chipFill(discHex) }}
         >
-          <CatIcon className="h-[17px] w-[17px]" style={{ color: `hsl(${catColor})` }} />
+          <CatIcon className="h-[18px] w-[18px]" style={{ color: chipInk(discHex) }} />
         </div>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <p className="truncate text-[14.5px] font-medium text-white">{tx.name}</p>
+            <p className="truncate text-[15px] font-medium text-white">{tx.name}</p>
             {isRecurring && <RefreshCw className="h-3 w-3 shrink-0 t-faint" />}
           </div>
           <p className="mt-0.5 truncate text-[12px] t-softer">
@@ -261,7 +253,7 @@ export const TransactionListItem = ({
 
         {/* Amount + status tag */}
         <div className="shrink-0 text-right">
-          <p className={cn("text-[14.5px] font-semibold tabular-nums", isReceita ? "text-willo-green-ink" : "text-white")}>
+          <p className={cn("text-[15px] font-semibold tabular-nums", isReceita ? "text-willo-green-ink" : "text-white")}>
             {isReceita ? "+" : "−"}{fmt(tx.amount)}
           </p>
           <span className={cn("mt-0.5 block text-[11.5px]", isPending ? "text-amber-300/90" : "t-softer")}>

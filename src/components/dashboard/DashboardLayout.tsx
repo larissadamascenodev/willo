@@ -9,6 +9,7 @@ import MobileBottomNav from "@/components/dashboard/MobileBottomNav";
 import { useProfile } from "@/hooks/useProfile";
 import { useLoginStreak } from "@/hooks/useLoginStreak";
 import { MonthProvider } from "@/contexts/MonthContext";
+import { cn } from "@/lib/utils";
 import NovaTransacaoModal, { type PrefillData, type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
 import TransferModal from "@/components/dashboard/TransferModal";
 import type { ExtractedItem } from "@/components/fatura/InvoiceUploadReviewModal";
@@ -57,6 +58,9 @@ const PAGES_WITHOUT_BACK = new Set([
 
 /** Screens that stand on the sky rather than on the working charcoal. */
 const SKY_PAGES = new Set(["/", "/cartoes", "/gestao"]);
+
+/** Screens that are mostly a list, where the ground is turned down instead. */
+const DIM_PAGES = new Set(["/transacoes"]);
 
 
 const DashboardLayout = () => {
@@ -373,7 +377,11 @@ const DashboardLayout = () => {
         // work in, and the cards sit badly on flat charcoal — a grey ground beside a
         // purple card reads as something unfinished. Everywhere else a picture would sit
         // behind a working header.
-        className={`willo-bg min-h-screen text-foreground${SKY_PAGES.has(location.pathname) ? " willo-sky" : ""}`}
+        className={cn(
+          "willo-bg min-h-screen text-foreground",
+          SKY_PAGES.has(location.pathname) && "willo-sky",
+          DIM_PAGES.has(location.pathname) && "willo-dim",
+        )}
         style={showOnboarding ? { display: "none" } : undefined}
       >
         {/* Only the home pins a header for content to dissolve under. On every other

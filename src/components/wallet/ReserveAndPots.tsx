@@ -6,11 +6,17 @@ import { toast } from "sonner";
 import GoalCreateModal from "@/components/goals/GoalCreateModal";
 import { createGoal, RESERVE_NAME, isReserveGoal, type Goal } from "@/services/goalService";
 import { useAuth } from "@/contexts/AuthContext";
-
 import { getCurrency } from "@/lib/currency";
-const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency(), maximumFractionDigits: 0 });
+import { shade } from "@/lib/tone";
+import { cn } from "@/lib/utils";
+
+const fmt = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency(), maximumFractionDigits: 0 });
 
 export { RESERVE_NAME, isReserveGoal };
+
+const RESERVE_HEX = "#C8F36D";
+const POTS_HEX = "#7DD3FC";
 
 interface Props {
   goals: Goal[];
@@ -19,12 +25,91 @@ interface Props {
   onCreated: () => void;
 }
 
+/** A line, in the shape the accounts above it use. */
+function SavedRow({ hex, icon: Icon, title, subtitle, amount, progress, empty, index, onOpen }: {
+  hex: string;
+  icon: typeof ShieldCheck;
+  title: string;
+  subtitle: string;
+  amount: number | null;
+  /** 0–1, when the thing being saved towards has a target. */
+  progress?: number;
+  empty: boolean;
+  index: number;
+  onOpen: () => void;
+}) {
+  return (
+    <motion.button
+      type="button"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.04 + index * 0.05, duration: 0.35 }}
+      onClick={onOpen}
+      className="w-full px-1 py-4 text-left transition-opacity active:opacity-60"
+    >
+      <div className="flex items-center gap-3.5">
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px]"
+          style={{
+            background: `linear-gradient(145deg, ${shade(hex, 0.18)} 0%, ${hex} 58%, ${shade(hex, -0.26)} 100%)`,
+            boxShadow: `0 10px 22px -12px ${hex}, inset 0 1px 0 rgb(255 255 255 / 0.3)`,
+          }}
+        >
+          <Icon className="h-[18px] w-[18px] text-[#101014]" strokeWidth={2.4} />
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span className="truncate text-[15.5px] font-semibold text-white">{title}</span>
+          <span className="mt-0.5 block truncate text-[12px] t-softer">{subtitle}</span>
+        </span>
+
+        {empty ? (
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.07] text-white/70">
+            <Plus className="h-4 w-4" strokeWidth={2.4} />
+          </span>
+        ) : (
+          <span className="shrink-0 text-right">
+            <span className={cn(
+              "block text-[15.5px] font-bold tabular-nums",
+              amount && amount > 0 ? "text-white" : "t-softer",
+            )}>
+              {fmt(amount ?? 0)}
+            </span>
+            {progress !== undefined && (
+              <span className="mt-0.5 block text-[12px] tabular-nums" style={{ color: shade(hex, 0.3) }}>
+                {Math.round(Math.min(progress, 1) * 100)}%
+              </span>
+            )}
+          </span>
+        )}
+
+        {!empty && <ChevronRight className="h-4 w-4 shrink-0 t-faint" />}
+      </div>
+
+      {progress !== undefined && !empty && (
+        <div className="ml-[54px] mt-2.5 h-[4px] overflow-hidden rounded-full bg-white/[0.08]">
+          <motion.span
+            className="block h-full rounded-full"
+            style={{ background: hex }}
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(progress, 1) * 100}%` }}
+            transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+          />
+        </div>
+      )}
+    </motion.button>
+  );
+}
+
 /**
- * Reserve and pots, side by side and kept separate: a cofrinho is a goal like any
- * other and shows up in Metas too, while the reserve is its own reserved thing.
- * Both share the same modern creation sheet, just with a different starting preset.
+ * Reserve and pots, as two lines rather than two cards.
+ *
+ * They sit under a list of accounts and are the same kind of thing — a name, a figure,
+ * somewhere to go — so they are written the same way. A cofrinho is a goal like any
+ * other and shows up in Metas too; the reserve is its own reserved thing, which is why
+ * it keeps its own line and its own progress.
  */
-const ReserveAndPots = ({ goals, essentialMonthly = 0, onCreated }: Props) => {
+const ReserveAndPots = ({ goals, onCreated }: Props) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const reserve = goals.find(isReserveGoal) ?? null;
@@ -52,65 +137,42 @@ const ReserveAndPots = ({ goals, essentialMonthly = 0, onCreated }: Props) => {
     }
   };
 
-  const reserveProgress = reserve && reserve.target_amount > 0 ? Number(reserve.current_amount) / reserve.target_amount : 0;
+  const reserveProgress =
+    reserve && reserve.target_amount > 0 ? Number(reserve.current_amount) / reserve.target_amount : 0;
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-2.5">
-        {/* Emergency reserve */}
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={() => (reserve ? navigate(`/metas/${reserve.id}`) : openCreate("reserva"))}
-          className="flex min-h-[148px] flex-col rounded-[22px] border border-white/[0.08] willo-glass p-4 text-left"
-        >
-          <div className="flex items-center justify-between">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-willo-green/15">
-              <ShieldCheck className="h-[18px] w-[18px] text-willo-green-ink" />
-            </span>
-            {reserve ? <ChevronRight className="h-4 w-4 t-faint" /> : <Plus className="h-4 w-4 t-soft" />}
-          </div>
-          <p className="mt-auto text-[13px] text-white/66">Reserva de emergência</p>
-          {reserve ? (
-            <>
-              <p className="truncate text-[20px] font-extrabold leading-tight tracking-tight text-white tabular-nums">
-                {fmt(Number(reserve.current_amount))}
-              </p>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
-                <div className="h-full rounded-full bg-willo-green" style={{ width: `${Math.min(reserveProgress, 1) * 100}%` }} />
-              </div>
-              <p className="mt-1.5 truncate text-[11px] t-soft tabular-nums">
-                {Math.round(Math.min(reserveProgress, 1) * 100)}% de {fmt(reserve.target_amount)}
-              </p>
-            </>
-          ) : (
-            <p className="mt-1 text-[12.5px] leading-snug text-white/62">Guarde uma parte para imprevistos</p>
-          )}
-        </motion.button>
+      <div className="divide-y divide-white/[0.06]">
+        <SavedRow
+          index={0}
+          hex={RESERVE_HEX}
+          icon={ShieldCheck}
+          title="Reserva de emergência"
+          subtitle={
+            reserve
+              ? `de ${fmt(Number(reserve.target_amount))}`
+              : "Guarde uma parte para imprevistos"
+          }
+          amount={reserve ? Number(reserve.current_amount) : null}
+          progress={reserve ? reserveProgress : undefined}
+          empty={!reserve}
+          onOpen={() => (reserve ? navigate(`/metas/${reserve.id}`) : openCreate("reserva"))}
+        />
 
-        {/* Pots */}
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={() => (pots.length > 0 ? navigate("/metas") : openCreate())}
-          className="flex min-h-[148px] flex-col rounded-[22px] border border-white/[0.08] willo-glass p-4 text-left"
-        >
-          <div className="flex items-center justify-between">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#7DD3FC]/15">
-              <PiggyBank className="h-[18px] w-[18px] text-[#7DD3FC]" />
-            </span>
-            {pots.length > 0 ? <ChevronRight className="h-4 w-4 t-faint" /> : <Plus className="h-4 w-4 t-soft" />}
-          </div>
-          <p className="mt-auto text-[13px] text-white/66">Cofrinhos</p>
-          {pots.length > 0 ? (
-            <>
-              <p className="truncate text-[20px] font-extrabold leading-tight tracking-tight text-white tabular-nums">{fmt(potsTotal)}</p>
-              <p className="mt-2 truncate text-[11px] t-soft">
-                {pots.length} {pots.length === 1 ? "cofrinho" : "cofrinhos"} · {pots[0].name}
-              </p>
-            </>
-          ) : (
-            <p className="mt-1 text-[12.5px] leading-snug text-white/62">Crie um cofrinho para cada objetivo</p>
-          )}
-        </motion.button>
+        <SavedRow
+          index={1}
+          hex={POTS_HEX}
+          icon={PiggyBank}
+          title="Cofrinhos"
+          subtitle={
+            pots.length > 0
+              ? `${pots.length} ${pots.length === 1 ? "cofrinho" : "cofrinhos"} · ${pots[0].name}`
+              : "Um cofrinho para cada objetivo"
+          }
+          amount={pots.length > 0 ? potsTotal : null}
+          empty={pots.length === 0}
+          onOpen={() => (pots.length > 0 ? navigate("/metas") : openCreate())}
+        />
       </div>
 
       <GoalCreateModal

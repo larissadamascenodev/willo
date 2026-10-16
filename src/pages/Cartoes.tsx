@@ -146,19 +146,27 @@ const Cartoes = () => {
       if (frame) return;
       frame = requestAnimationFrame(() => {
         frame = 0;
-        setProgress(Math.min(Math.max(window.scrollY / PIN_TRAVEL, 0), 1));
+        /* A page with barely anything below the fold should not recede at all: a few
+           pixels of scroll were enough to blur the total, which made a page that
+           fits look broken. The travel is whatever room there actually is. */
+        const room = document.documentElement.scrollHeight - window.innerHeight;
+        if (room < 80) { setProgress(0); return; }
+        const travel = Math.min(PIN_TRAVEL, room);
+        setProgress(Math.min(Math.max(window.scrollY / travel, 0), 1));
       });
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
     return () => {
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
       if (frame) cancelAnimationFrame(frame);
     };
   }, []);
 
   return (
-    <div className="mx-auto max-w-lg pb-28 pt-4">
+    <div className="mx-auto max-w-lg pb-10 pt-4">
       {/* Over the pinned summary as it leaves, like the cards. */}
       <div className="relative z-20 flex h-11 items-center">
         {/* Cartões is a page off the dashboard, and that is where back goes. */}
