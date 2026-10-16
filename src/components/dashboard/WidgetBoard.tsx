@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown, ArrowUp, Check, Maximize2, Minimize2, Plus, X } from "lucide-react";
+import { Check, ChevronsLeftRight, ChevronsRightLeft, Plus, X } from "lucide-react";
 import BottomSheet from "@/components/shared/BottomSheet";
 import WidgetMenu, { type WidgetMenuTarget } from "./WidgetMenu";
 import { useLongPress } from "@/hooks/useLongPress";
@@ -42,17 +42,33 @@ export default function WidgetBoard({ userId, render }: Props) {
     saveLayout(userId, next);
   }, [userId]);
 
-  const move = (id: string, delta: -1 | 1) => {
-    const i = slots.findIndex((s) => s.id === id);
-    const j = i + delta;
-    if (i < 0 || j < 0 || j >= slots.length) return;
-    const next = [...slots];
-    [next[i], next[j]] = [next[j], next[i]];
-    commit(next);
-  };
+  /* Where each card is right now, so a dragged one knows what it is over. */
+  const frames = useRef(new Map<string, HTMLDivElement>());
+  const registerRef = useCallback((id: string, el: HTMLDivElement | null) => {
+    if (el) frames.current.set(id, el);
+    else frames.current.delete(id);
+  }, []);
 
-  const resize = (id: string) => {
-    commit(slots.map((s) => (s.id === id ? { ...s, size: s.size === "full" ? "half" : "full" } : s)));
+  /* Dragging moves the order, not the card: whatever is under the finger changes
+     places with it, and the layout animation carries everything to its new seat. */
+  const dragTo = (id: string, x: number, y: number) => {
+    let overId: string | null = null;
+    frames.current.forEach((el, key) => {
+      if (key === id) return;
+      const r = el.getBoundingClientRect();
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) overId = key;
+    });
+    if (!overId) return;
+    setSlots((current) => {
+      const from = current.findIndex((s) => s.id === id);
+      const to = current.findIndex((s) => s.id === overId);
+      if (from < 0 || to < 0 || from === to) return current;
+      const next = [...current];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      saveLayout(userId, next);
+      return next;
+    });
   };
 
   const remove = (id: string) => {
@@ -109,7 +125,7 @@ export default function WidgetBoard({ userId, render }: Props) {
               className="flex items-center gap-3 rounded-full border border-white/[0.10] py-1.5 pl-5 pr-1.5 backdrop-blur-xl"
               style={{ background: "rgba(16,16,19,0.82)" }}
             >
-              <span className="text-[14px] font-semibold text-white">Editando a tela</span>
+              <span className="text-[14px] font-semibold text-white">Arraste para mover</span>
               <button
                 type="button"
                 onClick={() => setEditing(false)}
@@ -130,8 +146,6 @@ export default function WidgetBoard({ userId, render }: Props) {
                 key={slot.id}
                 slot={slot}
                 editing={editing}
-                first={slots[0]?.id === slot.id}
-                last={slots[slots.length - 1]?.id === slot.id}
                 onHold={(rect) => {
                   if (editing) return;
                   const def = widgetById(slot.id);
@@ -145,9 +159,10 @@ export default function WidgetBoard({ userId, render }: Props) {
                     rect,
                   });
                 }}
-                onMove={(d) => move(slot.id, d)}
-                onResize={() => resize(slot.id)}
+                onDragTo={dragTo}
+                onResize={(size) => setSize(slot.id, size)}
                 onRemove={() => remove(slot.id)}
+                registerRef={registerRef}
               >
                 {render(slot.id, slot.size)}
               </WidgetFrame>
@@ -212,22 +227,23 @@ export default function WidgetBoard({ userId, render }: Props) {
   );
 }
 
-/** One card on the board: held to open its options, and in edit mode, its controls. */
-function WidgetFrame({ slot, editing, first, last, children, onHold, onMove, onResize, onRemove }: {
+/** One card on the board: held to open its menu, and in edit mode, moved by hand. */
+function WidgetFrame({ slot, editing, children, onHold, onDragTo, onResize, onRemove, registerRef }: {
   slot: WidgetSlot;
   editing: boolean;
-  first: boolean;
-  last: boolean;
   children: ReactNode;
   onHold: (rect: { top: number; bottom: number; left: number; width: number }) => void;
-  onMove: (delta: -1 | 1) => void;
-  onResize: () => void;
+  /** Where the finger is, so the board can decide what this card is now over. */
+  onDragTo: (id: string, x: number, y: number) => void;
+  onResize: (size: WidgetSize) => void;
   onRemove: () => void;
+  registerRef: (id: string, el: HTMLDivElement | null) => void;
 }) {
   /* The hook swallows the tap for an element it wraps; here the card is a child that
      owns its own click, so the tap after a hold is caught on the way down instead. */
   const fired = useRef(false);
-  const box = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLDivElement | null>(null);
+  const [dragging, setDragging] = useState(false);
   const press = useLongPress(() => {
     fired.current = true;
     const r = box.current?.getBoundingClientRect();
@@ -236,7 +252,26 @@ function WidgetFrame({ slot, editing, first, last, children, onHold, onMove, onR
   const def = widgetById(slot.id);
 
   return (
-    <motion.div ref={box} layout transition={{ type: "spring", stiffness: 420, damping: 36 }} className="relative min-w-0">
+    <motion.div
+      ref={(el) => { box.current = el; registerRef(slot.id, el); }}
+      layout
+      transition={{ type: "spring", stiffness: 420, damping: 36 }}
+      /* Dragged by hand in edit mode, and it springs back to wherever the board has
+         since put it — the card does not travel, the order does. */
+      drag={editing}
+      dragSnapToOrigin
+      dragElastic={0.14}
+      dragMomentum={false}
+      onDragStart={() => setDragging(true)}
+      onDrag={(e) => {
+        const p = e as PointerEvent;
+        onDragTo(slot.id, p.clientX, p.clientY);
+      }}
+      onDragEnd={() => setDragging(false)}
+      animate={{ scale: dragging ? 1.04 : 1 }}
+      style={{ zIndex: dragging ? 40 : undefined, cursor: editing ? "grab" : undefined }}
+      className={cn("relative min-w-0", dragging && "cursor-grabbing")}
+    >
       <div
         onPointerDown={editing ? undefined : press.onPointerDown}
         onPointerMove={editing ? undefined : press.onPointerMove}
@@ -251,7 +286,7 @@ function WidgetFrame({ slot, editing, first, last, children, onHold, onMove, onR
           e.stopPropagation();
         }}
         className={cn(editing && "pointer-events-none select-none")}
-        style={editing ? { filter: "saturate(0.85)" } : undefined}
+        style={editing ? { filter: "saturate(0.9)" } : undefined}
       >
         {children}
       </div>
@@ -259,7 +294,6 @@ function WidgetFrame({ slot, editing, first, last, children, onHold, onMove, onR
       <AnimatePresence>
         {editing && (
           <>
-            {/* The controls sit over the card, which is not tappable while they are up. */}
             <motion.button
               type="button"
               initial={{ opacity: 0, scale: 0.7 }}
@@ -272,48 +306,35 @@ function WidgetFrame({ slot, editing, first, last, children, onHold, onMove, onR
               <X className="h-4 w-4" strokeWidth={3} />
             </motion.button>
 
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 6 }}
-              className="absolute inset-x-2 bottom-2 z-20 flex items-center justify-center gap-1.5"
-            >
-              <Ctl icon={ArrowUp} disabled={first} onClick={() => onMove(-1)} label="Mover para cima" />
-              <Ctl icon={ArrowDown} disabled={last} onClick={() => onMove(1)} label="Mover para baixo" />
-              {def?.resizable && (
-                <Ctl
-                  icon={slot.size === "full" ? Minimize2 : Maximize2}
-                  onClick={onResize}
-                  label={slot.size === "full" ? "Deixar menor" : "Ocupar a linha"}
-                />
-              )}
-            </motion.div>
+            {/* The grip, in the corner where a card is resized: pull it across, or
+                tap it, and the card takes the other width. */}
+            {def?.resizable && (
+              <motion.button
+                type="button"
+                initial={{ opacity: 0, scale: 0.7 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.7 }}
+                drag="x"
+                dragSnapToOrigin
+                dragElastic={0.2}
+                dragMomentum={false}
+                onDragEnd={(_, info) => {
+                  if (info.offset.x > 26) onResize("full");
+                  else if (info.offset.x < -26) onResize("half");
+                }}
+                onClick={() => onResize(slot.size === "full" ? "half" : "full")}
+                aria-label={slot.size === "full" ? "Deixar menor" : "Ocupar a linha"}
+                className="absolute -bottom-1.5 -right-1.5 z-20 flex h-8 w-8 cursor-ew-resize items-center justify-center rounded-full border border-white/[0.14] text-white backdrop-blur-xl"
+                style={{ background: "rgba(16,16,19,0.9)" }}
+              >
+                {slot.size === "full"
+                  ? <ChevronsLeftRight className="h-[15px] w-[15px]" strokeWidth={2.4} />
+                  : <ChevronsRightLeft className="h-[15px] w-[15px]" strokeWidth={2.4} />}
+              </motion.button>
+            )}
           </>
         )}
       </AnimatePresence>
     </motion.div>
-  );
-}
-
-function Ctl({ icon: Icon, onClick, disabled, label }: {
-  icon: typeof ArrowUp;
-  onClick: () => void;
-  disabled?: boolean;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-      className={cn(
-        "flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.12] backdrop-blur-xl transition-opacity",
-        disabled ? "opacity-25" : "active:scale-95",
-      )}
-      style={{ background: "rgba(16,16,19,0.86)" }}
-    >
-      <Icon className="h-4 w-4 text-white" strokeWidth={2.4} />
-    </button>
   );
 }

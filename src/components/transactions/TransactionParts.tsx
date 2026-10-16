@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 import { ArrowDownLeft, ArrowUpRight, CreditCard, Pencil, RefreshCw, Trash2, Wallet } from "lucide-react";
 import type { CustomCategory } from "@/services/categoryService";
@@ -8,6 +8,7 @@ import { hexFor } from "@/lib/banks";
 import { chipFill, chipInk } from "@/lib/chipColor";
 import { getCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
+import type { AnchorRect } from "@/components/shared/AnchoredMenu";
 
 /*
  * The visual pieces of the Transações page, kept apart from its data loading
@@ -156,10 +157,14 @@ export const TransactionListItem = ({
   onEdit: (tx: TransactionRow) => void;
   customCategories?: CustomCategory[];
   creditCards?: any[];
-  /** Hold a row to choose between editing and removing it. */
-  onLongPress?: (tx: TransactionRow) => void;
+  /** Hold a row to choose between editing and removing it; the menu opens beside it. */
+  onLongPress?: (tx: TransactionRow, rect: AnchorRect) => void;
 }) => {
-  const press = useLongPress(() => onLongPress?.(tx));
+  const box = useRef<HTMLDivElement>(null);
+  const press = useLongPress(() => {
+    const r = box.current?.getBoundingClientRect();
+    onLongPress?.(tx, r ? { top: r.top, bottom: r.bottom, left: r.left, width: r.width } : { top: 100, bottom: 160, left: 16, width: 320 });
+  });
   const x = useMotionValue(0);
   /* The row is see-through where it sits, so it reads as type on the page rather than
      as a card. It only takes a ground while it is being swiped — without one you
@@ -201,7 +206,7 @@ export const TransactionListItem = ({
   return (
     // Rounded, so the ground that appears under a swipe has the shape of a row
     // rather than of a rectangle cut out of the page.
-    <div className="relative overflow-hidden rounded-[18px]">
+    <div ref={box} className="relative overflow-hidden rounded-[18px]">
       {/* Background actions */}
       <div className="absolute inset-0 flex">
         <motion.div

@@ -1,42 +1,32 @@
 import { Pencil, Trash2 } from "lucide-react";
-import BottomSheet from "./BottomSheet";
+import AnchoredMenu, { MenuRow, type AnchorRect } from "./AnchoredMenu";
 
 /**
  * What a held item offers. Editing and removing live here rather than as buttons on
  * the thing itself: a list of rows each carrying two controls is a toolbar, and the
  * two actions are rare enough to be worth a deliberate gesture.
+ *
+ * It opens beside what is held, over a blurred page, the way the home screen's cards
+ * do — the gesture is the same, so the answer to it should look the same.
  */
-export default function HoldActions({ open, title, subtitle, onClose, onEdit, onDelete }: {
+export default function HoldActions({ open, title, subtitle, anchor, onClose, onEdit, onDelete }: {
   open: boolean;
   title: string;
   subtitle?: string;
+  /** Where the held row is. Without one the menu sits in the middle of the screen. */
+  anchor?: AnchorRect | null;
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   return (
-    <BottomSheet open={open} onClose={onClose} zIndex={74}>
-      <div className="px-5 pb-2">
-        <p className="truncate text-[17px] font-bold text-white">{title}</p>
-        {subtitle && <p className="mt-0.5 truncate text-[13px] t-soft">{subtitle}</p>}
-
-        <div className="mt-4 space-y-2.5">
-          <button
-            type="button"
-            onClick={onEdit}
-            className="flex h-[52px] w-full items-center gap-3 rounded-[20px] border border-white/[0.08] bg-white/[0.04] px-4 text-left text-[15px] font-semibold text-white active:opacity-75"
-          >
-            <Pencil className="h-[18px] w-[18px] t-soft" strokeWidth={2.1} /> Editar
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="flex h-[52px] w-full items-center gap-3 rounded-[20px] border border-red-400/20 bg-red-400/[0.08] px-4 text-left text-[15px] font-semibold text-red-400 active:opacity-75"
-          >
-            <Trash2 className="h-[18px] w-[18px]" strokeWidth={2.1} /> Excluir
-          </button>
-        </div>
+    <AnchoredMenu open={open} anchor={anchor} onClose={onClose}>
+      <div className="border-b border-white/[0.08] px-4 pb-2.5 pt-3">
+        <p className="truncate text-[13.5px] font-semibold text-white">{title}</p>
+        {subtitle && <p className="mt-0.5 truncate text-[11.5px] t-softer">{subtitle}</p>}
       </div>
-    </BottomSheet>
+      <MenuRow icon={Pencil} label="Editar" onClick={onEdit} />
+      <MenuRow icon={Trash2} label="Excluir" danger onClick={onDelete} />
+    </AnchoredMenu>
   );
 }

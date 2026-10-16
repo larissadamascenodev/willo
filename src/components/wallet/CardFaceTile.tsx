@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { motion } from "framer-motion";
 import { useLongPress } from "@/hooks/useLongPress";
 import { getCurrency } from "@/lib/currency";
@@ -67,15 +68,20 @@ export default function CardFaceTile({
   status: { label: string; isClosed: boolean };
   index: number;
   onOpen: () => void;
-  onHold: () => void;
+  onHold: (rect: { top: number; bottom: number; left: number; width: number }) => void;
 }) {
-  const press = useLongPress(onHold);
+  const box = useRef<HTMLDivElement>(null);
+  const press = useLongPress(() => {
+    const r = box.current?.getBoundingClientRect();
+    onHold(r ? { top: r.top, bottom: r.bottom, left: r.left, width: r.width } : { top: 100, bottom: 240, left: 16, width: 320 });
+  });
   const usedPct = card.limit > 0 ? Math.min((card.used / card.limit) * 100, 100) : 0;
   const available = Math.max(card.limit - card.used, 0);
   const freeTone = shade(hex, 0.58);
 
   return (
     <motion.div
+      ref={box}
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.07, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}

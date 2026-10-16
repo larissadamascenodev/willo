@@ -25,6 +25,7 @@ import TransactionTypeChooser from "@/components/dashboard/TransactionTypeChoose
 import CardEntryModal from "@/components/fatura/CardEntryModal";
 import FaturaDetailModal from "@/components/fatura/FaturaDetailModal";
 import HoldActions from "@/components/shared/HoldActions";
+import type { AnchorRect } from "@/components/shared/AnchoredMenu";
 import { TransactionListItem, TransactionTabs, TransactionsSummaryCard, formatDateHeader, type TabFilter, type TransactionRow } from "@/components/transactions/TransactionParts";
 import type { DashboardData } from "@/types/finance";
 
@@ -125,6 +126,8 @@ const Transacoes = () => {
   const [detailTx, setDetailTx] = useState<TransactionRow | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [heldTx, setHeldTx] = useState<TransactionRow | null>(null);
+  /* Where the held row sits, so its menu opens beside it rather than in the middle. */
+  const [heldRect, setHeldRect] = useState<AnchorRect | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TransactionRow | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [faturaDetailTx, setFaturaDetailTx] = useState<TransactionRow | null>(null);
@@ -702,7 +705,7 @@ const Transacoes = () => {
                         onDelete={handleDelete}
                         customCategories={customCategories}
                         creditCards={creditCards}
-                        onLongPress={setHeldTx}
+                        onLongPress={(t, rect) => { setHeldTx(t); setHeldRect(rect); }}
                         onEdit={(t) => {
                           if (t.id.startsWith("initial-balance-")) {
                             toast.info("Esse item mostra quando a conta foi criada com saldo inicial.");
@@ -736,6 +739,7 @@ const Transacoes = () => {
       {/* Editing reuses the very form that creates a transaction */}
       <HoldActions
         open={!!heldTx}
+        anchor={heldRect}
         title={heldTx?.name ?? ""}
         subtitle={heldTx?.category}
         onClose={() => setHeldTx(null)}

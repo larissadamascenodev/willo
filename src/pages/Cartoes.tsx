@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { CreditCard, Plus } from "lucide-react";
 import BackButton from "@/components/shared/BackButton";
 import HoldActions from "@/components/shared/HoldActions";
+import type { AnchorRect } from "@/components/shared/AnchoredMenu";
 import CardCreateSheet from "@/components/wallet/CardCreateSheet";
 import CreditCardEditModal from "@/components/fatura/CreditCardEditModal";
 import CardFaceTile, { FREE_LIMIT_HEX, USED_LIMIT_HEX } from "@/components/wallet/CardFaceTile";
@@ -49,6 +50,8 @@ const Cartoes = () => {
   const { cards, invoices, installments, items, loading, refresh } = useCardsOverview();
   const [showAddCard, setShowAddCard] = useState(false);
   const [heldCard, setHeldCard] = useState<OverviewCard | null>(null);
+  /* Where the held card sits, so its menu opens beside it. */
+  const [heldRect, setHeldRect] = useState<AnchorRect | null>(null);
   const [editingCard, setEditingCard] = useState<any | null>(null);
 
   const rows = useMemo<CardRow[]>(() => {
@@ -351,7 +354,7 @@ const Cartoes = () => {
                 owed={r.total}
                 status={r.status}
                 onOpen={() => navigate(`/fatura/${r.card.id}`)}
-                onHold={() => setHeldCard(r.card)}
+                onHold={(rect) => { setHeldCard(r.card); setHeldRect(rect); }}
               />
             ))}
 
@@ -369,6 +372,7 @@ const Cartoes = () => {
 
       <HoldActions
         open={!!heldCard}
+        anchor={heldRect}
         title={heldCard?.name ?? ""}
         subtitle="Cartão de crédito"
         onClose={() => setHeldCard(null)}
