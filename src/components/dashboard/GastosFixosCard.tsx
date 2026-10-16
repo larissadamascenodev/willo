@@ -123,7 +123,6 @@ const GastosFixosCard = memo(({ compact = false }: { compact?: boolean }) => {
       return (
         <StatTileWide
           label="Gastos e receitas fixas"
-          icon={Home}
           accent="#818CF8"
           empty
           columns={[
@@ -156,7 +155,6 @@ const GastosFixosCard = memo(({ compact = false }: { compact?: boolean }) => {
     return (
       <StatTileWide
         label="Gastos e receitas fixas"
-        icon={Home}
         accent="#818CF8"
         columns={[
           { label: "Gastos fixos", value: fmt(totalOf("despesa")), caption: porMes(despesaCount, "gasto", "gastos"), tone: "out" },

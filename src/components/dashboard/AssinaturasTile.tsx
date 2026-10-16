@@ -30,7 +30,6 @@ const AssinaturasTile = memo(() => {
         label="Assinaturas"
         value={fmt(0)}
         caption="Nenhuma assinatura ativa"
-        icon={RefreshCw}
         accent="#7DD3FC"
         empty
         onClick={() => navigate("/transacoes?filtro=recorrentes")}
@@ -49,7 +48,6 @@ const AssinaturasTile = memo(() => {
       caption={proxima
         ? `${n} ${n === 1 ? "ativa" : "ativas"} · ${proxima.name} dia ${proxima.dueDay}`
         : `${n} ${n === 1 ? "ativa" : "ativas"} · tudo pago no mês`}
-      icon={RefreshCw}
       accent="#7DD3FC"
       onClick={() => navigate("/transacoes?filtro=recorrentes")}
     />

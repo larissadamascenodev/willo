@@ -1,42 +1,18 @@
-import type { LucideIcon } from "lucide-react";
 import { ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { chipFill, chipInk } from "@/lib/chipColor";
+import { chipInk } from "@/lib/chipColor";
 
 /**
  * The summary tile. A dashboard of nothing but full-width cards reads as one long
  * column with no shape to it, so the summaries that are really a figure and a word
  * sit two to a row and let the cards that need the width keep it.
  *
- * The icon sits in a disc of its own rather than loose in the corner: on a tile with
- * a picture behind it a bare glyph has nothing to stand on, and the disc is what
- * makes four different tiles read as one family. The colour is the ring around that
- * disc and the rule along the bottom edge; the figure stays white, so the eye reads
- * the number first and the subject second.
+ * It leads with its name, the way the balance card does. A large glyph in the corner
+ * was decoration standing where the subject should be: you cannot read a disc, and on
+ * a tile half a screen wide it took the room the caption needed. The colour survives
+ * as the rule along the bottom edge, which is enough to tell four tiles apart.
  */
-
-/** The disc the icon stands in. Shared so the wide tile is the same object, stretched. */
-function TileBadge({ icon: Icon, accent, empty }: { icon: LucideIcon; accent: string; empty: boolean }) {
-  return (
-    <span
-      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full ring-1"
-      style={{
-        background: chipFill(accent),
-        ["--tw-ring-color" as string]: accent + (empty ? "22" : "3d"),
-      }}
-    >
-      <Icon
-        className="h-[21px] w-[21px]"
-        style={{ color: chipInk(accent), opacity: empty ? 0.45 : 1 }}
-        strokeWidth={2.1}
-      />
-    </span>
-  );
-}
-
-const SHELL =
-  "relative flex w-full flex-col overflow-hidden rounded-[22px] border border-white/[0.08] willo-glass p-4 text-left transition-transform active:scale-[0.98]";
 
 /** The rule along the bottom edge, drawn only when the tile is tracking something. */
 function TileProgress({ progress, accent }: { progress: number; accent: string }) {
@@ -53,12 +29,14 @@ function TileProgress({ progress, accent }: { progress: number; accent: string }
   );
 }
 
-export function StatTile({ label, value, caption, icon, accent, progress, empty = false, onClick }: {
+const SHELL =
+  "relative flex w-full flex-col overflow-hidden rounded-[22px] border border-white/[0.08] willo-glass p-4 text-left transition-transform active:scale-[0.98]";
+
+export function StatTile({ label, value, caption, accent, progress, empty = false, onClick }: {
   label: string;
   value: string;
   caption?: string;
-  icon: LucideIcon;
-  /** Hex. Rings the disc and draws the rule; the figure stays white so the pair reads as one. */
+  /** Hex. Draws the rule along the bottom; the figure stays white. */
   accent: string;
   /** 0–1. Drawn full-bleed along the bottom edge when the tile is tracking something. */
   progress?: number;
@@ -68,14 +46,13 @@ export function StatTile({ label, value, caption, icon, accent, progress, empty 
   onClick: () => void;
 }) {
   return (
-    <button onClick={onClick} className={cn(SHELL, "min-h-[176px] justify-between")}>
+    <button onClick={onClick} className={cn(SHELL, "min-h-[150px] justify-between")}>
       <div className="flex items-start justify-between gap-2">
-        <TileBadge icon={icon} accent={accent} empty={empty} />
-        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-white/25" />
+        <p className="truncate text-[14px] font-medium t-soft">{label}</p>
+        <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-white/25" />
       </div>
 
       <div className="mt-4">
-        <p className="truncate text-[14px] font-medium t-soft">{label}</p>
         <p className={cn(
           "mt-0.5 truncate text-[23px] font-extrabold leading-tight tracking-[-0.035em] tabular-nums",
           empty ? "t-faint" : "text-white",
@@ -96,9 +73,8 @@ export function StatTile({ label, value, caption, icon, accent, progress, empty 
  * The same tile across the full width, for a subject that is two figures rather than
  * one — money out and money in, which only mean something beside each other.
  */
-export function StatTileWide({ label, icon, accent, columns, empty = false, onClick }: {
+export function StatTileWide({ label, accent, columns, empty = false, onClick }: {
   label: string;
-  icon: LucideIcon;
   accent: string;
   /** Two or three figures, read left to right. */
   columns: { label: string; value: string; caption?: string; tone?: "neutral" | "in" | "out" }[];
@@ -108,11 +84,8 @@ export function StatTileWide({ label, icon, accent, columns, empty = false, onCl
   return (
     <button onClick={onClick} className={SHELL}>
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <TileBadge icon={icon} accent={accent} empty={empty} />
-          <p className="text-[14px] font-medium t-soft">{label}</p>
-        </div>
-        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-white/25" />
+        <p className="truncate text-[14px] font-medium t-soft">{label}</p>
+        <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-white/25" />
       </div>
 
       <div className="mt-4 grid gap-3" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}>

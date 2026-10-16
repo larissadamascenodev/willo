@@ -115,7 +115,6 @@ const ParcelamentosAtivosCard = ({ compact = false }: { compact?: boolean }) => 
           label="Parcelamentos"
           value="Nenhum"
           caption="Nada parcelado agora"
-          icon={CreditCard}
           accent="#F59E0B"
           empty
           onClick={() => navigate("/parcelamentos")}
@@ -156,7 +155,6 @@ const ParcelamentosAtivosCard = ({ compact = false }: { compact?: boolean }) => 
         label="Parcelamentos"
         value={formatCurrency(stats?.totalRestante ?? 0)}
         caption={`${formatCurrency(stats?.totalMensal ?? 0)} por mês`}
-        icon={CreditCard}
         accent="#F59E0B"
         onClick={() => navigate("/parcelamentos")}
       />

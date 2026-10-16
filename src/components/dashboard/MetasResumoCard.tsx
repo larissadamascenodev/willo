@@ -68,7 +68,6 @@ export function MetasResumoView({ goals, loading = false, compact = false }: { g
         label="Metas"
         value="Nenhuma"
         caption="Toque para criar"
-        icon={Target}
         accent="#C8F36D"
         empty
         onClick={() => navigate("/metas")}
@@ -85,7 +84,6 @@ export function MetasResumoView({ goals, loading = false, compact = false }: { g
         label="Metas"
         value={fmt(totalGuardado)}
         caption={`${Math.round(overall * 100)}% de ${fmt(totalObjetivo)}`}
-        icon={Target}
         accent="#C8F36D"
         progress={overall}
         onClick={() => navigate("/metas")}

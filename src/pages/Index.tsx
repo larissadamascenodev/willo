@@ -15,8 +15,8 @@ import AssinaturasTile from "@/components/dashboard/AssinaturasTile";
 import GastosPorCategoria from "@/components/dashboard/GastosPorCategoria";
 import FinanceChartCard from "@/components/dashboard/FinanceChartCard";
 import CardsOverviewSection from "@/components/dashboard/CardsOverviewSection";
-import { TileRow } from "@/components/dashboard/StatTile";
-import SectionTiles from "@/components/dashboard/SectionTiles";
+import WidgetBoard from "@/components/dashboard/WidgetBoard";
+import { renderHomeWidget } from "@/components/dashboard/HomeWidgets";
 import InsightCarousel from "@/components/dashboard/InsightCarousel";
 import SaldoContasCard from "@/components/dashboard/SaldoContasCard";
 import FluxoReceitasDespesasCard from "@/components/dashboard/FluxoReceitasDespesasCard";
@@ -218,42 +218,26 @@ const Index = () => {
             />
           )}
 
-          {/* AGORA — what is true this second: what is in hand, and where it lands. */}
-          <SaldoContasCard saldoPrevisto={saldoPrevisto} />
-
-          {/* ESTE MÊS — what moved, then what is already spoken for, then what is
-              still due. "Próximos eventos" sits high because it is the only card on the
-              screen you can act on; buried at the bottom it was a list nobody reached.
-              Two tiles here and two further down: four in a block is a keypad, and the
-              eye stops reading them separately. */}
-          <FluxoReceitasDespesasCard receitas={receitas} despesas={despesas} month={selectedMonth} isCurrentMonth={isCurrentMonth} />
-
-          <ProximosEventos events={data.events} selectedMonth={selectedMonth} selectedYear={selectedYear} onEventClick={handleEventClick} />
-
-          {/* O QUE JÁ ESTÁ COMPROMETIDO — quatro resumos em pares, e o quinto sozinho.
-              Gastos e receitas fixas ocupa a linha inteira porque é a única coisa aqui
-              que são dois números: o que sai todo mês e o que entra todo mês só querem
-              dizer alguma coisa um ao lado do outro. Ele fechando o bloco também quebra
-              a grade, para seis caixas iguais não virarem um teclado. */}
-          <TileRow>
-            <CardsOverviewSection compact />
-            <ParcelamentosAtivosCard compact />
-          </TileRow>
-
-          <TileRow>
-            <AssinaturasTile />
-            <MetasResumoCard compact />
-          </TileRow>
-
-          {/* The two screens that are not a summary of anything already on this page. */}
-          <SectionTiles />
-
-          <GastosFixosCard compact />
-
-          {/* O REGISTRO. Três de cada: o suficiente para reconhecer o mês, não para
-              virar extrato. */}
-          <GastosPorCategoria categories={data.categories} selectedMonth={selectedMonth} onVerAnalise={() => navigate("/transacoes")} />
-          <TransacoesRecentes transactions={data.transactions} onDelete={refetch} />
+          {/* The feed is a board now: what is on it, in what order and how wide, is
+              the person's own. Holding a card opens what can be done to it. */}
+          <WidgetBoard
+            userId={user?.id}
+            render={(id, size) =>
+              renderHomeWidget(id, size, {
+                saldoPrevisto,
+                receitas,
+                despesas,
+                selectedMonth,
+                selectedYear,
+                isCurrentMonth,
+                events: data.events,
+                categories: data.categories,
+                transactions: data.transactions,
+                onEventClick: handleEventClick,
+                onRefetch: refetch,
+              })
+            }
+          />
           </div>
         </div>
       <PagarEditarModal

@@ -65,7 +65,6 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
           label="Em faturas"
           value="Nenhum cartão"
           caption="Toque para adicionar"
-          icon={CreditCard}
           accent="#A78BFA"
           empty
           onClick={() => navigate("/cartoes")}
@@ -102,7 +101,6 @@ export function CardsOverviewView({ cards, invoices, loading = false, today = ne
           : summary.nextDue
             ? `Vence ${summary.nextDue.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`
             : `${cards.length} ${cards.length === 1 ? "cartão" : "cartões"}`}
-        icon={CreditCard}
         accent={tight ? "#F87171" : "#A78BFA"}
         progress={usedPct}
         onClick={() => navigate("/cartoes")}
