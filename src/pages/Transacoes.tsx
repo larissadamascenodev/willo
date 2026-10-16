@@ -44,6 +44,24 @@ const transactionsPageCache = new Map<string, TransactionsPageSnapshot>();
 const buildTransactionsCacheKey = (userId: string | undefined, month: number, year: number) =>
   `${userId ?? "anon"}-${month}-${year}`;
 
+/** A stored row as the form expects to receive it. */
+const toEditShape = (t: TransactionRow): EditTransactionData => ({
+  id: t.id,
+  name: t.name,
+  type: t.type as "receita" | "despesa",
+  amount: Number(t.amount),
+  category: t.category,
+  date: t.date,
+  status: t.status as "pago" | "pendente",
+  payment_method: t.payment_method as "conta" | "cartao",
+  account_id: t.account_id,
+  credit_card_id: t.credit_card_id,
+  recurrence_type: t.recurrence_type as "unica" | "parcelado" | "fixa",
+  installments: t.installments,
+  installment_current: t.installment_current,
+  observation: t.observation,
+});
+
 const buildSeedDate = (label: string, month: number, year: number) => {
   const day = Math.min(Math.max(Number(label.match(/\d+/)?.[0] ?? 1), 1), 31);
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -735,18 +753,27 @@ const Transacoes = () => {
         </p>
       )}
 
-      {/* Detail Modal */}
-      {/* Editing reuses the very form that creates a transaction */}
+      {/* Holding a row is the short way round: Editar opens the form itself, and
+          Excluir asks inside the same menu. Both used to land on the summary card,
+          which then offered the very two words that had just been chosen. */}
       <HoldActions
         open={!!heldTx}
         anchor={heldRect}
         title={heldTx?.name ?? ""}
         subtitle={heldTx?.category}
+        /* A fixed entry is asked a different question — this month or every month — so
+           it keeps its own dialog. */
+        confirmDelete={heldTx?.recurrence_type !== "fixa"}
+        deleteNote={
+          (heldTx?.installments ?? 0) > 1
+            ? "Isso remove a compra inteira, com todas as parcelas."
+            : undefined
+        }
         onClose={() => setHeldTx(null)}
         onEdit={() => {
           const t = heldTx;
           setHeldTx(null);
-          if (t) { setDetailTx(t); setShowDetailModal(true); }
+          if (t) setEditingTx(toEditShape(t));
         }}
         onDelete={() => {
           const t = heldTx;
@@ -778,26 +805,11 @@ const Transacoes = () => {
         }}
         cardName={detailTx?.payment_method === "cartao" ? "Cartão" : accountMap[detailTx?.account_id ?? ""] ?? "Conta"}
         onClose={() => { setShowDetailModal(false); setDetailTx(null); }}
-        onEdit={(id) => {
+        onEdit={() => {
           const t = detailTx;
           setShowDetailModal(false);
           setDetailTx(null);
-          if (t) setEditingTx({
-            id: t.id,
-            name: t.name,
-            type: t.type as "receita" | "despesa",
-            amount: Number(t.amount),
-            category: t.category,
-            date: t.date,
-            status: t.status as "pago" | "pendente",
-            payment_method: t.payment_method as "conta" | "cartao",
-            account_id: t.account_id,
-            credit_card_id: t.credit_card_id,
-            recurrence_type: t.recurrence_type as "unica" | "parcelado" | "fixa",
-            installments: t.installments,
-            installment_current: t.installment_current,
-            observation: t.observation,
-          });
+          if (t) setEditingTx(toEditShape(t));
         }}
         onDelete={async (id) => {
           setShowDetailModal(false);

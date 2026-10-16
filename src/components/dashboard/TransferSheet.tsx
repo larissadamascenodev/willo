@@ -164,7 +164,7 @@ export default function TransferBody({ onClose, onSuccess }: {
 
   return (
     <>
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-none px-4 pb-6">
+      <div className="mx-auto min-h-0 w-full max-w-[560px] flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-none px-4 pb-6">
         <div className="flex flex-col items-center pb-7 pt-6" onClick={() => amountRef.current?.focus()}>
           <span className="flex items-center gap-1.5 text-[14px] text-white/66">
             <ArrowDownUp className="h-4 w-4 text-sky-400" />
@@ -242,7 +242,7 @@ export default function TransferBody({ onClose, onSuccess }: {
         )}
       </div>
 
-      <div className="shrink-0 border-t border-white/[0.06] px-4 pt-3" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}>
+      <div className="mx-auto w-full max-w-[560px] shrink-0 border-t border-white/[0.06] px-4 pt-3" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}>
         <button
           type="button"
           onClick={submit}

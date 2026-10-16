@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, TrendingUp, TrendingDown, CalendarDays, FileText, Tag,
@@ -12,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import BottomSheet from "@/components/shared/BottomSheet";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { colorFor, initials } from "@/lib/banks";
 import { cardHex } from "@/hooks/useCardsOverview";
 import TransactionTypeSwitch, { type EntryType } from "@/components/dashboard/TransactionTypeSwitch";
@@ -75,8 +77,10 @@ interface Props {
 }
 
 /** One heading per section, and one card per section. Nothing is boxed inside a box. */
-const SECTION = "mb-2.5 mt-7 px-1 text-[10.5px] font-semibold uppercase tracking-[0.13em] t-softer";
-const GROUP = "divide-y divide-white/[0.055] rounded-[24px] border border-white/[0.07] willo-glass";
+const SECTION = "mb-1 mt-7 px-1 text-[11px] font-semibold uppercase tracking-[0.13em] t-softer";
+const GROUP = "divide-y divide-white/[0.055]";
+/** For the pickers, which float over the form and so still need an edge. */
+const PANEL = "divide-y divide-white/[0.055] rounded-[24px] border border-white/[0.07] willo-glass";
 
 /**
  * The one control that switches between a handful of things. It lives above the group
@@ -197,7 +201,7 @@ const PickRow = ({ selected, onClick, hex, initials: ini, icon: Icon, title, sub
   title: string;
   subtitle?: string;
 }) => (
-  <button type="button" onClick={onClick} className="flex w-full items-center gap-3.5 px-[18px] py-3 text-left active:bg-white/[0.03]">
+  <button type="button" onClick={onClick} className="flex w-full items-center gap-3.5 px-1 py-3 text-left active:opacity-70">
     <span
       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11.5px] font-bold text-white"
       style={{ background: hex }}
@@ -218,7 +222,7 @@ const PickRow = ({ selected, onClick, hex, initials: ini, icon: Icon, title, sub
 );
 
 const AddRow = ({ label, onClick }: { label: string; onClick: () => void }) => (
-  <button type="button" onClick={onClick} className="flex w-full items-center gap-3.5 px-[18px] py-3.5 text-left active:bg-white/[0.03]">
+  <button type="button" onClick={onClick} className="flex w-full items-center gap-3.5 px-1 py-3.5 text-left active:opacity-70">
     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-dashed border-white/20">
       <Plus className="h-4 w-4 t-soft" />
     </span>
@@ -236,7 +240,7 @@ const Row = ({ icon: Icon, label, children, onClick }: {
   <div
     role={onClick ? "button" : undefined}
     onClick={onClick}
-    className={cn("flex min-h-[58px] items-center gap-3.5 px-[18px] py-2.5", onClick && "cursor-pointer active:bg-white/[0.03]")}
+    className={cn("flex min-h-[56px] items-center gap-3.5 px-1 py-2.5", onClick && "cursor-pointer active:opacity-70")}
   >
     <Icon className="h-[17px] w-[17px] shrink-0 t-softer" strokeWidth={2} />
     <span className="shrink-0 text-[15px] text-white">{label}</span>
@@ -294,6 +298,9 @@ const KIND_ORDER: EntryType[] = ["receita", "despesa", "transferencia"];
 const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa", initialPaymentMethod, initialCreditCardId, editTransaction, prefillData }: Props) => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  /* The page under it stays where it was put — with the keyboard up, iOS otherwise
+     scrolls the document to reach the field and drags the screen behind into view. */
+  useScrollLock(open);
   const [type, setType] = useState<"receita" | "despesa">(initialType);
   // The kind of entry being made. Receita and despesa drive this form; transferência
   // swaps the body out, so the three live in one sheet instead of behind a chooser.
@@ -801,7 +808,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
   const switcher = isEditMode ? null : <TransactionTypeSwitch value={entryKind} onChange={changeKind} />;
   const isTransfer = entryKind === "transferencia" && !isEditMode;
 
-  return (
+  const sheet = (
     <AnimatePresence>
       {open && (
         <motion.div
@@ -809,10 +816,15 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 34, stiffness: 320 }}
-          className="willo-bg fixed inset-0 z-[60] flex flex-col md:inset-auto md:left-1/2 md:top-1/2 md:h-[88vh] md:w-[440px] md:-translate-x-1/2 md:-translate-y-1/2 md:overflow-hidden md:rounded-[32px] md:border md:border-white/[0.08]"
+          /* The whole screen, on every size. As a floating panel it left the page
+             showing above and around it, so you were reading two screens at once —
+             and on a phone the keyboard made that strip drift. 100dvh rather than
+             inset-0 because the keyboard changes what the screen is. */
+          className="willo-bg willo-dim fixed inset-x-0 top-0 z-[60] flex flex-col"
+          style={{ height: "100dvh" }}
         >
           {/* Nav */}
-          <div className="shrink-0 px-4" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
+          <div className="mx-auto w-full max-w-[560px] shrink-0 px-4" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
             <div className="flex h-11 items-center justify-between">
               <button onClick={onClose} aria-label="Fechar" className="-ml-1 flex h-10 w-10 items-center justify-center rounded-full text-white/82 active:opacity-60">
                 <X className="h-6 w-6" />
@@ -849,22 +861,24 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                   <TransferBody onClose={onClose} onSuccess={onSuccess} />
                 ) : (
                   <>
-            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-none px-4 pb-6">
-              {/* Amount */}
-              <div className="relative flex flex-col items-center pb-8 pt-7" onClick={() => amountInputRef.current?.focus()}>
-                <span className="relative flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] t-soft">
+            <div className="mx-auto min-h-0 w-full max-w-[560px] flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-none px-4 pb-6">
+              {/* The figure, loose on the page and reading from the left like every
+                  other figure in the app. */}
+              <div className="relative pb-7 pt-6" onClick={() => amountInputRef.current?.focus()}>
+                <span className="relative flex items-center gap-1.5 px-1 text-[11.5px] font-semibold uppercase tracking-[0.12em] t-softer">
                   {isReceita
                     ? <TrendingUp className="h-[13px] w-[13px]" style={{ color: accent }} strokeWidth={2.6} />
                     : <TrendingDown className="h-[13px] w-[13px]" style={{ color: accent }} strokeWidth={2.6} />}
                   {isReceita ? "Valor da receita" : "Valor da despesa"}
                 </span>
-                <div className="relative mt-3.5 flex items-baseline gap-2">
-                  <span className="text-[22px] font-bold t-softer">{currencySymbol()}</span>
+                <div className="relative mt-2 flex items-baseline gap-1.5 px-1">
+                  <span className="text-[20px] font-bold t-softer">{currencySymbol()}</span>
                   <motion.span
                     key={amountCents}
-                    initial={{ scale: 1.04 }}
+                    initial={{ scale: 1.03 }}
                     animate={{ scale: 1 }}
-                    className={cn("text-[54px] font-extrabold leading-none tracking-[-0.04em] tabular-nums", amountCents === 0 ? "t-faint" : "text-white")}
+                    style={{ transformOrigin: "0% 50%" }}
+                    className={cn("truncate text-[46px] font-extrabold leading-none tracking-[-0.035em] tabular-nums", amountCents === 0 ? "t-faint" : "text-white")}
                   >
                     {formatCurrency(amountCents)}
                   </motion.span>
@@ -882,7 +896,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                     className="absolute inset-0 w-full cursor-text opacity-0"
                   />
                 </div>
-                <span className="relative mt-4 h-[3px] w-12 rounded-full" style={{ background: accent }} />
+                <span className="relative mt-4 block h-[2px] w-11 rounded-full" style={{ background: accent, opacity: 0.85 }} />
               </div>
 
               {/* ── O que foi ──────────────────────────────────────────── */}
@@ -947,7 +961,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
               <div className={GROUP}>
                 {!usingCard ? (
                   loadingAccounts ? (
-                    <div className="flex items-center justify-center gap-2 px-[18px] py-5 text-[13px] t-soft">
+                    <div className="flex items-center justify-center gap-2 px-1 py-5 text-[13px] t-soft">
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" /> Carregando contas…
                     </div>
                   ) : accounts.length === 0 ? (
@@ -977,7 +991,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                       {!showNewAccount ? (
                         <AddRow label="Criar nova conta" onClick={() => setShowNewAccount(true)} />
                       ) : (
-                        <div className="flex gap-2 px-3 py-3">
+                        <div className="flex gap-2 px-1 py-3">
                           <input
                             placeholder="Nome da conta"
                             value={newAccountName}
@@ -997,7 +1011,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                 ) : (
                   <>
                     {creditCards.length === 0 ? (
-                      <p className="px-[18px] py-5 text-center text-[14px] t-soft">Nenhum cartão cadastrado</p>
+                      <p className="px-1 py-5 text-center text-[14px] t-soft">Nenhum cartão cadastrado</p>
                     ) : (
                       creditCards.map((card) => (
                         <PickRow
@@ -1014,7 +1028,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
                     {!showNewCard ? (
                       <AddRow label="Cadastrar cartão" onClick={() => setShowNewCard(true)} />
                     ) : (
-                      <div className="space-y-2 px-3 py-3">
+                      <div className="space-y-2 px-1 py-3">
                         <input placeholder="Nome do cartão" value={newCardName} onChange={(e) => setNewCardName(e.target.value)} className="h-11 w-full rounded-full bg-white/[0.06] px-4 text-[14px] text-white placeholder:t-faint focus:outline-none" />
                         <input placeholder="Limite" inputMode="numeric" value={newCardLimit} onChange={(e) => setNewCardLimit(e.target.value)} className="h-11 w-full rounded-full bg-white/[0.06] px-4 text-[14px] text-white placeholder:t-faint focus:outline-none" />
                         <div className="flex gap-2">
@@ -1177,7 +1191,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
             </div>
 
             {/* Save */}
-            <div className="shrink-0 border-t border-white/[0.06] px-4 pt-3" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}>
+            <div className="mx-auto w-full max-w-[560px] shrink-0 border-t border-white/[0.06] px-4 pt-3" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}>
               <button
                 type="submit"
                 form="nova-transacao-form"
@@ -1197,7 +1211,7 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
           <BottomSheet open={showDateSheet} onClose={() => setShowDateSheet(false)} zIndex={70}>
             <div className="px-4 pb-2">
               <h3 className="px-1 text-[17px] font-bold text-white">Quando foi?</h3>
-              <div className={cn(GROUP, "mt-3")}>
+              <div className={cn(PANEL, "mt-3")}>
                 {([["hoje", "Hoje"], ["ontem", "Ontem"]] as const).map(([mode, label]) => {
                   const on = mode === "hoje" ? isToday : isYesterday;
                   return (
@@ -1327,6 +1341,10 @@ const NovaTransacaoModal = ({ open, onClose, onSuccess, initialType = "despesa",
       )}
     </AnimatePresence>
   );
+
+  /* Straight onto the body. Rendered where it was opened, the screen was at the mercy
+     of whatever the page around it had done to its own layer. */
+  return typeof document !== "undefined" ? createPortal(sheet, document.body) : null;
 };
 
 export default NovaTransacaoModal;

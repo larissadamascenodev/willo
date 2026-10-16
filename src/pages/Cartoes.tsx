@@ -375,6 +375,9 @@ const Cartoes = () => {
         anchor={heldRect}
         title={heldCard?.name ?? ""}
         subtitle="Cartão de crédito"
+        /* Removing a card asks what becomes of its invoices, which is more than a
+           menu can hold — so it keeps its own screen for that. */
+        confirmDelete={false}
         onClose={() => setHeldCard(null)}
         onEdit={async () => {
           const held = heldCard;

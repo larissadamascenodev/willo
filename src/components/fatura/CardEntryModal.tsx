@@ -1,14 +1,15 @@
-import { useState, useEffect, type ComponentType } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
-import { X, Pencil, Trash2, Calendar, Clock, Tag, CreditCard, Layers, ChevronRight, AlertTriangle, Check } from "lucide-react";
+import { X, Pencil, Trash2, AlertTriangle, Check, Clock, ChevronRight } from "lucide-react";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { getCategoryHexColor } from "@/lib/categoryUtils";
 import { getDefaultCategoryIcon } from "@/lib/categoryIcons";
 import { getIconComponent } from "@/components/dashboard/CategoryCreateModal";
+import { MenuRow } from "@/components/shared/AnchoredMenu";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { getCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
-
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
@@ -37,8 +38,16 @@ export interface CardEntry {
 }
 
 /**
- * A purchase on a card is settled by the statement, not on its own — so this has no
- * paid/pending switch. It shows what the purchase was and gets out of the way.
+ * One entry, read rather than worked on.
+ *
+ * It answers in the order the question is asked: how much, then whether it has
+ * happened, then when and under what. The figure is loose on the ground and the facts
+ * under it are lines rather than boxes, the way every other screen reads now — a
+ * purchase is not important enough to be announced inside three nested cards.
+ *
+ * Editing and removing are at the foot, written out. They were three unlabelled
+ * circles in the corner, which is a toolbar for the two things people do here once a
+ * month, and the removal asks in place, in the same words the hold menu uses.
  */
 export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDelete, onToggleStatus }: {
   entry: CardEntry | null;
@@ -50,191 +59,168 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
   onToggleStatus?: (transactionId: string, next: "pago" | "pendente") => void;
 }) {
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
-  // The pencil reveals what you can do, so the actions are not repeated on the card
-  const [showActions, setShowActions] = useState(false);
+  const [asking, setAsking] = useState(false);
+
+  const open = !!entry;
+  useScrollLock(open);
 
   useEffect(() => {
     if (entry) {
       getCustomCategories().then(setCustomCats).catch(() => {});
-      setConfirmingDelete(false);
-      setShowActions(false);
+      setAsking(false);
     }
   }, [entry]);
 
-  const open = !!entry;
   const custom = entry ? customCats.find((c) => c.name === entry.category) : undefined;
   const CatIcon = custom ? getIconComponent(custom.icon) : getDefaultCategoryIcon(entry?.category ?? "");
   const catHex = getCategoryHexColor(entry?.category ?? "", customCats);
   const isPlan = !!(entry?.totalInstallments && entry.totalInstallments > 1);
+  const income = !!entry?.isReceita;
 
   const content = (
     <AnimatePresence>
       {open && entry && (
-        <div className="fixed inset-0 z-[75] flex items-center justify-center px-5">
+        <div className="fixed inset-0 z-[75] flex items-end justify-center px-4 pb-4 sm:items-center sm:pb-0">
           <motion.div
-            className="absolute inset-0 bg-black/66 backdrop-blur-[20px]"
+            className="absolute inset-0 bg-black/62 backdrop-blur-[5px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.16 }}
             onClick={onClose}
           />
           <motion.div
             role="dialog"
             aria-modal
-            initial={{ opacity: 0, scale: 0.94, y: 12 }}
+            initial={{ opacity: 0, scale: 0.96, y: 14 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 8 }}
-            transition={{ type: "spring", stiffness: 340, damping: 26 }}
-            className="relative w-full max-w-sm overflow-hidden rounded-[28px] border border-white/[0.08] willo-glass-strong shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)]"
+            exit={{ opacity: 0, scale: 0.97, y: 10 }}
+            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+            className="relative w-full max-w-[400px] overflow-hidden rounded-[26px] border border-white/[0.09]"
+            style={{
+              background: "#101113",
+              boxShadow: "0 32px 70px -22px rgb(0 0 0 / 0.92), inset 0 1px 0 rgb(255 255 255 / 0.06)",
+            }}
           >
-            <span
-              className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full blur-[60px]"
-              style={{ background: catHex, opacity: 0.22 }}
-            />
-
-            <div className="relative px-5 pt-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px]" style={{ background: `${catHex}1F` }}>
-                    <CatIcon className="h-5 w-5" style={{ color: catHex }} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-[17px] font-bold tracking-tight text-white">{entry.name}</p>
-                    <p className="flex items-center gap-1.5 truncate text-[12px] text-white/62">
-                      <CreditCard className="h-3.5 w-3.5 shrink-0" /> {cardName ?? "Cartão"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  {/* Straight to the form. Hiding "edit" behind a menu that offers
-                      "edit" was a step that only ever cost a tap. */}
-                  <button
-                    type="button"
-                    onClick={() => onEdit(entry.transactionId)}
-                    aria-label="Editar"
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-white/82 active:opacity-60"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setShowActions(true); setConfirmingDelete(true); }}
-                    aria-label="Excluir"
-                    className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
-                      confirmingDelete ? "bg-red-400 text-[#0B0B0B]" : "bg-white/[0.06] text-white/82",
-                    )}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    aria-label="Fechar"
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-white/74 active:opacity-60"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              <p className="relative mt-5 text-center text-[42px] font-extrabold leading-none tracking-tighter text-white tabular-nums">
-                {fmt(entry.amount)}
-              </p>
-              {isPlan && (
-                <p className="mt-2 text-center text-[12.5px] text-white/62">
-                  parcela {entry.installmentNumber} de {entry.totalInstallments} · total {fmt(entry.amount * (entry.totalInstallments ?? 1))}
+            {/* What it is, and the way out. */}
+            <div className="flex items-start gap-3 px-5 pt-4">
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                style={{ background: `${catHex}1F` }}
+              >
+                <CatIcon className="h-[18px] w-[18px]" style={{ color: catHex }} />
+              </span>
+              <div className="min-w-0 flex-1 pt-0.5">
+                <p className="truncate text-[15.5px] font-semibold leading-tight text-white">{entry.name}</p>
+                <p className="mt-0.5 truncate text-[12px] t-softer">
+                  {entry.category}
+                  <span className="text-white/20"> · </span>
+                  {cardName ?? "Cartão"}
                 </p>
-              )}
-              {entry.status && (
-                <div className="mt-3 flex justify-center">
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Fechar"
+                className="-mr-1.5 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/60 active:opacity-60"
+              >
+                <X className="h-[18px] w-[18px]" />
+              </button>
+            </div>
+
+            {/* How much, loose. */}
+            <div className="px-5 pb-4 pt-5">
+              <p className={cn(
+                "truncate text-[38px] font-extrabold leading-none tracking-[-0.035em] tabular-nums",
+                income ? "text-willo-green-ink" : "text-white",
+              )}>
+                {income ? "+" : ""}{fmt(entry.amount)}
+              </p>
+              <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                {entry.status && (
                   <span
                     className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold",
+                      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-semibold",
                       entry.status === "pago" ? "bg-willo-green/12 text-willo-green-ink" : "bg-amber-300/12 text-willo-amber",
                     )}
                   >
                     {entry.status === "pago" ? <Check className="h-3 w-3" strokeWidth={3} /> : <Clock className="h-3 w-3" />}
-                    {entry.status === "pago" ? (entry.isReceita ? "Recebido" : "Pago") : "Pendente"}
+                    {entry.status === "pago" ? (income ? "Recebido" : "Pago") : "Pendente"}
                   </span>
-                </div>
-              )}
+                )}
+                {isPlan && (
+                  <span className="text-[12.5px] t-soft">
+                    parcela {entry.installmentNumber} de {entry.totalInstallments}
+                    <span className="text-white/20"> · </span>
+                    total <span className="tabular-nums">{fmt(entry.amount * (entry.totalInstallments ?? 1))}</span>
+                  </span>
+                )}
+              </div>
             </div>
 
-            <div className="relative mt-5 divide-y divide-white/[0.06] border-t border-white/[0.06]">
-              <Line icon={Calendar} label="Data" value={longDate(entry.date)} />
-              {entry.time && <Line icon={Clock} label="Horário" value={entry.time} />}
+            {/* The facts, as lines. */}
+            <div className="divide-y divide-white/[0.055] border-t border-white/[0.06] px-5">
+              <Line label="Data" value={longDate(entry.date)} />
+              {entry.time && <Line label="Horário" value={entry.time} />}
               <button
                 type="button"
                 onClick={() => onEdit(entry.transactionId)}
-                className="flex w-full items-center gap-3 px-5 py-3.5 text-left active:bg-white/[0.03]"
+                className="flex w-full items-center gap-3 py-3.5 text-left active:opacity-70"
               >
-                <Tag className="h-4 w-4 shrink-0 t-soft" />
-                <span className="shrink-0 text-[14px] text-white/70">Categoria</span>
+                <span className="shrink-0 text-[13.5px] t-soft">Categoria</span>
                 <span className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                  <CatIcon className="h-4 w-4 shrink-0" style={{ color: catHex }} />
+                  <CatIcon className="h-[15px] w-[15px] shrink-0" style={{ color: catHex }} />
                   <span className="truncate text-[14px] text-white">{entry.category}</span>
                   <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
                 </span>
               </button>
-              {isPlan && (
-                <Line icon={Layers} label="Parcela" value={`${entry.installmentNumber} de ${entry.totalInstallments}`} />
-              )}
             </div>
 
-            <AnimatePresence initial={false}>
-              {showActions && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="relative overflow-hidden"
-                >
-                  {confirmingDelete && (
-                    <div className="p-5">
-                      <div className="flex items-start gap-3 rounded-[18px] border border-red-400/20 bg-red-400/[0.06] px-4 py-3">
-                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
-                        <p className="text-[13px] leading-snug text-white/82">
-                          {isPlan
-                            ? "Isso remove a compra inteira, com todas as parcelas."
-                            : "Esse lancamento sera removido."}
-                        </p>
-                      </div>
-                      <div className="mt-3 grid grid-cols-2 gap-2.5">
-                        <button
-                          type="button"
-                          onClick={() => setConfirmingDelete(false)}
-                          className="h-12 rounded-full border border-white/[0.08] bg-white/[0.04] text-[14px] font-semibold text-white"
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onDelete(entry.transactionId)}
-                          className="h-12 rounded-full bg-red-500 text-[14px] font-bold text-white"
-                        >
-                          Excluir
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-            {!showActions && entry.status === "pendente" && onToggleStatus && (
-              <div className="relative p-5">
+            {entry.status === "pendente" && onToggleStatus && !asking && (
+              <div className="px-5 pt-4">
                 <button
                   type="button"
                   onClick={() => onToggleStatus(entry.transactionId, "pago")}
-                  className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-white text-[15px] font-bold text-[#0B0B0B] active:opacity-80"
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-white py-3.5 text-[15px] font-bold willo-on-invert active:opacity-80"
                 >
                   <Check className="h-4 w-4" strokeWidth={3} />
-                  {entry.isReceita ? "Marcar como recebida" : "Marcar como paga"}
+                  {income ? "Marcar como recebida" : "Marcar como paga"}
                 </button>
               </div>
             )}
-            {!showActions && entry.status !== "pendente" && <div className="h-5" />}
+
+            {/* What you can do to it — written out, and the question asked in place. */}
+            {asking ? (
+              <div className="mt-3 border-t border-white/[0.07] p-4">
+                <div className="flex items-start gap-2.5 px-1 pb-3">
+                  <AlertTriangle className="mt-[1px] h-4 w-4 shrink-0 text-red-400" />
+                  <p className="text-[12.5px] leading-snug text-white/78">
+                    {isPlan
+                      ? "Isso remove a compra inteira, com todas as parcelas."
+                      : "Isso não pode ser desfeito."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onDelete(entry.transactionId)}
+                  className="h-11 w-full rounded-[14px] bg-red-500 text-[14.5px] font-bold text-white active:opacity-80"
+                >
+                  Excluir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAsking(false)}
+                  className="mt-2 h-11 w-full rounded-[14px] bg-white/[0.07] text-[14.5px] font-semibold text-white active:opacity-70"
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <div className="mt-3 border-t border-white/[0.07]">
+                <MenuRow icon={Pencil} label="Editar" onClick={() => onEdit(entry.transactionId)} />
+                <MenuRow icon={Trash2} label="Excluir" danger onClick={() => setAsking(true)} />
+              </div>
+            )}
           </motion.div>
         </div>
       )}
@@ -244,10 +230,9 @@ export default function CardEntryModal({ entry, cardName, onClose, onEdit, onDel
   return typeof document !== "undefined" ? createPortal(content, document.body) : null;
 }
 
-const Line = ({ icon: Icon, label, value }: { icon: ComponentType<{ className?: string }>; label: string; value: string }) => (
-  <div className="flex items-center gap-3 px-5 py-3.5">
-    <Icon className="h-4 w-4 shrink-0 t-soft" />
-    <span className="shrink-0 text-[14px] text-white/70">{label}</span>
+const Line = ({ label, value }: { label: string; value: string }) => (
+  <div className="flex items-center gap-3 py-3.5">
+    <span className="shrink-0 text-[13.5px] t-soft">{label}</span>
     <span className="min-w-0 flex-1 truncate text-right text-[14px] text-white">{value}</span>
   </div>
 );

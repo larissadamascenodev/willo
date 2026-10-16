@@ -8,9 +8,16 @@ import { cn } from "@/lib/utils";
  * A menu for the thing under your thumb.
  *
  * A sheet is a place you go to; this is something you do to what you are already
- * holding, so it opens beside it and the page behind it blurs. It places itself —
- * under the thing when there is room, over it when there is not, pulled in from the
- * edges — because the thing held can be anywhere on the screen.
+ * holding, so it opens beside it and the page behind it steps back. It places itself —
+ * under the thing when there is room, over it when there is not — because the thing
+ * held can be anywhere on the screen.
+ *
+ * Two things are deliberate about how it sits. The page is dimmed more than it is
+ * blurred: a heavy blur turned the screen to soup and the menu lost the one thing an
+ * anchored menu is for, which is still being able to see what you are holding. And it
+ * centres on the middle of what is held rather than lining up with its left edge — a
+ * full-width row starts at the page gutter, so left-aligning left the menu pinned to
+ * one side of the screen with a third of it empty.
  */
 
 export interface AnchorRect {
@@ -20,9 +27,9 @@ export interface AnchorRect {
   width: number;
 }
 
-const MARGIN = 12;
+const MARGIN = 14;
 
-export default function AnchoredMenu({ open, anchor, width = 252, onClose, children }: {
+export default function AnchoredMenu({ open, anchor, width = 258, onClose, children }: {
   open: boolean;
   /** Where the held thing is. Without one the menu sits in the middle of the screen. */
   anchor?: AnchorRect | null;
@@ -31,24 +38,30 @@ export default function AnchoredMenu({ open, anchor, width = 252, onClose, child
   children: ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  const [pos, setPos] = useState<{ left: number; top: number; from: "top" | "bottom" } | null>(null);
 
   useLayoutEffect(() => {
     if (!open) { setPos(null); return; }
     const height = panelRef.current?.offsetHeight ?? 200;
+    const span = Math.min(width, window.innerWidth - MARGIN * 2);
+
     if (!anchor) {
       setPos({
-        left: Math.max((window.innerWidth - width) / 2, MARGIN),
+        left: Math.max((window.innerWidth - span) / 2, MARGIN),
         top: Math.max((window.innerHeight - height) / 2, MARGIN),
+        from: "top",
       });
       return;
     }
-    const left = Math.min(Math.max(anchor.left, MARGIN), window.innerWidth - width - MARGIN);
+
+    /* Centred on what is held, then pulled back inside the screen. */
+    const wanted = anchor.left + anchor.width / 2 - span / 2;
+    const left = Math.min(Math.max(wanted, MARGIN), window.innerWidth - span - MARGIN);
+
     const below = anchor.bottom + 10;
-    const top = below + height + MARGIN < window.innerHeight
-      ? below
-      : Math.max(anchor.top - height - 10, MARGIN);
-    setPos({ left, top });
+    const fitsBelow = below + height + MARGIN < window.innerHeight;
+    const top = fitsBelow ? below : Math.max(anchor.top - height - 10, MARGIN);
+    setPos({ left, top, from: fitsBelow ? "top" : "bottom" });
   }, [open, anchor, width, children]);
 
   useEffect(() => {
@@ -63,31 +76,31 @@ export default function AnchoredMenu({ open, anchor, width = 252, onClose, child
       {open && (
         <div className="fixed inset-0 z-[74]">
           <motion.div
-            className="absolute inset-0 bg-black/45 backdrop-blur-[18px]"
+            className="absolute inset-0 bg-black/58 backdrop-blur-[5px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
+            transition={{ duration: 0.16 }}
             onClick={onClose}
           />
 
           <motion.div
             ref={panelRef}
             role="menu"
-            initial={{ opacity: 0, scale: 0.92, y: -6 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -4 }}
-            transition={{ type: "spring", stiffness: 460, damping: 32 }}
+            initial={{ opacity: 0, scale: 0.93 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 480, damping: 34 }}
             className="absolute overflow-hidden rounded-[22px] border border-white/[0.10]"
             style={{
-              width,
+              width: Math.min(width, window.innerWidth - MARGIN * 2),
               left: pos?.left ?? MARGIN,
               top: pos?.top ?? MARGIN,
-              transformOrigin: "50% 0%",
-              background: "rgba(28, 28, 31, 0.78)",
-              backdropFilter: "blur(30px) saturate(150%)",
-              WebkitBackdropFilter: "blur(30px) saturate(150%)",
-              boxShadow: "0 30px 60px -20px rgb(0 0 0 / 0.9), inset 0 1px 0 rgb(255 255 255 / 0.10)",
+              transformOrigin: pos?.from === "bottom" ? "50% 100%" : "50% 0%",
+              background: "rgba(30, 30, 33, 0.86)",
+              backdropFilter: "blur(26px) saturate(150%)",
+              WebkitBackdropFilter: "blur(26px) saturate(150%)",
+              boxShadow: "0 28px 56px -18px rgb(0 0 0 / 0.86), inset 0 1px 0 rgb(255 255 255 / 0.10)",
               visibility: pos ? "visible" : "hidden",
             }}
           >
@@ -123,5 +136,15 @@ export function MenuRow({ icon: Icon, label, danger, onClick }: {
         {label}
       </span>
     </button>
+  );
+}
+
+/** The header every anchored menu wears: what you are holding, and what it is. */
+export function MenuHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div className="border-b border-white/[0.08] px-4 pb-2.5 pt-3">
+      <p className="truncate text-[13.5px] font-semibold text-white">{title}</p>
+      {subtitle && <p className="mt-0.5 truncate text-[11.5px] t-softer">{subtitle}</p>}
+    </div>
   );
 }
