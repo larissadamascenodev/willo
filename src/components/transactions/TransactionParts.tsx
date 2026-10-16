@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 import { ArrowDownLeft, ArrowUpRight, CreditCard, Pencil, RefreshCw, Trash2, Wallet } from "lucide-react";
 import type { CustomCategory } from "@/services/categoryService";
@@ -160,6 +161,10 @@ export const TransactionListItem = ({
 }) => {
   const press = useLongPress(() => onLongPress?.(tx));
   const x = useMotionValue(0);
+  /* The row is see-through where it sits, so it reads as type on the page rather than
+     as a card. It only takes a ground while it is being swiped — without one you
+     would read the edit and delete layers straight through it. */
+  const [swiping, setSwiping] = useState(false);
   const editOpacity = useTransform(x, [0, 60, 120], [0, 0.5, 1]);
   const deleteOpacity = useTransform(x, [-120, -60, 0], [1, 0.5, 0]);
   const isReceita = tx.type === "receita";
@@ -185,6 +190,7 @@ export const TransactionListItem = ({
   const isPending = tx.status !== "pago";
 
   const handleDragEnd = (_: any, info: PanInfo) => {
+    setSwiping(false);
     if (info.offset.x > 100) {
       onEdit(tx);
     } else if (info.offset.x < -100) {
@@ -193,7 +199,9 @@ export const TransactionListItem = ({
   };
 
   return (
-    <div className="relative overflow-hidden">
+    // Rounded, so the ground that appears under a swipe has the shape of a row
+    // rather than of a rectangle cut out of the page.
+    <div className="relative overflow-hidden rounded-[18px]">
       {/* Background actions */}
       <div className="absolute inset-0 flex">
         <motion.div
@@ -215,9 +223,10 @@ export const TransactionListItem = ({
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.3}
+        onDragStart={() => setSwiping(true)}
         onDragEnd={handleDragEnd}
-        style={{ x }}
-        className="relative flex cursor-grab items-center gap-3.5 px-4 py-3.5 active:cursor-grabbing"
+        style={{ x, background: swiping ? "#0A0B0D" : "transparent" }}
+        className="relative flex cursor-grab items-center gap-3.5 px-1 py-3.5 active:cursor-grabbing"
         onPointerDownCapture={onLongPress ? press.onPointerDown : undefined}
         onPointerMove={onLongPress ? press.onPointerMove : undefined}
         onPointerUp={onLongPress ? press.onPointerUp : undefined}

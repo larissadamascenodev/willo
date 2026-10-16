@@ -480,30 +480,6 @@ const Transacoes = () => {
     setShowNewModal(true);
   };
 
-  /* How far the big title has gone. The compact one fades in over the same stretch,
-     so at no point are both fully present. */
-  const [titleProgress, setTitleProgress] = useState(0);
-  useEffect(() => {
-    let frame = 0;
-    const onScroll = () => {
-      if (frame) return;
-      frame = requestAnimationFrame(() => {
-        frame = 0;
-        const room = document.documentElement.scrollHeight - window.innerHeight;
-        if (room < 80) { setTitleProgress(0); return; }
-        setTitleProgress(Math.min(Math.max((window.scrollY - 24) / 70, 0), 1));
-      });
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, []);
-
   const activeFiltersCount = [filterCategory !== "todos", filterStatus !== "todos", filterAccount !== "todos"].filter(Boolean).length;
 
   const clearFilters = () => {
@@ -522,31 +498,11 @@ const Transacoes = () => {
 
   return (
     <div className="space-y-5 pt-4">
-      {/* The name, once the big one has gone: centred, over glass, so the rows pass
-          under something rather than behind nothing. */}
-      <motion.div
-        className="fixed inset-x-0 top-0 z-30 flex justify-center px-4"
-        style={{
-          paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)",
-          opacity: titleProgress,
-          pointerEvents: titleProgress > 0.6 ? "auto" : "none",
-        }}
-        aria-hidden={titleProgress < 0.6}
-      >
-        <div className="flex h-10 items-center rounded-full border border-white/[0.08] px-5 backdrop-blur-xl"
-             style={{ background: "rgba(16,16,19,0.72)" }}>
-          <span className="text-[14.5px] font-bold tracking-[-0.01em] text-white">Transações</span>
-        </div>
-      </motion.div>
-
       {/* Header */}
-      <motion.div
-        className="flex items-center justify-between gap-3"
-        style={{ opacity: 1 - titleProgress * 0.9 }}
-      >
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-[30px] font-extrabold tracking-[-0.03em] text-white">Transações</h1>
         <MonthSelector selectedMonth={selectedMonth} selectedYear={selectedYear} onMonthChange={(m, y) => setMonth(m, y)} />
-      </motion.div>
+      </div>
 
       {/* Summary - desktop */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="hidden md:grid grid-cols-[1.4fr_1fr] gap-3">
@@ -729,7 +685,10 @@ const Transacoes = () => {
                     Nada registrado hoje
                   </div>
                 )}
-                <div className={txs.length > 0 ? "overflow-hidden rounded-[22px] border border-white/[0.07] bg-white/[0.045] backdrop-blur-xl divide-y divide-white/[0.05]" : ""}>
+                {/* No panel: the rows stand on the page, with a hairline between
+                    them. A box around a day's spending is a frame around a list that
+                    already reads as one, and it costs the rows their air. */}
+                <div className={txs.length > 0 ? "divide-y divide-white/[0.055]" : ""}>
                   {txs.map((tx, i) => (
                     <motion.div
                       key={tx.id}
