@@ -59,8 +59,9 @@ const PAGES_WITHOUT_BACK = new Set([
 /** Screens that stand on the sky rather than on the working charcoal. */
 const SKY_PAGES = new Set(["/", "/cartoes", "/gestao"]);
 
-/** Screens that are mostly a list, where the ground is turned down instead. */
-const DIM_PAGES = new Set(["/transacoes"]);
+/* Everywhere else the ground is turned down. The charcoal lift was drawn for a home
+   screen with open space at the top; on a working page it only greys the panels
+   sitting on it, and the darker room lets them carry the screen. */
 
 
 const DashboardLayout = () => {
@@ -379,8 +380,7 @@ const DashboardLayout = () => {
         // behind a working header.
         className={cn(
           "willo-bg min-h-screen text-foreground",
-          SKY_PAGES.has(location.pathname) && "willo-sky",
-          DIM_PAGES.has(location.pathname) && "willo-dim",
+          SKY_PAGES.has(location.pathname) ? "willo-sky" : "willo-dim",
         )}
         style={showOnboarding ? { display: "none" } : undefined}
       >
