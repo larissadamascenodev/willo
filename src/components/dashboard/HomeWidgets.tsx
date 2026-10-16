@@ -1,13 +1,12 @@
 import { type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
-import { chipFill, chipInk } from "@/lib/chipColor";
 import { getCurrency } from "@/lib/currency";
 import { StatTile } from "./StatTile";
 import SaldoContasCard from "./SaldoContasCard";
 import FluxoReceitasDespesasCard from "./FluxoReceitasDespesasCard";
 import ProximosEventos from "./ProximosEventos";
 import CartoesResumoCard, { CartoesResumoTile } from "./CartoesResumoCard";
+import SaudeDoMesCard from "./SaudeDoMesCard";
 import ParcelamentosAtivosCard from "./ParcelamentosAtivosCard";
 import AssinaturasTile from "./AssinaturasTile";
 import MetasResumoCard from "./MetasResumoCard";
@@ -42,41 +41,6 @@ export interface HomeWidgetContext {
   onRefetch: () => void;
 }
 
-/** One of the two screens the home cannot show a piece of. */
-export function SectionTile({ label, caption, accent, path }: {
-  label: string;
-  caption: string;
-  accent: string;
-  path: string;
-}) {
-  const navigate = useNavigate();
-  return (
-    <button
-      type="button"
-      onClick={() => navigate(path)}
-      className="relative flex min-h-[150px] w-full flex-col justify-between overflow-hidden rounded-[22px] border border-white/[0.08] willo-glass p-4 text-left transition-transform active:scale-[0.98]"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <p className="truncate text-[14px] font-medium t-soft">{label}</p>
-        <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-white/25" />
-      </div>
-      <div>
-        <p className="text-[19px] font-bold tracking-[-0.025em] text-white">{label}</p>
-        <p className="mt-1 line-clamp-2 text-[12px] leading-snug t-softer">{caption}</p>
-      </div>
-      <span
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
-        style={{ background: chipInk(accent), opacity: 0.6 }}
-      />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full blur-[40px]"
-        style={{ background: chipFill(accent) }}
-      />
-    </button>
-  );
-}
-
 export function renderHomeWidget(id: string, size: WidgetSize, ctx: HomeWidgetContext): ReactNode {
   const half = size === "half";
 
@@ -100,10 +64,10 @@ export function renderHomeWidget(id: string, size: WidgetSize, ctx: HomeWidgetCo
       return half ? (
         <EventosTile events={ctx.events} />
       ) : (
-        <ProximosEventos
+        <EventosWidget
           events={ctx.events}
-          selectedMonth={ctx.selectedMonth}
-          selectedYear={ctx.selectedYear}
+          month={ctx.selectedMonth}
+          year={ctx.selectedYear}
           onEventClick={ctx.onEventClick}
         />
       );
@@ -123,23 +87,15 @@ export function renderHomeWidget(id: string, size: WidgetSize, ctx: HomeWidgetCo
     case "fixos":
       return <GastosFixosCard compact={half} />;
 
-    case "financeiro":
-      return (
-        <SectionTile
-          label="Financeiro"
-          caption="Balanço, fluxo e projeções"
-          accent="#7DD3FC"
-          path="/bot-finance/balanco"
-        />
-      );
-
     case "raiox":
       return (
-        <SectionTile
-          label="Raio-X"
-          caption="Para onde o dinheiro vai"
-          accent="#C8F36D"
-          path="/bot-finance"
+        <SaudeDoMesCard
+          receitas={ctx.receitas}
+          despesas={ctx.despesas}
+          saldoPrevisto={ctx.saldoPrevisto}
+          categories={ctx.categories}
+          isCurrentMonth={ctx.isCurrentMonth}
+          compact={half}
         />
       );
 
@@ -156,7 +112,26 @@ export function renderHomeWidget(id: string, size: WidgetSize, ctx: HomeWidgetCo
   }
 }
 
-/** Kept as a component so it can still navigate; the renderer itself is not one. */
+/** Kept as components so they can navigate; the renderer itself is not one. */
+function EventosWidget({ events, month, year, onEventClick }: {
+  events: FinanceEvent[];
+  month: number;
+  year: number;
+  onEventClick: (e: FinanceEvent) => void;
+}) {
+  const navigate = useNavigate();
+  return (
+    <ProximosEventos
+      events={events}
+      selectedMonth={month}
+      selectedYear={year}
+      onEventClick={onEventClick}
+      onVerTodos={() => navigate("/eventos")}
+    />
+  );
+}
+
+
 function CategoriasWidget({ categories, month }: { categories: CategoryExpense[]; month: number }) {
   const navigate = useNavigate();
   return (

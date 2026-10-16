@@ -35,6 +35,7 @@ const Suporte = lazy(() => import("./pages/Suporte.tsx"));
 const ReceitasDespesasDetalhe = lazy(() => import("./pages/ReceitasDespesasDetalhe.tsx"));
 const ParcelamentosDetalhe = lazy(() => import("./pages/ParcelamentosDetalhe.tsx"));
 const Cartoes = lazy(() => import("./pages/Cartoes.tsx"));
+const Eventos = lazy(() => import("./pages/Eventos.tsx"));
 const Assistente = lazy(() => import("./pages/Assistente.tsx"));
 const Agentes = lazy(() => import("./pages/Agentes.tsx"));
 const CentralAjuda = lazy(() => import("./pages/CentralAjuda.tsx"));
@@ -104,6 +105,7 @@ const App = () => (
               <Route path="/parcelamentos" element={<ParcelamentosDetalhe />} />
               <Route path="/fluxo-de-caixa" element={<Financeiro initialTab="fluxo" />} />
               <Route path="/cartoes" element={<Cartoes />} />
+              <Route path="/eventos" element={<Eventos />} />
               <Route path="/assistente" element={<Assistente />} />
               <Route path="/agentes" element={<Agentes />} />
             </Route>

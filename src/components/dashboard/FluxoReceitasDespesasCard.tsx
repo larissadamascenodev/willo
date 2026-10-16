@@ -79,21 +79,25 @@ const FluxoReceitasDespesasCard = memo(({ receitas, despesas, month, isCurrentMo
         <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
       </button>
 
-      <p className="mt-2 text-[13px] leading-snug t-soft">{verdict}</p>
+      {/* The balance leads, because it is the answer; the sentence explains it. */}
+      <p className={cn(
+        "mt-1 truncate text-[30px] font-extrabold leading-none tracking-[-0.03em] tabular-nums",
+        balanco < 0 ? "text-red-400" : "text-white",
+      )}>
+        {balanco > 0 ? "+" : ""}{value(balanco)}
+      </p>
+      <p className="mt-2 text-[12.5px] leading-snug t-soft">{verdict}</p>
 
-      <div className="mt-3.5 space-y-3.5">
+      <div className="mt-4 space-y-3.5">
         <Flow label="Entrada" amount={receitas} tone="receita" sign="" to="/detalhe/receitas" delay={0.05} />
         <Flow label="Saída" amount={despesas} tone="despesa" sign="−" to="/detalhe/despesas" delay={0.12} />
       </div>
 
-      <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-white/[0.09] pt-3.5">
-        <span className="text-[14px] font-medium text-white">Fluxo de caixa</span>
-        <span className={cn(
-          "shrink-0 text-[17px] font-extrabold tracking-[-0.02em] tabular-nums",
-          balanco < 0 ? "text-red-400" : "text-white",
-        )}>
-          {balanco > 0 ? "+" : ""}{value(balanco)}
+      <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-white/[0.07] pt-3.5">
+        <span className="text-[12.5px] t-soft">
+          {receitas > 0 ? `${pct}% do que entrou já saiu` : "Nada entrou neste mês"}
         </span>
+        <span className="shrink-0 text-[12.5px] t-softer">ver fluxo de caixa</span>
       </div>
     </div>
   );

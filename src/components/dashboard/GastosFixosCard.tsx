@@ -173,22 +173,21 @@ const GastosFixosCard = memo(({ compact = false }: { compact?: boolean }) => {
     <>
       <div className="rounded-[22px] border border-white/[0.08] willo-glass overflow-hidden">
         {/* Header with total */}
-        <div className="flex items-start justify-between gap-3 px-4 pt-4">
-          <div>
-            <h2 className="text-[16px] font-semibold text-white">Gastos e receitas fixas</h2>
-            <p className="text-[12px] t-soft">
-              {paidCount} de {filtered.length} {activeTab === "receita" ? "recebidas" : "pagas"} este mês
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-[11px] t-soft">Total/mês</p>
-            <p className={`text-[17px] font-bold tabular-nums ${activeTab === "receita" ? "text-willo-green-ink" : "text-white"}`}>{fmt(total)}</p>
-          </div>
+        <div className="px-4 pt-3.5">
+          <p className="text-[14px] text-white/66">Gastos e receitas fixas</p>
+          <p className={`mt-1 truncate text-[30px] font-extrabold leading-none tracking-[-0.03em] tabular-nums ${activeTab === "receita" ? "text-willo-green-ink" : "text-white"}`}>
+            {fmt(total)}
+          </p>
+          <p className="mt-2 text-[12.5px] t-soft">
+            por mês
+            <span className="text-white/20"> · </span>
+            {paidCount} de {filtered.length} {activeTab === "receita" ? "já recebidas" : "já pagas"}
+          </p>
         </div>
 
         {/* Progress of the month */}
         {filtered.length > 0 && (
-          <div className="mx-4 mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
+          <div className="mx-4 mt-3.5 h-[7px] overflow-hidden rounded-full bg-white/[0.07]">
             <motion.div
               className={`h-full rounded-full ${activeTab === "receita" ? "bg-willo-green" : "bg-white"}`}
               initial={{ width: 0 }}

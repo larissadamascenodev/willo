@@ -1,5 +1,5 @@
 import { memo, useMemo, useState } from "react";
-import { Check, Clock, AlertTriangle, ChevronDown, ChevronUp, CalendarDays } from "lucide-react";
+import { AlertTriangle, CalendarDays, Check, ChevronDown, ChevronRight, ChevronUp, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { FinanceEvent } from "@/types/finance";
 
@@ -109,11 +109,18 @@ const ProximosEventos = memo(({ events, selectedMonth, selectedYear, onVerTodos,
 
   return (
     <div className="rounded-[22px] border border-white/[0.08] willo-glass overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-4 pt-4">
-        <CalendarDays className="h-4 w-4 text-white/74" />
-        <h2 className="text-[16px] font-semibold text-white">Próximos eventos</h2>
-      </div>
+      {/* Header. The card shows the next few; the month itself is a page. */}
+      <button
+        type="button"
+        onClick={onVerTodos}
+        className="flex w-full items-center justify-between gap-2 px-4 pt-4 text-left active:opacity-70"
+      >
+        <span className="flex items-center gap-2">
+          <CalendarDays className="h-4 w-4 text-white/74" />
+          <span className="text-[16px] font-semibold text-white">Próximos eventos</span>
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 t-faint" />
+      </button>
 
       {/* Events list */}
       <div className="px-4 pt-1 divide-y divide-white/[0.06]">
@@ -137,7 +144,7 @@ const ProximosEventos = memo(({ events, selectedMonth, selectedYear, onVerTodos,
           {expanded ? (
             <>Recolher <ChevronUp className="h-4 w-4" /></>
           ) : (
-            <>Ver todos ({sortedEvents.length}) <ChevronDown className="h-4 w-4" /></>
+            <>Mostrar os {sortedEvents.length} do mês <ChevronDown className="h-4 w-4" /></>
           )}
         </button>
       ) : (

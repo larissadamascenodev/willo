@@ -32,8 +32,7 @@ export const WIDGETS: WidgetDef[] = [
   { id: "assinaturas", label: "Assinaturas", description: "O que se repete todo mês", resizable: true, defaultSize: "half" },
   { id: "metas", label: "Metas", description: "Quanto já foi guardado", resizable: true, defaultSize: "half" },
   { id: "fixos", label: "Gastos e receitas fixas", description: "O que é certo todo mês", resizable: true, defaultSize: "full" },
-  { id: "financeiro", label: "Financeiro", description: "Balanço, fluxo e projeções", resizable: true, defaultSize: "half" },
-  { id: "raiox", label: "Raio-X", description: "Para onde o dinheiro vai", resizable: true, defaultSize: "half" },
+  { id: "raiox", label: "Saúde do mês", description: "Quanto dá para gastar por dia até o fim do mês", resizable: true, defaultSize: "full" },
   { id: "categorias", label: "Gastos por categoria", description: "O mês repartido por categoria", resizable: false, defaultSize: "full" },
   { id: "recentes", label: "Transações recentes", description: "As últimas movimentações", resizable: false, defaultSize: "full" },
 ];
