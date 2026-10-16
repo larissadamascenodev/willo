@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown, ArrowUp, Check, Maximize2, Minimize2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Maximize2, Minimize2, Plus, X } from "lucide-react";
 import BottomSheet from "@/components/shared/BottomSheet";
+import WidgetMenu, { type WidgetMenuTarget } from "./WidgetMenu";
 import { useLongPress } from "@/hooks/useLongPress";
 import {
   WIDGETS, loadLayout, saveLayout, setDismissed, widgetById,
@@ -31,7 +32,7 @@ interface Props {
 export default function WidgetBoard({ userId, render }: Props) {
   const [slots, setSlots] = useState<WidgetSlot[]>(() => loadLayout(userId));
   const [editing, setEditing] = useState(false);
-  const [held, setHeld] = useState<string | null>(null);
+  const [held, setHeld] = useState<WidgetMenuTarget | null>(null);
   const [adding, setAdding] = useState(false);
 
   useEffect(() => { setSlots(loadLayout(userId)); }, [userId]);
@@ -58,6 +59,10 @@ export default function WidgetBoard({ userId, render }: Props) {
     setDismissed(userId, id, true);
     commit(slots.filter((s) => s.id !== id));
     setHeld(null);
+  };
+
+  const setSize = (id: string, size: WidgetSize) => {
+    commit(slots.map((s) => (s.id === id ? { ...s, size } : s)));
   };
 
   const add = (id: string) => {
@@ -87,7 +92,6 @@ export default function WidgetBoard({ userId, render }: Props) {
   }, [slots]);
 
   const missing = WIDGETS.filter((w) => !slots.some((s) => s.id === w.id));
-  const heldDef = held ? widgetById(held) : null;
 
   return (
     <>
@@ -128,7 +132,19 @@ export default function WidgetBoard({ userId, render }: Props) {
                 editing={editing}
                 first={slots[0]?.id === slot.id}
                 last={slots[slots.length - 1]?.id === slot.id}
-                onHold={() => !editing && setHeld(slot.id)}
+                onHold={(rect) => {
+                  if (editing) return;
+                  const def = widgetById(slot.id);
+                  if (!def) return;
+                  setHeld({
+                    id: slot.id,
+                    label: def.label,
+                    description: def.description,
+                    size: slot.size,
+                    resizable: def.resizable,
+                    rect,
+                  });
+                }}
                 onMove={(d) => move(slot.id, d)}
                 onResize={() => resize(slot.id)}
                 onRemove={() => remove(slot.id)}
@@ -148,39 +164,14 @@ export default function WidgetBoard({ userId, render }: Props) {
         </button>
       </div>
 
-      {/* Held: what can be done to this one card. */}
-      <BottomSheet open={!!held} onClose={() => setHeld(null)}>
-        <div className="px-5 pb-2">
-          <h2 className="text-[20px] font-extrabold tracking-tight text-white">{heldDef?.label}</h2>
-          <p className="mt-1 text-[13px] leading-snug text-white/62">{heldDef?.description}</p>
-
-          <div className="mt-5 space-y-2.5">
-            <SheetRow
-              icon={Pencil}
-              label="Editar a tela"
-              hint="Mover, aumentar ou tirar os cards"
-              onClick={() => { setHeld(null); setEditing(true); }}
-            />
-            {heldDef?.resizable && (
-              <SheetRow
-                icon={slots.find((s) => s.id === held)?.size === "full" ? Minimize2 : Maximize2}
-                label={slots.find((s) => s.id === held)?.size === "full" ? "Deixar menor" : "Ocupar a linha toda"}
-                hint={slots.find((s) => s.id === held)?.size === "full"
-                  ? "Divide a linha com outro card"
-                  : "Ocupa a largura inteira"}
-                onClick={() => { if (held) resize(held); setHeld(null); }}
-              />
-            )}
-            <SheetRow
-              icon={Trash2}
-              label="Remover da tela"
-              hint="Some daqui, mas continua em Adicionar widgets"
-              danger
-              onClick={() => held && remove(held)}
-            />
-          </div>
-        </div>
-      </BottomSheet>
+      {/* Held: a menu beside the card, not a sheet from the foot of the screen. */}
+      <WidgetMenu
+        target={held}
+        onClose={() => setHeld(null)}
+        onEdit={() => { setHeld(null); setEditing(true); }}
+        onResize={(size) => { if (held) setSize(held.id, size); setHeld(null); }}
+        onRemove={() => held && remove(held.id)}
+      />
 
       {/* The ones currently off the board. */}
       <BottomSheet open={adding} onClose={() => setAdding(false)} size="full">
@@ -221,33 +212,6 @@ export default function WidgetBoard({ userId, render }: Props) {
   );
 }
 
-function SheetRow({ icon: Icon, label, hint, danger, onClick }: {
-  icon: typeof Pencil;
-  label: string;
-  hint: string;
-  danger?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center gap-3.5 rounded-[20px] border border-white/[0.08] willo-glass-inset px-4 py-3.5 text-left active:scale-[0.99]"
-    >
-      <span className={cn(
-        "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-        danger ? "bg-red-400/15 text-red-400" : "bg-white/[0.07] text-white/85",
-      )}>
-        <Icon className="h-[18px] w-[18px]" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className={cn("block text-[15px] font-semibold", danger ? "text-red-400" : "text-white")}>{label}</span>
-        <span className="block truncate text-[12.5px] t-softer">{hint}</span>
-      </span>
-    </button>
-  );
-}
-
 /** One card on the board: held to open its options, and in edit mode, its controls. */
 function WidgetFrame({ slot, editing, first, last, children, onHold, onMove, onResize, onRemove }: {
   slot: WidgetSlot;
@@ -255,7 +219,7 @@ function WidgetFrame({ slot, editing, first, last, children, onHold, onMove, onR
   first: boolean;
   last: boolean;
   children: ReactNode;
-  onHold: () => void;
+  onHold: (rect: { top: number; bottom: number; left: number; width: number }) => void;
   onMove: (delta: -1 | 1) => void;
   onResize: () => void;
   onRemove: () => void;
@@ -263,11 +227,16 @@ function WidgetFrame({ slot, editing, first, last, children, onHold, onMove, onR
   /* The hook swallows the tap for an element it wraps; here the card is a child that
      owns its own click, so the tap after a hold is caught on the way down instead. */
   const fired = useRef(false);
-  const press = useLongPress(() => { fired.current = true; onHold(); });
+  const box = useRef<HTMLDivElement>(null);
+  const press = useLongPress(() => {
+    fired.current = true;
+    const r = box.current?.getBoundingClientRect();
+    onHold(r ? { top: r.top, bottom: r.bottom, left: r.left, width: r.width } : { top: 80, bottom: 200, left: 16, width: 300 });
+  });
   const def = widgetById(slot.id);
 
   return (
-    <motion.div layout transition={{ type: "spring", stiffness: 420, damping: 36 }} className="relative min-w-0">
+    <motion.div ref={box} layout transition={{ type: "spring", stiffness: 420, damping: 36 }} className="relative min-w-0">
       <div
         onPointerDown={editing ? undefined : press.onPointerDown}
         onPointerMove={editing ? undefined : press.onPointerMove}
