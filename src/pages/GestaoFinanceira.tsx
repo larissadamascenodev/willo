@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Landmark, Plus, Banknote, Vault, PiggyBank } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -46,9 +46,6 @@ const ACCOUNT_TYPE_LABELS: Record<string, { label: string; icon: typeof Landmark
 };
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
-
-/** How far the page scrolls before the pinned total has fully receded. */
-const PIN_TRAVEL = 150;
 
 const GestaoFinanceira = () => {
   const navigate = useNavigate();
@@ -125,60 +122,9 @@ const GestaoFinanceira = () => {
   const positive = rows.reduce((s, r) => s + Math.max(r.balance, 0), 0);
   const guardado = goals.reduce((s, g) => s + Number(g.current_amount), 0);
 
-  /* The total does not scroll: it stays and recedes while the accounts travel over it. */
-  const markerRef = useRef<HTMLDivElement>(null);
-  const summaryRef = useRef<HTMLDivElement>(null);
-  const [summaryHeight, setSummaryHeight] = useState(0);
-  const [summaryTop, setSummaryTop] = useState(0);
-  const [progress, setProgress] = useState(0);
-
-  useLayoutEffect(() => {
-    const el = summaryRef.current;
-    if (!el) return;
-    const measure = () => {
-      setSummaryHeight(el.offsetHeight);
-      const marker = markerRef.current;
-      if (marker) setSummaryTop(marker.getBoundingClientRect().top + window.scrollY);
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    window.addEventListener("resize", measure);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, [loading, rows.length, guardado]);
-
-  useEffect(() => {
-    let frame = 0;
-    const onScroll = () => {
-      if (frame) return;
-      frame = requestAnimationFrame(() => {
-        frame = 0;
-        /* A page with barely anything below the fold should not recede at all: a few
-           pixels of scroll were enough to blur the total, which made a page that
-           fits look broken. The travel is whatever room there actually is. */
-        const room = document.documentElement.scrollHeight - window.innerHeight;
-        if (room < 80) { setProgress(0); return; }
-        const travel = Math.min(PIN_TRAVEL, room);
-        setProgress(Math.min(Math.max(window.scrollY / travel, 0), 1));
-      });
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, []);
-
   return (
     <div className="mx-auto max-w-lg pb-10 pt-4">
-      {/* Over the pinned total as it leaves, like the accounts. */}
-      <div className="relative z-20 flex h-11 items-center justify-between">
+      <div className="flex h-11 items-center justify-between">
         <BackButton to="/" />
         <button
           type="button"
@@ -213,21 +159,11 @@ const GestaoFinanceira = () => {
         </div>
       ) : (
         <>
-          {/* ══ Pinned: everything you hold ══ */}
-          <div ref={markerRef} aria-hidden="true" />
-          <div
-            ref={summaryRef}
-            className="fixed inset-x-0 z-10 mx-auto max-w-lg px-4"
-            style={{
-              top: summaryTop,
-              filter: progress > 0.001 ? `blur(${(progress * 12).toFixed(2)}px)` : undefined,
-              opacity: 1 - progress * 0.8,
-              transform: `scale(${1 - progress * 0.03})`,
-              transformOrigin: "50% 0%",
-              willChange: "filter, opacity, transform",
-              pointerEvents: progress > 0.4 ? "none" : undefined,
-            }}
-          >
+          {/* ══ Everything you hold ══
+              It scrolls with the page. The wallet pins its total because a long list
+              of cards would otherwise carry it off screen; a handful of accounts
+              never does, and pinning a header a page does not need is just a header
+              that blurs for no reason. */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -257,13 +193,9 @@ const GestaoFinanceira = () => {
                 )}
               </p>
             </motion.div>
-          </div>
-
-          {/* The room the pinned block takes, so the accounts begin under it. */}
-          <div aria-hidden="true" style={{ height: summaryHeight }} />
 
           {/* ══ The accounts, one line each ══ */}
-          <div className="relative z-20 mt-6">
+          <div className="mt-6">
             {/* One bar split the way the money is, each share in its bank's colour. */}
             <div className="mb-1 flex h-2 gap-[3px] px-1">
               {positive > 0 ? (
