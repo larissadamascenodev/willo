@@ -24,3 +24,12 @@ export { default as Wallet } from "lucide-react-native/icons/wallet";
 export { default as Mic } from "lucide-react-native/icons/mic";
 export { default as Zap } from "lucide-react-native/icons/zap";
 export { default as Bell } from "lucide-react-native/icons/bell";
+/* lucide 1.x renamed alert-triangle to triangle-alert; the name stays AlertTriangle
+   so the screens read like the web ones. */
+export { default as AlertTriangle } from "lucide-react-native/icons/triangle-alert";
+export { default as CalendarDays } from "lucide-react-native/icons/calendar-days";
+export { default as Check } from "lucide-react-native/icons/check";
+export { default as ChevronDown } from "lucide-react-native/icons/chevron-down";
+export { default as ChevronUp } from "lucide-react-native/icons/chevron-up";
+export { default as Clock } from "lucide-react-native/icons/clock";
+export { default as Receipt } from "lucide-react-native/icons/receipt";

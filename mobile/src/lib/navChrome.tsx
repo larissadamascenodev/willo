@@ -12,6 +12,8 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 
 interface NavChrome {
   collapsed: boolean;
+  /** The page has moved at all — what the band over the header answers to. */
+  moved: boolean;
   /** Hand to any screen's ScrollView: onScroll={onScroll}. */
   onScroll: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
   /** Tapping Início while already on Início unfolds the row where you are. */
@@ -20,6 +22,7 @@ interface NavChrome {
 
 const Ctx = createContext<NavChrome>({
   collapsed: false,
+  moved: false,
   onScroll: () => {},
   holdOpen: () => {},
 });
@@ -28,18 +31,20 @@ export const useNavChrome = () => useContext(Ctx);
 
 export function NavChromeProvider({ children }: { children: ReactNode }) {
   const [scrolledPast, setScrolledPast] = useState(false);
+  const [moved, setMoved] = useState(false);
   const [held, setHeld] = useState(false);
 
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     /* Generous, so a thumb twitch does not make the row flap. */
-    const past = e.nativeEvent.contentOffset.y > 90;
-    setScrolledPast(past);
+    const y = e.nativeEvent.contentOffset.y;
+    setScrolledPast(y > 90);
+    setMoved(y > 4);
     setHeld(false);
   }, []);
 
   const value = useMemo(
-    () => ({ collapsed: scrolledPast && !held, onScroll, holdOpen: () => setHeld(true) }),
-    [scrolledPast, held, onScroll],
+    () => ({ collapsed: scrolledPast && !held, moved, onScroll, holdOpen: () => setHeld(true) }),
+    [scrolledPast, moved, held, onScroll],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

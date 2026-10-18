@@ -1,6 +1,7 @@
 import { View, useWindowDimensions } from "react-native";
 import Svg, {
   Defs,
+  G,
   LinearGradient,
   Mask,
   RadialGradient,
@@ -16,6 +17,11 @@ import Svg, {
  * reaches the cards so they sit on the room rather than on the picture. It is the
  * same set of gradients the web paints, drawn here as rectangles because React
  * Native has no radial gradient of its own.
+ *
+ * The fade is applied to all of it at once rather than to each layer. Masking them
+ * one by one compounds: every layer gets faded, and wherever two overlap the fade
+ * multiplies, so the whole picture came out washed and flat — which is exactly what
+ * it looked like.
  *
  * Only three screens wear it: the home, the wallet and the accounts screen. They are
  * places you arrive at rather than work in, and the cards sit badly on flat charcoal.
@@ -87,18 +93,12 @@ export default function Sky() {
           </Mask>
         </Defs>
 
-        <Rect x="0" y="0" width="100%" height="100%" fill="url(#sky-base)" mask="url(#sky-mask)" />
-        {LIGHTS.map((_, i) => (
-          <Rect
-            key={i}
-            x="0"
-            y="0"
-            width="100%"
-            height="100%"
-            fill={`url(#sky${i})`}
-            mask="url(#sky-mask)"
-          />
-        ))}
+        <G mask="url(#sky-mask)">
+          <Rect x="0" y="0" width="100%" height="100%" fill="url(#sky-base)" />
+          {LIGHTS.map((_, i) => (
+            <Rect key={i} x="0" y="0" width="100%" height="100%" fill={`url(#sky${i})`} />
+          ))}
+        </G>
       </Svg>
     </View>
   );

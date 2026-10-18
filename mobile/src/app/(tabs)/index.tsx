@@ -7,12 +7,17 @@ import { useFinanceData } from "@/hooks/useFinanceData";
 import { useProfile } from "@/hooks/useProfile";
 import { useHiddenValues } from "@/hooks/useHiddenValues";
 import { useCardsOverview, invoiceDueDate } from "@/hooks/useCardsOverview";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import Room from "~/components/Room";
+import ScrollEdge from "~/components/ScrollEdge";
 import HomeHeader from "~/components/home/HomeHeader";
 import Stories from "~/components/home/Stories";
 import SaldoContasCard from "~/components/home/SaldoContasCard";
 import FluxoCard from "~/components/home/FluxoCard";
 import SaudeDoMesCard from "~/components/home/SaudeDoMesCard";
+import ProximosEventos from "~/components/home/ProximosEventos";
+import GastosPorCategoria from "~/components/home/GastosPorCategoria";
+import TransacoesRecentes from "~/components/home/TransacoesRecentes";
 import { useAuth } from "~/lib/auth";
 import { useNavChrome } from "~/lib/navChrome";
 import { INK } from "~/theme/tokens";
@@ -31,7 +36,7 @@ import { INK } from "~/theme/tokens";
 export default function Home() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { onScroll } = useNavChrome();
+  const { onScroll, moved } = useNavChrome();
   const { greeting, dateStr } = useGreeting();
   const hidden = useHiddenValues();
   const [refreshing, setRefreshing] = useState(false);
@@ -122,25 +127,39 @@ export default function Home() {
           <Stories slides={slides} />
         </View>
 
+        {/* The feed, each card arriving a beat after the one above it, the way the
+            web stacks them. */}
         <View style={{ marginTop: 20, gap: 16 }}>
-          <SaldoContasCard saldoPrevisto={data.saldoPrevisto} />
-
-          <FluxoCard
-            receitas={data.receitas}
-            despesas={data.despesas}
-            month={month}
-            isCurrentMonth
-          />
-
-          <SaudeDoMesCard
-            receitas={data.receitas}
-            despesas={data.despesas}
-            saldoPrevisto={data.saldoPrevisto}
-            categories={data.categories ?? []}
-            isCurrentMonth
-          />
+          {[
+            <SaldoContasCard key="saldo" saldoPrevisto={data.saldoPrevisto} />,
+            <FluxoCard
+              key="fluxo"
+              receitas={data.receitas}
+              despesas={data.despesas}
+              month={month}
+              isCurrentMonth
+            />,
+            <ProximosEventos key="eventos" events={data.events ?? []} />,
+            <SaudeDoMesCard
+              key="raiox"
+              receitas={data.receitas}
+              despesas={data.despesas}
+              saldoPrevisto={data.saldoPrevisto}
+              categories={data.categories ?? []}
+              isCurrentMonth
+            />,
+            <GastosPorCategoria key="categorias" categories={data.categories ?? []} month={month} />,
+            <TransacoesRecentes key="recentes" transactions={data.transactions ?? []} />,
+          ].map((card, i) => (
+            <Animated.View key={card.key} entering={FadeInDown.delay(60 + i * 70).duration(420)}>
+              {card}
+            </Animated.View>
+          ))}
         </View>
       </ScrollView>
+
+      {/* Only this screen pins a header for content to dissolve under. */}
+      <ScrollEdge on={moved} />
     </Room>
   );
 }

@@ -126,10 +126,11 @@ export default function BottomNav({ state, navigation }: TabBarProps) {
                     onPress={() => go(item.name)}
                     accessibilityLabel={item.label}
                     style={{
-                      flex: collapsed ? 1 : undefined,
+                      /* One way of saying it: mixing flex with flexGrow on the same
+                         box is a styling bug waiting to happen. */
+                      flexGrow: 1,
+                      flexBasis: 0,
                       height: collapsed ? "100%" : 44,
-                      width: collapsed ? "100%" : undefined,
-                      flexGrow: collapsed ? 1 : 1,
                       marginHorizontal: 2,
                       borderRadius: 999,
                       alignItems: "center",
