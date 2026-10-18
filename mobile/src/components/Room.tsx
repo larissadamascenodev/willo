@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import { View, type ViewStyle } from "react-native";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
+import Sky from "~/components/Sky";
 import { GROUND, GROUND_LIT } from "~/theme/tokens";
 
 /**
@@ -31,10 +32,13 @@ const LIGHTS = [
 
 export default function Room({
   lit = false,
+  sky = false,
   children,
   style,
 }: {
   lit?: boolean;
+  /** The home, the wallet and the accounts screen get the hour on top of the room. */
+  sky?: boolean;
   children?: ReactNode;
   style?: ViewStyle;
 }) {
@@ -78,6 +82,8 @@ export default function Room({
         ))}
         <Rect x="0" y="0" width="100%" height="100%" fill="url(#vignette)" />
       </Svg>
+
+      {sky && <Sky />}
 
       {children}
     </View>

@@ -21,3 +21,6 @@ export { default as Search } from "lucide-react-native/icons/search";
    screens read like the web ones. */
 export { default as Trash2 } from "lucide-react-native/icons/trash";
 export { default as Wallet } from "lucide-react-native/icons/wallet";
+export { default as Mic } from "lucide-react-native/icons/mic";
+export { default as Zap } from "lucide-react-native/icons/zap";
+export { default as Bell } from "lucide-react-native/icons/bell";
