@@ -4,6 +4,7 @@
     "strict": true,
     "paths": {
       "@/integrations/supabase/client": ["./src/supabase/client.ts"],
+      "@/contexts/AuthContext": ["./src/lib/auth.tsx"],
       "@/*": ["../src/*"],
       "~/*": ["./src/*"]
     }

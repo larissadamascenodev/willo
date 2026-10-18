@@ -13,3 +13,11 @@ export { default as ChevronRight } from "lucide-react-native/icons/chevron-right
 export { default as House } from "lucide-react-native/icons/house";
 export { default as Plus } from "lucide-react-native/icons/plus";
 export { default as Sparkles } from "lucide-react-native/icons/sparkles";
+export { default as CreditCard } from "lucide-react-native/icons/credit-card";
+export { default as Pencil } from "lucide-react-native/icons/pencil";
+export { default as RefreshCw } from "lucide-react-native/icons/refresh-cw";
+export { default as Search } from "lucide-react-native/icons/search";
+/* lucide 1.x renamed trash-2 to trash; the name here stays Trash2 so the
+   screens read like the web ones. */
+export { default as Trash2 } from "lucide-react-native/icons/trash";
+export { default as Wallet } from "lucide-react-native/icons/wallet";

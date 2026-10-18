@@ -23,6 +23,7 @@ module.exports = function (api) {
         {
           alias: {
             "@/integrations/supabase/client": "./src/supabase/client",
+            "@/contexts/AuthContext": "./src/lib/auth",
             "@": "../src",
             "~": "./src",
           },

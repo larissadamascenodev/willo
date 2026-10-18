@@ -71,7 +71,7 @@ export async function assertCategoryIsUnique(
     throw new Error("Escolha um nome específico: “Outros” não ajuda a entender seus gastos");
   }
 
-  const { DEFAULT_CATEGORY_TYPE, DEFAULT_CATEGORY_HEX } = await import("@/lib/categoryIcons");
+  const { DEFAULT_CATEGORY_TYPE, DEFAULT_CATEGORY_HEX } = await import("@/lib/categoryData");
   const defaults = Object.keys(DEFAULT_CATEGORY_TYPE).filter((n) => DEFAULT_CATEGORY_TYPE[n] === type);
   if (defaults.some((n) => normalizeName(n) === clean)) throw new Error(`Já existe a categoria “${name.trim()}”`);
   if (Object.values(DEFAULT_CATEGORY_HEX).some((hex) => hex.toLowerCase() === color.toLowerCase())) {
