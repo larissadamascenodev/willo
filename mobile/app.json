@@ -8,7 +8,6 @@
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#08090A",
-    "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "com.willo.app",
       "supportsTablet": false,
@@ -43,7 +42,11 @@
         {
           "cameraPermission": "O Willo usa a câmera para ler suas faturas e comprovantes."
         }
-      ]
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
