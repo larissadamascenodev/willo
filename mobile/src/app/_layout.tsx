@@ -6,7 +6,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { installShims, hydrateShims } from "~/lib/shims";
 import { AuthProvider } from "~/lib/auth";
-import { GROUND } from "~/theme/tokens";
+import { GREEN, GROUND } from "~/theme/tokens";
 import "~/global.css";
 
 /* Before any shared module is imported for real, the handful of browser things it
@@ -14,9 +14,15 @@ import "~/global.css";
 installShims();
 
 /**
- * The shell. Nothing draws until the stored keys are in memory, because the shared
- * code reads them without waiting and would otherwise see an empty app on every
- * launch — no saved currency, no widget order, no hidden-values setting.
+ * The shell.
+ *
+ * It opens straight into the app. The sign-in screen is still here and still works,
+ * but it is a place you can go rather than a gate you have to pass — while the
+ * screens are being rebuilt, being stopped at the door on every reload costs more
+ * than it protects. It goes back to being a gate when the app is whole.
+ *
+ * Nothing draws until the stored keys are in memory, because the shared code reads
+ * them without waiting and would otherwise see a brand-new app on every launch.
  */
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
@@ -28,7 +34,7 @@ export default function RootLayout() {
   if (!ready) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: GROUND }}>
-        <ActivityIndicator color="#C8F36D" />
+        <ActivityIndicator color={GREEN} />
       </View>
     );
   }
@@ -42,9 +48,11 @@ export default function RootLayout() {
             screenOptions={{
               headerShown: false,
               contentStyle: { backgroundColor: GROUND },
-              animation: "fade",
             }}
-          />
+          >
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="login" options={{ presentation: "modal" }} />
+          </Stack>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

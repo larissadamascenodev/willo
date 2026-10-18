@@ -8,18 +8,9 @@ import NotificationsPanel, { useNotifications } from "./NotificationsPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import wordmarkOnDark from "@/assets/logo/willo-wordmark-light.png";
 
-export const useGreeting = () => {
-  return useMemo(() => {
-    const now = new Date();
-    const hour = now.getHours();
-    let g = "Bom dia";
-    if (hour >= 12 && hour < 18) g = "Boa tarde";
-    else if (hour >= 18) g = "Boa noite";
-    const days = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
-    const months = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
-    return { greeting: g, dateStr: `${days[now.getDay()]}, ${now.getDate()} de ${months[now.getMonth()]}` };
-  }, []);
-};
+/* Re-exported so everything that already imports it from here keeps working; the
+   reasoning itself moved to lib, where the phone app can reach it too. */
+export { useGreeting } from "@/lib/greeting";
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
