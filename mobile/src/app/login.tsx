@@ -16,38 +16,74 @@ import { GREEN, GROUND, INK, RED } from "~/theme/tokens";
 /**
  * The door.
  *
- * E-mail and password only, for now: it is the same account as the browser, so the
- * point of this screen is to prove the session travels, not to be the whole welcome
- * flow. Apple and Google come back with their native sign-in, which needs a build of
- * its own rather than the test app.
+ * The button is always a button. It was dimmed to a third while the fields were
+ * empty, which on a dark screen turns white into a grey bar that reads as a divider
+ * — so the one control on the screen looked like it was not there. It stays solid
+ * and answers a press that cannot go through by saying what is missing.
  */
+
+const RESET_REDIRECT = "https://willo-app.vercel.app/reset-password";
+
 export default function Login() {
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [reveal, setReveal] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const canSubmit = email.trim().length > 3 && password.length >= 6 && !busy;
+  const [note, setNote] = useState<{ tone: "bad" | "good"; text: string } | null>(null);
 
   const submit = async () => {
-    if (!canSubmit) return;
+    if (busy) return;
+
+    if (!email.trim().includes("@")) {
+      setNote({ tone: "bad", text: "Digite o seu e-mail." });
+      return;
+    }
+    if (password.length < 6) {
+      setNote({ tone: "bad", text: "Digite a sua senha." });
+      return;
+    }
+
     setBusy(true);
-    setError(null);
-    const { error: err } = await supabase.auth.signInWithPassword({
+    setNote(null);
+    const { error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
     });
-    if (err) {
-      setError(
-        err.message.toLowerCase().includes("invalid")
-          ? "E-mail ou senha incorretos."
+    if (error) {
+      const msg = error.message.toLowerCase();
+      setNote({
+        tone: "bad",
+        text: msg.includes("invalid")
+          ? "E-mail ou senha incorretos. Se você entra pela Apple ou pelo Google, use “Criar uma senha”."
           : "Não foi possível entrar. Tente de novo.",
-      );
+      });
       setBusy(false);
     }
-    /* On success the auth listener swaps the screen; leaving `busy` on keeps the
-       button from being pressed twice while that happens. */
+    /* On success the auth listener swaps the screen; `busy` stays on so the button
+       cannot be pressed twice while that happens. */
+  };
+
+  const sendReset = async () => {
+    if (busy) return;
+    if (!email.trim().includes("@")) {
+      setNote({ tone: "bad", text: "Digite o seu e-mail primeiro." });
+      return;
+    }
+    setBusy(true);
+    setNote(null);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: RESET_REDIRECT,
+    });
+    setBusy(false);
+    setNote(
+      error
+        ? { tone: "bad", text: "Não foi possível enviar o e-mail. Tente de novo." }
+        : {
+            tone: "good",
+            text: "Enviamos um link para o seu e-mail. Abra, defina uma senha e volte aqui para entrar com ela.",
+          },
+    );
   };
 
   return (
@@ -72,44 +108,73 @@ export default function Login() {
           Entre com a mesma conta que você usa no navegador.
         </Text>
 
-        <View style={{ marginTop: 32, gap: 12 }}>
+        <View style={{ marginTop: 30, gap: 12 }}>
           <Field
             label="E-mail"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(t) => {
+              setEmail(t);
+              setNote(null);
+            }}
             placeholder="voce@email.com"
             keyboardType="email-address"
             autoCapitalize="none"
+            autoCorrect={false}
             autoComplete="email"
           />
-          <Field
-            label="Senha"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="••••••••"
-            secureTextEntry
-            autoCapitalize="none"
-            autoComplete="current-password"
-            onSubmitEditing={submit}
-            returnKeyType="go"
-          />
+
+          <View>
+            <Field
+              label="Senha"
+              value={password}
+              onChangeText={(t) => {
+                setPassword(t);
+                setNote(null);
+              }}
+              placeholder="••••••••"
+              secureTextEntry={!reveal}
+              autoCapitalize="none"
+              autoComplete="current-password"
+              onSubmitEditing={submit}
+              returnKeyType="go"
+            />
+            <Pressable
+              onPress={() => setReveal((v) => !v)}
+              hitSlop={10}
+              style={{ position: "absolute", right: 14, bottom: 17 }}
+            >
+              <Text style={{ fontSize: 12.5, fontWeight: "600", color: INK.softer }}>
+                {reveal ? "Ocultar" : "Mostrar"}
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
-        {error && (
-          <Text style={{ marginTop: 14, fontSize: 13.5, color: RED, lineHeight: 19 }}>{error}</Text>
+        {note && (
+          <Text
+            style={{
+              marginTop: 14,
+              fontSize: 13.5,
+              lineHeight: 19,
+              color: note.tone === "bad" ? RED : GREEN,
+            }}
+          >
+            {note.text}
+          </Text>
         )}
 
+        {/* Solid, always. Whether it can go through is answered on the press. */}
         <Pressable
           onPress={submit}
-          disabled={!canSubmit}
+          disabled={busy}
           style={({ pressed }) => ({
-            marginTop: 24,
+            marginTop: 22,
             height: 54,
             borderRadius: 999,
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: "#fff",
-            opacity: !canSubmit ? 0.35 : pressed ? 0.8 : 1,
+            opacity: pressed ? 0.82 : 1,
           })}
         >
           {busy ? (
@@ -119,17 +184,30 @@ export default function Login() {
           )}
         </Pressable>
 
-        <View
-          style={{
-            marginTop: 28,
-            borderTopWidth: 1,
-            borderTopColor: INK.edge,
-            paddingTop: 14,
-          }}
+        <Pressable
+          onPress={sendReset}
+          disabled={busy}
+          style={({ pressed }) => ({
+            marginTop: 14,
+            height: 48,
+            borderRadius: 999,
+            alignItems: "center",
+            justifyContent: "center",
+            borderWidth: 1,
+            borderColor: INK.edge,
+            opacity: pressed ? 0.6 : 1,
+          })}
         >
+          <Text style={{ fontSize: 14.5, fontWeight: "600", color: INK.soft }}>
+            Criar uma senha por e-mail
+          </Text>
+        </Pressable>
+
+        <View style={{ marginTop: 26, borderTopWidth: 1, borderTopColor: INK.edge, paddingTop: 14 }}>
           <Text style={{ fontSize: 12, color: INK.faint, lineHeight: 17 }}>
-            Versão nativa em construção. Os dados são exatamente os mesmos do aplicativo web —
-            mesmo banco, mesma conta.
+            Entrar com a Apple e com o Google chega junto com a versão instalada — elas precisam
+            de permissões nativas que o aplicativo de teste não tem. Até lá, a senha vale para a
+            mesma conta.
           </Text>
         </View>
       </ScrollView>
@@ -138,10 +216,7 @@ export default function Login() {
 }
 
 /** A labelled field, drawn on the ground rather than inside a card. */
-function Field({
-  label,
-  ...props
-}: React.ComponentProps<typeof TextInput> & { label: string }) {
+function Field({ label, ...props }: React.ComponentProps<typeof TextInput> & { label: string }) {
   const [focused, setFocused] = useState(false);
   return (
     <View>
@@ -166,6 +241,7 @@ function Field({
           height: 54,
           borderRadius: 16,
           paddingHorizontal: 16,
+          paddingRight: 82,
           fontSize: 16,
           color: "#fff",
           backgroundColor: "rgba(255,255,255,0.05)",

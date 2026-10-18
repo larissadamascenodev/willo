@@ -14,6 +14,9 @@ module.exports = {
     "../src/**/*.{ts,tsx}",
   ],
   presets: [require("nativewind/preset")],
+  /* The app declares itself dark rather than following the system, and on web that
+     has to be a class for NativeWind to let the choice be made at all. */
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
