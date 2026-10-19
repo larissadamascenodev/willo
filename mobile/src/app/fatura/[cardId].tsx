@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { getInvoices, getInvoiceItems, type Invoice } from "@/services/invoiceService";
 import { getCreditCards } from "@/services/transactionService";
-import { readInvoice } from "@/lib/invoice/readModel";
+import { invoicePeriodIndex } from "@/lib/installments";
+import type { InvoiceLine } from "@/lib/invoice/readModel";
 import { cardHex as hexFor } from "@/hooks/useCardsOverview";
 import { shade } from "@/lib/tone";
 import { categoryHex } from "@/lib/categoryData";
@@ -13,9 +14,10 @@ import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import Surface from "~/components/Surface";
 import { statusPill } from "~/components/wallet/CardFaceTile";
-import { Check, MoreVertical, Plus, Wallet } from "~/components/icons";
-import { categoryIcon } from "~/lib/categoryIcon";
-import { chipFill, chipInk } from "~/lib/chip";
+import InvoiceForecastChart from "~/components/fatura/InvoiceForecastChart";
+import InvoiceRecentCard from "~/components/fatura/InvoiceRecentCard";
+import AnchoredMenu, { MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
+import { Check, MoreVertical, Pencil, Plus, Trash2, Wallet } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
@@ -48,6 +50,7 @@ interface CardInfo {
 
 export default function Fatura() {
   const { cardId } = useLocalSearchParams<{ cardId: string }>();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
 
@@ -59,6 +62,9 @@ export default function Fatura() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openLine, setOpenLine] = useState<InvoiceLine | null>(null);
+  const [menuAt, setMenuAt] = useState<AnchorRect | null>(null);
+  const dotsRef = useRef<View>(null);
 
   const load = useCallback(async () => {
     if (!cardId || !user) {
@@ -78,6 +84,29 @@ export default function Fatura() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /* Opening a card should land on the statement that still needs attention — the
+     oldest one not yet settled, or the period currently collecting purchases when
+     everything is paid. A settled month stays reachable through the strip, not as
+     the landing screen. */
+  const picked = useRef(false);
+  useEffect(() => {
+    if (picked.current || !card) return;
+    picked.current = true;
+
+    const unpaid = invoices
+      .filter((inv) => !inv.is_paid && Number(inv.total_amount) > 0)
+      .sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month))[0];
+
+    if (unpaid) {
+      setMonth(unpaid.month);
+      setYear(unpaid.year);
+      return;
+    }
+    const period = invoicePeriodIndex(new Date().toISOString().slice(0, 10), card.closing_day);
+    setMonth((period % 12) + 1);
+    setYear(Math.floor(period / 12));
+  }, [card, invoices]);
 
   const current = useMemo(
     () => invoices.find((i) => i.month === month && i.year === year),
@@ -160,18 +189,6 @@ export default function Fatura() {
     return { label: "Aberta", style: statusPill(hex) };
   }, [current, card, month, year, outstanding, hex]);
 
-  /* Every month this card has a bill for, so what it is about to ask for can be
-     read next to what it is asking for now. */
-  const months = useMemo(
-    () =>
-      [...invoices]
-        .filter((i) => Number(i.total_amount) > 0 || (i.month === month && i.year === year))
-        .sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month)),
-    [invoices, month, year],
-  );
-  const peak = Math.max(...months.map((i) => Number(i.total_amount)), 1);
-
-  const lines = useMemo(() => (items.length ? readInvoice(items).lines : []), [items]);
 
   return (
     <Room>
@@ -220,7 +237,13 @@ export default function Fatura() {
           </View>
 
           <Pressable
+            ref={dotsRef}
             accessibilityLabel="Opções do cartão"
+            onPress={() => {
+              dotsRef.current?.measureInWindow((x, y, w, h) =>
+                setMenuAt({ top: y, bottom: y + h, left: x, width: w }),
+              );
+            }}
             style={({ pressed }) => ({
               width: 40,
               height: 40,
@@ -403,117 +426,36 @@ export default function Fatura() {
             </View>
 
             {/* What this card is about to ask for, month by month. */}
-            {months.length > 1 && (
-              <Surface radius={24} style={{ marginTop: 24, paddingVertical: 16 }}>
-                <Text style={{ paddingHorizontal: 16, fontSize: 13, color: INK.soft }}>
-                  Próximas faturas
-                </Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ paddingHorizontal: 16, gap: 10, marginTop: 14, alignItems: "flex-end" }}
-                >
-                  {months.map((inv) => {
-                    const value = Number(inv.total_amount);
-                    const on = inv.month === month && inv.year === year;
-                    const past = inv.year * 12 + inv.month < year * 12 + month;
-                    return (
-                      <Pressable
-                        key={`${inv.year}-${inv.month}`}
-                        onPress={() => {
-                          setMonth(inv.month);
-                          setYear(inv.year);
-                        }}
-                        style={{ alignItems: "center", gap: 8, width: 46 }}
-                      >
-                        <Text style={{ fontSize: 10.5, color: on ? "#fff" : INK.faint }}>
-                          {money(value).replace(/^R\$\s?/, "").split(",")[0]}
-                        </Text>
-                        <View
-                          style={{
-                            width: 28,
-                            height: Math.max((value / peak) * 90, 4),
-                            borderRadius: 8,
-                            backgroundColor: on ? hex : past ? shade(hex, -0.3) : shade(hex, 0.55),
-                            opacity: on ? 1 : 0.7,
-                          }}
-                        />
-                        <Text
-                          style={{
-                            fontSize: 10.5,
-                            fontWeight: on ? "700" : "500",
-                            color: on ? "#fff" : INK.softer,
-                          }}
-                        >
-                          {MONTH_NAMES[inv.month - 1].slice(0, 3)}
-                        </Text>
-                        {inv.is_paid && <Check size={11} color={GREEN} strokeWidth={3} />}
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </Surface>
-            )}
+            <View style={{ marginTop: 28 }}>
+              <InvoiceForecastChart
+                invoices={invoices}
+                selectedMonth={month}
+                selectedYear={year}
+                onSelect={(m, y) => {
+                  setMonth(m);
+                  setYear(y);
+                }}
+                closingDay={card?.closing_day}
+                hex={hex}
+              />
+            </View>
 
-            {/* ── What is on it ── */}
-            <View style={{ marginTop: 24, paddingHorizontal: 4 }}>
-              <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>
-                Lançamentos
-              </Text>
-              {lines.length === 0 ? (
-                <Text style={{ marginTop: 16, fontSize: 13.5, color: INK.soft }}>
-                  Nenhum lançamento nesta fatura.
-                </Text>
-              ) : (
-                <View style={{ marginTop: 8 }}>
-                  {lines.map((line: any, i: number) => {
-                    const catHex = categoryHex(line.category ?? "");
-                    const Icon = categoryIcon(line.category ?? "");
-                    return (
-                      <View
-                        key={line.id ?? i}
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 14,
-                          paddingVertical: 14,
-                          borderTopWidth: i > 0 ? 1 : 0,
-                          borderTopColor: "rgba(255,255,255,0.055)",
-                        }}
-                      >
-                        <View
-                          style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: 22,
-                            alignItems: "center",
-                            justifyContent: "center",
-                            backgroundColor: chipFill(catHex),
-                          }}
-                        >
-                          <Icon size={18} color={chipInk(catHex)} />
-                        </View>
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text numberOfLines={1} style={T.rowName}>
-                            {line.name}
-                          </Text>
-                          <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>
-                            {line.category}
-                            {line.totalInstallments && line.totalInstallments > 1
-                              ? ` · ${line.installmentNumber}/${line.totalInstallments}x`
-                              : ""}
-                          </Text>
-                        </View>
-                        <Text style={T.rowValue}>{money(Number(line.amount))}</Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
+            <View style={{ marginTop: 24 }}>
+              <InvoiceRecentCard
+                items={items}
+                onSeeAll={() => router.push(`/fatura/${cardId}/lancamentos` as never)}
+                onOpen={setOpenLine}
+              />
             </View>
           </>
         )}
       </ScrollView>
+
+      {/* What can be done to the card itself. */}
+      <AnchoredMenu open={!!menuAt} anchor={menuAt} onClose={() => setMenuAt(null)}>
+        <MenuRow icon={Pencil} label="Editar cartão" onPress={() => setMenuAt(null)} />
+        <MenuRow icon={Trash2} label="Excluir cartão" danger last onPress={() => setMenuAt(null)} />
+      </AnchoredMenu>
     </Room>
   );
 }

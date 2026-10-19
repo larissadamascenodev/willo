@@ -50,3 +50,5 @@ export { default as MoreVertical } from "lucide-react-native/icons/ellipsis-vert
 export { default as Landmark } from "lucide-react-native/icons/landmark";
 export { default as FileText } from "lucide-react-native/icons/file-text";
 export { default as Tag } from "lucide-react-native/icons/tag";
+export { default as FastForward } from "lucide-react-native/icons/fast-forward";
+export { default as Undo2 } from "lucide-react-native/icons/undo-2";
