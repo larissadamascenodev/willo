@@ -59,6 +59,10 @@ export default function RootLayout() {
             <Stack.Screen name="cartoes" />
             <Stack.Screen name="fatura/[cardId]" />
             <Stack.Screen name="gestao" />
+            {/* Comes up from the foot of the screen, but as a screen rather than a card:
+                the modal presentation insets its own content, which on a form that is
+                already full width shows up as a left edge cut off. */}
+            <Stack.Screen name="novo" options={{ animation: "slide_from_bottom" }} />
           </Stack>
           </MonthProvider>
         </AuthProvider>

@@ -48,3 +48,5 @@ export { default as ChevronLeft } from "lucide-react-native/icons/chevron-left";
    so the screens read like the web ones. */
 export { default as MoreVertical } from "lucide-react-native/icons/ellipsis-vertical";
 export { default as Landmark } from "lucide-react-native/icons/landmark";
+export { default as FileText } from "lucide-react-native/icons/file-text";
+export { default as Tag } from "lucide-react-native/icons/tag";

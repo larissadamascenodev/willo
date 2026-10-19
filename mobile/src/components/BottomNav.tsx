@@ -2,6 +2,7 @@ import { Pressable, Text, View, useWindowDimensions } from "react-native";
 import Animated, { LinearTransition, FadeIn, FadeOut } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import BotMark from "~/components/BotMark";
 import { ArrowLeftRight, House, Mic, Sparkles, Zap } from "~/components/icons";
 import { useNavChrome } from "~/lib/navChrome";
@@ -44,6 +45,7 @@ export default function BottomNav({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { collapsed, holdOpen } = useNavChrome();
+  const router = useRouter();
 
   const active = state.routes[state.index]?.name ?? "index";
   const shown = collapsed ? ITEMS.slice(0, 1) : ITEMS;
@@ -75,6 +77,7 @@ export default function BottomNav({ state, navigation }: TabBarProps) {
       {!collapsed && (
         <Animated.View entering={FadeIn.duration(260)} exiting={FadeOut.duration(200)}>
           <Pressable
+            onPress={() => router.push("/novo")}
             style={[
               FLOAT,
               {
@@ -161,6 +164,7 @@ export default function BottomNav({ state, navigation }: TabBarProps) {
             style={{ flex: 1 }}
           >
             <Pressable
+              onPress={() => router.push("/novo")}
               style={[
                 FLOAT,
                 {
