@@ -11,23 +11,30 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
  * without it a title and a name smear straight through the avatar as they go by.
  *
  * The blur has to fade out, not stop — a blur that simply ends draws a line across
- * the screen. There is no way to fade a blur itself, so it is built in layers: each
- * one shorter than the last, so near the top the page is looking through four of
- * them and by the bottom edge through none. A mask would be tidier, but the only
- * masking component here renders as a white slab on the web, which is no way to
- * check one's work.
+ * the screen. There is no way to fade a blur itself, so it is built in layers, and
+ * the order matters: the tallest layer is the weakest, so what the bottom edge ends
+ * on is almost nothing. Stacked the other way round, with the full-strength layer
+ * reaching furthest, the line is exactly as visible as having no layers at all,
+ * which is what it looked like.
  */
 
-/** Fractions of the band's height, deepest first. */
-const LAYERS = [1, 0.74, 0.5, 0.3];
+/** Height as a fraction of the band, with the blur each layer adds. Weakest last. */
+const LAYERS: { to: number; intensity: number }[] = [
+  { to: 0.3, intensity: 16 },
+  { to: 0.48, intensity: 12 },
+  { to: 0.64, intensity: 9 },
+  { to: 0.78, intensity: 6 },
+  { to: 0.9, intensity: 4 },
+  { to: 1, intensity: 2 },
+];
 
 export default function ScrollEdge({ on }: { on: boolean }) {
   const insets = useSafeAreaInsets();
   const shown = useSharedValue(0);
-  const height = insets.top + 96;
+  const height = insets.top + 104;
 
   useEffect(() => {
-    shown.value = withTiming(on ? 1 : 0, { duration: 220 });
+    shown.value = withTiming(on ? 1 : 0, { duration: 260 });
   }, [on, shown]);
 
   const style = useAnimatedStyle(() => ({ opacity: shown.value }));
@@ -37,17 +44,17 @@ export default function ScrollEdge({ on }: { on: boolean }) {
       pointerEvents="none"
       style={[{ position: "absolute", top: 0, left: 0, right: 0, height, zIndex: 25 }, style]}
     >
-      {LAYERS.map((fraction, i) => (
+      {LAYERS.map((layer, i) => (
         <BlurView
           key={i}
-          intensity={14}
+          intensity={layer.intensity}
           tint="dark"
           style={{
             position: "absolute",
             top: 0,
             left: 0,
             right: 0,
-            height: height * fraction,
+            height: height * layer.to,
           }}
         />
       ))}
@@ -56,8 +63,9 @@ export default function ScrollEdge({ on }: { on: boolean }) {
       <Svg width="100%" height="100%" style={{ position: "absolute", top: 0, left: 0 }}>
         <Defs>
           <LinearGradient id="edge-tint" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#0E0E0F" stopOpacity={0.86} />
-            <Stop offset="0.58" stopColor="#0E0E0F" stopOpacity={0.3} />
+            <Stop offset="0" stopColor="#0E0E0F" stopOpacity={0.8} />
+            <Stop offset="0.5" stopColor="#0E0E0F" stopOpacity={0.3} />
+            <Stop offset="0.8" stopColor="#0E0E0F" stopOpacity={0.08} />
             <Stop offset="1" stopColor="#0E0E0F" stopOpacity={0} />
           </LinearGradient>
         </Defs>

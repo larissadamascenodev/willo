@@ -3,7 +3,7 @@
  *
  * Tailwind classes cover most of what a screen needs, but a navigator's background,
  * a status bar and a blur tint are set in JavaScript, so the few colours that are
- * asked for outside a className live here rather than being typed out again.
+ * asked for in more than one place live here rather than being typed out again.
  */
 
 /** The room with the lights down — the ground on every screen but three. */

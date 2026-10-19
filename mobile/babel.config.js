@@ -6,17 +6,14 @@
  * code lives in ../src and imports itself as `@/…`, so `@/` has to keep meaning the
  * same thing here, or none of it would resolve. This app's own files answer to `~/`.
  *
- * The one exception is the Supabase client: the shared code asks for it by the web
- * path, and here that path is answered by a twin that stores its session on the
- * phone instead of in a browser.
+ * Two modules are the exception: the shared code asks for the Supabase client and
+ * the auth context by their web paths, and here those paths are answered by twins
+ * that keep a session on the phone instead of in a browser.
  */
 module.exports = function (api) {
   api.cache(true);
   return {
-    presets: [
-      ["babel-preset-expo", { jsxImportSource: "nativewind" }],
-      "nativewind/babel",
-    ],
+    presets: ["babel-preset-expo"],
     plugins: [
       [
         "module-resolver",

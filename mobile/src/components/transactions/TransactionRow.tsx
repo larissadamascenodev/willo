@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { Pressable, Text, View } from "react-native";
 import { categoryHex } from "@/lib/categoryData";
 import { categoryIcon } from "~/lib/categoryIcon";
-import { chipFill, chipInk } from "@/lib/chipColor";
+import { chipFill, chipInk } from "~/lib/chip";
 import type { TransactionRow as Row } from "@/services/monthTransactions";
 import type { CustomCategory } from "@/services/categoryService";
 import { CreditCard, RefreshCw, Wallet } from "~/components/icons";

@@ -8,7 +8,6 @@ import { installShims, hydrateShims } from "~/lib/shims";
 import { AuthProvider } from "~/lib/auth";
 import { MonthProvider } from "@/contexts/MonthContext";
 import { GREEN, GROUND } from "~/theme/tokens";
-import "~/global.css";
 
 /* Before any shared module is imported for real, the handful of browser things it
    expects have to exist. */

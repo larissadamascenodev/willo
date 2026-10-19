@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { categoryHex } from "@/lib/categoryData";
-import { chipFill, chipInk } from "@/lib/chipColor";
+import { chipFill, chipInk } from "~/lib/chip";
 import type { Transaction } from "@/types/finance";
 import Surface from "~/components/Surface";
 import { ChevronRight, CreditCard, Receipt, Wallet } from "~/components/icons";
