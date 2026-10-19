@@ -1,6 +1,6 @@
 import { Image, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeInLeft, FadeOutLeft } from "react-native-reanimated";
+import Animated, { Easing, withTiming, type EntryExitAnimationFunction } from "react-native-reanimated";
 import { Bell, User } from "~/components/icons";
 import { GREEN } from "~/theme/tokens";
 
@@ -25,6 +25,32 @@ export default function HomeHeader({
 }) {
   const insets = useSafeAreaInsets();
   const firstName = name?.trim().split(" ")[0] ?? "";
+
+  /* The same ten pixels and the same curve the web uses, rather than whichever
+     distance a named preset happens to travel. */
+  const enter: EntryExitAnimationFunction = () => {
+    "worklet";
+    const ease = Easing.bezier(0.22, 1, 0.36, 1);
+    return {
+      initialValues: { opacity: 0, transform: [{ translateX: -10 }] },
+      animations: {
+        opacity: withTiming(1, { duration: 220, easing: ease }),
+        transform: [{ translateX: withTiming(0, { duration: 220, easing: ease }) }],
+      },
+    };
+  };
+
+  const leave: EntryExitAnimationFunction = () => {
+    "worklet";
+    const ease = Easing.bezier(0.22, 1, 0.36, 1);
+    return {
+      initialValues: { opacity: 1, transform: [{ translateX: 0 }] },
+      animations: {
+        opacity: withTiming(0, { duration: 180, easing: ease }),
+        transform: [{ translateX: withTiming(-10, { duration: 180, easing: ease }) }],
+      },
+    };
+  };
   const initial = firstName ? firstName[0].toUpperCase() : "";
 
   return (
@@ -70,8 +96,8 @@ export default function HomeHeader({
 
       {collapsed && firstName ? (
         <Animated.Text
-          entering={FadeInLeft.duration(220)}
-          exiting={FadeOutLeft.duration(180)}
+          entering={enter}
+          exiting={leave}
           numberOfLines={1}
           style={{ flex: 1, fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}
         >

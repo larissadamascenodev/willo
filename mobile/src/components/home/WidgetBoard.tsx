@@ -78,23 +78,56 @@ export default function WidgetBoard({ userId, render, gap = 16, editing, onEditi
     [],
   );
 
-  /* Dragging moves the order, not the card: whatever is under the finger changes
-     places with it, and the layout animation carries everything to its new seat. */
+  /* Where the cards were when the drag began, and in what order. Everything about
+     the move is judged against this rather than against the board as it moves:
+     reading live frames meant that the moment one swap landed, the next frame of
+     the gesture measured a board that had already changed under it and swapped
+     again, and again — which is why a card nudged upwards shot to the top. */
+  const snapshot = useRef<{ order: string[]; seats: { id: string; cy: number }[] } | null>(null);
+
+  const beginDrag = useCallback(() => {
+    const seats = slots
+      .map((slot) => {
+        const r = frames.current.get(slot.id);
+        return r ? { id: slot.id, cy: r.y + r.h / 2 } : null;
+      })
+      .filter((x): x is { id: string; cy: number } => x !== null);
+    snapshot.current = { order: slots.map((s) => s.id), seats };
+  }, [slots]);
+
+  const endDrag = useCallback(() => {
+    snapshot.current = null;
+  }, []);
+
+  /* Dragging moves the order, not the card. The seat the finger is over is found in
+     the snapshot, and the card takes that seat — one place at a time, because the
+     seats it passes are the ones it was sitting next to when it set off. */
   const dragTo = useCallback(
-    (id: string, x: number, y: number) => {
-      let overId: string | null = null;
-      frames.current.forEach((r, key) => {
-        if (key === id) return;
-        if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) overId = key;
+    (id: string, _x: number, y: number) => {
+      const snap = snapshot.current;
+      if (!snap) return;
+
+      const from = snap.order.indexOf(id);
+      if (from < 0) return;
+
+      /* The nearest seat to the finger, measured from where the seats were. */
+      let to = from;
+      let best = Number.POSITIVE_INFINITY;
+      snap.seats.forEach((seat, i) => {
+        const d = Math.abs(seat.cy - y);
+        if (d < best) {
+          best = d;
+          to = i;
+        }
       });
-      if (!overId) return;
+      if (to === from) return;
+
       setSlots((current) => {
-        const from = current.findIndex((s) => s.id === id);
-        const to = current.findIndex((s) => s.id === overId);
-        if (from < 0 || to < 0 || from === to) return current;
+        const at = current.findIndex((s) => s.id === id);
+        if (at < 0 || at === to) return current;
         const next = [...current];
-        const [moved] = next.splice(from, 1);
-        next.splice(to, 0, moved);
+        const [moved] = next.splice(at, 1);
+        next.splice(Math.min(to, next.length), 0, moved);
         saveLayout(userId, next);
         return next;
       });
@@ -177,6 +210,8 @@ export default function WidgetBoard({ userId, render, gap = 16, editing, onEditi
                   });
                 }}
                 onDragTo={dragTo}
+                onDragStart={beginDrag}
+                onDragEnd={endDrag}
                 onResize={(size) => setSize(slot.id, size)}
                 onRemove={() => remove(slot.id)}
                 registerFrame={registerFrame}
@@ -291,6 +326,8 @@ function WidgetFrame({
   children,
   onHold,
   onDragTo,
+  onDragStart,
+  onDragEnd,
   onResize,
   onRemove,
   registerFrame,
@@ -301,6 +338,8 @@ function WidgetFrame({
   children: ReactNode;
   onHold: (rect: { top: number; bottom: number; left: number; width: number }) => void;
   onDragTo: (id: string, x: number, y: number) => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
   onResize: (size: WidgetSize) => void;
   onRemove: () => void;
   registerFrame: (id: string, box: { x: number; y: number; w: number; h: number } | null) => void;
@@ -339,6 +378,7 @@ function WidgetFrame({
     .enabled(editing)
     .onStart(() => {
       lifted.value = withSpring(1, { damping: 18 });
+      runOnJS(onDragStart)();
     })
     .onUpdate((e) => {
       dx.value = e.translationX;
@@ -349,6 +389,7 @@ function WidgetFrame({
       dx.value = withSpring(0, { damping: 20, stiffness: 220 });
       dy.value = withSpring(0, { damping: 20, stiffness: 220 });
       lifted.value = withSpring(0, { damping: 18 });
+      runOnJS(onDragEnd)();
     });
 
   const carried = useAnimatedStyle(() => ({
