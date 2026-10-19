@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { getAccounts } from "@/services/transactionService";
@@ -40,6 +41,7 @@ interface Account {
 }
 
 export default function Gestao() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [accounts, setAccounts] = useState<Account[] | null>(null);
@@ -186,6 +188,7 @@ export default function Gestao() {
                 return (
                   <Animated.View key={r.account.id} entering={FadeInDown.delay(40 + i * 50).duration(350)}>
                     <Pressable
+                      onPress={() => router.push(`/conta/${r.account.id}` as never)}
                       style={({ pressed }) => ({
                         flexDirection: "row",
                         alignItems: "center",

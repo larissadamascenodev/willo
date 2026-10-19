@@ -1,13 +1,18 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronDown, CalendarClock, Check, Wallet, AlertTriangle } from "lucide-react";
+import { motion } from "framer-motion";
+import { CalendarClock } from "lucide-react";
 import BackButton from "@/components/shared/BackButton";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryUtils";
-import { buildActiveInstallmentItems, type ActiveInstallmentItem, type InstallmentInvoiceRow, type InstallmentTransactionRow } from "@/lib/installmentProgress";
-import type { CustomCategory } from "@/services/categoryService";
+import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
+import {
+  loadActiveInstallments,
+  installmentTotals,
+  installmentProjection,
+  installmentByCategory,
+  type CardBadge,
+} from "@/services/activeInstallments";
+import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { useSwipeBack } from "@/hooks/useSwipeBack";
 import InstallmentPurchaseCard from "@/components/installments/InstallmentPurchaseCard";
 
@@ -16,63 +21,24 @@ const formatCurrency = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
 
 
-const SCHEDULE_PREVIEW = 4;
-
-const CARD_HEX: Record<string, string> = {
-  violet: "#8B5CF6", emerald: "#10B981", sky: "#0EA5E9", amber: "#F59E0B", rose: "#F43F5E",
-  cyan: "#06B6D4", fuchsia: "#D946EF", lime: "#84CC16", purple: "#8A05BE", orange: "#F97316",
-};
-
-const monthLabel = (d: Date) => d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "").replace(" de ", "/");
-
-
 const ParcelamentosDetalhe = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   useSwipeBack(true);
   const [items, setItems] = useState<ActiveInstallmentItem[]>([]);
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [cardsById, setCardsById] = useState<Record<string, { name: string; color: string | null }>>({});
+  const [cardsById, setCardsById] = useState<Record<string, CardBadge>>({});
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-
-    const [transactionsRes, invoiceItemsRes, categoriesRes, creditCardsRes] = await Promise.all([
-      supabase
-        .from("transactions")
-        .select("id, name, category, amount, installment_current, installments, payment_method, date, credit_card_id, parent_transaction_id, status, type")
-        .eq("user_id", user.id)
-        .eq("recurrence_type", "parcelado")
-        .eq("type", "despesa")
-        .not("installments", "is", null),
-      supabase
-        .from("invoice_items")
-        .select("transaction_id, amount, installment_number, total_installments, invoices!inner(is_paid, user_id, month, year), transactions!inner(id, name, category, payment_method, credit_card_id, parent_transaction_id, date, type)")
-        .eq("invoices.user_id", user.id),
-      supabase
-        .from("custom_categories")
-        .select("*")
-        .eq("user_id", user.id),
-      supabase
-        .from("credit_cards")
-        .select("id, due_day, name, color")
-        .eq("user_id", user.id),
+    const [active, cats] = await Promise.all([
+      loadActiveInstallments(user.id),
+      getCustomCategories(),
     ]);
-
-    if (!transactionsRes.error && !invoiceItemsRes.error) {
-      const creditCardDueDays = Object.fromEntries((creditCardsRes.data ?? []).map((card) => [card.id, card.due_day]));
-      setCardsById(Object.fromEntries((creditCardsRes.data ?? []).map((card) => [card.id, { name: card.name, color: card.color }])));
-      setItems(
-        buildActiveInstallmentItems({
-          transactions: (transactionsRes.data ?? []) as InstallmentTransactionRow[],
-          invoiceItems: (invoiceItemsRes.data ?? []) as InstallmentInvoiceRow[],
-          creditCardDueDays,
-        })
-      );
-    }
-    if (categoriesRes.data) setCustomCats(categoriesRes.data);
+    setItems(active.items);
+    setCardsById(active.cardsById);
+    setCustomCats(cats);
     setLoading(false);
   }, [user]);
 
@@ -84,116 +50,28 @@ const ParcelamentosDetalhe = () => {
     return () => window.removeEventListener("finance-data-changed", handler);
   }, [user, fetchData]);
 
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+  const stats = useMemo(() => installmentTotals(items), [items]);
 
-  // ── Computed stats ──
-  const stats = useMemo(() => {
-    if (items.length === 0) return null;
+  /* The monthly figure, month by month, until the last instalment clears. The
+     colour is this app's to decide: the browser wants an HSL triplet. */
+  const projectionData = useMemo(
+    () =>
+      installmentProjection(items, stats?.monthsUntilFree ?? 12).map((m) => {
+        const date = new Date(m.year, m.month);
+        return {
+          ...m,
+          month: date.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""),
+          fullLabel: date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+          parts: m.parts.map((part) => ({
+            ...part,
+            color: `hsl(${getCategoryColor(part.category, customCats)})`,
+          })),
+        };
+      }),
+    [items, stats, customCats],
+  );
 
-    let totalMensal = 0;
-    let totalRestante = 0;
-    let totalJaPago = 0;
-    let totalGeral = 0;
-    let lastEndDate = new Date();
-    let cardCount = 0;
-    let accountCount = 0;
-
-    items.forEach((item) => {
-      const paidCount = item.installment_current - 1;
-      const unpaidCount = item.installments - paidCount;
-
-      totalGeral += item.amount * item.installments;
-      totalJaPago += item.amount * paidCount;
-
-      if (unpaidCount > 0) {
-        totalMensal += item.amount;
-        totalRestante += item.amount * unpaidCount;
-      }
-
-      const baseDate = new Date(item.date);
-      const endDate = new Date(baseDate);
-      endDate.setMonth(baseDate.getMonth() + (item.installments - 1));
-      if (endDate > lastEndDate) lastEndDate = endDate;
-
-      if (item.payment_method === "cartao") cardCount++;
-      else accountCount++;
-    });
-
-    const monthsUntilFree = (lastEndDate.getFullYear() - currentYear) * 12 + (lastEndDate.getMonth() - currentMonth);
-
-    return {
-      totalMensal, totalRestante, totalJaPago, totalGeral,
-      monthsUntilFree: Math.max(monthsUntilFree, 0),
-      lastEndDate, cardCount, accountCount,
-    };
-  }, [items, currentMonth, currentYear]);
-
-  // ── Monthly projection chart data ──
-  const projectionData = useMemo(() => {
-    if (items.length === 0) return [];
-
-    const months: {
-      key: string;
-      month: string;
-      fullLabel: string;
-      value: number;
-      parts: { id: string; name: string; amount: number; color: string; number: number; total: number }[];
-    }[] = [];
-
-    for (let offset = 0; offset <= (stats?.monthsUntilFree ?? 12); offset++) {
-      let m = currentMonth + offset;
-      let y = currentYear;
-      while (m > 11) { m -= 12; y++; }
-
-      const parts: (typeof months)[number]["parts"] = [];
-      items.forEach((item) => {
-        const baseDate = new Date(item.date);
-        const paidCount = item.installment_current - 1;
-        const itemStartMonth = baseDate.getMonth() + paidCount;
-        const itemStartYear = baseDate.getFullYear() + Math.floor(itemStartMonth / 12);
-        const normalizedStartMonth = itemStartMonth % 12;
-        const monthsDiff = (y - itemStartYear) * 12 + (m - normalizedStartMonth);
-        const remainingInstallments = item.installments - paidCount;
-        if (monthsDiff >= 0 && monthsDiff < remainingInstallments) {
-          parts.push({
-            id: item.id,
-            name: item.name,
-            amount: item.amount,
-            color: `hsl(${getCategoryColor(item.category, customCats)})`,
-            number: item.installment_current + monthsDiff,
-            total: item.installments,
-          });
-        }
-      });
-
-      const date = new Date(y, m);
-      months.push({
-        key: `${y}-${m}`,
-        month: date.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""),
-        fullLabel: date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
-        value: parts.reduce((sum, part) => sum + part.amount, 0),
-        parts: parts.sort((pa, pb) => pb.amount - pa.amount),
-      });
-    }
-
-    return months;
-  }, [items, stats, currentMonth, currentYear, customCats]);
-
-  // ── Category breakdown ──
-  const categoryData = useMemo(() => {
-    if (items.length === 0) return [];
-
-    const catMap = new Map<string, number>();
-    items.forEach((item) => {
-      catMap.set(item.category, (catMap.get(item.category) ?? 0) + item.amount);
-    });
-
-    return Array.from(catMap.entries())
-      .map(([cat, amount]) => ({ category: cat, amount }))
-      .sort((a, b) => b.amount - a.amount);
-  }, [items]);
+  const categoryData = useMemo(() => installmentByCategory(items), [items]);
 
   const [methodFilter, setMethodFilter] = useState<"todos" | "cartao" | "conta">("todos");
   const visibleItems = useMemo(

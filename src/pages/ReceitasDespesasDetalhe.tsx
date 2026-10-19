@@ -9,11 +9,15 @@ import { useMonth } from "@/contexts/MonthContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { useSwipeBack } from "@/hooks/useSwipeBack";
-import { supabase } from "@/integrations/supabase/client";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryUtils";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
-import { getRecurringForMonth } from "@/services/recurringService";
-import { dayOfMonth } from "@/lib/dateOnly";
+import {
+  loadMonthlyHistory,
+  loadTypeDetail,
+  trendBetween,
+  type TypeDetailInvoice as InvoiceRow,
+  type TypeDetailTransaction as TxRow,
+} from "@/services/typeDetail";
 import { getTransactionById, getAccounts } from "@/services/transactionService";
 import TransactionDetailModal from "@/components/dashboard/TransactionDetailModal";
 import NovaTransacaoModal, { type EditTransactionData } from "@/components/dashboard/NovaTransacaoModal";
@@ -30,17 +34,6 @@ const MONTH_NAMES = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 const MONTH_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-
-interface TxRow {
-  id: string; name: string; category: string; date: string; amount: number;
-  status: string; type: string; payment_method: string; recurrence_type: string;
-  created_at: string; updated_at: string; credit_card_id: string | null;
-}
-
-interface InvoiceRow {
-  id: string; credit_card_id: string; total_amount: number; is_paid: boolean;
-  month: number; year: number; card_name?: string; card_color?: string;
-}
 
 const ReceitasDespesasDetalhe = () => {
   const { tipo } = useParams<{ tipo: string }>();
@@ -65,96 +58,50 @@ const ReceitasDespesasDetalhe = () => {
 
   useEffect(() => {
     if (!user) return;
-    const start = new Date(selectedYear, selectedMonth, 1).toISOString().split("T")[0];
-    const end = new Date(selectedYear, selectedMonth + 1, 0).toISOString().split("T")[0];
-    const fetchAll = async () => {
-      setLoading(true);
-      let txQuery = supabase
-        .from("transactions")
-        .select("id, name, category, date, amount, status, type, payment_method, recurrence_type, created_at, updated_at, credit_card_id")
-        .eq("user_id", user.id).eq("type", typeFilter)
-        .gte("date", start).lte("date", end)
-        .order("date", { ascending: false }).order("created_at", { ascending: true });
-      if (!isReceita) txQuery = txQuery.is("credit_card_id", null);
-      const [{ data: txs }, cats, recurring] = await Promise.all([
-        txQuery,
+    let alive = true;
+    setLoading(true);
+    void (async () => {
+      const [detail, cats] = await Promise.all([
+        loadTypeDetail({ userId: user.id, month: selectedMonth, year: selectedYear, isReceita }),
         getCustomCategories(),
-        getRecurringForMonth(selectedMonth, selectedYear),
       ]);
-
-      // A fixed transaction repeats into this month without a row of its own. The totals
-      // already counted it, so the list has to show it too or the two disagree.
-      const base = (txs as TxRow[]) ?? [];
-      const seen = new Set(base.map((t) => t.id));
-      const materialised = (recurring as any[])
-        .filter((r) => r.type === typeFilter && !seen.has(r.id))
-        .filter((r) => (isReceita ? true : !r.credit_card_id))
-        .map((r) => ({
-          ...r,
-          date: `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(dayOfMonth(r.date)).padStart(2, "0")}`,
-          status: "pendente",
-        })) as TxRow[];
-
-      setTransactions(
-        [...base, ...materialised].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? "")),
-      );
+      if (!alive) return;
+      setTransactions(detail.transactions);
+      setInvoices(detail.invoices);
       setCustomCats(cats);
-      if (!isReceita) {
-        const { data: invData } = await supabase.from("invoices")
-          .select("id, credit_card_id, total_amount, is_paid, month, year")
-          .eq("user_id", user.id).eq("month", selectedMonth + 1).eq("year", selectedYear).gt("total_amount", 0);
-        if (invData && invData.length > 0) {
-          const cardIds = [...new Set(invData.map((inv) => inv.credit_card_id))];
-          const { data: cards } = await supabase.from("credit_cards").select("id, name, color").in("id", cardIds);
-          const cardMap = new Map((cards ?? []).map((c) => [c.id, c]));
-          setInvoices(invData.map((inv) => {
-            const card = cardMap.get(inv.credit_card_id);
-            return { ...inv, card_name: card?.name ?? "Cartão", card_color: card?.color ?? null };
-          }));
-        } else setInvoices([]);
-      }
       setLoading(false);
+    })();
+    return () => {
+      alive = false;
     };
-    fetchAll();
-  }, [user, selectedMonth, selectedYear, typeFilter, isReceita]);
+  }, [user, selectedMonth, selectedYear, isReceita]);
 
   useEffect(() => {
     if (!user) return;
-    const fetchHistory = async () => {
-      const months: { month: string; value: number }[] = [];
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(selectedYear, selectedMonth - i, 1);
-        const m = d.getMonth(); const y = d.getFullYear();
-        const start = new Date(y, m, 1).toISOString().split("T")[0];
-        const end = new Date(y, m + 1, 0).toISOString().split("T")[0];
-        const { data: txs } = await supabase.from("transactions").select("amount")
-          .eq("user_id", user.id).eq("type", typeFilter).gte("date", start).lte("date", end);
-        months.push({ month: MONTH_SHORT[m], value: (txs ?? []).reduce((s: number, t: any) => s + Number(t.amount), 0) });
-      }
-      setHistoryData(months);
+    let alive = true;
+    void (async () => {
+      const months = await loadMonthlyHistory({
+        userId: user.id,
+        isReceita,
+        month: selectedMonth,
+        year: selectedYear,
+      });
+      if (alive) setHistoryData(months.map((m) => ({ month: MONTH_SHORT[m.month], value: m.value })));
+    })();
+    return () => {
+      alive = false;
     };
-    fetchHistory();
-  }, [user, selectedMonth, selectedYear, typeFilter]);
+  }, [user, selectedMonth, selectedYear, isReceita]);
 
   const total = isReceita ? data.receitas : data.despesas;
   const paid = isReceita ? data.receitasRecebidas : data.despesasPagas;
   const pending = isReceita ? data.receitasPendentes : data.despesasPendentes;
   const paidPct = total > 0 ? Math.round((paid / total) * 100) : 0;
 
-  const trend = useMemo(() => {
-    if (historyData.length < 2) return 0;
-    // Only show trend if user existed in the previous month
-    if (user?.created_at) {
-      const created = new Date(user.created_at);
-      const prevMonthDate = new Date(selectedYear, selectedMonth - 1, 1);
-      const createdMonth = new Date(created.getFullYear(), created.getMonth(), 1);
-      if (prevMonthDate < createdMonth) return 0;
-    }
-    const prev = historyData[historyData.length - 2]?.value ?? 0;
-    const curr = historyData[historyData.length - 1]?.value ?? 0;
-    if (prev === 0) return 0;
-    return Math.round(((curr - prev) / prev) * 100);
-  }, [historyData, user, selectedMonth, selectedYear]);
+  const trend = useMemo(
+    () => trendBetween(historyData, user?.created_at, selectedMonth, selectedYear),
+    [historyData, user, selectedMonth, selectedYear],
+  );
 
   type ListItem = { kind: "tx"; tx: TxRow } | { kind: "invoice"; inv: InvoiceRow };
 

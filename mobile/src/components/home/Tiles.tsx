@@ -53,6 +53,7 @@ export function ParcelamentosTile() {
         caption="Nada parcelado agora"
         accent="#F59E0B"
         empty
+        onPress={() => router.push("/parcelamentos")}
       />
     );
   }
@@ -63,6 +64,7 @@ export function ParcelamentosTile() {
       value={money(stats.totalRestante)}
       caption={`${money(stats.totalMensal)} por mês`}
       accent="#F59E0B"
+      onPress={() => router.push("/parcelamentos")}
     />
   );
 }

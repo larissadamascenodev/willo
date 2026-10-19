@@ -1,4 +1,5 @@
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
 import { ChevronRight } from "~/components/icons";
@@ -30,6 +31,7 @@ export default function FluxoCard({
   month: number;
   isCurrentMonth?: boolean;
 }) {
+  const router = useRouter();
   const balanco = receitas - despesas;
   const monthLabel = MONTHS[month];
   const pct = receitas > 0 ? Math.round((despesas / receitas) * 100) : 0;
@@ -62,8 +64,21 @@ export default function FluxoCard({
       <Text style={[T.note, { marginTop: 8 }]}>{verdict}</Text>
 
       <View style={{ marginTop: 16, gap: 14 }}>
-        <Flow label="Entrada" amount={receitas} scale={scale} inflow delay={0.05} />
-        <Flow label="Saída" amount={despesas} scale={scale} delay={0.12} />
+        <Flow
+          label="Entrada"
+          amount={receitas}
+          scale={scale}
+          inflow
+          delay={0.05}
+          onPress={() => router.push("/detalhe/receitas" as never)}
+        />
+        <Flow
+          label="Saída"
+          amount={despesas}
+          scale={scale}
+          delay={0.12}
+          onPress={() => router.push("/detalhe/despesas" as never)}
+        />
       </View>
 
       <View
@@ -87,21 +102,24 @@ export default function FluxoCard({
   );
 }
 
+/** One of the two flows. Tapping it opens that side of the month in full. */
 function Flow({
   label,
   amount,
   scale,
   inflow,
   delay,
+  onPress,
 }: {
   label: string;
   amount: number;
   scale: number;
   inflow?: boolean;
   delay: number;
+  onPress?: () => void;
 }) {
   return (
-    <View>
+    <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
         <Text style={{ fontSize: 14, fontWeight: "500", color: "#fff" }}>{label}</Text>
         <Text style={{ fontSize: 14.5, fontWeight: "600", color: inflow ? "#fff" : RED }}>
@@ -124,6 +142,6 @@ function Flow({
           delay={delay}
         />
       </View>
-    </View>
+    </Pressable>
   );
 }
