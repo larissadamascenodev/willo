@@ -4,34 +4,42 @@ import Svg, { Path } from "react-native-svg";
 /**
  * The handle in the corner a card is resized from.
  *
- * Drawn rather than iconographic: a thick light arc hugging the bottom-right
- * corner, the way a window's resize corner reads. A small dark circle with a glyph
- * in it — which is what was here — says "a button that does something", and what
- * this is, is an edge you pull.
+ * It is the card's own corner, drawn again thicker and just outside it: the same
+ * centre, the same direction of turn, one radius further out. Anything else reads as
+ * a shape that happens to be near the corner rather than as the corner itself being
+ * something you can take hold of — which is the whole idea.
  *
- * It sits half outside the card on purpose, so it reads as attached to the corner
- * rather than printed inside it.
+ * So the geometry is tied to the card's radius rather than chosen: the arc runs from
+ * due east to due south about the point the corner curves around, and its inner edge
+ * lands exactly on the card's edge.
  */
-export default function ResizeGrip({ size = 46 }: { size?: number }) {
-  /* A quarter ring, thick, with round ends: the corner of the card redrawn as
-     something to take hold of. */
-  const s = size;
-  const r = s * 0.42;
-  const w = s * 0.26;
+
+/** Matches the radius every card on the board is cut with. */
+const CARD_RADIUS = 22;
+const BAND = 12;
+
+export default function ResizeGrip({ radius = CARD_RADIUS }: { radius?: number }) {
+  /* The arc's own radius, measured to the middle of the band, so its inside edge
+     sits on the card's edge. */
+  const r = radius + BAND / 2;
+  const box = r + BAND / 2 + 1;
 
   return (
-    <View style={{ width: s, height: s }}>
-      <Svg width={s} height={s} viewBox={`0 0 ${s} ${s}`}>
+    <View style={{ width: box, height: box }}>
+      <Svg width={box} height={box} viewBox={`0 0 ${box} ${box}`}>
+        {/* From east to south, turning the way the corner turns. */}
         <Path
-          d={`M ${s * 0.12} ${s * 0.6}
-              A ${r} ${r} 0 0 0 ${s * 0.6} ${s * 0.12}`}
+          d={`M ${r} 0 A ${r} ${r} 0 0 1 0 ${r}`}
           stroke="#D4D4D4"
-          strokeWidth={w}
+          strokeWidth={BAND}
           strokeLinecap="round"
           fill="none"
-          transform={`rotate(180 ${s / 2} ${s / 2})`}
         />
       </Svg>
     </View>
   );
 }
+
+/** How far the grip's box is pushed past the card, so its centre lands on the
+    corner's centre. */
+export const GRIP_OFFSET = CARD_RADIUS;

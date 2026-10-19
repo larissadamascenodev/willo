@@ -22,7 +22,7 @@ import {
 import BottomSheet from "~/components/BottomSheet";
 import WidgetMenu, { type WidgetMenuTarget } from "~/components/home/WidgetMenu";
 import { Plus } from "~/components/icons";
-import ResizeGrip from "~/components/home/ResizeGrip";
+import ResizeGrip, { GRIP_OFFSET } from "~/components/home/ResizeGrip";
 import { INK } from "~/theme/tokens";
 
 /**
@@ -38,6 +38,11 @@ import { INK } from "~/theme/tokens";
  * travel between the two, because it is kept in each app's own storage, but the
  * rules for it are one set.
  */
+
+/** How a card settles into a seat it has just been given. A duration makes the
+    whole board arrive at once, which reads as a redraw; a spring lets each card
+    find its place, which is what rearranging an app looks like. */
+const SEAT_CHANGE = LinearTransition.springify().damping(19).stiffness(170).mass(0.55);
 
 interface Props {
   userId?: string;
@@ -111,7 +116,9 @@ export default function WidgetBoard({ userId, render, gap = 16, editing, onEditi
       const from = snap.order.indexOf(id);
       if (from < 0) return;
 
-      /* The nearest seat to the finger, measured from where the seats were. */
+      /* The nearest seat to the finger, measured from where the seats were. The
+         one it is already in has to be beaten by a clear margin, or a card held
+         halfway between two of them flickers back and forth all the way up. */
       let to = from;
       let best = Number.POSITIVE_INFINITY;
       snap.seats.forEach((seat, i) => {
@@ -122,6 +129,8 @@ export default function WidgetBoard({ userId, render, gap = 16, editing, onEditi
         }
       });
       if (to === from) return;
+      const hereSeat = snap.seats[from];
+      if (hereSeat && Math.abs(hereSeat.cy - y) - best < 24) return;
 
       setSlots((current) => {
         const at = current.findIndex((s) => s.id === id);
@@ -186,7 +195,7 @@ export default function WidgetBoard({ userId, render, gap = 16, editing, onEditi
         {rows.map((row, ri) => (
           <Animated.View
             key={row.map((s) => s.id).join("+") + ri}
-            layout={LinearTransition.duration(300)}
+            layout={SEAT_CHANGE}
             style={row.length === 2 ? { flexDirection: "row", gap } : undefined}
           >
             {row.map((slot) => {
@@ -434,7 +443,7 @@ function WidgetFrame({
     <GestureDetector gesture={drag}>
     <Animated.View
       ref={box}
-      layout={LinearTransition.duration(300)}
+      layout={SEAT_CHANGE}
       onLayout={measure}
       style={[{ flex: half ? 1 : undefined, position: "relative" }, carried]}
     >
@@ -462,7 +471,9 @@ function WidgetFrame({
         <Animated.View
           entering={FadeIn.duration(200)}
           exiting={FadeOut.duration(140)}
-          style={{ position: "absolute", bottom: -14, right: -14, zIndex: 20 }}
+          /* Pushed out by the corner's radius, so the grip's own centre of turn
+             lands on the one the card's corner turns around. */
+          style={{ position: "absolute", bottom: -GRIP_OFFSET, right: -GRIP_OFFSET, zIndex: 20 }}
         >
           <GestureDetector gesture={resize}>
             <View accessibilityLabel={slot.size === "full" ? "Deixar menor" : "Ocupar a linha"}>
