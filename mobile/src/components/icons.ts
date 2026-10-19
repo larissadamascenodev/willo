@@ -42,3 +42,5 @@ export { default as RectangleHorizontal } from "lucide-react-native/icons/rectan
 export { default as Square } from "lucide-react-native/icons/square";
 export { default as X } from "lucide-react-native/icons/x";
 export { default as User } from "lucide-react-native/icons/user";
+export { default as CalendarClock } from "lucide-react-native/icons/calendar-clock";
+export { default as ChevronLeft } from "lucide-react-native/icons/chevron-left";

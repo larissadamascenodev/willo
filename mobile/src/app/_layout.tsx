@@ -57,6 +57,7 @@ export default function RootLayout() {
             <Stack.Screen name="login" options={{ presentation: "modal" }} />
             <Stack.Screen name="eventos" />
             <Stack.Screen name="cartoes" />
+            <Stack.Screen name="fatura/[cardId]" />
           </Stack>
           </MonthProvider>
         </AuthProvider>
