@@ -5,7 +5,8 @@ import { CreditCard, Wallet, ChevronDown, ChevronRight, AlertTriangle } from "lu
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryUtils";
-import { buildActiveInstallmentItems, type ActiveInstallmentItem, type InstallmentInvoiceRow, type InstallmentTransactionRow } from "@/lib/installmentProgress";
+import { type ActiveInstallmentItem } from "@/lib/installmentProgress";
+import { loadActiveInstallments, statsFor } from "@/services/activeInstallments";
 import type { CustomCategory } from "@/services/categoryService";
 import { StatTile } from "@/components/dashboard/StatTile";
 
@@ -17,48 +18,19 @@ const ParcelamentosAtivosCard = ({ compact = false }: { compact?: boolean }) => 
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
   const [loading, setLoading] = useState(true);
 
+  /* The four queries and the arithmetic over them moved to a service both apps
+     call: what is still being paid off is a fact about a person, not about a card. */
   const fetchData = useCallback(async () => {
     if (!user) return;
-
     setLoading(true);
 
-    const [transactionsRes, invoiceItemsRes, categoriesRes, creditCardsRes] = await Promise.all([
-      supabase
-        .from("transactions")
-        .select("id, name, category, amount, installment_current, installments, payment_method, date, credit_card_id, parent_transaction_id, status, type")
-        .eq("user_id", user.id)
-        .eq("recurrence_type", "parcelado")
-        .eq("type", "despesa")
-        .not("installments", "is", null),
-      supabase
-        .from("invoice_items")
-        .select("transaction_id, amount, installment_number, total_installments, invoices!inner(is_paid, user_id, month, year), transactions!inner(id, name, category, payment_method, credit_card_id, parent_transaction_id, date, type)")
-        .eq("invoices.user_id", user.id),
-      supabase
-        .from("custom_categories")
-        .select("*")
-        .eq("user_id", user.id),
-      supabase
-        .from("credit_cards")
-        .select("id, due_day")
-        .eq("user_id", user.id),
+    const [active, categoriesRes] = await Promise.all([
+      loadActiveInstallments(user.id),
+      supabase.from("custom_categories").select("*").eq("user_id", user.id),
     ]);
 
-    if (!transactionsRes.error && !invoiceItemsRes.error) {
-      const creditCardDueDays = Object.fromEntries((creditCardsRes.data ?? []).map((card) => [card.id, card.due_day]));
-      setItems(
-        buildActiveInstallmentItems({
-          transactions: (transactionsRes.data ?? []) as InstallmentTransactionRow[],
-          invoiceItems: (invoiceItemsRes.data ?? []) as InstallmentInvoiceRow[],
-          creditCardDueDays,
-        })
-      );
-    }
-
-    if (categoriesRes.data) {
-      setCustomCats(categoriesRes.data);
-    }
-
+    setItems(active.items);
+    if (categoriesRes.data) setCustomCats(categoriesRes.data);
     setLoading(false);
   }, [user]);
 
@@ -74,35 +46,7 @@ const ParcelamentosAtivosCard = ({ compact = false }: { compact?: boolean }) => 
     return () => window.removeEventListener("finance-data-changed", handleFinanceChange);
   }, [user, fetchData]);
 
-  const stats = useMemo(() => {
-    if (items.length === 0) return null;
-
-    let totalMensal = 0;
-    let totalRestante = 0;
-    let lastEndDate = new Date();
-
-    items.forEach((item) => {
-      const baseDate = new Date(item.date);
-      const currentInstallment = item.installment_current;
-      const unpaidInstallments = item.installments - currentInstallment + 1;
-
-      if (unpaidInstallments > 0) {
-        totalMensal += item.amount;
-        totalRestante += item.amount * unpaidInstallments;
-      }
-
-      const endDate = new Date(baseDate);
-      endDate.setMonth(endDate.getMonth() + (item.installments - currentInstallment));
-      if (endDate > lastEndDate) lastEndDate = endDate;
-    });
-
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
-    const monthsUntilFree = (lastEndDate.getFullYear() - currentYear) * 12 + (lastEndDate.getMonth() - currentMonth);
-
-    return { totalMensal, totalRestante, monthsUntilFree: Math.max(monthsUntilFree, 0), lastEndDate };
-  }, [items]);
+  const stats = useMemo(() => statsFor(items), [items]);
 
   if (loading) {
     return <div className={`${compact ? "h-[138px]" : "h-[120px]"} animate-pulse rounded-[22px] border border-white/[0.08] willo-glass`} />;

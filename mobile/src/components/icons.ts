@@ -33,3 +33,4 @@ export { default as ChevronDown } from "lucide-react-native/icons/chevron-down";
 export { default as ChevronUp } from "lucide-react-native/icons/chevron-up";
 export { default as Clock } from "lucide-react-native/icons/clock";
 export { default as Receipt } from "lucide-react-native/icons/receipt";
+export { default as Repeat } from "lucide-react-native/icons/repeat";

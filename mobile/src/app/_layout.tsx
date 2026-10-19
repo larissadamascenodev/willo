@@ -6,6 +6,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { installShims, hydrateShims } from "~/lib/shims";
 import { AuthProvider } from "~/lib/auth";
+import { MonthProvider } from "@/contexts/MonthContext";
 import { GREEN, GROUND } from "~/theme/tokens";
 import "~/global.css";
 
@@ -43,6 +44,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: GROUND }}>
       <SafeAreaProvider>
         <AuthProvider>
+          {/* Which month the screens are reading. Shared with the web, which has no
+              browser in it — just the month and a way to change it. */}
+          <MonthProvider>
           <StatusBar style="light" />
           <Stack
             screenOptions={{
@@ -53,7 +57,9 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="login" options={{ presentation: "modal" }} />
             <Stack.Screen name="eventos" />
+            <Stack.Screen name="cartoes" />
           </Stack>
+          </MonthProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

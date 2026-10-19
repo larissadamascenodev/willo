@@ -18,6 +18,9 @@ import SaudeDoMesCard from "~/components/home/SaudeDoMesCard";
 import ProximosEventos from "~/components/home/ProximosEventos";
 import GastosPorCategoria from "~/components/home/GastosPorCategoria";
 import TransacoesRecentes from "~/components/home/TransacoesRecentes";
+import GastosFixosCard from "~/components/home/GastosFixosCard";
+import CartoesResumoCard from "~/components/home/CartoesResumoCard";
+import { AssinaturasTile, MetasTile, ParcelamentosTile } from "~/components/home/Tiles";
 import { useAuth } from "~/lib/auth";
 import { useNavChrome } from "~/lib/navChrome";
 import { INK } from "~/theme/tokens";
@@ -140,6 +143,18 @@ export default function Home() {
               isCurrentMonth
             />,
             <ProximosEventos key="eventos" events={data.events ?? []} />,
+            <CartoesResumoCard key="cartoes" />,
+            /* Two to a row: each of these is a figure and a word, and a column of
+               nothing but full-width cards has no shape to it. */
+            <View key="meia-1" style={{ flexDirection: "row", gap: 16 }}>
+              <ParcelamentosTile />
+              <AssinaturasTile />
+            </View>,
+            <View key="meia-2" style={{ flexDirection: "row", gap: 16 }}>
+              <MetasTile />
+              <View style={{ flex: 1 }} />
+            </View>,
+            <GastosFixosCard key="fixos" />,
             <SaudeDoMesCard
               key="raiox"
               receitas={data.receitas}
