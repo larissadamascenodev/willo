@@ -2,13 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, View, useWindowDimensions } from "react-native";
 import Animated, {
   FadeIn,
-  FadeOut,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
   Easing,
 } from "react-native-reanimated";
-import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import { DWELL, type InsightSlide } from "@/lib/insights";
 import CalendarClock from "lucide-react-native/icons/calendar-clock";
 import CreditCard from "lucide-react-native/icons/credit-card";
@@ -68,32 +66,6 @@ export default function Stories({ slides }: { slides: InsightSlide[] }) {
 
   return (
     <View style={{ position: "relative" }}>
-      {/* The slide's colour, washed across the whole top of the screen. */}
-      <Animated.View
-        key={`wash-${slide.id}`}
-        entering={FadeIn.duration(700)}
-        exiting={FadeOut.duration(400)}
-        pointerEvents="none"
-        style={{
-          position: "absolute",
-          left: -width * 0.12,
-          right: -width * 0.12,
-          top: -220,
-          height: 560,
-          opacity: 0.26,
-        }}
-      >
-        <Svg width="100%" height="100%">
-          <Defs>
-            <RadialGradient id="wash" cx="0.5" cy="0.48" rx="0.34" ry="0.25">
-              <Stop offset="0" stopColor={slide.accent} stopOpacity={1} />
-              <Stop offset="0.7" stopColor={slide.accent} stopOpacity={0} />
-            </RadialGradient>
-          </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#wash)" />
-        </Svg>
-      </Animated.View>
-
       {/* Where you are in the set, and how long this one has left. */}
       {count > 1 && (
         <View style={{ flexDirection: "row", gap: 4 }}>
@@ -119,8 +91,9 @@ export default function Stories({ slides }: { slides: InsightSlide[] }) {
       )}
 
       {/* Fixed height, so slides of different lengths do not make the page jump as
-          they turn — sized to the longest rather than generously. */}
-      <View style={{ height: 138, marginTop: 16 }}>
+          they turn. Taller than the web's: a phone has the room, and at 138 the
+          longer readings were crowding their own quip. */}
+      <View style={{ height: 200, marginTop: 18 }}>
         <Animated.View key={slide.id} entering={FadeIn.duration(300)} style={{ flex: 1 }}>
           <Pressable
             onLongPress={() => setPaused(true)}

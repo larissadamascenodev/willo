@@ -46,8 +46,8 @@ export default function StatTile({
         overflow: "hidden",
         borderRadius: 22,
         borderWidth: 1,
-        borderColor: INK.edge,
-        backgroundColor: "rgba(255,255,255,0.046)",
+        borderColor: "rgba(255,255,255,0.10)",
+        backgroundColor: "rgba(255,255,255,0.062)",
         padding: 16,
         transform: [{ scale: pressed ? 0.98 : 1 }],
       })}

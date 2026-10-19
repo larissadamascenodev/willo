@@ -1,21 +1,22 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 
 /**
- * Whether the bottom row is folded.
+ * How far the page has travelled, and what the furniture does about it.
  *
  * On the web the nav reads `window.scrollY`, because every screen scrolls the page
  * itself. Here each screen owns its own scroller, so the screens report instead and
- * the bar listens — same rule, same threshold, same reason: once the page has moved
- * far enough that an open invitation would be in the way, it folds into the nav.
+ * the bar listens — same rules, same thresholds.
+ *
+ * It takes a number rather than a scroll event because the home drives its own
+ * scrolling through Reanimated, on the UI thread, and only hands back the figure.
  */
 
 interface NavChrome {
   collapsed: boolean;
   /** The page has moved at all — what the band over the header answers to. */
   moved: boolean;
-  /** Hand to any screen's ScrollView: onScroll={onScroll}. */
-  onScroll: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  /** Call from a screen's scroll handler with the vertical offset. */
+  report: (y: number) => void;
   /** Tapping Início while already on Início unfolds the row where you are. */
   holdOpen: () => void;
 }
@@ -23,7 +24,7 @@ interface NavChrome {
 const Ctx = createContext<NavChrome>({
   collapsed: false,
   moved: false,
-  onScroll: () => {},
+  report: () => {},
   holdOpen: () => {},
 });
 
@@ -34,17 +35,16 @@ export function NavChromeProvider({ children }: { children: ReactNode }) {
   const [moved, setMoved] = useState(false);
   const [held, setHeld] = useState(false);
 
-  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+  const report = useCallback((y: number) => {
     /* Generous, so a thumb twitch does not make the row flap. */
-    const y = e.nativeEvent.contentOffset.y;
     setScrolledPast(y > 90);
     setMoved(y > 4);
     setHeld(false);
   }, []);
 
   const value = useMemo(
-    () => ({ collapsed: scrolledPast && !held, moved, onScroll, holdOpen: () => setHeld(true) }),
-    [scrolledPast, moved, held, onScroll],
+    () => ({ collapsed: scrolledPast && !held, moved, report, holdOpen: () => setHeld(true) }),
+    [scrolledPast, moved, held, report],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

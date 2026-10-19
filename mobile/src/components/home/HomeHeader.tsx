@@ -1,88 +1,110 @@
 import { Image, Pressable, Text, View } from "react-native";
-import { Bell } from "~/components/icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeInLeft, FadeOutLeft } from "react-native-reanimated";
+import { Bell, User } from "~/components/icons";
 import { GREEN } from "~/theme/tokens";
 
 /**
- * Who is signed in, rather than the app's own name.
+ * The row that stays put while everything else scrolls under it.
  *
- * The screen already says Willo by being Willo; what the top of it is for is telling
- * you whose money this is and whether anything is waiting. The avatar falls back to
- * an initial, because a photograph is optional and a name is not.
+ * Who is signed in, and the way to what is waiting. The greeting itself opens the
+ * readings below, so up here only the name appears, and only once the top of the
+ * screen has receded far enough that reading the greeting is no longer the point.
  */
 export default function HomeHeader({
   name,
   avatarUrl,
   unread = 0,
+  collapsed = false,
 }: {
   name?: string | null;
   avatarUrl?: string | null;
   unread?: number;
+  /** The top of the screen has receded; the name takes over here. */
+  collapsed?: boolean;
 }) {
-  const initial = (name?.trim()?.[0] ?? "?").toUpperCase();
+  const insets = useSafeAreaInsets();
+  const firstName = name?.trim().split(" ")[0] ?? "";
+  const initial = firstName ? firstName[0].toUpperCase() : "";
 
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+    <View
+      pointerEvents="box-none"
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 30,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        paddingHorizontal: 16,
+        paddingTop: insets.top + 14,
+        paddingBottom: 10,
+      }}
+    >
       <Pressable
+        accessibilityLabel="Perfil"
         style={({ pressed }) => ({
-          flexDirection: "row",
+          width: 44,
+          height: 44,
+          borderRadius: 22,
           alignItems: "center",
-          gap: 10,
-          minWidth: 0,
+          justifyContent: "center",
+          overflow: "hidden",
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.34)",
+          backgroundColor: "rgba(255,255,255,0.10)",
           opacity: pressed ? 0.7 : 1,
         })}
-        accessibilityLabel="Perfil"
       >
-        <View
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            alignItems: "center",
-            justifyContent: "center",
-            overflow: "hidden",
-            backgroundColor: "rgba(255,255,255,0.10)",
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.20)",
-          }}
-        >
-          {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={{ width: "100%", height: "100%" }} />
-          ) : (
-            <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>{initial}</Text>
-          )}
-        </View>
-        <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>
-          {name?.split(" ")[0] ?? ""}
-        </Text>
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={{ width: "100%", height: "100%" }} />
+        ) : initial ? (
+          <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>{initial}</Text>
+        ) : (
+          <User size={18} color="rgba(255,255,255,0.8)" />
+        )}
       </Pressable>
+
+      {collapsed && firstName ? (
+        <Animated.Text
+          entering={FadeInLeft.duration(220)}
+          exiting={FadeOutLeft.duration(180)}
+          numberOfLines={1}
+          style={{ flex: 1, fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}
+        >
+          {firstName}
+        </Animated.Text>
+      ) : (
+        <View style={{ flex: 1 }} />
+      )}
 
       <Pressable
         accessibilityLabel="Notificações"
         style={({ pressed }) => ({
-          width: 40,
-          height: 40,
-          borderRadius: 20,
+          width: 44,
+          height: 44,
+          borderRadius: 22,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "rgba(255,255,255,0.10)",
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.15)",
           opacity: pressed ? 0.7 : 1,
         })}
       >
-        <Bell size={18} color="rgba(255,255,255,0.9)" />
+        <Bell size={18} color="#fff" />
         {unread > 0 && (
           <View
             style={{
               position: "absolute",
-              right: 9,
-              top: 9,
+              right: 11,
+              top: 11,
               width: 8,
               height: 8,
               borderRadius: 4,
               backgroundColor: GREEN,
               borderWidth: 2,
-              borderColor: "rgba(0,0,0,0.4)",
+              borderColor: "rgba(0,0,0,0.7)",
             }}
           />
         )}

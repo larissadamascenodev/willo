@@ -11,6 +11,7 @@ import TransactionsSummary, { TransactionTabs } from "~/components/transactions/
 import { Pencil, Search, Trash2 } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
+import { useNavChrome } from "~/lib/navChrome";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
@@ -43,6 +44,7 @@ const formatDateHeader = (dateStr: string, today = new Date()) => {
 export default function Transacoes() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { report } = useNavChrome();
   const today = useMemo(() => new Date(), []);
 
   const [month, setMonth] = useState(today.getMonth());
@@ -132,6 +134,8 @@ export default function Transacoes() {
         }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onScroll={(e) => report(e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={32}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

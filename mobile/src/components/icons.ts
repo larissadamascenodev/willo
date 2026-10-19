@@ -41,3 +41,4 @@ export { default as EyeOff } from "lucide-react-native/icons/eye-off";
 export { default as RectangleHorizontal } from "lucide-react-native/icons/rectangle-horizontal";
 export { default as Square } from "lucide-react-native/icons/square";
 export { default as X } from "lucide-react-native/icons/x";
+export { default as User } from "lucide-react-native/icons/user";

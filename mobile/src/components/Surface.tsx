@@ -12,7 +12,10 @@ import { INK } from "~/theme/tokens";
  * which sit over real content, get a true blur.
  */
 
-export const SURFACE_FILL = "rgba(255,255,255,0.046)";
+/* A touch stronger than the web's four and a half percent. The browser renders on
+   a backlit panel that never reaches black; an OLED phone does, and at that fill a
+   card over the dark end of the ground stopped being a card at all. */
+export const SURFACE_FILL = "rgba(255,255,255,0.062)";
 
 export default function Surface({
   children,
@@ -28,7 +31,7 @@ export default function Surface({
   const skin: ViewStyle = {
     borderRadius: radius,
     borderWidth: 1,
-    borderColor: INK.edge,
+    borderColor: "rgba(255,255,255,0.10)",
     backgroundColor: SURFACE_FILL,
     overflow: "hidden",
   };

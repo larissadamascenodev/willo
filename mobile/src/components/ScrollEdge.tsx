@@ -7,16 +7,24 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 /**
  * The band the page passes under.
  *
- * Only the home has a header pinned over moving content, so only the home needs
- * this: without it a title and a name smear straight through the avatar as they go
- * by. It is a blur that fades to nothing by its own bottom edge, so there is no line
- * across the screen — the content does not stop, it dissolves.
+ * Only the home pins a header over moving content, so only the home needs this:
+ * without it a title and a name smear straight through the avatar as they go by.
  *
- * It appears once the page has moved at all, and goes when it comes back.
+ * The blur has to fade out, not stop — a blur that simply ends draws a line across
+ * the screen. There is no way to fade a blur itself, so it is built in layers: each
+ * one shorter than the last, so near the top the page is looking through four of
+ * them and by the bottom edge through none. A mask would be tidier, but the only
+ * masking component here renders as a white slab on the web, which is no way to
+ * check one's work.
  */
+
+/** Fractions of the band's height, deepest first. */
+const LAYERS = [1, 0.74, 0.5, 0.3];
+
 export default function ScrollEdge({ on }: { on: boolean }) {
   const insets = useSafeAreaInsets();
   const shown = useSharedValue(0);
+  const height = insets.top + 96;
 
   useEffect(() => {
     shown.value = withTiming(on ? 1 : 0, { duration: 220 });
@@ -27,30 +35,34 @@ export default function ScrollEdge({ on }: { on: boolean }) {
   return (
     <Animated.View
       pointerEvents="none"
-      style={[
-        {
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: insets.top + 96,
-          zIndex: 25,
-        },
-        style,
-      ]}
+      style={[{ position: "absolute", top: 0, left: 0, right: 0, height, zIndex: 25 }, style]}
     >
-      <BlurView intensity={22} tint="dark" style={{ flex: 1 }}>
-        <Svg width="100%" height="100%">
-          <Defs>
-            <LinearGradient id="edge" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#0E0E0F" stopOpacity={0.86} />
-              <Stop offset="0.58" stopColor="#0E0E0F" stopOpacity={0.36} />
-              <Stop offset="1" stopColor="#0E0E0F" stopOpacity={0} />
-            </LinearGradient>
-          </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#edge)" />
-        </Svg>
-      </BlurView>
+      {LAYERS.map((fraction, i) => (
+        <BlurView
+          key={i}
+          intensity={14}
+          tint="dark"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: height * fraction,
+          }}
+        />
+      ))}
+
+      {/* The tint, which does fade, carrying the last of it to nothing. */}
+      <Svg width="100%" height="100%" style={{ position: "absolute", top: 0, left: 0 }}>
+        <Defs>
+          <LinearGradient id="edge-tint" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#0E0E0F" stopOpacity={0.86} />
+            <Stop offset="0.58" stopColor="#0E0E0F" stopOpacity={0.3} />
+            <Stop offset="1" stopColor="#0E0E0F" stopOpacity={0} />
+          </LinearGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#edge-tint)" />
+      </Svg>
     </Animated.View>
   );
 }
