@@ -1,5 +1,6 @@
 import { iconNameFor, FALLBACK_ICON_NAME } from "@/lib/categoryIconNames";
 import type { CustomCategory } from "@/services/categoryService";
+import { iconForSlug, type IconCmp } from "~/lib/categoryIconSlugs";
 
 import Award from "lucide-react-native/icons/award";
 import Banknote from "lucide-react-native/icons/banknote";
@@ -53,8 +54,6 @@ import Zap from "lucide-react-native/icons/zap";
  * the choice being written down twice.
  */
 
-export type IconCmp = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
-
 const LUCIDE: Record<string, IconCmp> = {
   Award, Banknote, Bike, Briefcase, Building2, Car, CircleEllipsis, Coffee,
   CupSoda, DollarSign, Droplets, Dumbbell, FileText, Flame, Gamepad2, Gift,
@@ -63,9 +62,17 @@ const LUCIDE: Record<string, IconCmp> = {
   Smartphone, TrendingUp, Users, Utensils, Wallet, Wifi, Wrench, Zap,
 };
 
-/** A custom category keeps whichever glyph it was given, if we have it. */
+/**
+ * A custom category keeps whichever glyph it was given.
+ *
+ * Its choice is stored as lucide's own slug — "shopping-cart" — which is a different
+ * vocabulary from the names the defaults are looked up by, so it is resolved through
+ * the slug map rather than this file's own table.
+ */
 export function categoryIcon(category: string, customCats?: CustomCategory[]): IconCmp {
   const custom = customCats?.find((c) => c.name === category && !c.is_hidden_default);
-  if (custom?.icon && LUCIDE[custom.icon]) return LUCIDE[custom.icon];
+  if (custom?.icon) return iconForSlug(custom.icon);
   return LUCIDE[iconNameFor(category)] ?? LUCIDE[FALLBACK_ICON_NAME];
 }
+
+export type { IconCmp };

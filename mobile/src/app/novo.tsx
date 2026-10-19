@@ -481,7 +481,29 @@ export default function Novo() {
 
       <BottomSheet open={pickingCategory} onClose={() => setPickingCategory(false)} full>
         <View style={{ paddingHorizontal: 20 }}>
-          <Text style={{ fontSize: 22, fontWeight: "700", color: "#fff" }}>Categoria</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <Text style={{ fontSize: 22, fontWeight: "700", color: "#fff" }}>Categoria</Text>
+            {/* The way out of choosing and into changing what there is to choose from. */}
+            <Pressable
+              onPress={() => {
+                setPickingCategory(false);
+                router.push("/categorias" as never);
+              }}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                borderRadius: 999,
+                backgroundColor: "rgba(255,255,255,0.07)",
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <Tag size={13} color={INK.soft} />
+              <Text style={{ fontSize: 12.5, fontWeight: "600", color: INK.soft }}>Gerenciar</Text>
+            </Pressable>
+          </View>
           <View style={{ marginTop: 16, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {categories.map((cat) => {
               const Icon = categoryIcon(cat, customCats);

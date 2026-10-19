@@ -15,6 +15,11 @@ import {
   Plug, Wifi, Phone, Building2,
 } from "lucide-react";
 import BottomSheet from "@/components/shared/BottomSheet";
+import {
+  CATEGORY_COLOR_OPTIONS as COLOR_OPTIONS,
+  FORBIDDEN_CATEGORY_NAMES as FORBIDDEN,
+  normalizeCategoryName as normalize,
+} from "@/lib/categoryPalette";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -108,21 +113,10 @@ const ICON_OPTIONS: { name: string; Icon: any }[] = [
   { name: "building-2", Icon: Building2 },
 ];
 
-const COLOR_OPTIONS = [
-  "#00e676", "#f44336", "#ff9800", "#2196f3", "#9c27b0",
-  "#e91e63", "#00bcd4", "#8bc34a", "#ffc107", "#795548",
-  "#607060", "#3f51b5", "#009688", "#ff5722", "#673ab7",
-  "#cddc39", "#4caf50", "#03a9f4", "#ff4081", "#7c4dff",
-  "#18ffff", "#69f0ae", "#ffab40", "#ea80fc",
-];
-
 // Find the Icon component by name
 function getIconComponent(iconName: string) {
   return ICON_OPTIONS.find((i) => i.name === iconName)?.Icon || FileText;
 }
-
-const FORBIDDEN = ["outros", "outro", "diversos", "geral", "varios", "sem categoria"];
-const normalize = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
 export default function CategoryCreateModal({
   open, onClose, onSave,
