@@ -57,12 +57,11 @@ Calendário do mês com marcas por dia, A receber / A pagar, dias escritos.
 Falta: **⬜ tocar num evento** leva a algum lugar.
 
 ### ✅ Contas — `/gestao`
-Total, barra repartida por banco, uma linha por conta.
+Total, barra repartida por banco, uma linha por conta, abre a conta ao tocar.
 
 Falta:
 - **⬜ Criar conta** (a folha igual à de cartão)
 - **⬜ Reserva e potes** (`ReserveAndPots`)
-- **⬜ Tocar numa conta** → `/conta/[id]`
 
 ### 🟡 Novo lançamento — `/novo`
 Valor, descrição, categoria, conta/cartão, repetição, status, observação. Salva de verdade.
@@ -78,17 +77,28 @@ Falta:
 154 linhas de página, mas puxa 7 componentes em `components/raiox/`. É o painel de análise:
 score do mês, radar, projeções, vilões, recomendações.
 
-### ⬜ Detalhe da conta — `/conta/[id]`
-466 linhas. Saldo, extrato da conta, editar, excluir.
+### ✅ Detalhe da conta — `/conta/[accountId]`
+Saldo, o mês pela conta, gastos por categoria, todas as movimentações, editar e
+excluir no ⋮.
 
-### ⬜ Receitas e despesas — `/detalhe/[tipo]`
-433 linhas. A tela que abre ao tocar no card de receitas/despesas.
+### ✅ Receitas e despesas — `/detalhe/[tipo]`
+Total do mês com quanto já andou, seis meses atrás, pendentes e pagas, fatura de
+cartão entrando como uma despesa só.
 
-### ⬜ Parcelamentos — `/parcelamentos`
-377 linhas. Tudo que está sendo pago parcelado, com progresso de cada compra.
+Falta: **⬜ tocar numa linha** abrir o resumo.
 
-### ⬜ Metas — `/metas` e `/metas/[id]`
-333 + 347 linhas, mais 5 componentes. Criar meta, guardar, sacar, capa, prazo.
+### ✅ Parcelamentos — `/parcelamentos`
+Comprometido por mês, quando fica livre, progresso geral, próximos meses, por
+categoria, e um card por compra com anel e régua de parcelas.
+
+### ✅ Metas — `/metas` e `/metas/[goalId]`
+Total guardado, card por meta, guardar dinheiro, criar e editar pelos presets,
+excluir. Na meta: anel, depósitos, saques, previsão, insight e movimentações
+(segurar um depósito desfaz).
+
+Falta:
+- **⬜ Capa da meta** (imagem) e **prazo** — a web tem os dois no formulário
+- **⬜ Planejar com IA** (`AIFinancialWizardModal`)
 
 ### ⬜ Fluxo de caixa / Balanço / Projeções — `/fluxo-de-caixa`, `/bot-finance/balanco`, `/bot-finance/projecoes`
 1089 linhas numa página só (`Financeiro`), com os gráficos.
@@ -96,8 +106,11 @@ score do mês, radar, projeções, vilões, recomendações.
 ### ⬜ Gastos por categoria — `/analytics/categorias`
 1841 linhas. A maior do app: análise por categoria com histórico e comparações.
 
-### ⬜ Gerenciar categorias — `/categorias`
-383 linhas. Criar, editar, esconder, cor e ícone.
+### ✅ Gerenciar categorias — `/categorias`
+Padrão e suas numa lista só, criar, editar, esconder, cor e ícone. Chega pelo
+"Gerenciar" no seletor de categoria do formulário.
+
+Falta: **⬜ sugestão de ícone e cor pela IA**.
 
 ### ⬜ Configurações — `/configuracoes`
 771 linhas. Perfil, moeda, tema, notificações, trocar senha, excluir conta, termos.
@@ -155,14 +168,14 @@ Não são dívida — são decisões que valem para o nativo:
 
 ## Ordem sugerida
 
-1. Fechar Transações: resumo, editar, excluir, filtros
-2. Fechar Fatura: pagar, adicionar, editar cartão
-3. Criar conta e criar cartão (as duas folhas)
-4. Raio-X
-5. Detalhe da conta, Parcelamentos, Receitas e despesas
-6. Metas
+1. ~~Detalhe da conta, Parcelamentos, Receitas e despesas~~ ✅
+2. ~~Metas~~ ✅ · ~~Categorias~~ ✅
+3. Fechar Transações: resumo, editar, excluir, filtros
+4. Fechar Fatura: pagar, adicionar, editar cartão
+5. Criar conta e criar cartão (as duas folhas)
+6. Raio-X
 7. Fluxo de caixa e Gastos por categoria (os dois grandes de gráfico)
-8. Configurações, Categorias
+8. Configurações
 9. Agentes e Assistente
 10. Login completo e onboarding
 11. Escanear e as ferramentas de IA

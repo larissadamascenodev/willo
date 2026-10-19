@@ -160,6 +160,7 @@ export function MetasTile() {
         caption="Toque para criar"
         accent="#C8F36D"
         empty
+        onPress={() => router.push("/metas")}
       />
     );
   }
@@ -175,6 +176,7 @@ export function MetasTile() {
       caption={`${Math.round(overall * 100)}% de ${money(objetivo)}`}
       accent="#C8F36D"
       progress={overall}
+      onPress={() => router.push("/metas")}
     />
   );
 }
