@@ -172,16 +172,21 @@ export default function Home() {
     <Room lit sky>
       {/* Pinned. It does not scroll; it recedes. Once it has gone far enough it
           stops taking taps, since by then you cannot read what you would tap. */}
-      <Animated.View
-        pointerEvents="box-none"
-        style={[
-          { position: "absolute", left: 0, right: 0, top: pinnedTop, paddingHorizontal: 16 },
-          pinnedStyle,
-        ]}
-      >
-        <Stories slides={slides} />
-      </Animated.View>
+      {/* Editing is about the board, so the readings stand down for it — leaving
+          them pinned behind an opaque bar only means drawing them to be covered. */}
+      {!editing && (
+        <Animated.View
+          pointerEvents="box-none"
+          style={[
+            { position: "absolute", left: 0, right: 0, top: pinnedTop, paddingHorizontal: 16 },
+            pinnedStyle,
+          ]}
+        >
+          <Stories slides={slides} />
+        </Animated.View>
+      )}
 
+      {!editing && (
       <AnimatedBlur
         tint="dark"
         animatedProps={blurProps}
@@ -191,6 +196,7 @@ export default function Home() {
           blurStyle,
         ]}
       />
+      )}
 
       <Animated.ScrollView
         contentContainerStyle={{
@@ -211,7 +217,7 @@ export default function Home() {
       >
         {/* Holds the room the pinned block would have taken, so the first card
             starts where it would have — and travels up over it from there. */}
-        <View style={{ height: pinnedHeight }} pointerEvents="none" />
+        <View style={{ height: editing ? insets.top + 86 : pinnedHeight }} pointerEvents="none" />
 
         <WidgetBoard
           userId={user?.id}

@@ -1,12 +1,14 @@
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInUp, FadeOutUp } from "react-native-reanimated";
-import { BlurView } from "expo-blur";
-import { Check } from "~/components/icons";
-import { GREEN } from "~/theme/tokens";
+import { GREEN, GROUND } from "~/theme/tokens";
 
 /**
- * While the board is being edited, a bar says so and gives the way out.
+ * While the board is being edited, the top of the screen says so.
+ *
+ * A full-width bar rather than a floating pill: editing is a mode the whole screen
+ * is in, and a small badge hovering over the cards reads as a message about one of
+ * them. The title sits where a screen's title sits and the way out sits opposite it.
  *
  * It belongs to the screen rather than to the board: inside a scroller it would
  * scroll away with the cards, and a way out that leaves the screen is not one.
@@ -19,52 +21,40 @@ export default function EditBar({ open, onDone }: { open: boolean; onDone: () =>
     <Animated.View
       entering={FadeInUp.duration(240)}
       exiting={FadeOutUp.duration(180)}
-      pointerEvents="box-none"
       style={{
         position: "absolute",
         left: 0,
         right: 0,
         top: 0,
-        alignItems: "center",
-        paddingTop: insets.top + 10,
         zIndex: 40,
+        backgroundColor: GROUND,
+        paddingTop: insets.top + 10,
+        paddingBottom: 16,
+        paddingHorizontal: 20,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
       }}
     >
-      <BlurView
-        intensity={30}
-        tint="dark"
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 12,
+      <Text style={{ fontSize: 27, fontWeight: "800", letterSpacing: -0.7, color: "#fff" }}>
+        Editar widgets
+      </Text>
+
+      <Pressable
+        onPress={onDone}
+        style={({ pressed }) => ({
+          height: 44,
+          justifyContent: "center",
           borderRadius: 999,
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.10)",
-          backgroundColor: "rgba(16,16,19,0.82)",
-          paddingVertical: 6,
-          paddingLeft: 20,
-          paddingRight: 6,
-          overflow: "hidden",
-        }}
+          paddingHorizontal: 20,
+          backgroundColor: "rgba(255,255,255,0.08)",
+          opacity: pressed ? 0.7 : 1,
+        })}
       >
-        <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>Arraste para mover</Text>
-        <Pressable
-          onPress={onDone}
-          style={({ pressed }) => ({
-            height: 36,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            borderRadius: 999,
-            backgroundColor: GREEN,
-            paddingHorizontal: 16,
-            opacity: pressed ? 0.8 : 1,
-          })}
-        >
-          <Check size={14} color="#0B0B0B" strokeWidth={3} />
-          <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#0B0B0B" }}>Concluído</Text>
-        </Pressable>
-      </BlurView>
+        <Text style={{ fontSize: 16, fontWeight: "700", color: GREEN }}>Concluído</Text>
+      </Pressable>
+
       <View />
     </Animated.View>
   );

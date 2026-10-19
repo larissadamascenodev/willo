@@ -21,7 +21,8 @@ import {
 } from "@/lib/homeWidgets";
 import BottomSheet from "~/components/BottomSheet";
 import WidgetMenu, { type WidgetMenuTarget } from "~/components/home/WidgetMenu";
-import { ChevronsLeftRight, ChevronsRightLeft, Plus, X } from "~/components/icons";
+import { Plus } from "~/components/icons";
+import ResizeGrip from "~/components/home/ResizeGrip";
 import { INK } from "~/theme/tokens";
 
 /**
@@ -318,6 +319,20 @@ export default function WidgetBoard({ userId, render, gap = 16, editing, onEditi
   );
 }
 
+/** What a card looks like while its corner is being pulled: the shape it is taking,
+    with nothing in it to read. */
+function Ghost() {
+  return (
+    <View
+      style={{
+        minHeight: 150,
+        borderRadius: 22,
+        backgroundColor: "rgba(255,255,255,0.09)",
+      }}
+    />
+  );
+}
+
 /** One card on the board: held to open its menu, and in edit mode, moved by hand. */
 function WidgetFrame({
   slot,
@@ -351,6 +366,7 @@ function WidgetFrame({
      handed, so it reads it from the height: a frame with no card in it must not
      carry controls, or they stack on top of the card below. */
   const [drawn, setDrawn] = useState(false);
+  const [resizing, setResizing] = useState(false);
 
   /* The card travels under the finger; the order is what actually changes, and the
      layout animation carries everything else to its new seat. It springs back to
@@ -392,6 +408,19 @@ function WidgetFrame({
       runOnJS(onDragEnd)();
     });
 
+  /* Pulled outwards for the whole row, inwards for half of it. The card shows the
+     size it is taking while the finger is still down, as a plain shape — what it
+     will hold is not the question being asked. */
+  const resize = Gesture.Pan()
+    .onUpdate((e) => {
+      const next = e.translationX > 26 ? "full" : e.translationX < -26 ? "half" : null;
+      if (next && next !== slot.size) runOnJS(onResize)(next);
+      if (Math.abs(e.translationX) > 6) runOnJS(setResizing)(true);
+    })
+    .onFinalize(() => {
+      runOnJS(setResizing)(false);
+    });
+
   const carried = useAnimatedStyle(() => ({
     transform: [
       { translateX: dx.value },
@@ -420,67 +449,27 @@ function WidgetFrame({
         /* In edit mode the card is a handle, not a thing you can press into. */
         style={editing ? { opacity: 0.92 } : undefined}
       >
-        <View pointerEvents={editing ? "none" : "auto"}>{children}</View>
+        <View pointerEvents={editing ? "none" : "auto"}>
+          {resizing ? <Ghost /> : children}
+        </View>
       </Pressable>
 
-      {editing && drawn && (
-        <>
-          {/* The wrapper carries the corner, not the button inside it: positioned on
-              the button, the box it answers to is the one after the card. */}
-          <Animated.View
-            entering={FadeIn.duration(200)}
-            exiting={FadeOut.duration(140)}
-            style={{ position: "absolute", left: -6, top: -6, zIndex: 20 }}
-          >
-            <Pressable
-              onPress={onRemove}
-              accessibilityLabel={`Remover ${def?.label}`}
-              hitSlop={6}
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "#fff",
-              }}
-            >
-              <X size={16} color="#0B0B0B" strokeWidth={3} />
-            </Pressable>
-          </Animated.View>
-
-          {/* The grip, in the corner where a card is resized: tap it and the card
-              takes the other width. */}
-          {def?.resizable && (
-            <Animated.View
-              entering={FadeIn.duration(200)}
-              exiting={FadeOut.duration(140)}
-              style={{ position: "absolute", bottom: -6, right: -6, zIndex: 20 }}
-            >
-              <Pressable
-                onPress={() => onResize(slot.size === "full" ? "half" : "full")}
-                accessibilityLabel={slot.size === "full" ? "Deixar menor" : "Ocupar a linha"}
-                hitSlop={6}
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.14)",
-                  backgroundColor: "rgba(16,16,19,0.9)",
-                }}
-              >
-                {slot.size === "full" ? (
-                  <ChevronsRightLeft size={15} color="#fff" strokeWidth={2.4} />
-                ) : (
-                  <ChevronsLeftRight size={15} color="#fff" strokeWidth={2.4} />
-                )}
-              </Pressable>
-            </Animated.View>
-          )}
-        </>
+      {/* The grip, in the corner a card is resized from. Removing a card is not here:
+          it is in the menu you get by holding one, which is where the reference
+          keeps it and where it belongs — a cross on every card turns editing into a
+          field of things to delete. */}
+      {editing && drawn && def?.resizable && (
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          exiting={FadeOut.duration(140)}
+          style={{ position: "absolute", bottom: -14, right: -14, zIndex: 20 }}
+        >
+          <GestureDetector gesture={resize}>
+            <View accessibilityLabel={slot.size === "full" ? "Deixar menor" : "Ocupar a linha"}>
+              <ResizeGrip />
+            </View>
+          </GestureDetector>
+        </Animated.View>
       )}
     </Animated.View>
     </GestureDetector>
