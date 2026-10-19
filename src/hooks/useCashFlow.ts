@@ -93,7 +93,13 @@ export function useCashFlow() {
   }, [user]);
 
   useEffect(() => {
-    if (!user) return;
+    /* No session is not a slow answer — it is the answer. Left as loading, every
+       screen reading this hook sits on a skeleton that never resolves. */
+    if (!user) {
+      setEntries([]);
+      setLoading(false);
+      return;
+    }
     if (!cache || cache.userId !== user.id || Date.now() - cache.timestamp >= CACHE_TTL) void load();
 
     const onChange = () => {

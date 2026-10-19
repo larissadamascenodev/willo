@@ -8,6 +8,15 @@ import {
 import { cn } from "@/lib/utils";
 import { getCategoryIcon, getCategoryHexColor } from "@/lib/categoryUtils";
 import { useCashFlow, periodStart, sumFlow, toDateKey, type CashFlowEntry, type CashFlowPeriod } from "@/hooks/useCashFlow";
+import { buildCashFlowBuckets, CASH_FLOW_PERIODS as PERIODS } from "@/lib/cashFlowBuckets";
+import {
+  buildProjectionRows,
+  MONTH_NAMES,
+  MONTH_SHORT,
+  PROJECTION_RISK as RISK,
+  riskOf,
+  type ProjectionRowView,
+} from "@/lib/projectionRows";
 import { useFinancialProjection } from "@/hooks/useFinancialProjection";
 import type { MonthProjection } from "@/services/projection/types";
 import type { DashboardData, FinanceEvent } from "@/types/finance";
@@ -17,8 +26,6 @@ import { currencySymbol, getCurrency } from "@/lib/currency";
 
 type Tool = "fluxo" | "balanco" | "projecoes";
 
-const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-const MONTH_SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const CASHFLOW_SHORT = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: getCurrency() });
@@ -85,32 +92,13 @@ interface Bucket {
   isCurrent: boolean;
 }
 
+/** The shared columns, with this app's labels written on them. */
 function buildBuckets(entries: CashFlowEntry[], period: CashFlowPeriod): Bucket[] {
-  const now = new Date();
-  if (period === "mes") {
-    const days = now.getDate();
-    return Array.from({ length: days }, (_, i) => {
-      const key = toDateKey(new Date(now.getFullYear(), now.getMonth(), i + 1));
-      const dayEntries = entries.filter((e) => e.date === key);
-      const { entradas, saidas } = sumFlow(dayEntries);
-      return { key, label: String(i + 1).padStart(2, "0"), entradas, saidas, isCurrent: i + 1 === days };
-    });
-  }
-  const months = period === "3m" ? 3 : period === "6m" ? 6 : 12;
-  return Array.from({ length: months }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (months - 1) + i, 1);
-    const prefix = toDateKey(d).slice(0, 7);
-    const { entradas, saidas } = sumFlow(entries.filter((e) => e.date.startsWith(prefix)));
-    return { key: prefix, label: CASHFLOW_SHORT[d.getMonth()], entradas, saidas, isCurrent: i === months - 1 };
-  });
+  return buildCashFlowBuckets(entries, period).map((b) => ({
+    ...b,
+    label: b.day !== null ? String(b.day).padStart(2, "0") : CASHFLOW_SHORT[b.month!],
+  }));
 }
-
-const PERIODS: { key: CashFlowPeriod; label: string }[] = [
-  { key: "mes", label: "Este mês" },
-  { key: "3m", label: "3m" },
-  { key: "6m", label: "6m" },
-  { key: "1a", label: "1a" },
-];
 
 const GREEN = "linear-gradient(180deg, #D9FF72 0%, #A8E63A 100%)";
 const RED = "linear-gradient(180deg, #FF8080 0%, #EF4444 100%)";
@@ -590,52 +578,7 @@ function MonthBalanceSheet({ row, data, onClose, onSeeProjections }: {
 
 /* ═══════════════════ Futuro — pra onde o saldo vai ═══════════════════ */
 
-const RISK = {
-  positivo: { label: "Tranquilo", hex: "#C8F36D" },
-  atencao: { label: "Atenção", hex: "#FCD34D" },
-  risco: { label: "Risco", hex: "#F87171" },
-} as const;
-const riskOf = (r: string) => RISK[r as keyof typeof RISK] ?? RISK.risco;
-
-/**
- * Every figure rounded once, and the rest derived from those rounded parts — four
- * independently rounded numbers do not add up to the fifth. Each month chains off the
- * close shown for the one before it, so a column of them always sums.
- */
-function buildRows(projections: MonthProjection[], previousMonthEndingBalance: number): ProjectionRowView[] {
-  return projections.reduce<ProjectionRowView[]>((acc, p, i) => {
-    const income = Math.round(p.income);
-    const expense = Math.round(p.expense);
-    const sobra = income - expense;
-    const prevBalance = i > 0 ? acc[i - 1].fecha : Math.round(previousMonthEndingBalance);
-    acc.push({
-      ...p,
-      income,
-      expense,
-      sobra,
-      prevBalance,
-      fecha: prevBalance + sobra,
-      short: MONTH_SHORT[p.month],
-      name: MONTH_NAMES[p.month],
-      yearTag: p.year !== new Date().getFullYear() ? String(p.year).slice(2) : "",
-    });
-    return acc;
-  }, []);
-}
-
-interface ProjectionRowView {
-  month: number;
-  year: number;
-  risk: "positivo" | "atencao" | "risco";
-  income: number;
-  expense: number;
-  sobra: number;
-  prevBalance: number;
-  fecha: number;
-  short: string;
-  name: string;
-  yearTag: string;
-}
+const buildRows = buildProjectionRows;
 
 function FuturoPanel() {
   const navigate = useNavigate();

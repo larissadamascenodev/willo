@@ -48,13 +48,22 @@ export default function FluxoCard({
 
   return (
     <Surface style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+      <Pressable
+        onPress={() => router.push("/fluxo-de-caixa" as never)}
+        style={({ pressed }) => ({
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          opacity: pressed ? 0.7 : 1,
+        })}
+      >
         <Text numberOfLines={1} style={[T.cardLabel, { flex: 1 }]}>
           Receitas e despesas <Text style={{ color: INK.faint }}>·</Text>{" "}
           {isCurrentMonth ? "este mês" : "no mês"}
         </Text>
         <ChevronRight size={16} color={INK.faint} />
-      </View>
+      </Pressable>
 
       {/* The balance leads, because it is the answer; the sentence explains it. */}
       <Text numberOfLines={1} style={[T.figure, { marginTop: 4 }, balanco < 0 && { color: RED }]}>

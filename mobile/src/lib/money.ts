@@ -13,3 +13,12 @@ export const money = (v: number) =>
 /** The same, without the symbol — for a column that already says what it holds. */
 export const amount = (v: number) =>
   v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/**
+ * The same figure with the cents dropped.
+ *
+ * For a chart label or a column of months, where two decimal places are noise and
+ * what matters is the order of magnitude and the sign.
+ */
+export const compact = (v: number) =>
+  `${v < 0 ? "−" : ""}R$ ${Math.abs(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
