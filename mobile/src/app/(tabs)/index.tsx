@@ -7,20 +7,13 @@ import { useFinanceData } from "@/hooks/useFinanceData";
 import { useProfile } from "@/hooks/useProfile";
 import { useHiddenValues } from "@/hooks/useHiddenValues";
 import { useCardsOverview, invoiceDueDate } from "@/hooks/useCardsOverview";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import Room from "~/components/Room";
 import ScrollEdge from "~/components/ScrollEdge";
 import HomeHeader from "~/components/home/HomeHeader";
 import Stories from "~/components/home/Stories";
-import SaldoContasCard from "~/components/home/SaldoContasCard";
-import FluxoCard from "~/components/home/FluxoCard";
-import SaudeDoMesCard from "~/components/home/SaudeDoMesCard";
-import ProximosEventos from "~/components/home/ProximosEventos";
-import GastosPorCategoria from "~/components/home/GastosPorCategoria";
-import TransacoesRecentes from "~/components/home/TransacoesRecentes";
-import GastosFixosCard from "~/components/home/GastosFixosCard";
-import CartoesResumoCard from "~/components/home/CartoesResumoCard";
-import { AssinaturasTile, MetasTile, ParcelamentosTile } from "~/components/home/Tiles";
+import WidgetBoard from "~/components/home/WidgetBoard";
+import EditBar from "~/components/home/EditBar";
+import { renderHomeWidget } from "~/components/home/HomeWidgets";
 import { useAuth } from "~/lib/auth";
 import { useNavChrome } from "~/lib/navChrome";
 import { INK } from "~/theme/tokens";
@@ -33,8 +26,9 @@ import { INK } from "~/theme/tokens";
  * on flat charcoal.
  *
  * The greeting is not a heading here: it is the first of the readings at the top,
- * which is where the web puts it too. Under them the cards, in the order the web
- * stacks them, each carried over reading for reading.
+ * which is where the web puts it too. Everything under them belongs to the board,
+ * which decides what is shown, in what order and at what width — this screen only
+ * says what each widget is made of.
  */
 export default function Home() {
   const insets = useSafeAreaInsets();
@@ -43,6 +37,9 @@ export default function Home() {
   const { greeting, dateStr } = useGreeting();
   const hidden = useHiddenValues();
   const [refreshing, setRefreshing] = useState(false);
+  /* Held here, not in the board: the bar that says it is being edited has to stay
+     put while the board scrolls under it. */
+  const [editing, setEditing] = useState(false);
 
   const today = useMemo(() => new Date(), []);
   const month = today.getMonth();
@@ -100,6 +97,20 @@ export default function Home() {
     [greeting, dateStr, firstName, data, month, invoice, hidden],
   );
 
+  const widgetContext = useMemo(
+    () => ({
+      receitas: data.receitas,
+      despesas: data.despesas,
+      saldoPrevisto: data.saldoPrevisto,
+      categories: data.categories ?? [],
+      events: data.events ?? [],
+      transactions: data.transactions ?? [],
+      month,
+      isCurrentMonth: true,
+    }),
+    [data, month],
+  );
+
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -130,51 +141,19 @@ export default function Home() {
           <Stories slides={slides} />
         </View>
 
-        {/* The feed, each card arriving a beat after the one above it, the way the
-            web stacks them. */}
-        <View style={{ marginTop: 20, gap: 16 }}>
-          {[
-            <SaldoContasCard key="saldo" saldoPrevisto={data.saldoPrevisto} />,
-            <FluxoCard
-              key="fluxo"
-              receitas={data.receitas}
-              despesas={data.despesas}
-              month={month}
-              isCurrentMonth
-            />,
-            <ProximosEventos key="eventos" events={data.events ?? []} />,
-            <CartoesResumoCard key="cartoes" />,
-            /* Two to a row: each of these is a figure and a word, and a column of
-               nothing but full-width cards has no shape to it. */
-            <View key="meia-1" style={{ flexDirection: "row", gap: 16 }}>
-              <ParcelamentosTile />
-              <AssinaturasTile />
-            </View>,
-            <View key="meia-2" style={{ flexDirection: "row", gap: 16 }}>
-              <MetasTile />
-              <View style={{ flex: 1 }} />
-            </View>,
-            <GastosFixosCard key="fixos" />,
-            <SaudeDoMesCard
-              key="raiox"
-              receitas={data.receitas}
-              despesas={data.despesas}
-              saldoPrevisto={data.saldoPrevisto}
-              categories={data.categories ?? []}
-              isCurrentMonth
-            />,
-            <GastosPorCategoria key="categorias" categories={data.categories ?? []} month={month} />,
-            <TransacoesRecentes key="recentes" transactions={data.transactions ?? []} />,
-          ].map((card, i) => (
-            <Animated.View key={card.key} entering={FadeInDown.delay(60 + i * 70).duration(420)}>
-              {card}
-            </Animated.View>
-          ))}
+        <View style={{ marginTop: 20 }}>
+          <WidgetBoard
+            userId={user?.id}
+            editing={editing}
+            onEditingChange={setEditing}
+            render={(id, size) => renderHomeWidget(id, size, widgetContext)}
+          />
         </View>
       </ScrollView>
 
       {/* Only this screen pins a header for content to dissolve under. */}
-      <ScrollEdge on={moved} />
+      <ScrollEdge on={moved && !editing} />
+      <EditBar open={editing} onDone={() => setEditing(false)} />
     </Room>
   );
 }
