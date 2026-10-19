@@ -443,7 +443,15 @@ export default function Fatura() {
             <View style={{ marginTop: 24 }}>
               <InvoiceRecentCard
                 items={items}
-                onSeeAll={() => router.push(`/fatura/${cardId}/lancamentos` as never)}
+                /* The month travels with the tap. Without it the list falls back to
+                   the calendar month, which is rarely the invoice you were reading —
+                   past the closing day the open one is already the next. */
+                onSeeAll={() =>
+                  router.push({
+                    pathname: "/fatura/[cardId]/lancamentos",
+                    params: { cardId: String(cardId), month: String(month), year: String(year) },
+                  } as never)
+                }
                 onOpen={setOpenLine}
               />
             </View>
