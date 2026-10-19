@@ -146,7 +146,10 @@ export default function Eventos() {
         </View>
 
         {/* What the month still owes and still brings. */}
-        <View style={{ marginTop: 20, flexDirection: "row", gap: 16, paddingHorizontal: 4 }}>
+        <Animated.View
+          entering={FadeInDown.duration(400)}
+          style={{ marginTop: 20, flexDirection: "row", gap: 16, paddingHorizontal: 4 }}
+        >
           <View style={{ flex: 1 }}>
             <Text style={T.eyebrow}>A receber</Text>
             <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 24, fontWeight: "800", letterSpacing: -0.8, color: GREEN }}>
@@ -159,7 +162,7 @@ export default function Eventos() {
               {money(aPagar)}
             </Text>
           </View>
-        </View>
+        </Animated.View>
 
         <Text style={{ marginTop: 10, paddingHorizontal: 4, fontSize: 12.5, color: INK.soft }}>
           {MONTHS[month]} de {year}
@@ -177,6 +180,7 @@ export default function Eventos() {
         </Text>
 
         {/* ══ The month as a month ══ */}
+        <Animated.View entering={FadeInDown.delay(70).duration(420)}>
         <Surface radius={24} style={{ marginTop: 20, padding: 16 }}>
           <View style={{ flexDirection: "row", marginBottom: 8 }}>
             {WEEKDAYS.map((d, i) => (
@@ -275,6 +279,7 @@ export default function Eventos() {
             </Pressable>
           )}
         </Surface>
+        </Animated.View>
 
         {/* ══ The same days, written out ══ */}
         <View style={{ marginTop: 20, gap: 20 }}>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { loadMonthTransactions, type AccountRow, type TransactionRow as Row } from "@/services/monthTransactions";
 import type { CustomCategory } from "@/services/categoryService";
 import { useFinanceData } from "@/hooks/useFinanceData";
@@ -178,18 +179,18 @@ export default function Transacoes() {
           </View>
         </View>
 
-        <View style={{ marginTop: 18 }}>
+        <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 18 }}>
           <TransactionsSummary
             saldoAtual={finance.saldoAtual}
             saldoPrevisto={finance.saldoPrevisto}
             receitas={finance.receitas}
             despesas={finance.despesas}
           />
-        </View>
+        </Animated.View>
 
-        <View style={{ marginTop: 22 }}>
+        <Animated.View entering={FadeInDown.delay(70).duration(400)} style={{ marginTop: 22 }}>
           <TransactionTabs value={tab} onChange={setTab} />
-        </View>
+        </Animated.View>
 
         <View
           style={{
@@ -228,14 +229,14 @@ export default function Transacoes() {
               </View>
             )}
 
-            {days.map(([date, rows]) => {
+            {days.map(([date, rows], i) => {
               const { label, isToday } = formatDateHeader(date, today);
               const net = rows.reduce(
                 (sum, t) => sum + (t.type === "receita" ? Number(t.amount) : -Number(t.amount)),
                 0,
               );
               return (
-                <View key={date}>
+                <Animated.View key={date} entering={FadeInDown.delay(120 + i * 45).duration(380)}>
                   <DayHeader label={isToday ? `Hoje · ${label}` : label} today={isToday} net={net} />
                   {rows.map((tx) => (
                     <TransactionRow
@@ -251,7 +252,7 @@ export default function Transacoes() {
                       }}
                     />
                   ))}
-                </View>
+                </Animated.View>
               );
             })}
 

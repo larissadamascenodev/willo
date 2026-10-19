@@ -9,6 +9,7 @@ import { cardHex as hexFor } from "@/hooks/useCardsOverview";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import { InvoiceLineRow } from "~/components/fatura/InvoiceRecentCard";
+import SegmentedTabs from "~/components/SegmentedTabs";
 import { Search } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
@@ -132,42 +133,15 @@ export default function Lancamentos() {
           </View>
         </View>
 
-        <View
-          style={{
-            marginTop: 20,
-            flexDirection: "row",
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.06)",
-            backgroundColor: "rgba(255,255,255,0.035)",
-            padding: 4,
-          }}
-        >
-          {([["todos", `Todos (${lines.length})`], ["parcelados", `Parcelados (${parceladoCount})`]] as const).map(
-            ([key, label]) => {
-              const on = tab === key;
-              return (
-                <Text
-                  key={key}
-                  onPress={() => setTab(key)}
-                  style={{
-                    flex: 1,
-                    height: 38,
-                    lineHeight: 38,
-                    textAlign: "center",
-                    borderRadius: 999,
-                    overflow: "hidden",
-                    fontSize: 13,
-                    fontWeight: "600",
-                    backgroundColor: on ? "#fff" : "transparent",
-                    color: on ? "#0B0B0B" : INK.soft,
-                  }}
-                >
-                  {label}
-                </Text>
-              );
-            },
-          )}
+        <View style={{ marginTop: 20 }}>
+          <SegmentedTabs
+            value={tab}
+            onChange={setTab}
+            options={[
+              { key: "todos" as const, label: `Todos (${lines.length})` },
+              { key: "parcelados" as const, label: `Parcelados (${parceladoCount})` },
+            ]}
+          />
         </View>
 
         <View

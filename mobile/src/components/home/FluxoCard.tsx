@@ -1,5 +1,6 @@
 import { Text, View } from "react-native";
 import Surface from "~/components/Surface";
+import Bar from "~/components/Bar";
 import { ChevronRight } from "~/components/icons";
 import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
@@ -61,8 +62,8 @@ export default function FluxoCard({
       <Text style={[T.note, { marginTop: 8 }]}>{verdict}</Text>
 
       <View style={{ marginTop: 16, gap: 14 }}>
-        <Flow label="Entrada" amount={receitas} scale={scale} inflow />
-        <Flow label="Saída" amount={despesas} scale={scale} />
+        <Flow label="Entrada" amount={receitas} scale={scale} inflow delay={0.05} />
+        <Flow label="Saída" amount={despesas} scale={scale} delay={0.12} />
       </View>
 
       <View
@@ -91,11 +92,13 @@ function Flow({
   amount,
   scale,
   inflow,
+  delay,
 }: {
   label: string;
   amount: number;
   scale: number;
   inflow?: boolean;
+  delay: number;
 }) {
   return (
     <View>
@@ -115,13 +118,10 @@ function Flow({
           overflow: "hidden",
         }}
       >
-        <View
-          style={{
-            height: "100%",
-            borderRadius: 999,
-            backgroundColor: inflow ? GREEN : RED,
-            width: `${Math.max((amount / scale) * 100, amount > 0 ? 3 : 0)}%`,
-          }}
+        <Bar
+          share={Math.max(amount / scale, amount > 0 ? 0.03 : 0)}
+          color={inflow ? GREEN : RED}
+          delay={delay}
         />
       </View>
     </View>

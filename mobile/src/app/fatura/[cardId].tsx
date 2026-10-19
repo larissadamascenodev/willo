@@ -13,6 +13,7 @@ import { categoryHex } from "@/lib/categoryData";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import Surface from "~/components/Surface";
+import Bar from "~/components/Bar";
 import { statusPill } from "~/components/wallet/CardFaceTile";
 import InvoiceForecastChart from "~/components/fatura/InvoiceForecastChart";
 import InvoiceRecentCard from "~/components/fatura/InvoiceRecentCard";
@@ -314,21 +315,17 @@ export default function Fatura() {
               {/* Inside a card the card's own colour rules; what is left is its
                   lighter tone. */}
               <View style={{ marginTop: 12, flexDirection: "row", height: 10, gap: 3 }}>
-                <View
-                  style={{
-                    width: `${Math.min(usedPct, 100)}%`,
-                    minWidth: usedLimit > 0 ? 6 : 0,
-                    borderRadius: 999,
-                    backgroundColor: hex,
-                  }}
+                <Bar
+                  share={Math.min(usedPct, 100) / 100}
+                  color={hex}
+                  minWidth={usedLimit > 0 ? 6 : 0}
+                  delay={0.08}
                 />
-                <View
-                  style={{
-                    width: `${limitTotal > 0 ? Math.max(100 - usedPct, 0) : 100}%`,
-                    minWidth: available > 0 ? 6 : 0,
-                    borderRadius: 999,
-                    backgroundColor: freeTone,
-                  }}
+                <Bar
+                  share={limitTotal > 0 ? Math.max(1 - usedPct / 100, 0) : 1}
+                  color={freeTone}
+                  minWidth={available > 0 ? 6 : 0}
+                  delay={0.16}
                 />
               </View>
 

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Text, View } from "react-native";
 import Surface from "~/components/Surface";
+import Bar from "~/components/Bar";
 import { ChevronRight } from "~/components/icons";
 import { money } from "~/lib/money";
 import { INK, RED } from "~/theme/tokens";
@@ -93,14 +94,7 @@ export default function SaudeDoMesCard({
           overflow: "hidden",
         }}
       >
-        <View
-          style={{
-            height: "100%",
-            borderRadius: 999,
-            backgroundColor: tone.hex,
-            width: `${Math.min(spentShare, 1) * 100}%`,
-          }}
-        />
+        <Bar share={Math.min(spentShare, 1)} color={tone.hex} delay={0.08} />
       </View>
 
       <View style={{ marginTop: 12, flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>

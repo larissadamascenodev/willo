@@ -1,4 +1,6 @@
 import { Text, View } from "react-native";
+import Bar from "~/components/Bar";
+import SegmentedTabs from "~/components/SegmentedTabs";
 import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
@@ -65,13 +67,10 @@ export default function TransactionsSummary({
                 overflow: "hidden",
               }}
             >
-              <View
-                style={{
-                  height: "100%",
-                  borderRadius: 999,
-                  backgroundColor: inflow ? GREEN : RED,
-                  width: `${Math.max((value / scale) * 100, value > 0 ? 3 : 0)}%`,
-                }}
+              <Bar
+                share={Math.max(value / scale, value > 0 ? 0.03 : 0)}
+                color={inflow ? GREEN : RED}
+                delay={inflow ? 0.05 : 0.12}
               />
             </View>
           </View>
@@ -89,46 +88,15 @@ export function TransactionTabs({
   value: "todos" | "receita" | "despesa";
   onChange: (v: "todos" | "receita" | "despesa") => void;
 }) {
-  const tabs = [
-    { key: "todos" as const, label: "Todas" },
-    { key: "receita" as const, label: "Receitas" },
-    { key: "despesa" as const, label: "Despesas" },
-  ];
-
   return (
-    <View
-      style={{
-        flexDirection: "row",
-        borderRadius: 999,
-        borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.06)",
-        backgroundColor: "rgba(255,255,255,0.035)",
-        padding: 4,
-      }}
-    >
-      {tabs.map((tab) => {
-        const on = value === tab.key;
-        return (
-          <Text
-            key={tab.key}
-            onPress={() => onChange(tab.key)}
-            style={{
-              flex: 1,
-              height: 38,
-              lineHeight: 38,
-              textAlign: "center",
-              borderRadius: 999,
-              fontSize: 13,
-              fontWeight: "600",
-              overflow: "hidden",
-              backgroundColor: on ? "#fff" : "transparent",
-              color: on ? "#0B0B0B" : INK.soft,
-            }}
-          >
-            {tab.label}
-          </Text>
-        );
-      })}
-    </View>
+    <SegmentedTabs
+      value={value}
+      onChange={onChange}
+      options={[
+        { key: "todos", label: "Todas" },
+        { key: "receita", label: "Receitas" },
+        { key: "despesa", label: "Despesas" },
+      ]}
+    />
   );
 }

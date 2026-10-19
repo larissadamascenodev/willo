@@ -3,6 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { shade, withAlpha } from "@/lib/tone";
 import BankMark from "~/components/BankMark";
+import Bar from "~/components/Bar";
 import { money } from "~/lib/money";
 import { GREEN, INK } from "~/theme/tokens";
 
@@ -154,21 +155,17 @@ export default function CardFaceTile({
 
         {/* The card's colour for what is spent, its lighter tone for what is left. */}
         <View style={{ marginTop: 16, flexDirection: "row", height: 7, gap: 3 }}>
-          <View
-            style={{
-              width: `${usedPct}%`,
-              minWidth: card.used > 0 ? 6 : 0,
-              borderRadius: 999,
-              backgroundColor: hex,
-            }}
+          <Bar
+            share={usedPct / 100}
+            color={hex}
+            minWidth={card.used > 0 ? 6 : 0}
+            delay={0.1 + index * 0.07}
           />
-          <View
-            style={{
-              width: `${card.limit > 0 ? Math.max(100 - usedPct, 0) : 100}%`,
-              minWidth: available > 0 ? 6 : 0,
-              borderRadius: 999,
-              backgroundColor: freeTone,
-            }}
+          <Bar
+            share={card.limit > 0 ? Math.max(1 - usedPct / 100, 0) : 1}
+            color={freeTone}
+            minWidth={available > 0 ? 6 : 0}
+            delay={0.18 + index * 0.07}
           />
         </View>
 

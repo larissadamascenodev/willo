@@ -19,6 +19,7 @@ import { colorFor, initials } from "@/lib/banks";
 import { cardHex } from "@/hooks/useCardsOverview";
 import Room from "~/components/Room";
 import BottomSheet from "~/components/BottomSheet";
+import SegmentedTabs from "~/components/SegmentedTabs";
 import { Check, ChevronRight, Clock, CreditCard, FileText, Tag, Wallet, X } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
@@ -209,43 +210,18 @@ export default function Novo() {
           </View>
 
           {/* Which kind. Editing has no kind to choose — it already is one. */}
-          <View
-            style={{
-              marginTop: 8,
-              flexDirection: "row",
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.06)",
-              backgroundColor: "rgba(255,255,255,0.035)",
-              padding: 4,
-            }}
-          >
-            {(["receita", "despesa"] as const).map((k) => {
-              const on = type === k;
-              return (
-                <Text
-                  key={k}
-                  onPress={() => {
-                    setType(k);
-                    setCategory("");
-                  }}
-                  style={{
-                    flex: 1,
-                    height: 38,
-                    lineHeight: 38,
-                    textAlign: "center",
-                    borderRadius: 999,
-                    overflow: "hidden",
-                    fontSize: 13,
-                    fontWeight: "600",
-                    backgroundColor: on ? "#fff" : "transparent",
-                    color: on ? "#0B0B0B" : INK.soft,
-                  }}
-                >
-                  {k === "receita" ? "Receita" : "Despesa"}
-                </Text>
-              );
-            })}
+          <View style={{ marginTop: 8 }}>
+            <SegmentedTabs
+              value={type}
+              onChange={(k) => {
+                setType(k);
+                setCategory("");
+              }}
+              options={[
+                { key: "receita" as const, label: "Receita" },
+                { key: "despesa" as const, label: "Despesa" },
+              ]}
+            />
           </View>
         </View>
 
@@ -320,38 +296,17 @@ export default function Novo() {
           {!isReceita && (
             <>
               <Text style={SECTION}>Como pagou</Text>
-              <View
-                style={{
-                  flexDirection: "row",
-                  borderRadius: 999,
-                  backgroundColor: "rgba(255,255,255,0.06)",
-                  padding: 4,
-                  marginBottom: 4,
-                }}
-              >
-                {(["conta", "cartao"] as const).map((k) => {
-                  const on = method === k;
-                  return (
-                    <Text
-                      key={k}
-                      onPress={() => setMethod(k)}
-                      style={{
-                        flex: 1,
-                        height: 34,
-                        lineHeight: 34,
-                        textAlign: "center",
-                        borderRadius: 999,
-                        overflow: "hidden",
-                        fontSize: 13,
-                        fontWeight: "600",
-                        backgroundColor: on ? "#fff" : "transparent",
-                        color: on ? "#0B0B0B" : "rgba(255,255,255,0.7)",
-                      }}
-                    >
-                      {k === "conta" ? "Conta" : "Cartão"}
-                    </Text>
-                  );
-                })}
+              <View style={{ marginBottom: 4 }}>
+                <SegmentedTabs
+                  compact
+                  height={34}
+                  value={method}
+                  onChange={setMethod}
+                  options={[
+                    { key: "conta" as const, label: "Conta" },
+                    { key: "cartao" as const, label: "Cartão" },
+                  ]}
+                />
               </View>
             </>
           )}
@@ -401,41 +356,24 @@ export default function Novo() {
           )}
 
           <Text style={SECTION}>Repetição</Text>
-          <View
-            style={{
-              flexDirection: "row",
-              borderRadius: 999,
-              backgroundColor: "rgba(255,255,255,0.06)",
-              padding: 4,
-            }}
-          >
-            {(isReceita
-              ? ([["unica", "Única"], ["fixa", "Todo mês"]] as const)
-              : ([["unica", "Única"], ["parcelado", "Parcelado"], ["fixa", usingCard ? "Assinatura" : "Todo mês"]] as const)
-            ).map(([key, label]) => {
-              const on = recurrence === key;
-              return (
-                <Text
-                  key={key}
-                  onPress={() => setRecurrence(key)}
-                  style={{
-                    flex: 1,
-                    height: 34,
-                    lineHeight: 34,
-                    textAlign: "center",
-                    borderRadius: 999,
-                    overflow: "hidden",
-                    fontSize: 13,
-                    fontWeight: "600",
-                    backgroundColor: on ? "#fff" : "transparent",
-                    color: on ? "#0B0B0B" : "rgba(255,255,255,0.7)",
-                  }}
-                >
-                  {label}
-                </Text>
-              );
-            })}
-          </View>
+          <SegmentedTabs
+            compact
+            height={34}
+            value={recurrence}
+            onChange={setRecurrence}
+            options={
+              isReceita
+                ? [
+                    { key: "unica" as const, label: "Única" },
+                    { key: "fixa" as const, label: "Todo mês" },
+                  ]
+                : [
+                    { key: "unica" as const, label: "Única" },
+                    { key: "parcelado" as const, label: "Parcelado" },
+                    { key: "fixa" as const, label: usingCard ? "Assinatura" : "Todo mês" },
+                  ]
+            }
+          />
 
           {!isReceita && recurrence === "parcelado" && (
             <View style={{ marginTop: 8 }}>

@@ -8,6 +8,7 @@ import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import Surface from "~/components/Surface";
 import BankMark from "~/components/BankMark";
+import { FlexBar } from "~/components/Bar";
 import { Landmark, Plus } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
@@ -161,22 +162,18 @@ export default function Gestao() {
             </Animated.View>
 
             {/* ══ The accounts, one line each ══ */}
-            <View style={{ marginTop: 24 }}>
+            <Animated.View entering={FadeInDown.delay(60).duration(420)} style={{ marginTop: 24 }}>
               {/* One bar split the way the money is, each share in its bank's colour. */}
               <View style={{ flexDirection: "row", height: 8, gap: 3, paddingHorizontal: 4, marginBottom: 4 }}>
                 {positive > 0 ? (
                   rows
                     .filter((r) => r.balance > 0)
-                    .map((r) => (
-                      <View
+                    .map((r, i) => (
+                      <FlexBar
                         key={r.account.id}
-                        style={{
-                          flexGrow: r.balance / positive,
-                          flexBasis: 0,
-                          minWidth: 6,
-                          borderRadius: 999,
-                          backgroundColor: r.hex,
-                        }}
+                        share={r.balance / positive}
+                        color={r.hex}
+                        delay={0.05 * i}
                       />
                     ))
                 ) : (
@@ -247,7 +244,7 @@ export default function Gestao() {
                   </Animated.View>
                 );
               })}
-            </View>
+            </Animated.View>
           </>
         )}
       </ScrollView>

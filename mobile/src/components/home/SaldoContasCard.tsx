@@ -5,6 +5,7 @@ import { getAccounts } from "@/services/transactionService";
 import { colorFor, initials } from "@/lib/banks";
 import { useRouter } from "expo-router";
 import Surface from "~/components/Surface";
+import { FlexBar } from "~/components/Bar";
 import { money } from "~/lib/money";
 import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
@@ -102,16 +103,8 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
         {positive > 0 ? (
           rows
             .filter((a) => a.balance > 0)
-            .map((a) => (
-              <View
-                key={a.id}
-                style={{
-                  flexGrow: a.balance / positive,
-                  flexBasis: 0,
-                  borderRadius: 999,
-                  backgroundColor: a.hex,
-                }}
-              />
+            .map((a, i) => (
+              <FlexBar key={a.id} share={a.balance / positive} color={a.hex} delay={0.04 * i} />
             ))
         ) : (
           <View style={{ flex: 1, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)" }} />

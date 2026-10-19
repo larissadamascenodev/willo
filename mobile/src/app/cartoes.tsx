@@ -9,6 +9,7 @@ import { colorFor } from "@/lib/banks";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import Surface from "~/components/Surface";
+import Bar from "~/components/Bar";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import CardFaceTile, { FREE_LIMIT_HEX, USED_LIMIT_HEX } from "~/components/wallet/CardFaceTile";
 import { CreditCard, Pencil, Plus, Trash2 } from "~/components/icons";
@@ -188,28 +189,24 @@ export default function Cartoes() {
               {/* One bar split the way the limit itself is split: each card's share of
                   what is spent, and what is still free at the end. */}
               <View style={{ marginTop: 12, flexDirection: "row", height: 10, gap: 3 }}>
-                {rows.map((r) => {
-                  const pct = sums.limite > 0 ? (r.card.used / sums.limite) * 100 : 0;
-                  if (pct < 0.5) return null;
+                {rows.map((r, i) => {
+                  const share = sums.limite > 0 ? r.card.used / sums.limite : 0;
+                  if (share < 0.005) return null;
                   return (
-                    <View
+                    <Bar
                       key={r.card.id}
-                      style={{
-                        width: `${pct}%`,
-                        minWidth: 6,
-                        borderRadius: 999,
-                        backgroundColor: USED_LIMIT_HEX,
-                      }}
+                      share={share}
+                      color={USED_LIMIT_HEX}
+                      minWidth={6}
+                      delay={0.1 + i * 0.06}
                     />
                   );
                 })}
-                <View
-                  style={{
-                    width: `${sums.limite > 0 ? (sums.disponivel / sums.limite) * 100 : 100}%`,
-                    minWidth: sums.disponivel > 0 ? 6 : 0,
-                    borderRadius: 999,
-                    backgroundColor: FREE_LIMIT_HEX,
-                  }}
+                <Bar
+                  share={sums.limite > 0 ? sums.disponivel / sums.limite : 1}
+                  color={FREE_LIMIT_HEX}
+                  minWidth={sums.disponivel > 0 ? 6 : 0}
+                  delay={0.2}
                 />
               </View>
 

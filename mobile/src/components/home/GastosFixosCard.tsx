@@ -5,6 +5,8 @@ import { useRecorrentes, daysUntil } from "@/hooks/useRecorrentes";
 import { useAuth } from "~/lib/auth";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import Surface from "~/components/Surface";
+import Bar from "~/components/Bar";
+import SegmentedTabs from "~/components/SegmentedTabs";
 import { Check, ChevronDown, ChevronUp, Repeat } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { money } from "~/lib/money";
@@ -116,54 +118,28 @@ export default function GastosFixosCard() {
             backgroundColor: "rgba(255,255,255,0.07)",
           }}
         >
-          <View
-            style={{
-              height: "100%",
-              borderRadius: 999,
-              backgroundColor: tab === "receita" ? GREEN : "#fff",
-              width: `${(paidCount / filtered.length) * 100}%`,
-            }}
+          <Bar
+            share={paidCount / filtered.length}
+            color={tab === "receita" ? GREEN : "#fff"}
+            delay={0.06}
           />
         </View>
       )}
 
       <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
-        <View
-          style={{
-            flexDirection: "row",
-            borderRadius: 999,
-            backgroundColor: "rgba(255,255,255,0.06)",
-            padding: 4,
+        <SegmentedTabs
+          compact
+          height={32}
+          value={tab}
+          onChange={(k) => {
+            setTab(k);
+            setExpanded(false);
           }}
-        >
-          {(["despesa", "receita"] as const).map((key) => {
-            const on = tab === key;
-            return (
-              <Text
-                key={key}
-                onPress={() => {
-                  setTab(key);
-                  setExpanded(false);
-                }}
-                style={{
-                  flex: 1,
-                  height: 32,
-                  lineHeight: 32,
-                  textAlign: "center",
-                  borderRadius: 999,
-                  overflow: "hidden",
-                  fontSize: 12,
-                  fontWeight: "600",
-                  backgroundColor: on ? "#fff" : "transparent",
-                  color: on ? "#0B0B0B" : "rgba(255,255,255,0.7)",
-                }}
-              >
-                {key === "despesa" ? "Despesas" : "Receitas"} (
-                {key === "despesa" ? despesaCount : receitaCount})
-              </Text>
-            );
-          })}
-        </View>
+          options={[
+            { key: "despesa" as const, label: `Despesas (${despesaCount})` },
+            { key: "receita" as const, label: `Receitas (${receitaCount})` },
+          ]}
+        />
       </View>
 
       <View style={{ paddingHorizontal: 16, paddingTop: 4 }}>
