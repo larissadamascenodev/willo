@@ -44,3 +44,7 @@ export { default as X } from "lucide-react-native/icons/x";
 export { default as User } from "lucide-react-native/icons/user";
 export { default as CalendarClock } from "lucide-react-native/icons/calendar-clock";
 export { default as ChevronLeft } from "lucide-react-native/icons/chevron-left";
+/* lucide 1.x renamed more-vertical to ellipsis-vertical; the name stays MoreVertical
+   so the screens read like the web ones. */
+export { default as MoreVertical } from "lucide-react-native/icons/ellipsis-vertical";
+export { default as Landmark } from "lucide-react-native/icons/landmark";

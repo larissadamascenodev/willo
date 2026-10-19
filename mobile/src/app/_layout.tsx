@@ -58,6 +58,7 @@ export default function RootLayout() {
             <Stack.Screen name="eventos" />
             <Stack.Screen name="cartoes" />
             <Stack.Screen name="fatura/[cardId]" />
+            <Stack.Screen name="gestao" />
           </Stack>
           </MonthProvider>
         </AuthProvider>

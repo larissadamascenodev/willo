@@ -3,6 +3,7 @@ import { Text, View } from "react-native";
 import { ChevronRight } from "~/components/icons";
 import { getAccounts } from "@/services/transactionService";
 import { colorFor, initials } from "@/lib/banks";
+import { useRouter } from "expo-router";
 import Surface from "~/components/Surface";
 import { money } from "~/lib/money";
 import { INK, RED } from "~/theme/tokens";
@@ -35,6 +36,7 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: number }) {
+  const router = useRouter();
   const [accounts, setAccounts] = useState<Account[] | null>(null);
 
   useEffect(() => {
@@ -74,8 +76,7 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
   const positive = rows.reduce((s, a) => s + Math.max(a.balance, 0), 0);
 
   return (
-    /* Contas is not carried over yet; the card leads nowhere until it is. */
-    <Surface style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 }}>
+    <Surface onPress={() => router.push("/gestao")} style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <Text style={T.cardLabel}>Saldo em contas</Text>
         <ChevronRight size={16} color={INK.faint} />
