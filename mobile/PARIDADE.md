@@ -100,11 +100,18 @@ Falta:
 - **⬜ Capa da meta** (imagem) e **prazo** — a web tem os dois no formulário
 - **⬜ Planejar com IA** (`AIFinancialWizardModal`)
 
-### ⬜ Fluxo de caixa / Balanço / Projeções — `/fluxo-de-caixa`, `/bot-finance/balanco`, `/bot-finance/projecoes`
-1089 linhas numa página só (`Financeiro`), com os gráficos.
+### ✅ Fluxo de caixa / Balanço / Projeções — `/fluxo-de-caixa`
+As três abas numa tela só. Fluxo: geral/entradas/saídas, períodos, colunas, últimos
+lançamentos. Balanço: parcial do mês, régua gasto × sobra, dias do mês, próximos
+meses com as duas barras. Projeções: fecha com, aviso de meses negativos, strip do
+saldo, mês a mês com a folha de cada um.
 
-### ⬜ Gastos por categoria — `/analytics/categorias`
-1841 linhas. A maior do app: análise por categoria com histórico e comparações.
+### ✅ Gastos por categoria — `/analytics/categorias` e `/analytics/categoria/[nome]`
+Anel do mês, maior gasto, categorias × grupos, limites por categoria (criar, editar,
+remover). Na categoria: cifra, selo, evolução de 6 meses, parcelas comprometidas,
+hábito e todos os lançamentos.
+
+Falta: **⬜ insights e sugestões de limite por IA** (depende do crédito da API).
 
 ### ✅ Gerenciar categorias — `/categorias`
 Padrão e suas numa lista só, criar, editar, esconder, cor e ícone. Chega pelo
@@ -170,11 +177,11 @@ Não são dívida — são decisões que valem para o nativo:
 
 1. ~~Detalhe da conta, Parcelamentos, Receitas e despesas~~ ✅
 2. ~~Metas~~ ✅ · ~~Categorias~~ ✅
-3. Fechar Transações: resumo, editar, excluir, filtros
-4. Fechar Fatura: pagar, adicionar, editar cartão
-5. Criar conta e criar cartão (as duas folhas)
-6. Raio-X
-7. Fluxo de caixa e Gastos por categoria (os dois grandes de gráfico)
+3. ~~Fluxo de caixa e Gastos por categoria~~ ✅
+4. Fechar Transações: resumo, editar, excluir, filtros
+5. Fechar Fatura: pagar, adicionar, editar cartão
+6. Criar conta e criar cartão (as duas folhas)
+7. Raio-X
 8. Configurações
 9. Agentes e Assistente
 10. Login completo e onboarding

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { getCategoryColor } from "@/lib/categoryData";
@@ -58,6 +59,7 @@ export default function GastosPorCategoria({
   categories: CategoryExpense[];
   month: number;
 }) {
+  const router = useRouter();
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -107,10 +109,20 @@ export default function GastosPorCategoria({
             {money(total)}
           </Text>
         </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 2, marginTop: 2 }}>
+        <Pressable
+          onPress={() => router.push("/analytics/categorias" as never)}
+          hitSlop={8}
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 2,
+            marginTop: 2,
+            opacity: pressed ? 0.6 : 1,
+          })}
+        >
           <Text style={{ fontSize: 12, fontWeight: "600", color: INK.soft }}>Análise</Text>
           <ChevronRight size={14} color={INK.soft} />
-        </View>
+        </Pressable>
       </View>
 
       {sorted.length === 0 ? (

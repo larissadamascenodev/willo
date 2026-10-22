@@ -54,3 +54,5 @@ export { default as FastForward } from "lucide-react-native/icons/fast-forward";
 export { default as Undo2 } from "lucide-react-native/icons/undo-2";
 export { default as Target } from "lucide-react-native/icons/target";
 export { default as Info } from "lucide-react-native/icons/info";
+/* lucide 1.x renamed pie-chart to chart-pie; the name stays ChartPie here. */
+export { default as ChartPie } from "lucide-react-native/icons/chart-pie";
