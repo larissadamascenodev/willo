@@ -5,6 +5,7 @@ import {
   GraduationCap, Landmark, MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { groupCategoryAmounts } from "@/lib/categoryGroups";
 
 import { currencySymbol, getCurrency } from "@/lib/currency";
 export interface OverviewCategory {
@@ -23,24 +24,19 @@ export const formatCompactBRL = (v: number) =>
     : fmt(v);
 
 // ── Groups ───────────────────────────────────────────────
+/* Which groups there are, and what falls into each, is decided once in
+   categoryGroups — the phone reads the same list. This is only the browser's half
+   of the glyph lookup. */
+const GROUP_LUCIDE: Record<string, React.ComponentType<{ className?: string }>> = {
+  ShoppingCart, Home, Car, HeartPulse, Gamepad2, ShoppingBag, GraduationCap, Landmark, MoreHorizontal,
+};
+
 interface GroupDef {
   name: string;
   hex: string;
   icon: React.ComponentType<{ className?: string }>;
   categories: string[];
 }
-
-const GROUPS: GroupDef[] = [
-  { name: "Alimentação", hex: "#F97316", icon: ShoppingCart, categories: ["Alimentação", "Supermercado", "Bebidas", "Delivery", "Cafeteria", "Fast Food", "Restaurantes", "Padaria"] },
-  { name: "Moradia", hex: "#6366F1", icon: Home, categories: ["Moradia", "Aluguel", "Condomínio", "Casa", "Contas", "Energia", "Conta de Luz", "Conta de Água", "Conta de Gás", "Internet"] },
-  { name: "Transporte", hex: "#3B82F6", icon: Car, categories: ["Transporte", "Combustível", "Viagem"] },
-  { name: "Saúde e bem-estar", hex: "#EF4444", icon: HeartPulse, categories: ["Saúde", "Academia", "Beleza", "Pets", "Farmácia"] },
-  { name: "Lazer", hex: "#EC4899", icon: Gamepad2, categories: ["Lazer", "Assinaturas", "Presentes", "Streaming"] },
-  { name: "Compras", hex: "#F59E0B", icon: ShoppingBag, categories: ["Compras", "Vestuário", "Tecnologia", "Eletrônicos"] },
-  { name: "Educação", hex: "#14B8A6", icon: GraduationCap, categories: ["Educação", "Cursos", "Livros"] },
-  { name: "Finanças", hex: "#22C55E", icon: Landmark, categories: ["Impostos", "Investimentos", "Transferência", "Cartão de Crédito", "Seguros", "Tarifas", "Empréstimos"] },
-];
-const OTHER_GROUP: GroupDef = { name: "Outros", hex: "#64748B", icon: MoreHorizontal, categories: [] };
 
 export interface CategoryGroup {
   def: GroupDef;
@@ -50,18 +46,10 @@ export interface CategoryGroup {
 }
 
 export function groupCategories(categories: OverviewCategory[]): CategoryGroup[] {
-  const total = categories.reduce((s, c) => s + c.amount, 0);
-  const byGroup = new Map<GroupDef, OverviewCategory[]>();
-  for (const cat of categories) {
-    const def = GROUPS.find((g) => g.categories.some((c) => c.toLowerCase() === cat.name.toLowerCase())) ?? OTHER_GROUP;
-    byGroup.set(def, [...(byGroup.get(def) ?? []), cat]);
-  }
-  return [...byGroup.entries()]
-    .map(([def, cats]) => {
-      const amount = cats.reduce((s, c) => s + c.amount, 0);
-      return { def, amount, percentage: total > 0 ? Math.round((amount / total) * 100) : 0, categories: cats };
-    })
-    .sort((a, b) => b.amount - a.amount);
+  return groupCategoryAmounts(categories).map((g) => ({
+    ...g,
+    def: { ...g.def, icon: GROUP_LUCIDE[g.def.icon] ?? MoreHorizontal },
+  }));
 }
 
 // ── Segmented control ────────────────────────────────────

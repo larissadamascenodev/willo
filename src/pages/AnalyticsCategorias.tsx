@@ -9,9 +9,18 @@ import BackButton from "@/components/shared/BackButton";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMonth } from "@/contexts/MonthContext";
-import { getRecurringForMonth } from "@/services/recurringService";
-import { dayOfMonth } from "@/lib/dateOnly";
-import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
+import { type CustomCategory } from "@/services/categoryService";
+import {
+  buildCategorySummaries,
+  buildHabitMap,
+  buildScoreMap,
+  enrichInstallmentImpacts,
+  loadCategoryAnalytics,
+  type AnalyticsTransaction,
+  type CategoryScoreData,
+  type HabitData,
+  type InstallmentImpact,
+} from "@/services/categoryAnalytics";
 import { getCategoryIcon, getCategoryColor, getCategoryHexColor } from "@/lib/categoryUtils";
 import MonthSelector from "@/components/dashboard/MonthSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -41,15 +50,7 @@ const SHORT_MONTH_NAMES = [
 ];
 
 // ── Types ────────────────────────────────────────────────
-interface TxRow {
-  id: string; name: string; category: string; date: string;
-  amount: number; type: string; status: string;
-  recurrence_type?: string; installments?: number | null;
-  installment_current?: number | null; parent_transaction_id?: string | null;
-  payment_method?: string; credit_card_id?: string | null;
-}
-
-interface CategorySummary {
+interface CategorySummaryView {
   name: string;
   amount: number;
   percentage: number;
@@ -76,49 +77,13 @@ interface HistoricalEntry {
 
 type HistoricalMap = Record<string, HistoricalEntry[]>;
 
-interface InstallmentImpact {
-  category: string;
-  monthlyAmount: number;
-  totalRemaining: number;
-  monthsRemaining: number;
-  impactPct: number;
-  items: { name: string; amount: number; remaining: number; total: number; paidInstallments: number }[];
-}
-
 type InstallmentImpactMap = Record<string, InstallmentImpact>;
-
-interface HabitData {
-  category: string;
-  txCount: number;
-  dailyCost: number;
-  isHabit: boolean;
-  topMerchant: { name: string; count: number } | null;
-  amount: number;
-}
-
-type CategoryScore = "saudavel" | "atencao" | "exagerado";
-
-interface CategoryScoreData {
-  score: CategoryScore;
-  percentage: number;
-  variation: number | null;
-  txCount: number;
-}
 
 const SCORE_CONFIG = {
   exagerado: { label: "Exagerado", emoji: "🔴", bg: "bg-destructive/10", text: "text-destructive", border: "border-destructive/20" },
   atencao: { label: "Atenção", emoji: "🟡", bg: "bg-warning/10", text: "text-warning", border: "border-warning/20" },
   saudavel: { label: "Saudável", emoji: "🟢", bg: "bg-success/10", text: "text-success", border: "border-success/20" },
 };
-
-function computeCategoryScore(pct: number, variation: number | null, txCount: number): CategoryScore {
-  // 🔴 Exagerado: any condition triggers it
-  if (pct > 30 || (variation !== null && variation > 25) || txCount >= 10) return "exagerado";
-  // 🟡 Atenção
-  if ((pct >= 15 && pct <= 30) || (variation !== null && variation >= 10 && variation <= 25) || (txCount >= 6 && txCount <= 9)) return "atencao";
-  // 🟢 Saudável
-  return "saudavel";
-}
 
 // ── Reusable Glass Card ──────────────────────────────────
 const GlassCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
@@ -172,7 +137,7 @@ const renderDefaultShape = (props: any) => {
 
 // ── Comparison Insights Section (carousel) ────────────────
 const ComparisonInsightsSection = ({ categoryData, prevCategoryData }: {
-  categoryData: CategorySummary[];
+  categoryData: CategorySummaryView[];
   prevCategoryData: { name: string; amount: number }[];
 }) => {
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -482,7 +447,7 @@ const LimitSuggestionItem = ({ suggestion, currentAmount, onApplied }: { suggest
   );
 };
 
-const LimitSuggestions = ({ suggestions, categoryData, onApplied }: { suggestions: AIInsights["limitSuggestions"]; categoryData: CategorySummary[]; onApplied?: () => void }) => {
+const LimitSuggestions = ({ suggestions, categoryData, onApplied }: { suggestions: AIInsights["limitSuggestions"]; categoryData: CategorySummaryView[]; onApplied?: () => void }) => {
   if (!suggestions || suggestions.length === 0) return null;
   return (
     <GlassCard className="p-4 md:p-5">
@@ -772,8 +737,8 @@ const CategoryDetail = ({
   category, transactions, onBack, monthLabel, isMobile, totalExpenses,
   historicalData, aiInsights, selectedMonth, installmentImpact, scoreData, habitData, limit, onEditLimit,
 }: {
-  category: CategorySummary;
-  transactions: TxRow[];
+  category: CategorySummaryView;
+  transactions: AnalyticsTransaction[];
   onBack: () => void;
   monthLabel: string;
   isMobile: boolean;
@@ -1217,8 +1182,8 @@ const AnalyticsCategorias = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const { selectedMonth, selectedYear, setMonth } = useMonth();
-  const [transactions, setTransactions] = useState<TxRow[]>([]);
-  const [prevMonthTxs, setPrevMonthTxs] = useState<TxRow[]>([]);
+  const [transactions, setTransactions] = useState<AnalyticsTransaction[]>([]);
+  const [prevMonthTxs, setPrevMonthTxs] = useState<AnalyticsTransaction[]>([]);
   const [historicalMap, setHistoricalMap] = useState<HistoricalMap>({});
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1259,362 +1224,71 @@ const AnalyticsCategorias = () => {
     return () => window.removeEventListener("finance-data-changed", onChange);
   }, [fetchLimits]);
 
-  // Fetch transactions for current month, previous month, and 6-month history
+  // A month's rows, its history and its instalments, assembled in one place.
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
       setLoading(true);
-      const start = new Date(selectedYear, selectedMonth, 1).toISOString().split("T")[0];
-      const end = new Date(selectedYear, selectedMonth + 1, 0).toISOString().split("T")[0];
-
-      // Previous month
-      const prevM = selectedMonth === 0 ? 11 : selectedMonth - 1;
-      const prevY = selectedMonth === 0 ? selectedYear - 1 : selectedYear;
-      const prevStart = new Date(prevY, prevM, 1).toISOString().split("T")[0];
-      const prevEnd = new Date(prevY, prevM + 1, 0).toISOString().split("T")[0];
-
-      // 6-month history range (5 months back + current)
-      const histStart = new Date(selectedYear, selectedMonth - 5, 1).toISOString().split("T")[0];
-
-      // Compute 6-month history invoice range (1-based months for invoices table)
-      const histMonths: { m1: number; y1: number }[] = [];
-      for (let i = -5; i <= 0; i++) {
-        const d = new Date(selectedYear, selectedMonth + i, 1);
-        histMonths.push({ m1: d.getMonth() + 1, y1: d.getFullYear() });
-      }
-      const histMinM1 = histMonths[0].m1;
-      const histMinY = histMonths[0].y1;
-      const histMaxM1 = histMonths[histMonths.length - 1].m1;
-      const histMaxY = histMonths[histMonths.length - 1].y1;
-
-      const [txRes, prevTxRes, histRes, installmentRes, invoiceItemsRes, prevInvoiceItemsRes, histInvoiceItemsRes, profileRes, recurringTxs, prevRecurring, cats] = await Promise.all([
-        supabase.from("transactions").select("*").eq("user_id", user.id)
-          .gte("date", start).lte("date", end).order("date", { ascending: false }),
-        supabase.from("transactions").select("*").eq("user_id", user.id)
-          .gte("date", prevStart).lte("date", prevEnd),
-        // Non-credit-card history (date-based is fine)
-        supabase.from("transactions").select("id,category,date,amount,type,payment_method,credit_card_id").eq("user_id", user.id)
-          .eq("type", "despesa").eq("payment_method", "conta")
-          .gte("date", histStart).lte("date", end),
-        // Fetch all active installment transactions (future parcels)
-        supabase.from("transactions").select("id,name,category,amount,date,installments,installment_current,parent_transaction_id,recurrence_type,payment_method,credit_card_id")
-          .eq("user_id", user.id).eq("recurrence_type", "parcelado").eq("type", "despesa")
-          .gte("date", start),
-        // Fetch invoice items for current month
-        supabase.from("invoice_items").select("*, invoices!inner(month, year, user_id, credit_card_id, is_paid), transactions!inner(name, category, amount, type, payment_method, installments, installment_current, parent_transaction_id, recurrence_type)")
-          .eq("invoices.user_id", user.id)
-          .eq("invoices.month", selectedMonth + 1)
-          .eq("invoices.year", selectedYear),
-        // Fetch invoice items for previous month
-        supabase.from("invoice_items").select("*, invoices!inner(month, year, user_id), transactions!inner(name, category, amount, type)")
-          .eq("invoices.user_id", user.id)
-          .eq("invoices.month", prevM + 1)
-          .eq("invoices.year", prevY),
-        // Fetch invoice items for entire 6-month history (credit card history by invoice month)
-        supabase.from("invoice_items").select("amount, invoices!inner(month, year, user_id), transactions!inner(category, type)")
-          .eq("invoices.user_id", user.id)
-          .gte("invoices.year", histMinY)
-          .lte("invoices.year", histMaxY),
-        // Fetch user profile to get account creation date
-        supabase.from("profiles").select("created_at").eq("id", user.id).single(),
-        getRecurringForMonth(selectedMonth, selectedYear),
-        getRecurringForMonth(prevM, prevY),
-        getCustomCategories(),
-      ]);
-
-      // User start date for filtering history
-      const profileCreatedAt = profileRes.data?.created_at ? new Date(profileRes.data.created_at) : null;
-      setUserStartDate(profileCreatedAt);
-
-      const baseTxs = (txRes.data ?? []) as TxRow[];
-      const materializedRecurring = recurringTxs.map((t: any) => ({
-        ...t,
-        date: `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(dayOfMonth(t.date)).padStart(2, "0")}`,
-      })) as TxRow[];
-
-      // Build a set of transaction IDs that belong to this month's invoices
-      const invoiceItems = (invoiceItemsRes.data ?? []) as any[];
-      const invoiceTxIds = new Set(invoiceItems.map((ii: any) => ii.transaction_id));
-
-      // Filter base transactions: for credit card txs, only include if they have an invoice item in this month
-      const filteredBaseTxs = baseTxs.filter((tx) => {
-        if (tx.payment_method === "cartao" && tx.credit_card_id) {
-          return invoiceTxIds.has(tx.id);
-        }
-        return true;
+      const analytics = await loadCategoryAnalytics({
+        userId: user.id,
+        month: selectedMonth,
+        year: selectedYear,
       });
 
-      // Also add credit card transactions that have invoice items in this month but whose date is in a different month
-      const existingTxIds = new Set(filteredBaseTxs.map((t) => t.id));
-      const extraCcTxIds = [...invoiceTxIds].filter((id) => !existingTxIds.has(id));
-      let extraCcTxs: TxRow[] = [];
-      if (extraCcTxIds.length > 0) {
-        const { data: extraData } = await supabase.from("transactions").select("*")
-          .eq("user_id", user.id)
-          .in("id", extraCcTxIds);
-        extraCcTxs = (extraData ?? []) as TxRow[];
-      }
-
-      const prevBaseTxs = (prevTxRes.data ?? []) as TxRow[];
-      const prevMaterialized = prevRecurring.map((t: any) => ({
-        ...t,
-        date: `${prevY}-${String(prevM + 1).padStart(2, "0")}-${String(dayOfMonth(t.date)).padStart(2, "0")}`,
-      })) as TxRow[];
-
-      // Filter previous month credit card txs similarly
-      const prevInvoiceItems = (prevInvoiceItemsRes.data ?? []) as any[];
-      const prevInvoiceTxIds = new Set(prevInvoiceItems.map((ii: any) => ii.transaction_id));
-      const filteredPrevBaseTxs = prevBaseTxs.filter((tx) => {
-        if (tx.payment_method === "cartao" && tx.credit_card_id) {
-          return prevInvoiceTxIds.has(tx.id);
-        }
-        return true;
+      // The service keeps the month and the year; the axis wants a name for them.
+      const labelled: HistoricalMap = {};
+      Object.entries(analytics.historical).forEach(([category, entries]) => {
+        labelled[category] = entries.map((e) => ({ ...e, label: SHORT_MONTH_NAMES[e.month] }));
       });
 
-      // Non-credit-card transactions: group by date
-      const histTxs = (histRes.data ?? []) as { id: string; category: string; date: string; amount: number; type: string; payment_method: string; credit_card_id: string | null }[];
-      const hMap: HistoricalMap = {};
-      histTxs.forEach((tx) => {
-        const d = new Date(tx.date + "T12:00:00");
-        const m = d.getMonth();
-        const y = d.getFullYear();
-        const key = tx.category;
-        if (!hMap[key]) hMap[key] = [];
-        const existing = hMap[key].find((e) => e.month === m && e.year === y);
-        if (existing) {
-          existing.amount += tx.amount;
-        } else {
-          hMap[key].push({ month: m, year: y, label: SHORT_MONTH_NAMES[m], amount: tx.amount });
-        }
-      });
-
-      // Credit card transactions: group by invoice month (1-based → 0-based)
-      const histIIs = (histInvoiceItemsRes.data ?? []) as any[];
-      histIIs.forEach((ii: any) => {
-        const tx = ii.transactions;
-        const inv = ii.invoices;
-        if (!tx || tx.type !== "despesa" || !inv) return;
-        const m = inv.month - 1; // convert to 0-based
-        const y = inv.year;
-        // Only include months within our 6-month window
-        const inRange = histMonths.some((hm) => hm.m1 === inv.month && hm.y1 === y);
-        if (!inRange) return;
-        const key = tx.category;
-        if (!hMap[key]) hMap[key] = [];
-        const existing = hMap[key].find((e) => e.month === m && e.year === y);
-        if (existing) {
-          existing.amount += ii.amount;
-        } else {
-          hMap[key].push({ month: m, year: y, label: SHORT_MONTH_NAMES[m], amount: ii.amount });
-        }
-      });
-
-      Object.values(hMap).forEach((arr) => arr.sort((a, b) => a.year - b.year || a.month - b.month));
-
-      // Build month slots, filtering out months before user account creation
-      const userStartMonth = profileCreatedAt ? profileCreatedAt.getMonth() : 0;
-      const userStartYear = profileCreatedAt ? profileCreatedAt.getFullYear() : 2000;
-
-      const allMonths: { month: number; year: number; label: string }[] = [];
-      for (let i = -5; i <= 0; i++) {
-        const d = new Date(selectedYear, selectedMonth + i, 1);
-        const m = d.getMonth();
-        const y = d.getFullYear();
-        // Skip months before user started using the app
-        if (profileCreatedAt && (y < userStartYear || (y === userStartYear && m < userStartMonth))) continue;
-        allMonths.push({ month: m, year: y, label: SHORT_MONTH_NAMES[m] });
-      }
-      Object.keys(hMap).forEach((cat) => {
-        const filled = allMonths.map((slot) => {
-          const found = hMap[cat].find((e) => e.month === slot.month && e.year === slot.year);
-          return found ?? { ...slot, amount: 0 };
-        });
-        hMap[cat] = filled;
-      });
-
-      // Build installment impact map from both regular installments AND invoice items
-      const instTxs = (installmentRes.data ?? []) as {
-        id: string; name: string; category: string; amount: number; date: string;
-        installments: number | null; installment_current: number | null;
-        parent_transaction_id: string | null; recurrence_type: string;
-        payment_method: string; credit_card_id: string | null;
-      }[];
-
-      const groupMap = new Map<string, { name: string; category: string; amount: number; total: number; paidInstallments: number }>();
-
-      // Credit card installments: current invoice only counts as paid when that invoice is paid
-      invoiceItems.forEach((ii: any) => {
-        const tx = ii.transactions;
-        const invoice = ii.invoices;
-        if (!tx || tx.type !== "despesa") return;
-        if (ii.total_installments <= 1) return;
-        const groupId = tx.parent_transaction_id ?? ii.transaction_id;
-        if (groupMap.has(groupId)) return;
-
-        const paidInstallments = Math.max(
-          0,
-          Math.min(
-            ii.total_installments,
-            (invoice?.is_paid ? ii.installment_number : ii.installment_number - 1) ?? 0,
-          ),
-        );
-
-        groupMap.set(groupId, {
-          name: tx.name,
-          category: tx.category,
-          amount: ii.amount,
-          total: ii.total_installments,
-          paidInstallments,
-        });
-      });
-
-      // Non-credit-card installments keep the month-based transaction mapping
-      instTxs.forEach((tx) => {
-        if (!tx.installments || tx.installments <= 1) return;
-        if (tx.payment_method === "cartao" && tx.credit_card_id) return;
-        const groupId = tx.parent_transaction_id ?? tx.id;
-        if (groupMap.has(groupId)) return;
-        const txDate = new Date(tx.date + "T12:00:00");
-        if (txDate.getMonth() !== selectedMonth || txDate.getFullYear() !== selectedYear) return;
-        groupMap.set(groupId, {
-          name: tx.name,
-          category: tx.category,
-          amount: tx.amount,
-          total: tx.installments,
-          paidInstallments: Math.max(0, Math.min(tx.installments, tx.installment_current ?? 1)),
-        });
-      });
-
-      const iMap: InstallmentImpactMap = {};
-      groupMap.forEach(({ name, category, amount, total, paidInstallments }) => {
-        const remaining = Math.max(total - paidInstallments, 0);
-        if (remaining <= 0) return;
-        if (!iMap[category]) {
-          iMap[category] = { category, monthlyAmount: 0, totalRemaining: 0, monthsRemaining: 0, impactPct: 0, items: [] };
-        }
-        iMap[category].monthlyAmount += amount;
-        iMap[category].totalRemaining += amount * remaining;
-        iMap[category].monthsRemaining = Math.max(iMap[category].monthsRemaining, remaining);
-        iMap[category].items.push({ name, amount, remaining, total, paidInstallments });
-      });
-
-      setTransactions([...filteredBaseTxs, ...extraCcTxs, ...materializedRecurring]);
-      setPrevMonthTxs([...filteredPrevBaseTxs, ...prevMaterialized]);
-      setHistoricalMap(hMap);
-      setInstallmentImpacts(iMap);
-      setCustomCats(cats);
+      setTransactions(analytics.transactions);
+      setPrevMonthTxs(analytics.prevTransactions);
+      setHistoricalMap(labelled);
+      setInstallmentImpacts(analytics.installmentImpacts);
+      setCustomCats(analytics.customCats);
+      setUserStartDate(analytics.userStartDate);
       setLoading(false);
     };
     fetchData();
   }, [user, selectedMonth, selectedYear]);
 
-  // Build category data
-  const categoryData: CategorySummary[] = useMemo(() => {
-    const map = new Map<string, { amount: number; count: number }>();
-    transactions.filter((t) => t.type === "despesa").forEach((t) => {
-      const existing = map.get(t.category) || { amount: 0, count: 0 };
-      map.set(t.category, { amount: existing.amount + t.amount, count: existing.count + 1 });
-    });
-    const total = Array.from(map.values()).reduce((s, v) => s + v.amount, 0);
-    return Array.from(map.entries())
-      .sort((a, b) => b[1].amount - a[1].amount)
-      .map(([name, { amount, count }]) => ({
-        name,
-        amount,
-        percentage: total > 0 ? Math.round((amount / total) * 100) : 0,
-        color: `hsl(${getCategoryColor(name, customCats)})`,
-        hexColor: getCategoryHexColor(name, customCats),
-        icon: getCategoryIcon(name, customCats),
-        txCount: count,
-        avgPerTx: count > 0 ? amount / count : 0,
-      }));
-  }, [transactions, customCats]);
+  // Build category data: the totals are the service's, the colours are the screen's.
+  const categoryData: CategorySummaryView[] = useMemo(
+    () =>
+      buildCategorySummaries(transactions).map((c) => ({
+        ...c,
+        color: `hsl(${getCategoryColor(c.name, customCats)})`,
+        hexColor: getCategoryHexColor(c.name, customCats),
+        icon: getCategoryIcon(c.name, customCats),
+      })),
+    [transactions, customCats],
+  );
 
   // Build habit data
-  const habitMap: Record<string, HabitData> = useMemo(() => {
-    const now = new Date();
-    const isCurrentMonth = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
-    const daysElapsed = isCurrentMonth ? Math.max(now.getDate(), 1) : new Date(selectedYear, selectedMonth + 1, 0).getDate();
+  const habitMap: Record<string, HabitData> = useMemo(
+    () => buildHabitMap(transactions, selectedMonth, selectedYear),
+    [transactions, selectedMonth, selectedYear],
+  );
 
-    const expenseTxs = transactions.filter((t) => t.type === "despesa");
-    const catMap = new Map<string, { amount: number; txCount: number; names: Map<string, number> }>();
-
-    expenseTxs.forEach((t) => {
-      const entry = catMap.get(t.category) || { amount: 0, txCount: 0, names: new Map() };
-      entry.amount += t.amount;
-      entry.txCount += 1;
-      entry.names.set(t.name, (entry.names.get(t.name) || 0) + 1);
-      catMap.set(t.category, entry);
-    });
-
-    const result: Record<string, HabitData> = {};
-    catMap.forEach((data, category) => {
-      let topMerchant: { name: string; count: number } | null = null;
-      let maxCount = 0;
-      data.names.forEach((count, name) => {
-        if (count > maxCount) { maxCount = count; topMerchant = { name, count }; }
-      });
-
-      const isHabit = data.txCount >= 8 || (topMerchant !== null && topMerchant.count >= 4);
-      result[category] = {
-        category,
-        txCount: data.txCount,
-        dailyCost: data.amount / daysElapsed,
-        isHabit,
-        topMerchant: topMerchant && topMerchant.count >= 2 ? topMerchant : null,
-        amount: data.amount,
-      };
-    });
-    return result;
-  }, [transactions, selectedMonth, selectedYear]);
-
-  const prevCategoryData = useMemo(() => {
-    const map = new Map<string, { amount: number; count: number }>();
-    prevMonthTxs.filter((t) => t.type === "despesa").forEach((t) => {
-      const existing = map.get(t.category) || { amount: 0, count: 0 };
-      map.set(t.category, { amount: existing.amount + t.amount, count: existing.count + 1 });
-    });
-    const total = Array.from(map.values()).reduce((s, v) => s + v.amount, 0);
-    return Array.from(map.entries()).map(([name, { amount, count }]) => ({
-      name,
-      amount,
-      percentage: total > 0 ? Math.round((amount / total) * 100) : 0,
-      txCount: count,
-    }));
-  }, [prevMonthTxs]);
+  const prevCategoryData = useMemo(() => buildCategorySummaries(prevMonthTxs), [prevMonthTxs]);
 
   const totalExpenses = useMemo(() => categoryData.reduce((s, c) => s + c.amount, 0), [categoryData]);
   const topCategory = categoryData[0];
   const groups = useMemo(() => groupCategories(categoryData), [categoryData]);
 
   // Compute score map
-  const scoreMap: Record<string, CategoryScoreData> = useMemo(() => {
-    const result: Record<string, CategoryScoreData> = {};
-    categoryData.forEach((cat) => {
-      const prev = prevCategoryData.find((p) => p.name === cat.name);
-      const prevAmount = prev?.amount ?? 0;
-      const variation = prevAmount > 0 ? Math.round(((cat.amount - prevAmount) / prevAmount) * 100) : null;
-      const score = computeCategoryScore(cat.percentage, variation, cat.txCount);
-      result[cat.name] = { score, percentage: cat.percentage, variation, txCount: cat.txCount };
-    });
-    return result;
-  }, [categoryData, prevCategoryData]);
+  const scoreMap: Record<string, CategoryScoreData> = useMemo(
+    () => buildScoreMap(categoryData, prevCategoryData),
+    [categoryData, prevCategoryData],
+  );
   const selectedCatData = categoryData.find((c) => c.name === selectedCategory);
   const monthLabel = MONTH_NAMES[selectedMonth];
 
   // Compute impactPct for installment impacts
-  const enrichedInstallmentImpacts = useMemo(() => {
-    const result: InstallmentImpact[] = [];
-    Object.values(installmentImpacts).forEach((imp) => {
-      const catData = categoryData.find((c) => c.name === imp.category);
-      const catAmount = catData?.amount ?? 0;
-      result.push({
-        ...imp,
-        impactPct: catAmount > 0 ? Math.round((imp.monthlyAmount / catAmount) * 100) : 0,
-      });
-    });
-    return result;
-  }, [installmentImpacts, categoryData]);
+  const enrichedInstallmentImpacts = useMemo(
+    () => enrichInstallmentImpacts(installmentImpacts, categoryData),
+    [installmentImpacts, categoryData],
+  );
 
   // Fetch AI insights with debounce to prevent 429
   const insightsCacheRef = useRef<{ key: string; data: AIInsights } | null>(null);
