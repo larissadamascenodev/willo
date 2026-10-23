@@ -29,13 +29,16 @@ interface Props {
   onBack: () => void;
   /** Signup only: what the onboarding collected, saved once a session exists. */
   pendingProfile?: PendingOnboardingProfile;
+  /** Overrides the two-line heading, for a flow that arrives here with its own words. */
+  headingLight?: string;
+  headingBold?: string;
 }
 
 /**
  * The "Bem-vindo de volta" / "Crie sua conta" screen: Apple and Google up
  * front, and e-mail tucked behind a link that expands the form in place.
  */
-const AuthPanel = ({ mode, onBack, pendingProfile }: Props) => {
+const AuthPanel = ({ mode, onBack, pendingProfile, headingLight, headingBold }: Props) => {
   const navigate = useNavigate();
   const isLogin = mode === "login";
   const [emailOpen, setEmailOpen] = useState(false);
@@ -156,8 +159,8 @@ const AuthPanel = ({ mode, onBack, pendingProfile }: Props) => {
         <motion.div layout className="flex flex-col items-center text-center">
           <img src={wordmarkOnDark} alt="Willo" className="h-7 w-auto" style={{ filter: "brightness(0) invert(1)" }} />
           <h1 className="mt-7 leading-[1.05] tracking-tight text-white">
-            <span className="block text-[40px] font-light">{isLogin ? "Bem-vindo" : "Crie sua"}</span>
-            <span className="block text-[44px] font-extrabold">{isLogin ? "de volta." : "conta."}</span>
+            <span className="block text-[40px] font-light">{headingLight ?? (isLogin ? "Bem-vindo" : "Crie sua")}</span>
+            <span className="block text-[44px] font-extrabold">{headingBold ?? (isLogin ? "de volta." : "conta.")}</span>
           </h1>
           {!isLogin && <p className="mt-3 text-[15px] text-white/66">Pra salvar seu plano e seus dados.</p>}
         </motion.div>

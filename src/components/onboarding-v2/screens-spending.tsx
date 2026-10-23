@@ -53,7 +53,7 @@ export function CategoriasScreen({ value, onChange, onBack, onNext, onSkip }: Na
       onBack={onBack}
       footer={
         <div className="space-y-3">
-          <GlowButton variant="light" disabled={value.length === 0} onClick={onNext}>
+          <GlowButton disabled={value.length === 0} onClick={onNext}>
             Continuar
           </GlowButton>
           <button
@@ -128,7 +128,7 @@ export function ComprovanteScreen({ categorias, onBack, onNext }: Nav & { catego
     <FlowScreen
       section="Seus gastos"
       onBack={onBack}
-      footer={<GlowButton variant="light" onClick={onNext}>Continuar</GlowButton>}
+      footer={<GlowButton onClick={onNext}>Continuar</GlowButton>}
     >
       <div className="pt-6">
         <Heading light="É assim que o Willo" bold="lê um comprovante." />

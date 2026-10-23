@@ -1,268 +1,383 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthPanel from "@/components/auth/AuthPanel";
-import { NameStep, ConsentStep, EvolutionStep, HowItWorksStep } from "@/components/onboarding-flow/IntroSteps";
-import { AgeStep, AmountStep, ChoiceStep, DeltaChip, MonthsStep } from "@/components/onboarding-flow/QuestionSteps";
 import {
-  CalculatingStep,
-  CategoriesStep,
-  CommitmentStep,
-  InsightStep,
-  NotificationStep,
-  ScanDemoStep,
-} from "@/components/onboarding-flow/ShowcaseSteps";
-import ResultStep from "@/components/onboarding-flow/ResultStep";
-import Paywall from "@/components/onboarding-flow/Paywall";
-import { BILLING_ENABLED } from "@/lib/billing";
+  ComoFuncionaScreen,
+  MudancaScreen,
+  NomeScreen,
+  TermosScreen,
+} from "@/components/onboarding-v2/screens-intro";
 import {
-  INITIAL_ANSWERS, PURPOSE_LABEL, brl0, buildPlan, defaultTarget, purposeOf, targetCopy,
-  type DebtAnswer, type GoalAnswer, type OnboardingAnswers, type PurposeAnswer, type WorkAnswer,
-} from "@/lib/onboardingPlan";
-import type { CreditCardAnswer, EmergencyAnswer, EndOfMonthAnswer } from "@/lib/onboardingScore";
-import { clearOnboardingProgress, readOnboardingProgress, saveOnboardingProgress } from "@/lib/onboardingProgress";
-
-const STEPS = [
-  "name", "consent", "evolution", "how",
-  "goal", "age", "work", "income", "spending",
-  "endOfMonth", "creditCard", "debts", "emergency",
-  "purpose", "target", "months",
-  "categories", "insight", "scan", "leaks",
-  "commitment", "notifications",
-  "calculating", "result", "signup",
-] as const;
-type Step = (typeof STEPS)[number];
-
-const LEAKS = [
-  { value: "delivery", label: "Delivery e restaurantes" },
-  { value: "online", label: "Compras online" },
-  { value: "mercado", label: "Mercado" },
-  { value: "transporte", label: "Uber e transporte" },
-  { value: "assinaturas", label: "Assinaturas" },
-  { value: "lazer", label: "Lazer e saídas" },
-];
+  GastosScreen,
+  HoraTrabalhoScreen,
+  MesScreen,
+  ObjetivoScreen,
+  RendaScreen,
+  TipoRendaScreen,
+} from "@/components/onboarding-v2/screens-money";
+import {
+  MetaGraficoScreen,
+  MetaPrazoScreen,
+  MetaValorScreen,
+} from "@/components/onboarding-v2/screens-goal";
+import { CategoriasScreen, ComprovanteScreen } from "@/components/onboarding-v2/screens-spending";
+import {
+  CompromissoScreen,
+  LembretesScreen,
+  LendoScreen,
+  LevaScreen,
+  PlanoScreen,
+} from "@/components/onboarding-v2/screens-plan";
+import { AntesDepoisScreen, ComunidadeScreen } from "@/components/onboarding-v2/screens-prova";
+import { temDepoimentos } from "@/lib/depoimentos";
+import PaywallV2 from "@/components/onboarding-v2/PaywallV2";
+import { trackOnboarding } from "@/services/onboardingEvents";
+import { finalizeOnboarding } from "@/services/finalizeOnboarding";
+import {
+  clearOnboardingState,
+  derivePlan,
+  INITIAL_ANSWERS,
+  mostraHoraTrabalho,
+  pedeValorEPrazo,
+  readOnboardingState,
+  saveOnboardingState,
+  type OnboardingAnswers,
+} from "@/lib/onboardingState";
 
 /**
- * The pre-signup onboarding, run as an analysis of the person's financial
- * profile: who they are, how their money behaves today and what they want
- * it for — then the analysis itself with a suggested plan, the Willo Pro
- * paywall and, last, the account.
+ * The onboarding, screen by screen.
+ *
+ * Twenty-two of them, and the welcome before them is the Welcome page, which is why the
+ * first back arrow here leaves rather than going back. Three of the screens are not
+ * always shown — the month needs a spending figure to subtract, the hourly rate means
+ * nothing to someone whose income is not hours, and only two of the four objectives
+ * have an amount to ask for — so stepping is done through `move`, never by ±1.
+ *
+ * Everything the person answers is kept in localStorage as they go, and dropped the
+ * moment it has been written to their account.
  */
+
+const STEPS = [
+  "nome",
+  "termos",
+  "mudanca",
+  "como",
+  "objetivo",
+  "tipoRenda",
+  "renda",
+  "gastos",
+  "mes",
+  "hora",
+  "metaValor",
+  "metaPrazo",
+  "metaGrafico",
+  "categorias",
+  "comprovante",
+  "compromisso",
+  "lembretes",
+  "lendo",
+  "plano",
+  "antesDepois",
+  "leva",
+  "comunidade",
+  "cadastro",
+  "paywall",
+] as const;
+
+type Step = (typeof STEPS)[number];
+
+/**
+ * The light behind each stretch of the flow, so a new section feels like a new room.
+ *
+ * Strong enough to be noticed without being looked at: it washes the top third, which
+ * is where the section label and the heading live, and leaves the answers on black.
+ * The hues are Willo's own — water green, coral, a cool blue — rather than the magenta
+ * of the reference this was drawn from.
+ */
+const SECAO: Record<Step, keyof typeof AURORA> = {
+  nome: "sobre",
+  termos: "sobre",
+  mudanca: "sobre",
+  como: "sobre",
+  objetivo: "objetivo",
+  tipoRenda: "renda",
+  renda: "renda",
+  gastos: "renda",
+  mes: "renda",
+  hora: "renda",
+  metaValor: "objetivo",
+  metaPrazo: "objetivo",
+  metaGrafico: "objetivo",
+  categorias: "gastos",
+  comprovante: "gastos",
+  compromisso: "plano",
+  lembretes: "plano",
+  lendo: "plano",
+  plano: "plano",
+  antesDepois: "plano",
+  leva: "plano",
+  comunidade: "conta",
+  cadastro: "conta",
+  paywall: "conta",
+};
+
+const AURORA = {
+  sobre: { esquerda: "rgba(150,190,255,0.20)", direita: "rgba(255,255,255,0.10)" },
+  objetivo: { esquerda: "rgba(124,224,195,0.22)", direita: "rgba(120,180,255,0.12)" },
+  renda: { esquerda: "rgba(120,180,255,0.20)", direita: "rgba(124,224,195,0.12)" },
+  gastos: { esquerda: "rgba(255,170,110,0.18)", direita: "rgba(255,138,122,0.12)" },
+  plano: { esquerda: "rgba(124,224,195,0.24)", direita: "rgba(150,190,255,0.12)" },
+  conta: { esquerda: "rgba(255,255,255,0.12)", direita: "rgba(124,224,195,0.14)" },
+} as const;
+
 const Onboarding = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  // Answered everything before on this device: back straight to the result
-  const [saved] = useState(readOnboardingProgress);
-  const [index, setIndex] = useState(() => {
-    if (saved) return STEPS.indexOf("result");
-    // Dev only: /onboarding?step=result jumps straight to a screen
-    if (!import.meta.env.DEV) return 0;
-    const i = STEPS.indexOf(new URLSearchParams(window.location.search).get("step") as Step);
-    return Math.max(i, 0);
-  });
-  const [dir, setDir] = useState(1);
-  const [a, setA] = useState<OnboardingAnswers>(() => (saved ? { ...INITIAL_ANSWERS, ...saved.answers } : INITIAL_ANSWERS));
-  const [paywall, setPaywall] = useState(false);
-  const plan = useMemo(() => buildPlan(a), [a]);
 
-  // Answers as of right now, for the choice steps that advance on a timer
-  const latest = useRef(a);
-  latest.current = a;
+  const [retomado] = useState(readOnboardingState);
+  const [chegouLogada] = useState(() => Boolean(user));
+  const [index, setIndex] = useState(() => {
+    const salvo = retomado ? STEPS.indexOf(retomado.screen as Step) : -1;
+    return salvo > 0 ? salvo : 0;
+  });
+  const [dir, setDir] = useState<1 | -1>(1);
+  const [a, setA] = useState<OnboardingAnswers>(() => retomado?.answers ?? INITIAL_ANSWERS);
 
   const step: Step = STEPS[index];
-  const set = <K extends keyof OnboardingAnswers>(key: K) => (v: OnboardingAnswers[K]) => setA((prev) => ({ ...prev, [key]: v }));
-  // Getting out of debt already says what the money is for
-  const skipped = (st: Step) => st === "purpose" && latest.current.goal === "dividas";
-  const move = (from: number, delta: 1 | -1) => {
-    let i = from + delta;
-    while (i > 0 && i < STEPS.length - 1 && skipped(STEPS[i])) i += delta;
-    return Math.min(Math.max(i, 0), STEPS.length - 1);
-  };
-  const go = (to: Step) => {
-    const i = STEPS.indexOf(to);
-    setDir(i >= index ? 1 : -1);
-    setIndex(i);
-  };
-  const next = () => { setDir(1); setIndex((i) => move(i, 1)); };
-  const back = () => {
-    if (index === 0) navigate("/welcome");
-    else { setDir(-1); setIndex((i) => move(i, -1)); }
-  };
+  const plan = useMemo(() => derivePlan(a), [a]);
 
-  // From the result on, the answers are kept: reopening the app comes back here
-  const reachedResult = index >= STEPS.indexOf("result");
-  useEffect(() => {
-    if (reachedResult) saveOnboardingProgress({ answers: a, completedAt: saved?.completedAt ?? new Date().toISOString() });
-  }, [reachedResult, a, saved]);
+  /* The answers as of now, for the handlers that fire from a timer. */
+  const atual = useRef(a);
+  atual.current = a;
+
+  const set = <K extends keyof OnboardingAnswers>(key: K, value: OnboardingAnswers[K]) =>
+    setA((prev) => ({ ...prev, [key]: value }));
+
+  /* ── Onde parou ─────────────────────────────────────────────────────────── */
 
   useEffect(() => {
-    if (user) clearOnboardingProgress();
+    /* Nothing is worth remembering until there is at least a name. */
+    if (a.nome.trim()) saveOnboardingState(a, step);
+  }, [a, step]);
+
+  useEffect(() => {
+    trackOnboarding(step, "view");
+  }, [step]);
+
+  /* ── Andando ────────────────────────────────────────────────────────────── */
+
+  const pular = useCallback((st: Step, respostas: OnboardingAnswers): boolean => {
+    if (st === "mes") return respostas.gastosCentavos === null;
+    if (st === "hora") return !mostraHoraTrabalho(respostas.tipoRenda);
+    if (st === "metaValor" || st === "metaPrazo") return !pedeValorEPrazo(respostas.objetivo);
+    /* Nobody real has said anything yet, so there is nothing to show. */
+    if (st === "comunidade") return !temDepoimentos();
+    /* Someone who is already signed in has nothing to create. */
+    if (st === "cadastro") return Boolean(user);
+    return false;
   }, [user]);
 
-  if (!loading && user) return <Navigate to="/" replace />;
+  const move = useCallback((from: number, delta: 1 | -1) => {
+    let i = from + delta;
+    while (i > 0 && i < STEPS.length - 1 && pular(STEPS[i], atual.current)) i += delta;
+    return Math.min(Math.max(i, 0), STEPS.length - 1);
+  }, [pular]);
 
-  const purpose = purposeOf(a);
-  const copy = targetCopy(purpose);
-  const name = a.name.trim().split(/\s+/)[0] ?? "";
+  const next = useCallback(() => {
+    trackOnboarding(STEPS[index], "answer");
+    setDir(1);
+    setIndex((i) => move(i, 1));
+  }, [index, move]);
+
+  const back = useCallback(() => {
+    if (index === 0) {
+      navigate("/welcome");
+      return;
+    }
+    setDir(-1);
+    setIndex((i) => move(i, -1));
+  }, [index, move, navigate]);
+
+  const skip = useCallback((what: () => void) => {
+    trackOnboarding(STEPS[index], "skip");
+    what();
+    setDir(1);
+    setIndex((i) => move(i, 1));
+  }, [index, move]);
+
+  const goTo = useCallback((st: Step) => {
+    const i = STEPS.indexOf(st);
+    setDir(i >= index ? 1 : -1);
+    setIndex(i);
+  }, [index]);
+
+  /* ── Salvando na conta ──────────────────────────────────────────────────── */
+
+  const gravando = useRef(false);
+
+  const gravar = useCallback(async (userId: string) => {
+    if (gravando.current || atual.current.finalized) return;
+    gravando.current = true;
+    try {
+      const result = await finalizeOnboarding(userId, atual.current);
+      if (result.ran) {
+        setA((prev) => ({ ...prev, finalized: true }));
+        clearOnboardingState();
+      }
+    } catch {
+      /* The plan is already on screen; a failed write must not trap anyone here. */
+    } finally {
+      gravando.current = false;
+    }
+  }, []);
+
+  /* Signing in is what ends the questions: write the answers, then show the paywall. */
+  useEffect(() => {
+    if (!user) return;
+    if (index < STEPS.indexOf("leva")) return;
+    void gravar(user.id);
+    if (step === "cadastro") goTo("paywall");
+  }, [user, index, step, gravar, goTo]);
+
+  const entrarNoApp = useCallback(() => {
+    trackOnboarding("paywall", "finish");
+    clearOnboardingState();
+    navigate("/", { replace: true });
+  }, [navigate]);
+
+  /* Someone with an account who lands here fresh has already been through this. */
+  if (!loading && chegouLogada && !retomado) return <Navigate to="/" replace />;
+
+  /* ── As telas ───────────────────────────────────────────────────────────── */
+
   const nav = { onBack: back, onNext: next };
 
   const screen = (() => {
     switch (step) {
-      case "name": return <NameStep value={a.name} onChange={set("name")} {...nav} />;
-      case "consent": return <ConsentStep name={name} {...nav} />;
-      case "evolution": return <EvolutionStep name={name} {...nav} />;
-      case "how": return <HowItWorksStep {...nav} />;
-      case "goal":
+      case "nome":
+        return <NomeScreen value={a.nome} onChange={(v) => set("nome", v)} {...nav} />;
+      case "termos":
         return (
-          <ChoiceStep<GoalAnswer>
-            section="Seu objetivo" light="Qual é o seu" bold="maior objetivo agora?"
-            value={a.goal}
-            onChange={(v) => setA((prev) => ({ ...prev, goal: v as GoalAnswer, ...(v === "dividas" ? { target: defaultTarget("dividas", prev.spending) } : {}) }))}
+          <TermosScreen
+            onBack={back}
+            onAccept={() => {
+              setA((prev) => ({ ...prev, termosAceitos: true, iaAceita: true }));
+              next();
+            }}
+          />
+        );
+      case "mudanca":
+        return <MudancaScreen nome={a.nome} {...nav} />;
+      case "como":
+        return <ComoFuncionaScreen {...nav} />;
+      case "objetivo":
+        return <ObjetivoScreen value={a.objetivo} onChange={(v) => set("objetivo", v)} {...nav} />;
+      case "tipoRenda":
+        return <TipoRendaScreen value={a.tipoRenda} onChange={(v) => set("tipoRenda", v)} {...nav} />;
+      case "renda":
+        return <RendaScreen value={a.rendaCentavos} onChange={(v) => set("rendaCentavos", v)} tipo={a.tipoRenda} {...nav} />;
+      case "gastos":
+        return (
+          <GastosScreen
+            value={a.gastosCentavos}
+            onChange={(v) => set("gastosCentavos", v)}
+            onSkip={() => skip(() => set("gastosCentavos", null))}
             {...nav}
-            options={[
-              { value: "juntar", label: "Juntar dinheiro" },
-              { value: "dividas", label: "Sair das dívidas" },
-              { value: "organizar", label: "Organizar os gastos" },
-              { value: "investir", label: "Começar a investir" },
-            ]}
           />
         );
-      case "age": return <AgeStep value={a.age} onChange={set("age")} {...nav} />;
-      case "work":
+      case "mes":
+        return <MesScreen renda={a.rendaCentavos ?? 0} gastos={a.gastosCentavos ?? 0} {...nav} />;
+      case "hora":
+        return <HoraTrabalhoScreen renda={a.rendaCentavos ?? 0} tipo={a.tipoRenda} {...nav} />;
+      case "metaValor":
         return (
-          <ChoiceStep<WorkAnswer>
-            section="Sobre você" light="Como você" bold="ganha dinheiro hoje?"
-            value={a.work} onChange={(v) => set("work")(v as WorkAnswer)} {...nav}
-            options={[
-              { value: "clt", label: "Carteira assinada (CLT)" },
-              { value: "autonomo", label: "Autônomo ou freelancer" },
-              { value: "empresario", label: "Tenho empresa" },
-              { value: "estudante", label: "Estudante" },
-              { value: "aposentado", label: "Aposentado" },
-            ]}
-          />
-        );
-      case "income":
-        return (
-          <AmountStep
-            section="Sua renda" light="Quanto entra" bold="por mês?" sub="Some tudo o que você recebe, já líquido."
-            value={a.income} onChange={set("income")} min={500} max={40000} step={100} labelEvery={10} {...nav}
-          />
-        );
-      case "spending":
-        return (
-          <AmountStep
-            section="Seus gastos" light="E quanto sai" bold="por mês?" sub="Um chute está ótimo. O app acerta isso pra você depois."
-            value={a.spending} onChange={set("spending")} min={300} max={40000} step={100} labelEvery={10}
-            hint={<DeltaChip income={a.income} spending={a.spending} />} {...nav}
-          />
-        );
-      case "endOfMonth":
-        return (
-          <ChoiceStep<EndOfMonthAnswer>
-            section="Seu mês" light="Quando o mês acaba," bold="como fica sua conta?"
-            value={a.endOfMonth} onChange={(v) => set("endOfMonth")(v as EndOfMonthAnswer)} {...nav}
-            options={[
-              { value: "sobra", label: "Sobra dinheiro" },
-              { value: "zero-a-zero", label: "Fecha no zero a zero" },
-              { value: "as-vezes-falta", label: "Às vezes falta" },
-              { value: "vermelho", label: "Quase sempre no vermelho" },
-            ]}
-          />
-        );
-      case "creditCard":
-        return (
-          <ChoiceStep<CreditCardAnswer>
-            section="Seu cartão" light="E o cartão de crédito," bold="como é com ele?"
-            value={a.creditCard} onChange={(v) => set("creditCard")(v as CreditCardAnswer)} {...nav}
-            options={[
-              { value: "pago-acompanho", label: "Pago tudo e acompanho" },
-              { value: "pago-nao-acompanho", label: "Pago tudo, mas não acompanho" },
-              { value: "parcelo-as-vezes", label: "Às vezes parcelo a fatura" },
-              { value: "dificuldade", label: "Tenho dificuldade pra pagar" },
-            ]}
-          />
-        );
-      case "debts":
-        return (
-          <ChoiceStep<DebtAnswer>
-            section="Suas dívidas" light="Você tem" bold="dívidas hoje?"
-            value={a.debts} onChange={(v) => set("debts")(v as DebtAnswer)} {...nav}
-            options={[
-              { value: "nao", label: "Não tenho" },
-              { value: "controle", label: "Tenho, mas estão sob controle" },
-              { value: "dificil", label: "Tenho e está difícil" },
-            ]}
-          />
-        );
-      case "emergency":
-        return (
-          <ChoiceStep<EmergencyAnswer>
-            section="Imprevistos" light="Se aparecesse um gasto de R$ 1.000 amanhã," bold="o que você faria?"
-            value={a.emergency} onChange={(v) => set("emergency")(v as EmergencyAnswer)} {...nav}
-            options={[
-              { value: "reserva", label: "Usaria minha reserva" },
-              { value: "dinheiro-do-mes", label: "Tiraria do dinheiro do mês" },
-              { value: "parcelaria", label: "Parcelaria no cartão" },
-              { value: "nao-conseguiria", label: "Não conseguiria pagar" },
-            ]}
-          />
-        );
-      case "purpose":
-        return (
-          <ChoiceStep<PurposeAnswer>
-            section="Seu objetivo" light="Pra que você quer" bold="juntar dinheiro?" sub="A análise muda conforme o seu objetivo."
-            value={a.purpose}
-            onChange={(v) => setA((prev) => ({ ...prev, purpose: v as PurposeAnswer, target: defaultTarget(v as PurposeAnswer, prev.spending) }))}
+          <MetaValorScreen
+            objetivo={a.objetivo ?? "juntar"}
+            valor={a.metaValorCentavos}
+            onValor={(v) => set("metaValorCentavos", v)}
+            nome={a.metaNome}
+            onNome={(v) => set("metaNome", v)}
             {...nav}
-            options={(() => {
-              const order: PurposeAnswer[] = ["reserva", "viagem", "casa", "carro", "estudos", "futuro", "dividas", "outro"];
-              // Someone with debts sees paying them off first
-              const list = a.debts && a.debts !== "nao" ? ["dividas" as PurposeAnswer, ...order.filter((p) => p !== "dividas")] : order;
-              return list.map((p) => ({
-                value: p,
-                label: PURPOSE_LABEL[p],
-                hint: p === "dividas" && a.debts === "dificil" ? "Recomendado pra você" : p === "reserva" && a.debts !== "dificil" && (a.emergency === "parcelaria" || a.emergency === "nao-conseguiria") ? "Recomendado pra você" : undefined,
-              }));
-            })()}
           />
         );
-      case "target":
+      case "metaPrazo":
         return (
-          <AmountStep
-            section="Seu objetivo"
-            light={copy.light}
-            bold={copy.bold}
-            sub={purpose === "reserva" ? `O ideal é ter 6 meses dos seus gastos: ${brl0(plan.reserve)}.` : undefined}
-            value={a.target} onChange={set("target")} min={500} max={200000} step={500} labelEvery={10} {...nav}
+          <MetaPrazoScreen
+            objetivo={a.objetivo ?? "juntar"}
+            prazo={a.prazoMeses}
+            onPrazo={(v) => set("prazoMeses", v)}
+            {...nav}
           />
         );
-      case "months": return <MonthsStep value={a.months} onChange={set("months")} bold={copy.monthsBold} {...nav} />;
-      case "categories": return <CategoriesStep {...nav} />;
-      case "insight": return <InsightStep surplus={plan.surplus} monthlySave={plan.monthlySave} cut={plan.cut} {...nav} />;
-      case "scan": return <ScanDemoStep {...nav} />;
-      case "leaks":
+      case "metaGrafico":
+        return <MetaGraficoScreen answers={a} plan={plan} {...nav} />;
+      case "categorias":
         return (
-          <ChoiceStep<string>
-            multi section="Seus hábitos" light="Onde você mais" bold="gasta sem perceber?" sub="Escolha quantos quiser."
-            value={a.spendDays} onChange={(v) => set("spendDays")(v as string[])} {...nav}
-            options={LEAKS}
+          <CategoriasScreen
+            value={a.categorias}
+            onChange={(v) => set("categorias", v)}
+            onSkip={() => skip(() => set("categorias", []))}
+            {...nav}
           />
         );
-      case "commitment": return <CommitmentStep {...nav} />;
-      case "notifications": return <NotificationStep {...nav} />;
-      case "calculating": return <CalculatingStep onDone={next} />;
-      case "result": return <ResultStep answers={a} plan={plan} onNext={() => (BILLING_ENABLED ? setPaywall(true) : go("signup"))} />;
-      case "signup":
+      case "comprovante":
+        return <ComprovanteScreen categorias={a.categorias} {...nav} />;
+      case "compromisso":
+        return (
+          <CompromissoScreen
+            onBack={back}
+            onConfirm={() => {
+              set("compromisso", true);
+              next();
+            }}
+          />
+        );
+      case "lembretes":
+        return (
+          <LembretesScreen
+            onBack={back}
+            onDecide={(ativar) => {
+              set("notifyDueDates", ativar);
+              next();
+            }}
+          />
+        );
+      case "lendo":
+        return <LendoScreen onDone={next} />;
+      case "plano":
+        return <PlanoScreen answers={a} plan={plan} {...nav} />;
+      case "antesDepois":
+        return <AntesDepoisScreen answers={a} plan={plan} {...nav} />;
+      case "leva":
+        return <LevaScreen {...nav} />;
+      case "comunidade":
+        return <ComunidadeScreen {...nav} />;
+      case "cadastro":
         return (
           <AuthPanel
             mode="signup"
-            onBack={() => { go("result"); if (BILLING_ENABLED) setPaywall(true); }}
-            pendingProfile={{
-              displayName: a.name.trim() || undefined,
-              initialScore: plan.score.score,
-              initialScoreLabel: plan.score.label,
+            onBack={back}
+            headingLight="Salve"
+            headingBold="seu plano."
+            pendingProfile={{ displayName: a.nome.trim() || undefined }}
+          />
+        );
+      case "paywall":
+        return (
+          <PaywallV2
+            nome={a.nome}
+            onPaywallView={() => trackOnboarding("paywall", "paywall_view")}
+            onCta={() => {
+              trackOnboarding("paywall", "paywall_cta");
+              entrarNoApp();
+            }}
+            onDismiss={() => {
+              trackOnboarding("paywall", "paywall_close");
+              setA((prev) => ({ ...prev, paywallDismissed: true }));
+              if (user) void gravar(user.id);
+              entrarNoApp();
             }}
           />
         );
@@ -270,48 +385,45 @@ const Onboarding = () => {
   })();
 
   return (
-    <div className="relative h-[100dvh] overflow-hidden bg-black text-white" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
-      <div className="relative h-full overflow-hidden">
-      <AnimatePresence mode="popLayout" initial={false} custom={dir}>
-        <motion.div
-          key={step}
-          custom={dir}
-          className="absolute inset-0"
-          variants={{
-            enter: (d: number) => ({ x: d > 0 ? "30%" : "-30%", opacity: 0 }),
-            center: { x: 0, opacity: 1 },
-            exit: (d: number) => ({ x: d > 0 ? "-30%" : "30%", opacity: 0 }),
-          }}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-        >
-          {screen}
-        </motion.div>
-      </AnimatePresence>
-      </div>
+    <div
+      className="relative h-[100dvh] overflow-hidden bg-black text-white"
+      style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      {/* Two lights spilling from the top corners, re-tinted as the flow moves from one
+          section to the next. They cross over the heading and fade before the answers. */}
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-32 -top-44 h-[380px] w-[380px] rounded-full blur-[100px]"
+        animate={{ backgroundColor: AURORA[SECAO[step]].esquerda }}
+        transition={{ duration: 0.7 }}
+      />
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-28 -top-32 h-[320px] w-[320px] rounded-full blur-[100px]"
+        animate={{ backgroundColor: AURORA[SECAO[step]].direita }}
+        transition={{ duration: 0.7, delay: 0.05 }}
+      />
 
-      {/* The paywall slides up over the result */}
-      <AnimatePresence>
-        {paywall && BILLING_ENABLED && (
+      <div className="relative h-full overflow-hidden">
+        <AnimatePresence mode="popLayout" initial={false} custom={dir}>
           <motion.div
-            key="paywall"
-            className="absolute inset-0 z-50"
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", stiffness: 240, damping: 32 }}
+            key={step}
+            custom={dir}
+            className="absolute inset-0"
+            variants={{
+              enter: (d: number) => ({ x: d > 0 ? "26%" : "-26%", opacity: 0 }),
+              center: { x: 0, opacity: 1 },
+              exit: (d: number) => ({ x: d > 0 ? "-26%" : "26%", opacity: 0 }),
+            }}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
           >
-            <Paywall
-              name={a.name}
-              onClose={() => setPaywall(false)}
-              onRestore={() => navigate("/auth", { state: { mode: "login" } })}
-              onPurchase={() => { setPaywall(false); go("signup"); }}
-            />
+            {screen}
           </motion.div>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>
+      </div>
     </div>
   );
 };

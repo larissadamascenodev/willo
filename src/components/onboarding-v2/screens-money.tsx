@@ -24,11 +24,35 @@ interface Nav {
 
 /* ── 6. O objetivo ──────────────────────────────────────────────────────────── */
 
-const OBJETIVOS: { value: Objetivo; label: string; reacao: string }[] = [
-  { value: "dividas", label: "Sair das dívidas", reacao: "Boa. Vamos traçar esse caminho." },
-  { value: "juntar", label: "Juntar dinheiro", reacao: "Combinado. Vamos dar nome e prazo pra isso." },
-  { value: "investir", label: "Começar a investir", reacao: "Antes de investir, vamos montar o seu colchão." },
-  { value: "organizar", label: "Organizar os gastos", reacao: "Começa por aí. Clareza primeiro, o resto vem." },
+/**
+ * The subtitle says what picking this does, before it is picked; the reaction says the
+ * Willo heard it, after. Two different moments, so they are allowed to coexist.
+ */
+const OBJETIVOS: { value: Objetivo; label: string; hint: string; reacao: string }[] = [
+  {
+    value: "dividas",
+    label: "Sair das dívidas",
+    hint: "Um prazo e uma parcela por mês",
+    reacao: "Boa. Vamos traçar esse caminho.",
+  },
+  {
+    value: "juntar",
+    label: "Juntar dinheiro",
+    hint: "Uma meta com nome e data",
+    reacao: "Combinado. Vamos dar nome e prazo pra isso.",
+  },
+  {
+    value: "investir",
+    label: "Começar a investir",
+    hint: "Primeiro a reserva de emergência",
+    reacao: "Antes de investir, vamos montar o seu colchão.",
+  },
+  {
+    value: "organizar",
+    label: "Organizar os gastos",
+    hint: "Seu mês dividido em 50/30/20",
+    reacao: "Começa por aí. Clareza primeiro, o resto vem.",
+  },
 ];
 
 export function ObjetivoScreen({ value, onChange, onBack, onNext }: Nav & {
@@ -41,7 +65,7 @@ export function ObjetivoScreen({ value, onChange, onBack, onNext }: Nav & {
     <FlowScreen
       section="Seu objetivo"
       onBack={onBack}
-      footer={<GlowButton variant="light" disabled={!value} onClick={onNext}>Continuar</GlowButton>}
+      footer={<GlowButton disabled={!value} onClick={onNext}>Continuar</GlowButton>}
     >
       <div className="pt-8">
         <Heading light="Qual é o seu" bold="objetivo agora?" />
@@ -52,6 +76,7 @@ export function ObjetivoScreen({ value, onChange, onBack, onNext }: Nav & {
           <OptionRow
             key={o.value}
             label={o.label}
+            hint={o.hint}
             selected={value === o.value}
             onClick={() => onChange(o.value)}
             delay={0.05 * i}
@@ -80,14 +105,19 @@ export function ObjetivoScreen({ value, onChange, onBack, onNext }: Nav & {
 
 /* ── 7. De onde vem o dinheiro ──────────────────────────────────────────────── */
 
-const TIPOS_RENDA: { value: TipoRenda; label: string }[] = [
-  { value: "clt", label: "CLT" },
-  { value: "autonomo", label: "Autônomo ou freelancer" },
-  { value: "empresario", label: "Empresário(a)" },
-  { value: "servidor", label: "Servidor(a) público(a)" },
-  { value: "aposentado", label: "Aposentado(a) ou pensionista" },
-  { value: "estudante", label: "Estudante, sem renda fixa" },
-  { value: "outro", label: "Outro" },
+/**
+ * The subtitles are not decoration: this answer decides how big the emergency fund
+ * should be and whether an hourly rate means anything, so it is worth being sure which
+ * line is yours.
+ */
+const TIPOS_RENDA: { value: TipoRenda; label: string; hint: string }[] = [
+  { value: "clt", label: "CLT", hint: "Salário fixo todo mês" },
+  { value: "autonomo", label: "Autônomo ou freelancer", hint: "Renda que varia de mês a mês" },
+  { value: "empresario", label: "Empresário(a)", hint: "Pró-labore ou retiradas" },
+  { value: "servidor", label: "Servidor(a) público(a)", hint: "Renda fixa e estável" },
+  { value: "aposentado", label: "Aposentado(a) ou pensionista", hint: "Benefício ou pensão" },
+  { value: "estudante", label: "Estudante, sem renda fixa", hint: "Bolsa, estágio ou ajuda" },
+  { value: "outro", label: "Outro", hint: "Conte pra gente depois" },
 ];
 
 export function TipoRendaScreen({ value, onChange, onBack, onNext }: Nav & {
@@ -98,7 +128,7 @@ export function TipoRendaScreen({ value, onChange, onBack, onNext }: Nav & {
     <FlowScreen
       section="Sua renda"
       onBack={onBack}
-      footer={<GlowButton variant="light" disabled={!value} onClick={onNext}>Continuar</GlowButton>}
+      footer={<GlowButton disabled={!value} onClick={onNext}>Continuar</GlowButton>}
     >
       <div className="pt-8">
         <Heading light="Como você" bold="ganha dinheiro?" />
@@ -109,6 +139,7 @@ export function TipoRendaScreen({ value, onChange, onBack, onNext }: Nav & {
           <OptionRow
             key={t.value}
             label={t.label}
+            hint={t.hint}
             selected={value === t.value}
             onClick={() => onChange(t.value)}
             delay={0.04 * i}
@@ -132,7 +163,7 @@ export function RendaScreen({ value, onChange, tipo, onBack, onNext }: Nav & {
       section="Sua renda"
       onBack={onBack}
       center
-      footer={<GlowButton variant="light" disabled={!ok} onClick={onNext}>Continuar</GlowButton>}
+      footer={<GlowButton disabled={!ok} onClick={onNext}>Continuar</GlowButton>}
     >
       <Heading light="Qual a sua" bold="renda mensal média?" />
       <MoneyInput value={value} onChange={onChange} onEnter={() => ok && onNext()} />
@@ -159,7 +190,7 @@ export function GastosScreen({ value, onChange, onBack, onNext, onSkip }: Nav & 
       center
       footer={
         <div className="space-y-3">
-          <GlowButton variant="light" disabled={!ok} onClick={onNext}>Continuar</GlowButton>
+          <GlowButton disabled={!ok} onClick={onNext}>Continuar</GlowButton>
           <button
             type="button"
             onClick={onSkip}
@@ -194,7 +225,7 @@ export function MesScreen({ renda, gastos, onBack, onNext }: Nav & { renda: numb
       section="Sua renda"
       onBack={onBack}
       center
-      footer={<GlowButton variant="light" onClick={onNext}>Continuar</GlowButton>}
+      footer={<GlowButton onClick={onNext}>Continuar</GlowButton>}
     >
       <p className="text-center text-[11px] font-semibold uppercase tracking-[0.28em] text-white/62">Seu mês</p>
 
@@ -237,7 +268,7 @@ export function HoraTrabalhoScreen({ renda, tipo, onBack, onNext }: Nav & {
       section="Sua renda"
       onBack={onBack}
       center
-      footer={<GlowButton variant="light" onClick={onNext}>Continuar</GlowButton>}
+      footer={<GlowButton onClick={onNext}>Continuar</GlowButton>}
     >
       <h1 className="text-[30px] leading-[1.12] tracking-tight text-white">
         <span className="block font-light">Uma hora do seu trabalho vale</span>

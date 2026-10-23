@@ -41,7 +41,7 @@ export function MetaValorScreen({ objetivo, valor, onValor, nome, onNome, onBack
       section="Seu objetivo"
       onBack={onBack}
       center
-      footer={<GlowButton variant="light" disabled={!ok} onClick={onNext}>Continuar</GlowButton>}
+      footer={<GlowButton disabled={!ok} onClick={onNext}>Continuar</GlowButton>}
     >
       {divida ? (
         <Heading light="Quanto você deve," bold="mais ou menos?" />
@@ -81,7 +81,7 @@ export function MetaPrazoScreen({ objetivo, prazo, onPrazo, onBack, onNext }: Na
       section="Seu objetivo"
       onBack={onBack}
       center
-      footer={<GlowButton variant="light" disabled={!prazo} onClick={onNext}>Continuar</GlowButton>}
+      footer={<GlowButton disabled={!prazo} onClick={onNext}>Continuar</GlowButton>}
     >
       <Heading light="Em quanto tempo você quer" bold={divida ? "quitar?" : "chegar lá?"} />
       <MonthPicker value={prazo} onChange={onPrazo} />
@@ -100,7 +100,7 @@ export function MetaGraficoScreen({ answers, plan, onBack, onNext }: Nav & {
     <FlowScreen
       section="Seu objetivo"
       onBack={onBack}
-      footer={<GlowButton variant="light" onClick={onNext}>Continuar</GlowButton>}
+      footer={<GlowButton onClick={onNext}>Continuar</GlowButton>}
     >
       <div className="pt-6 pb-4">
         {objetivo === "investir" ? (

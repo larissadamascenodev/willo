@@ -35,7 +35,7 @@ export function NomeScreen({ value, onChange, onBack, onNext }: Nav & {
       onBack={onBack}
       center
       footer={
-        <GlowButton variant="light" disabled={!ok} onClick={onNext}>
+        <GlowButton disabled={!ok} onClick={onNext}>
           Continuar
         </GlowButton>
       }
@@ -114,29 +114,36 @@ export function TermosScreen({ onAccept, onBack }: {
       section={SECTION}
       onBack={onBack}
       center
-      footer={<GlowButton variant="light" onClick={aceitarTudo}>Aceitar tudo e começar</GlowButton>}
+      footer={<GlowButton onClick={aceitarTudo}>Aceitar tudo e começar</GlowButton>}
     >
       <Heading light="Antes de começar," bold="só confirme:" />
 
       <div className="mt-8 space-y-5">
+        {/* The box is the button and the text is beside it, never around it: the links
+            inside the text are buttons too, and a button inside a button is invalid
+            HTML that keyboards and screen readers cannot untangle. */}
         {caixas.map((texto, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => toggle(i)}
-            aria-pressed={marcados[i]}
-            className="flex w-full items-start gap-3.5 py-1 text-left"
-          >
-            <span
+          <div key={i} className="flex items-start gap-3.5 py-1">
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={marcados[i]}
+              aria-label={i === 0 ? "Aceito os Termos de Uso e a Política de Privacidade" : "Concordo com o processamento por inteligência artificial"}
+              onClick={() => toggle(i)}
               className={cn(
                 "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] border-2 transition-colors",
                 marcados[i] ? "border-white bg-white" : "border-white/25",
               )}
             >
               {marcados[i] && <Check className="h-3.5 w-3.5 text-[#0B0B0B]" strokeWidth={3.5} />}
+            </button>
+            <span
+              onClick={() => toggle(i)}
+              className="cursor-pointer text-[14px] leading-relaxed text-white/66"
+            >
+              {texto}
             </span>
-            <span className="text-[14px] leading-relaxed text-white/66">{texto}</span>
-          </button>
+          </div>
         ))}
       </div>
 
@@ -156,7 +163,7 @@ export function MudancaScreen({ nome, onBack, onNext }: Nav & { nome: string }) 
     <FlowScreen
       section={SECTION}
       onBack={onBack}
-      footer={<GlowButton variant="light" onClick={onNext}>Quero ver</GlowButton>}
+      footer={<GlowButton onClick={onNext}>Quero ver</GlowButton>}
     >
       <div className="pt-8">
         <Heading light={`${nome.trim() || "Você"},`} bold="seu mês vai mudar." />
@@ -193,7 +200,7 @@ export function ComoFuncionaScreen({ onBack, onNext }: Nav) {
     <FlowScreen
       section={SECTION}
       onBack={onBack}
-      footer={<GlowButton variant="light" onClick={onNext}>Montar meu plano</GlowButton>}
+      footer={<GlowButton onClick={onNext}>Montar meu plano</GlowButton>}
     >
       <div className="pt-8">
         <Heading light="É simples assim:" bold="três passos." />

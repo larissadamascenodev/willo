@@ -35,7 +35,8 @@ export interface OnboardingAnswers {
   /** At most three, and empty when skipped. */
   categorias: string[];
   compromisso: boolean;
-  lembretes: boolean | null;
+  /** Lands in onboarding_answers.answers.notifyDueDates. */
+  notifyDueDates: boolean | null;
   paywallDismissed: boolean;
   /** Set by finalizeOnboarding so a second call writes nothing. */
   finalized?: boolean;
@@ -54,7 +55,7 @@ export const INITIAL_ANSWERS: OnboardingAnswers = {
   prazoMeses: null,
   categorias: [],
   compromisso: false,
-  lembretes: null,
+  notifyDueDates: null,
   paywallDismissed: false,
 };
 
