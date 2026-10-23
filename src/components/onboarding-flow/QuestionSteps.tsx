@@ -2,7 +2,7 @@ import { useRef, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import GlowButton from "@/components/shared/GlowButton";
 import { cn } from "@/lib/utils";
-import { FlowScreen, Heading, NumberWheel, OptionRow, ValueRuler } from "./primitives";
+import { FlowScreen, Heading, OptionRow, ValueRuler } from "./primitives";
 
 interface Base {
   section: string;
@@ -47,18 +47,6 @@ export function ChoiceStep<T extends string>({ section, light, bold, sub, option
           ))}
         </div>
         {note && <p className="pb-4 text-center text-[12px] t-soft">{note}</p>}
-      </div>
-    </FlowScreen>
-  );
-}
-
-/** Age on a wheel. */
-export function AgeStep({ value, onChange, onBack, onNext }: { value: number; onChange: (v: number) => void; onBack: () => void; onNext: () => void }) {
-  return (
-    <FlowScreen section="Sobre você" onBack={onBack} scroll={false} footer={<GlowButton onClick={onNext}>Continuar</GlowButton>}>
-      <Heading light="Qual" bold="sua idade?" className="pt-6" />
-      <div className="mt-6">
-        <NumberWheel value={value} min={16} max={85} onChange={onChange} unit="anos" />
       </div>
     </FlowScreen>
   );

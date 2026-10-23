@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { BrainCircuit, Camera, Check, TrendingUp, Trophy } from "lucide-react";
+import { Bell, Check, MessageCircle, Sparkles, TrendingUp, Trophy, Zap } from "lucide-react";
 import GlowButton from "@/components/shared/GlowButton";
 import LegalModal from "@/components/shared/LegalModal";
 import { cn } from "@/lib/utils";
@@ -37,7 +37,7 @@ export function NameStep({ value, onChange, onBack, onNext }: StepProps & { valu
 /* ─── 2. Consent ─── */
 export function ConsentStep({ name, onBack, onNext }: StepProps & { name: string }) {
   const [legal, setLegal] = useState<"terms" | "privacy" | null>(null);
-  const [checked, setChecked] = useState([false, false, false]);
+  const [checked, setChecked] = useState([false, false]);
   const toggle = (i: number) => setChecked((c) => c.map((v, j) => (j === i ? !v : v)));
 
   return (
@@ -46,7 +46,7 @@ export function ConsentStep({ name, onBack, onNext }: StepProps & { name: string
       onBack={onBack}
       center
       footer={
-        <GlowButton onClick={() => { setChecked([true, true, true]); setTimeout(onNext, 250); }}>
+        <GlowButton onClick={() => { setChecked([true, true]); setTimeout(onNext, 250); }}>
           Aceitar tudo e começar
         </GlowButton>
       }
@@ -59,23 +59,28 @@ export function ConsentStep({ name, onBack, onNext }: StepProps & { name: string
             <button type="button" onClick={(e) => { e.stopPropagation(); setLegal("terms"); }} className="underline underline-offset-2 text-white/80">Termos de Uso</button>{" "}
             e a{" "}
             <button type="button" onClick={(e) => { e.stopPropagation(); setLegal("privacy"); }} className="underline underline-offset-2 text-white/80">Política de Privacidade</button>
-            , incluindo a leitura dos meus comprovantes por inteligência artificial (Google Gemini).
+            , incluindo o envio dos meus comprovantes ao <b className="font-semibold text-white/80">Google (Gemini)</b> para leitura e dos meus
+            lançamentos à <b className="font-semibold text-white/80">Anthropic (Claude)</b> para categorizar e gerar as análises.
           </>,
           <>
-            Entendo que o Willo me ajuda a <b className="font-semibold text-white/80">organizar e acompanhar</b> meu dinheiro e que o conteúdo é
-            educativo: não substitui um consultor ou planejador financeiro.
-          </>,
-          <>
-            Sei que o Willo <b className="font-semibold text-white/80">não movimenta dinheiro</b> nem faz transações financeiras. Os dados vêm
-            só do que eu registro no app.
+            Entendo que o Willo me ajuda a <b className="font-semibold text-white/80">organizar e acompanhar</b> meu dinheiro, com conteúdo
+            educativo que não substitui um consultor ou planejador financeiro, e que ele{" "}
+            <b className="font-semibold text-white/80">não movimenta dinheiro</b> nem faz transações: os dados vêm só do que eu registro no app.
           </>,
         ].map((text, i) => (
-          <button key={i} type="button" onClick={() => toggle(i)} className="flex w-full items-start gap-3.5 text-left">
-            <span className={cn("mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors", checked[i] ? "border-white bg-white" : "border-white/25")}>
+          <div key={i} className="flex w-full items-start gap-3.5 text-left">
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={checked[i]}
+              aria-label={`Confirmar item ${i + 1}`}
+              onClick={() => toggle(i)}
+              className={cn("mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors", checked[i] ? "border-white bg-white" : "border-white/25")}
+            >
               {checked[i] && <Check className="h-3.5 w-3.5 text-[#0B0B0B]" strokeWidth={3.5} />}
-            </span>
-            <span className="text-[14px] leading-relaxed text-white/66">{text}</span>
-          </button>
+            </button>
+            <span onClick={() => toggle(i)} className="cursor-pointer text-[14px] leading-relaxed text-white/66">{text}</span>
+          </div>
         ))}
       </div>
       <LegalModal open={!!legal} onClose={() => setLegal(null)} type={legal || "terms"} />
@@ -92,7 +97,7 @@ export function EvolutionStep({ name, onBack, onNext }: StepProps & { name: stri
   return (
     <FlowScreen section="Sua evolução" onBack={onBack} footer={<GlowButton onClick={onNext}>Quero ver</GlowButton>}>
       <div className="pt-10">
-        <Heading light={`${name.trim() || "Você"},`} bold="seu dinheiro vai mudar." sub="E você vai ver toda a evolução." />
+        <Heading light={`${name.trim() || "Você"},`} bold="suas finanças mudam." sub="E você vai ver toda a evolução." />
       </div>
 
       <div className="mt-8">
@@ -163,61 +168,94 @@ export function EvolutionStep({ name, onBack, onNext }: StepProps & { name: stri
 
 /* ─── 4. How it works ─── */
 export function HowItWorksStep({ onBack, onNext }: StepProps) {
-  // The path runs down beside each stop and crosses over only below its label,
-  // so no line ever runs through the text.
-  const stops = [
-    { Icon: Camera, title: "Foto do comprovante", text: "e o gasto já fica anotado", x: 30, y: 40, side: "right" as const },
-    { Icon: BrainCircuit, title: "Raio-X do seu dinheiro", text: "score, alertas e o que fazer", x: 270, y: 165, side: "left" as const },
-    { Icon: TrendingUp, title: "Projeção visível", text: "o saldo dos próximos meses", x: 30, y: 290, side: "right" as const },
+  /**
+   * O caminho desceu para uma trilha vertical.
+   *
+   * Em zigue-zague, cada parada custava ~125px de altura fixa, e cinco delas não cabiam
+   * em tela nenhuma — a pessoa tinha que arrastar para ver o fim, que é justamente o
+   * prêmio. Em coluna, cada parada custa 44px e as cinco cabem num iPhone SE.
+   */
+  /* Uma linha de descrição cada, de propósito: é o que deixa todas as paradas com a
+     mesma altura, e é a altura igual que faz os trechos de linha ficarem iguais. */
+  const paradas = [
+    { Icon: Zap, titulo: "Anote em segundos", texto: "Fale, digite ou fotografe." },
+    { Icon: MessageCircle, titulo: "Pergunte antes de gastar", texto: "O assistente diz se cabe no mês." },
+    { Icon: Bell, titulo: "Limites que avisam antes", texto: "O Radar avisa quando aperta." },
+    { Icon: Sparkles, titulo: "Seu time de agentes", texto: "Faturas, metas e o mês, cada um no seu." },
+    { Icon: Trophy, titulo: "Alcance os objetivos", texto: "Metas com prazo e o caminho até elas.", fim: true },
   ];
-  const path = "M 30 40 C 30 100, 40 116, 150 118 S 270 128, 270 165 C 270 222, 262 238, 150 240 S 30 252, 30 290 C 30 344, 40 356, 150 358 S 262 366, 262 392";
+
+  /* Um de cada vez: o disco aparece, o trecho de linha desce até o próximo, o próximo
+     aparece. Sem molas — tudo em curvas suaves, que foi o pedido. */
+  /* Os tempos se sobrepõem de propósito: o trecho de linha começa enquanto o disco
+     ainda está assentando, e é essa emenda que faz a sequência correr como uma coisa
+     só em vez de bater compasso. */
+  const DISCO = 0.34;
+  const TRECHO = 0.34;
+  const PASSO = 0.42;
+  const entraEm = (i: number) => 0.12 + i * PASSO;
+  const desceEm = (i: number) => entraEm(i) + 0.16;
+
+  /* Sai depressa e assenta devagar — é o que faz o movimento parecer peso, não pressa. */
+  const SUAVE = [0.16, 1, 0.3, 1] as const;
 
   return (
     <FlowScreen section="Como funciona" onBack={onBack} footer={<GlowButton onClick={onNext}>Começar minha análise</GlowButton>}>
-      <div className="pt-8">
-        <Heading light="A vida financeira que você quer" bold="já está a caminho." sub="Primeiro, a gente entende o seu momento." />
+      <div className="pt-6">
+        <Heading light="A vida que você quer" bold="já está a caminho." sub="Primeiro, a gente entende o seu momento." />
       </div>
-      <div className="relative mx-auto mt-6 h-[420px] w-[300px]">
-        <svg viewBox="0 0 300 420" className="absolute inset-0 h-full w-full">
-          <motion.path
-            d={path}
-            fill="none"
-            stroke="rgba(255,255,255,0.85)"
-            strokeWidth="3"
-            strokeLinecap="round"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1.8, ease: "easeInOut" }}
-          />
-        </svg>
-        {stops.map(({ Icon, title, text, x, y, side }, i) => (
-          <motion.div
-            key={title}
-            className="absolute"
-            style={{ left: x, top: y }}
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 + i * 0.5, type: "spring", stiffness: 300, damping: 20 }}
-          >
-            <span className="absolute -left-[19px] -top-[19px] flex h-[38px] w-[38px] items-center justify-center rounded-full bg-white">
-              <Icon className="h-[18px] w-[18px] text-[#0B0B0B]" />
-            </span>
-            <div className={cn("absolute top-[-20px] w-[176px]", side === "right" ? "left-[30px]" : "right-[30px] text-right")}>
-              <p className="text-[14px] font-bold text-white">{title}</p>
-              <p className="text-[12.5px] leading-snug text-white/62">{text}</p>
-            </div>
-          </motion.div>
+
+      <ol className="relative mt-5">
+        {paradas.map(({ Icon, titulo, texto, fim }, i) => (
+          /* Altura fixa por parada: as descrições têm comprimentos diferentes, e deixar
+             a altura seguir o texto faria um par ficar mais junto que o outro. */
+          <li key={titulo} className="relative flex h-16 items-start gap-4">
+            {/* O trecho de linha até a próxima parada, que desce depois deste disco e
+                antes do próximo. É ele que faz a sequência andar. */}
+            {!fim && (
+              <motion.span
+                aria-hidden="true"
+                className={cn(
+                  "absolute left-[21px] top-[44px] w-[2px] rounded-full",
+                  i === paradas.length - 2 ? "bg-gradient-to-b from-white/25 to-willo-green/60" : "bg-white/25",
+                )}
+                style={{ bottom: -2, transformOrigin: "top" }}
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+                transition={{ delay: desceEm(i), duration: TRECHO, ease: [0.37, 0, 0.23, 1] }}
+              />
+            )}
+
+            {/* Entra crescendo de perto de si mesmo, não do nada: partir de 0,82 em vez
+                de 0,4 troca o estalo por um assentar. */}
+            <motion.span
+              className={cn(
+                "relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
+                fim ? "bg-willo-green shadow-[0_0_28px_rgba(200,243,109,0.45)]" : "bg-white",
+              )}
+              initial={{ scale: 0.82, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: entraEm(i), duration: DISCO, ease: SUAVE }}
+            >
+              <Icon className="h-[19px] w-[19px] text-[#0B0B0B]" strokeWidth={2.2} />
+            </motion.span>
+
+            {/* Sobe em vez de vir da esquerda: numa lista vertical, movimento vertical
+                acompanha a linha descendo em vez de brigar com ela. */}
+            <motion.span
+              className="min-w-0 flex-1 pt-[3px]"
+              initial={{ opacity: 0, y: 7 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: entraEm(i) + 0.06, duration: 0.42, ease: SUAVE }}
+            >
+              <span className={cn("block text-[15px] leading-tight", fim ? "font-extrabold text-white" : "font-semibold text-white/90")}>
+                {titulo}
+              </span>
+              <span className="mt-[3px] block truncate text-[12.5px] text-white/55">{texto}</span>
+            </motion.span>
+          </li>
         ))}
-        <motion.span
-          className="absolute flex h-12 w-12 items-center justify-center rounded-full bg-willo-green shadow-[0_0_30px_rgba(200,243,109,0.6)]"
-          style={{ left: 262 - 24, top: 392 - 24 }}
-          initial={{ opacity: 0, scale: 0.4 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 1.9, type: "spring", stiffness: 280, damping: 14 }}
-        >
-          <Trophy className="h-5 w-5 text-[#0B0B0B]" />
-        </motion.span>
-      </div>
+      </ol>
     </FlowScreen>
   );
 }

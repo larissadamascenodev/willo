@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthPanel from "@/components/auth/AuthPanel";
 import { NameStep, ConsentStep, EvolutionStep, HowItWorksStep } from "@/components/onboarding-flow/IntroSteps";
-import { AgeStep, AmountStep, ChoiceStep, DeltaChip, MonthsStep } from "@/components/onboarding-flow/QuestionSteps";
+import { AmountStep, ChoiceStep, DeltaChip, MonthsStep } from "@/components/onboarding-flow/QuestionSteps";
 import {
   CalculatingStep,
   CategoriesStep,
@@ -25,10 +25,10 @@ import { clearOnboardingProgress, readOnboardingProgress, saveOnboardingProgress
 
 const STEPS = [
   "name", "consent", "evolution", "how",
-  "goal", "age", "work", "income", "spending",
+  "goal", "work", "income", "spending",
   "endOfMonth", "creditCard", "debts", "emergency",
   "purpose", "target", "months",
-  "categories", "insight", "scan", "leaks",
+  "insight", "scan", "categories", "leaks",
   "commitment", "notifications",
   "calculating", "result", "signup",
 ] as const;
@@ -128,7 +128,6 @@ const Onboarding = () => {
             ]}
           />
         );
-      case "age": return <AgeStep value={a.age} onChange={set("age")} {...nav} />;
       case "work":
         return (
           <ChoiceStep<WorkAnswer>
@@ -239,9 +238,9 @@ const Onboarding = () => {
           />
         );
       case "months": return <MonthsStep value={a.months} onChange={set("months")} bold={copy.monthsBold} {...nav} />;
-      case "categories": return <CategoriesStep {...nav} />;
       case "insight": return <InsightStep surplus={plan.surplus} monthlySave={plan.monthlySave} cut={plan.cut} {...nav} />;
       case "scan": return <ScanDemoStep {...nav} />;
+      case "categories": return <CategoriesStep {...nav} />;
       case "leaks":
         return (
           <ChoiceStep<string>

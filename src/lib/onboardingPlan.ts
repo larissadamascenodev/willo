@@ -16,7 +16,6 @@ export type PurposeAnswer = "dividas" | "reserva" | "viagem" | "casa" | "carro" 
 export interface OnboardingAnswers {
   name: string;
   goal: GoalAnswer | null;
-  age: number;
   work: WorkAnswer | null;
   income: number;
   spending: number;
@@ -34,7 +33,6 @@ export interface OnboardingAnswers {
 export const INITIAL_ANSWERS: OnboardingAnswers = {
   name: "",
   goal: null,
-  age: 28,
   work: null,
   income: 4500,
   spending: 3600,
