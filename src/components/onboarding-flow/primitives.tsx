@@ -16,10 +16,11 @@ export function FlowScreen({ section, onBack, children, footer, center = false, 
   center?: boolean;
   scroll?: boolean;
 }) {
-  /* No light of its own: the page behind paints the room, and tints it per section. Two
-     white blobs used to sit here, on top of that, and washed the colour out. */
   return (
     <div className="relative flex h-full flex-col overflow-hidden">
+      <div className="pointer-events-none absolute -left-28 -top-36 h-80 w-80 rounded-full bg-white/[0.07] blur-[100px]" />
+      <div className="pointer-events-none absolute -right-28 -top-28 h-72 w-72 rounded-full bg-white/[0.045] blur-[100px]" />
+
       <div className="relative grid h-14 shrink-0 grid-cols-[48px_1fr_48px] items-center px-3">
         {onBack ? (
           <button type="button" onClick={onBack} aria-label="Voltar" className="flex h-11 w-11 items-center justify-center text-white/80 active:opacity-60">

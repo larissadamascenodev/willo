@@ -28,7 +28,7 @@ const SLIDES = [
 ] as const;
 
 /** Three phones; the middle one in focus, swipeable, advancing on its own. */
-export function PhoneCarousel() {
+function PhoneCarousel() {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
