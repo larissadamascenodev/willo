@@ -94,7 +94,7 @@ export default function BalancoPanel({
       : `Deve sobrar em ${month}`;
 
   return (
-    <Animated.View entering={FadeIn.duration(320)} style={{ marginTop: 28, paddingHorizontal: 4 }}>
+    <View style={{ marginTop: 28, paddingHorizontal: 4 }}>
       {/* ══ The answer ══ */}
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
         <Text style={{ fontSize: 15, color: INK.soft }}>{headline}</Text>
@@ -239,7 +239,7 @@ export default function BalancoPanel({
         data={open ? monthData.get(`${open.month}-${open.year}`) : undefined}
         onClose={() => setOpen(null)}
       />
-    </Animated.View>
+    </View>
   );
 }
 

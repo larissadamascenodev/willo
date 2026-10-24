@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeIn } from "react-native-reanimated";
 import { useFinancialProjection } from "@/hooks/useFinancialProjection";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
@@ -31,9 +30,19 @@ export default function FluxoDeCaixa() {
   const [tool, setTool] = useState<Tool>(
     initial === "balanco" || initial === "projecoes" ? initial : "fluxo",
   );
+  /* A tab is mounted the first time it is opened and then kept, so its chart
+     draws itself once per visit to the screen rather than on every switch. */
+  const [visited, setVisited] = useState<Set<Tool>>(() => new Set([tool]));
+  useEffect(() => {
+    setVisited((v) => (v.has(tool) ? v : new Set(v).add(tool)));
+  }, [tool]);
+
+  const panel = (key: Tool) => ({ display: tool === key ? ("flex" as const) : ("none" as const) });
 
   return (
-    <Room>
+    /* The sky behind, as on the home and the wallet: colour on the ground, and
+       something for the glass above it to catch. */
+    <Room lit sky>
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top + 8,
@@ -48,6 +57,7 @@ export default function FluxoDeCaixa() {
 
         <View style={{ marginTop: 10 }}>
           <SegmentedTabs
+            glass
             value={tool}
             onChange={setTool}
             options={[
@@ -58,15 +68,24 @@ export default function FluxoDeCaixa() {
           />
         </View>
 
-        {/* The key makes the panel arrive rather than swap in place, which is what
-            tells you the question changed and not just the numbers. */}
-        <Animated.View key={tool} entering={FadeIn.duration(180)}>
-          {tool === "fluxo" && <FluxoPanel />}
-          {tool === "balanco" && (
+        {/* Tabs are peers, so switching does not animate — the charts inside are
+            the motion, and they play once. Nothing here fades, either: the glass in
+            Projeções would flatten under a fading parent. */}
+        {visited.has("fluxo") && (
+          <View style={panel("fluxo")}>
+            <FluxoPanel />
+          </View>
+        )}
+        {visited.has("balanco") && (
+          <View style={panel("balanco")}>
             <BalancoPanel projection={projection} onOpenProjecoes={() => setTool("projecoes")} />
-          )}
-          {tool === "projecoes" && <ProjecoesPanel projection={projection} />}
-        </Animated.View>
+          </View>
+        )}
+        {visited.has("projecoes") && (
+          <View style={panel("projecoes")}>
+            <ProjecoesPanel projection={projection} />
+          </View>
+        )}
       </ScrollView>
     </Room>
   );

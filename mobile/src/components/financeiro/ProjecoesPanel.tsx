@@ -1,23 +1,32 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Platform, Pressable, Text, View, type TextStyle } from "react-native";
 import { useRouter } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
 import type { useFinancialProjection } from "@/hooks/useFinancialProjection";
-import { buildProjectionRows, MONTH_NAMES, type ProjectionRowView } from "@/lib/projectionRows";
+import {
+  buildHistoryRows,
+  buildProjectionRows,
+  MONTH_NAMES,
+  type MonthFlow,
+  type ProjectionRowView,
+} from "@/lib/projectionRows";
+import { loadPastMonthFlows } from "@/services/pastMonths";
 import BottomSheet from "~/components/BottomSheet";
 import BalanceLine from "~/components/financeiro/BalanceLine";
 import MonthBreakdown from "~/components/financeiro/MonthBreakdown";
 import { CalendarDays, ChevronRight, X } from "~/components/icons";
 import { compact } from "~/lib/money";
+import { useAuth } from "~/lib/auth";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 
 /**
  * Where the balance is going.
  *
  * Balanço asks how this month closes; this follows the balance from one month into
- * the next for a year, so each month opens with what the one before closed with.
- * It is drawn as a line, because a projection is a trajectory, and the large figure
- * above it is the line's readout — touch a month and the figure becomes that month.
+ * the next, so each month opens with what the one before closed with. It is drawn
+ * as a line, because a projection is a trajectory, six months at a time — drag it
+ * back through the months already lived or on through the year ahead. The large
+ * figure above is the line's readout: tap a month and the figure becomes that month.
  *
  * Like Balanço, the figures are white and colour lives in the small things: a dot
  * beside each month for how it goes — green when it adds to the balance, amber when
@@ -41,6 +50,9 @@ const nums: TextStyle = Platform.select({
 const signedValue = (v: number) => `${v < 0 ? "−" : ""}${compact(Math.abs(v))}`;
 const lower = (s: string) => s.toLocaleLowerCase("pt-BR");
 
+/* How far back the chart can be dragged. */
+const MONTHS_BEHIND = 6;
+
 /** How a month goes: adds to the balance, eats into it, or ends below zero. */
 const toneOf = (r: ProjectionRowView) => (r.fecha < 0 ? RED : r.sobra < 0 ? AMBER : GREEN);
 
@@ -48,19 +60,49 @@ const fullName = (r: ProjectionRowView) => `${lower(r.name)}${r.yearTag ? ` de 2
 
 export default function ProjecoesPanel({ projection }: { projection: Projection }) {
   const router = useRouter();
-  const { projections, data, loading, futureReady } = projection;
-  const [selected, setSelected] = useState(0);
+  const { user } = useAuth();
+  const { projections, data, loading, futureReady, selectedMonth, selectedYear } = projection;
   const [open, setOpen] = useState<ProjectionRowView | null>(null);
+  const [past, setPast] = useState<MonthFlow[] | null>(null);
+
+  /* The months behind are read the way the months ahead are, so the line through
+     them is one line. */
+  useEffect(() => {
+    let alive = true;
+    setPast(null);
+    if (!user) {
+      setPast([]);
+      return;
+    }
+    loadPastMonthFlows({ userId: user.id, month: selectedMonth, year: selectedYear, count: MONTHS_BEHIND })
+      .then((flows) => alive && setPast(flows))
+      .catch(() => alive && setPast([]));
+    return () => {
+      alive = false;
+    };
+  }, [user, selectedMonth, selectedYear]);
 
   const rows = useMemo(
     () => buildProjectionRows(projections, data.previousMonthEndingBalance),
     [projections, data.previousMonthEndingBalance],
   );
-  /* Kept stable, so picking a month does not make the line draw itself again. */
-  const values = useMemo(() => rows.map((r) => r.fecha), [rows]);
-  const months = useMemo(() => rows.map((r) => r.month), [rows]);
+  const history = useMemo(
+    () => (past ? buildHistoryRows(past, data.previousMonthEndingBalance) : []),
+    [past, data.previousMonthEndingBalance],
+  );
+  /* The whole chart: the months lived, this one, and the year ahead. */
+  const series = useMemo(() => [...history, ...rows], [history, rows]);
+  const todayIndex = history.length;
 
-  if (loading || !futureReady) return <Skeleton />;
+  /* Kept stable, so picking a month does not make the line draw itself again. */
+  const values = useMemo(() => series.map((r) => r.fecha), [series]);
+  const months = useMemo(() => series.map((r) => r.month), [series]);
+
+  /* Opens on this month; stays on whatever month was picked after that. */
+  const [picked, setPicked] = useState<number | null>(null);
+  const selected = picked ?? todayIndex;
+
+  if (loading || !futureReady || past === null) return <Skeleton />;
 
   if ((!data.transactions.length && !data.events.length) || rows.length === 0) {
     return (
@@ -91,43 +133,60 @@ export default function ProjecoesPanel({ projection }: { projection: Projection 
     );
   }
 
-  const pick = rows[Math.min(selected, rows.length - 1)];
+  const pick = series[Math.min(selected, series.length - 1)];
+  const offset = selected - todayIndex;
   const below = rows.filter((r) => r.fecha < 0);
 
   return (
-    <Animated.View entering={FadeIn.duration(320)} style={{ marginTop: 28, paddingHorizontal: 4 }}>
+    <View style={{ marginTop: 28, paddingHorizontal: 4 }}>
       {/* ══ The line's readout ══ */}
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
         <Text style={{ flex: 1, minWidth: 0, fontSize: 15, color: INK.soft }}>
           Saldo no fim de {fullName(pick)}
         </Text>
         <Text style={{ fontSize: 13, color: INK.softer }}>
-          {selected === 0 ? "este mês" : `daqui a ${selected} ${selected === 1 ? "mês" : "meses"}`}
+          {offset === 0
+            ? "este mês"
+            : offset > 0
+              ? `daqui a ${offset} ${offset === 1 ? "mês" : "meses"}`
+              : `há ${-offset} ${offset === -1 ? "mês" : "meses"}`}
         </Text>
       </View>
-      <Text
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        style={[
-          nums,
-          {
-            marginTop: 6,
-            fontSize: 54,
-            fontWeight: "700",
-            letterSpacing: -2.2,
-            color: pick.fecha < 0 ? RED : "#fff",
-          },
-        ]}
-      >
-        {signedValue(pick.fecha)}
-      </Text>
-      <Text style={{ marginTop: 6, fontSize: 13.5, color: INK.soft }}>
-        No mês, entra {compact(pick.income)} e sai {compact(pick.expense)}
-      </Text>
+      {/* The figure is the line's readout: when another month is picked it changes
+          with a quick fade, which says the number moved rather than flickered. */}
+      <Animated.View key={selected} entering={FadeIn.duration(180)}>
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          style={[
+            nums,
+            {
+              marginTop: 6,
+              fontSize: 54,
+              fontWeight: "700",
+              letterSpacing: -2.2,
+              color: pick.fecha < 0 ? RED : "#fff",
+            },
+          ]}
+        >
+          {signedValue(pick.fecha)}
+        </Text>
+        <Text style={{ marginTop: 6, fontSize: 13.5, color: INK.soft }}>
+          {offset < 0
+            ? `No mês, entrou ${compact(pick.income)} e saiu ${compact(pick.expense)}`
+            : `No mês, entra ${compact(pick.income)} e sai ${compact(pick.expense)}`}
+        </Text>
+      </Animated.View>
 
       {/* ══ The year, as one line ══ */}
       <View style={{ marginTop: 22, marginHorizontal: -4 }}>
-        <BalanceLine values={values} months={months} selected={selected} onSelect={setSelected} />
+        <BalanceLine
+          values={values}
+          months={months}
+          todayIndex={todayIndex}
+          selected={selected}
+          onSelect={setPicked}
+        />
       </View>
 
       {below.length > 0 && (
@@ -240,7 +299,7 @@ export default function ProjecoesPanel({ projection }: { projection: Projection 
           </View>
         )}
       </BottomSheet>
-    </Animated.View>
+    </View>
   );
 }
 
