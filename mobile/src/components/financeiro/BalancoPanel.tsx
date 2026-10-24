@@ -8,7 +8,7 @@ import Bar from "~/components/Bar";
 import BottomSheet from "~/components/BottomSheet";
 import { ChevronRight, X } from "~/components/icons";
 import { compact, money } from "~/lib/money";
-import { INK, RED } from "~/theme/tokens";
+import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 
 /**
  * How this month closes.
@@ -18,9 +18,11 @@ import { INK, RED } from "~/theme/tokens";
  * against what the month brings in. That one shape answers the screen's question
  * before a number is read, and everything else is the same figures written out.
  *
- * It is white on the dark ground in four strengths and nothing else. Colour is kept
- * for the one case that is a warning — a month that closes short — so that when red
- * appears it means something, instead of every figure being green or red by habit.
+ * The figures are white. Colour lives only in the small things — the slices of the
+ * bar, the keys under it, a dot beside a row — and each one is the colour the rest
+ * of the app already gives that idea: amber for what is still due, the green for
+ * money that is free, red for what goes out. That way the bar's colour lands on the
+ * answer, and a large figure only turns red when the month genuinely falls short.
  * There are no boxes: the sections are told apart by space and a hairline, which is
  * also how the Fluxo tab beside it reads.
  *
@@ -33,9 +35,10 @@ type Projection = ReturnType<typeof useFinancialProjection>;
 
 const AHEAD = 3;
 
-/* White in the four strengths the screen uses. */
+/* The bar's slices: what has gone, what is still due, what is free. */
 const SPENT = "#FFFFFF";
-const DUE = "rgba(255,255,255,0.38)";
+const DUE = AMBER;
+const FREE = GREEN;
 const TRACK = "rgba(255,255,255,0.08)";
 const RULE = "rgba(255,255,255,0.08)";
 
@@ -131,7 +134,8 @@ export default function BalancoPanel({
         }}
       >
         <Bar share={data.despesasPagas / base} color={SPENT} delay={0.15} />
-        <Bar share={data.despesasPendentes / base} color={DUE} delay={0.45} />
+        <Bar share={data.despesasPendentes / base} color={DUE} delay={0.4} />
+        <Bar share={free / base} color={FREE} delay={0.65} />
       </View>
 
       <View style={{ marginTop: 16, flexDirection: "row", gap: 12 }}>
@@ -140,18 +144,20 @@ export default function BalancoPanel({
         {short ? (
           <Legend swatch={RED} label="Falta" value={compact(Math.abs(sobra))} tone={RED} />
         ) : (
-          <Legend swatch={TRACK} outlined label="Livre" value={compact(free)} />
+          <Legend swatch={FREE} label="Livre" value={compact(free)} />
         )}
       </View>
 
       {/* ══ The same month, written out ══ */}
       <View style={{ marginTop: 34, borderTopWidth: 1, borderTopColor: RULE }}>
         <LedgerRow
+          dot={GREEN}
           label="Entrou"
           value={money(data.receitas)}
           note={`${money(data.receitasRecebidas)} recebido e ${money(data.receitasPendentes)} a receber`}
         />
         <LedgerRow
+          dot={RED}
           label="Saiu"
           value={money(data.despesas)}
           note={`${money(data.despesasPagas)} pago e ${money(data.despesasPendentes)} a pagar`}
@@ -207,6 +213,7 @@ export default function BalancoPanel({
                   opacity: pressed ? 0.55 : 1,
                 })}
               >
+                <Dot color={behind ? RED : r.risk === "atencao" ? AMBER : GREEN} />
                 <Text style={{ flex: 1, minWidth: 0, fontSize: 16, color: "#fff" }}>
                   {r.name}
                   {r.yearTag ? <Text style={{ color: INK.softer }}> de 20{r.yearTag}</Text> : null}
@@ -239,13 +246,11 @@ export default function BalancoPanel({
 /** A key under the bar: which slice it is, and how much. */
 function Legend({
   swatch,
-  outlined = false,
   label,
   value,
   tone = "#fff",
 }: {
   swatch: string;
-  outlined?: boolean;
   label: string;
   value: string;
   tone?: string;
@@ -259,8 +264,6 @@ function Legend({
             height: 9,
             borderRadius: 3,
             backgroundColor: swatch,
-            borderWidth: outlined ? 1 : 0,
-            borderColor: "rgba(255,255,255,0.28)",
           }}
         />
         <Text style={{ fontSize: 12.5, color: INK.soft }}>{label}</Text>
@@ -272,15 +275,33 @@ function Legend({
   );
 }
 
+/** A small mark of colour — the only place most of this screen carries any. */
+function Dot({ color }: { color: string }) {
+  return <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: color }} />;
+}
+
 /** One line of the month written out, with what it is made of under it. */
-function LedgerRow({ label, value, note }: { label: string; value: string; note: string }) {
+function LedgerRow({
+  label,
+  value,
+  note,
+  dot,
+}: {
+  label: string;
+  value: string;
+  note: string;
+  dot?: string;
+}) {
   return (
     <View style={{ paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: RULE }}>
-      <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-        <Text style={{ fontSize: 16, color: "#fff" }}>{label}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
+          {dot && <Dot color={dot} />}
+          <Text style={{ fontSize: 16, color: "#fff" }}>{label}</Text>
+        </View>
         <Text style={[nums, { fontSize: 16, fontWeight: "600", color: "#fff" }]}>{value}</Text>
       </View>
-      <Text style={{ marginTop: 4, fontSize: 12.5, color: INK.softer }}>{note}</Text>
+      <Text style={{ marginTop: 4, marginLeft: dot ? 16 : 0, fontSize: 12.5, color: INK.softer }}>{note}</Text>
     </View>
   );
 }
@@ -358,15 +379,25 @@ function MonthSheet({
             {compact(Math.abs(row.sobra))}
           </Text>
 
-          <EventList title="Entra" items={entradas} total={row.income} />
-          <EventList title="Sai" items={saidas} total={row.expense} />
+          <EventList title="Entra" dot={GREEN} items={entradas} total={row.income} />
+          <EventList title="Sai" dot={RED} items={saidas} total={row.expense} />
         </View>
       )}
     </BottomSheet>
   );
 }
 
-function EventList({ title, items, total }: { title: string; items: FinanceEvent[]; total: number }) {
+function EventList({
+  title,
+  dot,
+  items,
+  total,
+}: {
+  title: string;
+  dot: string;
+  items: FinanceEvent[];
+  total: number;
+}) {
   return (
     <View style={{ marginTop: 28 }}>
       <View
@@ -380,7 +411,10 @@ function EventList({ title, items, total }: { title: string; items: FinanceEvent
           borderBottomColor: RULE,
         }}
       >
-        <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>{title}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
+          <Dot color={dot} />
+          <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>{title}</Text>
+        </View>
         <Text style={[nums, { fontSize: 16, fontWeight: "600", color: "#fff" }]}>{compact(total)}</Text>
       </View>
 
