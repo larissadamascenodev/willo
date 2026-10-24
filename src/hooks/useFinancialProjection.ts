@@ -28,12 +28,22 @@ export function useFinancialProjection() {
 
   // Per-month data for future months — streamed progressively
   const [monthDataMap, setMonthDataMap] = useState<Map<string, DashboardData>>(new Map());
+  /* Until every future month has arrived, the projection fills the gaps with the
+     three-month average and swaps each one for the real figure as it lands — so a
+     screen that draws straight away shows its numbers jumping several times. This
+     says when the jumping is over, for a screen that would rather wait. */
+  const [futureReady, setFutureReady] = useState(false);
   const loadingRef = useRef(false);
   const batchKeyRef = useRef("");
 
   // Load real data for future months progressively (no blocking)
   useEffect(() => {
-    if (!user || loading) return;
+    /* Without a session there is nothing ahead to wait for. */
+    if (!user) {
+      setFutureReady(true);
+      return;
+    }
+    if (loading) return;
     const batchKey = `${user.id}-${selectedMonth}-${selectedYear}`;
     if (loadingRef.current && batchKeyRef.current === batchKey) return;
     loadingRef.current = true;
@@ -41,6 +51,7 @@ export function useFinancialProjection() {
 
     // Reset map for new month selection
     setMonthDataMap(new Map());
+    setFutureReady(false);
 
     const months: { m: number; y: number }[] = [];
     for (let i = 1; i < 12; i++) {
@@ -48,27 +59,24 @@ export function useFinancialProjection() {
       months.push({ m: d.getMonth(), y: d.getFullYear() });
     }
 
-    // Stream results as they arrive — each month updates the map immediately
-    for (const { m, y } of months) {
-      buildDashboardData(m, y, { includeHistorical: false, userId: user.id })
-        .then((result) => {
-          if (batchKeyRef.current !== batchKey) return;
-          setMonthDataMap((prev) => {
-            const next = new Map(prev);
-            next.set(`${m}-${y}`, result);
-            return next;
-          });
-        })
-        .catch(() => {});
-    }
+    // Stream results as they arrive — each month updates the map immediately.
+    // Each month is fetched once; the same requests are what "all settled" waits
+    // on, rather than asking the database for every month a second time.
+    const requests = months.map(({ m, y }) =>
+      buildDashboardData(m, y, { includeHistorical: false, userId: user.id }).then((result) => {
+        if (batchKeyRef.current !== batchKey) return;
+        setMonthDataMap((prev) => {
+          const next = new Map(prev);
+          next.set(`${m}-${y}`, result);
+          return next;
+        });
+      }),
+    );
 
-    // Mark loading done after all settle
-    Promise.allSettled(
-      months.map(({ m, y }) =>
-        buildDashboardData(m, y, { includeHistorical: false, userId: user.id })
-      )
-    ).then(() => {
-      if (batchKeyRef.current === batchKey) loadingRef.current = false;
+    Promise.allSettled(requests).then(() => {
+      if (batchKeyRef.current !== batchKey) return;
+      loadingRef.current = false;
+      setFutureReady(true);
     });
   }, [user, loading, selectedMonth, selectedYear]);
 
@@ -134,5 +142,8 @@ export function useFinancialProjection() {
     /** A whole month's data, keyed "month-year", for the months ahead. Already
         fetched to build the projection, so reading it costs nothing more. */
     monthData: monthDataMap,
+    /** Every month ahead has arrived, so the projection is real figures and no
+        longer the average standing in for them. */
+    futureReady,
   };
 }
