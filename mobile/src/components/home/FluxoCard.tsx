@@ -1,4 +1,4 @@
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
@@ -16,9 +16,17 @@ const MONTHS = [
  * The month as the two flows that make it.
  *
  * Both bars share one scale, so their lengths answer the only question that matters
- * here — which side is bigger — before the figures are read, and the balance above is
- * just their difference. The sentence under it is the verdict the bars cannot draw:
- * two near-equal lengths look fine until you are told they are 94%.
+ * here — which side is bigger — before the figures are read. The sentence above them
+ * is the verdict the bars cannot draw: two near-equal lengths look fine until you are
+ * told they are 94%.
+ *
+ * What is left over sits small at the foot rather than large at the top. The balance
+ * in the accounts is the big number on this screen, and a second figure the same size
+ * a card below read as a rival to it — two answers to the question of how much you
+ * have, when only one of them is that.
+ *
+ * The whole card is one way in, to the cash-flow screen, where this month is taken
+ * apart in full.
  */
 export default function FluxoCard({
   receitas,
@@ -47,47 +55,26 @@ export default function FluxoCard({
           : `Você gastou ${pct}% do que entrou em ${monthLabel}.`;
 
   return (
-    <Surface style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 }}>
-      <Pressable
-        onPress={() => router.push("/fluxo-de-caixa" as never)}
-        style={({ pressed }) => ({
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          opacity: pressed ? 0.7 : 1,
-        })}
-      >
+    <Surface
+      onPress={() => router.push("/fluxo-de-caixa" as never)}
+      style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <Text numberOfLines={1} style={[T.cardLabel, { flex: 1 }]}>
           Receitas e despesas <Text style={{ color: INK.faint }}>·</Text>{" "}
           {isCurrentMonth ? "este mês" : "no mês"}
         </Text>
         <ChevronRight size={16} color={INK.faint} />
-      </Pressable>
+      </View>
 
-      {/* The balance leads, because it is the answer; the sentence explains it. */}
-      <Text numberOfLines={1} style={[T.figure, { marginTop: 4 }, balanco < 0 && { color: RED }]}>
-        {balanco > 0 ? "+" : ""}
-        {money(balanco)}
+      {/* The verdict leads now that the leftover no longer does. */}
+      <Text style={{ marginTop: 8, fontSize: 15, lineHeight: 20, fontWeight: "500", color: "rgba(255,255,255,0.88)" }}>
+        {verdict}
       </Text>
-      <Text style={[T.note, { marginTop: 8 }]}>{verdict}</Text>
 
       <View style={{ marginTop: 16, gap: 14 }}>
-        <Flow
-          label="Entrada"
-          amount={receitas}
-          scale={scale}
-          inflow
-          delay={0.05}
-          onPress={() => router.push("/detalhe/receitas" as never)}
-        />
-        <Flow
-          label="Saída"
-          amount={despesas}
-          scale={scale}
-          delay={0.12}
-          onPress={() => router.push("/detalhe/despesas" as never)}
-        />
+        <Flow label="Entrada" amount={receitas} scale={scale} inflow delay={0.05} />
+        <Flow label="Saída" amount={despesas} scale={scale} delay={0.12} />
       </View>
 
       <View
@@ -102,8 +89,12 @@ export default function FluxoCard({
           gap: 12,
         }}
       >
-        <Text style={{ fontSize: 12.5, color: INK.soft }}>
-          {receitas > 0 ? `${pct}% do que entrou já saiu` : "Nada entrou neste mês"}
+        <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: INK.soft }}>
+          Sobra do mês{" "}
+          <Text style={{ fontSize: 13.5, fontWeight: "700", color: balanco < 0 ? RED : "#fff" }}>
+            {balanco > 0 ? "+" : ""}
+            {money(balanco)}
+          </Text>
         </Text>
         <Text style={{ fontSize: 12.5, color: INK.softer }}>ver fluxo de caixa</Text>
       </View>
@@ -111,24 +102,22 @@ export default function FluxoCard({
   );
 }
 
-/** One of the two flows. Tapping it opens that side of the month in full. */
+/** One of the two flows. */
 function Flow({
   label,
   amount,
   scale,
   inflow,
   delay,
-  onPress,
 }: {
   label: string;
   amount: number;
   scale: number;
   inflow?: boolean;
   delay: number;
-  onPress?: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+    <View>
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
         <Text style={{ fontSize: 14, fontWeight: "500", color: "#fff" }}>{label}</Text>
         <Text style={{ fontSize: 14.5, fontWeight: "600", color: inflow ? "#fff" : RED }}>
@@ -151,6 +140,6 @@ function Flow({
           delay={delay}
         />
       </View>
-    </Pressable>
+    </View>
   );
 }
