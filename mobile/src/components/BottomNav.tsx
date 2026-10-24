@@ -33,21 +33,27 @@ const FLOAT = {
   borderColor: "rgba(255,255,255,0.08)",
 } as const;
 
-/* Only the three things the bar actually reads. Typed here rather than imported,
+/* Only the two things the bar actually reads. Typed here rather than imported,
    because the navigator ships inside expo-router and its package is not a dependency
-   of ours to reach into. */
+   of ours to reach into. Since SDK 58 the navigator moves between tabs by a route's
+   key rather than its name, so the bar looks the key up from the name it knows. */
 interface TabBarProps {
-  state: { index: number; routes: { name: string }[] };
-  navigation: { navigate: (name: never) => void };
+  state: { index: number; routes: { key: string; name: string }[] };
+  navigateToTab: (routeKey: string) => void;
 }
 
-export default function BottomNav({ state, navigation }: TabBarProps) {
+export default function BottomNav({ state, navigateToTab }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { collapsed, holdOpen } = useNavChrome();
   const router = useRouter();
 
   const active = state.routes[state.index]?.name ?? "index";
+
+  const open = (name: string) => {
+    const key = state.routes.find((r) => r.name === name)?.key;
+    if (key) navigateToTab(key);
+  };
   const shown = collapsed ? ITEMS.slice(0, 1) : ITEMS;
 
   const end = collapsed ? 50 : 58;
@@ -59,7 +65,7 @@ export default function BottomNav({ state, navigation }: TabBarProps) {
       holdOpen();
       return;
     }
-    navigation.navigate(name as never);
+    open(name);
   };
 
   return (
@@ -189,7 +195,7 @@ export default function BottomNav({ state, navigation }: TabBarProps) {
         )}
 
         <Pressable
-          onPress={() => navigation.navigate("assistente" as never)}
+          onPress={() => open("assistente")}
           accessibilityLabel="Willo"
           style={({ pressed }) => ({
             width: end,

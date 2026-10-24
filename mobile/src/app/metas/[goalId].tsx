@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -109,7 +109,7 @@ export default function MetaDetalhe() {
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
 
-  const dots = useRef<View>(null);
+  const dots = useRef<ComponentRef<typeof View>>(null);
   const [menu, setMenu] = useState<AnchorRect | null>(null);
   const [moving, setMoving] = useState<"deposito" | "saque" | null>(null);
   const [editing, setEditing] = useState(false);

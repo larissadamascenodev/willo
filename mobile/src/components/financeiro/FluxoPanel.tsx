@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import Animated, { Easing, FadeInDown, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
@@ -86,7 +86,7 @@ export default function FluxoPanel() {
   const [subTab, setSubTab] = useState<SubTab>("geral");
   const [period, setPeriod] = useState<CashFlowPeriod>("mes");
   const [hidden, setHidden] = useState(false);
-  const strip = useRef<ScrollView>(null);
+  const strip = useRef<ComponentRef<typeof ScrollView>>(null);
 
   const inPeriod = useMemo(() => {
     const from = toDateKey(periodStart(period));

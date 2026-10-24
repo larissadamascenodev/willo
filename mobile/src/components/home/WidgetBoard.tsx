@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type ComponentRef } from "react";
 import { Pressable, Text, View } from "react-native";
 import Animated, {
   FadeIn,
@@ -368,7 +368,7 @@ function WidgetFrame({
   onRemove: () => void;
   registerFrame: (id: string, box: { x: number; y: number; w: number; h: number } | null) => void;
 }) {
-  const box = useRef<View>(null);
+  const box = useRef<ComponentRef<typeof View>>(null);
   const def = widgetById(slot.id);
   /* A widget decides for itself whether it has anything to say, and several answer
      by drawing nothing at all. The board cannot read that from the element it was

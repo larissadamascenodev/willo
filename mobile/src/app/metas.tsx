@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -48,7 +48,7 @@ export default function Metas() {
   const [menu, setMenu] = useState<{ goal: Goal; rect: AnchorRect } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const dots = useRef<Record<string, View | null>>({});
+  const dots = useRef<Record<string, ComponentRef<typeof View> | null>>({});
 
   const load = useCallback(async () => {
     if (!user) {

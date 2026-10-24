@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, type ComponentRef } from "react";
 import { Pressable, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { shade, withAlpha } from "@/lib/tone";
@@ -62,7 +62,7 @@ export default function CardFaceTile({
   onOpen: () => void;
   onHold: (rect: { top: number; bottom: number; left: number; width: number }) => void;
 }) {
-  const box = useRef<View>(null);
+  const box = useRef<ComponentRef<typeof View>>(null);
   const usedPct = card.limit > 0 ? Math.min((card.used / card.limit) * 100, 100) : 0;
   const available = Math.max(card.limit - card.used, 0);
   const freeTone = shade(hex, 0.58);

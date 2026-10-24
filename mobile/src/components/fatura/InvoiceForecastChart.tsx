@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, type ComponentRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import MaskedViewFallback from "react-native";
 import { shade } from "@/lib/tone";
@@ -61,7 +61,7 @@ export default function InvoiceForecastChart({
   /** The card's own colour: this strip is about one card, so it wears it. */
   hex: string;
 }) {
-  const scroller = useRef<ScrollView>(null);
+  const scroller = useRef<ComponentRef<typeof ScrollView>>(null);
   const parked = useRef(false);
 
   const { bars, openPeriod, committed, lastLabel } = useMemo(() => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -65,7 +65,7 @@ export default function Fatura() {
   const [loading, setLoading] = useState(true);
   const [openLine, setOpenLine] = useState<InvoiceLine | null>(null);
   const [menuAt, setMenuAt] = useState<AnchorRect | null>(null);
-  const dotsRef = useRef<View>(null);
+  const dotsRef = useRef<ComponentRef<typeof View>>(null);
 
   const load = useCallback(async () => {
     if (!cardId || !user) {

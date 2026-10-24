@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, type ComponentRef } from "react";
 import { Pressable, Text, View } from "react-native";
 import { categoryHex } from "@/lib/categoryData";
 import { categoryIcon } from "~/lib/categoryIcon";
@@ -38,7 +38,7 @@ export default function TransactionRow({
   onPress?: () => void;
   onHold?: (rect: { top: number; bottom: number; left: number; width: number }) => void;
 }) {
-  const box = useRef<View>(null);
+  const box = useRef<ComponentRef<typeof View>>(null);
 
   const isReceita = tx.type === "receita";
   const isFatura = tx.id.startsWith("fatura-");
