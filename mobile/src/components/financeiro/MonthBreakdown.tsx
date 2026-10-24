@@ -1,6 +1,6 @@
-import { Text, View } from "react-native";
+import { Platform, Text, View, type TextStyle } from "react-native";
 import { compact } from "~/lib/money";
-import { GREEN, INK, RED } from "~/theme/tokens";
+import { INK, RED } from "~/theme/tokens";
 
 /**
  * The month as the two sums it actually is.
@@ -8,7 +8,18 @@ import { GREEN, INK, RED } from "~/theme/tokens";
  * What moved this month gives the leftover, and that plus what was left of last
  * month gives the close. The rules sit where an equals sign would, which is what
  * makes it read as a ledger rather than as a list of five rows.
+ *
+ * Every figure is white; one turns red only when it is below zero, because that is
+ * the only thing in a ledger worth raising a voice for.
  */
+
+const nums: TextStyle = Platform.select({
+  ios: { fontVariant: ["tabular-nums"] },
+  default: {},
+}) as TextStyle;
+
+const value = (v: number) => `${v < 0 ? "−" : ""}${compact(Math.abs(v))}`;
+
 export default function MonthBreakdown({
   row,
   prevName,
@@ -23,68 +34,53 @@ export default function MonthBreakdown({
     name: string;
   };
   prevName: string;
-  /** Off in Balanço, which reports a month on its own; Projeções chains them. */
+  /** Off for a month reported on its own; on when months chain into each other. */
   carry?: boolean;
 }) {
   const total = carry ? row.fecha : row.sobra;
   const totalLabel = carry
-    ? `Fecha ${row.name.toLocaleLowerCase("pt-BR")} com`
-    : `Balanço de ${row.name.toLocaleLowerCase("pt-BR")}`;
+    ? `Saldo no fim de ${row.name.toLocaleLowerCase("pt-BR")}`
+    : `Sobra de ${row.name.toLocaleLowerCase("pt-BR")}`;
 
   return (
-    <View style={{ marginTop: 18 }}>
-      <Line label="Entra" value={row.income} />
-      <Line label="Sai" value={-row.expense} />
+    <View style={{ marginTop: 22 }}>
+      <Line label="Entra" amount={row.income} />
+      <Line label="Sai" amount={-row.expense} />
 
       {carry && (
         <>
-          <View style={{ borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.09)", paddingTop: 2 }}>
-            <Line label="Sobra do mês" value={row.sobra} strong result />
+          <View style={{ borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)" }}>
+            <Line label="Sobra do mês" amount={row.sobra} strong />
           </View>
-          <View style={{ marginTop: 8 }}>
-            <Line label={`Sobra de ${prevName.toLocaleLowerCase("pt-BR")}`} value={row.prevBalance} />
-          </View>
+          <Line label={`Saldo de ${prevName.toLocaleLowerCase("pt-BR")}`} amount={row.prevBalance} />
         </>
       )}
 
       <View
         style={{
-          marginTop: 2,
+          marginTop: 4,
           flexDirection: "row",
           alignItems: "baseline",
           justifyContent: "space-between",
           gap: 16,
           borderTopWidth: 1,
-          borderTopColor: "rgba(255,255,255,0.16)",
+          borderTopColor: "rgba(255,255,255,0.18)",
           paddingTop: 14,
         }}
       >
-        <Text style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: "600", color: "#fff" }}>
-          {totalLabel}
-        </Text>
+        <Text style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: "600", color: "#fff" }}>{totalLabel}</Text>
         <Text
           numberOfLines={1}
-          style={{ fontSize: 19, fontWeight: "800", letterSpacing: -0.4, color: total < 0 ? RED : GREEN }}
+          style={[nums, { fontSize: 20, fontWeight: "700", letterSpacing: -0.4, color: total < 0 ? RED : "#fff" }]}
         >
-          {total > 0 ? "+" : ""}
-          {compact(total)}
+          {value(total)}
         </Text>
       </View>
     </View>
   );
 }
 
-function Line({
-  label,
-  value,
-  strong = false,
-  result = false,
-}: {
-  label: string;
-  value: number;
-  strong?: boolean;
-  result?: boolean;
-}) {
+function Line({ label, amount, strong = false }: { label: string; amount: number; strong?: boolean }) {
   return (
     <View
       style={{
@@ -92,7 +88,7 @@ function Line({
         alignItems: "baseline",
         justifyContent: "space-between",
         gap: 16,
-        paddingVertical: 9,
+        paddingVertical: 11,
       }}
     >
       <Text
@@ -100,7 +96,7 @@ function Line({
         style={{
           flex: 1,
           minWidth: 0,
-          fontSize: 13,
+          fontSize: 14.5,
           fontWeight: strong ? "600" : "400",
           color: strong ? "#fff" : INK.soft,
         }}
@@ -108,14 +104,16 @@ function Line({
         {label}
       </Text>
       <Text
-        style={{
-          fontSize: 14,
-          fontWeight: strong ? "700" : "600",
-          color: result ? (value < 0 ? RED : GREEN) : "#fff",
-        }}
+        style={[
+          nums,
+          {
+            fontSize: 15,
+            fontWeight: strong ? "700" : "500",
+            color: strong && amount < 0 ? RED : "#fff",
+          },
+        ]}
       >
-        {value > 0 && result ? "+" : ""}
-        {compact(value)}
+        {value(amount)}
       </Text>
     </View>
   );
