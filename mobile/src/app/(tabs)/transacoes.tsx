@@ -3,6 +3,8 @@ import { ActivityIndicator, RefreshControl, ScrollView, Text, TextInput, View } 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { loadMonthTransactions, type AccountRow, type TransactionRow as Row } from "@/services/monthTransactions";
+import { useMonth } from "@/contexts/MonthContext";
+import MonthStrip from "~/components/MonthStrip";
 import type { CustomCategory } from "@/services/categoryService";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import Room from "~/components/Room";
@@ -31,7 +33,6 @@ import { type as T } from "~/theme/type";
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MONTHS_SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-const MONTHS_TAB = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 const formatDateHeader = (dateStr: string, today = new Date()) => {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -48,8 +49,9 @@ export default function Transacoes() {
   const { report } = useNavChrome();
   const today = useMemo(() => new Date(), []);
 
-  const [month, setMonth] = useState(today.getMonth());
-  const [year, setYear] = useState(today.getFullYear());
+  /* The month is the app's, not this screen's: chosen here, it is the month the
+     dashboard and the analysis screens read too, as on the web. */
+  const { selectedMonth: month, selectedYear: year, setMonth } = useMonth();
   const [tab, setTab] = useState<"todos" | "receita" | "despesa">("todos");
   const [search, setSearch] = useState("");
 
@@ -150,33 +152,7 @@ export default function Transacoes() {
       >
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <Text style={T.title}>Transações</Text>
-          <View style={{ flexDirection: "row", gap: 4 }}>
-            {[-1, 0, 1].map((offset) => {
-              const d = new Date(today.getFullYear(), today.getMonth() + offset, 1);
-              const on = d.getMonth() === month && d.getFullYear() === year;
-              return (
-                <Text
-                  key={offset}
-                  onPress={() => {
-                    setMonth(d.getMonth());
-                    setYear(d.getFullYear());
-                  }}
-                  style={{
-                    paddingHorizontal: 11,
-                    paddingVertical: 6,
-                    borderRadius: 999,
-                    fontSize: 12.5,
-                    fontWeight: "600",
-                    overflow: "hidden",
-                    backgroundColor: on ? "#fff" : "transparent",
-                    color: on ? "#0B0B0B" : INK.softer,
-                  }}
-                >
-                  {MONTHS_TAB[d.getMonth()]}
-                </Text>
-              );
-            })}
-          </View>
+          <MonthStrip month={month} year={year} onChange={setMonth} />
         </View>
 
         <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 18 }}>
