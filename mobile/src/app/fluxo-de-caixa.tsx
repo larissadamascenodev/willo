@@ -3,6 +3,7 @@ import { ScrollView, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn } from "react-native-reanimated";
+import { useFinancialProjection } from "@/hooks/useFinancialProjection";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import SegmentedTabs from "~/components/SegmentedTabs";
@@ -23,6 +24,10 @@ type Tool = "fluxo" | "balanco" | "projecoes";
 export default function FluxoDeCaixa() {
   const { tool: initial } = useLocalSearchParams<{ tool?: string }>();
   const insets = useSafeAreaInsets();
+  /* One projection for the screen, not one per tab: it starts loading while you
+     are still on Fluxo, and switching between Balanço and Projeções no longer asks
+     for twelve months all over again. */
+  const projection = useFinancialProjection();
   const [tool, setTool] = useState<Tool>(
     initial === "balanco" || initial === "projecoes" ? initial : "fluxo",
   );
@@ -57,8 +62,10 @@ export default function FluxoDeCaixa() {
             tells you the question changed and not just the numbers. */}
         <Animated.View key={tool} entering={FadeIn.duration(180)}>
           {tool === "fluxo" && <FluxoPanel />}
-          {tool === "balanco" && <BalancoPanel onOpenProjecoes={() => setTool("projecoes")} />}
-          {tool === "projecoes" && <ProjecoesPanel />}
+          {tool === "balanco" && (
+            <BalancoPanel projection={projection} onOpenProjecoes={() => setTool("projecoes")} />
+          )}
+          {tool === "projecoes" && <ProjecoesPanel projection={projection} />}
         </Animated.View>
       </ScrollView>
     </Room>

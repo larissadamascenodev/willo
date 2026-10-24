@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import Animated, { Easing, FadeInDown, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
-import { useFinancialProjection } from "@/hooks/useFinancialProjection";
+import type { useFinancialProjection } from "@/hooks/useFinancialProjection";
 import {
   buildProjectionRows,
   MONTH_NAMES,
@@ -66,9 +66,13 @@ function Column({
   );
 }
 
-export default function ProjecoesPanel() {
+export default function ProjecoesPanel({
+  projection,
+}: {
+  projection: ReturnType<typeof useFinancialProjection>;
+}) {
   const router = useRouter();
-  const { projections, data, loading, monthData } = useFinancialProjection();
+  const { projections, data, loading, futureReady, monthData } = projection;
   const [selected, setSelected] = useState(0);
   const [open, setOpen] = useState<ProjectionRowView | null>(null);
 
@@ -77,7 +81,7 @@ export default function ProjecoesPanel() {
     [projections, data.previousMonthEndingBalance],
   );
 
-  if (loading) {
+  if (loading || !futureReady) {
     return (
       <View style={{ marginTop: 20, gap: 12 }}>
         <View style={{ height: 180, borderRadius: 26, backgroundColor: "rgba(255,255,255,0.04)" }} />

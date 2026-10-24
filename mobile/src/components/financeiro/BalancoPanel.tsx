@@ -1,30 +1,46 @@
 import { useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
-import { useFinancialProjection } from "@/hooks/useFinancialProjection";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import type { useFinancialProjection } from "@/hooks/useFinancialProjection";
 import { buildProjectionRows, MONTH_NAMES, type ProjectionRowView } from "@/lib/projectionRows";
 import type { DashboardData, FinanceEvent } from "@/types/finance";
-import Surface from "~/components/Surface";
-import Bar, { FlexBar } from "~/components/Bar";
+import Surface, { Hairline } from "~/components/Surface";
+import Bar from "~/components/Bar";
 import BottomSheet from "~/components/BottomSheet";
-import MonthBreakdown from "~/components/financeiro/MonthBreakdown";
-import { ChevronRight, Info, X } from "~/components/icons";
+import { ChevronRight, X } from "~/components/icons";
 import { compact, money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
 
 /**
- * How the month is closing.
+ * How this month closes.
  *
- * The dashboard card already says the verdict in a sentence, so repeating it here
- * would waste the screen: this shows how the month is built, how far through it you
- * are, and where the months after it land.
+ * One question, answered in the order it is asked. First the answer: what the month
+ * will leave once everything planned for it has happened. Then the part of that which
+ * has already happened, because "deve fechar com" means little without "até agora"
+ * beside it. Then where it comes from — what comes in and what goes out, each split
+ * into what has moved and what is still due, on one scale so the two lengths compare
+ * before the figures are read. The months after this one are a short list at the
+ * foot; following the balance from one month into the next is what Projeções is for.
  *
- * Each month ahead is drawn as the two bars it is made of rather than as its result
- * alone, on one shared scale — the month that fails is the one whose lower bar runs
- * past the upper one, and you see which and why in the same glance.
+ * Nothing is drawn until its figure is final. The months ahead arrive one at a time
+ * and are stood in for by an average until they do, so drawing them straight away
+ * meant numbers that changed several times before settling.
  */
-export default function BalancoPanel({ onOpenProjecoes }: { onOpenProjecoes: () => void }) {
-  const { projections, data, loading, selectedMonth, selectedYear, monthData } = useFinancialProjection();
+
+type Projection = ReturnType<typeof useFinancialProjection>;
+
+const AHEAD = 3;
+
+const signed = (v: number) => `${v > 0 ? "+" : ""}${compact(v)}`;
+
+export default function BalancoPanel({
+  projection,
+  onOpenProjecoes,
+}: {
+  projection: Projection;
+  onOpenProjecoes: () => void;
+}) {
+  const { data, loading, futureReady, projections, monthData, selectedMonth, selectedYear } = projection;
   const [open, setOpen] = useState<ProjectionRowView | null>(null);
 
   const rows = useMemo(
@@ -32,232 +48,178 @@ export default function BalancoPanel({ onOpenProjecoes }: { onOpenProjecoes: () 
     [projections, data.previousMonthEndingBalance],
   );
 
-  if (loading || rows.length === 0) {
-    return (
-      <View style={{ marginTop: 20, gap: 12 }}>
-        <View style={{ height: 260, borderRadius: 26, backgroundColor: "rgba(255,255,255,0.04)" }} />
-        <View style={{ height: 130, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.04)" }} />
-      </View>
-    );
-  }
+  if (loading) return <Skeleton />;
 
-  const [current, ...ahead] = rows;
   const now = new Date();
-  const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-  const isCurrentMonth = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
+  const isCurrent = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
   const isPast =
     selectedYear < now.getFullYear() ||
     (selectedYear === now.getFullYear() && selectedMonth < now.getMonth());
-  const dayOfMonth = isCurrentMonth ? now.getDate() : daysInMonth;
-  const daysLeft = daysInMonth - dayOfMonth;
+  const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+  const daysLeft = isCurrent ? daysInMonth - now.getDate() : 0;
+  const monthName = MONTH_NAMES[selectedMonth];
 
-  const spent =
-    current.income > 0
-      ? Math.min((current.expense / current.income) * 100, 100)
-      : current.expense > 0
-        ? 100
-        : 0;
-  /* The month on its own: what came in less what went out. What last month left over
-     belongs to the running balance, which is what Projeções is for. */
-  const perDay = daysLeft > 0 ? current.sobra / daysLeft : 0;
+  const sobra = data.receitas - data.despesas;
+  const ateAgora = data.receitasRecebidas - data.despesasPagas;
+  /* One scale for both sides, so the lengths answer which is bigger before the
+     figures are read. */
+  const scale = Math.max(data.receitas, data.despesas, 1);
 
-  const aheadRows = rows.slice(1, 7);
-  /* One scale for the whole stack, taken from the largest side of any month shown,
-     so a bar means the same length in every card. */
-  const aheadScale = Math.max(...aheadRows.flatMap((r) => [r.income, r.expense]), 1);
+  const ahead = rows.slice(1, 1 + AHEAD);
 
   return (
-    <View style={{ marginTop: 18 }}>
-      <Animated.View entering={FadeInDown.duration(400)}>
-        <Surface radius={26} style={{ paddingHorizontal: 18, paddingTop: 16, paddingBottom: 18 }}>
-          <Text
-            style={{
-              fontSize: 11.5,
-              fontWeight: "600",
-              letterSpacing: 1.3,
-              textTransform: "uppercase",
-              color: INK.soft,
-            }}
-          >
-            {isPast ? "Balanço final" : isCurrentMonth ? "Balanço parcial" : "Balanço previsto"} ·{" "}
-            {current.name}
-          </Text>
+    <View style={{ marginTop: 24 }}>
+      {/* ══ The answer ══ */}
+      <Animated.View entering={FadeInDown.duration(380)} style={{ paddingHorizontal: 4 }}>
+        <Text style={{ fontSize: 14, color: INK.soft }}>
+          {monthName} {isPast ? "fechou com" : "deve fechar com"}
+        </Text>
+        <Text
+          numberOfLines={1}
+          style={{
+            marginTop: 4,
+            fontSize: 44,
+            fontWeight: "800",
+            letterSpacing: -1.6,
+            color: sobra < 0 ? RED : GREEN,
+          }}
+        >
+          {signed(sobra)}
+        </Text>
 
-          <Text
-            numberOfLines={1}
-            style={{
-              marginTop: 12,
-              fontSize: 40,
-              fontWeight: "800",
-              letterSpacing: -1.4,
-              color: current.sobra < 0 ? RED : GREEN,
-            }}
-          >
-            {current.sobra > 0 ? "+" : ""}
-            {compact(current.sobra)}
-          </Text>
-          <Text style={{ marginTop: 6, fontSize: 12.5, color: INK.soft }}>
-            {current.sobra < 0 ? "faltando no mês" : "sobrando no mês"}
-            {isCurrentMonth && daysLeft > 0 ? ` · ${compact(perDay)} por dia até o fim` : ""}
-          </Text>
+        <Text style={{ marginTop: 6, fontSize: 13.5, color: INK.soft }}>
+          {isPast ? (
+            "Mês encerrado."
+          ) : (
+            <>
+              Até agora{" "}
+              <Text style={{ fontWeight: "700", color: ateAgora < 0 ? RED : "#fff" }}>{signed(ateAgora)}</Text>
+              {isCurrent ? ` · faltam ${daysLeft} ${daysLeft === 1 ? "dia" : "dias"}` : ""}
+            </>
+          )}
+        </Text>
 
-          {/* The month split in two rather than a track being eaten: spending grows
-              the red by exactly as much as it shrinks the green. */}
-          <View style={{ marginTop: 16, flexDirection: "row", height: 6, gap: 3 }}>
-            <FlexBar
-              share={Math.max(spent, current.expense > 0 ? 3 : 0) / 100}
-              color={RED}
-              minWidth={0}
-              delay={0.08}
-            />
-            <FlexBar
-              share={Math.max(100 - spent, current.sobra > 0 ? 3 : 0) / 100}
-              color={GREEN}
-              minWidth={0}
-              delay={0.08}
-            />
-          </View>
-
-          <MonthBreakdown
-            row={current}
-            prevName={MONTH_NAMES[(current.month + 11) % 12]}
-            carry={false}
-          />
-        </Surface>
-      </Animated.View>
-
-      {isCurrentMonth && (
-        <Animated.View entering={FadeInDown.delay(60).duration(400)}>
-          <Surface radius={22} style={{ marginTop: 10, paddingHorizontal: 18, paddingVertical: 16 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-              <Text
-                style={{
-                  fontSize: 11.5,
-                  fontWeight: "600",
-                  letterSpacing: 1.3,
-                  textTransform: "uppercase",
-                  color: INK.soft,
-                }}
-              >
-                Mês em andamento
-              </Text>
-              <Text style={{ fontSize: 12, color: INK.soft }}>
-                {daysLeft} {daysLeft === 1 ? "dia restante" : "dias restantes"}
-              </Text>
-            </View>
-            {/* One tick per day, so the month's shape is a thing you can see rather
-                than a number you have to subtract. */}
-            <View style={{ marginTop: 12, flexDirection: "row", gap: 2 }}>
-              {Array.from({ length: daysInMonth }, (_, d) => (
-                <View
-                  key={d}
-                  style={{
-                    flex: 1,
-                    height: 14,
-                    borderRadius: 2,
-                    backgroundColor:
-                      d + 1 < dayOfMonth
-                        ? "rgba(255,255,255,0.45)"
-                        : d + 1 === dayOfMonth
-                          ? "#fff"
-                          : "rgba(255,255,255,0.07)",
-                  }}
-                />
-              ))}
-            </View>
-          </Surface>
-        </Animated.View>
-      )}
-
-      {ahead.length > 0 && (
-        <>
+        {/* How far through the month, as a length rather than a count of days. */}
+        {isCurrent && (
           <View
             style={{
-              marginTop: 26,
+              marginTop: 14,
+              height: 4,
+              borderRadius: 999,
+              overflow: "hidden",
+              backgroundColor: "rgba(255,255,255,0.07)",
+            }}
+          >
+            <Bar share={now.getDate() / daysInMonth} color="rgba(255,255,255,0.55)" delay={0.1} />
+          </View>
+        )}
+      </Animated.View>
+
+      {/* ══ Where it comes from ══ */}
+      <Animated.View entering={FadeInDown.delay(60).duration(400)}>
+        <Surface radius={24} style={{ marginTop: 24, padding: 18 }}>
+          <FlowRow
+            label="Entradas"
+            total={data.receitas}
+            moved={data.receitasRecebidas}
+            due={data.receitasPendentes}
+            movedWord="recebido"
+            dueWord="a receber"
+            scale={scale}
+            color={GREEN}
+            delay={0.12}
+          />
+          <View style={{ height: 18 }} />
+          <FlowRow
+            label="Saídas"
+            total={data.despesas}
+            moved={data.despesasPagas}
+            due={data.despesasPendentes}
+            movedWord="pago"
+            dueWord="a pagar"
+            scale={scale}
+            color={RED}
+            delay={0.18}
+          />
+
+          <Hairline style={{ marginTop: 18 }} />
+          <View
+            style={{
+              marginTop: 14,
               flexDirection: "row",
               alignItems: "baseline",
               justifyContent: "space-between",
               gap: 12,
-              paddingHorizontal: 4,
             }}
           >
-            <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>
-              Balanço dos próximos meses
-            </Text>
-            <Pressable onPress={onOpenProjecoes} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-              <Text style={{ fontSize: 12.5, fontWeight: "600", color: INK.soft }}>Ver tudo</Text>
-            </Pressable>
-          </View>
-
-          <View style={{ marginTop: 12, gap: 8 }}>
-            {aheadRows.map((r, i) => {
-              const negative = r.sobra < 0;
-              return (
-                <Animated.View key={`${r.year}-${r.month}`} entering={FadeInDown.delay(80 + i * 40).duration(380)}>
-                  <Pressable
-                    onPress={() => setOpen(r)}
-                    style={({ pressed }) => ({
-                      borderRadius: 20,
-                      borderWidth: 1,
-                      borderColor: negative ? "rgba(248,113,113,0.22)" : "rgba(255,255,255,0.07)",
-                      backgroundColor: "rgba(255,255,255,0.062)",
-                      paddingHorizontal: 16,
-                      paddingTop: 14,
-                      paddingBottom: 16,
-                      opacity: pressed ? 0.8 : 1,
-                    })}
-                  >
-                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                      <Text
-                        numberOfLines={1}
-                        style={{
-                          flex: 1,
-                          minWidth: 0,
-                          fontSize: 11,
-                          fontWeight: "600",
-                          letterSpacing: 1.4,
-                          textTransform: "uppercase",
-                          color: INK.softer,
-                        }}
-                      >
-                        {r.name}
-                        {r.yearTag ? ` ${r.yearTag}` : ""}
-                      </Text>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                        <Text
-                          style={{
-                            fontSize: 19,
-                            fontWeight: "800",
-                            letterSpacing: -0.6,
-                            color: negative ? RED : "#fff",
-                          }}
-                        >
-                          {r.sobra > 0 ? "+" : ""}
-                          {compact(r.sobra)}
-                        </Text>
-                        <ChevronRight size={14} color="rgba(255,255,255,0.25)" />
-                      </View>
-                    </View>
-
-                    <View style={{ marginTop: 14, gap: 7 }}>
-                      <ScaleBar label="Entra" value={r.income} scale={aheadScale} color={GREEN} delay={0.04 * i} />
-                      <ScaleBar label="Sai" value={r.expense} scale={aheadScale} color={RED} delay={0.04 * i + 0.03} />
-                    </View>
-                  </Pressable>
-                </Animated.View>
-              );
-            })}
-          </View>
-
-          <View style={{ marginTop: 16, flexDirection: "row", gap: 8, paddingHorizontal: 4 }}>
-            <Info size={14} color={INK.softer} style={{ marginTop: 2 }} />
-            <Text style={{ flex: 1, minWidth: 0, fontSize: 12, lineHeight: 17, color: INK.softer }}>
-              Cada mês conta só o que entra e sai nele, sem o que sobrou do anterior. Só o que já está
-              previsto entra na conta.
+            <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>Sobra do mês</Text>
+            <Text style={{ fontSize: 17, fontWeight: "800", letterSpacing: -0.3, color: sobra < 0 ? RED : GREEN }}>
+              {signed(sobra)}
             </Text>
           </View>
-        </>
+        </Surface>
+      </Animated.View>
+
+      {/* ══ The next few ══ */}
+      <View
+        style={{
+          marginTop: 28,
+          flexDirection: "row",
+          alignItems: "baseline",
+          justifyContent: "space-between",
+          gap: 12,
+          paddingHorizontal: 4,
+        }}
+      >
+        <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Próximos meses</Text>
+        <Pressable onPress={onOpenProjecoes} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+          <Text style={{ fontSize: 12.5, fontWeight: "600", color: INK.soft }}>Ver projeções</Text>
+        </Pressable>
+      </View>
+
+      {!futureReady ? (
+        <View style={{ marginTop: 12, height: 3 * 62, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.04)" }} />
+      ) : (
+        <Animated.View entering={FadeIn.duration(300)}>
+          <Surface radius={22} style={{ marginTop: 12 }}>
+            {ahead.map((r, i) => (
+              <View key={`${r.year}-${r.month}`}>
+                {i > 0 && <Hairline style={{ marginHorizontal: 16 }} />}
+                <Pressable
+                  onPress={() => setOpen(r)}
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 13,
+                    backgroundColor: pressed ? "rgba(255,255,255,0.04)" : "transparent",
+                  })}
+                >
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ fontSize: 15, fontWeight: "500", color: "#fff" }}>
+                      {r.name}
+                      {r.yearTag ? <Text style={{ color: INK.softer }}> {r.yearTag}</Text> : null}
+                    </Text>
+                    <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: INK.softer }}>
+                      entra {compact(r.income)} · sai {compact(r.expense)}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 15.5, fontWeight: "700", color: r.sobra < 0 ? RED : "#fff" }}>
+                    {signed(r.sobra)}
+                  </Text>
+                  <ChevronRight size={15} color={INK.faint} />
+                </Pressable>
+              </View>
+            ))}
+          </Surface>
+        </Animated.View>
       )}
+
+      <Text style={{ marginTop: 12, paddingHorizontal: 4, fontSize: 12, lineHeight: 17, color: INK.softer }}>
+        Cada mês aqui conta só o que entra e sai nele. O saldo que passa de um mês para o outro está
+        em Projeções.
+      </Text>
 
       <MonthSheet
         row={open}
@@ -268,49 +230,68 @@ export default function BalancoPanel({ onOpenProjecoes }: { onOpenProjecoes: () 
   );
 }
 
-/** A month's two inputs, on the scale shared by every month in the stack. */
-function ScaleBar({
+/**
+ * One side of the month: its total, and a bar where the solid part is what has
+ * already moved and the faint part what is still due.
+ */
+function FlowRow({
   label,
-  value,
+  total,
+  moved,
+  due,
+  movedWord,
+  dueWord,
   scale,
   color,
   delay,
 }: {
   label: string;
-  value: number;
+  total: number;
+  moved: number;
+  due: number;
+  movedWord: string;
+  dueWord: string;
   scale: number;
   color: string;
   delay: number;
 }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-      <Text
-        style={{
-          width: 38,
-          fontSize: 9.5,
-          fontWeight: "600",
-          letterSpacing: 0.9,
-          textTransform: "uppercase",
-          color: INK.faint,
-        }}
-      >
-        {label}
-      </Text>
+    <View>
+      <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+        <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{label}</Text>
+        <Text style={{ fontSize: 15.5, fontWeight: "700", color: "#fff" }}>{money(total)}</Text>
+      </View>
+
       <View
         style={{
-          flex: 1,
-          minWidth: 0,
-          height: 5,
+          marginTop: 10,
+          height: 8,
+          flexDirection: "row",
+          gap: 2,
           borderRadius: 999,
           overflow: "hidden",
           backgroundColor: "rgba(255,255,255,0.06)",
         }}
       >
-        <Bar share={Math.max(value / scale, 0.02)} color={color} delay={delay} />
+        <Bar share={moved / scale} color={color} delay={delay} />
+        <Bar share={due / scale} color={`${color}59`} delay={delay + 0.08} />
       </View>
-      <Text style={{ width: 66, textAlign: "right", fontSize: 11, fontWeight: "500", color: INK.softer }}>
-        {compact(value)}
+
+      <Text style={{ marginTop: 8, fontSize: 12, color: INK.soft }}>
+        {money(moved)} {movedWord}
+        <Text style={{ color: INK.faint }}> · </Text>
+        {money(due)} {dueWord}
       </Text>
+    </View>
+  );
+}
+
+function Skeleton() {
+  return (
+    <View style={{ marginTop: 24, gap: 14 }}>
+      <View style={{ height: 96, width: "70%", borderRadius: 18, backgroundColor: "rgba(255,255,255,0.04)" }} />
+      <View style={{ height: 210, borderRadius: 24, backgroundColor: "rgba(255,255,255,0.04)" }} />
+      <View style={{ height: 186, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.04)" }} />
     </View>
   );
 }
@@ -318,7 +299,7 @@ function ScaleBar({
 /**
  * What makes a month's balance, without having to go and change the month on another
  * screen to find out: everything coming in on one side, everything going out on the
- * other, and the two sums meeting at the bottom.
+ * other.
  */
 function MonthSheet({
   row,
@@ -360,7 +341,7 @@ function MonthSheet({
             </Pressable>
           </View>
 
-          <Text style={{ marginTop: 18, fontSize: 12.5, color: INK.soft }}>Balanço do mês</Text>
+          <Text style={{ marginTop: 18, fontSize: 12.5, color: INK.soft }}>Sobra do mês</Text>
           <Text
             numberOfLines={1}
             style={{
@@ -371,8 +352,7 @@ function MonthSheet({
               color: row.sobra < 0 ? RED : GREEN,
             }}
           >
-            {row.sobra > 0 ? "+" : ""}
-            {compact(row.sobra)}
+            {signed(row.sobra)}
           </Text>
 
           <EventList title="Entra" items={entradas} total={row.income} tone={GREEN} />
