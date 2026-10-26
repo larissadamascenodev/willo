@@ -1,12 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Platform, Pressable, ScrollView, Text, View, type TextStyle } from "react-native";
+import { Platform, ScrollView, Text, View, type TextStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
-import { categoryHex } from "@/lib/categoryData";
 import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import {
-  installmentByCategory,
   installmentProjection,
   installmentTotals,
   loadActiveInstallments,
@@ -15,11 +11,12 @@ import {
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
-import Bar, { FlexBar } from "~/components/Bar";
+import Bar from "~/components/Bar";
 import SegmentedTabs from "~/components/SegmentedTabs";
 import InstallmentPurchaseCard from "~/components/installments/InstallmentPurchaseCard";
-import { chipFill, chipInk } from "~/lib/chip";
-import { categoryIcon } from "~/lib/categoryIcon";
+import InstallmentChart from "~/components/installments/InstallmentChart";
+import InstallmentPayoffs from "~/components/installments/InstallmentPayoffs";
+import InstallmentCategories from "~/components/installments/InstallmentCategories";
 import { CalendarClock } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
@@ -32,25 +29,18 @@ import { type as T } from "~/theme/type";
  * The question this screen answers is not how much is owed — it is when it stops.
  * So it leads with what the instalments take out of a month and, right under it,
  * when that ends. Then the same figure taken apart, each part as a reading rather
- * than a box: how much of the debt is behind you, how the monthly amount falls
- * month by month — tap a month to see what is in it and what ends there, which is
- * why it falls — what categories it is made of, and the purchases themselves, each
- * paid off one tick at a time.
+ * than a box: how much of the debt is behind you. Then three cards — how the
+ * monthly amount falls month by month, what you finish paying in each month (which
+ * is why it falls), and what categories it is made of — the last two showing the
+ * start and opening the rest in the middle of the screen. Then the purchases
+ * themselves, each paid off one tick at a time.
  */
-
-const CHART_HEIGHT = 120;
-const RULE = "rgba(255,255,255,0.07)";
 
 const nums: TextStyle = Platform.select({
   ios: { fontVariant: ["tabular-nums"] },
   default: {},
 }) as TextStyle;
 
-const MONTHS = [
-  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
-  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
-];
-const shortMonth = (m: number) => MONTHS[m].slice(0, 3);
 const monthYear = (d: Date) =>
   d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(".", "").replace(" de ", " ");
 
@@ -102,8 +92,6 @@ export function ParcelamentosView({
   const list = items ?? [];
   const stats = useMemo(() => installmentTotals(list), [list]);
   const projection = useMemo(() => installmentProjection(list, stats?.monthsUntilFree ?? 12), [list, stats]);
-  const maxProjection = Math.max(...projection.map((p) => p.value), 1);
-  const categoryData = useMemo(() => installmentByCategory(list), [list]);
 
   const onCard = list.filter((i) => i.payment_method === "cartao").length;
   const visible = useMemo(
@@ -113,10 +101,6 @@ export function ParcelamentosView({
         : list.filter((i) => (methodFilter === "cartao" ? i.payment_method === "cartao" : i.payment_method !== "cartao")),
     [list, methodFilter],
   );
-
-  const picked = projection[Math.min(month, projection.length - 1)];
-  /* What ends in the month being read — the reason the line falls after it. */
-  const ending = picked ? picked.parts.filter((p) => p.number === p.total) : [];
 
   return (
     <Room lit sky>
@@ -193,123 +177,12 @@ export function ParcelamentosView({
               </Text>
             </View>
 
-            {/* ══ The monthly figure, falling ══ */}
-            {projection.length > 1 && picked && (
-              <View style={{ marginTop: 34 }}>
-                <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12, paddingHorizontal: 4 }}>
-                  <Text style={{ fontSize: 17, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>Próximos meses</Text>
-                  <Text style={{ fontSize: 13, color: INK.softer }}>toque num mês</Text>
-                </View>
-
-                {/* What the chosen month holds. */}
-                <View style={{ marginTop: 12, paddingHorizontal: 4 }}>
-                  <Text style={{ fontSize: 13.5, color: INK.soft }}>
-                    {month === 0 ? "Este mês" : `Em ${MONTHS[picked.month]}${picked.year !== new Date().getFullYear() ? ` de ${picked.year}` : ""}`}
-                    {" · "}
-                    {picked.parts.length} {picked.parts.length === 1 ? "parcela" : "parcelas"}
-                  </Text>
-                  <Text style={[nums, { marginTop: 2, fontSize: 22, fontWeight: "700", letterSpacing: -0.5, color: "#fff" }]}>
-                    {money(picked.value)}
-                  </Text>
-                  <Text numberOfLines={2} style={{ marginTop: 2, minHeight: 18, fontSize: 12.5, color: INK.softer }}>
-                    {ending.length > 0
-                      ? `Última parcela de ${ending.map((p) => p.name).join(", ")}`
-                      : "Nenhuma compra termina neste mês"}
-                  </Text>
-                </View>
-
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ paddingHorizontal: 4, paddingTop: 14, gap: 8 }}
-                >
-                  {projection.map((p, i) => (
-                    <Pressable
-                      key={p.key}
-                      onPress={() => {
-                        if (i === month) return;
-                        void Haptics.selectionAsync();
-                        setMonth(i);
-                      }}
-                      style={{ width: 40, alignItems: "center" }}
-                    >
-                      <View style={{ height: CHART_HEIGHT, justifyContent: "flex-end" }}>
-                        <Column value={p.value} max={maxProjection} on={i === month} delay={i * 0.03} />
-                      </View>
-                      <Text
-                        style={{
-                          marginTop: 8,
-                          fontSize: 12,
-                          textTransform: "capitalize",
-                          fontWeight: i === month ? "700" : "400",
-                          color: i === month ? "#fff" : INK.softer,
-                        }}
-                      >
-                        {shortMonth(p.month)}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {/* ══ What the monthly figure is made of ══ */}
-            {categoryData.length > 1 && (
-              <View style={{ marginTop: 34, paddingHorizontal: 4 }}>
-                <Text style={{ fontSize: 17, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>Por categoria</Text>
-                <View style={{ marginTop: 12, flexDirection: "row", height: 8, gap: 3 }}>
-                  {categoryData.map((cat, i) => (
-                    <FlexBar
-                      key={cat.category}
-                      share={cat.amount / stats.totalMensal}
-                      color={categoryHex(cat.category, customCats)}
-                      delay={0.1 + i * 0.05}
-                    />
-                  ))}
-                </View>
-                <View style={{ marginTop: 8 }}>
-                  {categoryData.map((cat, i) => {
-                    const Icon = categoryIcon(cat.category, customCats);
-                    const hex = categoryHex(cat.category, customCats);
-                    return (
-                      <View
-                        key={cat.category}
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 12,
-                          paddingVertical: 11,
-                          borderTopWidth: i > 0 ? 1 : 0,
-                          borderTopColor: RULE,
-                        }}
-                      >
-                        <View
-                          style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: 17,
-                            alignItems: "center",
-                            justifyContent: "center",
-                            backgroundColor: chipFill(hex),
-                          }}
-                        >
-                          <Icon size={16} color={chipInk(hex)} strokeWidth={2} />
-                        </View>
-                        <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: "#fff" }}>
-                          {cat.category}
-                        </Text>
-                        <Text style={[nums, { fontSize: 13, color: INK.softer }]}>
-                          {Math.round((cat.amount / stats.totalMensal) * 100)}%
-                        </Text>
-                        <Text style={[nums, { width: 96, textAlign: "right", fontSize: 14.5, fontWeight: "600", color: "#fff" }]}>
-                          {money(cat.amount)}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
-            )}
+            {/* ══ The monthly figure, falling; what ends, and when; what it is made of ══ */}
+            <View style={{ marginTop: 30, gap: 12 }}>
+              {projection.length > 1 && <InstallmentChart projection={projection} selected={month} onSelect={setMonth} />}
+              <InstallmentPayoffs projection={projection} customCats={customCats} />
+              <InstallmentCategories items={list} customCats={customCats} />
+            </View>
 
             {/* ══ The purchases ══ */}
             <View style={{ marginTop: 34, paddingHorizontal: 4, flexDirection: "row", alignItems: "baseline", gap: 8 }}>
@@ -366,31 +239,5 @@ function Figure({ swatch, label, value }: { swatch: string; label: string; value
         {value}
       </Text>
     </View>
-  );
-}
-
-/** A month's column, growing up from the floor; the chosen one lit. */
-function Column({ value, max, on, delay }: { value: number; max: number; on: boolean; delay: number }) {
-  const grow = useSharedValue(0);
-  const target = Math.max((value / max) * CHART_HEIGHT, value > 0 ? 8 : 3);
-
-  useEffect(() => {
-    grow.set(withDelay(delay * 1000, withTiming(target, { duration: 480, easing: Easing.bezier(0.23, 1, 0.32, 1) })));
-  }, [target, delay, grow]);
-
-  const animated = useAnimatedStyle(() => ({ height: grow.get() }));
-
-  return (
-    <Animated.View
-      style={[
-        {
-          width: 28,
-          borderRadius: 9,
-          borderCurve: "continuous",
-          backgroundColor: on ? "#fff" : "rgba(255,255,255,0.20)",
-        },
-        animated,
-      ]}
-    />
   );
 }
