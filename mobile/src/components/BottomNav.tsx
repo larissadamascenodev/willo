@@ -83,7 +83,7 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
       {!collapsed && (
         <Animated.View entering={FadeIn.duration(260)} exiting={FadeOut.duration(200)}>
           <Pressable
-            onPress={() => router.push("/novo")}
+            onPress={() => router.push("/registro" as never)}
             style={[
               FLOAT,
               {
@@ -170,7 +170,7 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
             style={{ flex: 1 }}
           >
             <Pressable
-              onPress={() => router.push("/novo")}
+              onPress={() => router.push("/registro" as never)}
               style={[
                 FLOAT,
                 {

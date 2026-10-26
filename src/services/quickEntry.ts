@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
-import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "@/lib/categoryIcons";
+/* From categoryData rather than categoryIcons, which re-exports the same lists but
+   also pulls in the browser's icon set — this module is read by the phone app too. */
+import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "@/lib/categoryData";
 import { getCustomCategories } from "@/services/categoryService";
 
 /**

@@ -56,3 +56,8 @@ export { default as Target } from "lucide-react-native/icons/target";
 export { default as Info } from "lucide-react-native/icons/info";
 /* lucide 1.x renamed pie-chart to chart-pie; the name stays ChartPie here. */
 export { default as ChartPie } from "lucide-react-native/icons/chart-pie";
+export { default as ArrowUp } from "lucide-react-native/icons/arrow-up";
+export { default as Camera } from "lucide-react-native/icons/camera";
+export { default as ImageIcon } from "lucide-react-native/icons/image";
+export { default as Keyboard } from "lucide-react-native/icons/keyboard";
+export { default as PenLine } from "lucide-react-native/icons/pen-line";

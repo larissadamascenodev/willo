@@ -46,7 +46,19 @@
       "expo-font",
       "expo-image",
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "O Willo usa o microfone para você registrar gastos falando."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O Willo usa suas fotos para ler comprovantes que você escolher."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
