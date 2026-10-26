@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState, type ComponentRef } from "react";
-import { Platform, Pressable, ScrollView, Text, View, type TextStyle } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import Animated, {
   Easing,
-  FadeIn,
-  interpolateColor,
   ReduceMotion,
   useAnimatedStyle,
   useSharedValue,
@@ -12,35 +10,39 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import type { ProjectionMonth } from "@/services/activeInstallments";
-import Surface from "~/components/Surface";
+import { Check } from "~/components/icons";
 import { money } from "~/lib/money";
-import { GREEN, INK } from "~/theme/tokens";
+import { AMBER, INK } from "~/theme/tokens";
 
 /**
  * The monthly figure, month by month, until it reaches nothing.
  *
- * Each month is a column you can tap; the one you chose lights and its reading
- * sits above the chart — what it takes, from how many instalments, and how much
- * less that is than now, which is the number a person is actually waiting on. A
- * small green mark under a month says something ends there. The cards under the
- * chart all read the chosen month, so this is the page's month picker too — and
- * when a month is chosen from elsewhere, the chart brings it into view.
+ * Drawn the way the card's invoices are: wide columns with their figure written
+ * above them, so the chart reads without a tap, in the colour the app gives to
+ * what is still to pay — this month at full strength, the months after lighter.
+ * A month in which some purchase ends carries a tick inside its column.
+ *
+ * It is also the page's month picker: tapping a column chooses the month the rest
+ * of the page reads. When a month is chosen from elsewhere the strip brings it into
+ * view; a tap never moves it, so it is not pulled out from under the finger.
  */
 
-const HEIGHT = 112;
-const COLUMN = 34;
-const BAR = 24;
-const OFF = "rgba(255,255,255,0.16)";
+const MONTH_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const BAR_W = 46;
+const GAP = 8;
+const TRACK = 96;
+/* Amber halfway to white: the same hue, still to come. */
+const LATER = "#FCE6A6";
 
-const nums: TextStyle = Platform.select({
-  ios: { fontVariant: ["tabular-nums"] },
-  default: {},
-}) as TextStyle;
-
-const MONTHS = [
-  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
-  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
-];
+/** R$ 1.743,20 is unreadable at 46px wide; "1,7k" is the same number you can see. */
+function short(v: number) {
+  if (v <= 0) return "—";
+  if (v >= 1000) {
+    const k = v / 1000;
+    return `${(k >= 10 ? Math.round(k) : Number(k.toFixed(1))).toLocaleString("pt-BR")}k`;
+  }
+  return Math.round(v).toLocaleString("pt-BR");
+}
 
 export default function InstallmentChart({
   projection,
@@ -52,47 +54,33 @@ export default function InstallmentChart({
   onSelect: (index: number) => void;
 }) {
   const max = Math.max(...projection.map((p) => p.value), 1);
-  const picked = projection[Math.min(selected, projection.length - 1)];
-  const now = projection[0];
-  const thisYear = now.year;
-  const less = now.value - picked.value;
+  const last = [...projection].reverse().find((p) => p.value > 0);
 
   const scroller = useRef<ComponentRef<typeof ScrollView>>(null);
+  const tapped = useRef(false);
   const [width, setWidth] = useState(0);
+
   useEffect(() => {
+    if (tapped.current) {
+      tapped.current = false;
+      return;
+    }
     if (!width) return;
-    const x = 12 + selected * COLUMN - (width - COLUMN) / 2;
+    const x = selected * (BAR_W + GAP) - (width - BAR_W) / 2;
     scroller.current?.scrollTo({ x: Math.max(0, x), animated: true });
   }, [selected, width]);
 
   return (
-    <Surface>
-      <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
-        <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-          <Text style={{ fontSize: 16, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>Próximos meses</Text>
-          <Text style={{ fontSize: 12.5, color: INK.softer }}>toque num mês</Text>
-        </View>
-
-        {/* The chosen month's reading. */}
-        <Animated.View key={picked.key} entering={FadeIn.duration(180)} style={{ marginTop: 12, minHeight: 66 }}>
-          <Text style={{ fontSize: 13, color: INK.soft }}>
-            {selected === 0
-              ? "Este mês"
-              : `${MONTHS[picked.month][0].toUpperCase()}${MONTHS[picked.month].slice(1)}${picked.year !== thisYear ? ` de ${picked.year}` : ""}`}
+    <View style={{ paddingHorizontal: 4 }}>
+      <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+        <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 1.4, textTransform: "uppercase", color: INK.soft }}>
+          Próximos meses
+        </Text>
+        {last && (
+          <Text style={{ textAlign: "right", fontSize: 11.5, lineHeight: 14, color: INK.faint }}>
+            última parcela{"\n"}em {MONTH_SHORT[last.month]}/{String(last.year).slice(2)}
           </Text>
-          <Text style={[nums, { marginTop: 2, fontSize: 24, fontWeight: "700", letterSpacing: -0.6, color: "#fff" }]}>
-            {money(picked.value)}
-          </Text>
-          <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>
-            {picked.parts.length} {picked.parts.length === 1 ? "parcela" : "parcelas"}
-            {selected > 0 && less > 0.005 ? (
-              <>
-                {" · "}
-                <Text style={{ color: "#fff", fontWeight: "600" }}>{money(less)}</Text> a menos que hoje
-              </>
-            ) : null}
-          </Text>
-        </Animated.View>
+        )}
       </View>
 
       <ScrollView
@@ -100,70 +88,82 @@ export default function InstallmentChart({
         onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 14, paddingBottom: 4 }}
+        contentContainerStyle={{ gap: GAP, alignItems: "flex-end", paddingBottom: 4, paddingRight: 18 }}
+        style={{ marginTop: 16 }}
       >
         {projection.map((p, i) => {
-          const ends = p.parts.some((x) => x.number === x.total);
           const on = i === selected;
+          const ends = p.parts.some((x) => x.number === x.total);
           return (
             <Pressable
               key={p.key}
               onPress={() => {
                 if (on) return;
+                tapped.current = true;
                 void Haptics.selectionAsync();
                 onSelect(i);
               }}
               accessibilityRole="button"
-              accessibilityLabel={`${MONTHS[p.month]} de ${p.year}, ${money(p.value)}`}
+              accessibilityLabel={`${MONTH_SHORT[p.month]} de ${p.year}, ${money(p.value)}`}
               accessibilityState={{ selected: on }}
-              style={{ width: COLUMN, alignItems: "center" }}
+              style={{ width: BAR_W, alignItems: "center", gap: 6 }}
             >
-              <View style={{ height: HEIGHT, justifyContent: "flex-end" }}>
-                <Column value={p.value} max={max} on={on} delay={Math.min(i, 12) * 0.035} />
+              {/* The figure above its own column: reading a chart should not need a tap. */}
+              <Text style={{ fontSize: 10.5, fontWeight: "600", color: on ? "#fff" : INK.faint }}>{short(p.value)}</Text>
+
+              <View style={{ height: TRACK, width: "100%", justifyContent: "flex-end" }}>
+                <Column
+                  value={p.value}
+                  max={max}
+                  color={i === 0 ? AMBER : LATER}
+                  on={on}
+                  delay={Math.min(i, 10) * 0.035}
+                />
+                {/* Something is paid off this month. */}
+                {ends && p.value > 0 && (
+                  <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 6, alignItems: "center" }}>
+                    <View
+                      style={{
+                        width: 17,
+                        height: 17,
+                        borderRadius: 9,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: "rgba(0,0,0,0.35)",
+                      }}
+                    >
+                      <Check size={11} color="#fff" strokeWidth={3.4} />
+                    </View>
+                  </View>
+                )}
               </View>
-              {/* Something ends this month. */}
-              <View
-                style={{
-                  marginTop: 7,
-                  width: 5,
-                  height: 5,
-                  borderRadius: 3,
-                  backgroundColor: ends ? GREEN : "transparent",
-                }}
-              />
-              <Text
-                style={{
-                  marginTop: 5,
-                  fontSize: 12,
-                  textTransform: "capitalize",
-                  fontWeight: on ? "700" : "400",
-                  color: on ? "#fff" : INK.softer,
-                }}
-              >
-                {MONTHS[p.month].slice(0, 3)}
+
+              <Text style={{ fontSize: 11, fontWeight: on ? "700" : "400", color: on ? "#fff" : INK.soft }}>
+                {MONTH_SHORT[p.month]}
               </Text>
               {/* The year, once, where it turns. */}
-              <Text style={{ height: 14, fontSize: 10.5, color: INK.faint }}>
-                {p.month === 0 && p.year !== thisYear ? p.year : ""}
+              <Text style={{ marginTop: -4, height: 13, fontSize: 10, color: INK.faint }}>
+                {p.month === 0 ? p.year : ""}
               </Text>
             </Pressable>
           );
         })}
       </ScrollView>
 
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 14 }}>
-        <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: GREEN }} />
-        <Text style={{ fontSize: 12, color: INK.softer }}>mês em que alguma compra termina</Text>
+      <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", flexWrap: "wrap", columnGap: 16, rowGap: 6 }}>
+        <Legend color={AMBER} label="Este mês" />
+        <Legend color={LATER} label="Próximos" />
+        <Legend color={LATER} label="Termina uma compra" tick />
       </View>
-    </Surface>
+    </View>
   );
 }
 
-/** A month's column, growing up from the floor; the chosen one lights. */
-function Column({ value, max, on, delay }: { value: number; max: number; on: boolean; delay: number }) {
+/** A month's column, growing up from the floor; the chosen one at full strength. */
+function Column({ value, max, color, on, delay }: { value: number; max: number; color: string; on: boolean; delay: number }) {
   const grow = useSharedValue(0);
   const lit = useSharedValue(on ? 1 : 0);
-  const target = Math.max((value / max) * HEIGHT, value > 0 ? 8 : 3);
+  const target = value > 0 ? Math.max(16, (value / max) * TRACK) : 5;
 
   useEffect(() => {
     grow.set(
@@ -175,13 +175,34 @@ function Column({ value, max, on, delay }: { value: number; max: number; on: boo
   }, [target, delay, grow]);
 
   useEffect(() => {
-    lit.set(withTiming(on ? 1 : 0, { duration: 220, easing: Easing.out(Easing.quad), reduceMotion: ReduceMotion.System }));
+    lit.set(withTiming(on ? 1 : 0, { duration: 200, easing: Easing.out(Easing.quad), reduceMotion: ReduceMotion.System }));
   }, [on, lit]);
 
-  const animated = useAnimatedStyle(() => ({
-    height: grow.get(),
-    backgroundColor: interpolateColor(lit.get(), [0, 1], [OFF, "#ffffff"]),
-  }));
+  const animated = useAnimatedStyle(() => ({ height: grow.get(), opacity: 0.72 + lit.get() * 0.28 }));
 
-  return <Animated.View style={[{ width: BAR, borderRadius: 8, borderCurve: "continuous" }, animated]} />;
+  return (
+    <Animated.View
+      style={[{ width: "100%", borderRadius: 9, borderCurve: "continuous", backgroundColor: value > 0 ? color : "rgba(255,255,255,0.10)" }, animated]}
+    />
+  );
+}
+
+function Legend({ color, label, tick }: { color: string; label: string; tick?: boolean }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+      <View
+        style={{
+          width: tick ? 12 : 10,
+          height: tick ? 12 : 10,
+          borderRadius: tick ? 6 : 3,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: tick ? "rgba(255,255,255,0.14)" : color,
+        }}
+      >
+        {tick && <Check size={8} color="#fff" strokeWidth={4} />}
+      </View>
+      <Text style={{ fontSize: 11, color: INK.softer }}>{label}</Text>
+    </View>
+  );
 }

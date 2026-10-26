@@ -14,7 +14,6 @@ import { getCustomCategories, type CustomCategory } from "@/services/categorySer
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import { FlexBar } from "~/components/Bar";
-import Surface from "~/components/Surface";
 import SegmentedTabs from "~/components/SegmentedTabs";
 import InstallmentPurchaseCard from "~/components/installments/InstallmentPurchaseCard";
 import InstallmentChart from "~/components/installments/InstallmentChart";
@@ -31,7 +30,7 @@ import { type as T } from "~/theme/type";
  *
  * The question this screen answers is not how much is owed — it is when it stops.
  * So it leads with what the instalments take out of a month and, right under it,
- * when that ends; then how much of the whole debt is behind you.
+ * when that ends; then, on the page itself, how much of the whole debt is behind you.
  *
  * The chart of the months ahead is the page's month picker. It opens on this month,
  * and everything under it reads whichever month is chosen: what you finish paying
@@ -193,11 +192,11 @@ export function ParcelamentosView({
             </View>
 
             {/* ══ How much of the debt is behind you ══ */}
-            <PaidCard paid={stats.totalJaPago} left={stats.totalRestante} total={stats.totalGeral} count={list.length} />
+            <Paid paid={stats.totalJaPago} left={stats.totalRestante} total={stats.totalGeral} />
 
             {/* ══ The months ahead — and the page's month picker ══ */}
             {months.length > 1 && (
-              <View style={{ marginTop: 12 }}>
+              <View style={{ marginTop: 34 }}>
                 <InstallmentChart projection={months} selected={selected} onSelect={setMonth} />
               </View>
             )}
@@ -210,7 +209,14 @@ export function ParcelamentosView({
                     {selected === 0 ? "Este mês" : `Em ${monthName}`}
                   </Text>
                   <Text style={{ marginTop: 2, fontSize: 13.5, color: INK.soft }}>
-                    O que termina, de onde vem e o que vence{selected === 0 ? " neste mês" : ""}.
+                    {picked.parts.length} {picked.parts.length === 1 ? "parcela" : "parcelas"}
+                    {selected > 0 && months[0].value - picked.value > 0.005 ? (
+                      <>
+                        {" · "}
+                        <Text style={[nums, { fontWeight: "600", color: "#fff" }]}>{money(months[0].value - picked.value)}</Text> a
+                        menos que este mês
+                      </>
+                    ) : null}
                   </Text>
                 </View>
 
@@ -218,7 +224,7 @@ export function ParcelamentosView({
                   <InstallmentPayoffs months={months} selected={selected} onSelect={setMonth} customCats={customCats} />
                   <InstallmentCategories
                     parts={picked.parts}
-                    monthLabel={selected === 0 ? "Este mês" : monthName[0].toUpperCase() + monthName.slice(1)}
+                    monthLabel={selected === 0 ? "este mês" : monthName}
                     byId={byId}
                     cardsById={cardsById}
                     customCats={customCats}
@@ -274,44 +280,34 @@ export function ParcelamentosView({
 }
 
 /**
- * How much of everything bought in instalments is already behind you: one bar,
- * green for what is paid and amber for what is still to come, and the two figures
- * side by side under it, kept apart by a hairline so long amounts never crowd.
+ * How much of everything bought in instalments is already behind you, on the page
+ * itself: one bar, green for what is paid and amber for what is still to come, and
+ * the two figures side by side under it in the same two colours.
  */
-function PaidCard({ paid, left, total, count }: { paid: number; left: number; total: number; count: number }) {
+function Paid({ paid, left, total }: { paid: number; left: number; total: number }) {
   const share = total > 0 ? paid / total : 0;
   return (
-    <Surface style={{ marginTop: 26 }}>
-      <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
-        <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-          <Text style={{ fontSize: 16, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>Já foi pago</Text>
-          <Text style={[nums, { fontSize: 15, fontWeight: "700", color: "#fff" }]}>
-            {Math.round(share * 100)}%
-          </Text>
-        </View>
-        <View style={{ marginTop: 12, flexDirection: "row", height: 8, gap: 3 }}>
-          {share > 0 && <FlexBar share={share} color={GREEN} delay={0.12} />}
-          {share < 1 && <FlexBar share={1 - share} color={AMBER} delay={0.2} />}
-        </View>
+    <View style={{ marginTop: 28, paddingHorizontal: 4 }}>
+      <View style={{ flexDirection: "row", height: 8, gap: 3 }}>
+        {share > 0 && <FlexBar share={share} color={GREEN} delay={0.12} />}
+        {share < 1 && <FlexBar share={1 - share} color={AMBER} delay={0.2} />}
       </View>
-
-      <View style={{ marginTop: 14, flexDirection: "row", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.07)" }}>
+      <View style={{ marginTop: 14, flexDirection: "row", gap: 16 }}>
         <Figure swatch={GREEN} label="Já pago" value={money(paid)} />
-        <View style={{ width: 1, marginVertical: 12, backgroundColor: "rgba(255,255,255,0.07)" }} />
         <Figure swatch={AMBER} label="Falta pagar" value={money(left)} />
       </View>
-
-      <Text style={{ paddingHorizontal: 16, paddingBottom: 14, fontSize: 12.5, color: INK.softer }}>
-        De {money(total)} em {count} {count === 1 ? "compra parcelada" : "compras parceladas"}.
+      <Text style={{ marginTop: 10, fontSize: 12.5, color: INK.softer }}>
+        <Text style={{ fontWeight: "700", color: "#fff" }}>{Math.round(share * 100)}%</Text> de {money(total)} em compras
+        parceladas já foi pago.
       </Text>
-    </Surface>
+    </View>
   );
 }
 
 /** One of the two figures under the paid bar. */
 function Figure({ swatch, label, value }: { swatch: string; label: string; value: string }) {
   return (
-    <View style={{ flex: 1, minWidth: 0, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10 }}>
+    <View style={{ flex: 1, minWidth: 0 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
         <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: swatch }} />
         <Text style={{ fontSize: 12.5, color: INK.soft }}>{label}</Text>

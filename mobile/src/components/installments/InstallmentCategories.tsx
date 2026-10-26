@@ -8,9 +8,8 @@ import type { CustomCategory } from "@/services/categoryService";
 import { cardHex } from "@/hooks/useCardsOverview";
 import Surface from "~/components/Surface";
 import CenterModal from "~/components/CenterModal";
-import Bar, { FlexBar } from "~/components/Bar";
+import { FlexBar } from "~/components/Bar";
 import { ChevronDown, ChevronRight } from "~/components/icons";
-import { chipFill, chipInk } from "~/lib/chip";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { money } from "~/lib/money";
 import { GREEN, INK } from "~/theme/tokens";
@@ -18,15 +17,15 @@ import { GREEN, INK } from "~/theme/tokens";
 /**
  * What the chosen month's instalments are made of.
  *
- * The page shows the three heaviest — usually most of it — and the bar above them
- * still carries every category, so nothing is hidden from the shape of it. Tapping
- * a category, or "Ver todas", lifts the whole list into the middle of the screen,
- * where each category opens to the purchases inside it: which of them, which
- * instalment, on which card.
+ * Drawn as the dashboard draws the month's spending: the total, one bar in the
+ * categories' own colours, and the three biggest named under it, each with its
+ * glyph in its colour, its figure and its share. Tapping one — or "Ver todas" —
+ * lifts the whole list into the middle of the screen, where every category opens
+ * to the purchases inside it: which of them, which instalment, on which card.
  */
 
 const SHOWN = 3;
-const RULE = "rgba(255,255,255,0.07)";
+const RULE = "rgba(255,255,255,0.06)";
 
 const nums: TextStyle = Platform.select({
   ios: { fontVariant: ["tabular-nums"] },
@@ -47,7 +46,7 @@ export default function InstallmentCategories({
   customCats,
 }: {
   parts: ProjectionPart[];
-  /** "Este mês", "Novembro" — for the heading of the full list. */
+  /** "este mês", "novembro". */
   monthLabel: string;
   byId: Map<string, ActiveInstallmentItem>;
   cardsById: Record<string, CardBadge>;
@@ -69,7 +68,6 @@ export default function InstallmentCategories({
       .sort((a, b) => b.amount - a.amount);
   }, [parts]);
   const total = categories.reduce((s, c) => s + c.amount, 0);
-  const rest = categories.slice(SHOWN);
 
   if (categories.length === 0 || total <= 0) return null;
 
@@ -81,68 +79,46 @@ export default function InstallmentCategories({
   return (
     <>
       <Surface>
-        <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
-          <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-            <Text style={{ fontSize: 16, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>Por categoria</Text>
-            <Text style={{ fontSize: 12.5, color: INK.softer }}>
-              {categories.length} {categories.length === 1 ? "categoria" : "categorias"}
+        <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12, padding: 14 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ fontSize: 12, color: INK.soft }}>Por categoria · {monthLabel}</Text>
+            <Text numberOfLines={1} style={[nums, { marginTop: 6, fontSize: 26, fontWeight: "800", letterSpacing: -0.9, color: "#fff" }]}>
+              {money(total)}
             </Text>
           </View>
-
-          <Split categories={categories} total={total} customCats={customCats} />
-
-          <View style={{ marginTop: 4 }}>
-            {categories.slice(0, SHOWN).map((c, i) => (
-              <CategoryRow
-                key={c.category}
-                share={c}
-                total={total}
-                customCats={customCats}
-                first={i === 0}
-                trailing="open"
-                onPress={() => show(c.category)}
-              />
-            ))}
-          </View>
-        </View>
-
-        {rest.length > 0 ? (
           <Pressable
             onPress={() => show(null)}
-            style={({ pressed }) => ({
-              marginHorizontal: 16,
-              paddingVertical: 12,
-              borderTopWidth: 1,
-              borderTopColor: RULE,
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              opacity: pressed ? 0.6 : 1,
-            })}
+            hitSlop={8}
+            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, marginTop: 2, opacity: pressed ? 0.6 : 1 })}
           >
-            <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 13, color: INK.soft }}>
-              Mais {rest.length} {rest.length === 1 ? "categoria" : "categorias"} ·{" "}
-              {money(rest.reduce((s, c) => s + c.amount, 0))}
+            <Text style={{ fontSize: 12, fontWeight: "600", color: INK.soft }}>
+              {categories.length > SHOWN ? `Ver todas (${categories.length})` : "Detalhes"}
             </Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-              <Text style={{ fontSize: 13, fontWeight: "500", color: "rgba(255,255,255,0.82)" }}>Ver todas</Text>
-              <ChevronRight size={15} color="rgba(255,255,255,0.82)" />
-            </View>
+            <ChevronRight size={14} color={INK.soft} />
           </Pressable>
-        ) : (
-          <View style={{ height: 6 }} />
-        )}
+        </View>
+
+        <Split categories={categories} total={total} customCats={customCats} />
+
+        <View style={{ marginTop: 14, paddingHorizontal: 14, paddingBottom: 6 }}>
+          {categories.slice(0, SHOWN).map((c, i) => (
+            <Animated.View key={c.category} entering={FadeIn.delay(i * 30).duration(240)}>
+              <CategoryRow share={c} total={total} customCats={customCats} first={i === 0} onPress={() => show(c.category)} />
+            </Animated.View>
+          ))}
+        </View>
       </Surface>
 
       <CenterModal
         open={open}
         onClose={() => setOpen(false)}
         title="Por categoria"
-        subtitle={`${monthLabel} · ${money(total)} em ${categories.length} ${categories.length === 1 ? "categoria" : "categorias"}`}
+        subtitle={`${monthLabel[0].toUpperCase()}${monthLabel.slice(1)} · ${money(total)} em ${categories.length} ${categories.length === 1 ? "categoria" : "categorias"}`}
       >
-        <Split categories={categories} total={total} customCats={customCats} />
-        <View style={{ marginTop: 4 }}>
+        <View style={{ marginHorizontal: -14 }}>
+          <Split categories={categories} total={total} customCats={customCats} />
+        </View>
+        <View style={{ marginTop: 10 }}>
           {categories.map((c, i) => {
             const isOpen = expanded === c.category;
             return (
@@ -156,15 +132,26 @@ export default function InstallmentCategories({
                   total={total}
                   customCats={customCats}
                   first
-                  trailing={isOpen ? "up" : "down"}
+                  withCount
+                  open={isOpen}
                   onPress={() => setExpanded(isOpen ? null : c.category)}
                 />
                 {isOpen && (
-                  <Animated.View entering={FadeIn.duration(200)} style={{ marginLeft: 48, paddingBottom: 8 }}>
+                  <Animated.View
+                    entering={FadeIn.duration(200)}
+                    style={{
+                      marginLeft: 29,
+                      marginBottom: 10,
+                      paddingLeft: 12,
+                      borderLeftWidth: 2,
+                      borderLeftColor: categoryHex(c.category, customCats),
+                    }}
+                  >
                     {c.parts.map((p, j) => {
                       const item = byId.get(p.id);
                       const card = item?.credit_card_id ? cardsById[item.credit_card_id] : undefined;
-                      const where = item?.payment_method === "cartao" ? (card?.name ?? "Cartão") : "Conta";
+                      const isCard = item?.payment_method === "cartao";
+                      const where = isCard ? (card?.name ?? "Cartão") : "Conta";
                       const last = p.number === p.total;
                       return (
                         <View
@@ -173,13 +160,13 @@ export default function InstallmentCategories({
                             flexDirection: "row",
                             alignItems: "center",
                             gap: 10,
-                            paddingVertical: 9,
+                            paddingVertical: 8,
                             borderTopWidth: j > 0 ? 1 : 0,
                             borderTopColor: "rgba(255,255,255,0.05)",
                           }}
                         >
                           <View style={{ flex: 1, minWidth: 0 }}>
-                            <Text numberOfLines={1} style={{ fontSize: 14, color: "#fff" }}>
+                            <Text numberOfLines={1} style={{ fontSize: 13.5, color: "#fff" }}>
                               {p.name}
                             </Text>
                             <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -188,19 +175,15 @@ export default function InstallmentCategories({
                                   width: 6,
                                   height: 6,
                                   borderRadius: 3,
-                                  backgroundColor: last
-                                    ? GREEN
-                                    : item?.payment_method === "cartao"
-                                      ? cardHex(card?.color ?? null)
-                                      : "rgba(255,255,255,0.35)",
+                                  backgroundColor: last ? GREEN : isCard ? cardHex(card?.color ?? null) : "rgba(255,255,255,0.35)",
                                 }}
                               />
-                              <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12, color: INK.softer }}>
+                              <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: INK.softer }}>
                                 {last ? "Última parcela" : `Parcela ${p.number} de ${p.total}`} · {where}
                               </Text>
                             </View>
                           </View>
-                          <Text style={[nums, { fontSize: 14, fontWeight: "600", color: "#fff" }]}>{money(p.amount)}</Text>
+                          <Text style={[nums, { fontSize: 13.5, fontWeight: "600", color: "#fff" }]}>{money(p.amount)}</Text>
                         </View>
                       );
                     })}
@@ -215,31 +198,34 @@ export default function InstallmentCategories({
   );
 }
 
-/** Every category, side by side in one track. */
+/** The stacked bar, in the categories' own colours. */
 function Split({ categories, total, customCats }: { categories: CategoryShare[]; total: number; customCats: CustomCategory[] }) {
   return (
-    <View style={{ marginTop: 12, flexDirection: "row", height: 6, gap: 3 }}>
+    <View style={{ paddingHorizontal: 14, flexDirection: "row", height: 8, gap: 3 }}>
       {categories.map((c, i) => (
-        <FlexBar key={c.category} share={c.amount / total} color={categoryHex(c.category, customCats)} delay={0.1 + i * 0.04} minWidth={4} />
+        <FlexBar key={c.category} share={c.amount / total} color={categoryHex(c.category, customCats)} delay={0.1 + i * 0.04} minWidth={6} />
       ))}
     </View>
   );
 }
 
-/** A category: its name and figure, and under them its share as a rule of its own colour. */
+/** A category as the dashboard writes it: glyph in its colour, name, figure and share. */
 function CategoryRow({
   share: c,
   total,
   customCats,
   first,
-  trailing,
+  withCount = false,
+  open,
   onPress,
 }: {
   share: CategoryShare;
   total: number;
   customCats: CustomCategory[];
   first: boolean;
-  trailing: "open" | "down" | "up";
+  withCount?: boolean;
+  /** In the full list: whether it is opened. Left out, the row leads to the full list. */
+  open?: boolean;
   onPress: () => void;
 }) {
   const Icon = categoryIcon(c.category, customCats);
@@ -251,50 +237,36 @@ function CategoryRow({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
+      accessibilityState={open === undefined ? undefined : { expanded: open }}
       style={({ pressed }) => ({
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
-        paddingVertical: 11,
+        paddingVertical: 10,
         borderTopWidth: first ? 0 : 1,
         borderTopColor: RULE,
-        opacity: pressed ? 0.65 : 1,
+        opacity: pressed ? 0.6 : 1,
       })}
     >
-      <View
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 18,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: chipFill(hex),
-        }}
-      >
-        <Icon size={16} color={chipInk(hex)} strokeWidth={2} />
+      <View style={{ width: 22, alignItems: "center" }}>
+        <Icon size={17} color={hex} />
       </View>
-
       <View style={{ flex: 1, minWidth: 0 }}>
-        <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
-          <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: "#fff" }}>
-            {c.category}
+        <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>
+          {c.category}
+        </Text>
+        {withCount && (
+          <Text style={{ marginTop: 1, fontSize: 11.5, color: INK.softer }}>
+            {count} {count === 1 ? "parcela" : "parcelas"}
           </Text>
-          <Text style={[nums, { fontSize: 14.5, fontWeight: "600", color: "#fff" }]}>{money(c.amount)}</Text>
-        </View>
-        <View style={{ marginTop: 7, flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <View style={{ flex: 1, height: 4, borderRadius: 999, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.07)" }}>
-            <Bar share={c.amount / total} color={hex} delay={0.12} />
-          </View>
-          <Text style={[nums, { fontSize: 11.5, color: INK.soft }]}>
-            {pct}% · {count} {count === 1 ? "parcela" : "parcelas"}
-          </Text>
-        </View>
+        )}
       </View>
-
-      {trailing === "open" ? (
-        <ChevronRight size={15} color={INK.faint} />
-      ) : (
-        <ChevronDown size={15} color={INK.softer} style={{ transform: [{ rotate: trailing === "up" ? "180deg" : "0deg" }] }} />
+      <View style={{ alignItems: "flex-end" }}>
+        <Text style={[nums, { fontSize: 13.5, fontWeight: "700", color: "#fff" }]}>{money(c.amount)}</Text>
+        <Text style={[nums, { fontSize: 10.5, color: INK.softer }]}>{pct}%</Text>
+      </View>
+      {open !== undefined && (
+        <ChevronDown size={15} color={INK.softer} style={{ transform: [{ rotate: open ? "180deg" : "0deg" }] }} />
       )}
     </Pressable>
   );
