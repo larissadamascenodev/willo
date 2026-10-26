@@ -76,3 +76,22 @@ const WEEKDAYS_SHORT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
 export const monthShort = (d: Date) => MONTHS_SHORT[d.getMonth()];
 export const weekdayShort = (d: Date) => WEEKDAYS_SHORT[d.getDay()];
+
+/**
+ * Where an event stands, as one short phrase: "Vence hoje", "Recebe amanhã",
+ * "Atrasado há 6 dias", "Pago". The verb says which way the money goes, so the
+ * phrase needs no "a pagar" or "a receber" beside it.
+ */
+export function dueLabel(e: FinanceEvent, today = new Date()): string {
+  const income = isIncome(e);
+  if (isSettled(e)) return income ? "Recebido" : "Pago";
+  const n = daysFrom(e, today);
+  if (isOverdue(e, today)) {
+    if (n >= 0) return "Atrasado";
+    return n === -1 ? "Atrasado desde ontem" : `Atrasado há ${-n} dias`;
+  }
+  const verb = income ? "Recebe" : "Vence";
+  if (n === 0) return `${verb} hoje`;
+  if (n === 1) return `${verb} amanhã`;
+  return `${verb} em ${n} dias`;
+}

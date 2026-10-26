@@ -9,21 +9,23 @@ import type { FinanceEvent } from "@/types/finance";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import Glass from "~/components/Glass";
+import Surface from "~/components/Surface";
+import SegmentedTabs from "~/components/SegmentedTabs";
 import MonthCalendar from "~/components/eventos/MonthCalendar";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import {
   dateOf,
+  dayOfMonth,
   daysFrom,
+  dueLabel,
   isIncome,
   isOverdue,
   isSettled,
   monthShort,
   stillToHappen,
   weekdayShort,
-  whenLabel,
-  dayOfMonth,
 } from "~/lib/events";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
@@ -33,21 +35,26 @@ import { type as T } from "~/theme/type";
 /**
  * What is still to come this month — and whether the money is there when it does.
  *
- * Two figures lead: what is still to come in and what is still to go out, with one
- * sentence saying where the month ends if all of it happens. Then the month drawn as
- * a month, each day carrying a dot for what falls on it, and tapping a day narrows
- * the list to it. The list is ordered by what needs doing: anything late first, in
- * red, then what is coming, day by day in words — hoje, amanhã — and last what has
- * already been paid, folded away because it has happened.
+ * It opens on a short statement rather than on two headline figures: what is still
+ * to come in, what is still to go out, and the balance the month ends on if all of
+ * it happens, each a row with its figure on the right. A statement keeps a large
+ * month legible — the figures have the width of the card to themselves instead of
+ * half of it each — and reads in the order the question is asked.
  *
- * Figures are white; colour is in the dots, as on the rest of the app, and red only
- * where something is late or the month would end short.
+ * Then one switch, Todos, A pagar or A receber, which narrows both the month and
+ * the list beneath it; the month drawn as a month, each day carrying a dot for what
+ * falls on it; and the list in the order things need doing — late first, then what
+ * is coming day by day, and last what has been paid, folded away. Each line says
+ * where it stands in plain words: "Vence hoje", "Recebe amanhã", "Atrasado há 6
+ * dias".
  */
 
 const MONTHS = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
 ];
+
+type Kind = "todos" | "pagar" | "receber";
 
 const RULE = "rgba(255,255,255,0.08)";
 
@@ -63,23 +70,29 @@ export default function Eventos() {
   const { user } = useAuth();
   const { selectedMonth: month, selectedYear: year, setMonth } = useMonth();
   const [day, setDay] = useState<number | null>(null);
+  const [kind, setKind] = useState<Kind>("todos");
   const [showSettled, setShowSettled] = useState(false);
   const today = useMemo(() => new Date(), []);
 
   const { data, loading } = useFinanceData(month, year);
 
-  const events = useMemo(
+  const all = useMemo(
     () => [...data.events].sort((a, b) => dateOf(a).getTime() - dateOf(b).getTime()),
     [data.events],
   );
-  const { aReceber, aPagar } = useMemo(() => stillToHappen(events), [events]);
+  const { aReceber, aPagar } = useMemo(() => stillToHappen(all), [all]);
+
+  /* The switch narrows the month and the list; the statement above stays whole. */
+  const events = useMemo(
+    () => (kind === "todos" ? all : all.filter((e) => (kind === "receber" ? isIncome(e) : !isIncome(e)))),
+    [all, kind],
+  );
 
   const late = events.filter((e) => isOverdue(e, today));
   const coming = events.filter((e) => !isSettled(e) && !isOverdue(e, today));
   const settled = events.filter(isSettled);
   const onDay = day === null ? [] : events.filter((e) => dayOfMonth(e) === day);
 
-  /* The days still to come, each with what falls on it. */
   const comingByDay = useMemo(() => {
     const map = new Map<string, FinanceEvent[]>();
     for (const e of coming) {
@@ -99,6 +112,7 @@ export default function Eventos() {
   const isPastMonth = year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth());
   const ending = data.saldoPrevisto;
   const waiting = loading && !!user;
+  const nothing = kind === "receber" ? "Nada a receber" : kind === "pagar" ? "Nada a pagar" : "Nada marcado";
 
   return (
     /* The sky behind, as on the home and the wallet. */
@@ -154,34 +168,38 @@ export default function Eventos() {
 
         <Text style={[T.title, { marginTop: 14, paddingHorizontal: 4 }]}>Próximos eventos</Text>
 
-        {/* ══ What is still to come in, and still to go out ══ */}
-        <View style={{ marginTop: 20, paddingHorizontal: 4 }}>
-          <View style={{ flexDirection: "row", gap: 16 }}>
-            <Figure dot={GREEN} label="A receber" value={waiting ? null : money(aReceber)} />
-            <Figure dot={AMBER} label="A pagar" value={waiting ? null : money(aPagar)} />
-          </View>
-          {!waiting && (
-            <Text style={{ marginTop: 10, fontSize: 13.5, lineHeight: 19, color: INK.soft }}>
-              {isPastMonth ? (
-                `${capitalise(MONTHS[month])} já terminou.`
-              ) : aReceber === 0 && aPagar === 0 ? (
-                "Nada mais para receber ou pagar neste mês."
-              ) : (
-                <>
-                  Se tudo acontecer, você termina {MONTHS[month]} com{" "}
-                  <Text style={{ fontWeight: "700", color: ending < 0 ? RED : "#fff" }}>
-                    {ending < 0 ? "−" : ""}
-                    {money(Math.abs(ending))}
-                  </Text>
-                  .
-                </>
-              )}
-            </Text>
-          )}
+        {/* ══ The month in three lines ══ */}
+        <Surface radius={22} style={{ marginTop: 18, paddingHorizontal: 16, paddingVertical: 4 }}>
+          <StatementRow dot={GREEN} label="Ainda a receber" value={waiting ? null : money(aReceber)} />
+          <StatementRow dot={AMBER} label="Ainda a pagar" value={waiting ? null : money(aPagar)} divider />
+          <StatementRow
+            label={isPastMonth ? `Saldo no fim de ${MONTHS[month]}` : `Se tudo acontecer, fim de ${MONTHS[month]}`}
+            value={waiting ? null : `${ending < 0 ? "−" : ""}${money(Math.abs(ending))}`}
+            tone={ending < 0 ? RED : "#fff"}
+            strong
+            divider
+          />
+        </Surface>
+
+        {/* ══ Which side to look at ══ */}
+        <View style={{ marginTop: 22 }}>
+          <SegmentedTabs
+            value={kind}
+            onChange={(k) => {
+              setKind(k);
+              setDay(null);
+            }}
+            height={34}
+            options={[
+              { key: "todos" as const, label: "Todos" },
+              { key: "pagar" as const, label: "A pagar" },
+              { key: "receber" as const, label: "A receber" },
+            ]}
+          />
         </View>
 
         {/* ══ The month as a month ══ */}
-        <View style={{ marginTop: 28 }}>
+        <View style={{ marginTop: 20 }}>
           <MonthCalendar month={month} year={year} events={events} selectedDay={day} onSelectDay={setDay} />
         </View>
 
@@ -189,7 +207,7 @@ export default function Eventos() {
         {waiting ? (
           <View style={{ marginTop: 24, height: 180, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.03)" }} />
         ) : day !== null ? (
-          <Animated.View key={`dia-${day}`} entering={FadeIn.duration(180)} style={{ marginTop: 22 }}>
+          <Animated.View key={`dia-${day}-${kind}`} entering={FadeIn.duration(180)} style={{ marginTop: 20 }}>
             <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
               <Text style={{ fontSize: 17, fontWeight: "600", color: "#fff" }}>
                 {capitalise(weekdayShort(new Date(year, month, day)))}, {day} de {MONTHS[month]}
@@ -198,20 +216,20 @@ export default function Eventos() {
                 <Text style={{ fontSize: 14, color: INK.soft }}>Ver o mês todo</Text>
               </Pressable>
             </View>
-            <View style={{ marginTop: 8 }}>
+            <View style={{ marginTop: 6 }}>
               {onDay.length === 0 ? (
-                <Text style={{ paddingVertical: 18, fontSize: 14, color: INK.softer }}>Nada marcado neste dia.</Text>
+                <Text style={{ paddingVertical: 18, fontSize: 14, color: INK.softer }}>{nothing} neste dia.</Text>
               ) : (
                 onDay.map((e) => <EventRow key={e.id} event={e} today={today} />)
               )}
             </View>
           </Animated.View>
         ) : events.length === 0 ? (
-          <Text style={{ marginTop: 26, paddingHorizontal: 4, fontSize: 14, color: INK.softer }}>
-            Nada marcado para {MONTHS[month]}.
+          <Text style={{ marginTop: 24, paddingHorizontal: 4, fontSize: 14, color: INK.softer }}>
+            {nothing} em {MONTHS[month]}.
           </Text>
         ) : (
-          <View style={{ marginTop: 18 }}>
+          <View style={{ marginTop: 14 }}>
             {late.length > 0 && (
               <Section dot={RED} title="Atrasados" count={late.length}>
                 {late.map((e) => (
@@ -268,21 +286,48 @@ export default function Eventos() {
   );
 }
 
-/** One of the two figures at the top. */
-function Figure({ dot, label, value }: { dot: string; label: string; value: string | null }) {
+/** One line of the statement at the top: what it is on the left, the figure on the right. */
+function StatementRow({
+  label,
+  value,
+  dot,
+  tone = "#fff",
+  strong = false,
+  divider = false,
+}: {
+  label: string;
+  value: string | null;
+  dot?: string;
+  tone?: string;
+  strong?: boolean;
+  divider?: boolean;
+}) {
   return (
-    <View style={{ flex: 1, minWidth: 0 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
-        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: dot }} />
-        <Text style={{ fontSize: 13, color: INK.soft }}>{label}</Text>
-      </View>
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingVertical: 13,
+        borderTopWidth: divider ? 1 : 0,
+        borderTopColor: RULE,
+      }}
+    >
+      {dot && <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: dot }} />}
+      <Text
+        numberOfLines={1}
+        style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: strong ? "600" : "400", color: strong ? "#fff" : INK.soft }}
+      >
+        {label}
+      </Text>
       {value === null ? (
-        <View style={{ marginTop: 8, height: 26, width: "80%", borderRadius: 8, backgroundColor: "rgba(255,255,255,0.06)" }} />
+        <View style={{ height: 16, width: 96, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.07)" }} />
       ) : (
         <Text
           numberOfLines={1}
           adjustsFontSizeToFit
-          style={[nums, { marginTop: 4, fontSize: 28, fontWeight: "700", letterSpacing: -1, color: "#fff" }]}
+          minimumFontScale={0.75}
+          style={[nums, { flexShrink: 1, fontSize: strong ? 17 : 16, fontWeight: strong ? "700" : "600", color: tone }]}
         >
           {value}
         </Text>
@@ -304,7 +349,7 @@ function Section({
 }) {
   return (
     <View style={{ marginTop: 18 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingBottom: 4 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingBottom: 2 }}>
         {dot && <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: dot }} />}
         <Text style={{ fontSize: 17, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>{title}</Text>
         <Text style={{ fontSize: 14, color: INK.faint }}>{count}</Text>
@@ -314,22 +359,14 @@ function Section({
   );
 }
 
-/** A day in the list: said in words when it is near, and what the day adds up to. */
+/** A day in the list: in words when it is near, with what the day adds up to. */
 function DayHeader({ event, today, list }: { event: FinanceEvent; today: Date; list: FinanceEvent[] }) {
   const d = dateOf(event);
   const n = daysFrom(event, today);
   const label = n === 0 ? "Hoje" : n === 1 ? "Amanhã" : capitalise(`${weekdayShort(d)}, ${d.getDate()} ${monthShort(d)}`);
   const net = list.reduce((s, e) => s + (isIncome(e) ? e.amount : -e.amount), 0);
   return (
-    <View
-      style={{
-        marginTop: 12,
-        flexDirection: "row",
-        alignItems: "baseline",
-        justifyContent: "space-between",
-        gap: 12,
-      }}
-    >
+    <View style={{ marginTop: 12, flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
       <Text style={{ fontSize: 13, fontWeight: "600", color: n <= 1 ? "#fff" : INK.soft }}>
         {label}
         {n <= 1 ? (
@@ -354,10 +391,6 @@ function EventRow({ event: e, today }: { event: FinanceEvent; today: Date }) {
   const done = isSettled(e);
   const lateNow = isOverdue(e, today);
   const income = isIncome(e);
-
-  const note = done
-    ? `${income ? "recebido" : "pago"} · ${e.category}`
-    : `${income ? "a receber" : "a pagar"} · ${lateNow ? whenLabel(e, today) : e.category}`;
 
   return (
     <View
@@ -387,11 +420,23 @@ function EventRow({ event: e, today }: { event: FinanceEvent; today: Date }) {
         <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "500", color: "#fff" }}>
           {e.name}
         </Text>
-        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: lateNow ? RED : INK.soft }}>
-          {note}
-        </Text>
+        <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 6 }}>
+          {!done && (
+            <View
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: lateNow ? RED : income ? GREEN : AMBER,
+              }}
+            />
+          )}
+          <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: lateNow ? RED : INK.soft }}>
+            {dueLabel(e, today)} · {e.category}
+          </Text>
+        </View>
       </View>
-      <Text style={[nums, { fontSize: 15.5, fontWeight: "600", color: "#fff" }]}>
+      <Text numberOfLines={1} style={[nums, { flexShrink: 0, fontSize: 15.5, fontWeight: "600", color: "#fff" }]}>
         {income ? "+" : ""}
         {money(e.amount)}
       </Text>

@@ -13,11 +13,6 @@ const nums: TextStyle = Platform.select({
   default: {},
 }) as TextStyle;
 
-const MONTHS = [
-  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
-  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
-];
-
 /**
  * The month as the two flows that make it.
  *
@@ -25,11 +20,12 @@ const MONTHS = [
  * card is: both on one scale, so their lengths answer which side is bigger before
  * a figure is read.
  *
- * What is left over closes the card on the right, where a total sits on a receipt
- * — one step larger than the rows above it, enough to read as the result and no
- * more, because the balance in the accounts is the headline figure of the home and
- * should not have a rival one card below. Under it, the sentence the bars cannot
- * draw: two near-equal lengths look fine until you are told they are 96%.
+ * What is left over closes the card as one row of a statement: its name on the
+ * left with the sentence the bars cannot draw under it — two near-equal lengths look
+ * fine until you are told they are 96% — and the figure on the right, centred on
+ * the pair. The figure is one step larger than the rows above, enough to read as
+ * the result and no more, because the balance in the accounts is the headline of
+ * the home and should not have a rival one card below.
  *
  * Colour is in the bars only. The figures are white, the outgoing one carrying its
  * minus sign; the leftover turns red only when the month falls short.
@@ -39,28 +35,27 @@ const MONTHS = [
 export default function FluxoCard({
   receitas,
   despesas,
-  month,
   isCurrentMonth = true,
 }: {
   receitas: number;
   despesas: number;
-  month: number;
+  /** Kept for the callers; the title says which month, so the card no longer names it. */
+  month?: number;
   isCurrentMonth?: boolean;
 }) {
   const router = useRouter();
   const balanco = receitas - despesas;
-  const monthLabel = MONTHS[month];
   const pct = receitas > 0 ? Math.round((despesas / receitas) * 100) : 0;
   const scale = Math.max(receitas, despesas, 1);
 
   const verdict =
     receitas <= 0 && despesas <= 0
-      ? `Nada entrou nem saiu em ${monthLabel} ainda.`
+      ? "Nada entrou nem saiu ainda"
       : receitas <= 0
-        ? `Saiu dinheiro em ${monthLabel} sem nenhuma entrada.`
+        ? "Saiu dinheiro sem nenhuma entrada"
         : balanco < 0
-          ? `Você gastou mais do que entrou em ${monthLabel}.`
-          : `Você gastou ${pct}% do que entrou em ${monthLabel}.`;
+          ? "Você gastou mais do que entrou"
+          : `Você gastou ${pct}% do que entrou`;
 
   const short = balanco < 0;
 
@@ -82,35 +77,41 @@ export default function FluxoCard({
         <Flow label="Saída" amount={despesas} scale={scale} delay={0.12} />
       </View>
 
-      {/* The result, on the right, with what it means under it. */}
+      {/* The result, as a row of a statement: what it is and what it means on the
+          left, the figure on the right. */}
       <View
         style={{
           marginTop: 16,
           paddingTop: 12,
           borderTopWidth: 1,
           borderTopColor: "rgba(255,255,255,0.07)",
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 12,
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-          <Text style={{ fontSize: 13, color: INK.soft }}>{short ? "Falta no mês" : "Sobra do mês"}</Text>
-          <Text
-            numberOfLines={1}
-            style={[
-              nums,
-              {
-                flexShrink: 1,
-                fontSize: 18,
-                fontWeight: "700",
-                letterSpacing: -0.3,
-                color: short ? RED : "#fff",
-              },
-            ]}
-          >
-            {money(Math.abs(balanco))}
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>
+            {short ? "Falta no mês" : "Sobra do mês"}
+          </Text>
+          <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>
+            {verdict}
           </Text>
         </View>
-        <Text style={{ marginTop: 3, textAlign: "right", fontSize: 12, lineHeight: 16, color: INK.softer }}>
-          {verdict}
+        <Text
+          numberOfLines={1}
+          style={[
+            nums,
+            {
+              flexShrink: 0,
+              fontSize: 18,
+              fontWeight: "700",
+              letterSpacing: -0.3,
+              color: short ? RED : "#fff",
+            },
+          ]}
+        >
+          {money(Math.abs(balanco))}
         </Text>
       </View>
     </Surface>
