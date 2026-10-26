@@ -1,4 +1,4 @@
-import { Text, View } from "react-native";
+import { Platform, Text, View, type TextStyle } from "react-native";
 import { useRouter } from "expo-router";
 import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
@@ -6,6 +6,12 @@ import { ChevronRight } from "~/components/icons";
 import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
+
+/* Figures line up in columns, so their digits have to be the same width. */
+const nums: TextStyle = Platform.select({
+  ios: { fontVariant: ["tabular-nums"] },
+  default: {},
+}) as TextStyle;
 
 const MONTHS = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -15,18 +21,17 @@ const MONTHS = [
 /**
  * The month as the two flows that make it.
  *
- * Both bars share one scale, so their lengths answer the only question that matters
- * here — which side is bigger — before the figures are read. The sentence above them
- * is the verdict the bars cannot draw: two near-equal lengths look fine until you are
- * told they are 94%.
+ * The two bars come first, straight under the title, because they are what the
+ * card is: both on one scale, so their lengths answer which side is bigger before
+ * a figure is read.
  *
- * What is left over sits small at the foot rather than large at the top. The balance
- * in the accounts is the big number on this screen, and a second figure the same size
- * a card below read as a rival to it — two answers to the question of how much you
- * have, when only one of them is that.
+ * What is left over closes the card on the right, where a total sits on a receipt
+ * — larger than the rows above it so it reads as the result, but well short of the
+ * balance in the accounts, which is the headline figure of the home and should not
+ * have a rival one card below. Under it, the sentence the bars cannot draw: two
+ * near-equal lengths look fine until you are told they are 96%.
  *
- * The whole card is one way in, to the cash-flow screen, where this month is taken
- * apart in full.
+ * The whole card is one way in, to the cash-flow screen.
  */
 export default function FluxoCard({
   receitas,
@@ -54,6 +59,8 @@ export default function FluxoCard({
           ? `Você gastou mais do que entrou em ${monthLabel}.`
           : `Você gastou ${pct}% do que entrou em ${monthLabel}.`;
 
+  const short = balanco < 0;
+
   return (
     <Surface
       onPress={() => router.push("/fluxo-de-caixa" as never)}
@@ -67,36 +74,41 @@ export default function FluxoCard({
         <ChevronRight size={16} color={INK.faint} />
       </View>
 
-      {/* The verdict leads now that the leftover no longer does. */}
-      <Text style={{ marginTop: 8, fontSize: 15, lineHeight: 20, fontWeight: "500", color: "rgba(255,255,255,0.88)" }}>
-        {verdict}
-      </Text>
-
       <View style={{ marginTop: 16, gap: 14 }}>
         <Flow label="Entrada" amount={receitas} scale={scale} inflow delay={0.05} />
         <Flow label="Saída" amount={despesas} scale={scale} delay={0.12} />
       </View>
 
+      {/* The result, on the right, with what it means under it. */}
       <View
         style={{
-          marginTop: 16,
+          marginTop: 18,
           paddingTop: 14,
           borderTopWidth: 1,
           borderTopColor: "rgba(255,255,255,0.07)",
-          flexDirection: "row",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          gap: 12,
         }}
       >
-        <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: INK.soft }}>
-          Sobra do mês{" "}
-          <Text style={{ fontSize: 13.5, fontWeight: "700", color: balanco < 0 ? RED : "#fff" }}>
-            {balanco > 0 ? "+" : ""}
-            {money(balanco)}
+        <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+          <Text style={{ fontSize: 13, color: INK.soft }}>{short ? "Falta no mês" : "Sobra do mês"}</Text>
+          <Text
+            numberOfLines={1}
+            style={[
+              nums,
+              {
+                flexShrink: 1,
+                fontSize: 22,
+                fontWeight: "700",
+                letterSpacing: -0.6,
+                color: short ? RED : "#fff",
+              },
+            ]}
+          >
+            {money(Math.abs(balanco))}
           </Text>
+        </View>
+        <Text style={{ marginTop: 4, textAlign: "right", fontSize: 12.5, lineHeight: 17, color: INK.soft }}>
+          {verdict}
         </Text>
-        <Text style={{ fontSize: 12.5, color: INK.softer }}>ver fluxo de caixa</Text>
       </View>
     </Surface>
   );
