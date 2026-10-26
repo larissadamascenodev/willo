@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
-import { useRecorrentes, daysUntil } from "@/hooks/useRecorrentes";
-import { useAuth } from "~/lib/auth";
+import { Platform, Pressable, Text, View, type TextStyle } from "react-native";
+import { useRecorrentes, daysUntil, type RecurringItem } from "@/hooks/useRecorrentes";
+import { categoryHex } from "@/lib/categoryData";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
 import SegmentedTabs from "~/components/SegmentedTabs";
 import { Check, ChevronDown, ChevronUp, Repeat } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
+import { chipFill, chipInk } from "~/lib/chip";
+import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
 import { AMBER, GREEN, INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
@@ -16,17 +17,32 @@ import { type as T } from "~/theme/type";
 /**
  * What is certain every month.
  *
- * Fixed outgoings and fixed income are two different questions wearing the same
- * shape, so they share a card and a switch rather than taking two. The bar under
- * the total is the month's progress through them — how many have already happened —
- * which is the thing a list of due dates cannot say at a glance.
+ * Fixed outgoings and fixed income are two questions wearing the same shape, so
+ * they share a card, and the switch between them comes first — under the title,
+ * above everything it changes — rather than halfway down.
+ *
+ * The total is at the size of a line, as on the cards around it. Under it the
+ * month's progress through these is drawn as one tick per item, filled once it has
+ * happened, which says "three of five paid" before the words do. Each item wears
+ * its category's colour and says where it stands plainly: "Vence em 3 dias",
+ * "Recebe amanhã", "Pago".
  */
+
+const SHOWN = 3;
+/* Past this many, ticks come out thinner than the gaps between them. */
+const MAX_TICKS = 16;
+
+const nums: TextStyle = Platform.select({
+  ios: { fontVariant: ["tabular-nums"] },
+  default: {},
+}) as TextStyle;
+
+const RULE = "rgba(255,255,255,0.07)";
+
 export default function GastosFixosCard() {
   const { user } = useAuth();
   const { items, loading } = useRecorrentes();
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
-  const [tab, setTab] = useState<"despesa" | "receita">("despesa");
-  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -38,33 +54,36 @@ export default function GastosFixosCard() {
     };
   }, []);
 
-  const filtered = useMemo(() => items.filter((s) => s.txType === tab), [items, tab]);
+  /* No session is not loading — it is nothing to show. */
+  if (loading && user) return <Surface style={{ height: 220 }}><View /></Surface>;
+  return <GastosFixosView items={items} customCats={customCats} />;
+}
+
+/** The card itself, drawn from what it is handed. */
+export function GastosFixosView({ items, customCats }: { items: RecurringItem[]; customCats: CustomCategory[] }) {
+  const [tab, setTab] = useState<"despesa" | "receita">("despesa");
+  const [expanded, setExpanded] = useState(false);
+
+  /* Soonest first, with what has already happened at the end. */
+  const filtered = useMemo(
+    () =>
+      items
+        .filter((s) => s.txType === tab)
+        .sort(
+          (a, b) =>
+            Number(a.isPaidThisMonth) - Number(b.isPaidThisMonth) || daysUntil(a.dueDay) - daysUntil(b.dueDay),
+        ),
+    [items, tab],
+  );
   const total = useMemo(() => filtered.reduce((s, x) => s + x.amount, 0), [filtered]);
   const despesaCount = items.filter((s) => s.txType === "despesa").length;
   const receitaCount = items.filter((s) => s.txType === "receita").length;
 
-  /* No session is not loading — it is nothing to show. */
-  if (loading && user) return <Surface style={{ height: 200 }}><View /></Surface>;
-
   if (items.length === 0) {
     return (
       <Surface style={{ padding: 16 }}>
-        <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>
-          Gastos e receitas fixas
-        </Text>
-        <Text style={{ fontSize: 12, color: INK.soft }}>Contas fixas e assinaturas do mês</Text>
-        <View
-          style={{
-            marginTop: 16,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 12,
-            borderRadius: 16,
-            backgroundColor: "rgba(255,255,255,0.04)",
-            paddingHorizontal: 14,
-            paddingVertical: 12,
-          }}
-        >
+        <Text style={T.cardLabel}>Gastos e receitas fixas</Text>
+        <View style={{ marginTop: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
           <View
             style={{
               width: 40,
@@ -77,158 +96,96 @@ export default function GastosFixosCard() {
           >
             <Repeat size={16} color={INK.soft} />
           </View>
-          <Text style={{ flex: 1, fontSize: 13, color: INK.soft }}>
-            Nenhuma despesa ou receita recorrente ainda.
+          <Text style={{ flex: 1, fontSize: 13.5, lineHeight: 19, color: INK.soft }}>
+            Nenhuma conta ou receita fixa ainda. Marque um lançamento como fixo e ele aparece aqui.
           </Text>
         </View>
       </Surface>
     );
   }
 
-  const shown = expanded ? filtered : filtered.slice(0, 3);
-  const hasMore = filtered.length > 3;
+  const shown = expanded ? filtered : filtered.slice(0, SHOWN);
+  const hasMore = filtered.length > SHOWN;
   const paidCount = filtered.filter((s) => s.isPaidThisMonth).length;
+  const income = tab === "receita";
 
   return (
     <Surface>
       <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
         <Text style={T.cardLabel}>Gastos e receitas fixas</Text>
-        <Text
-          numberOfLines={1}
-          style={[T.figure, { marginTop: 4 }, tab === "receita" && { color: GREEN }]}
-        >
-          {money(total)}
-        </Text>
-        <Text style={{ marginTop: 8, fontSize: 12.5, color: INK.soft }}>
-          por mês
-          <Text style={{ color: "rgba(255,255,255,0.2)" }}> · </Text>
-          {paidCount} de {filtered.length} {tab === "receita" ? "já recebidas" : "já pagas"}
-        </Text>
-      </View>
 
-      {/* Progress of the month. */}
-      {filtered.length > 0 && (
-        <View
-          style={{
-            marginHorizontal: 16,
-            marginTop: 14,
-            height: 7,
-            borderRadius: 999,
-            overflow: "hidden",
-            backgroundColor: "rgba(255,255,255,0.07)",
-          }}
-        >
-          <Bar
-            share={paidCount / filtered.length}
-            color={tab === "receita" ? GREEN : "#fff"}
-            delay={0.06}
+        <View style={{ marginTop: 12 }}>
+          <SegmentedTabs
+            compact
+            height={30}
+            value={tab}
+            onChange={(k) => {
+              setTab(k);
+              setExpanded(false);
+            }}
+            options={[
+              { key: "despesa" as const, label: `Despesas ${despesaCount}` },
+              { key: "receita" as const, label: `Receitas ${receitaCount}` },
+            ]}
           />
         </View>
-      )}
 
-      <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
-        <SegmentedTabs
-          compact
-          height={32}
-          value={tab}
-          onChange={(k) => {
-            setTab(k);
-            setExpanded(false);
-          }}
-          options={[
-            { key: "despesa" as const, label: `Despesas (${despesaCount})` },
-            { key: "receita" as const, label: `Receitas (${receitaCount})` },
-          ]}
-        />
-      </View>
-
-      <View style={{ paddingHorizontal: 16, paddingTop: 4 }}>
-        {shown.length === 0 ? (
-          <Text style={{ paddingVertical: 24, textAlign: "center", fontSize: 13, color: INK.soft }}>
-            Nenhuma {tab === "receita" ? "receita recorrente" : "despesa recorrente"}
+        {filtered.length === 0 ? (
+          <Text style={{ paddingVertical: 22, fontSize: 13.5, color: INK.soft }}>
+            Nenhuma {income ? "receita fixa" : "despesa fixa"} ainda.
           </Text>
         ) : (
-          shown.map((sub, idx) => {
-            const days = daysUntil(sub.dueDay);
-            const dueSoon = !sub.isPaidThisMonth && days <= 3;
-            const Icon = categoryIcon(sub.category, customCats);
+          <>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 14 }}>
+              <Text style={[nums, { fontSize: 21, fontWeight: "700", letterSpacing: -0.5, color: "#fff" }]}>
+                {money(total)}
+              </Text>
+              <Text style={{ fontSize: 13.5, color: INK.soft }}> por mês</Text>
+            </Text>
 
-            return (
-              <Animated.View
-                key={sub.id}
-                entering={FadeInDown.delay(idx * 30).duration(260)}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 12,
-                  paddingVertical: 12,
-                  borderTopWidth: idx > 0 ? 1 : 0,
-                  borderTopColor: "rgba(255,255,255,0.06)",
-                }}
-              >
-                <View
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 22,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: "rgba(255,255,255,0.06)",
-                  }}
-                >
-                  <Icon size={20} color="rgba(255,255,255,0.8)" />
+            {/* The month's progress through them: one tick each, filled once it has happened. */}
+            <View style={{ marginTop: 12 }}>
+              {filtered.length <= MAX_TICKS ? (
+                <View style={{ flexDirection: "row", gap: 3 }}>
+                  {/* What has happened fills from the left, as progress does. */}
+                  {[...filtered]
+                    .sort((a, b) => Number(b.isPaidThisMonth) - Number(a.isPaidThisMonth))
+                    .map((s) => (
+                    <View
+                      key={s.id}
+                      style={{
+                        flex: 1,
+                        height: 5,
+                        borderRadius: 999,
+                        backgroundColor: s.isPaidThisMonth
+                          ? income
+                            ? GREEN
+                            : "#fff"
+                          : "rgba(255,255,255,0.10)",
+                      }}
+                    />
+                  ))}
                 </View>
-
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text
-                    numberOfLines={1}
-                    style={{
-                      fontSize: 15,
-                      fontWeight: "500",
-                      color: sub.isPaidThisMonth ? "rgba(255,255,255,0.7)" : "#fff",
-                    }}
-                  >
-                    {sub.name}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: dueSoon ? AMBER : INK.soft }}>
-                    {sub.isPaidThisMonth
-                      ? tab === "receita"
-                        ? "Recebido este mês"
-                        : "Pago este mês"
-                      : `Dia ${sub.dueDay} · ${days === 0 ? "hoje" : days === 1 ? "amanhã" : `em ${days} dias`}`}
-                  </Text>
+              ) : (
+                <View style={{ height: 5, borderRadius: 999, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.10)" }}>
+                  <Bar share={paidCount / filtered.length} color={income ? GREEN : "#fff"} delay={0.06} />
                 </View>
-
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <Text
-                    style={{
-                      fontSize: 15,
-                      fontWeight: "600",
-                      color: sub.isPaidThisMonth ? "rgba(255,255,255,0.7)" : "#fff",
-                    }}
-                  >
-                    {money(sub.amount)}
-                  </Text>
-                  <View
-                    style={{
-                      width: 20,
-                      height: 20,
-                      borderRadius: 10,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: sub.isPaidThisMonth ? GREEN : "transparent",
-                      borderWidth: sub.isPaidThisMonth ? 0 : 1,
-                      borderColor: "rgba(255,255,255,0.15)",
-                    }}
-                  >
-                    {sub.isPaidThisMonth && <Check size={12} color="#0B0B0B" strokeWidth={3} />}
-                  </View>
-                </View>
-              </Animated.View>
-            );
-          })
+              )}
+              <Text style={{ marginTop: 7, fontSize: 12, color: INK.soft }}>
+                {paidCount} de {filtered.length} {income ? "já recebidas" : "já pagas"} este mês
+              </Text>
+            </View>
+          </>
         )}
       </View>
+
+      {filtered.length > 0 && (
+        <View style={{ marginTop: 12, marginHorizontal: 16, borderTopWidth: 1, borderTopColor: RULE }}>
+          {shown.map((s, i) => (
+            <FixedRow key={s.id} item={s} customCats={customCats} first={i === 0} />
+          ))}
+        </View>
+      )}
 
       {hasMore ? (
         <Pressable
@@ -238,8 +195,9 @@ export default function GastosFixosCard() {
             alignItems: "center",
             justifyContent: "center",
             gap: 4,
+            marginTop: 4,
             borderTopWidth: 1,
-            borderTopColor: "rgba(255,255,255,0.06)",
+            borderTopColor: RULE,
             paddingVertical: 12,
             opacity: pressed ? 0.6 : 1,
           })}
@@ -254,8 +212,76 @@ export default function GastosFixosCard() {
           )}
         </Pressable>
       ) : (
-        <View style={{ height: 4 }} />
+        <View style={{ height: 6 }} />
       )}
     </Surface>
+  );
+}
+
+/** One fixed item: what it is, where it stands, what it costs. */
+function FixedRow({ item: s, customCats, first }: { item: RecurringItem; customCats: CustomCategory[]; first: boolean }) {
+  const income = s.txType === "receita";
+  const days = daysUntil(s.dueDay);
+  const soon = !s.isPaidThisMonth && days <= 3;
+  const Icon = categoryIcon(s.category, customCats);
+  const hex = categoryHex(s.category, customCats);
+
+  const where = s.isPaidThisMonth
+    ? `${income ? "Recebido" : "Pago"} · dia ${s.dueDay}`
+    : `${income ? "Recebe" : "Vence"} ${days === 0 ? "hoje" : days === 1 ? "amanhã" : `em ${days} dias`} · dia ${s.dueDay}`;
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingVertical: 12,
+        borderTopWidth: first ? 0 : 1,
+        borderTopColor: RULE,
+        opacity: s.isPaidThisMonth ? 0.62 : 1,
+      }}
+    >
+      <View
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: chipFill(hex),
+        }}
+      >
+        <Icon size={18} color={chipInk(hex)} strokeWidth={2} />
+      </View>
+
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "500", color: "#fff" }}>
+          {s.name}
+        </Text>
+        <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, color: soon ? AMBER : INK.soft }}>
+          {where}
+        </Text>
+      </View>
+
+      <Text numberOfLines={1} style={[nums, { fontSize: 15, fontWeight: "600", color: "#fff" }]}>
+        {income ? "+" : ""}
+        {money(s.amount)}
+      </Text>
+      {s.isPaidThisMonth && (
+        <View
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: 9,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: income ? GREEN : "#fff",
+          }}
+        >
+          <Check size={11} color="#0B0B0B" strokeWidth={3} />
+        </View>
+      )}
+    </View>
   );
 }
