@@ -10,9 +10,9 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { loadPhoneLayout } from "~/lib/phoneLayout";
 import {
   WIDGETS,
-  loadLayout,
   saveLayout,
   setDismissed,
   widgetById,
@@ -58,12 +58,12 @@ interface Props {
 }
 
 export default function WidgetBoard({ userId, render, gap = 16, editing, onEditingChange }: Props) {
-  const [slots, setSlots] = useState<WidgetSlot[]>(() => loadLayout(userId));
+  const [slots, setSlots] = useState<WidgetSlot[]>(() => loadPhoneLayout(userId));
   const [held, setHeld] = useState<WidgetMenuTarget | null>(null);
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
-    setSlots(loadLayout(userId));
+    setSlots(loadPhoneLayout(userId));
   }, [userId]);
 
   const commit = useCallback(

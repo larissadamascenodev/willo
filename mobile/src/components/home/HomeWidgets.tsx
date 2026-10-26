@@ -56,13 +56,13 @@ export function renderHomeWidget(
       return <CartoesResumoCard />;
 
     case "parcelamentos":
-      return <ParcelamentosTile />;
+      return <ParcelamentosTile size={size} />;
 
     case "assinaturas":
-      return <AssinaturasTile />;
+      return <AssinaturasTile size={size} />;
 
     case "metas":
-      return <MetasTile />;
+      return <MetasTile size={size} />;
 
     case "fixos":
       return <GastosFixosCard />;
