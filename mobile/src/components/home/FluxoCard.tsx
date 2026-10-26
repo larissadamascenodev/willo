@@ -26,10 +26,13 @@ const MONTHS = [
  * a figure is read.
  *
  * What is left over closes the card on the right, where a total sits on a receipt
- * — larger than the rows above it so it reads as the result, but well short of the
- * balance in the accounts, which is the headline figure of the home and should not
- * have a rival one card below. Under it, the sentence the bars cannot draw: two
- * near-equal lengths look fine until you are told they are 96%.
+ * — one step larger than the rows above it, enough to read as the result and no
+ * more, because the balance in the accounts is the headline figure of the home and
+ * should not have a rival one card below. Under it, the sentence the bars cannot
+ * draw: two near-equal lengths look fine until you are told they are 96%.
+ *
+ * Colour is in the bars only. The figures are white, the outgoing one carrying its
+ * minus sign; the leftover turns red only when the month falls short.
  *
  * The whole card is one way in, to the cash-flow screen.
  */
@@ -74,7 +77,7 @@ export default function FluxoCard({
         <ChevronRight size={16} color={INK.faint} />
       </View>
 
-      <View style={{ marginTop: 16, gap: 14 }}>
+      <View style={{ marginTop: 14, gap: 12 }}>
         <Flow label="Entrada" amount={receitas} scale={scale} inflow delay={0.05} />
         <Flow label="Saída" amount={despesas} scale={scale} delay={0.12} />
       </View>
@@ -82,8 +85,8 @@ export default function FluxoCard({
       {/* The result, on the right, with what it means under it. */}
       <View
         style={{
-          marginTop: 18,
-          paddingTop: 14,
+          marginTop: 16,
+          paddingTop: 12,
           borderTopWidth: 1,
           borderTopColor: "rgba(255,255,255,0.07)",
         }}
@@ -96,9 +99,9 @@ export default function FluxoCard({
               nums,
               {
                 flexShrink: 1,
-                fontSize: 22,
+                fontSize: 18,
                 fontWeight: "700",
-                letterSpacing: -0.6,
+                letterSpacing: -0.3,
                 color: short ? RED : "#fff",
               },
             ]}
@@ -106,7 +109,7 @@ export default function FluxoCard({
             {money(Math.abs(balanco))}
           </Text>
         </View>
-        <Text style={{ marginTop: 4, textAlign: "right", fontSize: 12.5, lineHeight: 17, color: INK.soft }}>
+        <Text style={{ marginTop: 3, textAlign: "right", fontSize: 12, lineHeight: 16, color: INK.softer }}>
           {verdict}
         </Text>
       </View>
@@ -131,16 +134,16 @@ function Flow({
   return (
     <View>
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-        <Text style={{ fontSize: 14, fontWeight: "500", color: "#fff" }}>{label}</Text>
-        <Text style={{ fontSize: 14.5, fontWeight: "600", color: inflow ? "#fff" : RED }}>
+        <Text style={{ fontSize: 13.5, color: INK.soft }}>{label}</Text>
+        <Text style={[nums, { fontSize: 14.5, fontWeight: "600", color: "#fff" }]}>
           {inflow ? "" : "−"}
           {money(amount)}
         </Text>
       </View>
       <View
         style={{
-          marginTop: 8,
-          height: 6,
+          marginTop: 7,
+          height: 5,
           borderRadius: 999,
           backgroundColor: "rgba(255,255,255,0.06)",
           overflow: "hidden",
