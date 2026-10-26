@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, ScrollView, Text, View, type TextStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeIn } from "react-native-reanimated";
 import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import {
   installmentProjection,
   installmentTotals,
   loadActiveInstallments,
   type CardBadge,
+  type ProjectionMonth,
 } from "@/services/activeInstallments";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
-import Bar from "~/components/Bar";
+import { FlexBar } from "~/components/Bar";
+import Surface from "~/components/Surface";
 import SegmentedTabs from "~/components/SegmentedTabs";
 import InstallmentPurchaseCard from "~/components/installments/InstallmentPurchaseCard";
 import InstallmentChart from "~/components/installments/InstallmentChart";
@@ -20,7 +23,7 @@ import InstallmentCategories from "~/components/installments/InstallmentCategori
 import { CalendarClock } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
-import { INK } from "~/theme/tokens";
+import { AMBER, GREEN, INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 /**
@@ -28,18 +31,24 @@ import { type as T } from "~/theme/type";
  *
  * The question this screen answers is not how much is owed — it is when it stops.
  * So it leads with what the instalments take out of a month and, right under it,
- * when that ends. Then the same figure taken apart, each part as a reading rather
- * than a box: how much of the debt is behind you. Then three cards — how the
- * monthly amount falls month by month, what you finish paying in each month (which
- * is why it falls), and what categories it is made of — the last two showing the
- * start and opening the rest in the middle of the screen. Then the purchases
- * themselves, each paid off one tick at a time.
+ * when that ends; then how much of the whole debt is behind you.
+ *
+ * The chart of the months ahead is the page's month picker. It opens on this month,
+ * and everything under it reads whichever month is chosen: what you finish paying
+ * in it, what categories it is made of, and the purchases with an instalment in
+ * it — each with the tick of that month's instalment lit. Choose December and the
+ * page under the chart is December.
  */
 
 const nums: TextStyle = Platform.select({
   ios: { fontVariant: ["tabular-nums"] },
   default: {},
 }) as TextStyle;
+
+const MONTHS = [
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+];
 
 const monthYear = (d: Date) =>
   d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(".", "").replace(" de ", " ");
@@ -91,15 +100,36 @@ export function ParcelamentosView({
 
   const list = items ?? [];
   const stats = useMemo(() => installmentTotals(list), [list]);
-  const projection = useMemo(() => installmentProjection(list, stats?.monthsUntilFree ?? 12), [list, stats]);
+  const byId = useMemo(() => new Map(list.map((i) => [i.id, i])), [list]);
+
+  /* Month by month. This month is read from the purchases themselves rather than
+     projected, so one that is running late still counts in it. */
+  const months = useMemo<ProjectionMonth[]>(() => {
+    const projection = installmentProjection(list, stats?.monthsUntilFree ?? 12);
+    if (projection.length === 0) return projection;
+    const parts = list
+      .map((i) => ({ id: i.id, name: i.name, category: i.category, amount: i.amount, number: i.installment_current, total: i.installments }))
+      .sort((a, b) => b.amount - a.amount);
+    projection[0] = { ...projection[0], parts, value: parts.reduce((s, x) => s + x.amount, 0) };
+    return projection;
+  }, [list, stats]);
+
+  const selected = Math.min(month, Math.max(months.length - 1, 0));
+  const picked = months[selected];
+  const thisYear = months[0]?.year;
+  const monthName = picked ? `${MONTHS[picked.month]}${picked.year !== thisYear ? ` de ${picked.year}` : ""}` : "";
 
   const onCard = list.filter((i) => i.payment_method === "cartao").length;
-  const visible = useMemo(
+  /* The purchases with an instalment in the chosen month, and which one it is. */
+  const inMonth = useMemo(
     () =>
-      methodFilter === "todos"
-        ? list
-        : list.filter((i) => (methodFilter === "cartao" ? i.payment_method === "cartao" : i.payment_method !== "cartao")),
-    [list, methodFilter],
+      (picked?.parts ?? [])
+        .map((part) => ({ part, item: byId.get(part.id) }))
+        .filter((x): x is { part: (typeof x)["part"]; item: ActiveInstallmentItem } => !!x.item),
+    [picked, byId],
+  );
+  const visible = inMonth.filter(({ item }) =>
+    methodFilter === "todos" ? true : methodFilter === "cartao" ? item.payment_method === "cartao" : item.payment_method !== "cartao",
   );
 
   return (
@@ -163,30 +193,41 @@ export function ParcelamentosView({
             </View>
 
             {/* ══ How much of the debt is behind you ══ */}
-            <View style={{ marginTop: 28, paddingHorizontal: 4 }}>
-              <View style={{ height: 8, borderRadius: 999, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.10)" }}>
-                <Bar share={stats.totalGeral > 0 ? stats.totalJaPago / stats.totalGeral : 0} color="#fff" delay={0.12} />
-              </View>
-              <View style={{ marginTop: 12, flexDirection: "row", gap: 16 }}>
-                <Figure swatch="#fff" label="Já pago" value={money(stats.totalJaPago)} />
-                <Figure swatch="rgba(255,255,255,0.18)" label="Falta pagar" value={money(stats.totalRestante)} />
-              </View>
-              <Text style={{ marginTop: 10, fontSize: 12.5, color: INK.softer }}>
-                {Math.round(stats.totalGeral > 0 ? (stats.totalJaPago / stats.totalGeral) * 100 : 0)}% de{" "}
-                {money(stats.totalGeral)} em compras parceladas já foi pago.
-              </Text>
-            </View>
+            <PaidCard paid={stats.totalJaPago} left={stats.totalRestante} total={stats.totalGeral} count={list.length} />
 
-            {/* ══ The monthly figure, falling; what ends, and when; what it is made of ══ */}
-            <View style={{ marginTop: 30, gap: 12 }}>
-              {projection.length > 1 && <InstallmentChart projection={projection} selected={month} onSelect={setMonth} />}
-              <InstallmentPayoffs projection={projection} customCats={customCats} />
-              <InstallmentCategories items={list} customCats={customCats} />
-            </View>
+            {/* ══ The months ahead — and the page's month picker ══ */}
+            {months.length > 1 && (
+              <View style={{ marginTop: 12 }}>
+                <InstallmentChart projection={months} selected={selected} onSelect={setMonth} />
+              </View>
+            )}
 
-            {/* ══ The purchases ══ */}
-            <View style={{ marginTop: 34, paddingHorizontal: 4, flexDirection: "row", alignItems: "baseline", gap: 8 }}>
-              <Text style={{ fontSize: 17, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>Compras</Text>
+            {picked && (
+              <Animated.View key={picked.key} entering={FadeIn.duration(240)}>
+                {/* ══ The chosen month ══ */}
+                <View style={{ marginTop: 30, paddingHorizontal: 4 }}>
+                  <Text style={{ fontSize: 21, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>
+                    {selected === 0 ? "Este mês" : `Em ${monthName}`}
+                  </Text>
+                  <Text style={{ marginTop: 2, fontSize: 13.5, color: INK.soft }}>
+                    O que termina, de onde vem e o que vence{selected === 0 ? " neste mês" : ""}.
+                  </Text>
+                </View>
+
+                <View style={{ marginTop: 14, gap: 12 }}>
+                  <InstallmentPayoffs months={months} selected={selected} onSelect={setMonth} customCats={customCats} />
+                  <InstallmentCategories
+                    parts={picked.parts}
+                    monthLabel={selected === 0 ? "Este mês" : monthName[0].toUpperCase() + monthName.slice(1)}
+                    byId={byId}
+                    cardsById={cardsById}
+                    customCats={customCats}
+                  />
+                </View>
+
+                {/* ══ The purchases with an instalment in it ══ */}
+            <View style={{ marginTop: 30, paddingHorizontal: 4, flexDirection: "row", alignItems: "baseline", gap: 8 }}>
+              <Text style={{ fontSize: 17, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>Parcelas {selected === 0 ? "do mês" : `de ${MONTHS[picked.month]}`}</Text>
               <Text style={{ fontSize: 14, color: INK.faint }}>{visible.length}</Text>
             </View>
             <View style={{ marginTop: 12 }}>
@@ -206,20 +247,25 @@ export function ParcelamentosView({
             <View style={{ marginTop: 12, gap: 10 }}>
               {visible.length === 0 ? (
                 <Text style={{ paddingVertical: 24, textAlign: "center", fontSize: 14, color: INK.softer }}>
-                  Nenhuma compra parcelada {methodFilter === "cartao" ? "no cartão" : "na conta"}.
+                  Nenhuma parcela {methodFilter === "cartao" ? "no cartão" : "na conta"}{" "}
+                  {selected === 0 ? "este mês" : `em ${monthName}`}.
                 </Text>
               ) : (
-                visible.map((item, i) => (
+                visible.map(({ item, part }, i) => (
                   <InstallmentPurchaseCard
                     key={item.id}
                     item={item}
                     index={i}
                     customCats={customCats}
                     card={item.credit_card_id ? cardsById[item.credit_card_id] : undefined}
+                    focus={part.number}
+                    monthLabel={monthName}
                   />
                 ))
               )}
             </View>
+              </Animated.View>
+            )}
           </>
         )}
       </ScrollView>
@@ -227,15 +273,50 @@ export function ParcelamentosView({
   );
 }
 
+/**
+ * How much of everything bought in instalments is already behind you: one bar,
+ * green for what is paid and amber for what is still to come, and the two figures
+ * side by side under it, kept apart by a hairline so long amounts never crowd.
+ */
+function PaidCard({ paid, left, total, count }: { paid: number; left: number; total: number; count: number }) {
+  const share = total > 0 ? paid / total : 0;
+  return (
+    <Surface style={{ marginTop: 26 }}>
+      <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
+        <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+          <Text style={{ fontSize: 16, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>Já foi pago</Text>
+          <Text style={[nums, { fontSize: 15, fontWeight: "700", color: "#fff" }]}>
+            {Math.round(share * 100)}%
+          </Text>
+        </View>
+        <View style={{ marginTop: 12, flexDirection: "row", height: 8, gap: 3 }}>
+          {share > 0 && <FlexBar share={share} color={GREEN} delay={0.12} />}
+          {share < 1 && <FlexBar share={1 - share} color={AMBER} delay={0.2} />}
+        </View>
+      </View>
+
+      <View style={{ marginTop: 14, flexDirection: "row", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.07)" }}>
+        <Figure swatch={GREEN} label="Já pago" value={money(paid)} />
+        <View style={{ width: 1, marginVertical: 12, backgroundColor: "rgba(255,255,255,0.07)" }} />
+        <Figure swatch={AMBER} label="Falta pagar" value={money(left)} />
+      </View>
+
+      <Text style={{ paddingHorizontal: 16, paddingBottom: 14, fontSize: 12.5, color: INK.softer }}>
+        De {money(total)} em {count} {count === 1 ? "compra parcelada" : "compras parceladas"}.
+      </Text>
+    </Surface>
+  );
+}
+
 /** One of the two figures under the paid bar. */
 function Figure({ swatch, label, value }: { swatch: string; label: string; value: string }) {
   return (
-    <View style={{ flex: 1, minWidth: 0 }}>
+    <View style={{ flex: 1, minWidth: 0, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
-        <View style={{ width: 8, height: 8, borderRadius: 3, backgroundColor: swatch }} />
+        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: swatch }} />
         <Text style={{ fontSize: 12.5, color: INK.soft }}>{label}</Text>
       </View>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[nums, { marginTop: 4, fontSize: 18, fontWeight: "700", color: "#fff" }]}>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { marginTop: 4, fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }]}>
         {value}
       </Text>
     </View>

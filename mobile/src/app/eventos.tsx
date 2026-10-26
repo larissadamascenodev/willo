@@ -35,11 +35,11 @@ import { type as T } from "~/theme/type";
 /**
  * What is still to come this month — and whether the money is there when it does.
  *
- * It opens on a short statement rather than on two headline figures: what is still
- * to come in, what is still to go out, and the balance the month ends on if all of
- * it happens, each a row with its figure on the right. A statement keeps a large
- * month legible — the figures have the width of the card to themselves instead of
- * half of it each — and reads in the order the question is asked.
+ * It opens on the two figures side by side — what is still to come in, what is
+ * still to go out — each in its own half of one card with a hairline between them,
+ * set at a size that leaves a long amount room and shrinks it rather than letting
+ * it run into its neighbour. Under them, across the card, the balance the month
+ * ends on if all of it happens.
  *
  * Then one switch, Todos, A pagar or A receber, which narrows both the month and
  * the list beneath it; the month drawn as a month, each day carrying a dot for what
@@ -169,16 +169,40 @@ export default function Eventos() {
         <Text style={[T.title, { marginTop: 14, paddingHorizontal: 4 }]}>Próximos eventos</Text>
 
         {/* ══ The month in three lines ══ */}
-        <Surface radius={22} style={{ marginTop: 18, paddingHorizontal: 16, paddingVertical: 4 }}>
-          <StatementRow dot={GREEN} label="Ainda a receber" value={waiting ? null : money(aReceber)} />
-          <StatementRow dot={AMBER} label="Ainda a pagar" value={waiting ? null : money(aPagar)} divider />
-          <StatementRow
-            label={isPastMonth ? `Saldo no fim de ${MONTHS[month]}` : `Se tudo acontecer, fim de ${MONTHS[month]}`}
-            value={waiting ? null : `${ending < 0 ? "−" : ""}${money(Math.abs(ending))}`}
-            tone={ending < 0 ? RED : "#fff"}
-            strong
-            divider
-          />
+        <Surface radius={22} style={{ marginTop: 18 }}>
+          <View style={{ flexDirection: "row" }}>
+            <Figure dot={GREEN} label="A receber" value={waiting ? null : money(aReceber)} />
+            <View style={{ width: 1, marginVertical: 14, backgroundColor: RULE }} />
+            <Figure dot={AMBER} label="A pagar" value={waiting ? null : money(aPagar)} />
+          </View>
+          <View
+            style={{
+              marginHorizontal: 16,
+              paddingVertical: 12,
+              borderTopWidth: 1,
+              borderTopColor: RULE,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: INK.soft }}>
+              {isPastMonth ? `Saldo no fim de ${MONTHS[month]}` : `Se tudo acontecer, fim de ${MONTHS[month]}`}
+            </Text>
+            {waiting ? (
+              <View style={{ height: 16, width: 90, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.07)" }} />
+            ) : (
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+                style={[nums, { flexShrink: 1, fontSize: 16, fontWeight: "700", color: ending < 0 ? RED : "#fff" }]}
+              >
+                {ending < 0 ? "−" : ""}
+                {money(Math.abs(ending))}
+              </Text>
+            )}
+          </View>
         </Surface>
 
         {/* ══ Which side to look at ══ */}
@@ -286,48 +310,22 @@ export default function Eventos() {
   );
 }
 
-/** One line of the statement at the top: what it is on the left, the figure on the right. */
-function StatementRow({
-  label,
-  value,
-  dot,
-  tone = "#fff",
-  strong = false,
-  divider = false,
-}: {
-  label: string;
-  value: string | null;
-  dot?: string;
-  tone?: string;
-  strong?: boolean;
-  divider?: boolean;
-}) {
+/** One of the two figures at the top, in its half of the card. */
+function Figure({ dot, label, value }: { dot: string; label: string; value: string | null }) {
   return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        paddingVertical: 13,
-        borderTopWidth: divider ? 1 : 0,
-        borderTopColor: RULE,
-      }}
-    >
-      {dot && <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: dot }} />}
-      <Text
-        numberOfLines={1}
-        style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: strong ? "600" : "400", color: strong ? "#fff" : INK.soft }}
-      >
-        {label}
-      </Text>
+    <View style={{ flex: 1, minWidth: 0, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: dot }} />
+        <Text style={{ fontSize: 13, color: INK.soft }}>{label}</Text>
+      </View>
       {value === null ? (
-        <View style={{ height: 16, width: 96, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.07)" }} />
+        <View style={{ marginTop: 8, height: 22, width: "80%", borderRadius: 7, backgroundColor: "rgba(255,255,255,0.06)" }} />
       ) : (
         <Text
           numberOfLines={1}
           adjustsFontSizeToFit
-          minimumFontScale={0.75}
-          style={[nums, { flexShrink: 1, fontSize: strong ? 17 : 16, fontWeight: strong ? "700" : "600", color: tone }]}
+          minimumFontScale={0.6}
+          style={[nums, { marginTop: 5, fontSize: 22, fontWeight: "700", letterSpacing: -0.6, color: "#fff" }]}
         >
           {value}
         </Text>

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState, type ComponentRef } from "react";
 import { Platform, Pressable, ScrollView, Text, View, type TextStyle } from "react-native";
 import Animated, {
   Easing,
@@ -22,8 +22,9 @@ import { GREEN, INK } from "~/theme/tokens";
  * Each month is a column you can tap; the one you chose lights and its reading
  * sits above the chart — what it takes, from how many instalments, and how much
  * less that is than now, which is the number a person is actually waiting on. A
- * small green mark under a month says something ends there; the card under this
- * one says what.
+ * small green mark under a month says something ends there. The cards under the
+ * chart all read the chosen month, so this is the page's month picker too — and
+ * when a month is chosen from elsewhere, the chart brings it into view.
  */
 
 const HEIGHT = 112;
@@ -56,6 +57,14 @@ export default function InstallmentChart({
   const thisYear = now.year;
   const less = now.value - picked.value;
 
+  const scroller = useRef<ComponentRef<typeof ScrollView>>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    if (!width) return;
+    const x = 12 + selected * COLUMN - (width - COLUMN) / 2;
+    scroller.current?.scrollTo({ x: Math.max(0, x), animated: true });
+  }, [selected, width]);
+
   return (
     <Surface>
       <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
@@ -87,6 +96,8 @@ export default function InstallmentChart({
       </View>
 
       <ScrollView
+        ref={scroller}
+        onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 14, paddingBottom: 4 }}

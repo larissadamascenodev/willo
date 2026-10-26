@@ -19,6 +19,10 @@ import { GREEN, INK, RED } from "~/theme/tokens";
  * ten" is something you see before you read it. Above the ticks, what it is and
  * what it takes each month; under them, how far along it is and what is left.
  *
+ * Read from a month ahead, the white tick moves to the instalment that falls in
+ * that month, and the line under the ticks says which one it is — "7ª de 10 em
+ * dezembro", or that it is the last.
+ *
  * The schedule is the same information written out month by month, and stays
  * folded until it is asked for.
  */
@@ -41,12 +45,18 @@ export default function InstallmentPurchaseCard({
   index,
   customCats,
   card,
+  focus,
+  monthLabel,
   onOpen,
 }: {
   item: ActiveInstallmentItem;
   index: number;
   customCats: CustomCategory[];
   card?: { name: string; color: string | null };
+  /** The instalment that falls in the month being read; this month's when left out. */
+  focus?: number;
+  /** That month in words, "dezembro", for the line under the ticks. */
+  monthLabel?: string;
   /** Tapping the card opens the purchase; without it, the tap unfolds the schedule. */
   onOpen?: () => void;
 }) {
@@ -59,6 +69,8 @@ export default function InstallmentPurchaseCard({
   const hex = categoryHex(item.category, customCats);
   const isCard = item.payment_method === "cartao";
   const late = item.isOverdue;
+  const at = focus ?? item.installment_current;
+  const ahead = at !== item.installment_current;
 
   const start = new Date(`${item.date.slice(0, 10)}T12:00:00`);
   const next = item.dueDate ? new Date(`${item.dueDate.slice(0, 10)}T12:00:00`) : null;
@@ -70,6 +82,7 @@ export default function InstallmentPurchaseCard({
       n: n + 1,
       date: d,
       status: n < paidCount ? "paga" : n === paidCount ? "atual" : "futura",
+      focused: n + 1 === at,
     } as const;
   });
   const shownSchedule = showAll ? schedule : schedule.slice(paidCount, paidCount + SCHEDULE_PREVIEW);
@@ -142,11 +155,11 @@ export default function InstallmentPurchaseCard({
                     backgroundColor:
                       s.status === "paga"
                         ? GREEN
-                        : s.status === "atual"
-                          ? late
-                            ? RED
-                            : "#fff"
-                          : "rgba(255,255,255,0.10)",
+                        : s.status === "atual" && late
+                          ? RED
+                          : s.focused
+                            ? "#fff"
+                            : "rgba(255,255,255,0.10)",
                   }}
                 />
               ))}
@@ -160,11 +173,32 @@ export default function InstallmentPurchaseCard({
 
         {/* ── How far along, and what is left ── */}
         <View style={{ marginTop: 9, flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: INK.soft }}>
-            <Text style={{ fontWeight: "700", color: "#fff" }}>{paidCount}</Text> de {item.installments} pagas
-            {next && !late ? `, próxima ${dayMonth(next)}` : ""}
-          </Text>
-          <Text style={[nums, { fontSize: 12.5, color: INK.soft }]}>falta {money(item.amount * remaining)}</Text>
+          {ahead ? (
+            <>
+              <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: INK.soft }}>
+                {at === item.installments ? (
+                  <>
+                    <Text style={{ fontWeight: "700", color: "#fff" }}>Última</Text> parcela em {monthLabel}
+                  </>
+                ) : (
+                  <>
+                    <Text style={{ fontWeight: "700", color: "#fff" }}>{at}ª</Text> de {item.installments} em {monthLabel}
+                  </>
+                )}
+              </Text>
+              <Text style={[nums, { fontSize: 12.5, color: INK.soft }]}>
+                {at === item.installments ? "quita a compra" : `depois, faltam ${item.installments - at}`}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: INK.soft }}>
+                <Text style={{ fontWeight: "700", color: "#fff" }}>{paidCount}</Text> de {item.installments} pagas
+                {next && !late ? `, próxima ${dayMonth(next)}` : ""}
+              </Text>
+              <Text style={[nums, { fontSize: 12.5, color: INK.soft }]}>falta {money(item.amount * remaining)}</Text>
+            </>
+          )}
           <ChevronDown
             size={15}
             color={INK.softer}
@@ -229,6 +263,8 @@ export default function InstallmentPurchaseCard({
                       <Text style={{ textTransform: "none", color: late ? RED : INK.soft }}>
                         {late ? "  em atraso" : "  este mês"}
                       </Text>
+                    ) : s.focused ? (
+                      <Text style={{ textTransform: "none", color: INK.soft }}>{`  em ${monthLabel}`}</Text>
                     ) : null}
                   </Text>
                   <Text
