@@ -1,194 +1,156 @@
-import { useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { useMemo } from "react";
+import { Platform, Text, View, type TextStyle } from "react-native";
 import { useRouter } from "expo-router";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import type { FinanceEvent } from "@/types/finance";
 import Surface from "~/components/Surface";
+import { ChevronRight } from "~/components/icons";
 import {
-  AlertTriangle,
-  CalendarDays,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  ChevronUp,
-  Clock,
-} from "~/components/icons";
+  dateOf,
+  isIncome,
+  isOverdue,
+  monthShort,
+  stillToHappen,
+  upcoming,
+  whenLabel,
+} from "~/lib/events";
 import { money } from "~/lib/money";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
+import { type as T } from "~/theme/type";
 
 /**
- * What is coming, in the order it matters.
+ * What is still to come this month.
  *
- * Unsettled first and paid last, each group in date order — the question this card
- * answers is what still needs doing, so what is done sinks. It shows the next few;
- * the month itself is a page.
+ * Two figures first — what is still to come in and what is still to go out —
+ * because that is the question the card exists for: is the money there for what is
+ * coming. Under them the next three things still to settle, each with its day in a
+ * small calendar block and how far away it is in words, the overdue ones first and
+ * in red, the only red on the card. What has already been paid has happened and is
+ * not "próximo", so it is not here; the whole month is one tap away.
  */
 
-const STATUS = {
-  pendente: { label: "Pendente", accent: AMBER, Icon: Clock },
-  pago: { label: "Pago", accent: GREEN, Icon: Check },
-  atrasado: { label: "Atrasado", accent: RED, Icon: AlertTriangle },
-  recebido: { label: "Recebido", accent: GREEN, Icon: Check },
-} as const;
+const SHOWN = 3;
 
-const statusLabel = (status: string, type?: string) => {
-  if (type === "receita") {
-    if (status === "pago" || status === "recebido") return "Recebido";
-    if (status === "pendente") return "A Receber";
-  }
-  if (type === "despesa") {
-    if (status === "pago") return "Pago";
-    if (status === "pendente") return "Pendente";
-  }
-  if (status === "atrasado") return "A Pagar";
-  return STATUS[status as keyof typeof STATUS]?.label ?? status;
-};
-
-const fmtDate = (d: Date) =>
-  d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", "");
-
-const parseDateSafe = (dateStr: string): Date =>
-  dateStr.includes("T") ? new Date(dateStr) : new Date(`${dateStr}T12:00:00`);
-
-const MIN_VISIBLE = 3;
-
-/** A colour at the fill strength the app gives a chip. */
-const fill = (hex: string) => `${hex}1F`;
+const nums: TextStyle = Platform.select({
+  ios: { fontVariant: ["tabular-nums"] },
+  default: {},
+}) as TextStyle;
 
 export default function ProximosEventos({ events }: { events: FinanceEvent[] }) {
   const router = useRouter();
-  const [expanded, setExpanded] = useState(false);
+  const today = useMemo(() => new Date(), []);
 
-  const sorted = useMemo(() => {
-    const mapped = events.map((ev) => ({ ...ev, _date: parseDateSafe(ev.rawDate || ev.date) }));
-    const order = (s: string) => (s === "pago" || s === "recebido" ? 1 : 0);
-    return mapped.sort((a, b) => {
-      const so = order(a.status) - order(b.status);
-      return so !== 0 ? so : a._date.getTime() - b._date.getTime();
-    });
-  }, [events]);
-
-  const shown = expanded ? sorted : sorted.slice(0, MIN_VISIBLE);
-  const hasMore = sorted.length > MIN_VISIBLE;
+  const next = useMemo(() => upcoming(events, today), [events, today]);
+  const { aReceber, aPagar } = useMemo(() => stillToHappen(events), [events]);
+  const shown = next.slice(0, SHOWN);
+  const rest = next.length - shown.length;
 
   return (
-    <Surface>
-      <Pressable
-        onPress={() => router.push("/eventos")}
-        style={({ pressed }) => ({
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 8,
-          paddingHorizontal: 16,
-          paddingTop: 16,
-          opacity: pressed ? 0.7 : 1,
-        })}
-      >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <CalendarDays size={16} color="rgba(255,255,255,0.74)" />
-          <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>Próximos eventos</Text>
-        </View>
+    <Surface onPress={() => router.push("/eventos")} style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <Text style={[T.cardLabel, { flex: 1 }]}>Próximos eventos</Text>
         <ChevronRight size={16} color={INK.faint} />
-      </Pressable>
+      </View>
 
-      <View style={{ paddingHorizontal: 16, paddingTop: 4 }}>
+      {/* ══ What is still to come in, and still to go out ══ */}
+      <View style={{ marginTop: 12, flexDirection: "row", gap: 16 }}>
+        <Figure dot={GREEN} label="A receber" value={money(aReceber)} />
+        <Figure dot={AMBER} label="A pagar" value={money(aPagar)} />
+      </View>
+
+      {/* ══ The next few ══ */}
+      <View style={{ marginTop: 14 }}>
         {shown.length === 0 ? (
-          <Text style={{ paddingVertical: 20, textAlign: "center", fontSize: 13, color: INK.soft }}>
-            Nenhum evento este mês
+          <Text
+            style={{
+              paddingVertical: 18,
+              borderTopWidth: 1,
+              borderTopColor: "rgba(255,255,255,0.07)",
+              fontSize: 13.5,
+              color: INK.soft,
+            }}
+          >
+            {events.length === 0 ? "Nenhum evento neste mês." : "Tudo em dia. Nada mais para pagar ou receber este mês."}
           </Text>
         ) : (
-          shown.map((ev, idx) => {
-            const isPaid = ev.status === "pago" || ev.status === "recebido";
-            const cfg = STATUS[ev.status as keyof typeof STATUS] ?? STATUS.pendente;
-            const Icon = cfg.Icon;
-
+          shown.map((e) => {
+            const d = dateOf(e);
+            const late = isOverdue(e, today);
             return (
-              <Animated.View
-                key={ev.id}
-                entering={FadeInDown.delay(idx * 30).duration(260)}
+              <View
+                key={e.id}
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
                   gap: 12,
-                  paddingVertical: 12,
-                  borderTopWidth: idx > 0 ? 1 : 0,
-                  borderTopColor: "rgba(255,255,255,0.06)",
+                  paddingVertical: 11,
+                  borderTopWidth: 1,
+                  borderTopColor: "rgba(255,255,255,0.07)",
                 }}
               >
-                <View
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: fill(cfg.accent),
-                  }}
-                >
-                  <Icon size={16} color={cfg.accent} />
+                {/* The day, as a calendar would show it. */}
+                <View style={{ width: 38, alignItems: "center" }}>
+                  <Text style={[nums, { fontSize: 18, fontWeight: "700", lineHeight: 20, color: late ? RED : "#fff" }]}>
+                    {d.getDate()}
+                  </Text>
+                  <Text style={{ fontSize: 10.5, fontWeight: "600", color: INK.softer }}>{monthShort(d)}</Text>
                 </View>
 
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text
-                    numberOfLines={1}
-                    style={{
-                      fontSize: 15,
-                      fontWeight: "500",
-                      color: isPaid ? "rgba(255,255,255,0.62)" : "#fff",
-                    }}
-                  >
-                    {ev.name}
+                  <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "500", color: "#fff" }}>
+                    {e.name}
                   </Text>
-                  <Text style={{ fontSize: 12, color: cfg.accent, opacity: 0.85 }}>
-                    {statusLabel(ev.status, ev.type)}
-                  </Text>
+                  <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <View
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: 3,
+                        backgroundColor: late ? RED : isIncome(e) ? GREEN : AMBER,
+                      }}
+                    />
+                    <Text numberOfLines={1} style={{ fontSize: 12, color: late ? RED : INK.soft }}>
+                      {isIncome(e) ? "a receber" : "a pagar"}, {whenLabel(e, today)}
+                    </Text>
+                  </View>
                 </View>
 
-                <View style={{ alignItems: "flex-end" }}>
-                  <Text
-                    style={{
-                      fontSize: 15,
-                      fontWeight: "600",
-                      color: isPaid ? "rgba(255,255,255,0.62)" : "#fff",
-                    }}
-                  >
-                    {money(ev.amount)}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: INK.soft }}>{fmtDate(ev._date)}</Text>
-                </View>
-              </Animated.View>
+                <Text style={[nums, { fontSize: 15, fontWeight: "600", color: "#fff" }]}>
+                  {isIncome(e) ? "+" : ""}
+                  {money(e.amount)}
+                </Text>
+              </View>
             );
           })
         )}
-      </View>
 
-      {hasMore ? (
-        <Pressable
-          onPress={() => setExpanded((v) => !v)}
-          style={({ pressed }) => ({
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 4,
-            borderTopWidth: 1,
-            borderTopColor: "rgba(255,255,255,0.06)",
-            paddingVertical: 12,
-            opacity: pressed ? 0.6 : 1,
-          })}
-        >
-          <Text style={{ fontSize: 13, fontWeight: "500", color: "rgba(255,255,255,0.74)" }}>
-            {expanded ? "Recolher" : `Mostrar os ${sorted.length} do mês`}
+        {rest > 0 && (
+          <Text
+            style={{
+              paddingVertical: 12,
+              borderTopWidth: 1,
+              borderTopColor: "rgba(255,255,255,0.07)",
+              fontSize: 13,
+              color: INK.soft,
+            }}
+          >
+            E mais {rest} {rest === 1 ? "evento" : "eventos"} neste mês
           </Text>
-          {expanded ? (
-            <ChevronUp size={16} color="rgba(255,255,255,0.74)" />
-          ) : (
-            <ChevronDown size={16} color="rgba(255,255,255,0.74)" />
-          )}
-        </Pressable>
-      ) : (
-        <View style={{ height: 4 }} />
-      )}
+        )}
+      </View>
     </Surface>
+  );
+}
+
+function Figure({ dot, label, value }: { dot: string; label: string; value: string }) {
+  return (
+    <View style={{ flex: 1, minWidth: 0 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: dot }} />
+        <Text style={{ fontSize: 12.5, color: INK.soft }}>{label}</Text>
+      </View>
+      <Text numberOfLines={1} style={[nums, { marginTop: 4, fontSize: 20, fontWeight: "700", letterSpacing: -0.5, color: "#fff" }]}>
+        {value}
+      </Text>
+    </View>
   );
 }
