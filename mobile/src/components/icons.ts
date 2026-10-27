@@ -61,3 +61,4 @@ export { default as Camera } from "lucide-react-native/icons/camera";
 export { default as ImageIcon } from "lucide-react-native/icons/image";
 export { default as Keyboard } from "lucide-react-native/icons/keyboard";
 export { default as PenLine } from "lucide-react-native/icons/pen-line";
+export { default as LogOut } from "lucide-react-native/icons/log-out";

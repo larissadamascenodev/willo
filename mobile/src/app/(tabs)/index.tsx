@@ -19,6 +19,7 @@ import { useCardsOverview, invoiceDueDate } from "@/hooks/useCardsOverview";
 import Room from "~/components/Room";
 import ScrollEdge from "~/components/ScrollEdge";
 import HomeHeader from "~/components/home/HomeHeader";
+import ProfileSheet from "~/components/ProfileSheet";
 import Stories from "~/components/home/Stories";
 import WidgetBoard from "~/components/home/WidgetBoard";
 import EditBar from "~/components/home/EditBar";
@@ -61,6 +62,7 @@ export default function Home() {
   /* Held here, not in the board: the bar that says it is being edited has to stay
      put while the board scrolls under it. */
   const [editing, setEditing] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const today = useMemo(() => new Date(), []);
   const month = today.getMonth();
@@ -233,7 +235,9 @@ export default function Home() {
         name={name}
         avatarUrl={profile?.avatar_url}
         collapsed={collapsed && !editing}
+        onProfile={() => setProfileOpen(true)}
       />
+      <ProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} name={name} avatarUrl={profile?.avatar_url} />
       <EditBar open={editing} onDone={() => setEditing(false)} />
     </Room>
   );

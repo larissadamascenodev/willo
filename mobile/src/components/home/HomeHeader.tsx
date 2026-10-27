@@ -16,12 +16,15 @@ export default function HomeHeader({
   avatarUrl,
   unread = 0,
   collapsed = false,
+  onProfile,
 }: {
   name?: string | null;
   avatarUrl?: string | null;
   unread?: number;
   /** The top of the screen has receded; the name takes over here. */
   collapsed?: boolean;
+  /** Opens who is signed in, and the way out. */
+  onProfile?: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const firstName = name?.trim().split(" ")[0] ?? "";
@@ -72,6 +75,7 @@ export default function HomeHeader({
     >
       <Pressable
         accessibilityLabel="Perfil"
+        onPress={onProfile}
         style={({ pressed }) => ({
           width: 44,
           height: 44,
