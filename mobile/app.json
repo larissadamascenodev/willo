@@ -13,6 +13,9 @@
       "supportsTablet": false,
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
@@ -62,6 +65,18 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "2d556821-d8c3-4e2c-af43-e12ad03e0594"
+      }
+    },
+    "owner": "larissaddamasceno.dev",
+    "updates": {
+      "url": "https://u.expo.dev/2d556821-d8c3-4e2c-af43-e12ad03e0594"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }
