@@ -17,8 +17,8 @@ import { BANKS } from "@/lib/banks";
 import { supabase } from "~/supabase/client";
 import Room from "~/components/Room";
 import Glass from "~/components/Glass";
-import Field from "~/components/auth/Field";
-import { Check, ChevronLeft } from "~/components/icons";
+import Field, { PasswordField } from "~/components/auth/Field";
+import { Check, ChevronLeft, Mail } from "~/components/icons";
 import { savePendingOnboarding } from "~/lib/onboarding";
 import { GREEN, INK, RED } from "~/theme/tokens";
 
@@ -62,7 +62,6 @@ export default function Comecar() {
   const [cents, setCents] = useState(0);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [reveal, setReveal] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [confirmEmail, setConfirmEmail] = useState(false);
@@ -361,38 +360,29 @@ export default function Comecar() {
                   <Sub>É com ela que você entra aqui e no navegador.</Sub>
                   <View style={{ marginTop: 28, gap: 12 }}>
                     <Field
-                      label="E-mail"
+                      icon={Mail}
                       value={email}
                       onChangeText={(t) => {
                         setEmail(t);
                         setNote(null);
                       }}
-                      placeholder="voce@email.com"
+                      placeholder="E-mail"
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoCorrect={false}
                       autoComplete="email"
                     />
-                    <View>
-                      <Field
-                        label="Senha"
-                        trailing
-                        value={password}
-                        onChangeText={(t) => {
-                          setPassword(t);
-                          setNote(null);
-                        }}
-                        placeholder="Pelo menos 6 caracteres"
-                        secureTextEntry={!reveal}
-                        autoCapitalize="none"
-                        autoComplete="new-password"
-                        onSubmitEditing={createAccount}
-                        returnKeyType="go"
-                      />
-                      <Pressable onPress={() => setReveal((v) => !v)} hitSlop={10} style={{ position: "absolute", right: 14, bottom: 17 }}>
-                        <Text style={{ fontSize: 12.5, fontWeight: "600", color: INK.softer }}>{reveal ? "Ocultar" : "Mostrar"}</Text>
-                      </Pressable>
-                    </View>
+                    <PasswordField
+                      value={password}
+                      onChangeText={(t) => {
+                        setPassword(t);
+                        setNote(null);
+                      }}
+                      placeholder="Senha (pelo menos 6 caracteres)"
+                      autoComplete="new-password"
+                      onSubmitEditing={createAccount}
+                      returnKeyType="go"
+                    />
                   </View>
                 </>
               )}
