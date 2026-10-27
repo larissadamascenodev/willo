@@ -4,76 +4,89 @@ import { Eye, EyeOff, Lock } from "~/components/icons";
 import { GREEN, INK, RED } from "~/theme/tokens";
 
 /**
- * A field, drawn as a pill of glass on the ground.
+ * A field, drawn as a card of glass on the ground.
  *
- * It is the shape of the buttons around it — long, rounded, one height — so a form
- * reads as a column of the same kind of object. A glyph on the left says what it
- * asks for, and takes the green of the rim while the field has the keyboard, which
- * is all the feedback a field needs. `right` is for a control that lives inside it,
- * like the eye on a password.
+ * A glyph on the left says what it asks for, and takes the green of the rim while
+ * the field has the keyboard, which is all the feedback a field needs. `right` is
+ * for a control that lives inside it, like the eye on a password.
  *
- * The label above is optional: a field that says what it is with a glyph and a
- * placeholder does not need to say it twice.
+ * The name of the field sits in the card above what is typed (`inset`), the way it
+ * does on the web's sign-in, so the card reads as one thing and the name stays
+ * even once there is something typed over where a placeholder would have been.
+ * Without `inset` the name hangs above the card instead, and without a name the
+ * placeholder says it.
  */
 export default function Field({
   label,
+  inset = false,
   icon: Icon,
   right,
   error = false,
   ...props
 }: ComponentProps<typeof TextInput> & {
   label?: string;
+  inset?: boolean;
   icon?: ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
   right?: ReactNode;
   error?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
+  const outside = !!label && !inset;
+  const inside = !!label && inset;
+
   return (
     <View>
-      {label ? (
-        <Text
-          style={{
-            fontSize: 11.5,
-            fontWeight: "600",
-            letterSpacing: 1.2,
-            textTransform: "uppercase",
-            color: INK.softer,
-            marginBottom: 8,
-          }}
-        >
+      {outside ? (
+        <Text style={{ fontSize: 11.5, fontWeight: "600", letterSpacing: 1.2, textTransform: "uppercase", color: INK.softer, marginBottom: 8 }}>
           {label}
         </Text>
       ) : null}
       <View
         style={{
-          height: 58,
+          height: inside ? 76 : 58,
           flexDirection: "row",
           alignItems: "center",
-          gap: 12,
-          paddingLeft: 16,
-          paddingRight: right ? 6 : 16,
-          borderRadius: 18,
+          gap: 14,
+          paddingLeft: 18,
+          paddingRight: right ? 6 : 18,
+          borderRadius: inside ? 22 : 18,
           borderCurve: "continuous",
           borderWidth: 1,
           borderColor: error ? "rgba(248,113,113,0.7)" : focused ? "rgba(200,243,109,0.75)" : "rgba(255,255,255,0.10)",
           backgroundColor: focused ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.055)",
         }}
       >
-        {Icon ? <Icon size={19} color={error ? RED : focused ? GREEN : INK.softer} strokeWidth={2} /> : null}
-        <TextInput
-          accessibilityLabel={label ?? props.placeholder}
-          {...props}
-          onFocus={(e) => {
-            setFocused(true);
-            props.onFocus?.(e);
-          }}
-          onBlur={(e) => {
-            setFocused(false);
-            props.onBlur?.(e);
-          }}
-          placeholderTextColor={INK.faint}
-          style={{ flex: 1, minWidth: 0, height: "100%", fontSize: 16.5, color: "#fff", padding: 0 }}
-        />
+        {Icon ? <Icon size={20} color={error ? RED : focused ? GREEN : INK.softer} strokeWidth={2} /> : null}
+        <View style={{ flex: 1, minWidth: 0, justifyContent: "center" }}>
+          {inside ? (
+            <Text
+              style={{
+                fontSize: 11.5,
+                fontWeight: "600",
+                letterSpacing: 2,
+                textTransform: "uppercase",
+                color: error ? RED : focused ? "rgba(200,243,109,0.9)" : INK.softer,
+                marginBottom: 2,
+              }}
+            >
+              {label}
+            </Text>
+          ) : null}
+          <TextInput
+            accessibilityLabel={label ?? props.placeholder}
+            {...props}
+            onFocus={(e) => {
+              setFocused(true);
+              props.onFocus?.(e);
+            }}
+            onBlur={(e) => {
+              setFocused(false);
+              props.onBlur?.(e);
+            }}
+            placeholderTextColor={INK.faint}
+            style={{ height: inside ? 30 : "100%", fontSize: 17, color: "#fff", padding: 0 }}
+          />
+        </View>
         {right}
       </View>
     </View>
@@ -97,9 +110,9 @@ export function PasswordField(
           onPress={() => setReveal((v) => !v)}
           accessibilityLabel={reveal ? "Ocultar senha" : "Mostrar senha"}
           hitSlop={6}
-          style={({ pressed }) => ({ width: 46, height: 46, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.5 : 1 })}
+          style={({ pressed }) => ({ width: 48, height: 48, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.5 : 1 })}
         >
-          {reveal ? <EyeOff size={19} color={INK.soft} /> : <Eye size={19} color={INK.soft} />}
+          {reveal ? <EyeOff size={20} color={INK.soft} /> : <Eye size={20} color={INK.soft} />}
         </Pressable>
       }
     />

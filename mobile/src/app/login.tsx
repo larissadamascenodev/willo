@@ -11,46 +11,82 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import * as WebBrowser from "expo-web-browser";
 import { supabase } from "~/supabase/client";
 import Room from "~/components/Room";
 import Glass from "~/components/Glass";
 import Field, { PasswordField } from "~/components/auth/Field";
-import ParticleOrb from "~/components/registro/ParticleOrb";
-import { AlertTriangle, ChevronLeft, CircleCheck, Mail } from "~/components/icons";
+import { AppleMark, GoogleMark } from "~/components/auth/BrandIcons";
+import { AlertTriangle, ChevronLeft, CircleCheck, Info, Mail } from "~/components/icons";
 import { GREEN, INK, RED } from "~/theme/tokens";
 
 /**
  * The door, for someone who already has an account.
  *
- * The same sphere as the welcome, small, so it is plainly the same place — and it
- * spins while the sign-in is in flight, which says it is working better than a
- * spinner in a button does. Two glass fields, one button, and a line for whoever
- * has forgotten the password.
+ * It opens on the choice: the Apple button, the Google button, and under them a
+ * line for e-mail. Choosing e-mail does not go to another screen — the same page
+ * grows the form, and the two big buttons fold up into two small cards at the top
+ * of it, one glyph each, side by side, so the way in that was not chosen stays one
+ * tap away without taking up the room the form needs.
+ *
+ * Apple and Google are drawn and answer a tap, but cannot sign anyone in yet: they
+ * need the native build, and the Apple one needs the developer account that is not
+ * there yet. The tap says so, and points at e-mail, rather than doing nothing.
+ *
+ * There is no "create an account" here: the welcome, one step back, is where that
+ * lives, and offering it twice only gives someone who already has an account a
+ * second way to go wrong.
  *
  * The button is always a button. It was dimmed to a third while the fields were
  * empty, which on a dark screen turns white into a grey bar that reads as a divider
  * — so the one control on the screen looked like it was not there. It stays solid
  * and answers a press that cannot go through by saying what is missing.
- *
- * Someone with no account is one tap from the questions that make one.
  */
 
 const RESET_REDIRECT = "https://willo-app.vercel.app/reset-password";
+const SITE = "https://willo-app.vercel.app";
+
+type Note = { tone: "bad" | "good" | "info"; text: string; field?: "email" | "password" };
 
 export default function Login() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  /* Coming back from "confirm your e-mail", the address is already known. */
+  /* Coming back from "confirm your e-mail", the address is already known — and the
+     form is what they came for. */
   const params = useLocalSearchParams<{ email?: string }>();
-  const [email, setEmail] = useState(typeof params.email === "string" ? params.email : "");
+  const known = typeof params.email === "string" ? params.email : "";
+  const [form, setForm] = useState(!!known);
+  const [email, setEmail] = useState(known);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<{ tone: "bad" | "good"; text: string; field?: "email" | "password" } | null>(null);
+  const [note, setNote] = useState<Note | null>(null);
+  const emailRef = useRef<ComponentRef<typeof TextInput>>(null);
   const passwordRef = useRef<ComponentRef<typeof TextInput>>(null);
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace("/bem-vindo" as never));
+  /* From the form, back is back to the choice; from the choice, it leaves. */
+  const back = () => {
+    if (form) {
+      setForm(false);
+      setNote(null);
+      return;
+    }
+    router.canGoBack() ? router.back() : router.replace("/bem-vindo" as never);
+  };
+
+  const openForm = () => {
+    void Haptics.selectionAsync().catch(() => undefined);
+    setNote(null);
+    setForm(true);
+    /* Once the cards have folded away. */
+    setTimeout(() => emailRef.current?.focus(), 380);
+  };
+
+  const soon = (who: string) => {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
+    setNote({ tone: "info", text: `Entrar com ${who} chega em breve. Por enquanto, entre com o seu e-mail.` });
+  };
 
   const refuse = (text: string, field?: "email" | "password") => {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
@@ -73,7 +109,7 @@ export default function Login() {
       const msg = error.message.toLowerCase();
       refuse(
         msg.includes("invalid")
-          ? "E-mail ou senha incorretos. Se você entra pela Apple ou pelo Google, toque em “Esqueci a senha” para criar uma."
+          ? "E-mail ou senha incorretos. Se você entra pela Apple ou pelo Google, toque em “Esqueci minha senha” para criar uma."
           : msg.includes("confirm")
             ? "Confirme o seu e-mail pelo link que enviamos e tente de novo."
             : "Não foi possível entrar. Tente de novo.",
@@ -101,6 +137,8 @@ export default function Login() {
     });
   };
 
+  const transition = LinearTransition.duration(340);
+
   return (
     <Room lit sky>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -113,72 +151,89 @@ export default function Login() {
         </View>
 
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 4, paddingBottom: insets.bottom + 20 }}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingBottom: insets.bottom + 18 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Who this is, and what it asks ── */}
-          <Animated.View entering={FadeIn.delay(80).duration(700)} style={{ alignItems: "center" }}>
-            <ParticleOrb size={124} mode={busy ? "thinking" : "idle"} />
+          {/* The choice is centred in the page; the form starts near the top, where
+              the keyboard will not cover it. */}
+          <Animated.View layout={transition} style={{ flex: form ? 0 : 1, minHeight: form ? 28 : 0 }} />
+
+          {/* ── Welcome back ── */}
+          <Animated.View layout={transition} entering={FadeInDown.delay(60).duration(420)} style={{ alignItems: "center" }}>
+            <Text style={{ fontSize: 40, fontWeight: "300", letterSpacing: -1, lineHeight: 44, color: "#fff", textAlign: "center" }}>Bem-vindo</Text>
+            <Text style={{ fontSize: 40, fontWeight: "800", letterSpacing: -1.4, lineHeight: 46, color: "#fff", textAlign: "center" }}>de volta.</Text>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(120).duration(420)} style={{ marginTop: 4, alignItems: "center" }}>
-            <Text style={{ fontSize: 31, fontWeight: "800", letterSpacing: -1, lineHeight: 35, color: "#fff", textAlign: "center" }}>
-              Que bom te ver{"\n"}de novo.
-            </Text>
-            <Text style={{ marginTop: 10, fontSize: 15, lineHeight: 21, color: INK.soft, textAlign: "center" }}>
-              Entre com a mesma conta que você usa{"\n"}no navegador.
-            </Text>
-          </Animated.View>
-
-          {/* ── The two fields ── */}
-          <Animated.View entering={FadeInDown.delay(220).duration(420)} style={{ marginTop: 30, gap: 12 }}>
-            <Field
-              icon={Mail}
-              value={email}
-              error={note?.tone === "bad" && note.field === "email"}
-              onChangeText={(t) => {
-                setEmail(t);
-                setNote(null);
-              }}
-              placeholder="E-mail"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="email"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordRef.current?.focus()}
-            />
-            <PasswordField
-              ref={passwordRef}
-              value={password}
-              error={note?.tone === "bad" && note.field === "password"}
-              onChangeText={(t) => {
-                setPassword(t);
-                setNote(null);
-              }}
-              placeholder="Senha"
-              autoComplete="current-password"
-              onSubmitEditing={submit}
-              returnKeyType="go"
-            />
-          </Animated.View>
-
-          <Pressable
-            onPress={sendReset}
-            disabled={busy}
-            hitSlop={8}
-            style={({ pressed }) => ({ alignSelf: "flex-end", marginTop: 6, paddingVertical: 8, paddingHorizontal: 4, opacity: pressed ? 0.6 : 1 })}
+          {/* ── Apple and Google: two big buttons, or two small cards ── */}
+          <Animated.View
+            layout={transition}
+            entering={FadeInDown.delay(160).duration(420)}
+            style={{ marginTop: form ? 24 : 38, flexDirection: form ? "row" : "column", gap: form ? 10 : 12 }}
           >
-            <Text style={{ fontSize: 13.5, fontWeight: "500", color: INK.soft }}>Esqueci a senha</Text>
-          </Pressable>
+            <Provider compact={form} label="Entrar com Apple" onPress={() => soon("a Apple")}>
+              <AppleMark size={form ? 17 : 21} thin={form} />
+            </Provider>
+            <Provider compact={form} label="Entrar com Google" onPress={() => soon("o Google")}>
+              <GoogleMark size={form ? 17 : 20} thin={form} />
+            </Provider>
+          </Animated.View>
+
+          {/* ── Not a button's worth of attention: the e-mail way in ── */}
+          {!form && (
+            <Animated.View entering={FadeIn.delay(220).duration(300)} exiting={FadeOut.duration(120)}>
+              <Pressable onPress={openForm} hitSlop={8} accessibilityRole="button" style={({ pressed }) => ({ alignSelf: "center", marginTop: 14, paddingVertical: 12, paddingHorizontal: 12, opacity: pressed ? 0.6 : 1 })}>
+                <Text style={{ fontSize: 16, fontWeight: "700", color: "rgba(255,255,255,0.86)" }}>Entrar com e-mail</Text>
+              </Pressable>
+            </Animated.View>
+          )}
+
+          {/* ── The form ── */}
+          {form && (
+            <Animated.View entering={FadeInDown.delay(120).duration(380)} style={{ marginTop: 14, gap: 12 }}>
+              <Field
+                ref={emailRef}
+                label="E-mail"
+                inset
+                icon={Mail}
+                value={email}
+                error={note?.tone === "bad" && note.field === "email"}
+                onChangeText={(t) => {
+                  setEmail(t);
+                  setNote(null);
+                }}
+                placeholder="seu@email.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+              />
+              <PasswordField
+                ref={passwordRef}
+                label="Senha"
+                inset
+                value={password}
+                error={note?.tone === "bad" && note.field === "password"}
+                onChangeText={(t) => {
+                  setPassword(t);
+                  setNote(null);
+                }}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                onSubmitEditing={submit}
+                returnKeyType="go"
+              />
+            </Animated.View>
+          )}
 
           {/* ── What happened, if anything ── */}
           {note && (
             <Animated.View
               entering={FadeInDown.duration(220)}
               style={{
-                marginTop: 6,
+                marginTop: 14,
                 flexDirection: "row",
                 alignItems: "flex-start",
                 gap: 10,
@@ -186,42 +241,105 @@ export default function Login() {
                 borderWidth: 1,
                 paddingHorizontal: 14,
                 paddingVertical: 12,
-                borderColor: note.tone === "bad" ? "rgba(248,113,113,0.25)" : "rgba(200,243,109,0.25)",
-                backgroundColor: note.tone === "bad" ? "rgba(248,113,113,0.08)" : "rgba(200,243,109,0.08)",
+                borderColor: note.tone === "bad" ? "rgba(248,113,113,0.25)" : note.tone === "good" ? "rgba(200,243,109,0.25)" : "rgba(255,255,255,0.14)",
+                backgroundColor: note.tone === "bad" ? "rgba(248,113,113,0.08)" : note.tone === "good" ? "rgba(200,243,109,0.08)" : "rgba(255,255,255,0.06)",
               }}
             >
-              {note.tone === "bad" ? <AlertTriangle size={16} color={RED} /> : <CircleCheck size={16} color={GREEN} />}
+              {note.tone === "bad" ? <AlertTriangle size={16} color={RED} /> : note.tone === "good" ? <CircleCheck size={16} color={GREEN} /> : <Info size={16} color="rgba(255,255,255,0.8)" />}
               <Text style={{ flex: 1, fontSize: 13.5, lineHeight: 19, color: "rgba(255,255,255,0.88)" }}>{note.text}</Text>
             </Animated.View>
           )}
 
-          {/* Solid, always. Whether it can go through is answered on the press. */}
-          <Pressable
-            onPress={submit}
-            disabled={busy}
-            style={({ pressed }) => ({
-              marginTop: 18,
-              height: 58,
-              borderRadius: 29,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "#fff",
-              transform: [{ scale: pressed ? 0.985 : 1 }],
-            })}
-          >
-            {busy ? <ActivityIndicator color="#0B0B0B" /> : <Text style={{ fontSize: 17, fontWeight: "700", color: "#0B0B0B" }}>Entrar</Text>}
-          </Pressable>
+          {form && (
+            <Animated.View entering={FadeInDown.delay(200).duration(380)}>
+              {/* Solid, always. Whether it can go through is answered on the press. */}
+              <Pressable
+                onPress={submit}
+                disabled={busy}
+                style={({ pressed }) => ({
+                  marginTop: 16,
+                  height: 58,
+                  borderRadius: 29,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#fff",
+                  transform: [{ scale: pressed ? 0.985 : 1 }],
+                })}
+              >
+                {busy ? <ActivityIndicator color="#0B0B0B" /> : <Text style={{ fontSize: 17, fontWeight: "700", color: "#0B0B0B" }}>Entrar</Text>}
+              </Pressable>
 
-          <View style={{ flex: 1, minHeight: 28 }} />
+              <Pressable onPress={sendReset} disabled={busy} hitSlop={8} style={({ pressed }) => ({ alignSelf: "center", marginTop: 8, paddingVertical: 12, paddingHorizontal: 12, opacity: pressed ? 0.6 : 1 })}>
+                <Text style={{ fontSize: 15, fontWeight: "600", color: INK.soft }}>Esqueci minha senha</Text>
+              </Pressable>
+            </Animated.View>
+          )}
 
-          {/* ── No account yet ── */}
-          <Pressable onPress={() => router.replace("/comecar" as never)} hitSlop={8} style={({ pressed }) => ({ alignSelf: "center", paddingVertical: 10, opacity: pressed ? 0.6 : 1 })}>
-            <Text style={{ fontSize: 15, color: INK.softer }}>
-              Ainda não tem conta? <Text style={{ fontWeight: "700", color: "#fff" }}>Criar conta</Text>
+          <Animated.View layout={transition} style={{ flex: form ? 1 : 1.15, minHeight: 24 }} />
+
+          {/* ── What going on means ── */}
+          <Text style={{ paddingHorizontal: 8, fontSize: 13, lineHeight: 20, color: INK.faint, textAlign: "center" }}>
+            Ao continuar, você concorda com os{" "}
+            <Text onPress={() => void WebBrowser.openBrowserAsync(`${SITE}/termos-de-uso`)} style={{ fontWeight: "700", color: INK.soft, textDecorationLine: "underline" }}>
+              Termos de Uso
+            </Text>{" "}
+            e{" "}
+            <Text onPress={() => void WebBrowser.openBrowserAsync(`${SITE}/politica-privacidade`)} style={{ fontWeight: "700", color: INK.soft, textDecorationLine: "underline" }}>
+              Política de Privacidade
             </Text>
-          </Pressable>
+            .
+          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </Room>
+  );
+}
+
+/**
+ * One of the two outside ways in.
+ *
+ * Open, it is a long button with its solid glyph and its words; folded, it is half
+ * of a row, slimmer, and only the glyph, as a line. The same component in both, so moving between them is
+ * the layout animating rather than one thing being swapped for another.
+ */
+function Provider({
+  compact,
+  label,
+  onPress,
+  children,
+}: {
+  compact: boolean;
+  label: string;
+  onPress: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Animated.View layout={LinearTransition.duration(340)} style={{ flex: compact ? 1 : undefined }}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        style={({ pressed }) => ({
+          height: compact ? 44 : 62,
+          borderRadius: compact ? 22 : 31,
+          borderCurve: "continuous",
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 12,
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.11)",
+          backgroundColor: "rgba(255,255,255,0.07)",
+          transform: [{ scale: pressed ? 0.985 : 1 }],
+        })}
+      >
+        {children}
+        {!compact && (
+          <Animated.Text entering={FadeIn.delay(160).duration(200)} exiting={FadeOut.duration(100)} style={{ fontSize: 16.5, fontWeight: "600", color: "#fff" }}>
+            {label}
+          </Animated.Text>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }

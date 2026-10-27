@@ -360,25 +360,29 @@ export default function Comecar() {
                   <Sub>É com ela que você entra aqui e no navegador.</Sub>
                   <View style={{ marginTop: 28, gap: 12 }}>
                     <Field
+                      label="E-mail"
+                      inset
                       icon={Mail}
                       value={email}
                       onChangeText={(t) => {
                         setEmail(t);
                         setNote(null);
                       }}
-                      placeholder="E-mail"
+                      placeholder="seu@email.com"
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoCorrect={false}
                       autoComplete="email"
                     />
                     <PasswordField
+                      label="Senha"
+                      inset
                       value={password}
                       onChangeText={(t) => {
                         setPassword(t);
                         setNote(null);
                       }}
-                      placeholder="Senha (pelo menos 6 caracteres)"
+                      placeholder="Pelo menos 6 caracteres"
                       autoComplete="new-password"
                       onSubmitEditing={createAccount}
                       returnKeyType="go"
