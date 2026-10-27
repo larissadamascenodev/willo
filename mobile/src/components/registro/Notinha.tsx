@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Platform, Text, View, type TextStyle } from "react-native";
+import { useEffect, useState } from "react";
+import { Platform, Pressable, Text, View, type TextStyle } from "react-native";
 import Animated, {
   Easing,
   FadeIn,
@@ -15,7 +15,7 @@ import Animated, {
   ZoomIn,
 } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
-import { AlertTriangle, Check } from "~/components/icons";
+import { AlertTriangle, Check, Undo2 } from "~/components/icons";
 import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
 
@@ -28,9 +28,12 @@ import { GREEN, INK, RED } from "~/theme/tokens";
  * heard and which lines are already in the books. Glass rather than paper, with a
  * torn edge to carry the idea; while a line is still being read the whole slip
  * breathes instead of growing a spinner.
+ *
+ * Once it is all in the books it can be taken back from the slip itself — the
+ * quickest way to undo a sentence that was heard wrong.
  */
 
-export type NotinhaStatus = "reading" | "asking" | "saving" | "saved" | "error";
+export type NotinhaStatus = "reading" | "asking" | "saving" | "saved" | "error" | "undone";
 
 export interface NotinhaLine {
   id: string;
@@ -54,6 +57,7 @@ const subtitleFor = (line: NotinhaLine) => {
   if (line.status === "saving") return "salvando…";
   if (line.status === "error") return "não consegui salvar";
   if (line.status === "asking") return line.sub ? `${line.sub} · falta uma coisa` : "falta uma coisa";
+  if (line.status === "undone") return "desfeito";
   return line.sub;
 };
 
@@ -83,6 +87,7 @@ function StatusMark({ status }: { status: NotinhaStatus }) {
     );
   }
   if (status === "error") return <AlertTriangle size={17} color={RED} strokeWidth={2.4} />;
+  if (status === "undone") return <Undo2 size={16} color={INK.faint} strokeWidth={2.2} />;
   return (
     <View
       style={{
@@ -96,7 +101,8 @@ function StatusMark({ status }: { status: NotinhaStatus }) {
   );
 }
 
-export default function Notinha({ lines }: { lines: NotinhaLine[] }) {
+export default function Notinha({ lines, onUndo }: { lines: NotinhaLine[]; onUndo?: () => void }) {
+  const [undoing, setUndoing] = useState(false);
   const busy = lines.some((l) => l.status === "reading" || l.status === "saving");
   const breath = useSharedValue(1);
 
@@ -122,6 +128,7 @@ export default function Notinha({ lines }: { lines: NotinhaLine[] }) {
   if (lines.length === 0) return null;
 
   const allSaved = lines.every((l) => l.status === "saved");
+  const allUndone = lines.every((l) => l.status === "undone");
   const total = lines.reduce((t, l) => t + (l.type === "receita" ? l.amount : -l.amount), 0);
 
   return (
@@ -170,7 +177,8 @@ export default function Notinha({ lines }: { lines: NotinhaLine[] }) {
                   fontSize: 16,
                   fontWeight: "600",
                   letterSpacing: -0.2,
-                  color: line.status === "saved" ? "#fff" : "rgba(255,255,255,0.7)",
+                  color: line.status === "saved" ? "#fff" : line.status === "undone" ? INK.faint : "rgba(255,255,255,0.7)",
+                  textDecorationLine: line.status === "undone" ? "line-through" : "none",
                 }}
               >
                 {line.name}
@@ -186,7 +194,8 @@ export default function Notinha({ lines }: { lines: NotinhaLine[] }) {
                   fontSize: 16,
                   fontWeight: "700",
                   letterSpacing: -0.3,
-                  color: line.status === "saved" ? (line.type === "receita" ? GREEN : "#fff") : INK.soft,
+                  color: line.status === "saved" ? (line.type === "receita" ? GREEN : "#fff") : line.status === "undone" ? INK.faint : INK.soft,
+                  textDecorationLine: line.status === "undone" ? "line-through" : "none",
                 },
               ]}
             >
@@ -195,6 +204,12 @@ export default function Notinha({ lines }: { lines: NotinhaLine[] }) {
             </Text>
           </Animated.View>
         ))}
+
+        {allUndone && (
+          <View style={{ borderTopWidth: 1, borderStyle: "dashed", borderColor: DASH, paddingTop: 12 }}>
+            <Text style={{ fontSize: 13, color: INK.softer }}>Desfeito — nada disso ficou salvo.</Text>
+          </View>
+        )}
 
         {allSaved && (
           <Animated.View
@@ -213,12 +228,36 @@ export default function Notinha({ lines }: { lines: NotinhaLine[] }) {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <Check size={13} color={GREEN} strokeWidth={3} />
               <Text style={{ fontSize: 13, fontWeight: "600", color: GREEN }}>Salvo no Willo</Text>
+              {lines.length > 1 && (
+                <Text style={[nums, { fontSize: 13, fontWeight: "700", color: "rgba(255,255,255,0.75)" }]}>
+                  {" · "}
+                  {total >= 0 ? "+" : "−"}
+                  {money(Math.abs(total))}
+                </Text>
+              )}
             </View>
-            {lines.length > 1 && (
-              <Text style={[nums, { fontSize: 13, fontWeight: "700", color: "rgba(255,255,255,0.75)" }]}>
-                {total >= 0 ? "+" : "−"}
-                {money(Math.abs(total))}
-              </Text>
+            {onUndo && (
+              <Pressable
+                onPress={() => {
+                  if (undoing) return;
+                  setUndoing(true);
+                  onUndo();
+                }}
+                hitSlop={8}
+                style={({ pressed }) => ({
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 5,
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 999,
+                  backgroundColor: "rgba(255,255,255,0.07)",
+                  opacity: undoing ? 0.5 : pressed ? 0.7 : 1,
+                })}
+              >
+                <Undo2 size={13} color="rgba(255,255,255,0.8)" strokeWidth={2.2} />
+                <Text style={{ fontSize: 12.5, fontWeight: "600", color: "rgba(255,255,255,0.8)" }}>Desfazer</Text>
+              </Pressable>
             )}
           </Animated.View>
         )}

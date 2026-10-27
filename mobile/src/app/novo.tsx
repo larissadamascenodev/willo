@@ -11,7 +11,13 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { createTransaction, getAccounts, getCreditCards } from "@/services/transactionService";
+import {
+  createTransaction,
+  getAccounts,
+  getCreditCards,
+  getTransactionById,
+  updateTransaction,
+} from "@/services/transactionService";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "@/lib/categoryData";
 import { categoryHex } from "@/lib/categoryData";
@@ -20,7 +26,7 @@ import { cardHex } from "@/hooks/useCardsOverview";
 import Room from "~/components/Room";
 import BottomSheet from "~/components/BottomSheet";
 import SegmentedTabs from "~/components/SegmentedTabs";
-import { Check, ChevronRight, Clock, CreditCard, FileText, Tag, Wallet, X } from "~/components/icons";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Clock, CreditCard, FileText, Tag, Wallet, X } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { useAuth } from "~/lib/auth";
@@ -36,6 +42,11 @@ import { GREEN, INK, RED } from "~/theme/tokens";
  *
  * It fills the whole screen. As a panel it left a strip of the page showing above
  * it, and with the keyboard up that strip moved.
+ *
+ * Opened with an id to edit, it is the same form filled in with what was saved,
+ * and saving changes that movement rather than adding one. How it repeats is not
+ * offered then: turning a purchase into instalments after the fact is a different
+ * thing from correcting it.
  */
 
 const SECTION = {
@@ -52,9 +63,26 @@ const SECTION = {
 const brl = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const todayISO = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const isoOf = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const todayISO = () => isoOf(new Date());
+
+/** "Hoje", "Ontem", or the day itself. */
+const dayLabel = (iso: string) => {
+  const today = new Date();
+  const d = new Date(`${iso}T12:00:00`);
+  const diff = Math.round((new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime() - new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) / 86_400_000);
+  if (diff === 0) return "Hoje";
+  if (diff === 1) return "Ontem";
+  if (diff === -1) return "Amanhã";
+  return d
+    .toLocaleDateString("pt-BR", { day: "numeric", month: "short", ...(d.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}) })
+    .replace(".", "");
+};
+const shiftDay = (iso: string, by: number) => {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setDate(d.getDate() + by);
+  return isoOf(d);
 };
 
 interface Account {
@@ -75,7 +103,8 @@ export default function Novo() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const params = useLocalSearchParams<{ tipo?: string }>();
+  const params = useLocalSearchParams<{ tipo?: string; editar?: string }>();
+  const editingId = typeof params.editar === "string" && params.editar ? params.editar : null;
 
   const [type, setType] = useState<"receita" | "despesa">(
     params.tipo === "receita" ? "receita" : "despesa",
@@ -83,7 +112,7 @@ export default function Novo() {
   const [cents, setCents] = useState(0);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
-  const [date] = useState(todayISO());
+  const [date, setDate] = useState(todayISO());
   const [method, setMethod] = useState<"conta" | "cartao">("conta");
   const [accountId, setAccountId] = useState<string | null>(null);
   const [creditCardId, setCreditCardId] = useState<string | null>(null);
@@ -98,6 +127,8 @@ export default function Novo() {
   const [pickingCategory, setPickingCategory] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /* While the saved movement is on its way in, the form is not the person's yet. */
+  const [loadingEdit, setLoadingEdit] = useState(!!editingId);
 
   const isReceita = type === "receita";
   const accent = isReceita ? GREEN : RED;
@@ -112,17 +143,45 @@ export default function Novo() {
       setAccounts(accs);
       setCards(c as unknown as Card[]);
       setCustomCats(k);
-      setAccountId(accs.find((x) => x.is_default)?.id ?? accs[0]?.id ?? null);
+      if (!editingId) setAccountId(accs.find((x) => x.is_default)?.id ?? accs[0]?.id ?? null);
     })();
     return () => {
       alive = false;
     };
-  }, [user]);
+  }, [user, editingId]);
+
+  /* Editing: the form starts from what was saved. */
+  useEffect(() => {
+    if (!editingId) return;
+    let alive = true;
+    getTransactionById(editingId)
+      .then((tx: any) => {
+        if (!alive || !tx) return;
+        setType(tx.type === "receita" ? "receita" : "despesa");
+        setCents(Math.round(Number(tx.amount) * 100));
+        setName(tx.name ?? "");
+        setCategory(tx.category ?? "");
+        setDate(String(tx.date).slice(0, 10));
+        setMethod(tx.payment_method === "cartao" ? "cartao" : "conta");
+        setAccountId(tx.account_id ?? null);
+        setCreditCardId(tx.credit_card_id ?? null);
+        setRecurrence(tx.recurrence_type === "parcelado" || tx.recurrence_type === "fixa" ? tx.recurrence_type : "unica");
+        if (tx.installments) setInstallments(tx.installments);
+        setStatus(tx.status === "pago" ? "pago" : "pendente");
+        const obs = String(tx.observation ?? "");
+        setObservation(obs.startsWith("paid_installments:") ? (obs.split(" | ")[1] ?? "") : obs);
+      })
+      .catch(() => alive && setError("Não consegui abrir esse lançamento."))
+      .finally(() => alive && setLoadingEdit(false));
+    return () => {
+      alive = false;
+    };
+  }, [editingId]);
 
   /* A card purchase is settled by the statement, not on its own. */
   useEffect(() => {
-    if (method === "cartao") setStatus("pendente");
-  }, [method]);
+    if (method === "cartao" && !loadingEdit) setStatus("pendente");
+  }, [method, loadingEdit]);
 
   const usingCard = !isReceita && method === "cartao";
 
@@ -133,7 +192,7 @@ export default function Novo() {
   }, [isReceita, type, customCats]);
 
   const save = async () => {
-    if (saving) return;
+    if (saving || loadingEdit) return;
     if (cents === 0) {
       setError("Digite o valor.");
       return;
@@ -154,6 +213,23 @@ export default function Novo() {
     setSaving(true);
     setError(null);
     try {
+      if (editingId) {
+        await updateTransaction(editingId, {
+          name: name.trim(),
+          type,
+          amount: cents / 100,
+          category,
+          date,
+          status: usingCard ? "pendente" : status,
+          payment_method: usingCard ? "cartao" : "conta",
+          account_id: usingCard ? null : accountId,
+          credit_card_id: usingCard ? creditCardId : null,
+          observation: observation.trim() || null,
+        });
+        window.dispatchEvent(new CustomEvent("transaction-created"));
+        router.back();
+        return;
+      }
       await createTransaction(
         {
           name: name.trim(),
@@ -204,7 +280,7 @@ export default function Novo() {
               <X size={24} color="rgba(255,255,255,0.82)" />
             </Pressable>
             <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>
-              {isReceita ? "Nova receita" : "Nova despesa"}
+              {editingId ? (isReceita ? "Editar receita" : "Editar despesa") : isReceita ? "Nova receita" : "Nova despesa"}
             </Text>
             <View style={{ width: 40 }} />
           </View>
@@ -233,7 +309,11 @@ export default function Novo() {
           {/* The figure, loose on the page and reading from the left. */}
           <View style={{ paddingTop: 24, paddingBottom: 28 }}>
             <Text style={{ paddingHorizontal: 4, fontSize: 11.5, fontWeight: "600", letterSpacing: 1.4, textTransform: "uppercase", color: INK.softer }}>
-              {isReceita ? "Valor da receita" : "Valor da despesa"}
+              {editingId && recurrence === "parcelado"
+                ? "Valor da parcela"
+                : isReceita
+                  ? "Valor da receita"
+                  : "Valor da despesa"}
             </Text>
             <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6, paddingHorizontal: 4, marginTop: 8 }}>
               <Text style={{ fontSize: 20, fontWeight: "700", color: INK.softer }}>R$</Text>
@@ -355,6 +435,8 @@ export default function Novo() {
             </View>
           )}
 
+          {!editingId && (
+          <>
           <Text style={SECTION}>Repetição</Text>
           <SegmentedTabs
             compact
@@ -406,8 +488,25 @@ export default function Novo() {
             </View>
           )}
 
+          </>
+          )}
+
           <Text style={SECTION}>Mais</Text>
           <View>
+            {/* When it happened: today unless said otherwise, a day at a time either way. */}
+            <Row icon={CalendarDays} label="Data">
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Pressable onPress={() => setDate((d) => shiftDay(d, -1))} hitSlop={8} accessibilityLabel="Dia anterior" style={{ padding: 6 }}>
+                  <ChevronLeft size={18} color="rgba(255,255,255,0.8)" />
+                </Pressable>
+                <Text style={{ minWidth: 72, textAlign: "center", fontSize: 15, fontWeight: "600", color: "#fff" }}>
+                  {dayLabel(date)}
+                </Text>
+                <Pressable onPress={() => setDate((d) => shiftDay(d, 1))} hitSlop={8} accessibilityLabel="Dia seguinte" style={{ padding: 6 }}>
+                  <ChevronRight size={18} color="rgba(255,255,255,0.8)" />
+                </Pressable>
+              </View>
+            </Row>
             {!usingCard && (
               <Row
                 icon={status === "pago" ? Check : Clock}
@@ -472,7 +571,7 @@ export default function Novo() {
               <ActivityIndicator color="#0B0B0B" />
             ) : (
               <Text style={{ fontSize: 16, fontWeight: "700", color: "#0B0B0B" }}>
-                {isReceita ? "Adicionar receita" : "Adicionar despesa"}
+                {editingId ? "Salvar alterações" : isReceita ? "Adicionar receita" : "Adicionar despesa"}
               </Text>
             )}
           </Pressable>

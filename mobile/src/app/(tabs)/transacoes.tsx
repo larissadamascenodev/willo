@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { loadMonthTransactions, type AccountRow, type TransactionRow as Row } from "@/services/monthTransactions";
@@ -11,6 +12,7 @@ import Room from "~/components/Room";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import TransactionRow from "~/components/transactions/TransactionRow";
 import TransactionsSummary, { TransactionTabs } from "~/components/transactions/TransactionsSummary";
+import TransactionSheet, { removeTransaction } from "~/components/transactions/TransactionSheet";
 import { Pencil, Search, Trash2 } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
@@ -29,6 +31,9 @@ import { type as T } from "~/theme/type";
  * The list itself is assembled by the shared service, so a fixed entry appears in
  * the month it belongs to and a card's purchases arrive as one invoice line, exactly
  * as they do in the browser.
+ *
+ * A tap opens the movement — or, for an invoice line, the invoice. Holding a row is
+ * the short way round to editing or deleting it.
  */
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -45,6 +50,7 @@ const formatDateHeader = (dateStr: string, today = new Date()) => {
 
 export default function Transacoes() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { user } = useAuth();
   const { report } = useNavChrome();
   const today = useMemo(() => new Date(), []);
@@ -65,6 +71,32 @@ export default function Transacoes() {
   const [held, setHeld] = useState<Row | null>(null);
   const [heldRect, setHeldRect] = useState<AnchorRect | null>(null);
   const [asking, setAsking] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [holdError, setHoldError] = useState<string | null>(null);
+  const [detail, setDetail] = useState<Row | null>(null);
+
+  /* The same form it was made with, filled in. */
+  const edit = (tx: Row) => router.push({ pathname: "/novo", params: { editar: tx.id } } as never);
+
+  /* Only real movements open or hold: an invoice line opens its invoice, and an
+     opening balance is a record of when the account was created. */
+  const isReal = (tx: Row) => !tx.id.startsWith("fatura-") && !tx.id.startsWith("initial-balance-");
+
+  const removeHeld = async (scope: "month" | "all") => {
+    if (!held || removing) return;
+    setRemoving(true);
+    setHoldError(null);
+    try {
+      await removeTransaction(held, scope, { month, year, userId: user?.id });
+      window.dispatchEvent(new CustomEvent("transaction-created"));
+      setHeld(null);
+      void load();
+    } catch {
+      setHoldError("Não foi possível excluir. Tente de novo.");
+    } finally {
+      setRemoving(false);
+    }
+  };
 
   const { data: finance } = useFinanceData(month, year);
 
@@ -221,11 +253,23 @@ export default function Transacoes() {
                       accountName={tx.account_id ? accountName[tx.account_id] : undefined}
                       customCategories={customCategories}
                       creditCards={creditCards}
-                      onHold={(rect) => {
-                        setHeld(tx);
-                        setHeldRect(rect);
-                        setAsking(false);
+                      onPress={() => {
+                        if (tx.id.startsWith("fatura-") && tx.credit_card_id) {
+                          router.push(`/fatura/${tx.credit_card_id}` as never);
+                          return;
+                        }
+                        if (isReal(tx)) setDetail(tx);
                       }}
+                      onHold={
+                        isReal(tx)
+                          ? (rect) => {
+                              setHeld(tx);
+                              setHeldRect(rect);
+                              setAsking(false);
+                              setHoldError(null);
+                            }
+                          : undefined
+                      }
                     />
                   ))}
                 </Animated.View>
@@ -248,54 +292,99 @@ export default function Transacoes() {
           subtitle={asking ? "Excluir este lançamento?" : held?.category}
         />
         {asking ? (
-          <View style={{ padding: 12 }}>
-            <Text style={{ paddingHorizontal: 4, paddingBottom: 12, fontSize: 12.5, lineHeight: 17, color: "rgba(255,255,255,0.78)" }}>
-              {(held?.installments ?? 0) > 1
-                ? "Isso remove a compra inteira, com todas as parcelas."
-                : "Isso não pode ser desfeito."}
+          <View style={{ padding: 12, gap: 8 }}>
+            <Text style={{ paddingHorizontal: 4, paddingBottom: 4, fontSize: 12.5, lineHeight: 17, color: "rgba(255,255,255,0.78)" }}>
+              {held?.recurrence_type === "fixa"
+                ? "Ela se repete todo mês. Tirar só deste mês ou dela em diante?"
+                : (held?.installments ?? 0) > 1
+                  ? "Isso remove a compra inteira, com todas as parcelas."
+                  : "Isso não pode ser desfeito."}
             </Text>
-            <Text
-              onPress={() => setHeld(null)}
-              style={{
-                height: 44,
-                lineHeight: 44,
-                textAlign: "center",
-                borderRadius: 14,
-                overflow: "hidden",
-                backgroundColor: RED,
-                color: "#fff",
-                fontSize: 14.5,
-                fontWeight: "700",
-              }}
-            >
-              Excluir
-            </Text>
-            <Text
-              onPress={() => setAsking(false)}
-              style={{
-                marginTop: 8,
-                height: 44,
-                lineHeight: 44,
-                textAlign: "center",
-                borderRadius: 14,
-                overflow: "hidden",
-                backgroundColor: "rgba(255,255,255,0.07)",
-                color: "#fff",
-                fontSize: 14.5,
-                fontWeight: "600",
-              }}
-            >
-              Cancelar
-            </Text>
+            {held?.recurrence_type === "fixa" && (
+              <HoldButton label="Só deste mês" onPress={() => void removeHeld("month")} disabled={removing} />
+            )}
+            <HoldButton
+              label={held?.recurrence_type === "fixa" ? "Deste mês em diante" : "Excluir"}
+              danger
+              loading={removing}
+              onPress={() => void removeHeld("all")}
+            />
+            <HoldButton label="Cancelar" onPress={() => setAsking(false)} disabled={removing} />
+            {holdError && <Text style={{ paddingHorizontal: 4, fontSize: 12.5, color: RED }}>{holdError}</Text>}
           </View>
         ) : (
           <>
-            <MenuRow icon={Pencil} label="Editar" onPress={() => setHeld(null)} />
+            <MenuRow
+              icon={Pencil}
+              label="Editar"
+              onPress={() => {
+                const tx = held;
+                setHeld(null);
+                if (tx) edit(tx);
+              }}
+            />
             <MenuRow icon={Trash2} label="Excluir" danger last onPress={() => setAsking(true)} />
           </>
         )}
       </AnchoredMenu>
+
+      <TransactionSheet
+        tx={detail}
+        accountName={
+          detail?.account_id
+            ? (accountName[detail.account_id] ?? "Conta")
+            : detail?.payment_method === "cartao"
+              ? "Cartão"
+              : "Sem conta"
+        }
+        customCategories={customCategories}
+        userId={user?.id}
+        month={month}
+        year={year}
+        onClose={() => setDetail(null)}
+        onEdit={(tx) => {
+          setDetail(null);
+          edit(tx);
+        }}
+        onChanged={() => void load()}
+      />
     </Room>
+  );
+}
+
+/** One of the hold menu's answers. */
+function HoldButton({
+  label,
+  danger,
+  loading,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  danger?: boolean;
+  loading?: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled || loading}
+      style={({ pressed }) => ({
+        height: 44,
+        borderRadius: 14,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: danger ? RED : "rgba(255,255,255,0.07)",
+        opacity: disabled ? 0.5 : pressed ? 0.8 : 1,
+      })}
+    >
+      {loading ? (
+        <ActivityIndicator color="#fff" />
+      ) : (
+        <Text style={{ fontSize: 14.5, fontWeight: danger ? "700" : "600", color: "#fff" }}>{label}</Text>
+      )}
+    </Pressable>
   );
 }
 
