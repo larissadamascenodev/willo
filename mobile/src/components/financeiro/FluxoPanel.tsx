@@ -80,9 +80,21 @@ function Column({
   return <Animated.View style={[{ width, borderRadius: 999, backgroundColor: color }, animated]} />;
 }
 
-export default function FluxoPanel() {
+export default function FluxoPanel({
+  accountId,
+  embedded = false,
+}: {
+  /** Read only what moved through this account. */
+  accountId?: string;
+  /** Inside another page: no list of its own, that page has one. */
+  embedded?: boolean;
+}) {
   const router = useRouter();
-  const { entries, loading } = useCashFlow();
+  const { entries: all, loading } = useCashFlow();
+  const entries = useMemo(
+    () => (accountId ? all.filter((e) => e.accountId === accountId) : all),
+    [all, accountId],
+  );
   const [subTab, setSubTab] = useState<SubTab>("geral");
   const [period, setPeriod] = useState<CashFlowPeriod>("mes");
   const [hidden, setHidden] = useState(false);
@@ -136,7 +148,7 @@ export default function FluxoPanel() {
   const veil = (v: number) => (hidden ? "R$ ••••" : money(v));
 
   return (
-    <View style={{ marginTop: 20 }}>
+    <View style={{ marginTop: embedded ? 0 : 20 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <View style={{ flex: 1, minWidth: 0 }}>
           <SegmentedTabs
@@ -183,7 +195,9 @@ export default function FluxoPanel() {
         )}
 
         <Text style={{ marginTop: 12, fontSize: 12, lineHeight: 17, color: INK.soft }}>
-          Considera só o dinheiro que entrou e saiu das contas. Compras no cartão entram quando a fatura é paga.
+          {accountId
+            ? "Considera só o dinheiro que entrou e saiu desta conta. Compras no cartão entram quando a fatura é paga."
+            : "Considera só o dinheiro que entrou e saiu das contas. Compras no cartão entram quando a fatura é paga."}
         </Text>
       </Animated.View>
 
@@ -241,6 +255,8 @@ export default function FluxoPanel() {
         />
       </View>
 
+      {!embedded && (
+        <>
       {/* ══ The last few, named ══ */}
       <Text style={[T.eyebrow, { marginTop: 26, paddingHorizontal: 4 }]}>
         {subTab === "geral" ? "Últimos lançamentos" : subTab === "entradas" ? "Últimas entradas" : "Últimas saídas"}
@@ -274,6 +290,8 @@ export default function FluxoPanel() {
       >
         <Text style={{ fontSize: 15.5, fontWeight: "500", color: "#fff" }}>Ver todos os lançamentos</Text>
       </Pressable>
+        </>
+      )}
     </View>
   );
 }

@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { getAccounts } from "@/services/transactionService";
+import { useFinanceData } from "@/hooks/useFinanceData";
 import { fetchGoals, type Goal } from "@/services/goalService";
 import { colorFor } from "@/lib/banks";
 import { goalPreset } from "~/lib/goalIcon";
@@ -95,6 +96,11 @@ export default function Gestao() {
         .sort((a, b) => b.balance - a.balance),
     [accounts],
   );
+
+  /* Where the month lands: the figure the home card shows, read the same way. */
+  const now = useMemo(() => new Date(), []);
+  const { data: month } = useFinanceData(now.getMonth(), now.getFullYear(), { includeHistorical: false });
+  const previsto = month?.saldoPrevisto;
 
   const saldo = rows.reduce((s, r) => s + r.balance, 0);
   /* Money in a cofrinho has left the account's balance but is still the person's, so
@@ -196,15 +202,27 @@ export default function Gestao() {
               >
                 {money(saldo)}
               </Text>
-              {/* With a cofrinho, the accounts are not the whole of it: what is set aside
-                  is still the person's, so it is said once, small, under the balance. */}
-              {guardado > 0 && (
-                <Text numberOfLines={1} style={[T.note, { marginTop: 10, fontSize: 13 }]}>
-                  Patrimônio total:{" "}
-                  <Text style={{ fontWeight: "600", color: "rgba(255,255,255,0.8)" }}>{money(total)}</Text>
-                </Text>
-              )}
-              <Text style={{ marginTop: guardado > 0 ? 6 : 10, fontSize: 12.5, color: INK.soft }}>
+              {/* Two small readings side by side under the balance: where the month lands,
+                  and — once something is set aside — everything the person holds. */}
+              <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
+                {previsto !== undefined && (
+                  <View style={{ flex: 1, minWidth: 0, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: "rgba(255,255,255,0.07)" }}>
+                    <Text numberOfLines={1} style={{ fontSize: 11, color: INK.softer }}>Previsto no final do mês</Text>
+                    <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 14.5, fontWeight: "700", letterSpacing: -0.2, color: previsto < 0 ? RED : "#fff" }}>
+                      {money(previsto)}
+                    </Text>
+                  </View>
+                )}
+                {guardado > 0 && (
+                  <View style={{ flex: 1, minWidth: 0, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: "rgba(255,255,255,0.07)" }}>
+                    <Text numberOfLines={1} style={{ fontSize: 11, color: INK.softer }}>Patrimônio total</Text>
+                    <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 14.5, fontWeight: "700", letterSpacing: -0.2, color: "#fff" }}>
+                      {money(total)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Text style={{ marginTop: 10, fontSize: 12.5, color: INK.soft }}>
                 {rows.length} {rows.length === 1 ? "conta" : "contas"}
               </Text>
             </Animated.View>

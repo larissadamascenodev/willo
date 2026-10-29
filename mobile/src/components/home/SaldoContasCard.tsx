@@ -3,7 +3,6 @@ import { Text, View } from "react-native";
 import { ChevronRight } from "~/components/icons";
 import { getAccounts } from "@/services/transactionService";
 import { colorFor } from "@/lib/banks";
-import { fetchGoals } from "@/services/goalService";
 import BankMark from "~/components/BankMark";
 import { useRouter } from "expo-router";
 import Surface from "~/components/Surface";
@@ -38,8 +37,6 @@ const BUBBLE = 36;
 export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: number }) {
   const router = useRouter();
   const [accounts, setAccounts] = useState<Account[] | null>(null);
-  /* What is in cofrinhos has left the balance but not the person's hands. */
-  const [guardado, setGuardado] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -48,17 +45,9 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
         .then((a) => alive && setAccounts(a as unknown as Account[]))
         .catch(() => alive && setAccounts([]));
     load();
-    const loadGoals = () =>
-      fetchGoals()
-        .then((g) => alive && setGuardado(g.reduce((sum, x) => sum + (Number(x.current_amount) || 0), 0)))
-        .catch(() => alive && setGuardado(0));
-    loadGoals();
     /* The same event the web app fires when anything financial changes — it exists
        here because the shim gave the shared services somewhere to fire it. */
-    const onChange = () => {
-      load();
-      loadGoals();
-    };
+    const onChange = () => load();
     window.addEventListener("finance-data-changed", onChange);
     window.addEventListener("transaction-created", onChange);
     return () => {
@@ -97,16 +86,10 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
       </Text>
 
       {/* What is in hand, then where it lands: the same card answers "quanto tenho"
-          and "quanto sobra", which is the pair the question is actually about. */}
-      {guardado > 0 && (
-        <Text numberOfLines={1} style={[T.note, { marginTop: 8, fontSize: 13 }]}>
-          Patrimônio total:{" "}
-          <Text style={{ fontWeight: "600", color: "rgba(255,255,255,0.8)" }}>{money(total + guardado)}</Text>
-        </Text>
-      )}
+          and "quanto sobra". The patrimony lives on the accounts page, not here. */}
       {saldoPrevisto !== undefined && (
         <Text numberOfLines={1} style={[T.note, { marginTop: 8, fontSize: 13 }]}>
-          Previsto no fim do mês:{" "}
+          Previsto no final do mês:{" "}
           <Text style={{ fontWeight: "600", color: "rgba(255,255,255,0.8)" }}>
             {money(saldoPrevisto)}
           </Text>

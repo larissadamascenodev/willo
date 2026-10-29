@@ -10,6 +10,8 @@ export interface CashFlowEntry {
   amount: number;
   kind: "entrada" | "saida";
   accountName: string | null;
+  /** The account it moved through, so one account can read its own flow. */
+  accountId: string | null;
   isInvoicePayment: boolean;
 }
 
@@ -66,6 +68,7 @@ export function useCashFlow() {
         amount: Number(tx.amount),
         kind: tx.type === "receita" ? "entrada" : "saida",
         accountName: tx.account_id ? accountName.get(tx.account_id) ?? null : null,
+        accountId: tx.account_id ?? null,
         isInvoicePayment: false,
       });
     }
@@ -82,6 +85,7 @@ export function useCashFlow() {
         amount: Number(p.amount),
         kind: "saida",
         accountName: p.account_id ? accountName.get(p.account_id) ?? null : null,
+        accountId: p.account_id ?? null,
         isInvoicePayment: true,
       });
     }
