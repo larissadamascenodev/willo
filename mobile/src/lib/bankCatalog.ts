@@ -44,7 +44,18 @@ export const CATALOG: CatalogBank[] = [
   { id: "rico", name: "Rico", hex: "#FF5A00", match: /\brico\b/i, logo: require("../../assets/banks/rico.png") },
 ];
 
-/** The first twelve, which is what fits on a screen of tiles. */
-export const POPULAR = CATALOG.slice(0, 11);
+/**
+ * Willo's own wallet: for money in hand, which is in no bank. It is an account like
+ * the others — of the cash kind — with a mark of its own instead of a logo.
+ */
+export const WALLET: CatalogBank = {
+  id: "wallet",
+  name: "Carteira Willo",
+  hex: "#C8F36D",
+  match: /carteira willo/i,
+};
 
-export const catalogFor = (name: string) => CATALOG.find((b) => b.match.test(name));
+/** The first ten, which with the wallet and "Outro banco" fill a screen of tiles. */
+export const POPULAR = CATALOG.slice(0, 10);
+
+export const catalogFor = (name: string) => [WALLET, ...CATALOG].find((b) => b.match.test(name));

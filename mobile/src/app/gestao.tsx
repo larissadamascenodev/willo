@@ -4,13 +4,12 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { getAccounts } from "@/services/transactionService";
-import { fetchGoals, isReserveGoal, type Goal } from "@/services/goalService";
+import { fetchGoals, type Goal } from "@/services/goalService";
 import { colorFor } from "@/lib/banks";
 import { goalPreset } from "~/lib/goalIcon";
-import { goalProgress } from "@/lib/goalPresets";
-import { monthYear, paceOf } from "~/lib/cofrinho";
 import AccountSheet from "~/components/accounts/AccountSheet";
 import CofrinhoSheet from "~/components/accounts/CofrinhoSheet";
+import CofrinhoCard from "~/components/accounts/CofrinhoCard";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import Surface from "~/components/Surface";
@@ -197,10 +196,6 @@ export default function Gestao() {
               >
                 {money(saldo)}
               </Text>
-              <Text style={{ marginTop: 10, fontSize: 12.5, color: INK.soft }}>
-                {rows.length} {rows.length === 1 ? "conta" : "contas"}
-              </Text>
-
               {/* With a cofrinho, the accounts are not the whole of it: what is set aside
                   is still the person's, so it is said once, small, under the balance. */}
               {guardado > 0 && (
@@ -209,6 +204,9 @@ export default function Gestao() {
                   <Text style={{ fontWeight: "600", color: "rgba(255,255,255,0.8)" }}>{money(total)}</Text>
                 </Text>
               )}
+              <Text style={{ marginTop: guardado > 0 ? 6 : 10, fontSize: 12.5, color: INK.soft }}>
+                {rows.length} {rows.length === 1 ? "conta" : "contas"}
+              </Text>
             </Animated.View>
 
             {/* ══ The accounts, one line each ══ */}
@@ -353,54 +351,13 @@ export default function Gestao() {
                     )}
                   </View>
 
-                  {goals.map((g, i) => {
-                    const preset = goalPreset(g);
-                    const Icon = preset.icon;
-                    const { percent, isComplete } = goalProgress(g);
-                    const pace = paceOf(g);
-                    const held = Number(g.current_amount) || 0;
-                    const share = guardado > 0 ? held / guardado : 0;
-                    const note = isComplete
-                      ? "Meta concluída"
-                      : pace.open
-                        ? isReserveGoal(g)
-                          ? `${percent}% · reserva, sem prazo`
-                          : `${percent}% · sem prazo`
-                        : pace.late
-                          ? `${percent}% · prazo vencido`
-                          : `${percent}% · guarde ${money(pace.monthly)}/mês até ${monthYear(g.deadline as string)}`;
-                    return (
-                      <Animated.View key={g.id} entering={FadeInDown.delay(40 + i * 50).duration(350)}>
-                        <Pressable
-                          onPress={() => router.push(`/metas/${g.id}` as never)}
-                          style={({ pressed }) => ({
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 14,
-                            paddingHorizontal: 4,
-                            paddingVertical: 16,
-                            borderTopWidth: i > 0 ? 1 : 0,
-                            borderTopColor: "rgba(255,255,255,0.06)",
-                            opacity: pressed ? 0.6 : 1,
-                          })}
-                        >
-                          <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: `${preset.hex}22` }}>
-                            <Icon size={18} color={preset.hex} strokeWidth={2} />
-                          </View>
-                          <View style={{ flex: 1, minWidth: 0 }}>
-                            <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>{g.name}</Text>
-                            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: pace.late ? RED : INK.softer }}>{note}</Text>
-                          </View>
-                          <View style={{ alignItems: "flex-end" }}>
-                            <Text style={{ fontSize: 15.5, fontWeight: "700", color: "#fff" }}>{money(held)}</Text>
-                            <Text style={{ marginTop: 2, fontSize: 12, color: share > 0 ? preset.hex : INK.faint }}>
-                              {Math.round(share * 100)}%
-                            </Text>
-                          </View>
-                        </Pressable>
+                  <View style={{ marginTop: 12, gap: 12 }}>
+                    {goals.map((g, i) => (
+                      <Animated.View key={g.id} entering={FadeInDown.delay(40 + i * 60).duration(380)}>
+                        <CofrinhoCard goal={g} delay={0.04 * i} onPress={() => router.push(`/metas/${g.id}` as never)} />
                       </Animated.View>
-                    );
-                  })}
+                    ))}
+                  </View>
                 </>
               )}
             </Animated.View>

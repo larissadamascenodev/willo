@@ -11,6 +11,7 @@ import {
 } from "@/services/transactionService";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { useMonth } from "@/contexts/MonthContext";
+import MonthStrip from "~/components/MonthStrip";
 import { categoryHex } from "@/lib/categoryData";
 import { colorFor } from "@/lib/banks";
 import Room from "~/components/Room";
@@ -19,11 +20,11 @@ import Surface, { Hairline } from "~/components/Surface";
 import BankMark from "~/components/BankMark";
 import BottomSheet from "~/components/BottomSheet";
 import SegmentedTabs from "~/components/SegmentedTabs";
-import Bar from "~/components/Bar";
+import { FlexBar } from "~/components/Bar";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
-import { Check, MoreVertical, Pencil, Trash2, X } from "~/components/icons";
+import { ArrowDownLeft, ArrowUpRight, Check, ChevronDown, MoreVertical, Pencil, Trash2, X } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
@@ -91,12 +92,13 @@ export default function ContaDetalhe() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { selectedMonth, selectedYear } = useMonth();
+  const { selectedMonth, selectedYear, setMonth } = useMonth();
 
   const [account, setAccount] = useState<Account | null>(null);
   const [movements, setMovements] = useState<Movement[]>([]);
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [allCategories, setAllCategories] = useState(false);
 
   const dots = useRef<ComponentRef<typeof View>>(null);
   const [menu, setMenu] = useState<AnchorRect | null>(null);
@@ -164,6 +166,50 @@ export default function ContaDetalhe() {
     () => [...movements].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
     [movements],
   );
+
+  /* The month in weeks: what came in and what went out in each, so the shape of the
+     month shows before any figure is read. Only what has really moved counts. */
+  const weeks = useMemo(() => {
+    const last = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+    const count = Math.ceil(last / 7);
+    const rows = Array.from({ length: count }, (_, i) => ({
+      label: `${i * 7 + 1}–${Math.min((i + 1) * 7, last)}`,
+      income: 0,
+      expense: 0,
+    }));
+    movements
+      .filter((t) => t.status === "pago")
+      .forEach((t) => {
+        const day = Number(t.date.slice(8, 10));
+        const w = rows[Math.min(Math.floor((day - 1) / 7), count - 1)];
+        if (t.type === "receita") w.income += Number(t.amount);
+        else if (t.type === "despesa") w.expense += Number(t.amount);
+      });
+    return rows;
+  }, [movements, selectedMonth, selectedYear]);
+  const peak = Math.max(...weeks.map((w) => Math.max(w.income, w.expense)), 1);
+
+  const byDay = useMemo(() => {
+    const groups: { day: string; items: Movement[] }[] = [];
+    ordered.forEach((t) => {
+      const day = t.date.slice(0, 10);
+      const g = groups[groups.length - 1];
+      if (g && g.day === day) g.items.push(t);
+      else groups.push({ day, items: [t] });
+    });
+    return groups;
+  }, [ordered]);
+
+  const dayLabel = (iso: string) => {
+    const d = new Date(`${iso}T12:00:00`);
+    const today = new Date();
+    const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+    if (same(d, today)) return "Hoje";
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    if (same(d, yesterday)) return "Ontem";
+    return d.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" }).replace(/\./g, "");
+  };
 
   const openMenu = () => {
     dots.current?.measureInWindow((x, y, w, h) => {
@@ -288,135 +334,179 @@ export default function ContaDetalhe() {
               </Text>
             </Animated.View>
 
-            {/* ══ The month, through this account ══ */}
-            <Animated.View entering={FadeInDown.delay(60).duration(420)}>
-              <Text style={[T.eyebrow, { marginTop: 26, paddingHorizontal: 4 }]}>
-                {MONTH_NAMES[selectedMonth]} {selectedYear}
-              </Text>
-              <View style={{ marginTop: 10, flexDirection: "row", gap: 12 }}>
-                <Surface radius={20} style={{ flex: 1, minWidth: 0, padding: 14 }}>
-                  <Text style={{ fontSize: 12, color: INK.soft }}>Entrou</Text>
-                  <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 19, fontWeight: "800", letterSpacing: -0.5, color: GREEN }}>
-                    {money(totalReceitas)}
-                  </Text>
-                </Surface>
-                <Surface radius={20} style={{ flex: 1, minWidth: 0, padding: 14 }}>
-                  <Text style={{ fontSize: 12, color: INK.soft }}>Saiu</Text>
-                  <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 19, fontWeight: "800", letterSpacing: -0.5, color: RED }}>
-                    {money(totalDespesas)}
-                  </Text>
-                </Surface>
+            {/* ══ The month, and how this account moved through it ══ */}
+            <Animated.View entering={FadeInDown.delay(60).duration(420)} style={{ marginTop: 26 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4 }}>
+                <Text style={T.eyebrow}>Fluxo de caixa</Text>
+                <MonthStrip month={selectedMonth} year={selectedYear} onChange={setMonth} />
               </View>
+
+              <Surface radius={26} style={{ marginTop: 12, padding: 18 }}>
+                <Text style={{ fontSize: 12.5, color: INK.soft }}>
+                  Resultado de {MONTH_NAMES[selectedMonth].toLowerCase()}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={[T.figure, { marginTop: 4, color: totalReceitas - totalDespesas < 0 ? RED : "#fff" }]}
+                >
+                  {totalReceitas - totalDespesas > 0 ? "+" : ""}
+                  {money(totalReceitas - totalDespesas)}
+                </Text>
+
+                {/* In against out, as shares of everything that moved. */}
+                <View style={{ marginTop: 14, flexDirection: "row", height: 6, gap: 3 }}>
+                  {totalReceitas + totalDespesas > 0 ? (
+                    <>
+                      {totalReceitas > 0 && <FlexBar share={totalReceitas / (totalReceitas + totalDespesas)} color={GREEN} delay={0.05} />}
+                      {totalDespesas > 0 && <FlexBar share={totalDespesas / (totalReceitas + totalDespesas)} color={RED} delay={0.1} />}
+                    </>
+                  ) : (
+                    <View style={{ flex: 1, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)" }} />
+                  )}
+                </View>
+
+                <View style={{ marginTop: 16, flexDirection: "row", gap: 16 }}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <ArrowDownLeft size={13} color={GREEN} strokeWidth={2.6} />
+                      <Text style={{ fontSize: 12, color: INK.soft }}>Entrou</Text>
+                    </View>
+                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 18, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>
+                      {money(totalReceitas)}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <ArrowUpRight size={13} color={RED} strokeWidth={2.6} />
+                      <Text style={{ fontSize: 12, color: INK.soft }}>Saiu</Text>
+                    </View>
+                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 18, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>
+                      {money(totalDespesas)}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* The month in weeks. */}
+                <View style={{ marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.07)", flexDirection: "row", alignItems: "flex-end", gap: 10, height: 112 }}>
+                  {weeks.map((w, i) => (
+                    <View key={w.label} style={{ flex: 1, alignItems: "center" }}>
+                      <View style={{ height: 70, flexDirection: "row", alignItems: "flex-end", gap: 4 }}>
+                        <Animated.View
+                          entering={FadeInDown.delay(180 + i * 60).duration(400)}
+                          style={{ width: 9, height: Math.max((w.income / peak) * 70, w.income > 0 ? 4 : 2), borderRadius: 5, backgroundColor: w.income > 0 ? GREEN : "rgba(255,255,255,0.08)" }}
+                        />
+                        <Animated.View
+                          entering={FadeInDown.delay(210 + i * 60).duration(400)}
+                          style={{ width: 9, height: Math.max((w.expense / peak) * 70, w.expense > 0 ? 4 : 2), borderRadius: 5, backgroundColor: w.expense > 0 ? RED : "rgba(255,255,255,0.08)" }}
+                        />
+                      </View>
+                      <Text style={{ marginTop: 8, fontSize: 10.5, color: INK.softer }}>{w.label}</Text>
+                    </View>
+                  ))}
+                </View>
+              </Surface>
             </Animated.View>
 
             {/* ══ What took it ══ */}
             {categoryData.length > 0 && (
-              <Animated.View entering={FadeInDown.delay(110).duration(420)}>
-                <Text style={[T.eyebrow, { marginTop: 26, paddingHorizontal: 4 }]}>Gastos por categoria</Text>
-                <Surface radius={22} style={{ marginTop: 10 }}>
-                  {categoryData.map((cat, i) => {
-                    const Icon = categoryIcon(cat.name, customCats);
-                    const catHex = categoryHex(cat.name, customCats);
-                    const share = totalDespesas > 0 ? cat.amount / totalDespesas : 0;
-                    return (
-                      <View key={cat.name}>
-                        {i > 0 && <Hairline />}
-                        <View style={{ padding: 14 }}>
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                            <View
-                              style={{
-                                width: 30,
-                                height: 30,
-                                borderRadius: 15,
-                                alignItems: "center",
-                                justifyContent: "center",
-                                backgroundColor: chipFill(catHex),
-                              }}
-                            >
-                              <Icon size={15} color={chipInk(catHex)} strokeWidth={2} />
-                            </View>
-                            <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: "600", color: "#fff" }}>
-                              {cat.name}
-                            </Text>
-                            <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>
-                              {money(cat.amount)}
-                            </Text>
-                          </View>
-                          <View
-                            style={{
-                              marginTop: 10,
-                              height: 6,
-                              borderRadius: 999,
-                              overflow: "hidden",
-                              backgroundColor: "rgba(255,255,255,0.08)",
-                            }}
-                          >
-                            <Bar share={share} color={catHex} delay={0.1 + i * 0.05} />
-                          </View>
-                          <Text style={{ marginTop: 6, fontSize: 11.5, color: INK.softer }}>
-                            {Math.round(share * 100)}% do total
-                          </Text>
-                        </View>
+              <Animated.View entering={FadeInDown.delay(110).duration(420)} style={{ marginTop: 28 }}>
+                <Text style={[T.eyebrow, { paddingHorizontal: 4 }]}>Onde mais saiu</Text>
+
+                <View style={{ marginTop: 12, flexDirection: "row", height: 8, gap: 3, paddingHorizontal: 4 }}>
+                  {categoryData.slice(0, 6).map((cat, i) => (
+                    <FlexBar key={cat.name} share={cat.amount / totalDespesas} color={categoryHex(cat.name, customCats)} delay={0.05 * i} />
+                  ))}
+                </View>
+
+                {(allCategories ? categoryData : categoryData.slice(0, 4)).map((cat, i) => {
+                  const Icon = categoryIcon(cat.name, customCats);
+                  const catHex = categoryHex(cat.name, customCats);
+                  const share = totalDespesas > 0 ? cat.amount / totalDespesas : 0;
+                  return (
+                    <View
+                      key={cat.name}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 12,
+                        paddingHorizontal: 4,
+                        paddingVertical: 14,
+                        borderTopWidth: i > 0 ? 1 : 0,
+                        borderTopColor: "rgba(255,255,255,0.06)",
+                      }}
+                    >
+                      <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(catHex) }}>
+                        <Icon size={16} color={chipInk(catHex)} strokeWidth={2} />
                       </View>
-                    );
-                  })}
-                </Surface>
+                      <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: "600", color: "#fff" }}>
+                        {cat.name}
+                      </Text>
+                      <View style={{ alignItems: "flex-end" }}>
+                        <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>{money(cat.amount)}</Text>
+                        <Text style={{ marginTop: 2, fontSize: 12, color: catHex }}>{Math.round(share * 100)}%</Text>
+                      </View>
+                    </View>
+                  );
+                })}
+
+                {categoryData.length > 4 && (
+                  <Pressable
+                    onPress={() => setAllCategories((v) => !v)}
+                    hitSlop={8}
+                    style={({ pressed }) => ({ marginTop: 4, paddingHorizontal: 4, flexDirection: "row", alignItems: "center", gap: 6, opacity: pressed ? 0.6 : 1 })}
+                  >
+                    <Text style={{ fontSize: 13.5, fontWeight: "600", color: INK.soft }}>
+                      {allCategories ? "Mostrar menos" : `Ver as ${categoryData.length} categorias`}
+                    </Text>
+                    <View style={{ transform: [{ rotate: allCategories ? "180deg" : "0deg" }] }}>
+                      <ChevronDown size={15} color={INK.soft} />
+                    </View>
+                  </Pressable>
+                )}
               </Animated.View>
             )}
 
-            {/* ══ Every movement that touched it ══ */}
-            <Animated.View entering={FadeInDown.delay(160).duration(420)}>
-              <Text style={[T.eyebrow, { marginTop: 26, paddingHorizontal: 4 }]}>
-                Movimentações · {ordered.length}
-              </Text>
+            {/* ══ Every movement that touched it, by day ══ */}
+            <Animated.View entering={FadeInDown.delay(160).duration(420)} style={{ marginTop: 28 }}>
+              <Text style={[T.eyebrow, { paddingHorizontal: 4 }]}>Movimentações · {ordered.length}</Text>
               {ordered.length === 0 ? (
-                <Surface radius={22} style={{ marginTop: 10, paddingVertical: 28, alignItems: "center" }}>
-                  <Text style={{ fontSize: 14, color: INK.softer }}>Nenhuma transação neste mês</Text>
+                <Surface radius={22} style={{ marginTop: 12, paddingVertical: 28, alignItems: "center" }}>
+                  <Text style={{ fontSize: 14, color: INK.softer }}>Nenhuma movimentação neste mês</Text>
                 </Surface>
               ) : (
-                <Surface radius={22} style={{ marginTop: 10 }}>
-                  {ordered.map((tx, i) => {
-                    const Icon = categoryIcon(tx.category, customCats);
-                    const catHex = categoryHex(tx.category, customCats);
-                    const isReceita = tx.type === "receita";
-                    return (
-                      <View key={tx.id}>
-                        {i > 0 && <Hairline />}
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14 }}>
-                          <View
-                            style={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: 18,
-                              alignItems: "center",
-                              justifyContent: "center",
-                              backgroundColor: chipFill(catHex),
-                            }}
-                          >
-                            <Icon size={16} color={chipInk(catHex)} strokeWidth={2} />
+                byDay.map((group) => (
+                  <View key={group.day} style={{ marginTop: 16 }}>
+                    <Text style={{ paddingHorizontal: 4, fontSize: 12.5, fontWeight: "600", color: INK.softer }}>{dayLabel(group.day)}</Text>
+                    <Surface radius={22} style={{ marginTop: 8 }}>
+                      {group.items.map((tx, i) => {
+                        const Icon = categoryIcon(tx.category, customCats);
+                        const catHex = categoryHex(tx.category, customCats);
+                        const isReceita = tx.type === "receita";
+                        return (
+                          <View key={tx.id}>
+                            {i > 0 && <Hairline />}
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14 }}>
+                              <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(catHex) }}>
+                                <Icon size={16} color={chipInk(catHex)} strokeWidth={2} />
+                              </View>
+                              <View style={{ flex: 1, minWidth: 0 }}>
+                                <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: "#fff" }}>{tx.name}</Text>
+                                <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 11.5, color: INK.softer }}>
+                                  {tx.category}
+                                  {tx.status !== "pago" ? " · pendente" : ""}
+                                </Text>
+                              </View>
+                              <Text style={{ fontSize: 14.5, fontWeight: "700", color: isReceita ? GREEN : "#fff" }}>
+                                {isReceita ? "+" : "−"}
+                                {money(Number(tx.amount))}
+                              </Text>
+                            </View>
                           </View>
-                          <View style={{ flex: 1, minWidth: 0 }}>
-                            <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: "#fff" }}>
-                              {tx.name}
-                            </Text>
-                            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 11.5, color: INK.softer }}>
-                              {tx.category} ·{" "}
-                              {new Date(`${tx.date.slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR", {
-                                day: "2-digit",
-                                month: "short",
-                              }).replace(".", "")}
-                              {tx.status !== "pago" ? " · pendente" : ""}
-                            </Text>
-                          </View>
-                          <Text style={{ fontSize: 14.5, fontWeight: "700", color: isReceita ? GREEN : "#fff" }}>
-                            {isReceita ? "+" : "−"}
-                            {money(Number(tx.amount))}
-                          </Text>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </Surface>
+                        );
+                      })}
+                    </Surface>
+                  </View>
+                ))
               )}
             </Animated.View>
           </>

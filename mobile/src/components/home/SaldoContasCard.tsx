@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Text, View } from "react-native";
 import { ChevronRight } from "~/components/icons";
 import { getAccounts } from "@/services/transactionService";
-import { colorFor, initials } from "@/lib/banks";
+import { colorFor } from "@/lib/banks";
+import { fetchGoals } from "@/services/goalService";
+import BankMark from "~/components/BankMark";
 import { useRouter } from "expo-router";
 import Surface from "~/components/Surface";
 import { FlexBar } from "~/components/Bar";
@@ -29,16 +31,15 @@ interface Account {
   color: string | null;
 }
 
-const TYPE_LABEL: Record<string, string> = {
-  checking: "Conta corrente",
-  savings: "Poupança",
-  cash: "Dinheiro",
-  investment: "Investimento",
-};
+/* Five marks fit a line of the card; the rest are counted. */
+const MAX_BUBBLES = 5;
+const BUBBLE = 36;
 
 export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: number }) {
   const router = useRouter();
   const [accounts, setAccounts] = useState<Account[] | null>(null);
+  /* What is in cofrinhos has left the balance but not the person's hands. */
+  const [guardado, setGuardado] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -47,9 +48,17 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
         .then((a) => alive && setAccounts(a as unknown as Account[]))
         .catch(() => alive && setAccounts([]));
     load();
+    const loadGoals = () =>
+      fetchGoals()
+        .then((g) => alive && setGuardado(g.reduce((sum, x) => sum + (Number(x.current_amount) || 0), 0)))
+        .catch(() => alive && setGuardado(0));
+    loadGoals();
     /* The same event the web app fires when anything financial changes — it exists
        here because the shim gave the shared services somewhere to fire it. */
-    const onChange = () => load();
+    const onChange = () => {
+      load();
+      loadGoals();
+    };
     window.addEventListener("finance-data-changed", onChange);
     window.addEventListener("transaction-created", onChange);
     return () => {
@@ -89,6 +98,12 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
 
       {/* What is in hand, then where it lands: the same card answers "quanto tenho"
           and "quanto sobra", which is the pair the question is actually about. */}
+      {guardado > 0 && (
+        <Text numberOfLines={1} style={[T.note, { marginTop: 8, fontSize: 13 }]}>
+          Patrimônio total:{" "}
+          <Text style={{ fontWeight: "600", color: "rgba(255,255,255,0.8)" }}>{money(total + guardado)}</Text>
+        </Text>
+      )}
       {saldoPrevisto !== undefined && (
         <Text numberOfLines={1} style={[T.note, { marginTop: 8, fontSize: 13 }]}>
           Previsto no fim do mês:{" "}
@@ -111,44 +126,50 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
         )}
       </View>
 
-      <View
-        style={{
-          marginTop: 14,
-          paddingTop: 14,
-          borderTopWidth: 1,
-          borderTopColor: "rgba(255,255,255,0.06)",
-          gap: 12,
-        }}
-      >
-        {rows.map((a) => (
-          <View key={a.id} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+      {/* However many accounts there are, they take the room of one line: the marks sit
+          one over the next, and the count says how many that is. */}
+      <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          {rows.slice(0, MAX_BUBBLES).map((a, i) => (
             <View
+              key={a.id}
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
+                marginLeft: i === 0 ? 0 : -12,
+                width: BUBBLE + 4,
+                height: BUBBLE + 4,
+                borderRadius: (BUBBLE + 4) / 2,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: a.hex,
+                backgroundColor: "#101113",
+                zIndex: MAX_BUBBLES - i,
               }}
             >
-              <Text style={{ fontSize: 12.5, fontWeight: "700", color: "#fff" }}>
-                {initials(a.name)}
-              </Text>
+              <View style={{ width: BUBBLE, height: BUBBLE, borderRadius: BUBBLE / 2, overflow: "hidden" }}>
+                <BankMark name={a.name} hex={a.hex} size={BUBBLE} />
+              </View>
             </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text numberOfLines={1} style={[T.rowName, { fontSize: 14 }]}>
-                {a.name}
-              </Text>
-              <Text numberOfLines={1} style={T.rowNote}>
-                {TYPE_LABEL[a.type] ?? "Conta"}
-              </Text>
+          ))}
+          {rows.length > MAX_BUBBLES && (
+            <View
+              style={{
+                marginLeft: -12,
+                width: BUBBLE + 4,
+                height: BUBBLE + 4,
+                borderRadius: (BUBBLE + 4) / 2,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#101113",
+              }}
+            >
+              <View style={{ width: BUBBLE, height: BUBBLE, borderRadius: BUBBLE / 2, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>+{rows.length - MAX_BUBBLES}</Text>
+              </View>
             </View>
-            <Text style={[T.rowValue, { fontSize: 14 }, a.balance < 0 && { color: RED }]}>
-              {money(a.balance)}
-            </Text>
-          </View>
-        ))}
+          )}
+        </View>
+        <Text style={T.rowNote}>
+          {rows.length} {rows.length === 1 ? "conta" : "contas"}
+        </Text>
       </View>
     </Surface>
   );

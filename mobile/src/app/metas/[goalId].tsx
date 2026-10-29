@@ -36,6 +36,7 @@ import {
 } from "~/components/icons";
 import { money } from "~/lib/money";
 import { monthYear, paceOf } from "~/lib/cofrinho";
+import GoalAnalysis from "~/components/metas/GoalAnalysis";
 import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
@@ -182,6 +183,14 @@ export default function MetaDetalhe() {
     if (!goalId) return;
     await updateGoal(goalId, data);
     setEditing(false);
+    await load();
+    announce();
+  };
+
+  /* Adopting a plan from the analysis: the new monthly figure and the date it implies. */
+  const applyPlan = async (plan: { monthly: number; deadline: string }) => {
+    if (!goalId) return;
+    await updateGoal(goalId, { monthly_contribution: plan.monthly, deadline: plan.deadline });
     await load();
     announce();
   };
@@ -404,6 +413,11 @@ export default function MetaDetalhe() {
             </View>
           </Animated.View>
         )}
+
+        {/* ══ What the month leaves room for ══ */}
+        <Animated.View entering={FadeInDown.delay(140).duration(420)}>
+          <GoalAnalysis goal={goal} onApply={applyPlan} />
+        </Animated.View>
 
         {/* ══ Every movement ══ */}
         <Animated.View entering={FadeInDown.delay(150).duration(420)}>

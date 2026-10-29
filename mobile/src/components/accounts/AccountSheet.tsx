@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { createAccount } from "@/services/transactionService";
 import { PALETTE } from "@/lib/banks";
-import { CATALOG, POPULAR, type CatalogBank } from "~/lib/bankCatalog";
+import { CATALOG, POPULAR, WALLET, type CatalogBank } from "~/lib/bankCatalog";
 import StepSheet, { Ask } from "~/components/StepSheet";
 import Created from "~/components/accounts/Created";
 import BankMark from "~/components/BankMark";
@@ -67,6 +67,8 @@ export default function AccountSheet({
   const [paint, setPaint] = useState(PALETTE[1].hex);
   const [kind, setKind] = useState<Kind>("checking");
   const [name, setName] = useState("");
+  /* Once the person has written a name it is theirs; until then it follows the bank. */
+  const [named, setNamed] = useState(false);
   const [cents, setCents] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,11 +83,21 @@ export default function AccountSheet({
     setPaint(PALETTE[1].hex);
     setKind("checking");
     setName("");
+    setNamed(false);
     setCents(0);
     setSaving(false);
     setError(null);
     setMade(null);
   }, [open]);
+
+  const wallet = bank?.id === "wallet";
+
+  /* The wallet is cash by nature; any other choice puts that back to the usual. */
+  const choose = (next: CatalogBank | null) => {
+    setBank(next);
+    if (next?.id === "wallet") setKind("cash");
+    else if (wallet) setKind("checking");
+  };
 
   const hex = bank?.hex ?? (other ? paint : OTHER_HEX);
   const chosen = bank?.name ?? typed.trim();
@@ -93,9 +105,9 @@ export default function AccountSheet({
   const next = async () => {
     setError(null);
     if (step === 0) {
-      /* The bank names the account, unless a name was already written for it. */
-      setName((n) => (n.trim() ? n : chosen));
-      setStep(1);
+      /* The bank names the account, unless a name was written for it by hand. */
+      if (!named) setName(chosen);
+      setStep(wallet ? 2 : 1);
       return;
     }
     if (step === 1) {
@@ -135,9 +147,9 @@ export default function AccountSheet({
     <StepSheet
       open={open}
       onClose={onClose}
-      step={step}
-      steps={3}
-      onBack={() => setStep(Math.max(step - 1, 0))}
+      step={wallet && step === 2 ? 1 : step}
+      steps={wallet ? 2 : 3}
+      onBack={() => setStep(wallet ? 0 : Math.max(step - 1, 0))}
       onNext={next}
       nextLabel={step === 2 ? "Criar conta" : "Continuar"}
       nextDisabled={!canNext}
@@ -162,8 +174,8 @@ export default function AccountSheet({
         <View style={{ flex: 1 }}>
           <Ask title="Qual é o banco?" note="Toque no seu. Se não estiver aqui, use Outro banco." />
           <View style={{ marginTop: 22, flexDirection: "row", flexWrap: "wrap", rowGap: 14 }}>
-            {POPULAR.map((b) => (
-              <Tile key={b.id} label={b.id === "bb" ? "B. do Brasil" : b.name} on={bank?.id === b.id} onPress={() => setBank(bank?.id === b.id ? null : b)}>
+            {[WALLET, ...POPULAR].map((b) => (
+              <Tile key={b.id} label={b.id === "bb" ? "B. do Brasil" : b.name} on={bank?.id === b.id} onPress={() => choose(bank?.id === b.id ? null : b)}>
                 <BankMark name={b.name} hex={b.hex} size={58} />
               </Tile>
             ))}
@@ -171,7 +183,7 @@ export default function AccountSheet({
               label="Outro banco"
               on={false}
               onPress={() => {
-                setBank(null);
+                choose(null);
                 setOther(true);
               }}
             >
@@ -204,7 +216,7 @@ export default function AccountSheet({
                 <Pressable
                   key={b.id}
                   onPress={() => {
-                    setBank(on ? null : b);
+                    choose(on ? null : b);
                     setTyped(on ? "" : b.name);
                   }}
                   style={({ pressed }) => ({
@@ -233,7 +245,7 @@ export default function AccountSheet({
             value={typed}
             onChangeText={(t) => {
               setTyped(t);
-              setBank(CATALOG.find((b) => b.name.toLowerCase() === t.trim().toLowerCase()) ?? null);
+              choose(CATALOG.find((b) => b.name.toLowerCase() === t.trim().toLowerCase()) ?? null);
             }}
             placeholder="Ex: Banco Digital, Cooperativa"
             placeholderTextColor={INK.faint}
@@ -275,7 +287,7 @@ export default function AccountSheet({
           <Pressable
             onPress={() => {
               setOther(false);
-              setBank(null);
+              choose(null);
               setTyped("");
             }}
             hitSlop={10}
@@ -327,6 +339,7 @@ export default function AccountSheet({
               value={name}
               onChangeText={(t) => {
                 setName(t);
+                setNamed(true);
                 setError(null);
               }}
               placeholder="Nome da conta"
@@ -341,7 +354,14 @@ export default function AccountSheet({
 
       {step === 2 && (
         <View style={{ flex: 1 }}>
-          <Ask title="Quanto tem nela hoje?" note="É o ponto de partida do saldo. Daqui em diante ele muda com o que você registrar." />
+          <Ask
+            title={wallet ? "Quanto tem em dinheiro?" : "Quanto tem nela hoje?"}
+            note={
+              wallet
+                ? "Em espécie, na carteira ou em casa. É o ponto de partida: daqui em diante muda com o que você registrar."
+                : "É o ponto de partida do saldo. Daqui em diante ele muda com o que você registrar."
+            }
+          />
           <View style={{ marginTop: 26, flexDirection: "row", alignItems: "center", gap: 12 }}>
             <BankMark name={name.trim() || chosen} hex={hex} size={44} />
             <Text numberOfLines={1} style={{ flex: 1, fontSize: 16, fontWeight: "600", color: "#fff" }}>

@@ -3,6 +3,7 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { bankFor, initials } from "@/lib/banks";
 import { catalogFor } from "~/lib/bankCatalog";
+import { Wallet } from "~/components/icons";
 import { inkOn, shade } from "@/lib/tone";
 
 /**
@@ -27,6 +28,20 @@ export default function BankMark({
   const known = catalogFor(name);
   const letters = initials(bank?.name ?? known?.name ?? name) || "••";
   const radius = Math.round(size * 0.32);
+
+  if (known?.id === "wallet") {
+    return (
+      <LinearGradient
+        colors={[shade(known.hex, 0.22), known.hex, shade(known.hex, -0.2)]}
+        locations={[0, 0.55, 1]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={{ width: size, height: size, borderRadius: radius, overflow: "hidden", alignItems: "center", justifyContent: "center" }}
+      >
+        <Wallet size={size * 0.48} color="#0B0B0B" strokeWidth={2.2} />
+      </LinearGradient>
+    );
+  }
 
   if (known?.logo) {
     return (

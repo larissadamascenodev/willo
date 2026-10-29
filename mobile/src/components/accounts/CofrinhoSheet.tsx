@@ -302,37 +302,44 @@ export default function CofrinhoSheet({
 
       {step === 1 && (
         <View style={{ flex: 1 }}>
-          <Ask title={reserve ? "Quanto quer ter de reserva?" : "Quanto quer juntar?"} />
-          <TextInput
-            value={brl(cents)}
-            onChangeText={(t) => {
-              const digits = t.replace(/\D/g, "").slice(0, 11);
-              setCents(Math.min(Number(digits || "0"), 999999999));
-              setError(null);
-            }}
-            keyboardType="number-pad"
-            style={{
-              marginTop: 22,
-              minWidth: 0,
-              fontSize: 46,
-              fontWeight: "800",
-              letterSpacing: -1.8,
-              color: cents === 0 ? INK.faint : "#fff",
-              padding: 0,
-            }}
-          />
-          <Text style={{ marginTop: 26, fontSize: 12.5, color: INK.soft }}>Nome do cofrinho</Text>
-          <TextInput
-            value={name}
-            onChangeText={(t) => {
-              setName(t);
-              setError(null);
-            }}
-            placeholder="Ex: Viagem para o Japão"
-            placeholderTextColor={INK.faint}
-            maxLength={60}
-            style={{ ...FIELD, marginTop: 8 }}
-          />
+          {/* An objective of the person's own is asked for first: it is the one thing the
+              cofrinho cannot be made without. For the rest the name is already known. */}
+          {presetId === "custom" ? (
+            <>
+              <Ask title="Qual é o objetivo?" note="Dê um nome que você reconheça na hora: Moto, Casamento, Reforma…" />
+              <TextInput
+                value={name}
+                onChangeText={(t) => {
+                  setName(t);
+                  setError(null);
+                }}
+                placeholder="Nome do objetivo"
+                placeholderTextColor={INK.faint}
+                maxLength={60}
+                autoFocus
+                style={{ ...FIELD, marginTop: 20 }}
+              />
+              <Text style={{ marginTop: 24, fontSize: 12.5, color: INK.soft }}>Quanto quer juntar</Text>
+              <AmountField cents={cents} onChange={(c) => { setCents(c); setError(null); }} size={40} top={6} />
+            </>
+          ) : (
+            <>
+              <Ask title={reserve ? "Quanto quer ter de reserva?" : "Quanto quer juntar?"} />
+              <AmountField cents={cents} onChange={(c) => { setCents(c); setError(null); }} size={46} top={22} />
+              <Text style={{ marginTop: 26, fontSize: 12.5, color: INK.soft }}>Nome do cofrinho</Text>
+              <TextInput
+                value={name}
+                onChangeText={(t) => {
+                  setName(t);
+                  setError(null);
+                }}
+                placeholder="Ex: Viagem para o Japão"
+                placeholderTextColor={INK.faint}
+                maxLength={60}
+                style={{ ...FIELD, marginTop: 8 }}
+              />
+            </>
+          )}
           {error && <Text style={{ marginTop: 12, fontSize: 13, color: RED }}>{error}</Text>}
         </View>
       )}
@@ -569,6 +576,29 @@ function MonthlyField({ cents, onChange }: { cents: number; onChange: (c: number
       placeholder="Conforme der"
       placeholderTextColor={INK.faint}
       style={{ ...FIELD, marginTop: 18 }}
+    />
+  );
+}
+
+/** The figure a page is about, typed in place at the size it is read. */
+function AmountField({ cents, onChange, size, top }: { cents: number; onChange: (c: number) => void; size: number; top: number }) {
+  return (
+    <TextInput
+      value={brl(cents)}
+      onChangeText={(t) => {
+        const digits = t.replace(/\D/g, "").slice(0, 11);
+        onChange(Math.min(Number(digits || "0"), 999999999));
+      }}
+      keyboardType="number-pad"
+      style={{
+        marginTop: top,
+        minWidth: 0,
+        fontSize: size,
+        fontWeight: "800",
+        letterSpacing: -size / 26,
+        color: cents === 0 ? INK.faint : "#fff",
+        padding: 0,
+      }}
     />
   );
 }
