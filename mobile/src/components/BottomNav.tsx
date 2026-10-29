@@ -1,37 +1,45 @@
-import { Pressable, Text, View, useWindowDimensions } from "react-native";
-import Animated, { LinearTransition, FadeIn, FadeOut } from "react-native-reanimated";
+import { useEffect } from "react";
+import { Pressable, Text, View, type ViewStyle } from "react-native";
+import Animated, {
+  interpolateColor,
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { BlurView } from "expo-blur";
+import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import BotMark from "~/components/BotMark";
-import { ArrowLeftRight, House, Mic, Sparkles, Zap } from "~/components/icons";
-import { useNavChrome } from "~/lib/navChrome";
-import { GREEN, INK } from "~/theme/tokens";
+import ParticleOrb from "~/components/registro/ParticleOrb";
+import { ArrowLeftRight, House } from "~/components/icons";
 
 /**
  * The row at the foot of the screen.
  *
- * Three separate things, the way the web has them: Início on one end, Willo on the
- * other, and the invitation between — its own piece of glass rather than a slot
- * carved out of one long bar. Above them, while the page is still at rest, the same
- * invitation spread across the full width.
+ * Three pieces of glass, side by side: Início at one end, Transações at the other,
+ * and between them the way to Willo — a long pill with the sphere, small, in a disc
+ * at its left, and an invitation. The sphere is the same one that turns on the home
+ * and listens in Willo's own screen, only small.
  *
- * The row is a budget. Open, the ends can afford to be big and the icons grow to
- * fill the pill edge to edge; folded, the invitation needs the middle, so the two
- * ends give up height and width to pay for it.
+ * It is white and translucent and nothing else. The place you are is shown by the
+ * button itself — it lights, its glyph firms up and pops, and a point comes up under
+ * it — not by a colour.
+ *
+ * Willo's screen sits over the tabs rather than among them, because it has a bar of
+ * its own to type into and two bars at the foot would be one too many.
  */
 
-const ITEMS = [
-  { name: "index", label: "Início", icon: House },
-  { name: "transacoes", label: "Transações", icon: ArrowLeftRight },
-  { name: "agentes", label: "Agentes", icon: Sparkles },
-];
-
-const FLOAT = {
+const GLASS: ViewStyle = {
   backgroundColor: "rgba(34,34,36,0.82)",
   borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.08)",
-} as const;
+  borderColor: "rgba(255,255,255,0.09)",
+};
+
+const SIZE = 52;
+const GAP = 9;
 
 /* Only the two things the bar actually reads. Typed here rather than imported,
    because the navigator ships inside expo-router and its package is not a dependency
@@ -44,170 +52,115 @@ interface TabBarProps {
 
 export default function BottomNav({ state, navigateToTab }: TabBarProps) {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
-  const { collapsed, holdOpen } = useNavChrome();
   const router = useRouter();
-
   const active = state.routes[state.index]?.name ?? "index";
 
   const open = (name: string) => {
+    void Haptics.selectionAsync().catch(() => undefined);
     const key = state.routes.find((r) => r.name === name)?.key;
-    if (key) navigateToTab(key);
-  };
-  const shown = collapsed ? ITEMS.slice(0, 1) : ITEMS;
-
-  const end = collapsed ? 50 : 58;
-  /* Open, the nav takes everything the other two leave: Willo's end and both gaps. */
-  const navWidth = collapsed ? end : width - 40 - end - 20;
-
-  const go = (name: string) => {
-    if (name === active) {
-      holdOpen();
-      return;
-    }
-    open(name);
+    if (key && name !== active) navigateToTab(key);
   };
 
   return (
     <View
-      style={{
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        paddingHorizontal: 20,
-        paddingBottom: insets.bottom + 14,
-      }}
       pointerEvents="box-none"
+      style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingBottom: insets.bottom + 14 }}
     >
-      {!collapsed && (
-        <Animated.View entering={FadeIn.duration(260)} exiting={FadeOut.duration(200)}>
-          <Pressable
-            onPress={() => router.push("/registro" as never)}
-            style={[
-              FLOAT,
-              {
-                height: 46,
-                marginBottom: 10,
-                borderRadius: 999,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 10,
-                paddingLeft: 14,
-                paddingRight: 16,
-                overflow: "hidden",
-              },
-            ]}
-          >
-            <Zap size={19} color={GREEN} />
-            <Text numberOfLines={1} style={{ flex: 1, fontSize: 14.5, color: INK.soft }}>
-              Registro rápido
-            </Text>
-            <Mic size={17} color={INK.faint} />
-          </Pressable>
-        </Animated.View>
-      )}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: GAP }}>
+        <NavCircle label="Início" icon={House} on={active === "index"} onPress={() => open("index")} />
 
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <Animated.View
-          layout={LinearTransition.duration(420)}
-          style={[
-            FLOAT,
-            { width: navWidth, height: end, borderRadius: 999, overflow: "hidden" },
-          ]}
+        {/* Willo. */}
+        <Pressable
+          onPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+            router.push("/registro" as never);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Converse com o Willo"
+          style={({ pressed }) => ({ flex: 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}
         >
-          <BlurView intensity={26} tint="dark" style={{ flex: 1 }}>
+          <View style={[GLASS, { height: SIZE, borderRadius: SIZE / 2, overflow: "hidden", flexDirection: "row", alignItems: "center", paddingLeft: 7, paddingRight: 12, gap: 9 }]}>
+            <BlurView intensity={26} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
             <View
               style={{
-                flex: 1,
-                flexDirection: "row",
+                width: 38,
+                height: 38,
+                borderRadius: 19,
                 alignItems: "center",
-                justifyContent: "space-around",
-                paddingHorizontal: 6,
+                justifyContent: "center",
+                backgroundColor: "rgba(255,255,255,0.10)",
+                overflow: "hidden",
               }}
             >
-              {shown.map((item) => {
-                const on = item.name === active;
-                const Icon = item.icon;
-                return (
-                  <Pressable
-                    key={item.name}
-                    onPress={() => go(item.name)}
-                    accessibilityLabel={item.label}
-                    style={{
-                      /* One way of saying it: mixing flex with flexGrow on the same
-                         box is a styling bug waiting to happen. */
-                      flexGrow: 1,
-                      flexBasis: 0,
-                      height: collapsed ? "100%" : 44,
-                      marginHorizontal: 2,
-                      borderRadius: 999,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      /* A highlight behind the icon only while the nav is a long pill.
-                         Folded, the nav IS a circle, so a circle inside it would be a
-                         second ring around the same thing. */
-                      backgroundColor: on && !collapsed ? "rgba(255,255,255,0.10)" : "transparent",
-                    }}
-                  >
-                    <Icon
-                      size={collapsed ? 21 : 23}
-                      color={on ? GREEN : "rgba(255,255,255,0.45)"}
-                      strokeWidth={on ? 2.25 : 2}
-                    />
-                  </Pressable>
-                );
-              })}
+              <ParticleOrb size={33} density={140} />
             </View>
-          </BlurView>
-        </Animated.View>
-
-        {collapsed && (
-          <Animated.View
-            entering={FadeIn.duration(300)}
-            exiting={FadeOut.duration(160)}
-            layout={LinearTransition.duration(420)}
-            style={{ flex: 1 }}
-          >
-            <Pressable
-              onPress={() => router.push("/registro" as never)}
-              style={[
-                FLOAT,
-                {
-                  height: 50,
-                  borderRadius: 999,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 8,
-                  paddingLeft: 14,
-                  paddingRight: 16,
-                  overflow: "hidden",
-                },
-              ]}
-            >
-              <Zap size={17} color={GREEN} />
-              <Text numberOfLines={1} style={{ flex: 1, fontSize: 13.5, color: INK.soft }}>
-                Registro rápido
-              </Text>
-              <Mic size={15} color={INK.faint} />
-            </Pressable>
-          </Animated.View>
-        )}
-
-        <Pressable
-          onPress={() => open("assistente")}
-          accessibilityLabel="Willo"
-          style={({ pressed }) => ({
-            width: end,
-            height: end,
-            alignItems: "center",
-            justifyContent: "center",
-            transform: [{ scale: pressed ? 0.95 : 1 }],
-          })}
-        >
-          <BotMark size={end} />
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ flex: 1, minWidth: 0, fontSize: 14, color: "rgba(255,255,255,0.66)" }}>
+              Converse com o Willo
+            </Text>
+          </View>
         </Pressable>
+
+        <NavCircle label="Transações" icon={ArrowLeftRight} on={active === "transacoes"} onPress={() => open("transacoes")} />
       </View>
     </View>
+  );
+}
+
+/**
+ * A round button that knows whether it is where you are.
+ *
+ * Selected, its glass fills with white at a fifth, its rim brightens, its glyph goes
+ * from soft to full and firmer, and it pops — down a little and up past where it
+ * rests — as it arrives; a small point comes up beneath. Pressing it presses it in.
+ */
+function NavCircle({
+  label,
+  icon: Icon,
+  on,
+  onPress,
+}: {
+  label: string;
+  icon: typeof House;
+  on: boolean;
+  onPress: () => void;
+}) {
+  const lit = useSharedValue(on ? 1 : 0);
+  const pop = useSharedValue(1);
+
+  useEffect(() => {
+    lit.set(withSpring(on ? 1 : 0, { duration: 420, dampingRatio: 0.82, reduceMotion: ReduceMotion.System }));
+    if (on) pop.set(withSequence(withTiming(0.82, { duration: 90 }), withSpring(1, { duration: 520, dampingRatio: 0.45, reduceMotion: ReduceMotion.System })));
+  }, [on, lit, pop]);
+
+  const shell = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(lit.get(), [0, 1], ["rgba(34,34,36,0.82)", "rgba(255,255,255,0.20)"]),
+    borderColor: interpolateColor(lit.get(), [0, 1], ["rgba(255,255,255,0.09)", "rgba(255,255,255,0.34)"]),
+  }));
+  const glyph = useAnimatedStyle(() => ({ transform: [{ scale: pop.get() * (1 + lit.get() * 0.08) }] }));
+  const soft = useAnimatedStyle(() => ({ opacity: 1 - lit.get() }));
+  const full = useAnimatedStyle(() => ({ opacity: lit.get() }));
+  const point = useAnimatedStyle(() => ({ opacity: lit.get(), transform: [{ scale: 0.4 + lit.get() * 0.6 }] }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: on }}
+      style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.94 : 1 }] })}
+    >
+      <Animated.View style={[{ width: SIZE, height: SIZE, borderRadius: SIZE / 2, borderWidth: 1, overflow: "hidden", alignItems: "center", justifyContent: "center" }, shell]}>
+        <BlurView intensity={26} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <Animated.View style={glyph}>
+          <Animated.View style={soft}>
+            <Icon size={24} color="rgba(255,255,255,0.58)" strokeWidth={2} />
+          </Animated.View>
+          <Animated.View style={[{ position: "absolute", top: 0, left: 0 }, full]}>
+            <Icon size={24} color="#fff" strokeWidth={2.5} />
+          </Animated.View>
+        </Animated.View>
+        <Animated.View style={[{ position: "absolute", bottom: 7, width: 4, height: 4, borderRadius: 2, backgroundColor: "#fff" }, point]} />
+      </Animated.View>
+    </Pressable>
   );
 }

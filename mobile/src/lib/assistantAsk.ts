@@ -1,3 +1,5 @@
+import { supabase } from "~/supabase/client";
+
 /**
  * What to do with a question put to the sphere.
  *
@@ -57,3 +59,42 @@ export function brief(reply: string, max = 190): string {
 /** What the assistant is asked, with the shape of the answer asked for. */
 export const asking = (question: string) =>
   `${question.trim()}\n\n[Responda em português, falando como numa conversa: no máximo duas frases curtas, até 170 caracteres no total, sem listas, sem markdown e sem repetir a pergunta.]`;
+
+export interface Turn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+const GIVE_UP_MS = 50_000;
+
+/**
+ * Puts the conversation to the Willo assistant — the same function the web's assistant
+ * page calls, with the same snapshot of the person's money, so what it says is built on
+ * the app's own numbers — and returns what it answered.
+ */
+export async function askWillo(messages: Turn[], snapshot: unknown): Promise<string> {
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error("O Willo demorou a responder. Tente de novo.")), GIVE_UP_MS),
+  );
+  const { data, error } = await Promise.race([
+    supabase.functions.invoke("willo-assistant", { body: { messages, snapshot } }),
+    timeout,
+  ]);
+  if (error) {
+    let said: string | null = null;
+    try {
+      said = (await (error as { context?: { json?: () => Promise<{ error?: string }> } }).context?.json?.())?.error ?? null;
+    } catch {
+      said = null;
+    }
+    throw new Error(said || "Não consegui falar com o Willo agora.");
+  }
+  if (data?.error) throw new Error(data.error);
+  return String(data?.reply ?? "");
+}
+
+/** In a chat the answer can run longer than under the sphere, but still plain. */
+export const converseAsking = (question: string) =>
+  `${question.trim()}
+
+[Responda em português, de forma direta: no máximo quatro frases curtas, sem listas longas.]`;

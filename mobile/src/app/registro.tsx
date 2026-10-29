@@ -20,10 +20,20 @@ import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { useVoiceEntry } from "~/lib/voiceEntry";
+import { useAssistantSnapshot } from "@/hooks/useAssistantSnapshot";
+import { askWillo, brief, converseAsking, type Turn } from "~/lib/assistantAsk";
 import VoiceEntrySheet from "~/components/registro/VoiceEntrySheet";
 import { GREEN, INK } from "~/theme/tokens";
 
 /**
+ * Willo: talk to him, or tell him what you spent, in the same place.
+ *
+ * One screen where there used to be two that looked alike. What is said either has
+ * money in it — "uber 18", "recebi 200 de freela" — and is filed, as it always was; or
+ * it does not, and is a question for the assistant, which answers in the thread from
+ * the same snapshot of the person's money the web's assistant page uses. Nobody has to
+ * say which they mean.
+ *
  * Registro rápido: say what you spent, in one sentence, and have it filed.
  *
  * Read through the same reader and asked through the same rules as the web. It
@@ -91,7 +101,13 @@ export default function Registro() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const entry = useVoiceEntry();
+  /* What is said with no money in it is a question, whether it was typed or spoken. */
+  const askRef = useRef<(said: string) => void>(() => {});
+  const entry = useVoiceEntry({ onQuestion: (said) => askRef.current(said) });
+  const { build, loading: snapshotLoading } = useAssistantSnapshot();
+  const turns = useRef<Turn[]>([]);
+  const snapshotReady = useRef(true);
+  snapshotReady.current = !snapshotLoading;
   const { width } = useWindowDimensions();
   const [stageH, setStageH] = useState(0);
   const listening = entry.state === "listening";
@@ -285,13 +301,41 @@ export default function Registro() {
 
   /* ---- reading what was said ---- */
 
+  /** Puts the thread so far to the assistant and writes what it answers. */
+  const converse = useCallback(
+    async (said: string) => {
+      setThinking("Pensando");
+      try {
+        /* The snapshot takes a moment the first time; wait for it rather than ask blind. */
+        for (let n = 0; n < 24 && !snapshotReady.current; n++) await new Promise((r) => setTimeout(r, 250));
+        turns.current.push({ role: "user", content: said });
+        const sent = turns.current.slice(-8).map((t, i, all) => (i === all.length - 1 ? { ...t, content: converseAsking(t.content) } : t));
+        const reply = brief(await askWillo(sent, build()), 700);
+        turns.current.push({ role: "assistant", content: reply });
+        pushBot(reply);
+      } catch (err) {
+        pushBot(err instanceof Error ? err.message : "Não consegui falar com o Willo agora. Tenta de novo?");
+      } finally {
+        setThinking(null);
+      }
+    },
+    [build, pushBot],
+  );
+
+  /* A spoken question lands in the thread like a typed one. */
+  askRef.current = (said) => {
+    pushUser(said);
+    void converse(said);
+  };
+
   const ingest = useCallback(
     async (said: string) => {
       setThinking("Anotando");
       try {
         const { entries } = await readEntry({ text: said, categories });
         if (entries.length === 0) {
-          pushBot("Não achei nenhum valor aí. Tenta algo como “mercado 30” ou “recebi 200 de freela”.");
+          setThinking(null);
+          await converse(said);
           return;
         }
         const batchId = uid();
@@ -324,7 +368,7 @@ export default function Registro() {
         setThinking(null);
       }
     },
-    [categories, setup, pushBot],
+    [categories, setup, pushBot, converse],
   );
 
   /* ---- answering ---- */
@@ -461,7 +505,7 @@ export default function Registro() {
               </View>
             )}
             <View style={{ minWidth: 0 }}>
-              <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>Registro rápido</Text>
+              <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>Willo</Text>
               <Text style={{ fontSize: 12, color: INK.softer }}>
                 {listening
                   ? "Ouvindo…"
@@ -473,7 +517,7 @@ export default function Registro() {
                       ? "Tudo anotado"
                       : hasEntries
                         ? "Quase lá"
-                        : "Toque no orbe e fale"}
+                        : "Converse ou anote um gasto"}
               </Text>
             </View>
           </View>
@@ -682,7 +726,7 @@ export default function Registro() {
                 value={text}
                 onChangeText={setText}
                 onSubmitEditing={submitText}
-                placeholder={question ? "sua resposta…" : "o que rolou?"}
+                placeholder={question ? "sua resposta…" : "converse ou anote um gasto"}
                 placeholderTextColor={INK.faint}
                 editable={!listening}
                 returnKeyType="send"
