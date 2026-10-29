@@ -29,6 +29,7 @@ import GoalMoveSheet from "~/components/metas/GoalMoveSheet";
 import { goalPreset } from "~/lib/goalIcon";
 import { pickGoalCover } from "~/lib/goalCover";
 import CaixinhaCover from "~/components/accounts/CaixinhaCover";
+import ParticleOrb from "~/components/registro/ParticleOrb";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -62,16 +63,8 @@ import { type as T } from "~/theme/type";
 const PREVIEW = 5;
 
 /** A piece of glass on the page: the readings sit in these rather than loose on the ground. */
-/** The plan's piece of glass, on the picture's fade. */
-const PLAN = {
-  borderRadius: 22,
-  borderCurve: "continuous",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.12)",
-  backgroundColor: "rgba(255,255,255,0.07)",
-  paddingHorizontal: 18,
-  paddingVertical: 14,
-} as const;
+/** The figures inside Willo's line: what is worth reading in it. */
+const B = { fontWeight: "700", color: "#fff" } as const;
 
 const PANEL = {
   borderRadius: 28,
@@ -386,41 +379,33 @@ export default function MetaDetalhe() {
                 )}
               </View>
             </View>
-          ) : (
-            <Text style={{ marginTop: 6, fontSize: 14, color: INK.soft }}>Guardado até agora, no seu ritmo.</Text>
-          )}
-
-          {/* ══ The plan: what to put in each month, and when that gets there ══ */}
-          {hasTarget && !isComplete ? (
-            <View style={[PLAN, { marginTop: 18 }]}>
-              {plan > 0 && reachOn ? (
-                <View style={{ flexDirection: "row" }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>Guardar por mês</Text>
-                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 4, fontSize: 21, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>
-                      {money(plan)}
-                    </Text>
-                  </View>
-                  <View style={{ width: 1, marginHorizontal: 16, backgroundColor: "rgba(255,255,255,0.10)" }} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>Você alcança em</Text>
-                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 4, fontSize: 21, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>
-                      {reachOn.charAt(0).toUpperCase() + reachOn.slice(1)}
-                    </Text>
-                  </View>
-                </View>
-              ) : (
-                <Text style={{ fontSize: 13.5, lineHeight: 19, color: INK.soft }}>
-                  Diga quanto quer guardar por mês, em Editar caixinha, e eu calculo quando você chega lá.
-                </Text>
-              )}
-            </View>
-          ) : !hasTarget && Number(goal.monthly_contribution) > 0 ? (
-            <View style={[PLAN, { marginTop: 18 }]}>
-              <Text style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>Você guarda por mês</Text>
-              <Text style={{ marginTop: 4, fontSize: 21, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>{money(Number(goal.monthly_contribution))}</Text>
-            </View>
           ) : null}
+
+          {/* ══ Willo, saying the plan: written on the fade like the rest, no box around it ══ */}
+          <View style={{ marginTop: hasTarget ? 16 : 10, flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
+            <View style={{ marginTop: -7, marginLeft: -7 }}>
+              <ParticleOrb size={34} density={130} />
+            </View>
+            <Text style={{ flex: 1, fontSize: 15, lineHeight: 21, color: "rgba(255,255,255,0.66)" }}>
+              {isComplete ? (
+                <>
+                  Meta batida. <Text style={B}>Parabéns, você chegou lá!</Text>
+                </>
+              ) : hasTarget && plan > 0 && reachOn ? (
+                <>
+                  Guardando <Text style={B}>{money(plan)}</Text> por mês, você chega lá em <Text style={B}>{reachOn}</Text>.
+                </>
+              ) : hasTarget ? (
+                "Me diz quanto quer guardar por mês, em Editar caixinha, que eu calculo quando você chega lá."
+              ) : Number(goal.monthly_contribution) > 0 ? (
+                <>
+                  Você guarda <Text style={B}>{money(Number(goal.monthly_contribution))}</Text> por mês, no seu ritmo.
+                </>
+              ) : (
+                "Sem meta, sem pressão. É só ir guardando no seu ritmo."
+              )}
+            </Text>
+          </View>
         </Animated.View>
 
         <View style={{ paddingHorizontal: 20 }}>
