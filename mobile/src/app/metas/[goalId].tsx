@@ -382,8 +382,8 @@ export default function MetaDetalhe() {
           ) : null}
 
           {/* ══ Willo, saying the plan: written on the fade like the rest, no box around it ══ */}
-          <View style={{ marginTop: hasTarget ? 16 : 10, flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
-            <View style={{ marginTop: -7, marginLeft: -7 }}>
+          <View style={{ marginTop: hasTarget ? 16 : 10, flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <View style={{ marginLeft: -7 }}>
               <ParticleOrb size={34} density={130} />
             </View>
             <Text style={{ flex: 1, fontSize: 15, lineHeight: 21, color: "rgba(255,255,255,0.66)" }}>
