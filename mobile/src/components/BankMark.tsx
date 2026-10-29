@@ -3,8 +3,10 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { bankFor, initials } from "@/lib/banks";
 import { catalogFor } from "~/lib/bankCatalog";
-import { Wallet } from "~/components/icons";
 import { inkOn, shade } from "@/lib/tone";
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const WILLO_MARK = require("../../assets/willo-wallet.png") as number;
 
 /**
  * The bank, as a mark.
@@ -27,19 +29,17 @@ export default function BankMark({
   const bank = bankFor(name);
   const known = catalogFor(name);
   const letters = initials(bank?.name ?? known?.name ?? name) || "••";
-  const radius = Math.round(size * 0.32);
+  const radius = size / 2;
 
+  /* The wallet is Willo's own mark: the disc already has its shape, so it is drawn
+     whole, with nothing behind it. */
   if (known?.id === "wallet") {
     return (
-      <LinearGradient
-        colors={[shade(known.hex, 0.22), known.hex, shade(known.hex, -0.2)]}
-        locations={[0, 0.55, 1]}
-        start={{ x: 0.1, y: 0 }}
-        end={{ x: 0.9, y: 1 }}
-        style={{ width: size, height: size, borderRadius: radius, overflow: "hidden", alignItems: "center", justifyContent: "center" }}
-      >
-        <Wallet size={size * 0.48} color="#0B0B0B" strokeWidth={2.2} />
-      </LinearGradient>
+      <Image
+        source={WILLO_MARK}
+        contentFit="cover"
+        style={{ width: size, height: size, borderRadius: size / 2 }}
+      />
     );
   }
 
@@ -60,7 +60,7 @@ export default function BankMark({
         <Image
           source={known.logo}
           contentFit={known.bleed ? "cover" : "contain"}
-          style={known.bleed ? { width: size, height: size } : { width: size * 0.74, height: size * 0.74 }}
+          style={known.bleed ? { width: size, height: size } : { width: size * 0.62, height: size * 0.62 }}
         />
       </View>
     );

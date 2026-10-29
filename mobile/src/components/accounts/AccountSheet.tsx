@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { createAccount } from "@/services/transactionService";
 import { PALETTE } from "@/lib/banks";
-import { CATALOG, POPULAR, WALLET, type CatalogBank } from "~/lib/bankCatalog";
+import { CATALOG, POPULAR, type CatalogBank } from "~/lib/bankCatalog";
 import StepSheet, { Ask } from "~/components/StepSheet";
 import Created from "~/components/accounts/Created";
 import BankMark from "~/components/BankMark";
@@ -174,7 +174,7 @@ export default function AccountSheet({
         <View style={{ flex: 1 }}>
           <Ask title="Qual é o banco?" note="Toque no seu. Se não estiver aqui, use Outro banco." />
           <View style={{ marginTop: 22, flexDirection: "row", flexWrap: "wrap", rowGap: 14 }}>
-            {[WALLET, ...POPULAR].map((b) => (
+            {POPULAR.map((b) => (
               <Tile key={b.id} label={b.id === "bb" ? "B. do Brasil" : b.name} on={bank?.id === b.id} onPress={() => choose(bank?.id === b.id ? null : b)}>
                 <BankMark name={b.name} hex={b.hex} size={58} />
               </Tile>
@@ -191,7 +191,7 @@ export default function AccountSheet({
                 style={{
                   width: 58,
                   height: 58,
-                  borderRadius: 19,
+                  borderRadius: 29,
                   alignItems: "center",
                   justifyContent: "center",
                   backgroundColor: "rgba(255,255,255,0.08)",

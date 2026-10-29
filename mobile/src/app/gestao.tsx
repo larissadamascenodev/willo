@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { getAccounts } from "@/services/transactionService";
 import { useFinanceData } from "@/hooks/useFinanceData";
+import { ensureWallet } from "~/lib/ensureWallet";
 import { fetchGoals, type Goal } from "@/services/goalService";
 import { colorFor } from "@/lib/banks";
 import { goalPreset } from "~/lib/goalIcon";
@@ -56,6 +57,9 @@ export default function Gestao() {
   const [addingAccount, setAddingAccount] = useState(false);
   const [addingCofrinho, setAddingCofrinho] = useState(false);
 
+  const announceChange = () => window.dispatchEvent(new CustomEvent("finance-data-changed"));
+  const announce = announceChange;
+
   const load = useCallback(async () => {
     if (!user) {
       setAccounts([]);
@@ -63,7 +67,11 @@ export default function Gestao() {
       return;
     }
     try {
-      setAccounts((await getAccounts()) as unknown as Account[]);
+      const read = (await getAccounts()) as unknown as Account[];
+      setAccounts(read);
+      /* The wallet is made once for anyone with accounts; the change it announces
+         brings the list back with it in. */
+      if (await ensureWallet(user.id, read)) announceChange();
     } catch {
       setAccounts([]);
     }
@@ -75,7 +83,6 @@ export default function Gestao() {
     }
   }, [user]);
 
-  const announce = () => window.dispatchEvent(new CustomEvent("finance-data-changed"));
 
   useEffect(() => {
     void load();
@@ -204,19 +211,19 @@ export default function Gestao() {
               </Text>
               {/* Two small readings side by side under the balance: where the month lands,
                   and — once something is set aside — everything the person holds. */}
-              <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
+              <View style={{ marginTop: 14, flexDirection: "row", gap: 28 }}>
                 {previsto !== undefined && (
-                  <View style={{ flex: 1, minWidth: 0, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: "rgba(255,255,255,0.07)" }}>
-                    <Text numberOfLines={1} style={{ fontSize: 11, color: INK.softer }}>Previsto no final do mês</Text>
-                    <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 14.5, fontWeight: "700", letterSpacing: -0.2, color: previsto < 0 ? RED : "#fff" }}>
+                  <View style={{ flexShrink: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>Previsto no final do mês</Text>
+                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: previsto < 0 ? RED : "#fff" }}>
                       {money(previsto)}
                     </Text>
                   </View>
                 )}
                 {guardado > 0 && (
-                  <View style={{ flex: 1, minWidth: 0, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: "rgba(255,255,255,0.07)" }}>
-                    <Text numberOfLines={1} style={{ fontSize: 11, color: INK.softer }}>Patrimônio total</Text>
-                    <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 14.5, fontWeight: "700", letterSpacing: -0.2, color: "#fff" }}>
+                  <View style={{ flexShrink: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>Patrimônio total</Text>
+                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
                       {money(total)}
                     </Text>
                   </View>

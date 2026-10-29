@@ -11,9 +11,9 @@ import {
 } from "@/services/transactionService";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { useMonth } from "@/contexts/MonthContext";
-import MonthStrip from "~/components/MonthStrip";
 import { categoryHex } from "@/lib/categoryData";
 import { colorFor } from "@/lib/banks";
+import { isWallet } from "~/lib/ensureWallet";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import Surface, { Hairline } from "~/components/Surface";
@@ -24,7 +24,6 @@ import { FlexBar } from "~/components/Bar";
 import CenterModal from "~/components/CenterModal";
 import FluxoPanel from "~/components/financeiro/FluxoPanel";
 import SpendRing from "~/components/analytics/SpendRing";
-import { TopSpendRow } from "~/components/analytics/CategoryViews";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
@@ -96,7 +95,7 @@ export default function ContaDetalhe() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { selectedMonth, selectedYear, setMonth } = useMonth();
+  const { selectedMonth, selectedYear } = useMonth();
 
   const [account, setAccount] = useState<Account | null>(null);
   const [movements, setMovements] = useState<Movement[]>([]);
@@ -185,17 +184,6 @@ export default function ContaDetalhe() {
     [movements],
   );
 
-  const groupByDay = (list: Movement[]) => {
-    const groups: { day: string; items: Movement[] }[] = [];
-    list.forEach((t) => {
-      const day = t.date.slice(0, 10);
-      const g = groups[groups.length - 1];
-      if (g && g.day === day) g.items.push(t);
-      else groups.push({ day, items: [t] });
-    });
-    return groups;
-  };
-
   /* Everything this account has ever moved, read only when someone asks for it. */
   useEffect(() => {
     if (!movesOpen || history || !accountId) return;
@@ -216,18 +204,6 @@ export default function ContaDetalhe() {
   useEffect(() => {
     setHistory(null);
   }, [movements]);
-
-  const dayLabel = (iso: string) => {
-    const d = new Date(`${iso}T12:00:00`);
-    const today = new Date();
-    const yearSuffix = d.getFullYear() !== today.getFullYear() ? ` de ${d.getFullYear()}` : "";
-    const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-    if (same(d, today)) return "Hoje";
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-    if (same(d, yesterday)) return "Ontem";
-    return `${d.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" }).replace(/\./g, "")}${yearSuffix}`;
-  };
 
   const openMenu = () => {
     dots.current?.measureInWindow((x, y, w, h) => {
@@ -284,7 +260,7 @@ export default function ContaDetalhe() {
       >
         <View style={{ height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <BackButton to="/gestao" />
-          <Pressable
+          {account && isWallet(account.name) ? <View style={{ width: 40, height: 40 }} /> : <Pressable
             ref={dots}
             accessibilityLabel="Ações da conta"
             onPress={openMenu}
@@ -298,7 +274,7 @@ export default function ContaDetalhe() {
             })}
           >
             <MoreVertical size={20} color={INK.full} />
-          </Pressable>
+          </Pressable>}
         </View>
 
         {loading ? (
@@ -347,51 +323,71 @@ export default function ContaDetalhe() {
               >
                 {money(balance)}
               </Text>
-              <Text style={{ marginTop: 6, fontSize: 12.5, color: INK.softer }}>
-                Saldo inicial {money(Number(account.initial_balance) || 0)}
-              </Text>
             </Animated.View>
 
             {/* ══ What moved through it: the same reading as the main cash flow, for this account alone ══ */}
             <Animated.View entering={FadeInDown.delay(60).duration(420)} style={{ marginTop: 26 }}>
               <Text style={[T.eyebrow, { paddingHorizontal: 4 }]}>Fluxo de caixa</Text>
-              <FluxoPanel accountId={accountId} embedded />
+              <View style={{ marginTop: 18 }}>
+                <FluxoPanel accountId={accountId} embedded />
+              </View>
             </Animated.View>
 
-            {/* ══ What took it ══ */}
-            <Animated.View entering={FadeInDown.delay(110).duration(420)} style={{ marginTop: 32 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4 }}>
-                <Text style={T.eyebrow}>Onde mais saiu</Text>
-                <MonthStrip month={selectedMonth} year={selectedYear} onChange={setMonth} />
-              </View>
+            {/* ══ What took it: the biggest, called out, and the four after it ══ */}
+            <Animated.View entering={FadeInDown.delay(110).duration(420)} style={{ marginTop: 34 }}>
+              <Text style={[T.eyebrow, { paddingHorizontal: 4 }]}>Onde mais saiu</Text>
 
               {topCategory ? (
-                <>
-                  <View style={{ marginTop: 12 }}>
-                    <TopSpendRow
-                      category={topCategory}
-                      monthLabel={MONTH_NAMES[selectedMonth].toLowerCase()}
-                      onOpen={() => setRingOpen(true)}
-                    />
-                  </View>
-                  <Pressable
-                    onPress={() => setRingOpen(true)}
-                    hitSlop={8}
-                    style={({ pressed }) => ({ marginTop: 12, paddingHorizontal: 4, opacity: pressed ? 0.6 : 1 })}
-                  >
-                    <View style={{ flexDirection: "row", height: 8, gap: 3 }}>
-                      {categoryData.slice(0, 6).map((cat, i) => (
-                        <FlexBar key={cat.name} share={cat.amount / totalDespesas} color={categoryHex(cat.name, customCats)} delay={0.05 * i} />
-                      ))}
+                <Surface radius={26} onPress={() => setRingOpen(true)} style={{ marginTop: 12, padding: 16 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                    <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(topCategory.hex) }}>
+                      <topCategory.icon size={21} color={chipInk(topCategory.hex)} strokeWidth={2} />
                     </View>
-                    <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 4 }}>
-                      <Text style={{ fontSize: 13, fontWeight: "600", color: INK.soft }}>
-                        {categoryData.length === 1 ? "Ver o gráfico" : `Ver o gráfico das ${categoryData.length} categorias`}
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text numberOfLines={1} style={{ fontSize: 12, color: INK.soft }}>
+                        Maior gasto em {MONTH_NAMES[selectedMonth].toLowerCase()}
                       </Text>
-                      <ChevronRight size={14} color={INK.soft} />
+                      <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 17, fontWeight: "700", letterSpacing: -0.2, color: "#fff" }}>
+                        {topCategory.name}
+                      </Text>
                     </View>
-                  </Pressable>
-                </>
+                    <View style={{ alignItems: "flex-end" }}>
+                      <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>{money(topCategory.amount)}</Text>
+                      <Text style={{ marginTop: 1, fontSize: 12, color: INK.soft }}>{topCategory.percentage}% do total</Text>
+                    </View>
+                  </View>
+
+                  <View style={{ marginTop: 16, flexDirection: "row", height: 8, gap: 3 }}>
+                    {overview.slice(0, 5).map((cat, i) => (
+                      <FlexBar key={cat.name} share={cat.amount / totalDespesas} color={cat.hex} delay={0.05 * i} />
+                    ))}
+                  </View>
+
+                  {overview.slice(1, 5).map((cat, i) => {
+                    const Icon = cat.icon;
+                    return (
+                      <View
+                        key={cat.name}
+                        style={{
+                          marginTop: i === 0 ? 14 : 0,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 12,
+                          paddingVertical: 10,
+                          borderTopWidth: i > 0 ? 1 : 0,
+                          borderTopColor: "rgba(255,255,255,0.06)",
+                        }}
+                      >
+                        <Icon size={17} color={cat.hex} />
+                        <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: "600", color: "#fff" }}>{cat.name}</Text>
+                        <View style={{ alignItems: "flex-end" }}>
+                          <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#fff" }}>{money(cat.amount)}</Text>
+                          <Text style={{ fontSize: 10.5, color: INK.softer }}>{cat.percentage}%</Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </Surface>
               ) : (
                 <Surface radius={22} style={{ marginTop: 12, paddingVertical: 24, alignItems: "center" }}>
                   <Text style={{ fontSize: 14, color: INK.softer }}>Nada saiu desta conta em {MONTH_NAMES[selectedMonth].toLowerCase()}</Text>
@@ -399,27 +395,37 @@ export default function ContaDetalhe() {
               )}
             </Animated.View>
 
-            {/* ══ The latest few; the card opens the rest ══ */}
-            <Animated.View entering={FadeInDown.delay(160).duration(420)} style={{ marginTop: 32 }}>
-              <Text style={[T.eyebrow, { paddingHorizontal: 4 }]}>Movimentações recentes</Text>
+            {/* ══ The latest few, as on the main cash flow; the button opens the rest ══ */}
+            <Animated.View entering={FadeInDown.delay(160).duration(420)} style={{ marginTop: 34 }}>
+              <Text style={[T.eyebrow, { paddingHorizontal: 4 }]}>Últimos lançamentos</Text>
               {ordered.length === 0 ? (
-                <Surface radius={22} style={{ marginTop: 12, paddingVertical: 28, alignItems: "center" }}>
-                  <Text style={{ fontSize: 14, color: INK.softer }}>Nenhuma movimentação neste mês</Text>
-                </Surface>
+                <Text style={{ paddingVertical: 32, textAlign: "center", fontSize: 14, color: INK.soft }}>
+                  Nada por aqui neste mês
+                </Text>
               ) : (
-                <Surface radius={22} onPress={() => setMovesOpen(true)} style={{ marginTop: 12 }}>
-                  {ordered.slice(0, 5).map((tx, i) => (
-                    <View key={tx.id}>
-                      {i > 0 && <Hairline />}
-                      <MovementRow tx={tx} customCats={customCats} />
-                    </View>
+                <View style={{ marginTop: 6 }}>
+                  {ordered.slice(0, 5).map((tx) => (
+                    <MovementRow key={tx.id} tx={tx} customCats={customCats} />
                   ))}
-                  <Hairline />
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 13 }}>
-                    <Text style={{ fontSize: 13.5, fontWeight: "600", color: INK.soft }}>Abrir todas as movimentações</Text>
-                    <ChevronRight size={14} color={INK.soft} />
-                  </View>
-                </Surface>
+                </View>
+              )}
+              {ordered.length > 0 && (
+                <Pressable
+                  onPress={() => setMovesOpen(true)}
+                  style={({ pressed }) => ({
+                    marginTop: 16,
+                    height: 52,
+                    borderRadius: 26,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.08)",
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <Text style={{ fontSize: 15.5, fontWeight: "500", color: "#fff" }}>Ver todos os lançamentos</Text>
+                </Pressable>
               )}
             </Animated.View>
           </>
@@ -485,15 +491,8 @@ export default function ContaDetalhe() {
           <Text style={{ paddingVertical: 36, textAlign: "center", fontSize: 14, color: INK.softer }}>Esta conta ainda não teve movimentações</Text>
         ) : (
           <>
-            {groupByDay(history.slice(0, shownCount)).map((group) => (
-              <View key={group.day} style={{ marginTop: 10 }}>
-                <Text style={{ fontSize: 12.5, fontWeight: "600", color: INK.softer }}>{dayLabel(group.day)}</Text>
-                {group.items.map((tx, i) => (
-                  <View key={tx.id} style={{ borderTopWidth: i > 0 ? 1 : 0, borderTopColor: "rgba(255,255,255,0.05)" }}>
-                    <MovementRow tx={tx} customCats={customCats} flush />
-                  </View>
-                ))}
-              </View>
+            {history.slice(0, shownCount).map((tx) => (
+              <MovementRow key={tx.id} tx={tx} customCats={customCats} />
             ))}
             {history.length > shownCount && (
               <Pressable
@@ -686,24 +685,27 @@ export default function ContaDetalhe() {
   );
 }
 
-/** One movement of the account, shared by the recent card and the full list. */
-function MovementRow({ tx, customCats, flush = false }: { tx: Movement; customCats: CustomCategory[]; flush?: boolean }) {
+/** One movement, drawn as the main cash flow draws its entries. */
+function MovementRow({ tx, customCats }: { tx: Movement; customCats: CustomCategory[] }) {
   const Icon = categoryIcon(tx.category, customCats);
   const catHex = categoryHex(tx.category, customCats);
   const isReceita = tx.type === "receita";
+  const day = new Date(`${tx.date.slice(0, 10)}T12:00:00`);
+  const sameYear = day.getFullYear() === new Date().getFullYear();
+  const date = day.toLocaleDateString("pt-BR", { day: "numeric", month: "long", ...(sameYear ? {} : { year: "numeric" }) });
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: flush ? 0 : 14 }}>
-      <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(catHex) }}>
-        <Icon size={16} color={chipInk(catHex)} strokeWidth={2} />
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12 }}>
+      <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(catHex) }}>
+        <Icon size={20} color={chipInk(catHex)} strokeWidth={2} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: "#fff" }}>{tx.name}</Text>
-        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 11.5, color: INK.softer }}>
-          {tx.category}
+        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>{tx.name}</Text>
+        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>
+          {date} · {tx.category}
           {tx.status !== "pago" ? " · pendente" : ""}
         </Text>
       </View>
-      <Text style={{ fontSize: 14.5, fontWeight: "700", color: isReceita ? GREEN : "#fff" }}>
+      <Text style={{ fontSize: 15, fontWeight: "600", color: isReceita ? GREEN : RED }}>
         {isReceita ? "+" : "−"}
         {money(Number(tx.amount))}
       </Text>
