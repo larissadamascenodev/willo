@@ -130,7 +130,7 @@ export default function StepSheet({
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={{ flex: 1 }} onPress={finished || busy ? undefined : onClose}>
         <AnimatedBlur tint="dark" animatedProps={blurProps} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)" }, dim]} />
+        <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.4)" }, dim]} />
       </Pressable>
 
       <Animated.View
@@ -147,13 +147,13 @@ export default function StepSheet({
             overflow: "hidden",
             borderWidth: 1,
             borderBottomWidth: 0,
-            borderColor: "rgba(255,255,255,0.13)",
+            borderColor: "rgba(255,255,255,0.16)",
           },
           rise,
         ]}
       >
-        <BlurView intensity={70} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(16,17,20,0.74)" }} />
+        <BlurView intensity={60} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.38)" }} />
         {/* The light catching the glass's upper edge. */}
         <View style={{ position: "absolute", top: 0, left: 36, right: 36, height: 1, backgroundColor: "rgba(255,255,255,0.22)" }} />
 
