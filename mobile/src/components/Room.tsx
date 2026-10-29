@@ -1,8 +1,20 @@
 import { type ReactNode } from "react";
 import { View, type ViewStyle } from "react-native";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
-import Sky from "~/components/Sky";
+import { Image } from "expo-image";
 import { GROUND, GROUND_LIT } from "~/theme/tokens";
+
+/**
+ * The hour the home arrives at, as a picture.
+ *
+ * It was eleven radial lights, a mask and a vignette drawn live, and a phone did not
+ * draw them the way the web does: the welcome looked one way in the browser and
+ * another in the hand. This is that same drawing, taken once from the web and fixed,
+ * so every phone shows the same sky. It already carries its own vignette, which is
+ * why the sky screens draw none over it.
+ */
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const HOUR = require("../../assets/sky.png") as number;
 
 /**
  * The ground everything sits on.
@@ -50,10 +62,11 @@ export default function Room({
 
   return (
     <View style={[{ flex: 1, backgroundColor: lit ? GROUND_LIT : GROUND }, style]}>
-      {sky && <Sky />}
+      {sky && <Image source={HOUR} contentFit="fill" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />}
 
       {/* Both the box and the drawing have to be told to fill: left to itself the
           canvas takes its intrinsic size and the light stops partway down. */}
+      {!sky && (
       <Svg
         width="100%"
         height="100%"
@@ -97,6 +110,7 @@ export default function Room({
           ))}
         <Rect x="0" y="0" width="100%" height="100%" fill="url(#vignette)" />
       </Svg>
+      )}
 
       {children}
     </View>
