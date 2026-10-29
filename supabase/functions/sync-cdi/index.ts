@@ -5,7 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
  * Brings the CDI up to date.
  *
  * The Banco Central publishes the daily CDI (SGS series 12, in % per day, business days
- * only). This reads the last few weeks and keeps them in `cdi_rates`, where every
+ * only). This reads the last two months and keeps them in `cdi_rates`, where every
  * caixinha's yield is worked out on the server. It takes nothing from the caller — it
  * only copies public data — so being called often, or by anyone signed in, changes
  * nothing but a few rows that already exist.
@@ -19,7 +19,17 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SERIES = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados/ultimos/45?formato=json";
+/* "Últimos N" is capped at 20 values by the Banco Central, so a date range is asked for
+   instead: enough weeks back to catch up a caixinha whose person did not open the app. */
+const DAYS_BACK = 60;
+const seriesUrl = () => {
+  const dmy = (d: Date) =>
+    `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${d.getUTCFullYear()}`;
+  /* Brasília is three hours behind UTC; a day is not over for the bank until it is there. */
+  const today = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  const from = new Date(today.getTime() - DAYS_BACK * 24 * 60 * 60 * 1000);
+  return `https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=${dmy(from)}&dataFinal=${dmy(today)}`;
+};
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -34,7 +44,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const res = await fetch(SERIES, { headers: { Accept: "application/json" } });
+    const res = await fetch(seriesUrl(), { headers: { Accept: "application/json" } });
     if (!res.ok) return json({ error: "bcb_unavailable", status: res.status }, 502);
 
     const raw = (await res.json()) as { data: string; valor: string }[];
