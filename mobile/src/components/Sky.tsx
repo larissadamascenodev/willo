@@ -45,11 +45,9 @@ const LIGHTS: { cx: number; cy: number; rx: number; ry: number; rgb: string; a: 
   { cx: 0.5, cy: 0, rx: 0.6, ry: 0.085, rgb: "8,12,22", a: 0.9 },
 ];
 
-export default function Sky({ strong = false }: { strong?: boolean }) {
+export default function Sky() {
   const { height } = useWindowDimensions();
-  /* Strong holds the picture longer before it gives way to the room: the way the
-     welcome screen shows it, where nothing stands over it. */
-  const band = height * (strong ? 0.74 : 0.62);
+  const band = height * 0.62;
 
   return (
     <View
@@ -86,8 +84,8 @@ export default function Sky({ strong = false }: { strong?: boolean }) {
               photograph rather than in a room. */}
           <LinearGradient id="sky-fade" x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor="#fff" stopOpacity={1} />
-            <Stop offset={strong ? "0.66" : "0.5"} stopColor="#fff" stopOpacity={1} />
-            <Stop offset={strong ? "0.86" : "0.74"} stopColor="#fff" stopOpacity={strong ? 0.55 : 0.42} />
+            <Stop offset="0.5" stopColor="#fff" stopOpacity={1} />
+            <Stop offset="0.74" stopColor="#fff" stopOpacity={0.42} />
             <Stop offset="1" stopColor="#fff" stopOpacity={0} />
           </LinearGradient>
           <Mask id="sky-mask">

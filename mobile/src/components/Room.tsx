@@ -36,15 +36,12 @@ const LIGHTS = [
 export default function Room({
   lit = false,
   sky = false,
-  skyStrong = false,
   children,
   style,
 }: {
   lit?: boolean;
   /** The home, the wallet and the accounts screen get the hour instead of the lights. */
   sky?: boolean;
-  /** The hour held further down the screen before it gives way to the room. */
-  skyStrong?: boolean;
   children?: ReactNode;
   style?: ViewStyle;
 }) {
@@ -53,7 +50,7 @@ export default function Room({
 
   return (
     <View style={[{ flex: 1, backgroundColor: lit ? GROUND_LIT : GROUND }, style]}>
-      {sky && <Sky strong={skyStrong} />}
+      {sky && <Sky />}
 
       {/* Both the box and the drawing have to be told to fill: left to itself the
           canvas takes its intrinsic size and the light stops partway down. */}
