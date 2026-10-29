@@ -7,7 +7,7 @@ import type { Goal } from "@/services/goalService";
 import { goalProgress } from "@/lib/goalPresets";
 import { goalPreset } from "~/lib/goalIcon";
 import CaixinhaCover from "~/components/accounts/CaixinhaCover";
-import { Plus } from "~/components/icons";
+import { Plus, TrendingUp } from "~/components/icons";
 import { money } from "~/lib/money";
 import { earns } from "~/lib/yields";
 import { GREEN } from "~/theme/tokens";
@@ -64,6 +64,16 @@ export default function CaixinhaTile({
             <BlurView intensity={40} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
             <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.3)" }} />
             <Text style={{ fontSize: 12, fontWeight: "700", color: isComplete ? GREEN : "#fff" }}>{percent}%</Text>
+          </View>
+        )}
+
+        {/* One that earns says so in the opposite corner. */}
+        {earns(goal) && (
+          <View style={{ position: "absolute", top: 12, right: 12, height: 26, paddingHorizontal: 9, borderRadius: 13, overflow: "hidden", flexDirection: "row", alignItems: "center", gap: 4, borderWidth: 1, borderColor: "rgba(200,243,109,0.45)" }}>
+            <BlurView intensity={40} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(200,243,109,0.16)" }} />
+            <TrendingUp size={12} color={GREEN} strokeWidth={2.6} />
+            <Text style={{ fontSize: 11.5, fontWeight: "700", color: GREEN }}>{Number(goal.yield_percent)}%</Text>
           </View>
         )}
 

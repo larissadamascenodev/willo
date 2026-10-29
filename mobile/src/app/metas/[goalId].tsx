@@ -21,7 +21,7 @@ import { getAccounts } from "@/services/transactionService";
 import { goalProgress } from "@/lib/goalPresets";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
-import RoundButton from "~/components/RoundButton";
+import { BlurView } from "expo-blur";
 import ConfirmGlass from "~/components/ConfirmGlass";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import GoalFormSheet from "~/components/metas/GoalFormSheet";
@@ -33,9 +33,10 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   ChevronDown,
+  ChevronLeft,
   ChevronUp,
   ImageIcon,
-  MoreVertical,
+  MoreHorizontal,
   Pencil,
   Trash2,
 } from "~/components/icons";
@@ -59,7 +60,18 @@ import { type as T } from "~/theme/type";
  */
 
 const PREVIEW = 5;
-const HERO = 360;
+const HERO = 340;
+
+/** A piece of glass on the page: the readings sit in these rather than loose on the ground. */
+const PANEL = {
+  borderRadius: 28,
+  borderCurve: "continuous",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.10)",
+  backgroundColor: "rgba(255,255,255,0.062)",
+  paddingHorizontal: 18,
+  paddingVertical: 18,
+} as const;
 
 /** The fill of the bar, drawn in once. */
 function Progress({ progress, color }: { progress: number; color: string }) {
@@ -314,7 +326,6 @@ export default function MetaDetalhe() {
 
   const forecast = earns(goal) && cdi !== null ? estimate(Number(goal.current_amount) || 0, cdi, Number(goal.yield_percent)) : null;
   const shown = showAll ? movements : movements.slice(0, PREVIEW);
-  const heroH = HERO + insets.top;
 
   return (
     <Room>
@@ -322,27 +333,50 @@ export default function MetaDetalhe() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ══ Its picture, and across the foot of it what it is and what is kept ══ */}
-        <View style={{ height: heroH, overflow: "hidden", borderBottomLeftRadius: 36, borderBottomRightRadius: 36, borderCurve: "continuous" }}>
-          <CaixinhaCover goal={goal} height={heroH} glyph={200} glyphTop={insets.top + 40} />
+        {/* ══ Its picture, set in the page as a card; across the foot of it what it is and what is kept ══ */}
+        <View
+          style={{
+            marginHorizontal: 12,
+            marginTop: insets.top + 6,
+            height: HERO,
+            borderRadius: 36,
+            borderCurve: "continuous",
+            overflow: "hidden",
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.14)",
+          }}
+        >
+          <CaixinhaCover goal={goal} height={HERO} glyph={230} glyphTop={24} />
           <LinearGradient
-            colors={["rgba(0,0,0,0.45)", "rgba(0,0,0,0)"]}
-            style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 100 }}
+            colors={["rgba(0,0,0,0.38)", "rgba(0,0,0,0)"]}
+            style={{ position: "absolute", top: 0, left: 0, right: 0, height: 110 }}
           />
           <LinearGradient
-            colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.55)", "rgba(8,9,10,0.88)"]}
-            locations={[0, 0.55, 1]}
-            style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 210 }}
+            colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.6)", "rgba(8,9,10,0.92)"]}
+            locations={[0, 0.5, 1]}
+            style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 230 }}
           />
 
-          <View style={{ position: "absolute", top: insets.top + 8, left: 16, right: 16, height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <BackButton to="/gestao" onImage />
-            <RoundButton label="Opções da caixinha" hostRef={dots} onPress={openMenu} onImage>
-              <MoreVertical size={18} color="rgba(255,255,255,0.9)" />
-            </RoundButton>
+          <View style={{ position: "absolute", top: 14, left: 14, right: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <HeroButton label="Voltar" onPress={() => router.replace("/gestao" as never)}>
+              <ChevronLeft size={21} color="#fff" strokeWidth={2.4} />
+            </HeroButton>
+            <HeroButton label="Opções da caixinha" hostRef={dots} onPress={openMenu}>
+              <MoreHorizontal size={21} color="#fff" strokeWidth={2.4} />
+            </HeroButton>
           </View>
 
-          <Animated.View entering={FadeInDown.duration(460)} style={{ position: "absolute", left: 20, right: 20, bottom: 6 }}>
+          <Animated.View entering={FadeInDown.duration(460)} style={{ position: "absolute", left: 22, right: 22, bottom: 20 }}>
+            {(earns(goal) || (hasTarget && !isComplete && goal.deadline) || isComplete) && (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                {earns(goal) && <GlassPill tone={GREEN} label={`Rende ${Number(goal.yield_percent)}% do CDI`} />}
+                {isComplete ? (
+                  <GlassPill tone={GREEN} label="Meta concluída" />
+                ) : hasTarget && goal.deadline ? (
+                  <GlassPill label={pace.late ? "Prazo vencido" : `Até ${monthYear(goal.deadline)}`} tone={pace.late ? RED : undefined} />
+                ) : null}
+              </View>
+            )}
             <Text numberOfLines={2} style={{ fontSize: 16, fontWeight: "600", color: "rgba(255,255,255,0.82)" }}>{goal.name}</Text>
             <Text
               numberOfLines={1}
@@ -355,44 +389,45 @@ export default function MetaDetalhe() {
           </Animated.View>
         </View>
 
-        <View style={{ paddingHorizontal: 20 }}>
-          {/* ══ How far along: the share on the left, what is left on the right ══ */}
+        <View style={{ paddingHorizontal: 12 }}>
+          {/* ══ How far along and what each month asks, together in one piece of glass ══ */}
           {hasTarget ? (
-          <Animated.View entering={FadeInDown.delay(60).duration(420)} style={{ marginTop: 14 }}>
-            <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", marginBottom: 9 }}>
-              <Text style={{ fontSize: 13.5, color: INK.soft }}>
-                <Text style={{ fontWeight: "700", color: isComplete ? GREEN : "#fff" }}>{percent}%</Text> de {money(goal.target_amount)}
-              </Text>
-              <Text style={{ fontSize: 13.5, color: INK.soft }}>
-                {isComplete ? "Meta concluída" : <>faltam <Text style={{ fontWeight: "700", color: "#fff" }}>{money(remaining)}</Text></>}
-              </Text>
-            </View>
-            <Progress progress={progress} color={isComplete ? GREEN : preset.hex} />
-          </Animated.View>
+            <Animated.View entering={FadeInDown.delay(60).duration(420)} style={[PANEL, { marginTop: 12 }]}>
+              <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
+                <Text style={{ fontSize: 13.5, color: INK.soft }}>
+                  <Text style={{ fontWeight: "700", color: isComplete ? GREEN : "#fff" }}>{percent}%</Text> de {money(goal.target_amount)}
+                </Text>
+                <Text style={{ fontSize: 13.5, color: INK.soft }}>
+                  {isComplete ? "Meta concluída" : <>faltam <Text style={{ fontWeight: "700", color: "#fff" }}>{money(remaining)}</Text></>}
+                </Text>
+              </View>
+              <Progress progress={progress} color={isComplete ? GREEN : preset.hex} />
+              <View style={{ marginTop: 16, paddingTop: 16, flexDirection: "row", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)" }}>
+                <Reading label="Guardar por mês" value={perMonth > 0 ? money(perMonth) : "—"} />
+                <View style={{ width: 1, marginVertical: 2, marginRight: 16, backgroundColor: "rgba(255,255,255,0.08)" }} />
+                <Reading label="Previsão" value={arrives} late={pace.late && !isComplete} />
+              </View>
+            </Animated.View>
           ) : (
-            <Animated.Text entering={FadeInDown.delay(60).duration(420)} style={{ marginTop: 14, fontSize: 13.5, color: INK.soft }}>
-              Sem valor definido: é só ir guardando.
-            </Animated.Text>
-          )}
-
-          {/* ══ What it asks of each month, and when it arrives ══ */}
-          {hasTarget && (
-            <Animated.View entering={FadeInDown.delay(100).duration(420)} style={{ marginTop: 22, flexDirection: "row" }}>
-              <Reading label="Guardar por mês" value={perMonth > 0 ? money(perMonth) : "—"} />
-              <View style={{ width: 1, marginVertical: 2, marginRight: 16, backgroundColor: "rgba(255,255,255,0.08)" }} />
-              <Reading label="Previsão" value={arrives} late={pace.late && !isComplete} />
+            <Animated.View entering={FadeInDown.delay(60).duration(420)} style={[PANEL, { marginTop: 12 }]}>
+              <Text style={{ fontSize: 14, lineHeight: 19, color: INK.soft }}>
+                Sem valor definido: é só ir guardando, no seu ritmo.
+              </Text>
             </Animated.View>
           )}
 
           {/* ══ What it earns: the rate it follows and what that is expected to come to ══ */}
           {earns(goal) && (
-            <Animated.View entering={FadeInDown.delay(120).duration(420)} style={{ marginTop: 22 }}>
+            <Animated.View
+              entering={FadeInDown.delay(100).duration(420)}
+              style={[PANEL, { marginTop: 12, backgroundColor: "rgba(200,243,109,0.06)", borderColor: "rgba(200,243,109,0.18)" }]}
+            >
               <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" }}>
                 <Text style={T.eyebrow}>Rendimento estimado</Text>
                 <Text style={{ fontSize: 12.5, color: INK.softer }}>{Number(goal.yield_percent)}% do CDI</Text>
               </View>
               {forecast ? (
-                <View style={{ marginTop: 10, flexDirection: "row" }}>
+                <View style={{ marginTop: 12, flexDirection: "row" }}>
                   <Reading label="Por dia" value={`+${money(forecast.day)}`} tone={GREEN} />
                   <Reading label="Por mês" value={`+${money(forecast.month)}`} tone={GREEN} />
                   <Reading label="Por ano" value={`+${money(forecast.year)}`} tone={GREEN} />
@@ -402,14 +437,14 @@ export default function MetaDetalhe() {
                   Calculando com o CDI de hoje. Volte em instantes.
                 </Text>
               )}
-              <Text style={{ marginTop: 10, fontSize: 12, lineHeight: 16, color: INK.softer }}>
+              <Text style={{ marginTop: 12, fontSize: 12, lineHeight: 16, color: INK.softer }}>
                 {earned > 0 ? `${money(earned)} já rendidos. ` : ""}Estimativa bruta de imposto, em dias úteis; o rendimento real pode variar.
               </Text>
             </Animated.View>
           )}
 
           {/* ══ The two things done to a cofrinho; the rest is under the three dots ══ */}
-          <Animated.View entering={FadeInDown.delay(140).duration(420)} style={{ marginTop: 26, flexDirection: "row", gap: 10 }}>
+          <Animated.View entering={FadeInDown.delay(140).duration(420)} style={{ marginTop: 18, marginHorizontal: 8, flexDirection: "row", gap: 10 }}>
             <Pressable
               onPress={() => setMoving("deposito")}
               style={({ pressed }) => ({
@@ -451,7 +486,7 @@ export default function MetaDetalhe() {
           </Animated.View>
 
           {/* ══ Every movement, as transactions are ══ */}
-          <Animated.View entering={FadeInDown.delay(180).duration(420)} style={{ marginTop: 30 }}>
+          <Animated.View entering={FadeInDown.delay(180).duration(420)} style={{ marginTop: 30, marginHorizontal: 8 }}>
             <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", paddingHorizontal: 4 }}>
               <Text style={T.eyebrow}>Movimentações</Text>
               {movements.length > 0 && (
@@ -641,7 +676,74 @@ export default function MetaDetalhe() {
   );
 }
 
-/** One of the readings, plain on the page, side by side. */
+/**
+ * A round button over the picture.
+ *
+ * Light glass rather than dark: a blur with a white wash and a bright rim reads as a
+ * lens on any photo, where a dark wash over a dark picture only ever looked muddy.
+ */
+function HeroButton({
+  label,
+  onPress,
+  hostRef,
+  children,
+}: {
+  label: string;
+  onPress: () => void;
+  hostRef?: React.Ref<ComponentRef<typeof View>>;
+  children: React.ReactNode;
+}) {
+  return (
+    <Pressable
+      ref={hostRef}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      hitSlop={6}
+      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, transform: [{ scale: pressed ? 0.94 : 1 }] })}
+    >
+      <View
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          overflow: "hidden",
+          alignItems: "center",
+          justifyContent: "center",
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.34)",
+        }}
+      >
+        <BlurView intensity={32} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 22 }} />
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.16)" }} />
+        <View style={{ zIndex: 1 }}>{children}</View>
+      </View>
+    </Pressable>
+  );
+}
+
+/** A small label in glass, for the two or three things worth knowing at a glance. */
+function GlassPill({ label, tone }: { label: string; tone?: string }) {
+  return (
+    <View
+      style={{
+        height: 28,
+        paddingHorizontal: 12,
+        borderRadius: 14,
+        overflow: "hidden",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: tone ? `${tone}66` : "rgba(255,255,255,0.28)",
+      }}
+    >
+      <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14 }} />
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14, backgroundColor: tone ? `${tone}22` : "rgba(255,255,255,0.12)" }} />
+      <Text style={{ zIndex: 1, fontSize: 12.5, fontWeight: "700", color: tone ?? "#fff" }}>{label}</Text>
+    </View>
+  );
+}
+
+/** One of the readings, side by side. */
 function Reading({ label, value, late, tone }: { label: string; value: string; late?: boolean; tone?: string }) {
   return (
     <View style={{ flex: 1, paddingRight: 12 }}>

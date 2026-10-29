@@ -3,6 +3,8 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import type { Goal } from "@/services/goalService";
 import { goalPreset } from "~/lib/goalIcon";
+import { coverKind } from "~/lib/coverKind";
+import CoverArt from "~/components/accounts/CoverArt";
 
 /**
  * What a cofrinho looks like.
@@ -44,12 +46,16 @@ export default function CaixinhaCover({
 }) {
   const preset = goalPreset(goal);
   const Icon = preset.icon;
+  /* A trip, a house, a rocket… drawn; anything else falls back to the colour and glyph. */
+  const kind = coverKind(goal.name);
   const size = glyph ?? Math.round(height * 0.46);
 
   return (
     <View style={[{ width: width ?? "100%", height, borderRadius: radius, overflow: "hidden" }, style]}>
       {goal.cover_image ? (
         <Image source={{ uri: goal.cover_image }} contentFit="cover" transition={260} style={{ width: "100%", height: "100%" }} />
+      ) : kind ? (
+        <CoverArt kind={kind} />
       ) : (
         <>
           <LinearGradient
