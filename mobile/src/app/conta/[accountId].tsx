@@ -24,7 +24,7 @@ import GastosPorCategoria from "~/components/home/GastosPorCategoria";
 import CenterModal from "~/components/CenterModal";
 import FluxoPanel from "~/components/financeiro/FluxoPanel";
 import SpendRing from "~/components/analytics/SpendRing";
-import { GroupCards } from "~/components/analytics/CategoryViews";
+import { CategoryRows, GroupCards, TopSpendRow } from "~/components/analytics/CategoryViews";
 import { groupCategoryAmounts } from "@/lib/categoryGroups";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import { categoryIcon } from "~/lib/categoryIcon";
@@ -106,6 +106,7 @@ export default function ContaDetalhe() {
   /* The two things that open over the page: every category as a ring, and every
      movement the account has ever had. */
   const [ringOpen, setRingOpen] = useState(false);
+  const [view, setView] = useState<"categorias" | "grupos">("categorias");
   const [movesOpen, setMovesOpen] = useState(false);
   const [history, setHistory] = useState<Movement[] | null>(null);
   const [shownCount, setShownCount] = useState(80);
@@ -395,11 +396,35 @@ export default function ContaDetalhe() {
           <SpendRing
             total={totalDespesas}
             caption={`saiu em ${MONTH_NAMES[selectedMonth].toLowerCase()}`}
-            segments={groups.map((g) => ({ key: g.def.name, hex: g.def.hex, amount: g.amount }))}
+            segments={
+              view === "categorias"
+                ? overview.map((c) => ({ key: c.name, hex: c.hex, amount: c.amount }))
+                : groups.map((g) => ({ key: g.def.name, hex: g.def.hex, amount: g.amount }))
+            }
           />
         </View>
-        <View style={{ marginTop: 18 }}>
-          <GroupCards groups={groups} />
+
+        {/* The one that took the most, called out before the list. */}
+        {overview[0] && (
+          <View style={{ marginTop: 16 }}>
+            <TopSpendRow category={overview[0]} monthLabel={MONTH_NAMES[selectedMonth].toLowerCase()} />
+          </View>
+        )}
+
+        <View style={{ marginTop: 14 }}>
+          <SegmentedTabs
+            value={view}
+            onChange={setView}
+            height={38}
+            options={[
+              { key: "categorias" as const, label: "Categorias" },
+              { key: "grupos" as const, label: "Grupos" },
+            ]}
+          />
+        </View>
+
+        <View style={{ marginTop: 14 }}>
+          {view === "categorias" ? <CategoryRows categories={overview} /> : <GroupCards groups={groups} />}
         </View>
       </CenterModal>
 

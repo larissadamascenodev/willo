@@ -36,11 +36,11 @@ export function TopSpendRow({
 }: {
   category: OverviewCategory;
   monthLabel: string;
-  onOpen: (name: string) => void;
+  onOpen?: (name: string) => void;
 }) {
   const Icon = category.icon;
   return (
-    <Surface radius={22} onPress={() => onOpen(category.name)} style={{ padding: 14 }}>
+    <Surface radius={22} onPress={onOpen ? () => onOpen(category.name) : undefined} style={{ padding: 14 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
         <View
           style={{
@@ -74,7 +74,8 @@ export function CategoryRows({
   onOpen,
 }: {
   categories: OverviewCategory[];
-  onOpen: (name: string) => void;
+  /** Left out, the rows are only read: no chevron, nothing to open. */
+  onOpen?: (name: string) => void;
 }) {
   return (
     <View style={{ gap: 2 }}>
@@ -83,7 +84,7 @@ export function CategoryRows({
         return (
           <Animated.View key={cat.name} entering={FadeInDown.delay(i * 30).duration(320)}>
             <Pressable
-              onPress={() => onOpen(cat.name)}
+              onPress={onOpen ? () => onOpen(cat.name) : undefined}
               style={({ pressed }) => ({
                 flexDirection: "row",
                 alignItems: "center",
@@ -113,7 +114,7 @@ export function CategoryRows({
                 <Text style={{ marginTop: 1, fontSize: 15, color: INK.soft }}>{cat.percentage}%</Text>
               </View>
               <Text style={{ fontSize: 16, fontWeight: "500", color: "#fff" }}>{money(cat.amount)}</Text>
-              <ChevronRight size={16} color={INK.faint} />
+              {onOpen && <ChevronRight size={16} color={INK.faint} />}
             </Pressable>
           </Animated.View>
         );
