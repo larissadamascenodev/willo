@@ -201,22 +201,13 @@ export default function Gestao() {
                 {rows.length} {rows.length === 1 ? "conta" : "contas"}
               </Text>
 
-              {/* With a cofrinho, the accounts are not the whole of it. */}
+              {/* With a cofrinho, the accounts are not the whole of it: what is set aside
+                  is still the person's, so it is said once, small, under the balance. */}
               {guardado > 0 && (
-                <View style={{ marginTop: 18, flexDirection: "row", gap: 24 }}>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={{ fontSize: 12.5, color: INK.soft }}>Nos cofrinhos</Text>
-                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 19, fontWeight: "700", letterSpacing: -0.5, color: "#fff" }}>
-                      {money(guardado)}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={{ fontSize: 12.5, color: INK.soft }}>Saldo total</Text>
-                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 19, fontWeight: "700", letterSpacing: -0.5, color: total < 0 ? RED : "#fff" }}>
-                      {money(total)}
-                    </Text>
-                  </View>
-                </View>
+                <Text numberOfLines={1} style={[T.note, { marginTop: 10, fontSize: 13 }]}>
+                  Patrimônio total:{" "}
+                  <Text style={{ fontWeight: "600", color: "rgba(255,255,255,0.8)" }}>{money(total)}</Text>
+                </Text>
               )}
             </Animated.View>
 
@@ -348,51 +339,69 @@ export default function Gestao() {
                   <ChevronRight size={16} color={INK.softer} />
                 </Pressable>
               ) : (
-                goals.map((g, i) => {
-                  const preset = goalPreset(g);
-                  const Icon = preset.icon;
-                  const { progress, isComplete } = goalProgress(g);
-                  const pace = paceOf(g);
-                  const note = isComplete
-                    ? "Meta concluída"
-                    : pace.open
-                      ? isReserveGoal(g)
-                        ? "Reserva · sem prazo"
-                        : "Sem prazo"
-                      : pace.late
-                        ? "Prazo vencido"
-                        : `Guarde ${money(pace.monthly)}/mês · até ${monthYear(g.deadline as string)}`;
-                  return (
-                    <Pressable
-                      key={g.id}
-                      onPress={() => router.push(`/metas/${g.id}` as never)}
-                      style={({ pressed }) => ({
-                        paddingHorizontal: 4,
-                        paddingVertical: 16,
-                        borderTopWidth: i > 0 ? 1 : 0,
-                        borderTopColor: "rgba(255,255,255,0.06)",
-                        opacity: pressed ? 0.6 : 1,
-                      })}
-                    >
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                        <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: `${preset.hex}22` }}>
-                          <Icon size={18} color={preset.hex} strokeWidth={2} />
-                        </View>
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>{g.name}</Text>
-                          <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: pace.late ? RED : INK.softer }}>{note}</Text>
-                        </View>
-                        <View style={{ alignItems: "flex-end" }}>
-                          <Text style={{ fontSize: 15.5, fontWeight: "700", color: "#fff" }}>{money(Number(g.current_amount) || 0)}</Text>
-                          <Text style={{ marginTop: 2, fontSize: 12, color: INK.softer }}>de {money(Number(g.target_amount) || 0)}</Text>
-                        </View>
-                      </View>
-                      <View style={{ marginTop: 12, marginLeft: 54, height: 4, borderRadius: 999, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.08)" }}>
-                        <View style={{ width: `${Math.round(progress * 100)}%`, height: 4, borderRadius: 999, backgroundColor: preset.hex }} />
-                      </View>
-                    </Pressable>
-                  );
-                })
+                <>
+                  {/* One bar split the way the money set aside is, each share in its goal's colour. */}
+                  <View style={{ flexDirection: "row", height: 8, gap: 3, paddingHorizontal: 4, marginTop: 10, marginBottom: 4 }}>
+                    {guardado > 0 ? (
+                      goals
+                        .filter((g) => Number(g.current_amount) > 0)
+                        .map((g, i) => (
+                          <FlexBar key={g.id} share={Number(g.current_amount) / guardado} color={goalPreset(g).hex} delay={0.05 * i} />
+                        ))
+                    ) : (
+                      <View style={{ flex: 1, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)" }} />
+                    )}
+                  </View>
+
+                  {goals.map((g, i) => {
+                    const preset = goalPreset(g);
+                    const Icon = preset.icon;
+                    const { percent, isComplete } = goalProgress(g);
+                    const pace = paceOf(g);
+                    const held = Number(g.current_amount) || 0;
+                    const share = guardado > 0 ? held / guardado : 0;
+                    const note = isComplete
+                      ? "Meta concluída"
+                      : pace.open
+                        ? isReserveGoal(g)
+                          ? `${percent}% · reserva, sem prazo`
+                          : `${percent}% · sem prazo`
+                        : pace.late
+                          ? `${percent}% · prazo vencido`
+                          : `${percent}% · guarde ${money(pace.monthly)}/mês até ${monthYear(g.deadline as string)}`;
+                    return (
+                      <Animated.View key={g.id} entering={FadeInDown.delay(40 + i * 50).duration(350)}>
+                        <Pressable
+                          onPress={() => router.push(`/metas/${g.id}` as never)}
+                          style={({ pressed }) => ({
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 14,
+                            paddingHorizontal: 4,
+                            paddingVertical: 16,
+                            borderTopWidth: i > 0 ? 1 : 0,
+                            borderTopColor: "rgba(255,255,255,0.06)",
+                            opacity: pressed ? 0.6 : 1,
+                          })}
+                        >
+                          <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: `${preset.hex}22` }}>
+                            <Icon size={18} color={preset.hex} strokeWidth={2} />
+                          </View>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>{g.name}</Text>
+                            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: pace.late ? RED : INK.softer }}>{note}</Text>
+                          </View>
+                          <View style={{ alignItems: "flex-end" }}>
+                            <Text style={{ fontSize: 15.5, fontWeight: "700", color: "#fff" }}>{money(held)}</Text>
+                            <Text style={{ marginTop: 2, fontSize: 12, color: share > 0 ? preset.hex : INK.faint }}>
+                              {Math.round(share * 100)}%
+                            </Text>
+                          </View>
+                        </Pressable>
+                      </Animated.View>
+                    );
+                  })}
+                </>
               )}
             </Animated.View>
           </>

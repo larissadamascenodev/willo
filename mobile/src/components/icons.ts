@@ -66,3 +66,6 @@ export { default as Mail } from "lucide-react-native/icons/mail";
 export { default as Lock } from "lucide-react-native/icons/lock";
 export { default as CircleCheck } from "lucide-react-native/icons/circle-check";
 export { default as PiggyBank } from "lucide-react-native/icons/piggy-bank";
+export { default as Banknote } from "lucide-react-native/icons/banknote";
+export { default as TrendingUp } from "lucide-react-native/icons/trending-up";
+export { default as Minus } from "lucide-react-native/icons/minus";

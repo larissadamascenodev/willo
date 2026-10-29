@@ -1,18 +1,17 @@
 import { Text, View } from "react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { bankFor, initials } from "@/lib/banks";
+import { catalogFor } from "~/lib/bankCatalog";
 import { inkOn, shade } from "@/lib/tone";
 
 /**
  * The bank, as a mark.
  *
- * Not the bank's own logo: those are trademarks, and shipping them means shipping
- * someone else's artwork inside the app. This is the next most recognisable thing —
- * the bank's initials on a tile in the bank's own colour, which is how you pick your
+ * The bank's own logo where the app has one, on a tile the shape of an app icon; and
+ * where it does not — a store card, a "cartão da obra", a bank whose logo is not in
+ * the catalogue — the initials on a tile in the colour, which is how you pick your
  * card out of a wallet anyway, by colour first and letters second.
- *
- * A card with no bank behind it (a store card, a "cartão da obra") gets the initials
- * of whatever it was called, so every card has a face.
  */
 export default function BankMark({
   name,
@@ -25,7 +24,32 @@ export default function BankMark({
   size?: number;
 }) {
   const bank = bankFor(name);
-  const letters = initials(bank?.name ?? name) || "••";
+  const known = catalogFor(name);
+  const letters = initials(bank?.name ?? known?.name ?? name) || "••";
+  const radius = Math.round(size * 0.32);
+
+  if (known?.logo) {
+    return (
+      <View
+        style={{
+          width: size,
+          height: size,
+          borderRadius: radius,
+          borderCurve: "continuous",
+          overflow: "hidden",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: known.bleed ? known.hex : "#FFFFFF",
+        }}
+      >
+        <Image
+          source={known.logo}
+          contentFit={known.bleed ? "cover" : "contain"}
+          style={known.bleed ? { width: size, height: size } : { width: size * 0.74, height: size * 0.74 }}
+        />
+      </View>
+    );
+  }
 
   return (
     <LinearGradient
@@ -36,7 +60,8 @@ export default function BankMark({
       style={{
         width: size,
         height: size,
-        borderRadius: 14,
+        borderRadius: radius,
+        overflow: "hidden",
         alignItems: "center",
         justifyContent: "center",
       }}
@@ -51,8 +76,8 @@ export default function BankMark({
           right: 0,
           height: 1,
           backgroundColor: "rgba(255,255,255,0.3)",
-          borderTopLeftRadius: 14,
-          borderTopRightRadius: 14,
+          borderTopLeftRadius: radius,
+          borderTopRightRadius: radius,
         }}
       />
       <Text style={{ fontSize: 14, fontWeight: "800", letterSpacing: -0.3, color: inkOn(hex) }}>

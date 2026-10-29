@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 import { currencySymbol } from "@/lib/currency";
+import { notifyFinanceDataChanged } from "@/services/transactionService";
 
 /** The emergency reserve is a goal with this reserved name; every other goal is a "cofrinho". */
 export const RESERVE_NAME = "Reserva de emergência";
@@ -158,6 +159,8 @@ export async function createGoalDeposit(deposit: {
     }
   }
 
+  /* The debit above moved an account's balance; the cached list of accounts has to know. */
+  notifyFinanceDataChanged();
   return data as GoalTransaction;
 }
 
@@ -216,6 +219,7 @@ export async function createGoalWithdraw(withdraw: {
     });
   }
 
+  notifyFinanceDataChanged();
   return data as GoalTransaction;
 }
 
@@ -247,6 +251,8 @@ export async function deleteGoalDepositWithRefund(
       observation: `Estorno de depósito da meta "${goalName}"`,
     });
   }
+
+  notifyFinanceDataChanged();
 }
 
 export function computeGoalInsights(

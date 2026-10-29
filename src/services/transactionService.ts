@@ -39,7 +39,7 @@ export interface TransactionFilters {
   category?: string;
 }
 
-function notifyFinanceDataChanged() {
+export function notifyFinanceDataChanged() {
   clearFinanceQueryCache();
   // Import dynamically to avoid circular deps
   import("@/services/dashboardData").then(({ clearDashboardCache }) => {
