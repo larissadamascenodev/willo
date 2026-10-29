@@ -35,21 +35,21 @@ export async function pickGoalCover(userId: string): Promise<string | null> {
   const asset = picked.canceled ? null : picked.assets[0];
   if (!asset) return null;
 
-  let uri = asset.uri;
+  /* The bytes come out of the image library as base64 rather than through fetch():
+     the phone's JavaScript engine cannot turn a file:// response into an ArrayBuffer,
+     so a fetch-based read works in the browser and fails only on the device. */
+  let bytes: Uint8Array;
   try {
-    const context = ImageManipulator.manipulate(uri);
+    const context = ImageManipulator.manipulate(asset.uri);
     if ((asset.width ?? 0) > COVER_WIDTH) context.resize({ width: COVER_WIDTH });
     const image = await context.renderAsync();
-    uri = (await image.saveAsync({ compress: 0.82, format: SaveFormat.JPEG })).uri;
+    const saved = await image.saveAsync({ compress: 0.82, format: SaveFormat.JPEG, base64: true });
+    if (!saved.base64) throw new Error("empty");
+    const binary = atob(saved.base64);
+    bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   } catch {
-    /* Sent as it is; the picker already cut it. */
-  }
-
-  let bytes: ArrayBuffer;
-  try {
-    bytes = await (await fetch(uri)).arrayBuffer();
-  } catch {
-    throw new CoverError("Não foi possível ler a foto escolhida.");
+    throw new CoverError("Não foi possível preparar a foto escolhida. Tente outra imagem.");
   }
 
   const path = `${userId}/goal-${Date.now()}.jpg`;
