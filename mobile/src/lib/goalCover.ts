@@ -28,11 +28,12 @@ export class CoverError extends Error {}
 export async function pickGoalCover(userId: string): Promise<string | null> {
   let picked: ImagePicker.ImagePickerResult;
   try {
+    /* No editing step: on an iPhone asking for one swaps the quick photo picker for the
+       old, slow one. The picture is cut to the cover's shape below instead. */
     picked = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.9,
+      allowsEditing: false,
+      quality: 1,
     });
   } catch {
     throw new CoverError("Não foi possível abrir a galeria. Confira a permissão de fotos do Willo nos Ajustes do aparelho.");
@@ -46,7 +47,17 @@ export async function pickGoalCover(userId: string): Promise<string | null> {
   let base64: string;
   try {
     const context = ImageManipulator.manipulate(asset.uri);
-    if ((asset.width ?? 0) > COVER_WIDTH) context.resize({ width: COVER_WIDTH });
+    /* Cut from the middle to the cover's shape (4:3), so a tall phone photo keeps its centre. */
+    const w = asset.width ?? 0;
+    const h = asset.height ?? 0;
+    if (w > 0 && h > 0) {
+      const cropW = Math.min(w, Math.round((h * 4) / 3));
+      const cropH = Math.min(h, Math.round((w * 3) / 4));
+      context.crop({ originX: Math.round((w - cropW) / 2), originY: Math.round((h - cropH) / 2), width: cropW, height: cropH });
+      if (cropW > COVER_WIDTH) context.resize({ width: COVER_WIDTH });
+    } else if (w > COVER_WIDTH) {
+      context.resize({ width: COVER_WIDTH });
+    }
     const image = await context.renderAsync();
     const saved = await image.saveAsync({ compress: 0.82, format: SaveFormat.JPEG, base64: true });
     if (!saved.base64) throw new Error("empty");

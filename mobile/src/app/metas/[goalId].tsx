@@ -611,7 +611,9 @@ export default function MetaDetalhe() {
           last={false}
           onPress={() => {
             setMenu(null);
-            void changeCover();
+            /* The menu is a window of its own; the phone will not open the gallery over one
+               that is still fading out, and then it simply does nothing. Wait for it to go. */
+            setTimeout(() => void changeCover(), 450);
           }}
         />
         {goal.cover_image ? (
