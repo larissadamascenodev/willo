@@ -63,7 +63,7 @@ export default function CofrinhoTile({
 
         <View style={{ position: "absolute", left: 16, right: 16, bottom: 16 }}>
           <Text numberOfLines={2} style={{ fontSize: 14, fontWeight: "600", lineHeight: 18, color: "rgba(255,255,255,0.86)" }}>{goal.name}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 4, fontSize: 23, fontWeight: "800", letterSpacing: -0.8, color: "#fff" }}>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 4, fontSize: width < 150 ? 18 : 23, fontWeight: "800", letterSpacing: -0.8, color: "#fff" }}>
             {money(Number(goal.current_amount) || 0)}
           </Text>
           <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, color: "rgba(255,255,255,0.6)" }}>
