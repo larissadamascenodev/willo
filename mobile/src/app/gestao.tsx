@@ -12,7 +12,7 @@ import { colorFor } from "@/lib/banks";
 import { paceOf } from "~/lib/cofrinho";
 import AccountSheet from "~/components/accounts/AccountSheet";
 import CofrinhoSheet from "~/components/accounts/CofrinhoSheet";
-import CofrinhoRow from "~/components/accounts/CofrinhoRow";
+import CofrinhoTile, { NewCofrinhoTile, TILE_W } from "~/components/accounts/CofrinhoTile";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import Surface from "~/components/Surface";
@@ -405,13 +405,25 @@ export default function Gestao() {
                     </View>
                   </View>
 
-                  <View style={{ marginTop: 10 }}>
+                  {/* A shelf of them, each its own picture, running off the edge so it reads as more. */}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    decelerationRate="fast"
+                    snapToInterval={TILE_W + 12}
+                    snapToAlignment="start"
+                    style={{ marginTop: 20, marginHorizontal: -16 }}
+                    contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
+                  >
                     {goals.map((g, i) => (
-                      <Animated.View key={g.id} entering={FadeInDown.delay(40 + i * 60).duration(380)}>
-                        <CofrinhoRow goal={g} first={i === 0} delay={0.04 * i} onPress={() => router.push(`/metas/${g.id}` as never)} />
+                      <Animated.View key={g.id} entering={FadeInDown.delay(60 + i * 70).duration(420)}>
+                        <CofrinhoTile goal={g} delay={0.06 * i} onPress={() => router.push(`/metas/${g.id}` as never)} />
                       </Animated.View>
                     ))}
-                  </View>
+                    <Animated.View entering={FadeInDown.delay(60 + goals.length * 70).duration(420)}>
+                      <NewCofrinhoTile onPress={() => setAddingCofrinho(true)} />
+                    </Animated.View>
+                  </ScrollView>
                 </>
               )}
             </Animated.View>

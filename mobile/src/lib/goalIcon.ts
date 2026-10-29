@@ -12,6 +12,15 @@ import Plane from "lucide-react-native/icons/plane";
 import Rocket from "lucide-react-native/icons/rocket";
 import ShieldCheck from "lucide-react-native/icons/shield-check";
 import TrendingUp from "lucide-react-native/icons/trending-up";
+import Laptop from "lucide-react-native/icons/laptop";
+import Trophy from "lucide-react-native/icons/trophy";
+import Gift from "lucide-react-native/icons/gift";
+import Heart from "lucide-react-native/icons/heart";
+import Baby from "lucide-react-native/icons/baby";
+import Dog from "lucide-react-native/icons/dog";
+import Gem from "lucide-react-native/icons/gem";
+import Bike from "lucide-react-native/icons/bike";
+import Sofa from "lucide-react-native/icons/sofa";
 
 /**
  * The phone's drawings for the goal presets.
@@ -22,6 +31,7 @@ import TrendingUp from "lucide-react-native/icons/trending-up";
 
 const ICONS: Record<string, IconCmp> = {
   Home, Car, Plane, TrendingUp, GraduationCap, Palmtree, ShieldCheck, Rocket, PiggyBank,
+  Laptop, Trophy, Gift, Heart, Baby, Dog, Gem, Bike, Sofa,
 };
 
 export interface GoalPreset extends Omit<GoalPresetData, "icon"> {
@@ -46,6 +56,20 @@ const WORDS: [RegExp, string][] = [
   [/liberdade|investir|investimento/, "liberdade"],
 ];
 
+/* Things people save for that have no preset of their own: drawn and coloured here,
+   on the phone only. */
+const KINDS: [RegExp, { icon: string; hex: string }][] = [
+  [/macbook|notebook|laptop|computador|\bpc\b|iphone|celular|smartphone|ipad|tablet|playstation|xbox|console|camera|câmera/, { icon: "Laptop", hex: "#A5B4FC" }],
+  [/copa|show|festival|ingresso|olimpiada|olimpíada|final|jogo|torneio/, { icon: "Trophy", hex: "#FACC15" }],
+  [/casamento|noivado|alianca|aliança/, { icon: "Gem", hex: "#F9A8D4" }],
+  [/presente|natal|aniversario|aniversário|festa/, { icon: "Gift", hex: "#FB7185" }],
+  [/bebe|bebê|filho|filha|enxoval|gravidez|maternidade/, { icon: "Baby", hex: "#93C5FD" }],
+  [/cachorro|gato|pet/, { icon: "Dog", hex: "#FDBA74" }],
+  [/bike|bicicleta/, { icon: "Bike", hex: "#86EFAC" }],
+  [/sofa|sofá|movel|móvel|moveis|móveis|decoracao|decoração/, { icon: "Sofa", hex: "#D6B98C" }],
+  [/saude|saúde|cirurgia|tratamento|dentista/, { icon: "Heart", hex: "#F87171" }],
+];
+
 /** The preset a goal came from, with its glyph drawn. */
 export function goalPreset(goal: { name: string }): GoalPreset {
   const found = getGoalPresetData(goal);
@@ -53,7 +77,9 @@ export function goalPreset(goal: { name: string }): GoalPreset {
   const name = goal.name.toLocaleLowerCase("pt-BR");
   const hit = WORDS.find(([re]) => re.test(name));
   const kin = hit ? GOAL_PRESET_DATA.find((p) => p.id === hit[1]) : undefined;
-  return draw(kin ? { ...kin, name: goal.name } : found);
+  if (kin) return draw({ ...kin, name: goal.name });
+  const kind = KINDS.find(([re]) => re.test(name));
+  return draw(kind ? { ...found, ...kind[1] } : found);
 }
 
 export { GOAL_PRESET_DATA } from "@/lib/goalPresets";

@@ -29,6 +29,7 @@ export default function CofrinhoCover({
   height,
   radius = 0,
   glyph,
+  glyphTop,
   style,
 }: {
   goal: Pick<Goal, "name" | "cover_image">;
@@ -37,6 +38,8 @@ export default function CofrinhoCover({
   radius?: number;
   /** The glyph's size; left out, it is drawn in proportion to the cover. */
   glyph?: number;
+  /** Where the large glyph sits from the top; left out, it is cropped at the foot. */
+  glyphTop?: number;
   style?: ViewStyle;
 }) {
   const preset = goalPreset(goal);
@@ -68,7 +71,7 @@ export default function CofrinhoCover({
               <Icon size={Math.round(height * 0.44)} color="rgba(255,255,255,0.92)" strokeWidth={1.9} />
             </View>
           ) : (
-            <View style={{ position: "absolute", right: -size * 0.12, bottom: -size * 0.14, opacity: 0.34 }}>
+            <View style={[{ position: "absolute", right: -size * 0.12, opacity: 0.34 }, glyphTop !== undefined ? { top: glyphTop } : { bottom: -size * 0.14 }]}>
               <Icon size={size} color="#fff" strokeWidth={1.4} />
             </View>
           )}
