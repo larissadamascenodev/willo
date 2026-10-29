@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -6,12 +6,14 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Switch,
   Text,
   TextInput,
   View,
   useWindowDimensions,
+  type ViewStyle,
 } from "react-native";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
@@ -22,25 +24,15 @@ import { getAccounts } from "@/services/transactionService";
 import { colorFor } from "@/lib/banks";
 import { deadlineIn, monthYear, monthlyNeeded } from "~/lib/caixinha";
 import { KIND_ORDER, coverKind, type CoverKind } from "~/lib/coverKind";
-import {
-  aboutLine,
-  purposeLine,
-  reserveChips,
-  reviewLine,
-  startLine,
-  timeLine,
-  yieldLine,
-  type Month,
-} from "~/lib/caixinhaCoach";
+import { aboutLine, purposeLine, reserveChips, reviewLine, startLine, timeLine, type Month } from "~/lib/caixinhaCoach";
 import { CoverError, pickGoalCover } from "~/lib/goalCover";
-import { estimate, latestCdi } from "~/lib/yields";
 import Room from "~/components/Room";
-import BotMark from "~/components/BotMark";
+import ParticleOrb from "~/components/registro/ParticleOrb";
 import BankMark from "~/components/BankMark";
 import Created from "~/components/accounts/Created";
 import CaixinhaCover from "~/components/accounts/CaixinhaCover";
 import CoverArt from "~/components/accounts/CoverArt";
-import { Check, ChevronLeft, ImageIcon, Minus, Plus, X } from "~/components/icons";
+import { Check, ChevronLeft, ChevronRight, ImageIcon, Minus, Plus, X } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
@@ -48,21 +40,23 @@ import { GREEN, INK, RED } from "~/theme/tokens";
 /**
  * Opening a caixinha with Willo beside you.
  *
- * A full page rather than a sheet, because it is a conversation: at the top Willo says
- * something about the step — worked out from the person's own month, see `caixinhaCoach` —
- * and below it is the one thing being decided. The first thing decided is what the caixinha
- * is for, shown as pictures, because a trip should look like a trip.
+ * A full page rather than a sheet, because it is a conversation: at the top is Willo's
+ * sphere, small, with the question he is asking typed out large, and under it a line that
+ * is about this person — worked out from their own month, see `caixinhaCoach`. Below that
+ * is the one thing being decided, set in glass. The first thing decided is what the
+ * caixinha is for, shown as pictures, because a trip should look like a trip.
  *
- * A caixinha is a goal with the money in it, so the page asks what a goal asks — for what,
- * how much, by when — then whether to put some in today and from which account, and whether
- * it earns. All in one go: the goal and the money cannot be made out of step with each other.
- * Not every caixinha has an amount to reach; the reserve is only filled as life allows, so
- * one can be made "sem valor definido" and then it is not asked how long it will take.
+ * It asks what a goal asks — for what, how much, by when — and whether to put some in
+ * today and from which account. All in one go: the goal and the money cannot be made out
+ * of step with each other. Not every caixinha has an amount to reach; the reserve is only
+ * filled as life allows, so the amount is a switch, and with it off the question of time
+ * drops out.
  */
 
 interface Choice {
-  id: CoverKind;
   label: string;
+  /** One line of what it covers, under the picture. */
+  hint: string;
   /** What is saved; recognised later by its words, so it wears the same picture. */
   name: string;
   /** Starts without an amount to reach. */
@@ -70,14 +64,14 @@ interface Choice {
 }
 
 const CHOICES: Record<CoverKind, Choice> = {
-  reserva: { id: "reserva", label: "Reserva de emergência", name: RESERVE_NAME, open: true },
-  viagem: { id: "viagem", label: "Viagem", name: "Viagem dos Sonhos" },
-  reforma: { id: "reforma", label: "Reformar a casa", name: "Reformar a casa" },
-  carreira: { id: "carreira", label: "Focar na carreira", name: "Focar na carreira" },
-  consumo: { id: "consumo", label: "Sonho de consumo", name: "Sonho de consumo" },
-  carro: { id: "carro", label: "Carro", name: "Carro Novo" },
-  casa: { id: "casa", label: "Casa própria", name: "Casa Própria" },
-  educacao: { id: "educacao", label: "Educação", name: "Educação" },
+  reserva: { label: "Reserva de emergência", hint: "Para imprevistos, sempre à mão", name: RESERVE_NAME, open: true },
+  viagem: { label: "Viagem", hint: "Passagem e hospedagem", name: "Viagem dos Sonhos" },
+  reforma: { label: "Reformar a casa", hint: "Obra, móveis, decoração", name: "Reformar a casa" },
+  carreira: { label: "Carreira", hint: "Cursos e mentorias", name: "Focar na carreira" },
+  consumo: { label: "Sonho de consumo", hint: "Aquele desejo, sem culpa", name: "Sonho de consumo" },
+  carro: { label: "Carro", hint: "A entrada ou à vista", name: "Carro Novo" },
+  casa: { label: "Casa própria", hint: "A entrada do imóvel", name: "Casa Própria" },
+  educacao: { label: "Educação", hint: "Faculdade, curso, idioma", name: "Educação" },
 };
 
 const SPANS = [
@@ -86,7 +80,13 @@ const SPANS = [
   { months: 24, label: "2 anos" },
 ];
 
-const SHARES = [100, 105, 110, 115, 120];
+const ASK: Record<Key, string> = {
+  purpose: "Pra que vai ser essa caixinha?",
+  about: "Como ela vai ser?",
+  time: "Em quanto tempo?",
+  start: "Quer começar com quanto?",
+  review: "Ficou assim. Vamos criar?",
+};
 
 interface Account {
   id: string;
@@ -99,32 +99,15 @@ interface Account {
 const brl = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-const FIELD = {
-  height: 54,
-  minWidth: 0,
-  borderRadius: 18,
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.12)",
-  backgroundColor: "rgba(255,255,255,0.06)",
-  paddingHorizontal: 18,
-  fontSize: 17,
-  color: "#fff",
-} as const;
-
 const isoToday = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
 const yearsLabel = (n: number) => `${n} ${n === 1 ? "ano" : "anos"}`;
+const same = (a: string, b: string) => a.trim().toLocaleLowerCase("pt-BR") === b.trim().toLocaleLowerCase("pt-BR");
 
-/** "104", "104,5" → 104.5; null when it is not a share worth keeping. */
-const parsePercent = (raw: string): number | null => {
-  const n = Number(raw.replace(",", ".").trim());
-  return Number.isFinite(n) && n >= 1 && n <= 500 ? Math.round(n * 100) / 100 : null;
-};
-
-type Key = "purpose" | "about" | "time" | "start" | "yield" | "review";
+type Key = "purpose" | "about" | "time" | "start" | "review";
 
 export default function CaixinhaSheet({
   open,
@@ -152,8 +135,6 @@ export default function CaixinhaSheet({
   const [more, setMore] = useState(false);
   const [years, setYears] = useState(3);
   const [monthlyCents, setMonthlyCents] = useState(0);
-  const [earning, setEarning] = useState(false);
-  const [percent, setPercent] = useState("100");
   const [startCents, setStartCents] = useState(0);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountId, setAccountId] = useState<string | null>(null);
@@ -164,7 +145,6 @@ export default function CaixinhaSheet({
   const [made, setMade] = useState<{ name: string; line: string; photo: string | null } | null>(null);
   /* The person's month, read once when the page opens. */
   const [month, setMonth] = useState<Month>({ income: 0, expense: 0 });
-  const [cdi, setCdi] = useState<number | null>(null);
   const advance = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -178,8 +158,6 @@ export default function CaixinhaSheet({
     setMore(false);
     setYears(3);
     setMonthlyCents(0);
-    setEarning(false);
-    setPercent("100");
     setStartCents(0);
     setPhoto(null);
     setError(null);
@@ -206,14 +184,13 @@ export default function CaixinhaSheet({
         setMonth({ income: 0, expense: 0 });
       }
     })();
-    void latestCdi().then((r) => setCdi(r?.rate ?? null));
     return () => {
       if (advance.current) clearTimeout(advance.current);
     };
   }, [open, user]);
 
   /* Without an amount there is nothing to be late for, so the question of time drops out. */
-  const keys: Key[] = hasValue ? ["purpose", "about", "time", "start", "yield", "review"] : ["purpose", "about", "start", "yield", "review"];
+  const keys: Key[] = hasValue ? ["purpose", "about", "time", "start", "review"] : ["purpose", "about", "start", "review"];
   const key = keys[Math.min(step, keys.length - 1)];
   const last = step >= keys.length - 1;
 
@@ -227,13 +204,13 @@ export default function CaixinhaSheet({
     [withDate, months, target, start],
   );
   const due = withDate && months ? monthYear(deadlineIn(months)) : null;
-  const share = parsePercent(percent);
   const account = accounts.find((a) => a.id === accountId) ?? null;
   const first = ((user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? "") as string).trim().split(/\s+/)[0] || null;
 
-  /* What the rate would credit: today's deposit if there is one, otherwise the amount aimed at. */
-  const base = start > 0 ? start : target;
-  const forecast = earning && share !== null && cdi !== null && base > 0 ? estimate(base, cdi, share) : null;
+  /* The reserve is made for everyone already; offering it again only leads to "you already have one". */
+  const hasReserve = existingNames.some((n) => same(n, RESERVE_NAME));
+  const featured: CoverKind | null = hasReserve ? null : "reserva";
+  const grid = KIND_ORDER.filter((k) => k !== "reserva");
 
   const pick = (c: CoverKind | "custom") => {
     void Haptics.selectionAsync().catch(() => undefined);
@@ -243,14 +220,18 @@ export default function CaixinhaSheet({
       setHasValue(true);
     } else {
       setChoiceId(c);
-      setName(CHOICES[c].name);
+      /* A second trip should not start on "you already have one": it is offered a name that is free. */
+      const taken = (n: string) => existingNames.some((e) => same(e, n));
+      const base = CHOICES[c].name;
+      const free = [base, CHOICES[c].label, ...[2, 3, 4, 5].map((i) => `${base} ${i}`)].find((n) => !taken(n)) ?? "";
+      setName(free);
       setHasValue(!CHOICES[c].open);
     }
     setMonths((m) => m ?? 12);
     setError(null);
     /* The picture is the answer; the page moves on a beat after it, so the choice is seen. */
     if (advance.current) clearTimeout(advance.current);
-    advance.current = setTimeout(() => setStep((s) => (s === 0 ? 1 : s)), 260);
+    advance.current = setTimeout(() => setStep((s) => (s === 0 ? 1 : s)), 280);
   };
 
   const choosePhoto = async () => {
@@ -275,21 +256,17 @@ export default function CaixinhaSheet({
         setError("Dê um nome à caixinha.");
         return;
       }
-      if (existingNames.some((n) => n.toLocaleLowerCase("pt-BR") === trimmed.toLocaleLowerCase("pt-BR"))) {
+      if (existingNames.some((n) => same(n, trimmed))) {
         setError("Você já tem uma caixinha com esse nome. Dê outro nome a esta.");
         return;
       }
       if (hasValue && cents <= 0) {
-        setError("Diga quanto quer juntar, ou marque sem valor definido.");
+        setError("Diga quanto quer juntar, ou desligue o valor definido.");
         return;
       }
     }
     if (key === "start" && start > 0 && !accountId) {
       setError("Escolha de qual conta sai o dinheiro.");
-      return;
-    }
-    if (key === "yield" && earning && share === null) {
-      setError("Diga quanto do CDI ela rende, por exemplo 100.");
       return;
     }
     if (!last) {
@@ -308,7 +285,6 @@ export default function CaixinhaSheet({
           monthly_contribution: dated ? perMonth || null : hasValue && monthlyCents > 0 ? monthlyCents / 100 : null,
           deadline: dated && months ? deadlineIn(months) : null,
           cover_image: photo,
-          ...(earning && share !== null ? { yield_type: "cdi" as const, yield_percent: share } : {}),
         },
         user.id,
       );
@@ -339,7 +315,7 @@ export default function CaixinhaSheet({
   const canNext =
     key === "purpose" ? choiceId !== null : key === "about" ? name.trim().length >= 2 && (!hasValue || cents > 0) : true;
 
-  const say = (() => {
+  const tip = (() => {
     switch (key) {
       case "purpose":
         return purposeLine(first);
@@ -349,22 +325,21 @@ export default function CaixinhaSheet({
         return timeLine({ month, perMonth, months, target });
       case "start":
         return startLine({ start, accountName: account?.name ?? null, balance: account ? Number(account.current_balance) || 0 : null });
-      case "yield":
-        return yieldLine({ earning, percent: share, base, monthly: forecast?.month ?? null });
       default:
-        return reviewLine({ name: name.trim(), perMonth, due, start, earning });
+        return reviewLine({ perMonth, due, start });
     }
   })();
 
   const gutter = 20;
   const cardW = (width - gutter * 2 - 12) / 2;
+  const span = more ? "more" : months === null ? null : months;
 
   return (
     <Modal visible={open} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <Room>
         {made ? (
           <Created
-            accent={kind ? "#C8F36D" : "#C4B5FD"}
+            accent="#C8F36D"
             mark={
               <View style={{ width: 112, height: 112, borderRadius: 34, borderCurve: "continuous", overflow: "hidden", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.3)" }}>
                 <CaixinhaCover goal={{ name: made.name, cover_image: made.photo }} width={112} height={112} />
@@ -377,7 +352,7 @@ export default function CaixinhaSheet({
         ) : (
           <View style={{ flex: 1, paddingTop: insets.top + 8 }}>
             {/* Back, how far along, and out. */}
-            <View style={{ height: 44, flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: gutter }}>
+            <View style={{ height: 44, flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: gutter }}>
               <View style={{ width: 40, height: 40 }}>
                 {step > 0 && (
                   <Animated.View entering={FadeIn.duration(180)}>
@@ -387,9 +362,9 @@ export default function CaixinhaSheet({
                   </Animated.View>
                 )}
               </View>
-              <View style={{ flex: 1, flexDirection: "row", gap: 5 }}>
+              <View style={{ flex: 1, flexDirection: "row", gap: 4 }}>
                 {keys.map((k, i) => (
-                  <View key={k} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: i <= step ? "#fff" : "rgba(255,255,255,0.16)" }} />
+                  <View key={k} style={{ flex: 1, height: 2.5, borderRadius: 2, backgroundColor: i <= step ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.14)" }} />
                 ))}
               </View>
               <GlassDot label="Fechar" onPress={onClose}>
@@ -401,154 +376,174 @@ export default function CaixinhaSheet({
               <ScrollView
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: gutter, paddingTop: 18, paddingBottom: 24 }}
+                contentContainerStyle={{ paddingHorizontal: gutter, paddingTop: 20, paddingBottom: key === "purpose" && choiceId === null ? insets.bottom + 28 : 28 }}
               >
-                <Say text={say} />
+                <Willo key={key} ask={ASK[key]} tip={tip} />
 
                 {/* ══ What is it for ══ */}
                 {key === "purpose" && (
-                  <Animated.View entering={FadeInDown.duration(380)} style={{ marginTop: 22, flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-                    {KIND_ORDER.map((k) => (
-                      <PictureCard key={k} width={cardW} on={choiceId === k} label={CHOICES[k].label} onPress={() => pick(k)}>
-                        <CoverArt kind={k} />
+                  <Animated.View entering={FadeInDown.delay(180).duration(420)} style={{ marginTop: 26, gap: 12 }}>
+                    {featured && (
+                      <PictureCard width={width - gutter * 2} height={150} on={choiceId === featured} label={CHOICES[featured].label} hint={CHOICES[featured].hint} badge="Recomendado" onPress={() => pick(featured)}>
+                        <CoverArt kind={featured} />
                       </PictureCard>
-                    ))}
-                    <PictureCard width={cardW} on={choiceId === "custom"} label="Personalizada" onPress={() => pick("custom")}>
-                      <LinearGradient colors={["#1B1E27", "#2B2F3D"]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-                      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 28, alignItems: "center", justifyContent: "center" }}>
-                        <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" }}>
-                          <Plus size={22} color="#fff" strokeWidth={2.4} />
+                    )}
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+                      {grid.map((k) => (
+                        <PictureCard key={k} width={cardW} height={164} on={choiceId === k} dim={choiceId !== null && choiceId !== k} label={CHOICES[k].label} hint={CHOICES[k].hint} onPress={() => pick(k)}>
+                          <CoverArt kind={k} />
+                        </PictureCard>
+                      ))}
+                      <PictureCard
+                        width={cardW}
+                        height={164}
+                        on={choiceId === "custom"}
+                        dim={choiceId !== null && choiceId !== "custom"}
+                        label="Personalizada"
+                        hint="Do seu jeito"
+                        onPress={() => pick("custom")}
+                      >
+                        <LinearGradient colors={["#242838", "#14161E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+                        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 44, alignItems: "center", justifyContent: "center" }}>
+                          <View style={{ width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.22)", backgroundColor: "rgba(255,255,255,0.08)" }}>
+                            <Plus size={22} color="#fff" strokeWidth={2.2} />
+                          </View>
                         </View>
-                      </View>
-                    </PictureCard>
+                      </PictureCard>
+                    </View>
                   </Animated.View>
                 )}
 
                 {/* ══ Name and amount ══ */}
                 {key === "about" && (
-                  <Animated.View entering={FadeInDown.duration(380)} style={{ marginTop: 20 }}>
-                    <View style={{ height: 118, borderRadius: 26, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
-                      <CaixinhaCover goal={{ name: name || "Nova caixinha", cover_image: null }} height={118} glyph={110} glyphTop={-6} />
-                      <LinearGradient colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.7)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 70 }} />
-                      <Text numberOfLines={1} style={{ position: "absolute", left: 16, right: 16, bottom: 12, fontSize: 16, fontWeight: "700", color: "#fff" }}>
-                        {name.trim() || "Nova caixinha"}
-                      </Text>
-                    </View>
-
-                    <TextInput
-                      value={name}
-                      onChangeText={(t) => {
-                        setName(t);
-                        setError(null);
-                      }}
-                      placeholder="Nome da caixinha"
-                      placeholderTextColor={INK.faint}
-                      maxLength={60}
-                      autoFocus={choiceId === "custom"}
-                      style={{ ...FIELD, marginTop: 14 }}
-                    />
-
-                    <View style={{ marginTop: 14, flexDirection: "row", gap: 8 }}>
-                      <Chip label="Valor definido" on={hasValue} onPress={() => { setHasValue(true); setError(null); }} />
-                      <Chip label="Sem valor definido" on={!hasValue} onPress={() => { setHasValue(false); setError(null); }} />
-                    </View>
-
-                    {hasValue ? (
-                      <>
-                        <Text style={{ marginTop: 22, fontSize: 12.5, color: INK.soft }}>Quanto quer juntar</Text>
-                        <AmountField cents={cents} onChange={(c) => { setCents(c); setError(null); }} />
-                      </>
-                    ) : (
-                      <Text style={{ marginTop: 18, fontSize: 14, lineHeight: 19, color: INK.soft }}>
-                        Sem meta nem prazo: você vai guardando conforme der e ela fica sempre à mão.
-                      </Text>
-                    )}
-
-                    {kind === "reserva" && reserveChips(month).length > 0 && (
-                      <View style={{ marginTop: 16 }}>
-                        <Text style={{ fontSize: 12.5, color: INK.soft }}>Sugestão do Willo, pelas suas despesas</Text>
-                        <View style={{ marginTop: 8, flexDirection: "row", gap: 8 }}>
-                          {reserveChips(month).map((c) => (
-                            <Chip
-                              key={c.label}
-                              label={`${c.label} · ${brl(c.cents).replace(/\s/g, " ")}`}
-                              on={hasValue && cents === c.cents}
-                              small
-                              onPress={() => {
-                                setHasValue(true);
-                                setCents(c.cents);
-                                setError(null);
-                              }}
-                            />
-                          ))}
-                        </View>
+                  <Animated.View entering={FadeInDown.delay(180).duration(420)} style={{ marginTop: 24, gap: 14 }}>
+                    <View style={{ height: 150, borderRadius: 28, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" }}>
+                      <CaixinhaCover goal={{ name: name || "Nova caixinha", cover_image: null }} height={150} glyph={130} glyphTop={-4} />
+                      <LinearGradient colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.78)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 92 }} />
+                      <View style={{ position: "absolute", left: 18, right: 18, bottom: 14 }}>
+                        <Text numberOfLines={1} style={{ fontSize: 19, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>{name.trim() || "Nova caixinha"}</Text>
+                        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: "rgba(255,255,255,0.72)" }}>
+                          {hasValue ? (cents > 0 ? `Meta de ${brl(cents)}` : "Defina um valor") : "Sem valor definido"}
+                        </Text>
                       </View>
-                    )}
+                    </View>
+
+                    <Group>
+                      <Row>
+                        <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: INK.softer }}>Nome</Text>
+                        <TextInput
+                          value={name}
+                          onChangeText={(t) => {
+                            setName(t);
+                            setError(null);
+                          }}
+                          placeholder="Ex.: Viagem para o Japão"
+                          placeholderTextColor={INK.faint}
+                          maxLength={60}
+                          autoFocus={choiceId === "custom"}
+                          style={{ marginTop: 4, minWidth: 0, padding: 0, fontSize: 17, fontWeight: "600", color: "#fff" }}
+                        />
+                      </Row>
+                      <Row last={!hasValue}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>Valor definido</Text>
+                            <Text style={{ marginTop: 2, fontSize: 12.5, lineHeight: 17, color: INK.soft }}>
+                              {hasValue ? "Eu calculo quanto guardar por mês." : "Você guarda conforme der, sem meta nem prazo."}
+                            </Text>
+                          </View>
+                          <Switch
+                            value={hasValue}
+                            onValueChange={(v) => {
+                              void Haptics.selectionAsync().catch(() => undefined);
+                              setHasValue(v);
+                              setError(null);
+                            }}
+                            trackColor={{ false: "rgba(255,255,255,0.16)", true: GREEN }}
+                            thumbColor="#fff"
+                            ios_backgroundColor="rgba(255,255,255,0.16)"
+                          />
+                        </View>
+                      </Row>
+                      {hasValue && (
+                        <Row last>
+                          <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: INK.softer }}>Quanto quer juntar</Text>
+                          <AmountField cents={cents} onChange={(c) => { setCents(c); setError(null); }} size={36} />
+                          {kind === "reserva" && reserveChips(month).length > 0 && (
+                            <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                              {reserveChips(month).map((c) => (
+                                <Tag key={c.label} on={cents === c.cents} onPress={() => { setCents(c.cents); setError(null); }}>
+                                  {`${c.label} · ${brl(c.cents)}`}
+                                </Tag>
+                              ))}
+                            </View>
+                          )}
+                        </Row>
+                      )}
+                    </Group>
                   </Animated.View>
                 )}
 
                 {/* ══ By when ══ */}
                 {key === "time" && (
-                  <Animated.View entering={FadeInDown.duration(380)} style={{ marginTop: 22 }}>
-                    <View style={{ flexDirection: "row", gap: 8 }}>
-                      {SPANS.map((s) => (
-                        <Chip
-                          key={s.months}
-                          label={s.label}
-                          on={!more && months === s.months}
-                          onPress={() => {
-                            setMore(false);
-                            setMonths(s.months);
-                          }}
-                        />
-                      ))}
-                      <Chip
-                        label="Mais"
-                        on={more && months !== null}
-                        onPress={() => {
+                  <Animated.View entering={FadeInDown.delay(180).duration(420)} style={{ marginTop: 26, gap: 14 }}>
+                    <Segments
+                      value={span}
+                      options={[...SPANS.map((s) => ({ value: s.months as number | "more", label: s.label })), { value: "more", label: "Outro" }]}
+                      onChange={(v) => {
+                        void Haptics.selectionAsync().catch(() => undefined);
+                        if (v === "more") {
                           setMore(true);
                           setMonths(years * 12);
-                        }}
-                      />
-                    </View>
+                        } else {
+                          setMore(false);
+                          setMonths(v);
+                        }
+                      }}
+                    />
 
                     {more && months !== null && (
-                      <View style={{ marginTop: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 22 }}>
-                        <Stepper
-                          icon={Minus}
-                          label="Menos um ano"
-                          disabled={years <= 1}
-                          onPress={() => {
-                            setYears(years - 1);
-                            setMonths((years - 1) * 12);
-                          }}
-                        />
-                        <Text style={{ minWidth: 110, textAlign: "center", fontSize: 28, fontWeight: "800", letterSpacing: -0.8, color: "#fff" }}>
-                          {yearsLabel(years)}
-                        </Text>
-                        <Stepper
-                          icon={Plus}
-                          label="Mais um ano"
-                          disabled={years >= 30}
-                          onPress={() => {
-                            setYears(years + 1);
-                            setMonths((years + 1) * 12);
-                          }}
-                        />
-                      </View>
+                      <Group>
+                        <Row last>
+                          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                            <Stepper icon={Minus} label="Menos um ano" disabled={years <= 1} onPress={() => { setYears(years - 1); setMonths((years - 1) * 12); }} />
+                            <Text style={{ fontSize: 26, fontWeight: "800", letterSpacing: -0.8, color: "#fff" }}>{yearsLabel(years)}</Text>
+                            <Stepper icon={Plus} label="Mais um ano" disabled={years >= 30} onPress={() => { setYears(years + 1); setMonths((years + 1) * 12); }} />
+                          </View>
+                        </Row>
+                      </Group>
                     )}
 
                     {withDate && cents > 0 ? (
-                      <GlassCard style={{ marginTop: 22 }}>
-                        <Text style={{ fontSize: 13, color: INK.soft }}>Para chegar em {due}, guarde</Text>
-                        <Text style={{ marginTop: 4, fontSize: 32, fontWeight: "800", letterSpacing: -1.1, color: "#fff" }}>
-                          {money(perMonth)}
-                          <Text style={{ fontSize: 15, fontWeight: "500", letterSpacing: 0, color: INK.soft }}> por mês</Text>
-                        </Text>
-                      </GlassCard>
+                      <Group>
+                        <Row last>
+                          <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: INK.softer }}>Para chegar em {due}</Text>
+                          <Text style={{ marginTop: 4, fontSize: 34, fontWeight: "800", letterSpacing: -1.2, color: "#fff" }}>
+                            {money(perMonth)}
+                            <Text style={{ fontSize: 15, fontWeight: "500", letterSpacing: 0, color: INK.soft }}> por mês</Text>
+                          </Text>
+                        </Row>
+                      </Group>
                     ) : null}
 
-                    {months === null ? <MonthlyField cents={monthlyCents} onChange={setMonthlyCents} /> : null}
+                    {months === null ? (
+                      <Group>
+                        <Row last>
+                          <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: INK.softer }}>Quanto por mês (opcional)</Text>
+                          <TextInput
+                            value={monthlyCents === 0 ? "" : brl(monthlyCents)}
+                            onChangeText={(t) => {
+                              const digits = t.replace(/\D/g, "").slice(0, 10);
+                              setMonthlyCents(Math.min(Number(digits || "0"), 99999999));
+                            }}
+                            keyboardType="number-pad"
+                            placeholder="Conforme der"
+                            placeholderTextColor={INK.faint}
+                            style={{ marginTop: 4, minWidth: 0, padding: 0, fontSize: 22, fontWeight: "700", color: "#fff" }}
+                          />
+                        </Row>
+                      </Group>
+                    ) : null}
 
                     <Pressable
                       onPress={() => {
@@ -556,7 +551,7 @@ export default function CaixinhaSheet({
                         setMonths(months === null ? 12 : null);
                       }}
                       hitSlop={10}
-                      style={{ marginTop: 18, alignSelf: "flex-start" }}
+                      style={{ alignSelf: "center", paddingVertical: 4 }}
                     >
                       <Text style={{ fontSize: 13.5, fontWeight: "600", color: INK.soft }}>
                         {months === null ? "Definir um prazo" : "Não tem prazo"}
@@ -567,152 +562,70 @@ export default function CaixinhaSheet({
 
                 {/* ══ Start with how much ══ */}
                 {key === "start" && (
-                  <Animated.View entering={FadeInDown.duration(380)} style={{ marginTop: 22 }}>
-                    <Text style={{ fontSize: 12.5, color: INK.soft }}>Começar com</Text>
-                    <TextInput
-                      value={startCents === 0 ? "" : brl(startCents)}
-                      onChangeText={(t) => {
-                        const digits = t.replace(/\D/g, "").slice(0, 10);
-                        setStartCents(Math.min(Number(digits || "0"), 99999999));
-                        setError(null);
-                      }}
-                      keyboardType="number-pad"
-                      placeholder="R$ 0,00"
-                      placeholderTextColor={INK.faint}
-                      style={{ marginTop: 6, minWidth: 0, fontSize: 44, fontWeight: "800", letterSpacing: -1.7, color: "#fff", padding: 0 }}
-                    />
+                  <Animated.View entering={FadeInDown.delay(180).duration(420)} style={{ marginTop: 26, gap: 14 }}>
+                    <Group>
+                      <Row last>
+                        <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: INK.softer }}>Começar com</Text>
+                        <AmountField
+                          cents={startCents}
+                          size={40}
+                          onChange={(c) => {
+                            setStartCents(Math.min(c, 99999999));
+                            setError(null);
+                          }}
+                        />
+                      </Row>
+                    </Group>
 
-                    {start > 0 && (
-                      <>
-                        <Text style={{ marginTop: 24, fontSize: 12.5, color: INK.soft }}>Sai de qual conta</Text>
-                        {accounts.length === 0 ? (
-                          <Text style={{ marginTop: 10, fontSize: 13, color: INK.softer }}>Crie uma conta primeiro para guardar a partir dela.</Text>
-                        ) : (
-                          <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            keyboardShouldPersistTaps="handled"
-                            style={{ marginHorizontal: -gutter }}
-                            contentContainerStyle={{ paddingHorizontal: gutter, paddingTop: 10, gap: 10 }}
-                          >
-                            {accounts.map((acc) => {
+                    {start > 0 &&
+                      (accounts.length === 0 ? (
+                        <Text style={{ fontSize: 13, color: INK.softer }}>Crie uma conta primeiro para guardar a partir dela.</Text>
+                      ) : (
+                        <View>
+                          <Text style={{ marginBottom: 8, marginLeft: 4, fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: INK.softer }}>Sai de qual conta</Text>
+                          <Group>
+                            {accounts.map((acc, i) => {
                               const on = acc.id === accountId;
                               return (
-                                <Pressable
-                                  key={acc.id}
-                                  onPress={() => setAccountId(acc.id)}
-                                  style={({ pressed }) => ({
-                                    flexDirection: "row",
-                                    alignItems: "center",
-                                    gap: 10,
-                                    paddingLeft: 8,
-                                    paddingRight: 16,
-                                    paddingVertical: 8,
-                                    borderRadius: 22,
-                                    borderCurve: "continuous",
-                                    borderWidth: 1,
-                                    borderColor: on ? "#fff" : "rgba(255,255,255,0.10)",
-                                    backgroundColor: on ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)",
-                                    transform: [{ scale: pressed ? 0.97 : 1 }],
-                                  })}
-                                >
-                                  <BankMark name={acc.name} hex={colorFor(acc.name, acc.color, "#6B7280")} size={38} />
-                                  <View>
-                                    <Text numberOfLines={1} style={{ maxWidth: 120, fontSize: 14, fontWeight: "600", color: "#fff" }}>{acc.name}</Text>
-                                    <Text style={{ marginTop: 1, fontSize: 12, color: INK.softer }}>{money(Number(acc.current_balance) || 0)}</Text>
-                                  </View>
-                                  {on && <Check size={15} color="#fff" strokeWidth={3} />}
+                                <Pressable key={acc.id} onPress={() => { void Haptics.selectionAsync().catch(() => undefined); setAccountId(acc.id); }}>
+                                  <Row last={i === accounts.length - 1}>
+                                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                                      <BankMark name={acc.name} hex={colorFor(acc.name, acc.color, "#6B7280")} size={38} />
+                                      <View style={{ flex: 1, minWidth: 0 }}>
+                                        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>{acc.name}</Text>
+                                        <Text style={{ marginTop: 1, fontSize: 12.5, color: INK.softer }}>{money(Number(acc.current_balance) || 0)}</Text>
+                                      </View>
+                                      <View
+                                        style={{
+                                          width: 24,
+                                          height: 24,
+                                          borderRadius: 12,
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          borderWidth: on ? 0 : 1.5,
+                                          borderColor: "rgba(255,255,255,0.28)",
+                                          backgroundColor: on ? "#fff" : "transparent",
+                                        }}
+                                      >
+                                        {on && <Check size={14} color="#0B0B0B" strokeWidth={3.2} />}
+                                      </View>
+                                    </View>
+                                  </Row>
                                 </Pressable>
                               );
                             })}
-                          </ScrollView>
-                        )}
-                      </>
-                    )}
-                  </Animated.View>
-                )}
-
-                {/* ══ Does it earn ══ */}
-                {key === "yield" && (
-                  <Animated.View entering={FadeInDown.duration(380)} style={{ marginTop: 22 }}>
-                    <View style={{ flexDirection: "row", gap: 8 }}>
-                      <Chip label="Não rende" on={!earning} onPress={() => { setEarning(false); setError(null); }} />
-                      <Chip label="Rende" on={earning} onPress={() => { setEarning(true); setError(null); }} />
-                    </View>
-
-                    {earning && (
-                      <>
-                        <Text style={{ marginTop: 22, fontSize: 12.5, color: INK.soft }}>Tipo de rendimento</Text>
-                        <View style={{ marginTop: 8, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                          <Pill label="CDI" on />
-                          {["Tesouro Direto", "CDB", "LCI / LCA", "Fundos"].map((t) => (
-                            <Pill key={t} label={t} soon />
-                          ))}
+                          </Group>
                         </View>
-
-                        <Text style={{ marginTop: 22, fontSize: 12.5, color: INK.soft }}>Quanto do CDI ela rende</Text>
-                        <View style={{ marginTop: 8, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                          {SHARES.map((s) => (
-                            <Pressable
-                              key={s}
-                              onPress={() => {
-                                setPercent(String(s));
-                                setError(null);
-                              }}
-                              style={({ pressed }) => ({
-                                height: 42,
-                                minWidth: 64,
-                                paddingHorizontal: 14,
-                                borderRadius: 21,
-                                alignItems: "center",
-                                justifyContent: "center",
-                                borderWidth: 1,
-                                borderColor: share === s ? "#fff" : "rgba(255,255,255,0.10)",
-                                backgroundColor: share === s ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.05)",
-                                transform: [{ scale: pressed ? 0.96 : 1 }],
-                              })}
-                            >
-                              <Text style={{ fontSize: 14.5, fontWeight: "700", color: "#fff" }}>{s}%</Text>
-                            </Pressable>
-                          ))}
-                          <TextInput
-                            value={SHARES.includes(Number(percent)) ? "" : percent}
-                            onChangeText={(t) => {
-                              setPercent(t.replace(/[^0-9,.]/g, "").slice(0, 6));
-                              setError(null);
-                            }}
-                            keyboardType="decimal-pad"
-                            placeholder="Outro"
-                            placeholderTextColor={INK.faint}
-                            style={{ ...FIELD, height: 42, width: 92, borderRadius: 21, paddingHorizontal: 12, fontSize: 14.5, textAlign: "center", fontWeight: "700" }}
-                          />
-                        </View>
-
-                        {forecast ? (
-                          <GlassCard style={{ marginTop: 20 }}>
-                            <Text style={{ fontSize: 13, color: INK.soft }}>
-                              {start > 0 ? `Com ${money(start)} guardados` : `Quando chegar em ${money(target)}`}, rende cerca de
-                            </Text>
-                            <View style={{ marginTop: 10, flexDirection: "row" }}>
-                              <Figure label="Por mês" value={`+${money(forecast.month)}`} />
-                              <Figure label="Por ano" value={`+${money(forecast.year)}`} />
-                            </View>
-                          </GlassCard>
-                        ) : null}
-                        <Text style={{ marginTop: 14, fontSize: 12.5, lineHeight: 17, color: INK.softer }}>
-                          O rendimento é uma estimativa, bruto de imposto, e entra no saldo a cada dia útil.
-                        </Text>
-                      </>
-                    )}
+                      ))}
                   </Animated.View>
                 )}
 
                 {/* ══ How it will look, and a picture of your own ══ */}
                 {key === "review" && (
-                  <Animated.View entering={FadeInDown.duration(380)} style={{ marginTop: 20 }}>
-                    <View style={{ height: 210, borderRadius: 30, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" }}>
-                      <CaixinhaCover goal={{ name: name.trim(), cover_image: photo }} height={210} glyph={150} glyphTop={10} />
-                      <LinearGradient colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.82)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 120 }} />
+                  <Animated.View entering={FadeInDown.delay(180).duration(420)} style={{ marginTop: 24, gap: 14 }}>
+                    <View style={{ height: 220, borderRadius: 30, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" }}>
+                      <CaixinhaCover goal={{ name: name.trim(), cover_image: photo }} height={220} glyph={160} glyphTop={10} />
+                      <LinearGradient colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.84)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 120 }} />
                       <View style={{ position: "absolute", left: 18, right: 18, bottom: 16 }}>
                         <Text numberOfLines={2} style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.7, color: "#fff" }}>{name.trim()}</Text>
                         <Text style={{ marginTop: 3, fontSize: 14, color: "rgba(255,255,255,0.74)" }}>
@@ -721,42 +634,38 @@ export default function CaixinhaSheet({
                       </View>
                     </View>
 
-                    <Pressable
-                      onPress={() => void choosePhoto()}
-                      disabled={photoBusy}
-                      style={({ pressed }) => ({
-                        marginTop: 12,
-                        height: 50,
-                        borderRadius: 25,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 8,
-                        borderWidth: 1,
-                        borderColor: "rgba(255,255,255,0.14)",
-                        backgroundColor: "rgba(255,255,255,0.07)",
-                        opacity: photoBusy ? 0.6 : 1,
-                        transform: [{ scale: pressed ? 0.98 : 1 }],
-                      })}
-                    >
-                      <ImageIcon size={18} color="#fff" />
-                      <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>
-                        {photoBusy ? "Enviando…" : photo ? "Trocar foto" : "Adicionar foto"}
-                      </Text>
-                    </Pressable>
+                    <Group>
+                      <Pressable onPress={() => void choosePhoto()} disabled={photoBusy} style={({ pressed }) => ({ opacity: pressed || photoBusy ? 0.6 : 1 })}>
+                        <Row last>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                            <View style={{ width: 34, height: 34, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.10)" }}>
+                              <ImageIcon size={17} color="#fff" />
+                            </View>
+                            <Text style={{ flex: 1, fontSize: 15.5, fontWeight: "600", color: "#fff" }}>
+                              {photoBusy ? "Enviando a foto…" : photo ? "Trocar a foto" : "Usar uma foto sua"}
+                            </Text>
+                            <ChevronRight size={17} color={INK.softer} />
+                          </View>
+                        </Row>
+                      </Pressable>
+                    </Group>
 
-                    <View style={{ marginTop: 14, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-                      <Fact label="Prazo" value={due ?? "Sem prazo"} />
-                      <Fact label="Por mês" value={perMonth > 0 ? money(perMonth) : monthlyCents > 0 ? money(monthlyCents / 100) : "Conforme der"} />
-                      <Fact label="Começa com" value={start > 0 ? money(start) : "R$ 0"} />
-                      <Fact label="Rendimento" value={earning && share !== null ? `${share}% do CDI` : "Não rende"} tone={earning ? GREEN : undefined} />
-                    </View>
+                    <Group>
+                      <Fact label="Meta" value={hasValue ? money(target) : "Sem valor definido"} />
+                      {hasValue && <Fact label="Prazo" value={due ?? "Sem prazo"} />}
+                      {hasValue && (
+                        <Fact label="Guardar por mês" value={perMonth > 0 ? money(perMonth) : monthlyCents > 0 ? money(monthlyCents / 100) : "Conforme der"} />
+                      )}
+                      <Fact label="Começa com" value={start > 0 ? `${money(start)}${account ? ` · ${account.name}` : ""}` : "R$ 0,00"} last />
+                    </Group>
                   </Animated.View>
                 )}
 
                 {error && <Text style={{ marginTop: 16, fontSize: 13.5, lineHeight: 18, color: RED }}>{error}</Text>}
               </ScrollView>
 
+              {/* On the first page a picture is the answer, so there is no button until one has been chosen. */}
+              {(key !== "purpose" || choiceId !== null) && (
               <View style={{ paddingHorizontal: gutter, paddingTop: 8, paddingBottom: insets.bottom + 12 }}>
                 <Pressable
                   onPress={() => {
@@ -772,7 +681,7 @@ export default function CaixinhaSheet({
                     alignItems: "center",
                     justifyContent: "center",
                     backgroundColor: "#fff",
-                    opacity: !canNext ? 0.32 : saving ? 0.7 : 1,
+                    opacity: !canNext ? 0.28 : saving ? 0.7 : 1,
                     transform: [{ scale: pressed && canNext ? 0.98 : 1 }],
                   })}
                 >
@@ -781,6 +690,7 @@ export default function CaixinhaSheet({
                   </Text>
                 </Pressable>
               </View>
+              )}
             </KeyboardAvoidingView>
           </View>
         )}
@@ -789,92 +699,107 @@ export default function CaixinhaSheet({
   );
 }
 
-/** Willo's line: his mark, and what he says typed out in a bubble of glass. */
-function Say({ text }: { text: string }) {
+/**
+ * Willo, asking.
+ *
+ * His sphere, small and turning — quicker while he is "speaking" — with his name beside
+ * it; the question typed out large under them, and once it is all there, his note about
+ * this person's own money fades in beneath. The note keeps its place while the question
+ * types, so nothing below it jumps.
+ */
+function Willo({ ask, tip }: { ask: string; tip: string }) {
   const [shown, setShown] = useState(0);
 
   useEffect(() => {
     setShown(0);
-    /* Always done in about a second, however long the line is. */
-    const step = Math.max(1, Math.ceil(text.length / 55));
     const id = setInterval(() => {
       setShown((n) => {
-        if (n + step >= text.length) {
+        if (n >= ask.length) {
           clearInterval(id);
-          return text.length;
+          return n;
         }
-        return n + step;
+        return n + 1;
       });
-    }, 18);
+    }, 24);
     return () => clearInterval(id);
-  }, [text]);
+  }, [ask]);
+
+  const typing = shown < ask.length;
+  const fade = useSharedValue(0);
+  useEffect(() => {
+    fade.set(withTiming(typing ? 0 : 1, { duration: typing ? 0 : 420 }));
+  }, [typing, fade]);
+  const note = useAnimatedStyle(() => ({ opacity: fade.get(), transform: [{ translateY: (1 - fade.get()) * 6 }] }));
 
   return (
-    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
-      <BotMark size={38} />
-      <View
-        style={{
-          flex: 1,
-          minWidth: 0,
-          borderRadius: 22,
-          borderTopLeftRadius: 6,
-          borderCurve: "continuous",
-          overflow: "hidden",
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.14)",
-        }}
-      >
-        <BlurView intensity={50} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.4)" }} />
-        <View style={{ position: "absolute", top: 0, left: 16, right: 16, height: 1, backgroundColor: "rgba(255,255,255,0.2)" }} />
-        <View style={{ paddingHorizontal: 16, paddingVertical: 13 }}>
-          {/* The full line sits invisible underneath so the bubble is its final size from the first letter. */}
-          <Text style={{ fontSize: 15.5, lineHeight: 22, color: "transparent" }}>{text}</Text>
-          <Text style={{ position: "absolute", left: 16, right: 16, top: 13, fontSize: 15.5, lineHeight: 22, color: "#fff" }}>
-            {text.slice(0, shown)}
-          </Text>
-        </View>
+    <View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginLeft: -6 }}>
+        <ParticleOrb size={44} density={170} mode={typing ? "thinking" : "idle"} />
+        <Text style={{ fontSize: 13, fontWeight: "700", letterSpacing: 0.3, color: "rgba(255,255,255,0.9)" }}>Willo</Text>
       </View>
+      <Text style={{ marginTop: 10, fontSize: 29, fontWeight: "800", letterSpacing: -1, lineHeight: 34, color: "#fff" }}>
+        {ask.slice(0, shown)}
+        <Text style={{ color: "transparent" }}>{ask.slice(shown)}</Text>
+      </Text>
+      <Animated.Text style={[{ marginTop: 10, fontSize: 15, lineHeight: 22, color: "rgba(255,255,255,0.62)" }, note]}>{tip}</Animated.Text>
     </View>
   );
 }
 
-/** A picture to choose, with what it is called across its foot. */
+/** A picture to choose, with what it is called and what it covers across its foot. */
 function PictureCard({
   width,
+  height,
   on,
+  dim = false,
   label,
+  hint,
+  badge,
   onPress,
   children,
 }: {
   width: number;
+  height: number;
   on: boolean;
+  dim?: boolean;
   label: string;
+  hint: string;
+  badge?: string;
   onPress: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.97 : 1 }] })}>
       <View
         style={{
           width,
-          height: 128,
-          borderRadius: 24,
+          height,
+          borderRadius: 26,
           borderCurve: "continuous",
           overflow: "hidden",
           borderWidth: on ? 2 : 1,
           borderColor: on ? "#fff" : "rgba(255,255,255,0.12)",
-          opacity: on ? 1 : 0.94,
+          opacity: dim ? 0.5 : 1,
         }}
       >
         {children}
-        <LinearGradient colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.82)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 66 }} />
-        <Text numberOfLines={2} style={{ position: "absolute", left: 13, right: 13, bottom: 11, fontSize: 14.5, lineHeight: 17, fontWeight: "700", color: "#fff" }}>
-          {label}
-        </Text>
+        <LinearGradient colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.55)", "rgba(8,9,10,0.9)"]} locations={[0, 0.45, 1]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 86 }} />
+        <View style={{ position: "absolute", left: 14, right: 14, bottom: 12 }}>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ fontSize: 15.5, fontWeight: "800", letterSpacing: -0.3, color: "#fff" }}>
+            {label}
+          </Text>
+          <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, color: "rgba(255,255,255,0.66)" }}>{hint}</Text>
+        </View>
+        {badge && (
+          <View style={{ position: "absolute", top: 12, left: 12, height: 26, paddingHorizontal: 10, borderRadius: 13, overflow: "hidden", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.26)" }}>
+            <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 13 }} />
+            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 13, backgroundColor: "rgba(255,255,255,0.12)" }} />
+            <Text style={{ zIndex: 1, fontSize: 11.5, fontWeight: "700", color: "#fff" }}>{badge}</Text>
+          </View>
+        )}
         {on && (
-          <View style={{ position: "absolute", top: 10, right: 10, width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
-            <Check size={14} color="#0B0B0B" strokeWidth={3.2} />
+          <View style={{ position: "absolute", top: 12, right: 12, width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
+            <Check size={15} color="#0B0B0B" strokeWidth={3.2} />
           </View>
         )}
       </View>
@@ -883,7 +808,7 @@ function PictureCard({
 }
 
 /** A round glass button for the page's top bar. */
-function GlassDot({ label, onPress, children }: { label: string; onPress: () => void; children: React.ReactNode }) {
+function GlassDot({ label, onPress, children }: { label: string; onPress: () => void; children: ReactNode }) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
       <View
@@ -891,7 +816,6 @@ function GlassDot({ label, onPress, children }: { label: string; onPress: () => 
           width: 40,
           height: 40,
           borderRadius: 20,
-          overflow: "hidden",
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 1,
@@ -905,18 +829,18 @@ function GlassDot({ label, onPress, children }: { label: string; onPress: () => 
   );
 }
 
-function GlassCard({ children, style }: { children: React.ReactNode; style?: object }) {
+/** A grouped piece of glass, the way a settings page groups its rows. */
+function Group({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   return (
     <View
       style={[
         {
-          borderRadius: 22,
+          borderRadius: 24,
           borderCurve: "continuous",
+          overflow: "hidden",
           borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.12)",
+          borderColor: "rgba(255,255,255,0.10)",
           backgroundColor: "rgba(255,255,255,0.06)",
-          paddingHorizontal: 18,
-          paddingVertical: 16,
         },
         style,
       ]}
@@ -926,69 +850,83 @@ function GlassCard({ children, style }: { children: React.ReactNode; style?: obj
   );
 }
 
-function Figure({ label, value }: { label: string; value: string }) {
+function Row({ children, last = false }: { children: ReactNode; last?: boolean }) {
   return (
-    <View style={{ flex: 1 }}>
-      <Text style={{ fontSize: 12, color: INK.softer }}>{label}</Text>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 3, fontSize: 21, fontWeight: "800", letterSpacing: -0.6, color: GREEN }}>
-        {value}
-      </Text>
+    <View style={{ paddingHorizontal: 18, paddingVertical: 15, borderBottomWidth: last ? 0 : 1, borderBottomColor: "rgba(255,255,255,0.07)" }}>
+      {children}
     </View>
   );
 }
 
-function Fact({ label, value, tone }: { label: string; value: string; tone?: string }) {
+function Fact({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
   return (
-    <GlassCard style={{ width: "48%", paddingVertical: 12, paddingHorizontal: 14, flexGrow: 1 }}>
-      <Text style={{ fontSize: 12, color: INK.softer }}>{label}</Text>
-      <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: tone ?? "#fff" }}>{value}</Text>
-    </GlassCard>
+    <Row last={last}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <Text style={{ fontSize: 14.5, color: INK.soft }}>{label}</Text>
+        <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15, fontWeight: "700", color: "#fff", textAlign: "right" }}>{value}</Text>
+      </View>
+    </Row>
   );
 }
 
-/** A kind of yield: the chosen one lit, the ones not built yet dimmed and marked. */
-function Pill({ label, on = false, soon = false }: { label: string; on?: boolean; soon?: boolean }) {
+/**
+ * The spans of time, as one control: a capsule of glass with the chosen one lit white.
+ * `value` null lights none — there is no date at all.
+ */
+function Segments<V extends string | number>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: V; label: string }[];
+  value: V | null;
+  onChange: (v: V) => void;
+}) {
   return (
     <View
       style={{
+        height: 50,
+        padding: 4,
+        borderRadius: 25,
         flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-        height: 38,
-        paddingHorizontal: 16,
-        borderRadius: 19,
         borderWidth: 1,
-        borderColor: on ? "#fff" : "rgba(255,255,255,0.10)",
-        backgroundColor: on ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.04)",
-        opacity: soon ? 0.5 : 1,
+        borderColor: "rgba(255,255,255,0.10)",
+        backgroundColor: "rgba(255,255,255,0.06)",
       }}
     >
-      <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#fff" }}>{label}</Text>
-      {soon && <Text style={{ fontSize: 10.5, color: INK.softer }}>em breve</Text>}
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <Pressable
+            key={String(o.value)}
+            onPress={() => onChange(o.value)}
+            style={{ flex: 1, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: on ? "#fff" : "transparent" }}
+          >
+            <Text style={{ fontSize: 14, fontWeight: on ? "700" : "600", color: on ? "#0B0B0B" : "rgba(255,255,255,0.78)" }}>{o.label}</Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
 
-function Chip({ label, on, onPress, small = false }: { label: string; on: boolean; onPress: () => void; small?: boolean }) {
+/** A small suggestion that can be tapped to use it. */
+function Tag({ on, onPress, children }: { on: boolean; onPress: () => void; children: string }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        flex: 1,
-        height: small ? 44 : 50,
-        borderRadius: small ? 22 : 25,
-        alignItems: "center",
+        height: 34,
+        paddingHorizontal: 13,
+        borderRadius: 17,
         justifyContent: "center",
-        paddingHorizontal: 8,
         borderWidth: 1,
-        borderColor: on ? "#fff" : "rgba(255,255,255,0.10)",
-        backgroundColor: on ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.05)",
+        borderColor: on ? "#fff" : "rgba(255,255,255,0.16)",
+        backgroundColor: on ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.05)",
         transform: [{ scale: pressed ? 0.96 : 1 }],
       })}
     >
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ fontSize: small ? 13 : 14.5, fontWeight: "700", color: "#fff" }}>
-        {label}
-      </Text>
+      <Text style={{ fontSize: 13, fontWeight: "600", color: "#fff" }}>{children}</Text>
     </Pressable>
   );
 }
@@ -1000,9 +938,9 @@ function Stepper({ icon: Icon, label, disabled, onPress }: { icon: typeof Plus; 
       onPress={onPress}
       disabled={disabled}
       style={({ pressed }) => ({
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         alignItems: "center",
         justifyContent: "center",
         borderWidth: 1,
@@ -1012,29 +950,13 @@ function Stepper({ icon: Icon, label, disabled, onPress }: { icon: typeof Plus; 
         transform: [{ scale: pressed ? 0.92 : 1 }],
       })}
     >
-      <Icon size={20} color="#fff" strokeWidth={2.4} />
+      <Icon size={19} color="#fff" strokeWidth={2.4} />
     </Pressable>
   );
 }
 
-function MonthlyField({ cents, onChange }: { cents: number; onChange: (c: number) => void }) {
-  return (
-    <TextInput
-      value={cents === 0 ? "" : brl(cents)}
-      onChangeText={(t) => {
-        const digits = t.replace(/\D/g, "").slice(0, 10);
-        onChange(Math.min(Number(digits || "0"), 99999999));
-      }}
-      keyboardType="number-pad"
-      placeholder="Quanto por mês (opcional)"
-      placeholderTextColor={INK.faint}
-      style={{ ...FIELD, marginTop: 18 }}
-    />
-  );
-}
-
-/** The figure a page is about, typed in place at the size it is read. */
-function AmountField({ cents, onChange }: { cents: number; onChange: (c: number) => void }) {
+/** The figure a row is about, typed in place at the size it is read. */
+function AmountField({ cents, onChange, size }: { cents: number; onChange: (c: number) => void; size: number }) {
   return (
     <TextInput
       value={brl(cents)}
@@ -1044,11 +966,11 @@ function AmountField({ cents, onChange }: { cents: number; onChange: (c: number)
       }}
       keyboardType="number-pad"
       style={{
-        marginTop: 6,
+        marginTop: 4,
         minWidth: 0,
-        fontSize: 42,
+        fontSize: size,
         fontWeight: "800",
-        letterSpacing: -1.6,
+        letterSpacing: -size / 26,
         color: cents === 0 ? INK.faint : "#fff",
         padding: 0,
       }}

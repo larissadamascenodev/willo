@@ -22,7 +22,7 @@ const known = (n: number) => Number.isFinite(n) && n > 0;
 const rounded = (n: number) => (n >= 1000 ? Math.round(n / 50) * 50 : Math.round(n));
 
 export const purposeLine = (first: string | null) =>
-  `${first ? `Oi, ${first}. ` : "Oi! "}Vamos montar essa caixinha juntos. Pra que ela vai servir?`;
+  `${first ? `Oi, ${first}. ` : "Oi! "}Escolha um objetivo e eu te ajudo com o valor e o prazo.`;
 
 const ABOUT: Record<CoverKind, string> = {
   viagem: "Viagem costuma custar mais do que a gente imagina: passagem, hospedagem, passeios. Dê um nome e um valor que caiba no seu mês.",
@@ -40,7 +40,7 @@ export function aboutLine(kind: CoverKind | null, custom: boolean, month: Month)
     return `${ABOUT.reserva} Com o que você gasta por mês, o ideal fica entre ${money(rounded(month.expense * 3))} e ${money(rounded(month.expense * 6))}.`;
   }
   if (kind) return ABOUT[kind];
-  return custom ? "Dê um nome que você reconheça na hora: Moto, Casamento, Reforma da cozinha…" : "Como vai se chamar?";
+  return custom ? "Dê um nome que você reconheça na hora: Moto, Casamento, Reforma da cozinha…" : "Dê um nome que você reconheça na hora.";
 }
 
 /** Reserve suggestions the person can tap to fill the amount: three and six months of expenses. */
@@ -72,20 +72,11 @@ export function startLine(args: { start: number; accountName: string | null; bal
   return accountName ? `Certo, ${money(start)} saem de ${accountName} e já ficam guardados.` : "Escolha de qual conta sai o dinheiro.";
 }
 
-export function yieldLine(args: { earning: boolean; percent: number | null; base: number; monthly: number | null }): string {
-  const { earning, percent, base, monthly } = args;
-  if (!earning) return "Se o dinheiro fica num lugar que rende, como um CDB ou uma conta com rendimento, eu estimo quanto por aqui. Essa rende?";
-  if (percent === null) return "Quanto do CDI ela rende? Bancos costumam pagar entre 100% e 120%.";
-  if (base <= 0 || monthly === null) return `Rendendo ${percent}% do CDI, o rendimento entra no saldo todo dia útil. Quando tiver valor guardado, mostro quanto.`;
-  return `Com ${money(base)} rendendo ${percent}% do CDI, são cerca de ${money(monthly)} por mês. É estimativa, bruta de imposto.`;
-}
-
-export function reviewLine(args: { name: string; perMonth: number; due: string | null; start: number; earning: boolean }): string {
-  const { name, perMonth, due, start, earning } = args;
-  const parts: string[] = [`Tudo pronto para “${name}”.`];
-  if (perMonth > 0 && due) parts.push(`Guardando ${money(perMonth)} por mês você chega em ${due}.`);
+export function reviewLine(args: { perMonth: number; due: string | null; start: number }): string {
+  const { perMonth, due, start } = args;
+  const parts: string[] = [];
+  if (perMonth > 0 && due) parts.push(`Guardando ${money(perMonth)} por mês, você chega lá em ${due}.`);
   if (start > 0) parts.push(`${money(start)} já começam guardados.`);
-  if (earning) parts.push("E ela rende sozinha.");
-  parts.push("Quer deixar com uma foto sua?");
+  parts.push("Se quiser, coloque uma foto sua para ela ficar com a sua cara.");
   return parts.join(" ");
 }
