@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Platform, Pressable, Text, View, type TextStyle } from "react-native";
-import Animated, { FadeIn, FadeInDown, LinearTransition } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { categoryHex } from "@/lib/categoryData";
 import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import type { CustomCategory } from "@/services/categoryService";
@@ -10,6 +10,7 @@ import { categoryIcon } from "~/lib/categoryIcon";
 import { Check, ChevronDown } from "~/components/icons";
 import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
+import { EXPAND } from "~/lib/expand";
 
 /**
  * One parcelled purchase.
@@ -92,7 +93,7 @@ export default function InstallmentPurchaseCard({
   return (
     <Animated.View
       entering={FadeInDown.delay(Math.min(index, 8) * 30).duration(320)}
-      layout={LinearTransition.springify().damping(24).stiffness(220)}
+      layout={EXPAND}
       style={{
         overflow: "hidden",
         borderRadius: 20,

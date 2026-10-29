@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Platform, Pressable, Text, View, type TextStyle } from "react-native";
-import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
 import { categoryHex } from "@/lib/categoryData";
 import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import type { CardBadge, ProjectionPart } from "@/services/activeInstallments";
@@ -13,6 +13,7 @@ import { ChevronDown, ChevronRight } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { money } from "~/lib/money";
 import { GREEN, INK } from "~/theme/tokens";
+import { EXPAND } from "~/lib/expand";
 
 /**
  * What the chosen month's instalments are made of.
@@ -124,7 +125,7 @@ export default function InstallmentCategories({
             return (
               <Animated.View
                 key={c.category}
-                layout={LinearTransition.springify().damping(24).stiffness(220)}
+                layout={EXPAND}
                 style={{ borderTopWidth: i > 0 ? 1 : 0, borderTopColor: RULE }}
               >
                 <CategoryRow

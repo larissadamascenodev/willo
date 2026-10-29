@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import Animated, { FadeIn, FadeInDown, LinearTransition } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import type { GroupedCategories } from "@/lib/categoryGroups";
 import Surface, { Hairline } from "~/components/Surface";
 import { groupIcon } from "~/lib/groupIcon";
@@ -9,6 +9,7 @@ import { ChevronDown, ChevronRight } from "~/components/icons";
 import { money } from "~/lib/money";
 import { INK } from "~/theme/tokens";
 import type { IconCmp } from "~/lib/categoryIconSlugs";
+import { EXPAND } from "~/lib/expand";
 
 /**
  * The two ways to read a month: by category, or by the handful of things those
@@ -133,7 +134,7 @@ export function GroupCards({ groups }: { groups: GroupedCategories<OverviewCateg
           <Animated.View
             key={g.def.name}
             entering={FadeInDown.delay(i * 30).duration(320)}
-            layout={LinearTransition.springify().damping(24).stiffness(220)}
+            layout={EXPAND}
             style={{
               overflow: "hidden",
               borderRadius: 22,

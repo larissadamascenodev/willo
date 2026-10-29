@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeIn, FadeInDown, LinearTransition } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import {
   createCustomCategory,
   deleteCustomCategory,
@@ -23,6 +23,7 @@ import { Pencil, Plus, Tag, Trash2 } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
 import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
+import { EXPAND } from "~/lib/expand";
 
 /**
  * The categories, as one list.
@@ -261,7 +262,7 @@ export default function Categorias() {
             </Pressable>
           </View>
         ) : (
-          <Animated.View layout={LinearTransition.springify().damping(26).stiffness(220)}>
+          <Animated.View layout={EXPAND}>
             <Surface radius={22}>
               {categories.map((cat, i) => {
                 const Icon = categoryIcon(cat.name, customCats ?? undefined);

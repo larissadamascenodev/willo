@@ -24,6 +24,8 @@ import GastosPorCategoria from "~/components/home/GastosPorCategoria";
 import CenterModal from "~/components/CenterModal";
 import FluxoPanel from "~/components/financeiro/FluxoPanel";
 import SpendRing from "~/components/analytics/SpendRing";
+import { GroupCards } from "~/components/analytics/CategoryViews";
+import { groupCategoryAmounts } from "@/lib/categoryGroups";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
@@ -177,6 +179,8 @@ export default function ContaDetalhe() {
       })),
     [categoryData, totalDespesas, customCats],
   );
+
+  const groups = useMemo(() => groupCategoryAmounts(overview), [overview]);
 
   const ordered = useMemo(
     () => [...movements].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
@@ -391,35 +395,11 @@ export default function ContaDetalhe() {
           <SpendRing
             total={totalDespesas}
             caption={`saiu em ${MONTH_NAMES[selectedMonth].toLowerCase()}`}
-            segments={categoryData.map((c) => ({ key: c.name, hex: categoryHex(c.name, customCats), amount: c.amount }))}
+            segments={groups.map((g) => ({ key: g.def.name, hex: g.def.hex, amount: g.amount }))}
           />
         </View>
         <View style={{ marginTop: 18 }}>
-          {overview.map((cat, i) => {
-            const Icon = cat.icon;
-            return (
-              <View
-                key={cat.name}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 12,
-                  paddingVertical: 11,
-                  borderTopWidth: i > 0 ? 1 : 0,
-                  borderTopColor: "rgba(255,255,255,0.06)",
-                }}
-              >
-                <View style={{ width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(cat.hex) }}>
-                  <Icon size={17} color={chipInk(cat.hex)} strokeWidth={2} />
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{cat.name}</Text>
-                  <Text style={{ marginTop: 1, fontSize: 12, color: cat.hex }}>{cat.percentage}%</Text>
-                </View>
-                <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>{money(cat.amount)}</Text>
-              </View>
-            );
-          })}
+          <GroupCards groups={groups} />
         </View>
       </CenterModal>
 

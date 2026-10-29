@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Platform, Pressable, Text, View, type TextStyle } from "react-native";
-import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
 import { categoryHex } from "@/lib/categoryData";
 import type { ProjectionMonth } from "@/services/activeInstallments";
 import type { CustomCategory } from "@/services/categoryService";
@@ -10,6 +10,7 @@ import { chipFill, chipInk } from "~/lib/chip";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { money } from "~/lib/money";
 import { GREEN, INK } from "~/theme/tokens";
+import { EXPAND } from "~/lib/expand";
 
 /**
  * What you finish paying in the month chosen on the chart.
@@ -64,7 +65,7 @@ export default function InstallmentPayoffs({
 
   return (
     <Animated.View
-      layout={LinearTransition.springify().damping(24).stiffness(220)}
+      layout={EXPAND}
       style={{
         overflow: "hidden",
         borderRadius: 22,
