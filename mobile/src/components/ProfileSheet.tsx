@@ -6,6 +6,7 @@ import BottomSheet from "~/components/BottomSheet";
 import SegmentedTabs from "~/components/SegmentedTabs";
 import { LogOut } from "~/components/icons";
 import { useHomeHero } from "~/lib/homeHero";
+import { useSkyModel } from "~/lib/skyModel";
 import { useAuth } from "~/lib/auth";
 import { INK, RED } from "~/theme/tokens";
 
@@ -36,6 +37,7 @@ export default function ProfileSheet({
 }) {
   const { user, signOut } = useAuth();
   const [hero, setHero] = useHomeHero();
+  const [skyModel, setSkyModel] = useSkyModel();
   const [asking, setAsking] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
@@ -96,6 +98,23 @@ export default function ProfileSheet({
             options={[
               { key: "orb" as const, label: "Orbe" },
               { key: "stories" as const, label: "Stories" },
+            ]}
+          />
+        </View>
+
+        {/* The sky behind the screens that wear one. */}
+        <View style={{ marginTop: 22 }}>
+          <Text style={{ fontSize: 11.5, fontWeight: "600", letterSpacing: 1.3, textTransform: "uppercase", color: INK.softer, marginBottom: 10 }}>
+            Fundo
+          </Text>
+          <SegmentedTabs
+            compact
+            height={36}
+            value={skyModel}
+            onChange={setSkyModel}
+            options={[
+              { key: "1" as const, label: "Modelo 1" },
+              { key: "2" as const, label: "Modelo 2" },
             ]}
           />
         </View>

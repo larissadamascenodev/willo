@@ -2,16 +2,19 @@ import { type ReactNode } from "react";
 import { View, type ViewStyle } from "react-native";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import { Image } from "expo-image";
+import Sky from "~/components/Sky";
+import { useSkyModel } from "~/lib/skyModel";
 import { GROUND, GROUND_LIT } from "~/theme/tokens";
 
 /**
- * The hour the home arrives at, as a picture.
+ * The second sky: the hour as a picture.
  *
- * It was eleven radial lights, a mask and a vignette drawn live, and a phone did not
- * draw them the way the web does: the welcome looked one way in the browser and
+ * The first is eleven radial lights, a mask and a vignette drawn live, and a phone did
+ * not draw them the way the web does: the welcome looked one way in the browser and
  * another in the hand. This is that same drawing, taken once from the web and fixed,
- * so every phone shows the same sky. It already carries its own vignette, which is
- * why the sky screens draw none over it.
+ * so every phone shows the same sky, with its brightest part held back a little so
+ * cards passing over the glow do not change under it. It already carries its own
+ * vignette, which is why it is drawn without the one the first sky needs.
  */
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const HOUR = require("../../assets/sky.png") as number;
@@ -59,14 +62,17 @@ export default function Room({
 }) {
   /* Turned down is not a different picture, only a quieter one. */
   const strength = lit ? 1 : 0.45;
+  const [model] = useSkyModel();
+  const picture = sky && model === "2";
 
   return (
     <View style={[{ flex: 1, backgroundColor: lit ? GROUND_LIT : GROUND }, style]}>
-      {sky && <Image source={HOUR} contentFit="fill" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />}
+      {sky && !picture && <Sky />}
+      {picture && <Image source={HOUR} contentFit="fill" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />}
 
       {/* Both the box and the drawing have to be told to fill: left to itself the
           canvas takes its intrinsic size and the light stops partway down. */}
-      {!sky && (
+      {!picture && (
       <Svg
         width="100%"
         height="100%"
