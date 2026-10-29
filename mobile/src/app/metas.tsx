@@ -19,6 +19,7 @@ import Bar from "~/components/Bar";
 import BottomSheet from "~/components/BottomSheet";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import GoalFormSheet from "~/components/metas/GoalFormSheet";
+import { paceOf } from "~/lib/cofrinho";
 import GoalMoveSheet from "~/components/metas/GoalMoveSheet";
 import { goalPreset } from "~/lib/goalIcon";
 import { Clock, MoreVertical, Pencil, Plus, Target, Trash2, Wallet } from "~/components/icons";
@@ -80,6 +81,7 @@ export default function Metas() {
     name: string;
     target_amount: number;
     monthly_contribution: number | null;
+    deadline: string | null;
   }) => {
     if (!user) return;
     await createGoal(data, user.id);
@@ -92,6 +94,7 @@ export default function Metas() {
     name: string;
     target_amount: number;
     monthly_contribution: number | null;
+    deadline: string | null;
   }) => {
     if (!editing) return;
     await updateGoal(editing.id, data);
@@ -240,9 +243,15 @@ export default function Metas() {
                 const preset = goalPreset(goal);
                 const Icon = preset.icon;
                 const deadline = goal.deadline ? new Date(`${goal.deadline}T12:00:00`) : null;
+                const pace = paceOf(goal);
                 const details = [
                   `Faltam ${money(remaining)}`,
-                  goal.monthly_contribution ? `${money(goal.monthly_contribution)}/mês` : null,
+                  /* With a date, the month's figure is what it takes to arrive on it. */
+                  !isComplete && !pace.open && !pace.late
+                    ? `guarde ${money(pace.monthly)}/mês`
+                    : goal.monthly_contribution
+                      ? `${money(goal.monthly_contribution)}/mês`
+                      : null,
                   deadline
                     ? `até ${deadline
                         .toLocaleDateString("pt-BR", { month: "short", year: "numeric" })
@@ -480,9 +489,11 @@ export default function Metas() {
                 name: editing.name,
                 target_amount: editing.target_amount,
                 monthly_contribution: editing.monthly_contribution ?? null,
+                deadline: editing.deadline ?? null,
               }
             : undefined
         }
+        saved={editing?.current_amount ?? 0}
         existingNames={list.filter((g) => g.id !== editing?.id).map((g) => g.name)}
       />
 

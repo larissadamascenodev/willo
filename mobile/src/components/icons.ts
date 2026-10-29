@@ -65,3 +65,4 @@ export { default as LogOut } from "lucide-react-native/icons/log-out";
 export { default as Mail } from "lucide-react-native/icons/mail";
 export { default as Lock } from "lucide-react-native/icons/lock";
 export { default as CircleCheck } from "lucide-react-native/icons/circle-check";
+export { default as PiggyBank } from "lucide-react-native/icons/piggy-bank";

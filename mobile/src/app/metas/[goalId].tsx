@@ -35,6 +35,7 @@ import {
   Trash2,
 } from "~/components/icons";
 import { money } from "~/lib/money";
+import { monthYear, paceOf } from "~/lib/cofrinho";
 import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
@@ -176,6 +177,7 @@ export default function MetaDetalhe() {
     name: string;
     target_amount: number;
     monthly_contribution: number | null;
+    deadline: string | null;
   }) => {
     if (!goalId) return;
     await updateGoal(goalId, data);
@@ -255,8 +257,12 @@ export default function MetaDetalhe() {
   const totalIn = deposits.reduce((s, t) => s + Number(t.amount), 0);
   const totalOut = withdrawals.reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
 
+  const pace = paceOf(goal);
+  /* With a date, the month's figure is what it takes to arrive on it. */
+  const dueIn = !isComplete && !pace.open && !pace.late;
+
   const monthsLeft =
-    !isComplete && goal.monthly_contribution && goal.monthly_contribution > 0
+    !dueIn && !isComplete && goal.monthly_contribution && goal.monthly_contribution > 0
       ? Math.ceil(remaining / goal.monthly_contribution)
       : 0;
 
@@ -362,13 +368,15 @@ export default function MetaDetalhe() {
           <Stat label="Depósitos" value={money(totalIn)} tone={GREEN} />
           <Stat label="Saques" value={money(totalOut)} tone={RED} />
           <Stat
-            label={monthsLeft > 0 ? "Previsão" : "Por mês"}
+            label={dueIn ? `Guardar/mês até ${monthYear(goal.deadline as string)}` : monthsLeft > 0 ? "Previsão" : "Por mês"}
             value={
-              monthsLeft > 0
-                ? `${monthsLeft} ${monthsLeft === 1 ? "mês" : "meses"}`
-                : goal.monthly_contribution
-                  ? money(goal.monthly_contribution)
-                  : "—"
+              dueIn
+                ? money(pace.monthly)
+                : monthsLeft > 0
+                  ? `${monthsLeft} ${monthsLeft === 1 ? "mês" : "meses"}`
+                  : goal.monthly_contribution
+                    ? money(goal.monthly_contribution)
+                    : "—"
             }
             tone="#fff"
           />
@@ -584,7 +592,9 @@ export default function MetaDetalhe() {
           name: goal.name,
           target_amount: goal.target_amount,
           monthly_contribution: goal.monthly_contribution ?? null,
+          deadline: goal.deadline ?? null,
         }}
+        saved={goal.current_amount}
       />
     </Room>
   );

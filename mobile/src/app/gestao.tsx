@@ -4,16 +4,23 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { getAccounts } from "@/services/transactionService";
+import { fetchGoals, isReserveGoal, type Goal } from "@/services/goalService";
 import { colorFor } from "@/lib/banks";
+import { goalPreset } from "~/lib/goalIcon";
+import { goalProgress } from "@/lib/goalPresets";
+import { monthYear, paceOf } from "~/lib/cofrinho";
+import AccountSheet from "~/components/accounts/AccountSheet";
+import CofrinhoSheet from "~/components/accounts/CofrinhoSheet";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import Surface from "~/components/Surface";
 import BankMark from "~/components/BankMark";
 import { FlexBar } from "~/components/Bar";
-import { Landmark, Plus } from "~/components/icons";
+import { ChevronRight, Landmark, PiggyBank, Plus } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
-import { GREEN, INK, RED } from "~/theme/tokens";
+import { INK, RED } from "~/theme/tokens";
+import { type as T } from "~/theme/type";
 
 /**
  * Where the money is.
@@ -45,10 +52,14 @@ export default function Gestao() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [accounts, setAccounts] = useState<Account[] | null>(null);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [addingAccount, setAddingAccount] = useState(false);
+  const [addingCofrinho, setAddingCofrinho] = useState(false);
 
   const load = useCallback(async () => {
     if (!user) {
       setAccounts([]);
+      setGoals([]);
       return;
     }
     try {
@@ -56,7 +67,15 @@ export default function Gestao() {
     } catch {
       setAccounts([]);
     }
+    /* The cofrinhos are the goals; the accounts do not wait on them. */
+    try {
+      setGoals(await fetchGoals());
+    } catch {
+      setGoals([]);
+    }
   }, [user]);
+
+  const announce = () => window.dispatchEvent(new CustomEvent("finance-data-changed"));
 
   useEffect(() => {
     void load();
@@ -79,6 +98,10 @@ export default function Gestao() {
   );
 
   const saldo = rows.reduce((s, r) => s + r.balance, 0);
+  /* Money in a cofrinho has left the account's balance but is still the person's, so
+     the whole of what they have is the two together. */
+  const guardado = goals.reduce((s, g) => s + (Number(g.current_amount) || 0), 0);
+  const total = saldo + guardado;
   /* Only what is actually in hand can take up room on a share rule; an account in
      the red still gets its line, so the list stays the whole truth. */
   const positive = rows.reduce((s, r) => s + Math.max(r.balance, 0), 0);
@@ -97,6 +120,7 @@ export default function Gestao() {
           <BackButton to="/" />
           <Pressable
             accessibilityLabel="Adicionar conta"
+            onPress={() => setAddingAccount(true)}
             style={({ pressed }) => ({
               width: 40,
               height: 40,
@@ -140,6 +164,21 @@ export default function Gestao() {
             <Text style={{ marginTop: 6, maxWidth: 256, textAlign: "center", fontSize: 13.5, lineHeight: 18, color: INK.soft }}>
               Cadastre uma conta para acompanhar o saldo e o que entra e sai dela.
             </Text>
+            <Pressable
+              onPress={() => setAddingAccount(true)}
+              style={({ pressed }) => ({
+                marginTop: 18,
+                height: 46,
+                paddingHorizontal: 24,
+                borderRadius: 23,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#fff",
+                opacity: pressed ? 0.85 : 1,
+              })}
+            >
+              <Text style={{ fontSize: 15, fontWeight: "700", color: "#0B0B0B" }}>Adicionar conta</Text>
+            </Pressable>
           </Surface>
         ) : (
           <>
@@ -161,6 +200,24 @@ export default function Gestao() {
               <Text style={{ marginTop: 10, fontSize: 12.5, color: INK.soft }}>
                 {rows.length} {rows.length === 1 ? "conta" : "contas"}
               </Text>
+
+              {/* With a cofrinho, the accounts are not the whole of it. */}
+              {guardado > 0 && (
+                <View style={{ marginTop: 18, flexDirection: "row", gap: 24 }}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ fontSize: 12.5, color: INK.soft }}>Nos cofrinhos</Text>
+                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 19, fontWeight: "700", letterSpacing: -0.5, color: "#fff" }}>
+                      {money(guardado)}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ fontSize: 12.5, color: INK.soft }}>Saldo total</Text>
+                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 19, fontWeight: "700", letterSpacing: -0.5, color: total < 0 ? RED : "#fff" }}>
+                      {money(total)}
+                    </Text>
+                  </View>
+                </View>
+              )}
             </Animated.View>
 
             {/* ══ The accounts, one line each ══ */}
@@ -248,9 +305,120 @@ export default function Gestao() {
                 );
               })}
             </Animated.View>
+
+            {/* ══ Cofrinhos: money set aside for something, still yours ══ */}
+            <Animated.View entering={FadeInDown.delay(120).duration(420)} style={{ marginTop: 30 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 4 }}>
+                <Text style={T.eyebrow}>Cofrinhos</Text>
+                <Pressable
+                  onPress={() => setAddingCofrinho(true)}
+                  hitSlop={8}
+                  style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, opacity: pressed ? 0.6 : 1 })}
+                >
+                  <Plus size={14} color="#fff" strokeWidth={2.6} />
+                  <Text style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>Novo</Text>
+                </Pressable>
+              </View>
+
+              {goals.length === 0 ? (
+                <Pressable
+                  onPress={() => setAddingCofrinho(true)}
+                  style={({ pressed }) => ({
+                    marginTop: 8,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 14,
+                    borderRadius: 22,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.08)",
+                    backgroundColor: "rgba(255,255,255,0.04)",
+                    padding: 16,
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.07)" }}>
+                    <PiggyBank size={20} color="#fff" strokeWidth={2} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Crie seu primeiro cofrinho</Text>
+                    <Text style={{ marginTop: 2, fontSize: 12.5, lineHeight: 17, color: INK.soft }}>
+                      Para a viagem, a reserva de emergência, o carro. O dinheiro sai da conta, mas continua seu.
+                    </Text>
+                  </View>
+                  <ChevronRight size={16} color={INK.softer} />
+                </Pressable>
+              ) : (
+                goals.map((g, i) => {
+                  const preset = goalPreset(g);
+                  const Icon = preset.icon;
+                  const { progress, isComplete } = goalProgress(g);
+                  const pace = paceOf(g);
+                  const note = isComplete
+                    ? "Meta concluída"
+                    : pace.open
+                      ? isReserveGoal(g)
+                        ? "Reserva · sem prazo"
+                        : "Sem prazo"
+                      : pace.late
+                        ? "Prazo vencido"
+                        : `Guarde ${money(pace.monthly)}/mês · até ${monthYear(g.deadline as string)}`;
+                  return (
+                    <Pressable
+                      key={g.id}
+                      onPress={() => router.push(`/metas/${g.id}` as never)}
+                      style={({ pressed }) => ({
+                        paddingHorizontal: 4,
+                        paddingVertical: 16,
+                        borderTopWidth: i > 0 ? 1 : 0,
+                        borderTopColor: "rgba(255,255,255,0.06)",
+                        opacity: pressed ? 0.6 : 1,
+                      })}
+                    >
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                        <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: `${preset.hex}22` }}>
+                          <Icon size={18} color={preset.hex} strokeWidth={2} />
+                        </View>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>{g.name}</Text>
+                          <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: pace.late ? RED : INK.softer }}>{note}</Text>
+                        </View>
+                        <View style={{ alignItems: "flex-end" }}>
+                          <Text style={{ fontSize: 15.5, fontWeight: "700", color: "#fff" }}>{money(Number(g.current_amount) || 0)}</Text>
+                          <Text style={{ marginTop: 2, fontSize: 12, color: INK.softer }}>de {money(Number(g.target_amount) || 0)}</Text>
+                        </View>
+                      </View>
+                      <View style={{ marginTop: 12, marginLeft: 54, height: 4, borderRadius: 999, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.08)" }}>
+                        <View style={{ width: `${Math.round(progress * 100)}%`, height: 4, borderRadius: 999, backgroundColor: preset.hex }} />
+                      </View>
+                    </Pressable>
+                  );
+                })
+              )}
+            </Animated.View>
           </>
         )}
       </ScrollView>
+
+      <AccountSheet
+        open={addingAccount}
+        onClose={() => setAddingAccount(false)}
+        existingNames={rows.map((r) => r.account.name)}
+        onCreated={() => {
+          setAddingAccount(false);
+          void load();
+          announce();
+        }}
+      />
+      <CofrinhoSheet
+        open={addingCofrinho}
+        onClose={() => setAddingCofrinho(false)}
+        existingNames={goals.map((g) => g.name)}
+        onCreated={() => {
+          setAddingCofrinho(false);
+          void load();
+          announce();
+        }}
+      />
     </Room>
   );
 }
