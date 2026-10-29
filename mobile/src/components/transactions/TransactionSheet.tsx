@@ -8,7 +8,9 @@ import { deleteTransaction, updateTransaction, updateTransactionStatus } from "@
 import { excludeRecurringForMonth, excludeRecurringFromMonthOnward } from "@/services/recurringService";
 import type { TransactionRow as Row } from "@/services/monthTransactions";
 import type { CustomCategory } from "@/services/categoryService";
+import { BlurView } from "expo-blur";
 import BottomSheet from "~/components/BottomSheet";
+import RoundButton from "~/components/RoundButton";
 import {
   AlertTriangle,
   CalendarDays,
@@ -192,10 +194,11 @@ export default function TransactionSheet({
               borderCurve: "continuous",
               borderWidth: 1,
               borderColor: "rgba(255,255,255,0.12)",
-              backgroundColor: "#1A1B1E",
               overflow: "hidden",
             }}
           >
+            <BlurView intensity={70} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+            <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.5)" }} />
             <MenuItem
               icon={Pencil}
               label="Editar"
@@ -234,39 +237,12 @@ export default function TransactionSheet({
             </View>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Pressable
-              onPress={() => setMenuOpen((v) => !v)}
-              accessibilityLabel="Mais opções"
-              accessibilityState={{ expanded: menuOpen }}
-              hitSlop={8}
-              style={({ pressed }) => ({
-                width: 34,
-                height: 34,
-                borderRadius: 17,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: menuOpen ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.06)",
-                opacity: pressed ? 0.6 : 1,
-              })}
-            >
-              <MoreVertical size={17} color="rgba(255,255,255,0.8)" />
-            </Pressable>
-            <Pressable
-              onPress={onClose}
-              accessibilityLabel="Fechar"
-              hitSlop={8}
-              style={({ pressed }) => ({
-                width: 34,
-                height: 34,
-                borderRadius: 17,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "rgba(255,255,255,0.06)",
-                opacity: pressed ? 0.6 : 1,
-              })}
-            >
-              <X size={16} color="rgba(255,255,255,0.74)" />
-            </Pressable>
+            <RoundButton label="Mais opções" onPress={() => setMenuOpen((v) => !v)}>
+              <MoreVertical size={18} color="rgba(255,255,255,0.9)" />
+            </RoundButton>
+            <RoundButton label="Fechar" onPress={onClose}>
+              <X size={18} color="rgba(255,255,255,0.9)" />
+            </RoundButton>
           </View>
         </View>
 

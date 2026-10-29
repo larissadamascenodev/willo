@@ -1,6 +1,9 @@
 import { type ReactNode } from "react";
 import type { WidgetSize } from "@/lib/homeWidgets";
 import type { CategoryExpense, FinanceEvent, Transaction } from "@/types/finance";
+import type { RecurringItem } from "@/hooks/useRecorrentes";
+import type { EndedSubscription } from "~/lib/subscriptionCheck";
+import { upcoming } from "~/lib/events";
 import SaldoContasCard from "~/components/home/SaldoContasCard";
 import FluxoCard from "~/components/home/FluxoCard";
 import ProximosEventos from "~/components/home/ProximosEventos";
@@ -28,6 +31,22 @@ export interface HomeWidgetContext {
   transactions: Transaction[];
   month: number;
   isCurrentMonth: boolean;
+  assinaturas: RecurringItem[];
+  totalAssinaturas: number;
+  ended: EndedSubscription[];
+  keepEnded: (e: EndedSubscription) => void;
+  cancelEnded: (e: EndedSubscription) => void;
+}
+
+/**
+ * Cards that have nothing to say are not on the board at all, rather than drawn empty:
+ * subscriptions when there are none, and the events once the month is settled. They are
+ * back as soon as there is something, so nothing is removed from the person's layout.
+ */
+export function widgetIsEmpty(id: string, ctx: HomeWidgetContext): boolean {
+  if (id === "assinaturas") return ctx.assinaturas.length === 0 && ctx.ended.length === 0;
+  if (id === "eventos") return upcoming(ctx.events).length === 0;
+  return false;
 }
 
 export function renderHomeWidget(
@@ -59,7 +78,16 @@ export function renderHomeWidget(
       return <ParcelamentosTile size={size} />;
 
     case "assinaturas":
-      return <AssinaturasTile size={size} />;
+      return (
+        <AssinaturasTile
+          size={size}
+          assinaturas={ctx.assinaturas}
+          total={ctx.totalAssinaturas}
+          ended={ctx.ended}
+          onKeep={ctx.keepEnded}
+          onCancel={ctx.cancelEnded}
+        />
+      );
 
     case "metas":
       return <MetasTile size={size} />;

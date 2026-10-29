@@ -97,8 +97,12 @@ export function useRecorrentes() {
   }, [refetch]);
 
   const split = useMemo(() => {
-    const assinaturas = items.filter((i) => i.txType === "despesa" && isSubscription(i.name));
-    const gastosFixos = items.filter((i) => i.txType === "despesa" && !isSubscription(i.name));
+    /* What repeats on a card is a subscription whatever it is called: a card is where
+       a service bills you every month, and the form itself calls that option
+       "Assinatura" there. */
+    const isSub = (i: RecurringItem) => i.txType === "despesa" && (i.source === "cartao" || isSubscription(i.name));
+    const assinaturas = items.filter(isSub);
+    const gastosFixos = items.filter((i) => i.txType === "despesa" && !isSub(i));
     const receitasFixas = items.filter((i) => i.txType === "receita");
     const sum = (list: RecurringItem[]) => list.reduce((t, i) => t + i.amount, 0);
     return {

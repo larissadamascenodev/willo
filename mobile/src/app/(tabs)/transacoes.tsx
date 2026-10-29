@@ -3,12 +3,15 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, TextInp
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { removeInitialBalance } from "@/services/transactionService";
 import { loadMonthTransactions, type AccountRow, type TransactionRow as Row } from "@/services/monthTransactions";
 import { useMonth } from "@/contexts/MonthContext";
 import MonthStrip from "~/components/MonthStrip";
 import type { CustomCategory } from "@/services/categoryService";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import Room from "~/components/Room";
+import ConfirmGlass from "~/components/ConfirmGlass";
+import { showToast } from "~/lib/toast";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import TransactionRow from "~/components/transactions/TransactionRow";
 import TransactionsSummary, { TransactionTabs } from "~/components/transactions/TransactionsSummary";
@@ -80,7 +83,28 @@ export default function Transacoes() {
 
   /* Only real movements open or hold: an invoice line opens its invoice, and an
      opening balance is a record of when the account was created. */
-  const isReal = (tx: Row) => !tx.id.startsWith("fatura-") && !tx.id.startsWith("initial-balance-");
+  const isOpening = (tx: Row) => tx.id.startsWith("initial-balance-");
+  const isReal = (tx: Row) => !tx.id.startsWith("fatura-") && !isOpening(tx);
+
+  /* An opening balance goes like any other income: asked once, then gone from the
+     month and from the account's balance. */
+  const [opening, setOpening] = useState<Row | null>(null);
+  const [removingOpening, setRemovingOpening] = useState(false);
+  const removeOpening = async () => {
+    if (!opening?.account_id || removingOpening) return;
+    setRemovingOpening(true);
+    try {
+      await removeInitialBalance(opening.account_id);
+      window.dispatchEvent(new CustomEvent("transaction-created"));
+      setOpening(null);
+      showToast("Saldo inicial excluído");
+      void load();
+    } catch {
+      showToast("Não foi possível excluir. Tente de novo.");
+    } finally {
+      setRemovingOpening(false);
+    }
+  };
 
   const removeHeld = async (scope: "month" | "all") => {
     if (!held || removing) return;
@@ -258,10 +282,16 @@ export default function Transacoes() {
                           router.push(`/fatura/${tx.credit_card_id}` as never);
                           return;
                         }
+                        if (isOpening(tx)) {
+                          setOpening(tx);
+                          return;
+                        }
                         if (isReal(tx)) setDetail(tx);
                       }}
                       onHold={
-                        isReal(tx)
+                        isOpening(tx)
+                          ? () => setOpening(tx)
+                          : isReal(tx)
                           ? (rect) => {
                               setHeld(tx);
                               setHeldRect(rect);
@@ -327,6 +357,19 @@ export default function Transacoes() {
           </>
         )}
       </AnchoredMenu>
+
+      <ConfirmGlass
+        open={!!opening}
+        title="Excluir saldo inicial?"
+        confirmLabel="Excluir"
+        busy={removingOpening}
+        onConfirm={() => void removeOpening()}
+        onClose={() => setOpening(null)}
+      >
+        {opening
+          ? `Os ${money(Number(opening.amount))} que entraram em ${opening.observation?.replace("Saldo inicial da conta ", "") ?? "essa conta"} deixam de contar no saldo dela.`
+          : ""}
+      </ConfirmGlass>
 
       <TransactionSheet
         tx={detail}

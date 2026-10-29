@@ -37,9 +37,9 @@ const HOUR = require("../../assets/sky.png") as number;
  * home there reads as one picture: drawing both stacked a second set of lights over
  * the hour and turned it to haze.
  *
- * `lit` is the difference between the app's two grounds: the home, the wallet and
- * the accounts screen keep the full light, and everywhere else it is turned down,
- * because those screens are mostly lists and the room only competes with them.
+ * Every screen wears the home's ground: one picture across the whole app, so moving
+ * between screens never changes the room. `lit` and `sky` stay as props only so a screen
+ * can opt out of it; none does.
  */
 
 const LIGHTS = [
@@ -49,8 +49,8 @@ const LIGHTS = [
 ];
 
 export default function Room({
-  lit = false,
-  sky = false,
+  lit = true,
+  sky = true,
   children,
   style,
 }: {

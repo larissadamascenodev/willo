@@ -48,6 +48,8 @@ interface Props {
   userId?: string;
   /** Draws a widget at the width it is currently set to. */
   render: (id: string, size: WidgetSize) => ReactNode;
+  /** Cards with nothing to say right now: kept in the layout, left off the board. */
+  skip?: (id: string) => boolean;
   /** Space between cards, and between the halves of a row. */
   gap?: number;
   /* Edit mode is held by the screen rather than here, because the bar that says
@@ -57,7 +59,7 @@ interface Props {
   onEditingChange: (editing: boolean) => void;
 }
 
-export default function WidgetBoard({ userId, render, gap = 16, editing, onEditingChange }: Props) {
+export default function WidgetBoard({ userId, render, skip, gap = 16, editing, onEditingChange }: Props) {
   const [slots, setSlots] = useState<WidgetSlot[]>(() => loadPhoneLayout(userId));
   const [held, setHeld] = useState<WidgetMenuTarget | null>(null);
   const [adding, setAdding] = useState(false);
@@ -169,6 +171,7 @@ export default function WidgetBoard({ userId, render, gap = 16, editing, onEditi
     const out: WidgetSlot[][] = [];
     let row: WidgetSlot[] = [];
     for (const slot of slots) {
+      if (skip?.(slot.id)) continue;
       if (slot.size === "full") {
         if (row.length) {
           out.push(row);
@@ -185,7 +188,7 @@ export default function WidgetBoard({ userId, render, gap = 16, editing, onEditi
     }
     if (row.length) out.push(row);
     return out;
-  }, [slots]);
+  }, [slots, skip]);
 
   const missing = WIDGETS.filter((w) => !slots.some((s) => s.id === w.id));
 

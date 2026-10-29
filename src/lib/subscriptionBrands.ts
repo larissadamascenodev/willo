@@ -37,6 +37,13 @@ const BRAND_MAP: Record<string, BrandInfo> = {
   "google one":   { bg: "#000000", fg: "#4285F4", logo: "https://www.gstatic.com/images/branding/product/2x/google_one_64dp.png" },
   dropbox:        { bg: "#000000", fg: "#0061FF", icon: "DB" },
   onedrive:       { bg: "#000000", fg: "#0078D4", icon: "OD" },
+  claude:         { bg: "#000000", fg: "#D97757", icon: "CL" },
+  anthropic:      { bg: "#000000", fg: "#D97757", icon: "CL" },
+  cursor:         { bg: "#000000", fg: "#fff", icon: "Cu" },
+  midjourney:     { bg: "#000000", fg: "#fff", icon: "MJ" },
+  adobe:          { bg: "#000000", fg: "#FF0000", icon: "Ad" },
+  "microsoft 365":{ bg: "#000000", fg: "#F25022", icon: "M" },
+  "google workspace": { bg: "#000000", fg: "#4285F4", icon: "G" },
   chatgpt:        { bg: "#000000", fg: "#10A37F", logo: "https://cdn.oaistatic.com/assets/apple-touch-icon-mz9nytnj.png" },
   openai:         { bg: "#000000", fg: "#10A37F", logo: "https://cdn.oaistatic.com/assets/apple-touch-icon-mz9nytnj.png" },
   academia:       { bg: "#1a1a2e", fg: "#FF6B35" },
@@ -102,7 +109,10 @@ export function getBrand(name: string): BrandInfo & { matched: boolean } {
   return { bg: "transparent", fg: "hsl(var(--primary))", matched: false };
 }
 
+/** A name that says so itself: "Assinatura da academia", "Mensalidade do curso". */
+const SAYS_SO = /(assinatura|mensalidade)/i;
+
 /** A recurring charge people would call an assinatura, rather than a fixed bill. */
 export function isSubscription(name: string): boolean {
-  return getBrand(name).matched;
+  return getBrand(name).matched || SAYS_SO.test(name);
 }

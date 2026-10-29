@@ -18,6 +18,7 @@ import {
 } from "@/services/goalService";
 import { getAccounts } from "@/services/transactionService";
 import { goalProgress } from "@/lib/goalPresets";
+import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import RoundButton from "~/components/RoundButton";
 import ConfirmGlass from "~/components/ConfirmGlass";
@@ -40,7 +41,7 @@ import {
 import { money } from "~/lib/money";
 import { monthYear, paceOf } from "~/lib/cofrinho";
 import { useAuth } from "~/lib/auth";
-import { GREEN, GROUND_LIT, INK, RED } from "~/theme/tokens";
+import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 /**
@@ -241,7 +242,7 @@ export default function MetaDetalhe() {
 
   if (loading || !goal) {
     return (
-      <View style={{ flex: 1, backgroundColor: GROUND_LIT }}>
+      <Room>
         <ScrollView contentContainerStyle={{ paddingTop: insets.top + 8, paddingHorizontal: 16 }}>
           <View style={{ height: 44, justifyContent: "center" }}>
             <BackButton to="/gestao" />
@@ -251,7 +252,7 @@ export default function MetaDetalhe() {
             <View style={{ height: 80, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.04)" }} />
           </View>
         </ScrollView>
-      </View>
+      </Room>
     );
   }
 
@@ -287,22 +288,22 @@ export default function MetaDetalhe() {
   const heroH = HERO + insets.top;
 
   return (
-    <View style={{ flex: 1, backgroundColor: GROUND_LIT }}>
+    <Room>
       <ScrollView
         contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         showsVerticalScrollIndicator={false}
       >
         {/* ══ Its picture, and across the foot of it what it is and what is kept ══ */}
-        <View style={{ height: heroH }}>
+        <View style={{ height: heroH, overflow: "hidden", borderBottomLeftRadius: 36, borderBottomRightRadius: 36, borderCurve: "continuous" }}>
           <CofrinhoCover goal={goal} height={heroH} glyph={200} glyphTop={insets.top + 40} />
           <LinearGradient
             colors={["rgba(0,0,0,0.45)", "rgba(0,0,0,0)"]}
             style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 100 }}
           />
           <LinearGradient
-            colors={["rgba(13,14,16,0)", "rgba(13,14,16,0.78)", GROUND_LIT]}
-            locations={[0, 0.5, 1]}
-            style={{ position: "absolute", left: 0, right: 0, bottom: -1, height: 231 }}
+            colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.55)", "rgba(8,9,10,0.88)"]}
+            locations={[0, 0.55, 1]}
+            style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 210 }}
           />
 
           <View style={{ position: "absolute", top: insets.top + 8, left: 16, right: 16, height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -572,7 +573,7 @@ export default function MetaDetalhe() {
         }}
         saved={goal.current_amount}
       />
-    </View>
+    </Room>
   );
 }
 

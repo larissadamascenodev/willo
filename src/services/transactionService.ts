@@ -349,6 +349,29 @@ export async function updateAccount(id: string, updates: {
   return data;
 }
 
+/**
+ * Takes an account's opening balance out, the way any other income or expense is
+ * deleted: the line it left in the month goes, and the balance drops by what it had added.
+ * The balance is a stored figure that only transactions keep up to date, so the two
+ * numbers are moved together instead of leaving the account out of step with its history.
+ */
+export async function removeInitialBalance(id: string) {
+  const { data: account, error: readError } = await supabase
+    .from("accounts")
+    .select("initial_balance, current_balance")
+    .eq("id", id)
+    .single();
+  if (readError) throw readError;
+
+  const opening = Number(account.initial_balance) || 0;
+  const { error } = await supabase
+    .from("accounts")
+    .update({ initial_balance: 0, current_balance: (Number(account.current_balance) || 0) - opening })
+    .eq("id", id);
+  if (error) throw error;
+  notifyFinanceDataChanged();
+}
+
 export async function deleteAccount(id: string) {
   const { error } = await supabase
     .from("accounts")

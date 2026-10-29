@@ -1,22 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Platform, Text, View, type TextStyle } from "react-native";
+import { Platform, Pressable, ScrollView, Text, View, type TextStyle } from "react-native";
 import { useRouter } from "expo-router";
 import Svg, { Circle } from "react-native-svg";
-import { supabase } from "~/supabase/client";
+import { fetchGoals, type Goal } from "@/services/goalService";
 import type { WidgetSize } from "@/lib/homeWidgets";
 import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import { categoryHex } from "@/lib/categoryData";
 import { goalProgress } from "@/lib/goalPresets";
 import { installmentTotals, loadActiveInstallments } from "@/services/activeInstallments";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
-import { useRecorrentes, daysUntil, type RecurringItem } from "@/hooks/useRecorrentes";
+import { daysUntil, type RecurringItem } from "@/hooks/useRecorrentes";
+import type { EndedSubscription } from "~/lib/subscriptionCheck";
 import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
 import { ChevronRight } from "~/components/icons";
-import { goalPreset } from "~/lib/goalIcon";
+import CofrinhoTile from "~/components/accounts/CofrinhoTile";
 import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
-import { GREEN, INK } from "~/theme/tokens";
+import { AMBER, GREEN, INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 /**
@@ -300,26 +301,120 @@ const whenDue = (dueDay: number) => {
 };
 
 /**
- * What repeats every month and carries a brand: the streaming, the gym, the phone.
+ * What repeats every month and carries a brand — and whatever repeats on a card.
  *
  * A slice of the recurring charges rather than a list of its own, because nothing in
- * the data marks a row as a subscription.
+ * the data marks a row as a subscription. With none, the card is not drawn at all: it
+ * has nothing to say and is back the day there is one. When a subscription did not turn
+ * up in the month that closed, the card leads with the question — still subscribed? —
+ * because it is the one thing here someone has to answer.
  */
-export function AssinaturasTile({ size = "full" }: { size?: WidgetSize }) {
+export function AssinaturasTile({
+  size = "full",
+  assinaturas,
+  total,
+  ended,
+  onKeep,
+  onCancel,
+}: {
+  size?: WidgetSize;
+  assinaturas: RecurringItem[];
+  total: number;
+  ended: EndedSubscription[];
+  onKeep: (e: EndedSubscription) => void;
+  onCancel: (e: EndedSubscription) => void;
+}) {
   const router = useRouter();
-  const { user } = useAuth();
-  const { assinaturas, totalAssinaturas, loading } = useRecorrentes();
-
-  /* The shared hook never settles without a session; that is not loading, it is
-     nothing to show. */
-  if (loading && user) return <Skeleton size={size} />;
+  if (assinaturas.length === 0 && ended.length === 0) return null;
   return (
     <AssinaturasCard
       assinaturas={assinaturas}
-      total={totalAssinaturas}
+      total={total}
+      ended={ended}
+      onKeep={onKeep}
+      onCancel={onCancel}
       size={size}
       onOpen={() => router.push("/transacoes")}
     />
+  );
+}
+
+const MONTH_NAMES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+/** The question for a subscription that did not show up: asked in place, answered in a tap. */
+function EndedAsk({
+  item,
+  onKeep,
+  onCancel,
+}: {
+  item: EndedSubscription;
+  onKeep: () => void;
+  onCancel: () => Promise<void> | void;
+}) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <View
+      style={{
+        marginTop: 14,
+        padding: 14,
+        borderRadius: 18,
+        borderCurve: "continuous",
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.12)",
+        backgroundColor: "rgba(255,255,255,0.06)",
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <Mark name={item.name} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text numberOfLines={2} style={{ fontSize: 14.5, fontWeight: "600", color: "#fff" }}>
+            {item.name} não foi cobrada em {MONTH_NAMES[item.month]}
+          </Text>
+          <Text style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>Você ainda assina?</Text>
+        </View>
+      </View>
+      <View style={{ marginTop: 12, flexDirection: "row", gap: 8 }}>
+        <Pressable
+          disabled={busy}
+          onPress={onKeep}
+          style={({ pressed }) => ({
+            flex: 1,
+            height: 40,
+            borderRadius: 20,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#fff",
+            opacity: busy ? 0.5 : pressed ? 0.85 : 1,
+          })}
+        >
+          <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#0B0B0B" }}>Sim, continua</Text>
+        </Pressable>
+        <Pressable
+          disabled={busy}
+          onPress={async () => {
+            setBusy(true);
+            try {
+              await onCancel();
+            } finally {
+              setBusy(false);
+            }
+          }}
+          style={({ pressed }) => ({
+            flex: 1,
+            height: 40,
+            borderRadius: 20,
+            alignItems: "center",
+            justifyContent: "center",
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.14)",
+            backgroundColor: "rgba(255,255,255,0.08)",
+            opacity: busy ? 0.5 : pressed ? 0.75 : 1,
+          })}
+        >
+          <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#fff" }}>{busy ? "Cancelando…" : "Cancelei"}</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -327,11 +422,17 @@ export function AssinaturasTile({ size = "full" }: { size?: WidgetSize }) {
 export function AssinaturasCard({
   assinaturas,
   total: totalAssinaturas,
+  ended = [],
+  onKeep,
+  onCancel,
   size,
   onOpen: open,
 }: {
   assinaturas: RecurringItem[];
   total: number;
+  ended?: EndedSubscription[];
+  onKeep?: (e: EndedSubscription) => void;
+  onCancel?: (e: EndedSubscription) => void | Promise<void>;
   size: WidgetSize;
   onOpen: () => void;
 }) {
@@ -339,15 +440,7 @@ export function AssinaturasCard({
   const next = assinaturas
     .filter((a) => !a.isPaidThisMonth)
     .sort((a, b) => daysUntil(a.dueDay) - daysUntil(b.dueDay));
-
-  if (n === 0) {
-    return (
-      <Surface onPress={open} style={{ flex: 1, padding: 16 }}>
-        <Header title="Assinaturas" />
-        <Empty text="Nenhuma assinatura ativa." />
-      </Surface>
-    );
-  }
+  const ask = ended[0];
 
   if (size !== "full") {
     return (
@@ -357,8 +450,8 @@ export function AssinaturasCard({
         <View style={{ marginTop: 10 }}>
           <MarkRow items={assinaturas} max={3} />
         </View>
-        <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 12, color: INK.soft }}>
-          {next[0] ? `${next[0].name} ${whenDue(next[0].dueDay)}` : "Tudo pago no mês"}
+        <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 12, color: ask ? AMBER : INK.soft }}>
+          {ask ? `Confirmar ${ask.name}` : next[0] ? `${next[0].name} ${whenDue(next[0].dueDay)}` : "Tudo pago no mês"}
         </Text>
       </Surface>
     );
@@ -366,50 +459,53 @@ export function AssinaturasCard({
 
   return (
     <Surface onPress={open} style={{ padding: 16 }}>
-      <Header title="Assinaturas" aside={`${n} ${n === 1 ? "ativa" : "ativas"}`} />
-      <Lead value={money(totalAssinaturas)} unit="por mês" />
-      <View style={{ marginTop: 12 }}>
-        <MarkRow items={assinaturas} max={7} />
-      </View>
+      <Header title="Assinaturas" aside={n > 0 ? `${n} ${n === 1 ? "ativa" : "ativas"}` : undefined} />
 
-      <View style={{ marginTop: 14, borderTopWidth: 1, borderTopColor: RULE }}>
-        {next.length === 0 ? (
-          <Text style={{ paddingTop: 12, fontSize: 13, color: INK.soft }}>Todas já foram pagas este mês.</Text>
-        ) : (
-          next.slice(0, 2).map((s) => (
-            <View key={s.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingTop: 12 }}>
-              <Mark name={s.name} />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "500", color: "#fff" }}>
-                  {s.name}
-                </Text>
-                <Text style={{ marginTop: 1, fontSize: 12, color: INK.softer }}>
-                  dia {s.dueDay}, {whenDue(s.dueDay)}
-                </Text>
-              </View>
-              <Text style={[nums, { fontSize: 14.5, fontWeight: "600", color: "#fff" }]}>{money(s.amount)}</Text>
-            </View>
-          ))
-        )}
-      </View>
+      {ask && onKeep && onCancel ? (
+        <EndedAsk item={ask} onKeep={() => onKeep(ask)} onCancel={() => onCancel(ask)} />
+      ) : null}
+
+      {n > 0 && (
+        <>
+          <Lead value={money(totalAssinaturas)} unit="por mês" />
+          <View style={{ marginTop: 12 }}>
+            <MarkRow items={assinaturas} max={7} />
+          </View>
+
+          <View style={{ marginTop: 14, borderTopWidth: 1, borderTopColor: RULE }}>
+            {next.length === 0 ? (
+              <Text style={{ paddingTop: 12, fontSize: 13, color: INK.soft }}>Todas já foram pagas este mês.</Text>
+            ) : (
+              next.slice(0, 2).map((s) => (
+                <View key={s.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingTop: 12 }}>
+                  <Mark name={s.name} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "500", color: "#fff" }}>
+                      {s.name}
+                    </Text>
+                    <Text style={{ marginTop: 1, fontSize: 12, color: INK.softer }}>
+                      dia {s.dueDay}, {whenDue(s.dueDay)}
+                      {s.source === "cartao" ? " · no cartão" : ""}
+                    </Text>
+                  </View>
+                  <Text style={[nums, { fontSize: 14.5, fontWeight: "600", color: "#fff" }]}>{money(s.amount)}</Text>
+                </View>
+              ))
+            )}
+          </View>
+        </>
+      )}
     </Surface>
   );
 }
 
 /* ────────────────────────────────── Goals ────────────────────────────────── */
 
-export interface GoalRow {
-  id: string;
-  name: string;
-  target_amount: number;
-  current_amount: number;
-}
-
 /** How much has been put aside, and how close each goal is. */
 export function MetasTile({ size = "full" }: { size?: WidgetSize }) {
   const router = useRouter();
   const { user } = useAuth();
-  const [goals, setGoals] = useState<GoalRow[] | null>(null);
+  const [goals, setGoals] = useState<Goal[] | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -418,11 +514,12 @@ export function MetasTile({ size = "full" }: { size?: WidgetSize }) {
       return;
     }
     const load = async () => {
-      const { data } = await supabase
-        .from("goals")
-        .select("id, name, target_amount, current_amount")
-        .eq("user_id", user.id);
-      if (alive) setGoals((data as GoalRow[]) ?? []);
+      try {
+        const rows = await fetchGoals();
+        if (alive) setGoals(rows);
+      } catch {
+        if (alive) setGoals([]);
+      }
     };
     void load();
     const onChange = () => void load();
@@ -434,20 +531,29 @@ export function MetasTile({ size = "full" }: { size?: WidgetSize }) {
   }, [user]);
 
   if (goals === null) return <Skeleton size={size} />;
-  return <MetasCard goals={goals} size={size} onOpen={() => router.push("/metas")} />;
+  return <MetasCard goals={goals} size={size} onOpen={() => router.push("/metas")} onOpenGoal={(id) => router.push(`/metas/${id}` as never)} />;
 }
 
-/** The goals card itself, drawn from what it is handed. */
+const SHELF_W = 132;
+const SHELF_H = 172;
+
+/**
+ * The goals card itself, drawn from what it is handed.
+ *
+ * Full width it is the same shelf of picture cards the accounts screen has, smaller:
+ * a goal looks the same wherever it is met. The nearest to done come first.
+ */
 export function MetasCard({
   goals,
   size,
   onOpen: open,
+  onOpenGoal,
 }: {
-  goals: GoalRow[];
+  goals: Goal[];
   size: WidgetSize;
   onOpen: () => void;
+  onOpenGoal?: (id: string) => void;
 }) {
-
   if (goals.length === 0) {
     return (
       <Surface onPress={open} style={{ flex: 1, padding: 16 }}>
@@ -457,8 +563,8 @@ export function MetasCard({
     );
   }
 
-  const guardado = goals.reduce((s, g) => s + g.current_amount, 0);
-  const objetivo = goals.reduce((s, g) => s + g.target_amount, 0);
+  const guardado = goals.reduce((s, g) => s + (Number(g.current_amount) || 0), 0);
+  const objetivo = goals.reduce((s, g) => s + (Number(g.target_amount) || 0), 0);
   const overall = objetivo > 0 ? Math.min(guardado / objetivo, 1) : 0;
 
   if (size !== "full") {
@@ -480,51 +586,36 @@ export function MetasCard({
   const ordered = [...goals]
     .map((g) => ({ goal: g, ...goalProgress(g) }))
     .sort((a, b) => Number(a.isComplete) - Number(b.isComplete) || b.progress - a.progress)
-    .slice(0, 3);
+    .slice(0, 6);
 
   return (
-    <Surface onPress={open} style={{ padding: 16 }}>
-      <Header title="Metas" aside={`${goals.length} ${goals.length === 1 ? "meta" : "metas"}`} />
-      <Lead value={money(guardado)} unit="guardados" />
-      <Text style={[nums, { marginTop: 2, fontSize: 12.5, color: INK.soft }]}>
-        {Math.round(overall * 100)}% de {money(objetivo)}
-      </Text>
-
-      <View style={{ marginTop: 14, borderTopWidth: 1, borderTopColor: RULE, gap: 12, paddingTop: 12 }}>
-        {ordered.map(({ goal, progress, percent, isComplete }, i) => {
-          const preset = goalPreset(goal);
-          const Icon = preset.icon;
-          return (
-            <View key={goal.id} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <View
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: `${preset.hex}24`,
-                }}
-              >
-                <Icon size={16} color={preset.hex} strokeWidth={2} />
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-                  <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: "500", color: "#fff" }}>
-                    {goal.name}
-                  </Text>
-                  <Text style={[nums, { fontSize: 12.5, fontWeight: "600", color: isComplete ? GREEN : INK.soft }]}>
-                    {isComplete ? "concluída" : `${percent}%`}
-                  </Text>
-                </View>
-                <View style={{ marginTop: 6 }}>
-                  <Track share={progress} color={preset.hex} height={4} delay={0.15 + i * 0.06} />
-                </View>
-              </View>
-            </View>
-          );
-        })}
+    <Surface onPress={open} style={{ paddingTop: 16, paddingBottom: 16 }}>
+      <View style={{ paddingHorizontal: 16 }}>
+        <Header title="Metas" aside={`${goals.length} ${goals.length === 1 ? "meta" : "metas"}`} />
+        <Lead value={money(guardado)} unit="guardados" />
+        <Text style={[nums, { marginTop: 2, fontSize: 12.5, color: INK.soft }]}>
+          {Math.round(overall * 100)}% de {money(objetivo)}
+        </Text>
       </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, gap: 10, marginTop: 14 }}
+        snapToInterval={SHELF_W + 10}
+        decelerationRate="fast"
+      >
+        {ordered.map(({ goal }, i) => (
+          <CofrinhoTile
+            key={goal.id}
+            goal={goal}
+            delay={0.05 * i}
+            width={SHELF_W}
+            height={SHELF_H}
+            onPress={() => (onOpenGoal ? onOpenGoal(goal.id) : open())}
+          />
+        ))}
+      </ScrollView>
     </Surface>
   );
 }

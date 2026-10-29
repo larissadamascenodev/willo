@@ -25,7 +25,9 @@ import OrbHero, { ORB_HERO_BODY } from "~/components/home/OrbHero";
 import { useHomeHero } from "~/lib/homeHero";
 import WidgetBoard from "~/components/home/WidgetBoard";
 import EditBar from "~/components/home/EditBar";
-import { renderHomeWidget } from "~/components/home/HomeWidgets";
+import { renderHomeWidget, widgetIsEmpty } from "~/components/home/HomeWidgets";
+import { useRecorrentes } from "@/hooks/useRecorrentes";
+import { useEndedSubscriptions } from "~/lib/subscriptionCheck";
 import { useAuth } from "~/lib/auth";
 import { useNavChrome } from "~/lib/navChrome";
 import { INK } from "~/theme/tokens";
@@ -79,6 +81,8 @@ export default function Home() {
   const { data, refetch } = useFinanceData(month, year, { includeHistorical: false });
   const { profile } = useProfile();
   const { cards, invoices } = useCardsOverview();
+  const { assinaturas, totalAssinaturas } = useRecorrentes();
+  const { ended, keep: keepEnded, cancel: cancelEnded } = useEndedSubscriptions(user?.id);
 
   const name = profile?.display_name || user?.email?.split("@")[0] || "";
   const firstName = name.trim().split(" ")[0] ?? "";
@@ -172,9 +176,16 @@ export default function Home() {
       transactions: data.transactions ?? [],
       month,
       isCurrentMonth: true,
+      assinaturas,
+      totalAssinaturas,
+      ended,
+      keepEnded,
+      cancelEnded,
     }),
-    [data, month],
+    [data, month, assinaturas, totalAssinaturas, ended, keepEnded, cancelEnded],
   );
+
+  const skipWidget = useCallback((id: string) => widgetIsEmpty(id, widgetContext), [widgetContext]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -245,6 +256,7 @@ export default function Home() {
           editing={editing}
           onEditingChange={setEditing}
           render={(id, size) => renderHomeWidget(id, size, widgetContext)}
+          skip={skipWidget}
         />
       </Animated.ScrollView>
 
