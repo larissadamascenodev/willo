@@ -55,9 +55,12 @@ const catColor = (name: string, fallbackIdx: number, customCats?: CustomCategory
 export default function GastosPorCategoria({
   categories,
   month,
+  onAnalysis,
 }: {
   categories: CategoryExpense[];
   month: number;
+  /** Where "Análise" goes. By default, the categories page for the whole month. */
+  onAnalysis?: () => void;
 }) {
   const router = useRouter();
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
@@ -110,7 +113,7 @@ export default function GastosPorCategoria({
           </Text>
         </View>
         <Pressable
-          onPress={() => router.push("/analytics/categorias" as never)}
+          onPress={onAnalysis ?? (() => router.push("/analytics/categorias" as never))}
           hitSlop={8}
           style={({ pressed }) => ({
             flexDirection: "row",

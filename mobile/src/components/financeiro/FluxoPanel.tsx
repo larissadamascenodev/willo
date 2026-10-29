@@ -98,6 +98,8 @@ export default function FluxoPanel({
   const [subTab, setSubTab] = useState<SubTab>("geral");
   const [period, setPeriod] = useState<CashFlowPeriod>("mes");
   const [hidden, setHidden] = useState(false);
+  /* A tapped column: the figure, the legend and the list all narrow to it. */
+  const [picked, setPicked] = useState<string | null>(null);
   const strip = useRef<ComponentRef<typeof ScrollView>>(null);
 
   const inPeriod = useMemo(() => {
@@ -105,17 +107,23 @@ export default function FluxoPanel({
     return entries.filter((e) => e.date >= from);
   }, [entries, period]);
 
-  const totals = useMemo(() => sumFlow(inPeriod), [inPeriod]);
   const buckets = useMemo(() => buildCashFlowBuckets(inPeriod, period), [inPeriod, period]);
+  const pickedBucket = buckets.find((b) => b.key === picked) ?? null;
+  /* A day key is a whole date and a month key is "YYYY-MM": one prefix test serves both. */
+  const inFocus = useMemo(
+    () => (pickedBucket ? inPeriod.filter((e) => e.date.startsWith(pickedBucket.key)) : inPeriod),
+    [inPeriod, pickedBucket],
+  );
+  const totals = useMemo(() => sumFlow(inFocus), [inFocus]);
 
   const latest = useMemo(
     () =>
-      inPeriod
+      inFocus
         .filter((e) =>
           subTab === "geral" ? true : subTab === "entradas" ? e.kind === "entrada" : e.kind === "saida",
         )
         .slice(0, 6),
-    [inPeriod, subTab],
+    [inFocus, subTab],
   );
 
   /* The right edge is where today is. */
@@ -138,8 +146,14 @@ export default function FluxoPanel({
   const slot = single ? 52 : 58;
 
   const subject = subTab === "geral" ? "Fluxo geral" : subTab === "entradas" ? "Entradas" : "Saídas";
-  const title =
-    period === "mes"
+  const pickedLabel = pickedBucket
+    ? pickedBucket.day !== null
+      ? new Date(`${pickedBucket.key}T12:00:00`).toLocaleDateString("pt-BR", { day: "numeric", month: "long" })
+      : `${MONTH_NAMES[pickedBucket.month!]}`
+    : null;
+  const title = pickedLabel
+    ? `${subject} em ${pickedLabel}`
+    : period === "mes"
       ? `${subject} em ${MONTH_NAMES[new Date().getMonth()]}`
       : period === "1a"
         ? `${subject} no último ano`
@@ -209,7 +223,11 @@ export default function FluxoPanel({
         contentContainerStyle={{ paddingHorizontal: 4, paddingTop: 22, gap: 10 }}
       >
         {buckets.map((b, i) => (
-          <View key={b.key} style={{ width: slot, alignItems: "center" }}>
+          <Pressable
+            key={b.key}
+            onPress={() => setPicked((p) => (p === b.key ? null : b.key))}
+            style={{ width: slot, alignItems: "center", opacity: picked && picked !== b.key ? 0.35 : 1 }}
+          >
             <View style={{ height: HEIGHT, flexDirection: "row", alignItems: "flex-end", justifyContent: "center", gap: 6 }}>
               {subTab !== "saidas" && (
                 <Column
@@ -236,20 +254,23 @@ export default function FluxoPanel({
               style={{
                 marginTop: 12,
                 fontSize: 13,
-                fontWeight: b.isCurrent ? "600" : "400",
-                color: b.isCurrent ? "#fff" : INK.soft,
+                fontWeight: picked === b.key || (!picked && b.isCurrent) ? "600" : "400",
+                color: picked === b.key || (!picked && b.isCurrent) ? "#fff" : INK.soft,
               }}
             >
               {b.day !== null ? String(b.day).padStart(2, "0") : MONTH_UPPER[b.month!]}
             </Text>
-          </View>
+          </Pressable>
         ))}
       </ScrollView>
 
       <View style={{ marginTop: 22 }}>
         <SegmentedTabs
           value={period}
-          onChange={setPeriod}
+          onChange={(p) => {
+            setPeriod(p);
+            setPicked(null);
+          }}
           height={36}
           options={CASH_FLOW_PERIODS.map((p) => ({ key: p.key, label: p.label }))}
         />

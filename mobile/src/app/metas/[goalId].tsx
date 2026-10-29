@@ -241,7 +241,7 @@ export default function MetaDetalhe() {
 
   if (loading || !goal) {
     return (
-      <Room lit>
+      <Room lit sky>
         <ScrollView contentContainerStyle={{ paddingTop: insets.top + 8, paddingHorizontal: 16 }}>
           <View style={{ height: 44, justifyContent: "center" }}>
             <BackButton to="/metas" />
@@ -278,7 +278,7 @@ export default function MetaDetalhe() {
   const shown = showAll ? movements : movements.slice(0, PREVIEW);
 
   return (
-    <Room lit>
+    <Room lit sky>
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top + 8,

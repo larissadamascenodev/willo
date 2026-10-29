@@ -20,7 +20,7 @@ import Surface, { Hairline } from "~/components/Surface";
 import BankMark from "~/components/BankMark";
 import BottomSheet from "~/components/BottomSheet";
 import SegmentedTabs from "~/components/SegmentedTabs";
-import { FlexBar } from "~/components/Bar";
+import GastosPorCategoria from "~/components/home/GastosPorCategoria";
 import CenterModal from "~/components/CenterModal";
 import FluxoPanel from "~/components/financeiro/FluxoPanel";
 import SpendRing from "~/components/analytics/SpendRing";
@@ -177,7 +177,6 @@ export default function ContaDetalhe() {
       })),
     [categoryData, totalDespesas, customCats],
   );
-  const topCategory = overview[0] ?? null;
 
   const ordered = useMemo(
     () => [...movements].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
@@ -249,7 +248,7 @@ export default function ContaDetalhe() {
   const balance = Number(account?.current_balance ?? 0);
 
   return (
-    <Room lit>
+    <Room lit sky>
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top + 8,
@@ -335,64 +334,13 @@ export default function ContaDetalhe() {
 
             {/* ══ What took it: the biggest, called out, and the four after it ══ */}
             <Animated.View entering={FadeInDown.delay(110).duration(420)} style={{ marginTop: 34 }}>
-              <Text style={[T.eyebrow, { paddingHorizontal: 4 }]}>Onde mais saiu</Text>
-
-              {topCategory ? (
-                <Surface radius={26} onPress={() => setRingOpen(true)} style={{ marginTop: 12, padding: 16 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                    <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(topCategory.hex) }}>
-                      <topCategory.icon size={21} color={chipInk(topCategory.hex)} strokeWidth={2} />
-                    </View>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text numberOfLines={1} style={{ fontSize: 12, color: INK.soft }}>
-                        Maior gasto em {MONTH_NAMES[selectedMonth].toLowerCase()}
-                      </Text>
-                      <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 17, fontWeight: "700", letterSpacing: -0.2, color: "#fff" }}>
-                        {topCategory.name}
-                      </Text>
-                    </View>
-                    <View style={{ alignItems: "flex-end" }}>
-                      <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>{money(topCategory.amount)}</Text>
-                      <Text style={{ marginTop: 1, fontSize: 12, color: INK.soft }}>{topCategory.percentage}% do total</Text>
-                    </View>
-                  </View>
-
-                  <View style={{ marginTop: 16, flexDirection: "row", height: 8, gap: 3 }}>
-                    {overview.slice(0, 5).map((cat, i) => (
-                      <FlexBar key={cat.name} share={cat.amount / totalDespesas} color={cat.hex} delay={0.05 * i} />
-                    ))}
-                  </View>
-
-                  {overview.slice(1, 5).map((cat, i) => {
-                    const Icon = cat.icon;
-                    return (
-                      <View
-                        key={cat.name}
-                        style={{
-                          marginTop: i === 0 ? 14 : 0,
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 12,
-                          paddingVertical: 10,
-                          borderTopWidth: i > 0 ? 1 : 0,
-                          borderTopColor: "rgba(255,255,255,0.06)",
-                        }}
-                      >
-                        <Icon size={17} color={cat.hex} />
-                        <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: "600", color: "#fff" }}>{cat.name}</Text>
-                        <View style={{ alignItems: "flex-end" }}>
-                          <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#fff" }}>{money(cat.amount)}</Text>
-                          <Text style={{ fontSize: 10.5, color: INK.softer }}>{cat.percentage}%</Text>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </Surface>
-              ) : (
-                <Surface radius={22} style={{ marginTop: 12, paddingVertical: 24, alignItems: "center" }}>
-                  <Text style={{ fontSize: 14, color: INK.softer }}>Nada saiu desta conta em {MONTH_NAMES[selectedMonth].toLowerCase()}</Text>
-                </Surface>
-              )}
+              <View style={{ marginTop: 12 }}>
+                <GastosPorCategoria
+                  month={selectedMonth}
+                  categories={categoryData.map((c) => ({ name: c.name, amount: c.amount, color: "", icon: "" }))}
+                  onAnalysis={() => setRingOpen(true)}
+                />
+              </View>
             </Animated.View>
 
             {/* ══ The latest few, as on the main cash flow; the button opens the rest ══ */}
