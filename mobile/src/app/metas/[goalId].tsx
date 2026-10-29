@@ -3,8 +3,9 @@ import { showToast } from "~/lib/toast";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { Easing, FadeInDown, useAnimatedProps, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
-import Svg, { Circle } from "react-native-svg";
+import Animated, { Easing, FadeInDown, ReduceMotion, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import {
   computeGoalInsights,
   createGoalDeposit,
@@ -21,15 +22,21 @@ import { getAccounts } from "@/services/transactionService";
 import { goalProgress } from "@/lib/goalPresets";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
-import Surface, { Hairline } from "~/components/Surface";
 import BottomSheet from "~/components/BottomSheet";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import GoalFormSheet from "~/components/metas/GoalFormSheet";
 import GoalMoveSheet from "~/components/metas/GoalMoveSheet";
 import { goalPreset } from "~/lib/goalIcon";
+import { pickGoalCover } from "~/lib/goalCover";
+import CofrinhoCover from "~/components/accounts/CofrinhoCover";
 import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Camera,
   ChevronDown,
+  ChevronLeft,
   ChevronUp,
+  ImageIcon,
   MoreVertical,
   Pencil,
   Sparkles,
@@ -39,64 +46,46 @@ import { money } from "~/lib/money";
 import { monthYear, paceOf } from "~/lib/cofrinho";
 import GoalAnalysis from "~/components/metas/GoalAnalysis";
 import { useAuth } from "~/lib/auth";
-import { GREEN, INK, RED } from "~/theme/tokens";
+import { GREEN, GROUND_LIT, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 /**
- * One goal, up close.
+ * One cofrinho, up close.
  *
- * The ring is the whole screen in one shape: how much of the promise is kept. Then
- * the three numbers a goal is actually judged by — what went in, what came back
- * out, and when it arrives at this rate — and under them every movement, because a
- * goal that cannot be audited is a goal nobody trusts.
+ * It opens on its picture — the one the person chose, or the cover made from the goal
+ * itself — and what is held sits right under it, large, with how far that is along. Then
+ * the four readings a goal is judged by, plain on the page: how much of it is kept, what
+ * is left, what to put in each month, and when it arrives at that pace. Under them every
+ * movement, laid out the way transactions are: what came in green, what went out in red.
  */
 
-const RING_SIZE = 96;
-const RING_R = 38;
-const RING_C = 2 * Math.PI * RING_R;
 const PREVIEW = 5;
+const HERO = 300;
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
-function ProgressRing({ progress, color }: { progress: number; color: string }) {
+/** The fill of the bar, drawn in once. */
+function Progress({ progress, color }: { progress: number; color: string }) {
   const drawn = useSharedValue(0);
-
   useEffect(() => {
-    drawn.value = withDelay(
-      150,
-      withTiming(progress, { duration: 1100, easing: Easing.out(Easing.cubic) }),
-    );
+    drawn.set(withDelay(200, withTiming(progress, { duration: 1000, easing: Easing.out(Easing.cubic), reduceMotion: ReduceMotion.System })));
   }, [progress, drawn]);
-
-  const animated = useAnimatedProps(() => ({
-    strokeDasharray: [drawn.value * RING_C, RING_C],
-  }));
-
+  const fill = useAnimatedStyle(() => ({ width: `${drawn.get() * 100}%` }));
   return (
-    <Svg
-      width={RING_SIZE}
-      height={RING_SIZE}
-      style={{ position: "absolute", transform: [{ rotate: "-90deg" }] }}
-    >
-      <Circle
-        cx={RING_SIZE / 2}
-        cy={RING_SIZE / 2}
-        r={RING_R}
-        fill="none"
-        stroke="rgba(255,255,255,0.08)"
-        strokeWidth={10}
-      />
-      <AnimatedCircle
-        cx={RING_SIZE / 2}
-        cy={RING_SIZE / 2}
-        r={RING_R}
-        fill="none"
-        stroke={color}
-        strokeWidth={10}
-        strokeLinecap="round"
-        animatedProps={animated}
-      />
-    </Svg>
+    <View style={{ height: 6, borderRadius: 3, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.10)" }}>
+      <Animated.View style={[{ height: 6, borderRadius: 3, backgroundColor: color }, fill]} />
+    </View>
+  );
+}
+
+/** A round button over the picture: glass, so it reads on anything. */
+function Round({ children, onPress, label, hostRef }: { children: React.ReactNode; onPress: () => void; label: string; hostRef?: React.Ref<ComponentRef<typeof View>> }) {
+  return (
+    <Pressable ref={hostRef} accessibilityLabel={label} onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+      <View style={{ width: 40, height: 40, borderRadius: 20, overflow: "hidden", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" }}>
+        <BlurView intensity={40} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.34)" }} />
+        {children}
+      </View>
+    </Pressable>
   );
 }
 
@@ -118,6 +107,7 @@ export default function MetaDetalhe() {
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState<"meta" | GoalTransaction | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [coverBusy, setCoverBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!goalId || !user) {
@@ -139,7 +129,7 @@ export default function MetaDetalhe() {
         setAccountNames(names);
       }
     } catch {
-      router.replace("/metas");
+      router.replace("/gestao" as never);
     } finally {
       setLoading(false);
     }
@@ -199,13 +189,43 @@ export default function MetaDetalhe() {
     showToast("Plano atualizado");
   };
 
+  /* The picture: chosen from the library, or taken away to return to the made one. */
+  const changeCover = async () => {
+    if (!goalId || !user || coverBusy) return;
+    setCoverBusy(true);
+    try {
+      const uri = await pickGoalCover(user.id);
+      if (!uri) return;
+      await updateGoal(goalId, { cover_image: uri });
+      await load();
+      announce();
+      showToast("Imagem atualizada");
+    } catch {
+      setError("Não foi possível enviar a imagem.");
+    } finally {
+      setCoverBusy(false);
+    }
+  };
+
+  const clearCover = async () => {
+    if (!goalId) return;
+    try {
+      await updateGoal(goalId, { cover_image: null });
+      await load();
+      announce();
+      showToast("Imagem removida");
+    } catch {
+      setError("Não foi possível remover a imagem.");
+    }
+  };
+
   const removeGoal = async () => {
     if (!goalId) return;
     try {
       await deleteGoal(goalId);
       announce();
       showToast("Cofrinho excluído");
-      router.replace("/metas");
+      router.replace("/gestao" as never);
     } catch {
       setError("Não foi possível excluir a meta.");
       setConfirming(null);
@@ -250,10 +270,10 @@ export default function MetaDetalhe() {
       <Room lit sky>
         <ScrollView contentContainerStyle={{ paddingTop: insets.top + 8, paddingHorizontal: 16 }}>
           <View style={{ height: 44, justifyContent: "center" }}>
-            <BackButton to="/metas" />
+            <BackButton to="/gestao" />
           </View>
           <View style={{ marginTop: 16, gap: 12 }}>
-            <View style={{ height: 160, borderRadius: 24, backgroundColor: "rgba(255,255,255,0.04)" }} />
+            <View style={{ height: 200, borderRadius: 24, backgroundColor: "rgba(255,255,255,0.04)" }} />
             <View style={{ height: 80, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.04)" }} />
           </View>
         </ScrollView>
@@ -263,7 +283,6 @@ export default function MetaDetalhe() {
 
   const { progress, percent, remaining, isComplete } = goalProgress(goal);
   const preset = goalPreset(goal);
-  const Icon = preset.icon;
   const insights = computeGoalInsights(goal, movements);
   const topInsight = insights[0] ?? null;
 
@@ -281,250 +300,235 @@ export default function MetaDetalhe() {
       ? Math.ceil(remaining / goal.monthly_contribution)
       : 0;
 
+  const perMonth = dueIn ? pace.monthly : goal.monthly_contribution && goal.monthly_contribution > 0 ? goal.monthly_contribution : 0;
+  const arrives = isComplete
+    ? "Concluída"
+    : dueIn
+      ? monthYear(goal.deadline as string)
+      : pace.late
+        ? "Prazo vencido"
+        : monthsLeft > 0
+          ? `${monthsLeft} ${monthsLeft === 1 ? "mês" : "meses"}`
+          : "—";
+
   const shown = showAll ? movements : movements.slice(0, PREVIEW);
+  const heroH = HERO + insets.top;
 
   return (
     <Room lit sky>
       <ScrollView
-        contentContainerStyle={{
-          paddingTop: insets.top + 8,
-          paddingBottom: insets.bottom + 40,
-          paddingHorizontal: 16,
-        }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <BackButton to="/metas" />
+        {/* ══ Its picture, with the way back and the options laid over it ══ */}
+        <View style={{ height: heroH }}>
+          <CofrinhoCover goal={goal} height={heroH} glyph={210} />
+          <LinearGradient
+            colors={["rgba(0,0,0,0.42)", "rgba(0,0,0,0)"]}
+            style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 90 }}
+          />
+          <LinearGradient
+            colors={["rgba(13,14,16,0)", "rgba(13,14,16,0.7)", GROUND_LIT]}
+            locations={[0, 0.55, 1]}
+            style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 170 }}
+          />
+
+          <View style={{ position: "absolute", top: insets.top + 8, left: 16, right: 16, height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Round label="Voltar" onPress={() => router.replace("/gestao" as never)}>
+              <ChevronLeftIcon />
+            </Round>
+            <Round label="Opções do cofrinho" hostRef={dots} onPress={openMenu}>
+              <MoreVertical size={19} color="#fff" />
+            </Round>
+          </View>
+
           <Pressable
-            ref={dots}
-            accessibilityLabel="Opções da meta"
-            onPress={openMenu}
-            style={({ pressed }) => ({
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: pressed ? 0.6 : 1,
-            })}
+            onPress={() => void changeCover()}
+            disabled={coverBusy}
+            accessibilityLabel={goal.cover_image ? "Trocar imagem" : "Adicionar imagem"}
+            style={({ pressed }) => ({ position: "absolute", right: 16, bottom: 30, opacity: pressed ? 0.7 : 1 })}
           >
-            <MoreVertical size={20} color={INK.full} />
+            <View style={{ height: 34, paddingHorizontal: 13, borderRadius: 17, overflow: "hidden", flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" }}>
+              <BlurView intensity={40} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+              <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.34)" }} />
+              <Camera size={14} color="#fff" strokeWidth={2.2} />
+              <Text style={{ fontSize: 12.5, fontWeight: "600", color: "#fff" }}>
+                {coverBusy ? "Enviando…" : goal.cover_image ? "Trocar imagem" : "Adicionar imagem"}
+              </Text>
+            </View>
           </Pressable>
         </View>
 
-        {/* ══ The promise, as one shape ══ */}
-        <Animated.View entering={FadeInDown.duration(400)}>
-          <Surface radius={26} style={{ marginTop: 10, padding: 18 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 18 }}>
-              <View style={{ width: RING_SIZE, height: RING_SIZE, alignItems: "center", justifyContent: "center" }}>
-                <ProgressRing progress={progress} color={isComplete ? GREEN : preset.hex} />
-                <Icon size={26} color={preset.hex} strokeWidth={2} />
-              </View>
-
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text numberOfLines={2} style={{ fontSize: 16, fontWeight: "700", color: "#fff" }}>
-                  {goal.name}
-                </Text>
-                <Text
-                  numberOfLines={1}
-                  style={{ marginTop: 4, fontSize: 26, fontWeight: "800", letterSpacing: -0.9, color: isComplete ? GREEN : "#fff" }}
-                >
-                  {money(goal.current_amount)}
-                </Text>
-                <Text style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>
-                  de {money(goal.target_amount)} · {percent}%
-                </Text>
-                {!isComplete && remaining > 0 && (
-                  <Text style={{ marginTop: 1, fontSize: 12.5, color: INK.softer }}>
-                    faltam {money(remaining)}
-                  </Text>
-                )}
-              </View>
-            </View>
-
-            <View style={{ marginTop: 16, flexDirection: "row", gap: 8 }}>
-              <Pressable
-                onPress={() => setMoving("deposito")}
-                style={({ pressed }) => ({
-                  flex: 1,
-                  height: 46,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: 23,
-                  backgroundColor: "#fff",
-                  opacity: pressed ? 0.85 : 1,
-                })}
-              >
-                <Text style={{ fontSize: 14.5, fontWeight: "700", color: "#0B0B0B" }}>Guardar</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setMoving("saque")}
-                disabled={goal.current_amount <= 0}
-                style={({ pressed }) => ({
-                  flex: 1,
-                  height: 46,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: 23,
-                  borderWidth: 1,
-                  borderColor: "rgba(248,113,113,0.28)",
-                  backgroundColor: "rgba(248,113,113,0.12)",
-                  opacity: goal.current_amount <= 0 ? 0.4 : pressed ? 0.8 : 1,
-                })}
-              >
-                <Text style={{ fontSize: 14.5, fontWeight: "700", color: RED }}>Sacar</Text>
-              </Pressable>
-            </View>
-          </Surface>
-        </Animated.View>
-
-        {/* ══ The three numbers a goal is judged by ══ */}
-        <Animated.View entering={FadeInDown.delay(60).duration(420)} style={{ marginTop: 12, flexDirection: "row", gap: 8 }}>
-          <Stat label="Depósitos" value={money(totalIn)} tone={GREEN} />
-          <Stat label="Saques" value={money(totalOut)} tone={RED} />
-          <Stat
-            label={dueIn ? `Guardar/mês até ${monthYear(goal.deadline as string)}` : monthsLeft > 0 ? "Previsão" : "Por mês"}
-            value={
-              dueIn
-                ? money(pace.monthly)
-                : monthsLeft > 0
-                  ? `${monthsLeft} ${monthsLeft === 1 ? "mês" : "meses"}`
-                  : goal.monthly_contribution
-                    ? money(goal.monthly_contribution)
-                    : "—"
-            }
-            tone="#fff"
-          />
-        </Animated.View>
-
-        {topInsight && (
-          <Animated.View entering={FadeInDown.delay(110).duration(420)}>
-            <View
-              style={{
-                marginTop: 12,
-                flexDirection: "row",
-                alignItems: "flex-start",
-                gap: 10,
-                borderRadius: 18,
-                borderWidth: 1,
-                borderColor: "rgba(200,243,109,0.14)",
-                backgroundColor: "rgba(200,243,109,0.05)",
-                padding: 14,
-              }}
+        <View style={{ paddingHorizontal: 20, marginTop: -64 }}>
+          {/* ══ What it is for, and what is kept toward it ══ */}
+          <Animated.View entering={FadeInDown.duration(420)}>
+            <Text numberOfLines={2} style={{ fontSize: 15, fontWeight: "600", color: "rgba(255,255,255,0.78)" }}>{goal.name}</Text>
+            <Text
+              numberOfLines={1}
+              style={{ marginTop: 4, fontSize: 42, fontWeight: "800", letterSpacing: -1.8, color: isComplete ? GREEN : "#fff" }}
             >
-              <Sparkles size={15} color={GREEN} />
-              <Text style={{ flex: 1, minWidth: 0, fontSize: 12.5, lineHeight: 18, color: INK.soft }}>
-                {topInsight}
-              </Text>
+              {money(goal.current_amount)}
+            </Text>
+            <Text style={{ marginTop: 2, fontSize: 14, color: INK.soft }}>
+              de {money(goal.target_amount)}
+            </Text>
+            <View style={{ marginTop: 16 }}>
+              <Progress progress={progress} color={isComplete ? GREEN : preset.hex} />
             </View>
           </Animated.View>
-        )}
 
-        {/* ══ What the month leaves room for ══ */}
-        <Animated.View entering={FadeInDown.delay(140).duration(420)}>
-          <GoalAnalysis goal={goal} onApply={applyPlan} />
-        </Animated.View>
+          {/* ══ The four readings ══ */}
+          <Animated.View entering={FadeInDown.delay(60).duration(420)} style={{ marginTop: 22, flexDirection: "row", flexWrap: "wrap", rowGap: 18 }}>
+            <Reading label="Conquistado" value={`${percent}%`} />
+            <Reading label="Falta" value={isComplete ? "—" : money(remaining)} />
+            <Reading label="Guardar por mês" value={perMonth > 0 ? money(perMonth) : "—"} />
+            <Reading label="Previsão" value={arrives} late={pace.late && !isComplete} />
+          </Animated.View>
 
-        {/* ══ Every movement ══ */}
-        <Animated.View entering={FadeInDown.delay(150).duration(420)}>
-          <Text style={[T.eyebrow, { marginTop: 24, paddingHorizontal: 4 }]}>Movimentações</Text>
-          {movements.length === 0 ? (
-            <Surface radius={22} style={{ marginTop: 10, paddingVertical: 28, alignItems: "center" }}>
-              <Text style={{ fontSize: 14, color: INK.softer }}>Nenhuma movimentação ainda</Text>
-            </Surface>
-          ) : (
-            <Surface radius={22} style={{ marginTop: 10, paddingHorizontal: 14 }}>
-              {shown.map((tx, i) => {
-                const value = Number(tx.amount);
-                const isWithdraw = value < 0;
-                const tone = isWithdraw ? RED : GREEN;
-                const under = [
-                  new Date(`${tx.date.slice(0, 10)}T12:00:00`)
-                    .toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
-                    .replace(".", ""),
-                  tx.source || null,
-                  tx.account_id ? accountNames[tx.account_id] || null : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ");
+          <Animated.View entering={FadeInDown.delay(100).duration(420)} style={{ marginTop: 22, flexDirection: "row", gap: 10 }}>
+            <Pressable
+              onPress={() => setMoving("deposito")}
+              style={({ pressed }) => ({
+                flex: 1,
+                height: 50,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 25,
+                backgroundColor: "#fff",
+                opacity: pressed ? 0.85 : 1,
+              })}
+            >
+              <Text style={{ fontSize: 15.5, fontWeight: "700", color: "#0B0B0B" }}>Guardar</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setMoving("saque")}
+              disabled={goal.current_amount <= 0}
+              style={({ pressed }) => ({
+                flex: 1,
+                height: 50,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 25,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                backgroundColor: "rgba(255,255,255,0.06)",
+                opacity: goal.current_amount <= 0 ? 0.4 : pressed ? 0.8 : 1,
+              })}
+            >
+              <Text style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>Retirar</Text>
+            </Pressable>
+          </Animated.View>
 
-                return (
-                  <View key={tx.id}>
-                    {i > 0 && <Hairline />}
+          {topInsight && (
+            <Animated.View entering={FadeInDown.delay(130).duration(420)} style={{ marginTop: 20, flexDirection: "row", alignItems: "flex-start", gap: 10, paddingHorizontal: 2 }}>
+              <View style={{ marginTop: 2 }}>
+                <Sparkles size={15} color={GREEN} />
+              </View>
+              <Text style={{ flex: 1, minWidth: 0, fontSize: 13.5, lineHeight: 19, color: INK.soft }}>{topInsight}</Text>
+            </Animated.View>
+          )}
+
+          {/* ══ What the month leaves room for ══ */}
+          <Animated.View entering={FadeInDown.delay(150).duration(420)}>
+            <GoalAnalysis goal={goal} onApply={applyPlan} />
+          </Animated.View>
+
+          {/* ══ Every movement, as transactions are ══ */}
+          <Animated.View entering={FadeInDown.delay(180).duration(420)} style={{ marginTop: 30 }}>
+            <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", paddingHorizontal: 4 }}>
+              <Text style={T.eyebrow}>Movimentações</Text>
+              {movements.length > 0 && (
+                <Text style={{ fontSize: 12.5, color: INK.softer }}>
+                  <Text style={{ color: GREEN }}>+{money(totalIn)}</Text>
+                  {totalOut > 0 ? <Text>  <Text style={{ color: RED }}>−{money(totalOut)}</Text></Text> : null}
+                </Text>
+              )}
+            </View>
+
+            {movements.length === 0 ? (
+              <Text style={{ paddingVertical: 32, textAlign: "center", fontSize: 14, color: INK.soft }}>
+                Nenhuma movimentação ainda
+              </Text>
+            ) : (
+              <View style={{ marginTop: 6 }}>
+                {shown.map((tx) => {
+                  const value = Number(tx.amount);
+                  const isWithdraw = value < 0;
+                  const tone = isWithdraw ? RED : GREEN;
+                  const Glyph = isWithdraw ? ArrowUpRight : ArrowDownLeft;
+                  const day = new Date(`${tx.date.slice(0, 10)}T12:00:00`);
+                  const sameYear = day.getFullYear() === new Date().getFullYear();
+                  const date = day.toLocaleDateString("pt-BR", { day: "numeric", month: "long", ...(sameYear ? {} : { year: "numeric" }) });
+                  const under = [date, tx.source || null, tx.account_id ? accountNames[tx.account_id] || null : null]
+                    .filter(Boolean)
+                    .join(" · ");
+                  return (
                     <Pressable
+                      key={tx.id}
                       disabled={isWithdraw}
                       onLongPress={() => setConfirming(tx)}
-                      style={({ pressed }) => ({
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 12,
-                        paddingVertical: 12,
-                        opacity: pressed && !isWithdraw ? 0.7 : 1,
-                      })}
+                      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed && !isWithdraw ? 0.7 : 1 })}
                     >
                       <View
                         style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 16,
+                          width: 46,
+                          height: 46,
+                          borderRadius: 23,
                           alignItems: "center",
                           justifyContent: "center",
-                          backgroundColor: isWithdraw ? "rgba(248,113,113,0.12)" : "rgba(200,243,109,0.12)",
+                          backgroundColor: isWithdraw ? "rgba(248,113,113,0.13)" : "rgba(200,243,109,0.13)",
                         }}
                       >
-                        {isWithdraw ? (
-                          <ChevronUp size={15} color={RED} strokeWidth={2.6} />
-                        ) : (
-                          <ChevronDown size={15} color={GREEN} strokeWidth={2.6} />
-                        )}
+                        <Glyph size={20} color={tone} strokeWidth={2.2} />
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={{ fontSize: 13.5, fontWeight: "700", color: tone }}>
-                          {isWithdraw ? "Saque" : "Depósito"}
+                        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>
+                          {isWithdraw ? "Retirada" : "Depósito"}
                         </Text>
-                        <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 11.5, color: INK.softer }}>
-                          {under}
-                        </Text>
+                        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>{under}</Text>
                       </View>
-                      <Text style={{ fontSize: 14, fontWeight: "700", color: tone }}>
+                      <Text style={{ fontSize: 15, fontWeight: "600", color: tone }}>
                         {isWithdraw ? "−" : "+"}
                         {money(Math.abs(value))}
                       </Text>
                     </Pressable>
-                  </View>
-                );
-              })}
+                  );
+                })}
+              </View>
+            )}
 
-              {movements.length > PREVIEW && (
-                <Pressable
-                  onPress={() => setShowAll((v) => !v)}
-                  style={({ pressed }) => ({
-                    height: 42,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 5,
-                    borderTopWidth: 1,
-                    borderTopColor: "rgba(255,255,255,0.06)",
-                    opacity: pressed ? 0.7 : 1,
-                  })}
-                >
-                  {showAll ? <ChevronUp size={14} color={INK.soft} /> : <ChevronDown size={14} color={INK.soft} />}
-                  <Text style={{ fontSize: 12.5, fontWeight: "600", color: INK.soft }}>
-                    {showAll ? "Mostrar menos" : `Ver todas (${movements.length})`}
-                  </Text>
-                </Pressable>
-              )}
-            </Surface>
-          )}
-          {deposits.length > 0 && (
-            <Text style={{ marginTop: 8, paddingHorizontal: 4, fontSize: 11.5, color: INK.softer }}>
-              Segure um depósito para desfazê-lo.
-            </Text>
-          )}
-        </Animated.View>
+            {movements.length > PREVIEW && (
+              <Pressable
+                onPress={() => setShowAll((v) => !v)}
+                style={({ pressed }) => ({
+                  marginTop: 12,
+                  height: 52,
+                  borderRadius: 26,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.08)",
+                  backgroundColor: "rgba(255,255,255,0.05)",
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                {showAll ? <ChevronUp size={15} color="#fff" /> : <ChevronDown size={15} color="#fff" />}
+                <Text style={{ fontSize: 15.5, fontWeight: "500", color: "#fff" }}>
+                  {showAll ? "Mostrar menos" : `Ver todas as movimentações (${movements.length})`}
+                </Text>
+              </Pressable>
+            )}
+            {deposits.length > 0 && (
+              <Text style={{ marginTop: 10, paddingHorizontal: 4, fontSize: 11.5, color: INK.softer }}>
+                Segure um depósito para desfazê-lo.
+              </Text>
+            )}
+          </Animated.View>
 
-        {error && <Text style={{ marginTop: 14, paddingHorizontal: 4, fontSize: 13, color: RED }}>{error}</Text>}
+          {error && <Text style={{ marginTop: 14, paddingHorizontal: 4, fontSize: 13, color: RED }}>{error}</Text>}
+        </View>
       </ScrollView>
 
       <AnchoredMenu open={!!menu} anchor={menu} onClose={() => setMenu(null)}>
@@ -537,6 +541,25 @@ export default function MetaDetalhe() {
             setEditing(true);
           }}
         />
+        <MenuRow
+          icon={ImageIcon}
+          label={goal.cover_image ? "Trocar imagem" : "Adicionar imagem"}
+          last={false}
+          onPress={() => {
+            setMenu(null);
+            void changeCover();
+          }}
+        />
+        {goal.cover_image ? (
+          <MenuRow
+            icon={Trash2}
+            label="Remover imagem"
+            onPress={() => {
+              setMenu(null);
+              void clearCover();
+            }}
+          />
+        ) : null}
         <MenuRow
           icon={Trash2}
           label="Excluir meta"
@@ -620,16 +643,19 @@ export default function MetaDetalhe() {
   );
 }
 
-/** One of the three figures under the ring. */
-function Stat({ label, value, tone }: { label: string; value: string; tone: string }) {
+/** One of the four readings, plain on the page, two to a row. */
+function Reading({ label, value, late }: { label: string; value: string; late?: boolean }) {
   return (
-    <Surface radius={18} style={{ flex: 1, minWidth: 0, paddingVertical: 12, paddingHorizontal: 10, alignItems: "center" }}>
-      <Text style={{ fontSize: 9.5, fontWeight: "600", letterSpacing: 0.8, textTransform: "uppercase", color: INK.softer }}>
-        {label}
-      </Text>
-      <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 12.5, fontWeight: "700", color: tone }}>
+    <View style={{ width: "50%", paddingRight: 12 }}>
+      <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>{label}</Text>
+      <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 18, fontWeight: "700", letterSpacing: -0.4, color: late ? RED : "#fff" }}>
         {value}
       </Text>
-    </Surface>
+    </View>
   );
+}
+
+/** The chevron on the round back button. */
+function ChevronLeftIcon() {
+  return <ChevronLeft size={21} color="#fff" strokeWidth={2.4} />;
 }

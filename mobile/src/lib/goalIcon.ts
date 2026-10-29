@@ -1,4 +1,4 @@
-import { getGoalPresetData, type GoalPresetData } from "@/lib/goalPresets";
+import { GOAL_PRESET_DATA, getGoalPresetData, type GoalPresetData } from "@/lib/goalPresets";
 import type { IconCmp } from "~/lib/categoryIconSlugs";
 
 import Car from "lucide-react-native/icons/car";
@@ -33,9 +33,27 @@ const draw = (preset: GoalPresetData): GoalPreset => ({
   icon: ICONS[preset.icon] ?? PiggyBank,
 });
 
+/* A goal the person named in their own words still says what it is for: a trip to
+   Japan is a trip. Only read on the phone, and only when the name is none of the
+   presets', so a preset's own name keeps meaning exactly what it does on the web. */
+const WORDS: [RegExp, string][] = [
+  [/viag|viaj|ferias|férias|passagem|intercambio|intercâmbio|cruzeiro|lua de mel/, "viagem"],
+  [/carro|moto|veiculo|veículo|automovel|automóvel/, "carro"],
+  [/casa|apartamento|apto|imovel|imóvel|reforma|mudanca|mudança|financiamento/, "casa"],
+  [/faculdade|curso|estudo|mba|pos-?gradua|escola/, "educacao"],
+  [/aposent/, "aposentadoria"],
+  [/negocio|negócio|empresa|startup/, "negocio"],
+  [/liberdade|investir|investimento/, "liberdade"],
+];
+
 /** The preset a goal came from, with its glyph drawn. */
 export function goalPreset(goal: { name: string }): GoalPreset {
-  return draw(getGoalPresetData(goal));
+  const found = getGoalPresetData(goal);
+  if (found.id !== "custom") return draw(found);
+  const name = goal.name.toLocaleLowerCase("pt-BR");
+  const hit = WORDS.find(([re]) => re.test(name));
+  const kin = hit ? GOAL_PRESET_DATA.find((p) => p.id === hit[1]) : undefined;
+  return draw(kin ? { ...kin, name: goal.name } : found);
 }
 
 export { GOAL_PRESET_DATA } from "@/lib/goalPresets";

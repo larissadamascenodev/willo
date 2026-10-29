@@ -9,10 +9,10 @@ import { ensureWallet } from "~/lib/ensureWallet";
 import { showToast } from "~/lib/toast";
 import { fetchGoals, type Goal } from "@/services/goalService";
 import { colorFor } from "@/lib/banks";
-import { goalPreset } from "~/lib/goalIcon";
+import { paceOf } from "~/lib/cofrinho";
 import AccountSheet from "~/components/accounts/AccountSheet";
 import CofrinhoSheet from "~/components/accounts/CofrinhoSheet";
-import CofrinhoCard from "~/components/accounts/CofrinhoCard";
+import CofrinhoRow from "~/components/accounts/CofrinhoRow";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import Surface from "~/components/Surface";
@@ -115,6 +115,14 @@ export default function Gestao() {
      the whole of what they have is the two together. */
   const guardado = goals.reduce((s, g) => s + (Number(g.current_amount) || 0), 0);
   const total = saldo + guardado;
+  /* The cofrinhos as one reading: what is set aside, what it is all for, and what
+     the dated ones ask of each month. */
+  const metaTotal = goals.reduce((s, g) => s + (Number(g.target_amount) || 0), 0);
+  const conquistado = metaTotal > 0 ? Math.min(1, guardado / metaTotal) : 0;
+  const porMes = goals.reduce((s, g) => {
+    const pace = paceOf(g);
+    return s + (pace.open || pace.late ? 0 : pace.monthly);
+  }, 0);
   /* Only what is actually in hand can take up room on a share rule; an account in
      the red still gets its line, so the list stays the whole truth. */
   const positive = rows.reduce((s, r) => s + Math.max(r.balance, 0), 0);
@@ -364,23 +372,43 @@ export default function Gestao() {
                 </Pressable>
               ) : (
                 <>
-                  {/* One bar split the way the money set aside is, each share in its goal's colour. */}
-                  <View style={{ flexDirection: "row", height: 8, gap: 3, paddingHorizontal: 4, marginTop: 10, marginBottom: 4 }}>
-                    {guardado > 0 ? (
-                      goals
-                        .filter((g) => Number(g.current_amount) > 0)
-                        .map((g, i) => (
-                          <FlexBar key={g.id} share={Number(g.current_amount) / guardado} color={goalPreset(g).hex} delay={0.05 * i} />
-                        ))
-                    ) : (
-                      <View style={{ flex: 1, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)" }} />
-                    )}
+                  {/* The cofrinhos as numbers first, the way the accounts are. */}
+                  <View style={{ paddingHorizontal: 4, paddingTop: 10 }}>
+                    <Text style={{ fontSize: 13.5, color: "rgba(255,255,255,0.62)" }}>Guardado nos cofrinhos</Text>
+                    <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 32, fontWeight: "800", letterSpacing: -1.2, color: "#fff" }}>
+                      {money(guardado)}
+                    </Text>
+                    <View style={{ marginTop: 12, flexDirection: "row", gap: 26 }}>
+                      <View style={{ flexShrink: 1, minWidth: 0 }}>
+                        <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>Meta total</Text>
+                        <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
+                          {money(metaTotal)}
+                        </Text>
+                      </View>
+                      <View style={{ flexShrink: 1, minWidth: 0 }}>
+                        <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>Conquistado</Text>
+                        <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
+                          {Math.round(conquistado * 100)}%
+                        </Text>
+                      </View>
+                      {porMes > 0 && (
+                        <View style={{ flexShrink: 1, minWidth: 0 }}>
+                          <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>Guardar por mês</Text>
+                          <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
+                            {money(porMes)}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={{ marginTop: 14, height: 4, borderRadius: 2, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.09)" }}>
+                      <View style={{ width: `${conquistado * 100}%`, height: 4, borderRadius: 2, backgroundColor: "#fff" }} />
+                    </View>
                   </View>
 
-                  <View style={{ marginTop: 12, gap: 12 }}>
+                  <View style={{ marginTop: 10 }}>
                     {goals.map((g, i) => (
                       <Animated.View key={g.id} entering={FadeInDown.delay(40 + i * 60).duration(380)}>
-                        <CofrinhoCard goal={g} delay={0.04 * i} onPress={() => router.push(`/metas/${g.id}` as never)} />
+                        <CofrinhoRow goal={g} first={i === 0} delay={0.04 * i} onPress={() => router.push(`/metas/${g.id}` as never)} />
                       </Animated.View>
                     ))}
                   </View>
