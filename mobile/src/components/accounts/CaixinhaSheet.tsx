@@ -6,14 +6,13 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Switch,
   Text,
   TextInput,
   View,
   useWindowDimensions,
   type ViewStyle,
 } from "react-native";
-import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
@@ -35,7 +34,7 @@ import CoverArt from "~/components/accounts/CoverArt";
 import { Check, ChevronLeft, ChevronRight, ImageIcon, Minus, Plus, X } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
-import { GREEN, INK, RED } from "~/theme/tokens";
+import { INK, RED } from "~/theme/tokens";
 
 /**
  * Opening a caixinha with Willo beside you.
@@ -445,25 +444,25 @@ export default function CaixinhaSheet({
                         />
                       </Row>
                       <Row last={!hasValue}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                          <View style={{ flex: 1, minWidth: 0 }}>
-                            <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>Valor definido</Text>
-                            <Text style={{ marginTop: 2, fontSize: 12.5, lineHeight: 17, color: INK.soft }}>
-                              {hasValue ? "Eu calculo quanto guardar por mês." : "Você guarda conforme der, sem meta nem prazo."}
-                            </Text>
-                          </View>
-                          <Switch
-                            value={hasValue}
-                            onValueChange={(v) => {
+                        <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: INK.softer }}>Valor</Text>
+                        <View style={{ marginTop: 10 }}>
+                          <Segments
+                            height={42}
+                            value={hasValue ? "com" : "sem"}
+                            options={[
+                              { value: "com", label: "Com meta" },
+                              { value: "sem", label: "Sem valor definido" },
+                            ]}
+                            onChange={(v) => {
                               void Haptics.selectionAsync().catch(() => undefined);
-                              setHasValue(v);
+                              setHasValue(v === "com");
                               setError(null);
                             }}
-                            trackColor={{ false: "rgba(255,255,255,0.16)", true: GREEN }}
-                            thumbColor="#fff"
-                            ios_backgroundColor="rgba(255,255,255,0.16)"
                           />
                         </View>
+                        <Text style={{ marginTop: 10, fontSize: 12.5, lineHeight: 17, color: INK.soft }}>
+                          {hasValue ? "Eu calculo quanto guardar por mês para você chegar lá." : "Você guarda conforme der, sem meta nem prazo."}
+                        </Text>
                       </Row>
                       {hasValue && (
                         <Row last>
@@ -870,39 +869,72 @@ function Fact({ label, value, last = false }: { label: string; value: string; la
 }
 
 /**
- * The spans of time, as one control: a capsule of glass with the chosen one lit white.
- * `value` null lights none — there is no date at all.
+ * A choice of a few, as one control: a capsule of glass with a white pill that slides
+ * under the chosen one. `value` null lights none — for time, there is no date at all.
  */
 function Segments<V extends string | number>({
   options,
   value,
   onChange,
+  height = 50,
 }: {
   options: { value: V; label: string }[];
   value: V | null;
   onChange: (v: V) => void;
+  height?: number;
 }) {
+  const [track, setTrack] = useState(0);
+  const index = options.findIndex((o) => o.value === value);
+  const each = track > 0 ? (track - 8) / options.length : 0;
+  const x = useSharedValue(0);
+  const shown = useSharedValue(index >= 0 ? 1 : 0);
+
+  useEffect(() => {
+    if (index >= 0) x.set(withSpring(index * each, { duration: 420, dampingRatio: 0.82 }));
+    shown.set(withTiming(index >= 0 ? 1 : 0, { duration: 180 }));
+  }, [index, each, x, shown]);
+
+  const pill = useAnimatedStyle(() => ({ opacity: shown.get(), transform: [{ translateX: x.get() }] }));
+
   return (
     <View
+      onLayout={(e) => setTrack(e.nativeEvent.layout.width)}
       style={{
-        height: 50,
+        height,
         padding: 4,
-        borderRadius: 25,
+        borderRadius: height / 2,
         flexDirection: "row",
         borderWidth: 1,
         borderColor: "rgba(255,255,255,0.10)",
         backgroundColor: "rgba(255,255,255,0.06)",
       }}
     >
+      {each > 0 && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            {
+              position: "absolute",
+              top: 4,
+              left: 4,
+              width: each,
+              height: height - 10,
+              borderRadius: (height - 10) / 2,
+              backgroundColor: "#fff",
+              shadowColor: "#000",
+              shadowOpacity: 0.25,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 2 },
+            },
+            pill,
+          ]}
+        />
+      )}
       {options.map((o) => {
         const on = o.value === value;
         return (
-          <Pressable
-            key={String(o.value)}
-            onPress={() => onChange(o.value)}
-            style={{ flex: 1, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: on ? "#fff" : "transparent" }}
-          >
-            <Text style={{ fontSize: 14, fontWeight: on ? "700" : "600", color: on ? "#0B0B0B" : "rgba(255,255,255,0.78)" }}>{o.label}</Text>
+          <Pressable key={String(o.value)} onPress={() => onChange(o.value)} style={{ flex: 1, alignItems: "center", justifyContent: "center", zIndex: 1 }}>
+            <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: on ? "700" : "600", color: on ? "#0B0B0B" : "rgba(255,255,255,0.78)" }}>{o.label}</Text>
           </Pressable>
         );
       })}
