@@ -8,6 +8,7 @@ import { installShims, hydrateShims } from "~/lib/shims";
 import { AuthProvider, useAuth } from "~/lib/auth";
 import { useApplyOnboarding } from "~/lib/onboarding";
 import { MonthProvider } from "@/contexts/MonthContext";
+import ToastHost from "~/components/ToastHost";
 import { GREEN, GROUND } from "~/theme/tokens";
 
 /* Before any shared module is imported for real, the handful of browser things it
@@ -45,6 +46,7 @@ export default function RootLayout() {
           <MonthProvider>
             <StatusBar style="light" />
             <Door />
+            <ToastHost />
           </MonthProvider>
         </AuthProvider>
       </SafeAreaProvider>

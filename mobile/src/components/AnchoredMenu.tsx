@@ -54,27 +54,31 @@ export default function AnchoredMenu({
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={{ flex: 1 }} onPress={onClose}>
-        <BlurView intensity={14} tint="dark" style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.58)" }}>
-          <View
-            onLayout={(e) => setHeight(e.nativeEvent.layout.height)}
-            style={{
-              position: "absolute",
-              width: span,
-              left,
-              top,
-              borderRadius: 22,
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.10)",
-              backgroundColor: "rgba(30,30,33,0.97)",
-              overflow: "hidden",
-              opacity: height ? 1 : 0,
-            }}
-          >
-            {/* The press must not reach the backdrop behind it. */}
-            <Pressable onPress={() => {}}>{children}</Pressable>
-          </View>
-        </BlurView>
+        <BlurView intensity={14} tint="dark" style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }} />
       </Pressable>
+
+      {/* A sibling of the backdrop, not a child: glass inside a blur sees nothing to
+          blur, and the page behind showed through sharp. */}
+      <View
+        onLayout={(e) => setHeight(e.nativeEvent.layout.height)}
+        style={{
+          position: "absolute",
+          width: span,
+          left,
+          top,
+          borderRadius: 22,
+          borderCurve: "continuous",
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.16)",
+          overflow: "hidden",
+          opacity: height ? 1 : 0,
+        }}
+      >
+        <BlurView intensity={70} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.5)" }} />
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 22, right: 22, height: 1, backgroundColor: "rgba(255,255,255,0.22)" }} />
+        {children}
+      </View>
     </Modal>
   );
 }

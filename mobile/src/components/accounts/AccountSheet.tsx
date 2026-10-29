@@ -20,9 +20,9 @@ import { INK, RED } from "~/theme/tokens";
  * asked rather than assumed; but "zero" is one tap.
  */
 
-type Kind = "checking" | "savings" | "cash" | "investment";
+export type Kind = "checking" | "savings" | "cash" | "investment";
 
-const KINDS: { key: Kind; label: string; note: string; icon: typeof Landmark }[] = [
+export const KINDS: { key: Kind; label: string; note: string; icon: typeof Landmark }[] = [
   { key: "checking", label: "Conta corrente", note: "O dia a dia", icon: Landmark },
   { key: "savings", label: "Poupança", note: "Guardado no banco", icon: PiggyBank },
   { key: "investment", label: "Investimento", note: "Corretora, renda fixa", icon: TrendingUp },

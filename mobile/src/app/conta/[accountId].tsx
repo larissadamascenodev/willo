@@ -18,8 +18,9 @@ import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import Surface, { Hairline } from "~/components/Surface";
 import BankMark from "~/components/BankMark";
-import BottomSheet from "~/components/BottomSheet";
-import SegmentedTabs from "~/components/SegmentedTabs";
+import EditAccountSheet from "~/components/accounts/EditAccountSheet";
+import ConfirmGlass from "~/components/ConfirmGlass";
+import { showToast } from "~/lib/toast";
 import GastosPorCategoria from "~/components/home/GastosPorCategoria";
 import CenterModal from "~/components/CenterModal";
 import FluxoPanel from "~/components/financeiro/FluxoPanel";
@@ -29,7 +30,7 @@ import { EXPAND } from "~/lib/expand";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
-import { Check, ChevronDown, ChevronRight, MoreVertical, Pencil, Trash2, X } from "~/components/icons";
+import { ChevronDown, MoreVertical, Pencil, Trash2 } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
@@ -57,18 +58,6 @@ const TYPE_LABEL: Record<string, string> = {
 const MONTH_NAMES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-];
-
-/* The eight the web offers when a bank's own colour is not wanted. */
-const COLOR_OPTIONS: { value: string; hex: string }[] = [
-  { value: "violet", hex: "#8B5CF6" },
-  { value: "emerald", hex: "#10B981" },
-  { value: "sky", hex: "#0EA5E9" },
-  { value: "amber", hex: "#F59E0B" },
-  { value: "rose", hex: "#F43F5E" },
-  { value: "cyan", hex: "#06B6D4" },
-  { value: "fuchsia", hex: "#D946EF" },
-  { value: "lime", hex: "#84CC16" },
 ];
 
 interface Account {
@@ -117,9 +106,7 @@ export default function ContaDetalhe() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [editName, setEditName] = useState("");
-  const [editType, setEditType] = useState("checking");
-  const [editColor, setEditColor] = useState("violet");
+  const [otherNames, setOtherNames] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     if (!user || !accountId) {
@@ -134,9 +121,7 @@ export default function ContaDetalhe() {
         return;
       }
       setAccount(acc);
-      setEditName(acc.name);
-      setEditType(acc.type);
-      setEditColor(acc.color ?? "violet");
+      setOtherNames(accs.filter((a) => a.id !== accountId).map((a) => a.name));
       setCustomCats(cats);
 
       const txs = await getTransactions({ month: selectedMonth, year: selectedYear });
@@ -212,17 +197,15 @@ export default function ContaDetalhe() {
     });
   };
 
-  const save = async () => {
-    if (!accountId || !editName.trim() || saving) return;
+  const save = async (next: { name: string; type: string }) => {
+    if (!accountId || saving) return;
     setSaving(true);
     setError(null);
     try {
-      await updateAccount(accountId, {
-        name: editName.trim(),
-        type: editType,
-        color: editColor,
-      });
+      /* The colour is the bank's, so it is never sent: only what the person can change. */
+      await updateAccount(accountId, { name: next.name, type: next.type });
       setEditing(false);
+      showToast("Conta atualizada");
       window.dispatchEvent(new CustomEvent("finance-data-changed"));
     } catch {
       setError("Não foi possível salvar a conta.");
@@ -237,6 +220,8 @@ export default function ContaDetalhe() {
     try {
       await deleteAccount(accountId);
       window.dispatchEvent(new CustomEvent("finance-data-changed"));
+      setConfirming(false);
+      showToast("Conta excluída");
       router.replace("/gestao");
     } catch {
       setError("Não foi possível excluir a conta.");
@@ -473,157 +458,30 @@ export default function ContaDetalhe() {
       </AnchoredMenu>
 
       {/* ── Editing it ── */}
-      <BottomSheet open={editing} onClose={() => setEditing(false)}>
-        <View style={{ paddingHorizontal: 20 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text style={{ fontSize: 18, fontWeight: "700", color: "#fff" }}>Editar conta</Text>
-            <Pressable
-              accessibilityLabel="Fechar"
-              onPress={() => setEditing(false)}
-              hitSlop={10}
-              style={({ pressed }) => ({
-                width: 32,
-                height: 32,
-                borderRadius: 16,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "rgba(255,255,255,0.06)",
-                opacity: pressed ? 0.6 : 1,
-              })}
-            >
-              <X size={16} color={INK.soft} />
-            </Pressable>
-          </View>
-
-          <Text style={{ marginTop: 20, fontSize: 12.5, color: INK.soft }}>Nome</Text>
-          <TextInput
-            value={editName}
-            onChangeText={(t) => {
-              setEditName(t);
-              setError(null);
-            }}
-            placeholder="Nome da conta"
-            placeholderTextColor={INK.faint}
-            maxLength={60}
-            style={{
-              marginTop: 8,
-              height: 48,
-              minWidth: 0,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: INK.edge,
-              backgroundColor: "rgba(255,255,255,0.05)",
-              paddingHorizontal: 16,
-              fontSize: 15.5,
-              color: "#fff",
-            }}
-          />
-
-          <Text style={{ marginTop: 18, fontSize: 12.5, color: INK.soft }}>Tipo</Text>
-          <View style={{ marginTop: 8 }}>
-            <SegmentedTabs
-              value={editType}
-              onChange={setEditType}
-              options={[
-                { key: "checking", label: "Corrente" },
-                { key: "savings", label: "Poupança" },
-                { key: "cash", label: "Dinheiro" },
-              ]}
-            />
-          </View>
-
-          <Text style={{ marginTop: 18, fontSize: 12.5, color: INK.soft }}>Cor</Text>
-          <View style={{ marginTop: 10, flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-            {COLOR_OPTIONS.map((c) => {
-              const on = editColor === c.value;
-              return (
-                <Pressable
-                  key={c.value}
-                  accessibilityLabel={`Cor ${c.value}`}
-                  onPress={() => setEditColor(c.value)}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 18,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: c.hex,
-                    opacity: on ? 1 : 0.55,
-                    borderWidth: on ? 2 : 0,
-                    borderColor: "#fff",
-                    transform: [{ scale: on ? 1.08 : 1 }],
-                  }}
-                >
-                  {on && <Check size={16} color="#0B0B0B" strokeWidth={3} />}
-                </Pressable>
-              );
-            })}
-          </View>
-
-          {error && <Text style={{ marginTop: 16, fontSize: 13, color: RED }}>{error}</Text>}
-
-          <Pressable
-            onPress={save}
-            disabled={!editName.trim() || saving}
-            style={({ pressed }) => ({
-              marginTop: 24,
-              height: 52,
-              borderRadius: 26,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "#fff",
-              opacity: !editName.trim() || saving ? 0.5 : pressed ? 0.85 : 1,
-            })}
-          >
-            <Text style={{ fontSize: 16, fontWeight: "700", color: "#0B0B0B" }}>
-              {saving ? "Salvando..." : "Salvar"}
-            </Text>
-          </Pressable>
-        </View>
-      </BottomSheet>
+      <EditAccountSheet
+        open={editing}
+        name={account?.name ?? ""}
+        kind={account?.type ?? "checking"}
+        hex={hex}
+        existingNames={otherNames}
+        saving={saving}
+        error={error}
+        onClose={() => setEditing(false)}
+        onSave={save}
+      />
 
       {/* ── Deleting it ── */}
-      <BottomSheet open={confirming} onClose={() => setConfirming(false)}>
-        <View style={{ paddingHorizontal: 20 }}>
-          <Text style={{ fontSize: 18, fontWeight: "700", color: "#fff" }}>Excluir conta</Text>
-          <Text style={{ marginTop: 8, fontSize: 14, lineHeight: 20, color: INK.soft }}>
-            Tem certeza que deseja excluir {account?.name ?? "esta conta"}? As transações já lançadas nela
-            não serão excluídas.
-          </Text>
-          {error && <Text style={{ marginTop: 14, fontSize: 13, color: RED }}>{error}</Text>}
-          <Pressable
-            onPress={remove}
-            disabled={saving}
-            style={({ pressed }) => ({
-              marginTop: 22,
-              height: 52,
-              borderRadius: 26,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "rgba(248,113,113,0.16)",
-              borderWidth: 1,
-              borderColor: "rgba(248,113,113,0.30)",
-              opacity: saving ? 0.6 : pressed ? 0.8 : 1,
-            })}
-          >
-            <Text style={{ fontSize: 16, fontWeight: "700", color: RED }}>
-              {saving ? "Excluindo..." : "Excluir conta"}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setConfirming(false)}
-            style={({ pressed }) => ({
-              marginTop: 10,
-              height: 48,
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: pressed ? 0.6 : 1,
-            })}
-          >
-            <Text style={{ fontSize: 15, fontWeight: "600", color: INK.soft }}>Cancelar</Text>
-          </Pressable>
-        </View>
-      </BottomSheet>
+      <ConfirmGlass
+        open={confirming}
+        title={`Excluir ${account?.name ?? "conta"}?`}
+        confirmLabel="Excluir"
+        busy={saving}
+        onConfirm={remove}
+        onClose={() => setConfirming(false)}
+      >
+        {balance !== 0 ? `O saldo de ${money(balance)} deixa de contar no seu total. ` : ""}
+        As transações já lançadas nela não serão excluídas.
+      </ConfirmGlass>
     </Room>
   );
 }

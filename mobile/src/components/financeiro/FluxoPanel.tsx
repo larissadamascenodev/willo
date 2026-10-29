@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import Animated, { Easing, FadeInDown, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import { periodStart, sumFlow, toDateKey, useCashFlow, type CashFlowEntry, type CashFlowPeriod } from "@/hooks/useCashFlow";
 import { buildCashFlowBuckets, CASH_FLOW_PERIODS } from "@/lib/cashFlowBuckets";
 import { MONTH_NAMES } from "@/lib/projectionRows";
@@ -9,7 +9,8 @@ import { categoryHex } from "@/lib/categoryData";
 import SegmentedTabs from "~/components/SegmentedTabs";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
-import { Eye, EyeOff } from "~/components/icons";
+import { BlurView } from "expo-blur";
+import { Eye, EyeOff, Info } from "~/components/icons";
 import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
@@ -98,8 +99,10 @@ export default function FluxoPanel({
   const [subTab, setSubTab] = useState<SubTab>("geral");
   const [period, setPeriod] = useState<CashFlowPeriod>("mes");
   const [hidden, setHidden] = useState(false);
-  /* A tapped column: the figure, the legend and the list all narrow to it. */
-  const [picked, setPicked] = useState<string | null>(null);
+  /* A tapped bar: one side of one column. The figure, the title and the list all narrow
+     to that one value — the green bar is what came in, the red one what went out. */
+  const [picked, setPicked] = useState<{ key: string; kind: "entrada" | "saida" } | null>(null);
+  const [noteOpen, setNoteOpen] = useState(false);
   const strip = useRef<ComponentRef<typeof ScrollView>>(null);
 
   const inPeriod = useMemo(() => {
@@ -108,11 +111,14 @@ export default function FluxoPanel({
   }, [entries, period]);
 
   const buckets = useMemo(() => buildCashFlowBuckets(inPeriod, period), [inPeriod, period]);
-  const pickedBucket = buckets.find((b) => b.key === picked) ?? null;
+  const pickedBucket = buckets.find((b) => b.key === picked?.key) ?? null;
   /* A day key is a whole date and a month key is "YYYY-MM": one prefix test serves both. */
   const inFocus = useMemo(
-    () => (pickedBucket ? inPeriod.filter((e) => e.date.startsWith(pickedBucket.key)) : inPeriod),
-    [inPeriod, pickedBucket],
+    () =>
+      pickedBucket && picked
+        ? inPeriod.filter((e) => e.date.startsWith(pickedBucket.key) && e.kind === picked.kind)
+        : inPeriod,
+    [inPeriod, pickedBucket, picked],
   );
   const totals = useMemo(() => sumFlow(inFocus), [inFocus]);
 
@@ -139,8 +145,16 @@ export default function FluxoPanel({
     1,
   );
 
-  const headline =
-    subTab === "geral" ? totals.net : subTab === "entradas" ? totals.entradas : totals.saidas;
+  const headline = picked
+    ? picked.kind === "entrada"
+      ? totals.entradas
+      : totals.saidas
+    : subTab === "geral"
+      ? totals.net
+      : subTab === "entradas"
+        ? totals.entradas
+        : totals.saidas;
+  const pickedColor = picked?.kind === "entrada" ? GREEN : "#EF4444";
   const single = subTab !== "geral";
   const barWidth = single ? 40 : 18;
   const slot = single ? 52 : 58;
@@ -152,7 +166,7 @@ export default function FluxoPanel({
       : `${MONTH_NAMES[pickedBucket.month!]}`
     : null;
   const title = pickedLabel
-    ? `${subject} em ${pickedLabel}`
+    ? `${picked!.kind === "entrada" ? "Entradas" : "Saídas"} em ${pickedLabel}`
     : period === "mes"
       ? `${subject} em ${MONTH_NAMES[new Date().getMonth()]}`
       : period === "1a"
@@ -167,7 +181,10 @@ export default function FluxoPanel({
         <View style={{ flex: 1, minWidth: 0 }}>
           <SegmentedTabs
             value={subTab}
-            onChange={setSubTab}
+            onChange={(t) => {
+              setSubTab(t);
+              setPicked(null);
+            }}
             height={32}
             compact
             options={[
@@ -196,23 +213,61 @@ export default function FluxoPanel({
 
       {/* ══ What moved, in one figure ══ */}
       <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 20, paddingHorizontal: 4 }}>
-        <Text style={{ fontSize: 14, color: INK.soft }}>{title}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          {picked && <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: pickedColor }} />}
+          <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 14, color: INK.soft }}>{title}</Text>
+          {/* The rule the figure follows is one tap away, not a paragraph under it. */}
+          <Pressable
+            accessibilityLabel="Como isso é calculado"
+            onPress={() => setNoteOpen((v) => !v)}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              width: 20,
+              height: 20,
+              borderRadius: 10,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: noteOpen ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.07)",
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <Info size={12} color={INK.soft} strokeWidth={2.2} />
+          </Pressable>
+        </View>
+
+        {noteOpen && (
+          <Animated.View
+            entering={FadeIn.duration(220)}
+            style={{
+              marginTop: 10,
+              borderRadius: 18,
+              borderCurve: "continuous",
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.14)",
+              overflow: "hidden",
+            }}
+          >
+            <BlurView intensity={50} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.4)" }} />
+            <Text style={{ paddingHorizontal: 14, paddingVertical: 11, fontSize: 12.5, lineHeight: 18, color: "rgba(255,255,255,0.78)" }}>
+              {accountId
+                ? "Considera só o dinheiro que entrou e saiu desta conta. Compras no cartão entram quando a fatura é paga."
+                : "Considera só o dinheiro que entrou e saiu das contas. Compras no cartão entram quando a fatura é paga."}
+            </Text>
+          </Animated.View>
+        )}
+
         <Text numberOfLines={1} style={[T.figureBig, { marginTop: 2, fontSize: 34 }]}>
-          {loading ? "…" : hidden ? "R$ ••••" : `${subTab === "geral" && headline < 0 ? "−" : ""}${money(Math.abs(headline))}`}
+          {loading ? "…" : hidden ? "R$ ••••" : `${!picked && subTab === "geral" && headline < 0 ? "−" : ""}${money(Math.abs(headline))}`}
         </Text>
 
-        {subTab === "geral" && (
-          <View style={{ marginTop: 8, gap: 4 }}>
+        {/* In and out side by side — one glance, two figures. */}
+        {subTab === "geral" && !picked && (
+          <View style={{ marginTop: 12, flexDirection: "row", gap: 28 }}>
             <Legend color={GREEN} label="Entradas" value={veil(totals.entradas)} />
             <Legend color="#EF4444" label="Saídas" value={veil(totals.saidas)} />
           </View>
         )}
-
-        <Text style={{ marginTop: 12, fontSize: 12, lineHeight: 17, color: INK.soft }}>
-          {accountId
-            ? "Considera só o dinheiro que entrou e saiu desta conta. Compras no cartão entram quando a fatura é paga."
-            : "Considera só o dinheiro que entrou e saiu das contas. Compras no cartão entram quando a fatura é paga."}
-        </Text>
       </Animated.View>
 
       {/* ══ The columns ══ */}
@@ -222,46 +277,31 @@ export default function FluxoPanel({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 4, paddingTop: 22, gap: 10 }}
       >
-        {buckets.map((b, i) => (
-          <Pressable
-            key={b.key}
-            onPress={() => setPicked((p) => (p === b.key ? null : b.key))}
-            style={{ width: slot, alignItems: "center", opacity: picked && picked !== b.key ? 0.35 : 1 }}
-          >
-            <View style={{ height: HEIGHT, flexDirection: "row", alignItems: "flex-end", justifyContent: "center", gap: 6 }}>
-              {subTab !== "saidas" && (
-                <Column
-                  value={b.entradas}
-                  max={max}
-                  width={barWidth}
-                  color={GREEN}
-                  delay={i * 0.02}
-                  sparse={period === "mes"}
-                />
-              )}
-              {subTab !== "entradas" && (
-                <Column
-                  value={b.saidas}
-                  max={max}
-                  width={barWidth}
-                  color="#EF4444"
-                  delay={i * 0.02 + 0.03}
-                  sparse={period === "mes"}
-                />
-              )}
+        {buckets.map((b, i) => {
+          const dim = (kind: "entrada" | "saida") => (picked && !(picked.key === b.key && picked.kind === kind) ? 0.3 : 1);
+          const toggle = (kind: "entrada" | "saida") =>
+            setPicked((p) => (p && p.key === b.key && p.kind === kind ? null : { key: b.key, kind }));
+          const on = picked?.key === b.key || (!picked && b.isCurrent);
+          return (
+            <View key={b.key} style={{ width: slot, alignItems: "center" }}>
+              <View style={{ height: HEIGHT, flexDirection: "row", alignItems: "flex-end", justifyContent: "center", gap: 6 }}>
+                {subTab !== "saidas" && (
+                  <Pressable onPress={() => toggle("entrada")} hitSlop={4} style={{ justifyContent: "flex-end", height: HEIGHT, opacity: dim("entrada") }}>
+                    <Column value={b.entradas} max={max} width={barWidth} color={GREEN} delay={i * 0.02} sparse={period === "mes"} />
+                  </Pressable>
+                )}
+                {subTab !== "entradas" && (
+                  <Pressable onPress={() => toggle("saida")} hitSlop={4} style={{ justifyContent: "flex-end", height: HEIGHT, opacity: dim("saida") }}>
+                    <Column value={b.saidas} max={max} width={barWidth} color="#EF4444" delay={i * 0.02 + 0.03} sparse={period === "mes"} />
+                  </Pressable>
+                )}
+              </View>
+              <Text style={{ marginTop: 12, fontSize: 13, fontWeight: on ? "600" : "400", color: on ? "#fff" : INK.soft }}>
+                {b.day !== null ? String(b.day).padStart(2, "0") : MONTH_UPPER[b.month!]}
+              </Text>
             </View>
-            <Text
-              style={{
-                marginTop: 12,
-                fontSize: 13,
-                fontWeight: picked === b.key || (!picked && b.isCurrent) ? "600" : "400",
-                color: picked === b.key || (!picked && b.isCurrent) ? "#fff" : INK.soft,
-              }}
-            >
-              {b.day !== null ? String(b.day).padStart(2, "0") : MONTH_UPPER[b.month!]}
-            </Text>
-          </Pressable>
-        ))}
+          );
+        })}
       </ScrollView>
 
       <View style={{ marginTop: 22 }}>
@@ -319,10 +359,13 @@ export default function FluxoPanel({
 
 function Legend({ color, label, value }: { color: string; label: string; value: string }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }} />
-      <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.74)" }}>
-        {label} <Text style={{ color: "#fff" }}>{value}</Text>
+    <View style={{ flexShrink: 1, minWidth: 0 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
+        <Text style={{ fontSize: 12.5, color: INK.soft }}>{label}</Text>
+      </View>
+      <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
+        {value}
       </Text>
     </View>
   );

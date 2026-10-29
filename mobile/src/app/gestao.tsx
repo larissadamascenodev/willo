@@ -6,6 +6,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { getAccounts } from "@/services/transactionService";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { ensureWallet } from "~/lib/ensureWallet";
+import { showToast } from "~/lib/toast";
 import { fetchGoals, type Goal } from "@/services/goalService";
 import { colorFor } from "@/lib/banks";
 import { goalPreset } from "~/lib/goalIcon";
@@ -398,6 +399,7 @@ export default function Gestao() {
           setAddingAccount(false);
           void load();
           announce();
+          showToast("Conta adicionada");
         }}
       />
       <CofrinhoSheet
