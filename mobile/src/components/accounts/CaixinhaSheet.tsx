@@ -31,7 +31,7 @@ import BankMark from "~/components/BankMark";
 import Created from "~/components/accounts/Created";
 import CaixinhaCover from "~/components/accounts/CaixinhaCover";
 import CoverArt from "~/components/accounts/CoverArt";
-import { Check, ChevronLeft, ChevronRight, ImageIcon, Minus, Plus, X } from "~/components/icons";
+import { Check, ChevronLeft, ImageIcon, Minus, Plus, X } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { INK, RED } from "~/theme/tokens";
@@ -73,6 +73,9 @@ const CHOICES: Record<CoverKind, Choice> = {
   educacao: { label: "Educação", hint: "Faculdade, curso, idioma", name: "Educação" },
 };
 
+/** The card the summary is drawn on: the picture fades into it. */
+const CARD = "#17191F";
+
 const SPANS = [
   { months: 6, label: "6 meses" },
   { months: 12, label: "1 ano" },
@@ -80,11 +83,11 @@ const SPANS = [
 ];
 
 const ASK: Record<Key, string> = {
-  purpose: "Pra que vai ser essa caixinha?",
-  about: "Como ela vai ser?",
-  time: "Em quanto tempo?",
+  purpose: "Bora guardar pra quê?",
+  about: "Como vai ser essa caixinha?",
+  time: "E pra quando você quer?",
   start: "Quer começar com quanto?",
-  review: "Ficou assim. Vamos criar?",
+  review: "Ficou assim. Bora criar?",
 };
 
 interface Account {
@@ -325,7 +328,7 @@ export default function CaixinhaSheet({
       case "start":
         return startLine({ start, accountName: account?.name ?? null, balance: account ? Number(account.current_balance) || 0 : null });
       default:
-        return reviewLine({ perMonth, due, start });
+        return reviewLine({ perMonth, due, start, hasValue });
     }
   })();
 
@@ -619,44 +622,81 @@ export default function CaixinhaSheet({
                   </Animated.View>
                 )}
 
-                {/* ══ How it will look, and a picture of your own ══ */}
+                {/* ══ The caixinha as it will be: its picture fading into a card with the plan on it ══ */}
                 {key === "review" && (
-                  <Animated.View entering={FadeInDown.delay(180).duration(420)} style={{ marginTop: 24, gap: 14 }}>
-                    <View style={{ height: 220, borderRadius: 30, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" }}>
-                      <CaixinhaCover goal={{ name: name.trim(), cover_image: photo }} height={220} glyph={160} glyphTop={10} />
-                      <LinearGradient colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.84)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 120 }} />
-                      <View style={{ position: "absolute", left: 18, right: 18, bottom: 16 }}>
-                        <Text numberOfLines={2} style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.7, color: "#fff" }}>{name.trim()}</Text>
-                        <Text style={{ marginTop: 3, fontSize: 14, color: "rgba(255,255,255,0.74)" }}>
-                          {hasValue ? `Meta de ${money(target)}` : "Sem valor definido"}
-                        </Text>
+                  <Animated.View entering={FadeInDown.delay(180).duration(420)} style={{ marginTop: 24 }}>
+                    <View style={{ borderRadius: 30, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", backgroundColor: CARD }}>
+                      <View style={{ height: 190 }}>
+                        <CaixinhaCover goal={{ name: name.trim(), cover_image: photo }} height={190} glyph={150} glyphTop={8} />
+                        <LinearGradient colors={["rgba(23,25,31,0)", "rgba(23,25,31,0.7)", CARD]} locations={[0, 0.6, 1]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 110 }} />
+
+                        {/* The picture can be changed now or any time later, so it is only a small thing in the corner. */}
+                        <Pressable
+                          onPress={() => void choosePhoto()}
+                          disabled={photoBusy}
+                          accessibilityLabel="Trocar imagem"
+                          style={({ pressed }) => ({ position: "absolute", top: 12, right: 12, opacity: pressed || photoBusy ? 0.6 : 1 })}
+                        >
+                          <View style={{ height: 32, paddingHorizontal: 12, borderRadius: 16, overflow: "hidden", flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderColor: "rgba(255,255,255,0.28)" }}>
+                            <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 16 }} />
+                            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.12)" }} />
+                            <View style={{ zIndex: 1, flexDirection: "row", alignItems: "center", gap: 6 }}>
+                              <ImageIcon size={14} color="#fff" />
+                              <Text style={{ fontSize: 12.5, fontWeight: "700", color: "#fff" }}>{photoBusy ? "Enviando…" : "Trocar imagem"}</Text>
+                            </View>
+                          </View>
+                        </Pressable>
+                      </View>
+
+                      <View style={{ paddingHorizontal: 20, paddingBottom: 20, marginTop: -26 }}>
+                        <Text numberOfLines={2} style={{ fontSize: 24, fontWeight: "800", letterSpacing: -0.8, color: "#fff" }}>{name.trim()}</Text>
+
+                        {/* The plan, large: what each month asks and when it gets there. */}
+                        <View style={{ marginTop: 18 }}>
+                          {hasValue && perMonth > 0 ? (
+                            <>
+                              <Text style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>Guardar por mês</Text>
+                              <Text style={{ marginTop: 2, fontSize: 36, fontWeight: "800", letterSpacing: -1.3, color: "#fff" }}>
+                                {money(perMonth)}
+                              </Text>
+                              <Text style={{ marginTop: 2, fontSize: 14, color: INK.soft }}>
+                                pra chegar lá em <Text style={{ fontWeight: "700", color: "#fff" }}>{due}</Text>
+                                {months ? ` · ${months >= 12 && months % 12 === 0 ? yearsLabel(months / 12) : `${months} meses`}` : ""}
+                              </Text>
+                            </>
+                          ) : hasValue ? (
+                            <>
+                              <Text style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>Sem prazo</Text>
+                              <Text style={{ marginTop: 2, fontSize: 24, fontWeight: "800", letterSpacing: -0.8, color: "#fff" }}>
+                                {monthlyCents > 0 ? `${money(monthlyCents / 100)} por mês` : "Guarda quando der"}
+                              </Text>
+                            </>
+                          ) : (
+                            <>
+                              <Text style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>Sem valor definido</Text>
+                              <Text style={{ marginTop: 2, fontSize: 24, fontWeight: "800", letterSpacing: -0.8, color: "#fff" }}>No seu ritmo</Text>
+                            </>
+                          )}
+                        </View>
+
+                        <View style={{ marginTop: 18, paddingTop: 16, flexDirection: "row", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)" }}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>Meta</Text>
+                            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 3, fontSize: 17, fontWeight: "700", color: "#fff" }}>
+                              {hasValue ? money(target) : "Livre"}
+                            </Text>
+                          </View>
+                          <View style={{ width: 1, marginHorizontal: 16, backgroundColor: "rgba(255,255,255,0.08)" }} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>Começa com</Text>
+                            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 3, fontSize: 17, fontWeight: "700", color: "#fff" }}>
+                              {money(start)}
+                            </Text>
+                            {start > 0 && account && <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, color: INK.softer }}>de {account.name}</Text>}
+                          </View>
+                        </View>
                       </View>
                     </View>
-
-                    <Group>
-                      <Pressable onPress={() => void choosePhoto()} disabled={photoBusy} style={({ pressed }) => ({ opacity: pressed || photoBusy ? 0.6 : 1 })}>
-                        <Row last>
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                            <View style={{ width: 34, height: 34, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.10)" }}>
-                              <ImageIcon size={17} color="#fff" />
-                            </View>
-                            <Text style={{ flex: 1, fontSize: 15.5, fontWeight: "600", color: "#fff" }}>
-                              {photoBusy ? "Enviando a foto…" : photo ? "Trocar a foto" : "Usar uma foto sua"}
-                            </Text>
-                            <ChevronRight size={17} color={INK.softer} />
-                          </View>
-                        </Row>
-                      </Pressable>
-                    </Group>
-
-                    <Group>
-                      <Fact label="Meta" value={hasValue ? money(target) : "Sem valor definido"} />
-                      {hasValue && <Fact label="Prazo" value={due ?? "Sem prazo"} />}
-                      {hasValue && (
-                        <Fact label="Guardar por mês" value={perMonth > 0 ? money(perMonth) : monthlyCents > 0 ? money(monthlyCents / 100) : "Conforme der"} />
-                      )}
-                      <Fact label="Começa com" value={start > 0 ? `${money(start)}${account ? ` · ${account.name}` : ""}` : "R$ 0,00"} last />
-                    </Group>
                   </Animated.View>
                 )}
 
@@ -854,17 +894,6 @@ function Row({ children, last = false }: { children: ReactNode; last?: boolean }
     <View style={{ paddingHorizontal: 18, paddingVertical: 15, borderBottomWidth: last ? 0 : 1, borderBottomColor: "rgba(255,255,255,0.07)" }}>
       {children}
     </View>
-  );
-}
-
-function Fact({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
-  return (
-    <Row last={last}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <Text style={{ fontSize: 14.5, color: INK.soft }}>{label}</Text>
-        <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15, fontWeight: "700", color: "#fff", textAlign: "right" }}>{value}</Text>
-      </View>
-    </Row>
   );
 }
 

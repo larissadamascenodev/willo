@@ -41,7 +41,7 @@ import {
   Trash2,
 } from "~/components/icons";
 import { money } from "~/lib/money";
-import { monthYear, paceOf } from "~/lib/caixinha";
+import { deadlineIn, monthYear, paceOf } from "~/lib/caixinha";
 import { catchUpYields, earns, estimate, latestCdi, yieldEarned } from "~/lib/yields";
 import { useAuth } from "~/lib/auth";
 import { GREEN, GROUND_LIT, INK, RED } from "~/theme/tokens";
@@ -62,6 +62,17 @@ import { type as T } from "~/theme/type";
 const PREVIEW = 5;
 
 /** A piece of glass on the page: the readings sit in these rather than loose on the ground. */
+/** The plan's piece of glass, on the picture's fade. */
+const PLAN = {
+  borderRadius: 22,
+  borderCurve: "continuous",
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.12)",
+  backgroundColor: "rgba(255,255,255,0.07)",
+  paddingHorizontal: 18,
+  paddingVertical: 14,
+} as const;
+
 const PANEL = {
   borderRadius: 28,
   borderCurve: "continuous",
@@ -305,29 +316,17 @@ export default function MetaDetalhe() {
   const totalOut = withdrawals.reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
 
   const pace = paceOf(goal);
-  /* With a date, the month's figure is what it takes to arrive on it. */
-  const dueIn = hasTarget && !isComplete && !pace.open && !pace.late;
-
-  const monthsLeft =
-    hasTarget && !dueIn && !isComplete && goal.monthly_contribution && goal.monthly_contribution > 0
-      ? Math.ceil(remaining / goal.monthly_contribution)
-      : 0;
-
-  const perMonth = dueIn ? pace.monthly : goal.monthly_contribution && goal.monthly_contribution > 0 ? goal.monthly_contribution : 0;
-  const arrives = isComplete
-    ? "Concluída"
-    : dueIn
-      ? monthYear(goal.deadline as string)
-      : pace.late
-        ? "Prazo vencido"
-        : monthsLeft > 0
-          ? `${monthsLeft} ${monthsLeft === 1 ? "mês" : "meses"}`
-          : "—";
+  /* The plan is what was set to go in each month; with only a date, what that date asks.
+     When it arrives is always worked out again from what is actually left, so a month with
+     more put in brings the date closer and a month with less pushes it out. */
+  const plan =
+    Number(goal.monthly_contribution) > 0 ? Number(goal.monthly_contribution) : !pace.open && !pace.late && pace.monthly > 0 ? pace.monthly : 0;
+  const monthsToGo = hasTarget && !isComplete && plan > 0 ? Math.max(1, Math.ceil(remaining / plan)) : 0;
+  const reachOn = monthsToGo > 0 ? monthYear(deadlineIn(monthsToGo)) : null;
 
   const forecast = earns(goal) && cdi !== null ? estimate(Number(goal.current_amount) || 0, cdi, Number(goal.yield_percent)) : null;
   const shown = showAll ? movements : movements.slice(0, PREVIEW);
   const heroH = Math.round(width * 1.15) + insets.top;
-  const tileW = (width - 40 - 10) / 2;
 
   return (
     /* A plain ground, so the picture melts into it with no seam. */
@@ -390,6 +389,38 @@ export default function MetaDetalhe() {
           ) : (
             <Text style={{ marginTop: 6, fontSize: 14, color: INK.soft }}>Guardado até agora, no seu ritmo.</Text>
           )}
+
+          {/* ══ The plan: what to put in each month, and when that gets there ══ */}
+          {hasTarget && !isComplete ? (
+            <View style={[PLAN, { marginTop: 18 }]}>
+              {plan > 0 && reachOn ? (
+                <View style={{ flexDirection: "row" }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>Guardar por mês</Text>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 4, fontSize: 21, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>
+                      {money(plan)}
+                    </Text>
+                  </View>
+                  <View style={{ width: 1, marginHorizontal: 16, backgroundColor: "rgba(255,255,255,0.10)" }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>Você alcança em</Text>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 4, fontSize: 21, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>
+                      {reachOn.charAt(0).toUpperCase() + reachOn.slice(1)}
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <Text style={{ fontSize: 13.5, lineHeight: 19, color: INK.soft }}>
+                  Diga quanto quer guardar por mês, em Editar caixinha, e eu calculo quando você chega lá.
+                </Text>
+              )}
+            </View>
+          ) : !hasTarget && Number(goal.monthly_contribution) > 0 ? (
+            <View style={[PLAN, { marginTop: 18 }]}>
+              <Text style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>Você guarda por mês</Text>
+              <Text style={{ marginTop: 4, fontSize: 21, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>{money(Number(goal.monthly_contribution))}</Text>
+            </View>
+          ) : null}
         </Animated.View>
 
         <View style={{ paddingHorizontal: 20 }}>
@@ -434,22 +465,6 @@ export default function MetaDetalhe() {
               <Text style={{ fontSize: 16.5, fontWeight: "600", color: "#fff" }}>Retirar</Text>
             </Pressable>
           </Animated.View>
-
-          {/* ══ The numbers a goal is judged by, each in its own small piece of glass ══ */}
-          {hasTarget && (
-            <Animated.View entering={FadeInDown.delay(120).duration(420)} style={{ marginTop: 14, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-              <Stat width={tileW} label="Guardado" value={money(goal.current_amount)} />
-              <Stat width={tileW} label={isComplete ? "Concluída" : "Falta"} value={isComplete ? "100%" : money(remaining)} tone={isComplete ? GREEN : undefined} />
-              <Stat width={tileW} label="Meta" value={money(goal.target_amount)} />
-              <Stat width={tileW} label="Guardar por mês" value={perMonth > 0 ? money(perMonth) : "—"} />
-              <Stat width={tileW * 2 + 10} label="Previsão de chegada" value={arrives} tone={pace.late && !isComplete ? RED : undefined} />
-            </Animated.View>
-          )}
-          {!hasTarget && Number(goal.monthly_contribution) > 0 && (
-            <Animated.View entering={FadeInDown.delay(120).duration(420)} style={{ marginTop: 14 }}>
-              <Stat width={tileW * 2 + 10} label="Você guarda por mês" value={money(Number(goal.monthly_contribution))} />
-            </Animated.View>
-          )}
 
           {/* ══ What it earns: the rate it follows and what that is expected to come to ══ */}
           {earns(goal) && (
@@ -741,29 +756,6 @@ function GlassPill({ label, tone }: { label: string; tone?: string }) {
       <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14 }} />
       <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14, backgroundColor: tone ? `${tone}22` : "rgba(255,255,255,0.12)" }} />
       <Text style={{ zIndex: 1, fontSize: 12.5, fontWeight: "700", color: tone ?? "#fff" }}>{label}</Text>
-    </View>
-  );
-}
-
-/** One number in its own small piece of glass: what it is, and the figure. */
-function Stat({ width, label, value, tone }: { width: number; label: string; value: string; tone?: string }) {
-  return (
-    <View
-      style={{
-        width,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        borderRadius: 22,
-        borderCurve: "continuous",
-        borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.09)",
-        backgroundColor: "rgba(255,255,255,0.055)",
-      }}
-    >
-      <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>{label}</Text>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={{ marginTop: 5, fontSize: 19, fontWeight: "800", letterSpacing: -0.5, color: tone ?? "#fff" }}>
-        {value}
-      </Text>
     </View>
   );
 }

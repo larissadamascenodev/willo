@@ -22,25 +22,25 @@ const known = (n: number) => Number.isFinite(n) && n > 0;
 const rounded = (n: number) => (n >= 1000 ? Math.round(n / 50) * 50 : Math.round(n));
 
 export const purposeLine = (first: string | null) =>
-  `${first ? `Oi, ${first}. ` : "Oi! "}Escolha um objetivo e eu te ajudo com o valor e o prazo.`;
+  `${first ? `Oi, ${first}!` : "Oi!"} Me conta o que você quer conquistar que eu te ajudo a chegar lá.`;
 
 const ABOUT: Record<CoverKind, string> = {
-  viagem: "Viagem costuma custar mais do que a gente imagina: passagem, hospedagem, passeios. Dê um nome e um valor que caiba no seu mês.",
-  reserva: "A reserva é o que te segura num imprevisto. Não precisa de prazo: ela se enche conforme der.",
-  reforma: "Obra quase sempre passa do orçamento. Se puder, some uma folga de 10% ao valor.",
-  casa: "Entrada de imóvel é um objetivo de anos. Quanto mais cedo começar, menos pesa cada mês.",
-  carro: "Pense no valor da entrada, não do carro inteiro. O resto o financiamento ou o próximo ano resolvem.",
-  carreira: "Investir em você costuma ser o melhor retorno que existe. Curso, mentoria, equipamento: qual é o primeiro passo?",
-  consumo: "Um desejo planejado é um desejo que você aproveita sem culpa. Quanto ele custa?",
-  educacao: "Estudo é investimento. Coloque o valor total do curso ou da mensalidade que você quer cobrir.",
+  viagem: "Viagem sempre sai mais cara do que a gente pensa, né? Passagem, hotel, passeio… Coloca um valor que caiba no bolso.",
+  reserva: "A reserva é o seu colchão pra imprevisto. Nada de prazo: ela vai enchendo no seu ritmo.",
+  reforma: "Obra adora passar do orçamento. Se der, coloca uma folguinha de uns 10% no valor.",
+  casa: "Casa própria é projeto de alguns anos. Quanto antes começar, mais leve fica cada mês.",
+  carro: "Dica: pensa no valor da entrada, não no carro inteiro. O resto a gente resolve depois.",
+  carreira: "Investir em você é o melhor retorno que existe. Curso, mentoria, equipamento… quanto vai precisar?",
+  consumo: "Desejo planejado é desejo aproveitado sem culpa. Quanto custa esse sonho?",
+  educacao: "Estudo é investimento. Coloca o valor total do curso, ou das mensalidades que quer cobrir.",
 };
 
 export function aboutLine(kind: CoverKind | null, custom: boolean, month: Month): string {
   if (kind === "reserva" && known(month.expense)) {
-    return `${ABOUT.reserva} Com o que você gasta por mês, o ideal fica entre ${money(rounded(month.expense * 3))} e ${money(rounded(month.expense * 6))}.`;
+    return `${ABOUT.reserva} Pelo que você gasta, o ideal fica entre ${money(rounded(month.expense * 3))} e ${money(rounded(month.expense * 6))}.`;
   }
   if (kind) return ABOUT[kind];
-  return custom ? "Dê um nome que você reconheça na hora: Moto, Casamento, Reforma da cozinha…" : "Dê um nome que você reconheça na hora.";
+  return custom ? "Dá um nome que você bata o olho e já saiba o que é: Moto, Casamento, Cozinha nova…" : "Dá um nome que você bata o olho e já saiba o que é.";
 }
 
 /** Reserve suggestions the person can tap to fill the amount: three and six months of expenses. */
@@ -51,32 +51,30 @@ export function reserveChips(month: Month): { label: string; cents: number }[] {
 
 export function timeLine(args: { month: Month; perMonth: number; months: number | null; target: number }): string {
   const { month, perMonth, months, target } = args;
-  if (months === null) return "Sem prazo você guarda conforme der. Se quiser, diga quanto pretende separar por mês.";
-  if (perMonth <= 0) return "Esse prazo já cobre o valor com o que você vai colocar agora.";
-  if (!known(month.income)) return `Para chegar lá, são ${money(perMonth)} por mês.`;
+  if (months === null) return "Sem prazo, sem pressão. Se quiser, me fala quanto pensa em separar por mês.";
+  if (perMonth <= 0) return "Com o que você vai colocar agora, já fecha a conta. Boa!";
+  if (!known(month.income)) return `Pra chegar lá, são ${money(perMonth)} por mês.`;
   const share = Math.round((perMonth / month.income) * 100);
   if (share >= 35 && months < 36) {
-    const longer = Math.ceil(target / (months * 2) * 100) / 100;
-    return `São ${money(perMonth)} por mês, ${share}% do que entra. É pesado. Em ${months * 2} meses cai para ${money(longer)}.`;
+    const longer = Math.ceil((target / (months * 2)) * 100) / 100;
+    return `Hmm, ${money(perMonth)} por mês é ${share}% do que entra. Puxado! Em ${months * 2} meses cai pra ${money(longer)}.`;
   }
-  if (share >= 20) return `${money(perMonth)} por mês é ${share}% da sua renda. Dá, mas pede atenção aos outros gastos.`;
-  return `${money(perMonth)} por mês é só ${Math.max(share, 1)}% da sua renda. Cabe tranquilo.`;
+  if (share >= 20) return `${money(perMonth)} por mês é ${share}% da sua renda. Dá, mas vai pedir um pouco de disciplina.`;
+  return `${money(perMonth)} por mês? É só ${Math.max(share, 1)}% da sua renda. Tranquilo!`;
 }
 
 export function startLine(args: { start: number; accountName: string | null; balance: number | null }): string {
   const { start, accountName, balance } = args;
-  if (start <= 0) return "Quer já colocar algum valor? Pode deixar zerado e guardar depois, sem pressa.";
+  if (start <= 0) return "Quer dar o pontapé inicial? Pode deixar zerado também e ir guardando depois.";
   if (balance !== null && accountName && start > balance) {
-    return `${accountName} tem ${money(Math.max(balance, 0))} agora, menos que isso. Escolha outra conta ou um valor menor.`;
+    return `Opa, ${accountName} só tem ${money(Math.max(balance, 0))} agora. Escolhe outra conta ou um valor menor.`;
   }
-  return accountName ? `Certo, ${money(start)} saem de ${accountName} e já ficam guardados.` : "Escolha de qual conta sai o dinheiro.";
+  return accountName ? `Fechado! ${money(start)} saem de ${accountName} e já ficam guardados.` : "De qual conta sai o dinheiro?";
 }
 
-export function reviewLine(args: { perMonth: number; due: string | null; start: number }): string {
-  const { perMonth, due, start } = args;
-  const parts: string[] = [];
-  if (perMonth > 0 && due) parts.push(`Guardando ${money(perMonth)} por mês, você chega lá em ${due}.`);
-  if (start > 0) parts.push(`${money(start)} já começam guardados.`);
-  parts.push("Se quiser, coloque uma foto sua para ela ficar com a sua cara.");
-  return parts.join(" ");
+export function reviewLine(args: { perMonth: number; due: string | null; start: number; hasValue: boolean }): string {
+  const { perMonth, due, start, hasValue } = args;
+  if (!hasValue) return start > 0 ? `Ficou ótima! Já começa com ${money(start)} guardados.` : "Ficou ótima! É só ir guardando quando der.";
+  if (perMonth > 0 && due) return `Tá tudo certo. Guardando ${money(perMonth)} por mês, você chega lá em ${due}.`;
+  return "Tá tudo certo. Confere aí e é só criar.";
 }
