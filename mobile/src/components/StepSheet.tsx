@@ -8,8 +8,10 @@ import Animated, {
   SlideInRight,
   SlideOutLeft,
   SlideOutRight,
+  useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
@@ -31,6 +33,8 @@ import { INK } from "~/theme/tokens";
  */
 
 const SLIDE = 300;
+const EXIT_MS = 260;
+const AnimatedBlur = Animated.createAnimatedComponent(BlurView);
 
 export default function StepSheet({
   open,
@@ -63,10 +67,43 @@ export default function StepSheet({
   const [lift, setLift] = useState(0);
   const before = useRef(step);
   const forward = step >= before.current;
+  /* A page crosses over only when the step changes. The first one is simply there:
+     sliding it in from the side as the panel rose made the whole thing arrive on a
+     diagonal. */
+  const crossing = step !== before.current;
 
   useEffect(() => {
     before.current = step;
   }, [step]);
+
+  /* The panel rises from the bottom edge and the page behind softens, the same way
+     the centred panes arrive; it stays mounted through the way out so it can leave. */
+  const [mounted, setMounted] = useState(open);
+  const shown = useSharedValue(0);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (timer.current) clearTimeout(timer.current);
+    if (open) {
+      setMounted(true);
+      shown.set(withSpring(1, { duration: 520, dampingRatio: 0.94, reduceMotion: ReduceMotion.System }));
+    } else {
+      shown.set(withTiming(0, { duration: EXIT_MS, easing: Easing.in(Easing.cubic), reduceMotion: ReduceMotion.System }));
+      timer.current = setTimeout(() => {
+        setMounted(false);
+        before.current = 0;
+      }, EXIT_MS + 20);
+    }
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, [open, shown]);
+
+  const blurProps = useAnimatedProps(() => ({ intensity: Math.max(0, Math.min(1, shown.get())) * 18 }));
+  const dim = useAnimatedStyle(() => ({ opacity: Math.max(0, Math.min(1, shown.get())) }));
+  const rise = useAnimatedStyle(() => ({
+    transform: [{ translateY: (1 - Math.min(1, shown.get())) * (height * 0.9) }],
+  }));
 
   useEffect(() => {
     if (!open) {
@@ -90,26 +127,30 @@ export default function StepSheet({
   const finished = done !== undefined && done !== null;
 
   return (
-    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={{ flex: 1 }} onPress={finished || busy ? undefined : onClose}>
-        <BlurView intensity={18} tint="dark" style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)" }} />
+        <AnimatedBlur tint="dark" animatedProps={blurProps} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)" }, dim]} />
       </Pressable>
 
-      <View
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: lift,
-          height: panel,
-          borderTopLeftRadius: 34,
-          borderTopRightRadius: 34,
-          borderCurve: "continuous",
-          overflow: "hidden",
-          borderWidth: 1,
-          borderBottomWidth: 0,
-          borderColor: "rgba(255,255,255,0.13)",
-        }}
+      <Animated.View
+        style={[
+          {
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: lift,
+            height: panel,
+            borderTopLeftRadius: 34,
+            borderTopRightRadius: 34,
+            borderCurve: "continuous",
+            overflow: "hidden",
+            borderWidth: 1,
+            borderBottomWidth: 0,
+            borderColor: "rgba(255,255,255,0.13)",
+          },
+          rise,
+        ]}
       >
         <BlurView intensity={70} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(16,17,20,0.74)" }} />
@@ -153,7 +194,7 @@ export default function StepSheet({
             <View style={{ flex: 1, overflow: "hidden", marginTop: 10 }}>
               <Animated.View
                 key={step}
-                entering={(forward ? SlideInRight : SlideInLeft).duration(SLIDE).easing(Easing.out(Easing.cubic))}
+                entering={crossing ? (forward ? SlideInRight : SlideInLeft).duration(SLIDE).easing(Easing.out(Easing.cubic)) : undefined}
                 exiting={(forward ? SlideOutLeft : SlideOutRight).duration(SLIDE - 80).easing(Easing.in(Easing.cubic))}
                 style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, paddingHorizontal: 22 }}
               >
@@ -187,7 +228,7 @@ export default function StepSheet({
             </View>
           </View>
         )}
-      </View>
+      </Animated.View>
     </Modal>
   );
 }

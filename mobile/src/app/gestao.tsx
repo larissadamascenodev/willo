@@ -410,6 +410,7 @@ export default function Gestao() {
           setAddingCofrinho(false);
           void load();
           announce();
+          showToast("Cofrinho criado");
         }}
       />
     </Room>

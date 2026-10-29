@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from "react";
+import { showToast } from "~/lib/toast";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -101,6 +102,7 @@ export default function Metas() {
     setEditing(null);
     await load();
     announce();
+    showToast("Cofrinho atualizado");
   };
 
   const deposit = async (data: {
@@ -114,6 +116,7 @@ export default function Metas() {
     setDepositing(null);
     await load();
     announce();
+    showToast("Valor guardado");
   };
 
   const remove = async (goal: Goal) => {
@@ -122,6 +125,7 @@ export default function Metas() {
       setConfirming(null);
       await load();
       announce();
+      showToast("Cofrinho excluído");
     } catch {
       setError("Não foi possível excluir a meta.");
     }

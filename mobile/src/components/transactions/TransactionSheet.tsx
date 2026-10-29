@@ -1,4 +1,5 @@
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { showToast } from "~/lib/toast";
 import { ActivityIndicator, Platform, Pressable, Text, View, type TextStyle } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
@@ -145,13 +146,14 @@ export default function TransactionSheet({
   const Icon = categoryIcon(tx.category, customCategories);
   const hex = categoryHex(tx.category, customCategories);
 
-  const run = async (fn: () => Promise<unknown>) => {
+  const run = async (fn: () => Promise<unknown>, said?: string) => {
     setBusy(true);
     setError(null);
     try {
       await fn();
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       window.dispatchEvent(new CustomEvent("transaction-created"));
+      if (said) showToast(said);
       onChanged();
       onClose();
     } catch (e) {
@@ -161,10 +163,10 @@ export default function TransactionSheet({
     }
   };
 
-  const markPaid = () => run(() => updateTransactionStatus(tx.id, "pago"));
+  const markPaid = () => run(() => updateTransactionStatus(tx.id, "pago"), "Marcada como paga");
 
-  const removeThisMonth = () => run(() => removeTransaction(tx, "month", { month, year, userId }));
-  const removeAll = () => run(() => removeTransaction(tx, "all", { month, year, userId }));
+  const removeThisMonth = () => run(() => removeTransaction(tx, "month", { month, year, userId }), "Transação excluída");
+  const removeAll = () => run(() => removeTransaction(tx, "all", { month, year, userId }), "Transação excluída");
 
   return (
     <BottomSheet open={!!asked} onClose={onClose}>

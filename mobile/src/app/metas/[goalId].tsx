@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from "react";
+import { showToast } from "~/lib/toast";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -172,6 +173,7 @@ export default function MetaDetalhe() {
     setMoving(null);
     await load();
     announce();
+    showToast(moving === "saque" ? "Retirada registrada" : "Valor guardado");
   };
 
   const save = async (data: {
@@ -185,6 +187,7 @@ export default function MetaDetalhe() {
     setEditing(false);
     await load();
     announce();
+    showToast("Cofrinho atualizado");
   };
 
   /* Adopting a plan from the analysis: the new monthly figure and the date it implies. */
@@ -193,6 +196,7 @@ export default function MetaDetalhe() {
     await updateGoal(goalId, { monthly_contribution: plan.monthly, deadline: plan.deadline });
     await load();
     announce();
+    showToast("Plano atualizado");
   };
 
   const removeGoal = async () => {
@@ -200,6 +204,7 @@ export default function MetaDetalhe() {
     try {
       await deleteGoal(goalId);
       announce();
+      showToast("Cofrinho excluído");
       router.replace("/metas");
     } catch {
       setError("Não foi possível excluir a meta.");
@@ -214,6 +219,7 @@ export default function MetaDetalhe() {
       setConfirming(null);
       await load();
       announce();
+      showToast("Depósito desfeito");
     } catch {
       setError("Não foi possível remover o depósito.");
       setConfirming(null);

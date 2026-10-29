@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { showToast } from "~/lib/toast";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -227,6 +228,7 @@ export default function Novo() {
           observation: observation.trim() || null,
         });
         window.dispatchEvent(new CustomEvent("transaction-created"));
+        showToast("Transação atualizada");
         router.back();
         return;
       }
@@ -250,6 +252,7 @@ export default function Novo() {
       );
       /* Every screen that reads a month listens for this. */
       window.dispatchEvent(new CustomEvent("transaction-created"));
+      showToast(type === "receita" ? "Receita adicionada" : "Despesa adicionada");
       router.back();
     } catch {
       setError("Não foi possível salvar. Tente de novo.");

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { showToast } from "~/lib/toast";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
@@ -127,6 +128,7 @@ export default function Categorias() {
       setError(null);
       await load();
       window.dispatchEvent(new CustomEvent("finance-data-changed"));
+      showToast("Categoria criada");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível criar a categoria.");
     }
@@ -147,6 +149,7 @@ export default function Categorias() {
       setError(null);
       await load();
       window.dispatchEvent(new CustomEvent("finance-data-changed"));
+      showToast("Categoria atualizada");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível salvar a categoria.");
     }
@@ -161,6 +164,7 @@ export default function Categorias() {
       setError(null);
       await load();
       window.dispatchEvent(new CustomEvent("finance-data-changed"));
+      showToast("Categoria removida");
     } catch {
       setError("Não foi possível remover a categoria.");
     }
