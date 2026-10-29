@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import type { ComponentRef } from "react";
 import * as Haptics from "expo-haptics";
 import { RESERVE_NAME } from "@/services/goalService";
 import { deadlineIn, monthYear, monthlyNeeded, monthsUntil } from "~/lib/caixinha";
@@ -44,7 +45,6 @@ const NAME: Record<CoverKind, string> = {
 };
 
 const SPANS: { value: number | "more"; label: string }[] = [
-  { value: 0, label: "Livre" },
   { value: 6, label: "6 meses" },
   { value: 12, label: "1 ano" },
   { value: 24, label: "2 anos" },
@@ -100,6 +100,7 @@ export default function GoalFormSheet({
   const [monthlyCents, setMonthlyCents] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const nameRef = useRef<ComponentRef<typeof TextInput>>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -117,7 +118,7 @@ export default function GoalFormSheet({
   const kind = coverKind(name);
   const dated = hasValue && span > 0;
   const perMonth = dated ? monthlyNeeded(Math.max(cents / 100 - saved, 0), span) : 0;
-  const segment: number | "more" = more ? "more" : span;
+  const segment: number | "more" | null = span === 0 ? null : more ? "more" : span;
 
   const submit = async () => {
     const trimmed = name.trim();
@@ -225,6 +226,33 @@ export default function GoalFormSheet({
               </Pressable>
             );
           })}
+          {/* Their own: the name is cleared to be written. */}
+          <Pressable
+            onPress={() => {
+              void Haptics.selectionAsync().catch(() => undefined);
+              setName("");
+              setError(null);
+              nameRef.current?.focus();
+            }}
+            style={({ pressed }) => ({ alignItems: "center", transform: [{ scale: pressed ? 0.96 : 1 }] })}
+          >
+            <View
+              style={{
+                width: 84,
+                height: 64,
+                borderRadius: 18,
+                borderCurve: "continuous",
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: kind === null ? 2 : 1,
+                borderColor: kind === null ? "#fff" : "rgba(255,255,255,0.12)",
+                backgroundColor: "rgba(255,255,255,0.07)",
+              }}
+            >
+              <Plus size={20} color="#fff" strokeWidth={2.2} />
+            </View>
+            <Text style={{ marginTop: 6, fontSize: 12, fontWeight: kind === null ? "700" : "500", color: kind === null ? "#fff" : INK.soft }}>Personalizado</Text>
+          </Pressable>
         </ScrollView>
 
         {/* ══ Name and amount ══ */}
@@ -232,6 +260,7 @@ export default function GoalFormSheet({
           <Row>
             {label("Nome")}
             <TextInput
+              ref={nameRef}
               value={name}
               onChangeText={(t) => {
                 setName(t);
@@ -290,7 +319,18 @@ export default function GoalFormSheet({
               }}
             />
 
-            {more && (
+            <Pressable
+              onPress={() => {
+                setMore(false);
+                setSpan(span === 0 ? 12 : 0);
+              }}
+              hitSlop={10}
+              style={{ alignSelf: "center", marginTop: 12, paddingVertical: 2 }}
+            >
+              <Text style={{ fontSize: 13.5, fontWeight: "600", color: INK.soft }}>{span === 0 ? "Definir um prazo" : "Não tem prazo"}</Text>
+            </Pressable>
+
+            {more && span > 0 && (
               <Group style={{ marginTop: 10 }}>
                 <Row last>
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
