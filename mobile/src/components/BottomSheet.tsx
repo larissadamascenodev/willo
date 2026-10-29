@@ -1,5 +1,5 @@
-import { type ReactNode } from "react";
-import { Modal, Pressable, ScrollView, View } from "react-native";
+import { useEffect, useState, type ReactNode } from "react";
+import { Keyboard, Modal, Platform, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { GROUND_LIT, INK } from "~/theme/tokens";
@@ -10,6 +10,9 @@ import { GROUND_LIT, INK } from "~/theme/tokens";
  * For a place you go to, rather than something you do to what is under your thumb —
  * that is the anchored menu. It keeps a real blur behind it, because what sits back
  * there is the page's own content and not a flat ground.
+ *
+ * It rides up with the keyboard. A sheet with a field in it that the keyboard then
+ * covers is a sheet whose field cannot be seen being typed in.
  */
 export default function BottomSheet({
   open,
@@ -24,6 +27,23 @@ export default function BottomSheet({
   full?: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const [lift, setLift] = useState(0);
+
+  useEffect(() => {
+    if (!open) {
+      setLift(0);
+      return;
+    }
+    const ios = Platform.OS === "ios";
+    const show = Keyboard.addListener(ios ? "keyboardWillChangeFrame" : "keyboardDidShow", (e) => {
+      setLift(Math.max(0, e.endCoordinates.height - (ios ? insets.bottom : 0)));
+    });
+    const hide = Keyboard.addListener(ios ? "keyboardWillHide" : "keyboardDidHide", () => setLift(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, [open, insets.bottom]);
 
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
@@ -36,7 +56,7 @@ export default function BottomSheet({
           position: "absolute",
           left: 0,
           right: 0,
-          bottom: 0,
+          bottom: lift,
           maxHeight: full ? "88%" : "72%",
           borderTopLeftRadius: 28,
           borderTopRightRadius: 28,

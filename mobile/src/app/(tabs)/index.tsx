@@ -21,6 +21,8 @@ import ScrollEdge from "~/components/ScrollEdge";
 import HomeHeader from "~/components/home/HomeHeader";
 import ProfileSheet from "~/components/ProfileSheet";
 import Stories from "~/components/home/Stories";
+import OrbHero, { ORB_HERO_BODY } from "~/components/home/OrbHero";
+import { useHomeHero } from "~/lib/homeHero";
 import WidgetBoard from "~/components/home/WidgetBoard";
 import EditBar from "~/components/home/EditBar";
 import { renderHomeWidget } from "~/components/home/HomeWidgets";
@@ -32,6 +34,8 @@ const AnimatedBlur = Animated.createAnimatedComponent(BlurView);
 
 /** How far the page travels before the pinned block has fully receded. */
 const PIN_TRAVEL = 190;
+/** The sphere is taller, so it takes longer to go. */
+const ORB_TRAVEL = 270;
 /** What the readings take, plus the room between them and the first card: the
     progress bar, its margin, the slide's own height, and a gap. Measured rather
     than guessed — the slack was showing as a band of empty screen. */
@@ -45,6 +49,10 @@ const PINNED_BODY = 2.5 + 18 + 200 + 24;
  * is the whole arrangement: a fixed row that says who is signed in, a pinned block
  * holding what the app noticed, and a scroller that starts below both and passes
  * over them.
+ *
+ * What is pinned is one of two, to be tried against each other: the stories, or
+ * the sphere — Willo floating, saying the same readings one at a time, and the
+ * quickest way into Registro rápido. Which is chosen from the avatar's sheet.
  *
  * The greeting is not a heading here: it is the first of the readings. The name
  * only appears in the row at the top once the block has receded far enough that
@@ -75,22 +83,33 @@ export default function Home() {
   const name = profile?.display_name || user?.email?.split("@")[0] || "";
   const firstName = name.trim().split(" ")[0] ?? "";
 
+  const [hero] = useHomeHero();
+  const orbHero = hero === "orb";
+  const travel = orbHero ? ORB_TRAVEL : PIN_TRAVEL;
+
   /* ── How far into the recession we are, and everything that reads off it ── */
   const scrollY = useSharedValue(0);
-  const progress = useDerivedValue(() => Math.min(Math.max(scrollY.value / PIN_TRAVEL, 0), 1));
+  const progress = useDerivedValue(() => Math.min(Math.max(scrollY.value / travel, 0), 1));
 
   const onScroll = useAnimatedScrollHandler({
     onScroll: (e) => {
       scrollY.value = e.contentOffset.y;
       runOnJS(report)(e.contentOffset.y);
       /* The name takes over up top once the greeting has faded far enough. */
-      runOnJS(setCollapsed)(e.contentOffset.y / PIN_TRAVEL > 0.55);
+      runOnJS(setCollapsed)(e.contentOffset.y / travel > 0.55);
     },
   });
 
   const pinnedStyle = useAnimatedStyle(() => ({
     opacity: 1 - progress.value * 0.78,
     transform: [{ scale: 1 - progress.value * 0.035 }],
+  }));
+
+  /* The sphere sits above the page, so the cards cannot pass over it the way they do
+     the stories; it is gone before they reach it instead. */
+  const orbStyle = useAnimatedStyle(() => ({
+    opacity: Math.max(0, 1 - progress.value * 1.7),
+    transform: [{ translateY: -progress.value * 26 }, { scale: 1 - progress.value * 0.06 }],
   }));
 
   /* React Native has no filter: blur, so the blur is a layer over the block whose
@@ -168,7 +187,7 @@ export default function Home() {
 
   /* Where the readings sit, and therefore where the first card starts. */
   const pinnedTop = insets.top + 72;
-  const pinnedHeight = pinnedTop + PINNED_BODY;
+  const pinnedHeight = pinnedTop + (orbHero ? ORB_HERO_BODY : PINNED_BODY);
 
   return (
     <Room lit sky>
@@ -176,7 +195,7 @@ export default function Home() {
           stops taking taps, since by then you cannot read what you would tap. */}
       {/* Editing is about the board, so the readings stand down for it — leaving
           them pinned behind an opaque bar only means drawing them to be covered. */}
-      {!editing && (
+      {!editing && !orbHero && (
         <Animated.View
           pointerEvents="box-none"
           style={[
@@ -188,7 +207,7 @@ export default function Home() {
         </Animated.View>
       )}
 
-      {!editing && (
+      {!editing && !orbHero && (
       <AnimatedBlur
         tint="dark"
         animatedProps={blurProps}
@@ -228,6 +247,17 @@ export default function Home() {
           render={(id, size) => renderHomeWidget(id, size, widgetContext)}
         />
       </Animated.ScrollView>
+
+      {/* The sphere is above the page, not under it: the scroller would take the tap.
+          Whatever it does not cover still reaches the page. */}
+      {!editing && orbHero && (
+        <Animated.View
+          pointerEvents={collapsed ? "none" : "box-none"}
+          style={[{ position: "absolute", left: 0, right: 0, top: pinnedTop - 8, paddingHorizontal: 16 }, orbStyle]}
+        >
+          <OrbHero slides={slides} />
+        </Animated.View>
+      )}
 
       {/* Above everything: the row that stays, and the band the page passes under. */}
       <ScrollEdge on={moved && !editing} />

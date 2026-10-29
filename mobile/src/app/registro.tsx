@@ -1,19 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef, type ComponentType } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, {
-  Easing,
-  FadeIn,
-  FadeInDown,
-  FadeOut,
-  LinearTransition,
-  ReduceMotion,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, LinearTransition } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { categoryHex } from "@/lib/categoryData";
 import { createTransaction, deleteTransaction, getAccounts, getCreditCards, getRecentTransactions } from "@/services/transactionService";
@@ -25,13 +14,14 @@ import Glass from "~/components/Glass";
 import Notinha, { type NotinhaLine } from "~/components/registro/Notinha";
 import Confirmado from "~/components/registro/Confirmado";
 import ParticleOrb, { type OrbMode } from "~/components/registro/ParticleOrb";
-import { ArrowUp, Camera, Mic, PenLine, Sparkles, Square, X, Zap } from "~/components/icons";
+import { ArrowUp, Camera, Mic, PenLine, Sparkles, X, Zap } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
-import { MicrophoneDenied, useVoice } from "~/lib/voice";
-import { GREEN, INK, RED } from "~/theme/tokens";
+import { useVoiceEntry } from "~/lib/voiceEntry";
+import VoiceEntrySheet from "~/components/registro/VoiceEntrySheet";
+import { GREEN, INK } from "~/theme/tokens";
 
 /**
  * Registro rápido: say what you spent, in one sentence, and have it filed.
@@ -43,9 +33,11 @@ import { GREEN, INK, RED } from "~/theme/tokens";
  * been said the screen becomes the conversation, each batch landing on its own
  * receipt, saved once nothing is missing and undoable from the receipt itself.
  *
- * Speaking takes the whole stage while it lasts — the sphere large, breathing,
- * with the seconds under it — and fills the box rather than the books: read it,
- * fix the word, send.
+ * The sphere is the microphone. Drag it and it turns; tap it and it swells and
+ * listens; tap it again and what was said is read, and a sheet comes up to confirm
+ * before anything is written — see lib/voiceEntry. Writing and the camera stay in
+ * the bar below, and the person's own frequent entries sit under the sphere as
+ * shortcuts: "Uber 18" again is a tap.
  */
 
 type Item =
@@ -73,6 +65,9 @@ interface Shortcut {
   text: string;
 }
 
+/** The room under the sphere for what it is saying. */
+const CAPTION_H = 84;
+
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 /** Examples that between them show the range: one thing, several, income, card, a past day. */
@@ -88,7 +83,6 @@ const EXAMPLES: { text: string; category: string }[] = [
 const INCOME_CATEGORIES = ["Salário", "Freelance", "Investimentos", "Vendas", "Aluguéis", "Bônus", "Comissão", "Mesada"];
 
 const spoken = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(2).replace(".", ","));
-const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
 const tapSaved = () => void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
 const tapAsked = () => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
@@ -97,7 +91,11 @@ export default function Registro() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const voice = useVoice();
+  const entry = useVoiceEntry();
+  const { width } = useWindowDimensions();
+  const [stageH, setStageH] = useState(0);
+  const listening = entry.state === "listening";
+  const reading = entry.state === "reading";
 
   const [items, setItems] = useState<Item[]>([]);
   const [lines, setLines] = useState<Line[]>([]);
@@ -172,9 +170,9 @@ export default function Registro() {
   }, []);
 
   const close = useCallback(() => {
-    void voice.cancel();
+    void entry.cancel();
     router.back();
-  }, [router, voice]);
+  }, [router, entry]);
 
   /* ---- writing ---- */
 
@@ -386,42 +384,6 @@ export default function Registro() {
     send(said);
   }, [text, thinking, send]);
 
-  /** What was heard goes into the box, not into the books. */
-  const toggleRecording = useCallback(async () => {
-    if (voice.recording) {
-      try {
-        const clip = await voice.stop();
-        if (!clip || clip.seconds < 1) {
-          pushBot("Não peguei nada. Segura um pouquinho mais?");
-          return;
-        }
-        setThinking("Ouvindo");
-        const { transcript } = await readEntry({ audio: { data: clip.data, mimeType: clip.mimeType }, categories });
-        if (!transcript?.trim()) {
-          pushBot("Não consegui ouvir. Fala mais perto, num lugar mais quieto?");
-          return;
-        }
-        setText(transcript.trim());
-        inputRef.current?.focus();
-      } catch {
-        pushBot("Não consegui ouvir agora. Tenta de novo?");
-      } finally {
-        setThinking(null);
-      }
-      return;
-    }
-    try {
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
-      await voice.start();
-    } catch (err) {
-      pushBot(
-        err instanceof MicrophoneDenied
-          ? "O microfone está bloqueado. Libere o Willo em Ajustes › Willo › Microfone."
-          : "Não consegui acessar o microfone agora.",
-      );
-    }
-  }, [voice, categories, pushBot]);
-
   /* ---- what each receipt shows ---- */
 
   const linesOf = useCallback(
@@ -465,7 +427,13 @@ export default function Registro() {
   const optionChips = question && question.kind !== "category" ? question.options : [];
   const busy = thinking !== null;
   const typed = text.trim().length > 0;
-  const mode: OrbMode = voice.recording ? "listening" : busy ? "thinking" : "idle";
+  const mode: OrbMode = listening ? "listening" : busy || reading ? "thinking" : "idle";
+  /* As large as the stage can spare: what is left once the words under the sphere
+     have their room, and the swell has its own — across as well as down, since
+     swollen it is a sixth wider than it is drawn. Measured, not guessed — the sphere
+     was laid out against a height it did not have, and everything overlapped. */
+  const orb = stageH > 0 ? Math.max(190, Math.min(width * 0.8, 320, stageH - CAPTION_H - 18 - 56)) : 250;
+  const stage = listening || reading || !started;
 
   return (
     <Room lit sky>
@@ -483,9 +451,9 @@ export default function Registro() {
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-            {started && !voice.recording ? (
+            {started && !listening && !reading ? (
               <Animated.View entering={FadeIn.duration(320)}>
-                <ParticleOrb size={34} mode={mode} />
+                <ParticleOrb size={44} mode={mode} onPress={() => void entry.toggle()} />
               </Animated.View>
             ) : (
               <View style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
@@ -495,15 +463,17 @@ export default function Registro() {
             <View style={{ minWidth: 0 }}>
               <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>Registro rápido</Text>
               <Text style={{ fontSize: 12, color: INK.softer }}>
-                {voice.recording
+                {listening
                   ? "Ouvindo…"
+                  : reading
+                    ? "Anotando…"
                   : busy
                     ? `${thinking}…`
                     : allSaved
                       ? "Tudo anotado"
                       : hasEntries
                         ? "Quase lá"
-                        : "Escreva, fale ou fotografe"}
+                        : "Toque no orbe e fale"}
               </Text>
             </View>
           </View>
@@ -519,70 +489,77 @@ export default function Registro() {
           </Pressable>
         </View>
 
-        {/* ── The stage: listening, the welcome, or the conversation ── */}
-        {voice.recording ? (
-          <Listening seconds={voice.seconds} onStop={() => void toggleRecording()} onCancel={() => void voice.cancel()} />
-        ) : !started ? (
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20 }}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            <Animated.View entering={FadeIn.duration(500)} exiting={FadeOut.duration(200)} style={{ alignItems: "center" }}>
-              <ParticleOrb size={196} mode={mode} />
-              <Text style={{ marginTop: 6, fontSize: 24, fontWeight: "800", letterSpacing: -0.7, color: "#fff", textAlign: "center" }}>
-                O que entrou ou saiu?
-              </Text>
-              <Text style={{ marginTop: 6, maxWidth: 300, fontSize: 14, lineHeight: 20, color: INK.soft, textAlign: "center" }}>
-                Uma frase basta. Eu separo, categorizo e salvo — e pergunto só o que faltar.
-              </Text>
-            </Animated.View>
+        {/* ── The stage: the sphere, or — once something has been said — the conversation ── */}
+        {stage ? (
+          <View style={{ flex: 1 }}>
+            <View style={{ flex: 1 }} onLayout={(e) => setStageH(e.nativeEvent.layout.height)}>
+              <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 }}>
+                <ParticleOrb size={orb} mode={mode} expanded={listening} onPress={() => void entry.toggle()} />
 
-            {/* The three ways in. */}
-            <Animated.View entering={FadeInDown.delay(120).duration(380)} style={{ marginTop: 22, flexDirection: "row", gap: 10 }}>
-              <Way icon={Mic} label="Falar" note="Por voz" onPress={() => void toggleRecording()} />
-              <Way icon={Camera} label="Fotografar" note="Comprovante" onPress={() => router.replace("/scanner" as never)} />
-              <Way icon={PenLine} label="Formulário" note="Completo" onPress={() => router.replace("/novo" as never)} />
-            </Animated.View>
+                {/* What the sphere is saying, in the same place whichever it is. */}
+                <View style={{ marginTop: 18, height: CAPTION_H, alignSelf: "stretch", alignItems: "center" }}>
+                  {listening ? (
+                    <Animated.View entering={FadeIn.duration(240)} style={{ alignItems: "center" }}>
+                      <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Estou ouvindo…</Text>
+                      <Text style={{ marginTop: 3, fontSize: 13.5, color: INK.soft, textAlign: "center" }}>Pode falar. Eu paro quando você parar.</Text>
+                      <Pressable onPress={() => void entry.cancel()} hitSlop={10} style={({ pressed }) => ({ marginTop: 6, paddingVertical: 5, paddingHorizontal: 14, opacity: pressed ? 0.6 : 1 })}>
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.7)" }}>Cancelar</Text>
+                      </Pressable>
+                    </Animated.View>
+                  ) : reading ? (
+                    <Animated.View entering={FadeIn.duration(240)} style={{ alignItems: "center" }}>
+                      <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Anotando…</Text>
+                      <Text style={{ marginTop: 3, fontSize: 13.5, color: INK.soft }}>Só um instante.</Text>
+                    </Animated.View>
+                  ) : (
+                    <Animated.View entering={FadeIn.duration(400)} style={{ alignItems: "center" }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+                        <Mic size={16} color={GREEN} strokeWidth={2.3} />
+                        <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Toque para falar</Text>
+                      </View>
+                      <Text numberOfLines={2} style={{ marginTop: 3, fontSize: 13.5, lineHeight: 19, color: entry.message ? "#F9CE4E" : INK.soft, textAlign: "center" }}>
+                        {entry.message ?? "Diga o que gastou ou recebeu."}
+                      </Text>
+                    </Animated.View>
+                  )}
+                </View>
+              </View>
+            </View>
 
-            {/* The person's own shortcuts — or, before there are any, what a sentence can carry. */}
-            <Animated.View entering={FadeInDown.delay(200).duration(380)} style={{ marginTop: 26 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 2 }}>
-                {shortcuts.length > 0 ? <Zap size={13} color={GREEN} /> : <Sparkles size={13} color={GREEN} />}
-                <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase", color: INK.soft }}>
-                  {shortcuts.length > 0 ? "Seus atalhos" : "Experimente"}
-                </Text>
-                <Text style={{ marginLeft: "auto", fontSize: 12, color: INK.faint }}>
-                  {shortcuts.length > 0 ? "um toque e pronto" : "toque para usar"}
-                </Text>
-              </View>
-              <View style={{ marginTop: 10, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {shortcuts.length > 0
-                  ? shortcuts.map((s) => (
-                      <ShortcutChip
-                        key={s.key}
-                        label={s.name}
-                        amount={money(s.amount)}
-                        category={s.category}
-                        income={s.type === "receita"}
-                        onPress={() => send(s.text)}
-                      />
-                    ))
-                  : EXAMPLES.map((e) => (
-                      <ShortcutChip
-                        key={e.text}
-                        label={e.text}
-                        category={e.category}
-                        onPress={() => {
-                          setText(e.text);
-                          inputRef.current?.focus();
-                        }}
-                      />
-                    ))}
-              </View>
-            </Animated.View>
-          </ScrollView>
+            {/* ── The person's own shortcuts — or, before there are any, what a sentence can carry ── */}
+            {!listening && !reading && (
+              <Animated.View entering={FadeInDown.delay(160).duration(380)} style={{ paddingBottom: 12 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 22 }}>
+                  {shortcuts.length > 0 ? <Zap size={12} color={GREEN} /> : <Sparkles size={12} color={GREEN} />}
+                  <Text style={{ fontSize: 11.5, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase", color: INK.soft }}>
+                    {shortcuts.length > 0 ? "Seus atalhos" : "Experimente"}
+                  </Text>
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, gap: 8 }}
+                >
+                  {shortcuts.length > 0
+                    ? shortcuts.slice(0, 8).map((sc) => (
+                        <ShortcutChip key={sc.key} label={sc.name} note={money(sc.amount)} category={sc.category} income={sc.type === "receita"} onPress={() => send(sc.text)} />
+                      ))
+                    : EXAMPLES.map((e) => (
+                        <ShortcutChip
+                          key={e.text}
+                          label={e.text}
+                          category={e.category}
+                          onPress={() => {
+                            setText(e.text);
+                            inputRef.current?.focus();
+                          }}
+                        />
+                      ))}
+                </ScrollView>
+              </Animated.View>
+            )}
+          </View>
         ) : (
           <ScrollView
             ref={threadRef}
@@ -618,7 +595,7 @@ export default function Registro() {
 
         {/* ── The composer ── */}
         <View style={{ paddingTop: 8, paddingBottom: insets.bottom + 8 }}>
-          {started && !voice.recording && (
+          {started && !listening && (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -682,7 +659,7 @@ export default function Registro() {
                 paddingHorizontal: 6,
                 gap: 4,
                 borderWidth: 1,
-                borderColor: voice.recording ? "rgba(248,113,113,0.55)" : typed ? "rgba(200,243,109,0.45)" : "rgba(255,255,255,0.10)",
+                borderColor: typed ? "rgba(200,243,109,0.45)" : "rgba(255,255,255,0.10)",
               }}
             >
               <Pressable
@@ -705,23 +682,19 @@ export default function Registro() {
                 value={text}
                 onChangeText={setText}
                 onSubmitEditing={submitText}
-                placeholder={voice.recording ? `Ouvindo…  ${clock(voice.seconds)}` : question ? "sua resposta…" : "o que rolou?"}
+                placeholder={question ? "sua resposta…" : "o que rolou?"}
                 placeholderTextColor={INK.faint}
-                editable={!voice.recording}
+                editable={!listening}
                 returnKeyType="send"
                 submitBehavior="submit"
                 style={{ flex: 1, minWidth: 0, height: "100%", paddingHorizontal: 4, fontSize: 16, color: "#fff" }}
               />
-              <SendOrSpeak
-                typed={typed}
-                recording={voice.recording}
-                disabled={busy}
-                onPress={() => (typed ? submitText() : void toggleRecording())}
-              />
+              {/* Only once there is something to send: the microphone is the sphere. */}
+              {typed && <SendButton disabled={busy || reading} onPress={submitText} />}
             </Glass>
           </View>
 
-          {started && !voice.recording && (
+          {!listening && !reading && (
             <Pressable
               onPress={() => router.replace("/novo" as never)}
               style={({ pressed }) => ({
@@ -741,107 +714,23 @@ export default function Registro() {
           )}
         </View>
       </KeyboardAvoidingView>
+
+      {/* What was heard, for a look before it is written. */}
+      <VoiceEntrySheet entry={entry} />
     </Room>
   );
 }
 
-/** While speaking: the sphere takes the stage, with the time under it. */
-function Listening({ seconds, onStop, onCancel }: { seconds: number; onStop: () => void; onCancel: () => void }) {
-  return (
-    <Animated.View
-      entering={FadeIn.duration(260)}
-      exiting={FadeOut.duration(180)}
-      style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 }}
-    >
-      <ParticleOrb size={240} mode="listening" />
-      <Text style={{ marginTop: 10, fontSize: 34, fontWeight: "300", letterSpacing: 1, color: "#fff", fontVariant: ["tabular-nums"] }}>
-        {clock(seconds)}
-      </Text>
-      <Text style={{ marginTop: 4, fontSize: 14, color: INK.soft, textAlign: "center" }}>
-        Pode falar. Toque em parar quando terminar.
-      </Text>
-      <View style={{ marginTop: 22, flexDirection: "row", gap: 10 }}>
-        <Pressable
-          onPress={onCancel}
-          style={({ pressed }) => ({
-            height: 46,
-            paddingHorizontal: 20,
-            borderRadius: 999,
-            justifyContent: "center",
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.14)",
-            opacity: pressed ? 0.7 : 1,
-          })}
-        >
-          <Text style={{ fontSize: 14.5, fontWeight: "600", color: "rgba(255,255,255,0.85)" }}>Cancelar</Text>
-        </Pressable>
-        <Pressable
-          onPress={onStop}
-          style={({ pressed }) => ({
-            height: 46,
-            paddingHorizontal: 22,
-            borderRadius: 999,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 8,
-            backgroundColor: "#fff",
-            opacity: pressed ? 0.85 : 1,
-          })}
-        >
-          <Square size={12} color="#0B0B0B" fill="#0B0B0B" />
-          <Text style={{ fontSize: 14.5, fontWeight: "700", color: "#0B0B0B" }}>Parar</Text>
-        </Pressable>
-      </View>
-    </Animated.View>
-  );
-}
-
-/** One of the three ways in: a glass tile with its glyph, what it does and how. */
-function Way({
-  icon: Icon,
-  label,
-  note,
-  onPress,
-}: {
-  icon: ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
-  label: string;
-  note: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => ({ flex: 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}>
-      <Glass radius={22} interactive style={{ height: 96, paddingHorizontal: 12, paddingVertical: 12, justifyContent: "space-between" }}>
-        <View
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: 17,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "rgba(200,243,109,0.14)",
-          }}
-        >
-          <Icon size={17} color={GREEN} strokeWidth={2.2} />
-        </View>
-        <View>
-          <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>{label}</Text>
-          <Text style={{ marginTop: 1, fontSize: 11.5, color: INK.softer }}>{note}</Text>
-        </View>
-      </Glass>
-    </Pressable>
-  );
-}
-
-/** A shortcut on the welcome: the category's mark, the thing, and — for one of the person's own — the amount. */
+/** One shortcut: the category's mark, the thing, and — for one of the person's own — the amount. Small, in a row. */
 function ShortcutChip({
   label,
-  amount,
+  note,
   category,
   income,
   onPress,
 }: {
   label: string;
-  amount?: string;
+  note?: string;
   category: string;
   income?: boolean;
   onPress: () => void;
@@ -852,26 +741,31 @@ function ShortcutChip({
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
+        height: 38,
         flexDirection: "row",
         alignItems: "center",
         gap: 8,
         paddingLeft: 5,
         paddingRight: 13,
-        height: 40,
-        borderRadius: 999,
+        borderRadius: 19,
         borderWidth: 1,
         borderColor: "rgba(255,255,255,0.09)",
         backgroundColor: "rgba(255,255,255,0.05)",
         transform: [{ scale: pressed ? 0.96 : 1 }],
       })}
     >
-      <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
+      <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
         <Icon size={14} color={chipInk(hex)} strokeWidth={2} />
       </View>
-      <Text numberOfLines={1} style={{ maxWidth: 150, fontSize: 13.5, fontWeight: "500", color: "#fff" }}>
+      <Text numberOfLines={1} style={{ maxWidth: 130, fontSize: 13.5, fontWeight: "600", color: "#fff" }}>
         {label}
       </Text>
-      {amount && <Text style={{ fontSize: 12.5, color: income ? GREEN : INK.soft }}>{amount}</Text>}
+      {note ? (
+        <Text style={{ fontSize: 12.5, color: income ? GREEN : INK.soft }}>
+          {income ? "+" : ""}
+          {note}
+        </Text>
+      ) : null}
     </Pressable>
   );
 }
@@ -947,60 +841,27 @@ function Bubble({ role, text }: { role: "bot" | "user"; text: string }) {
   );
 }
 
-/** Send when there is something written; otherwise the microphone, red while it listens. */
-function SendOrSpeak({
-  typed,
-  recording,
-  disabled,
-  onPress,
-}: {
-  typed: boolean;
-  recording: boolean;
-  disabled: boolean;
-  onPress: () => void;
-}) {
-  const pulse = useSharedValue(0);
-
-  useEffect(() => {
-    pulse.set(
-      recording
-        ? withRepeat(withTiming(1, { duration: 1300, easing: Easing.out(Easing.quad) }), -1, false, undefined, ReduceMotion.System)
-        : 0,
-    );
-  }, [recording, pulse]);
-
-  const ring = useAnimatedStyle(() => ({
-    opacity: recording ? 0.45 * (1 - pulse.get()) : 0,
-    transform: [{ scale: 1 + pulse.get() * 0.35 }],
-  }));
-
+/** Sends what is written. */
+function SendButton({ disabled, onPress }: { disabled: boolean; onPress: () => void }) {
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityLabel={typed ? "Enviar" : recording ? "Parar gravação" : "Gravar"}
-      style={({ pressed }) => ({
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: recording ? RED : typed ? GREEN : "rgba(255,255,255,0.10)",
-        opacity: disabled ? 0.4 : 1,
-        transform: [{ scale: pressed ? 0.94 : 1 }],
-      })}
-    >
-      <Animated.View
-        pointerEvents="none"
-        style={[{ position: "absolute", width: 44, height: 44, borderRadius: 22, backgroundColor: RED }, ring]}
-      />
-      {typed ? (
+    <Animated.View entering={FadeIn.duration(160)}>
+      <Pressable
+        onPress={onPress}
+        disabled={disabled}
+        accessibilityLabel="Enviar"
+        style={({ pressed }) => ({
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: GREEN,
+          opacity: disabled ? 0.4 : 1,
+          transform: [{ scale: pressed ? 0.94 : 1 }],
+        })}
+      >
         <ArrowUp size={20} color="#0B0B0B" strokeWidth={2.8} />
-      ) : recording ? (
-        <Square size={14} color="#fff" fill="#fff" />
-      ) : (
-        <Mic size={19} color="#fff" strokeWidth={2.1} />
-      )}
-    </Pressable>
+      </Pressable>
+    </Animated.View>
   );
 }

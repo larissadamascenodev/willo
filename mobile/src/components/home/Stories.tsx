@@ -36,7 +36,7 @@ import { INK } from "~/theme/tokens";
  * never pauses; a finger held down does, and letting go starts the next clock.
  */
 
-const GLYPHS: Record<string, React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>> = {
+export const GLYPHS: Record<string, React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>> = {
   CalendarClock, CreditCard, Hand, PieChart, Receipt, Sparkles, Sun, TrendingDown, Wallet,
 };
 

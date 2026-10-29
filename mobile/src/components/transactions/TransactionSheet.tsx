@@ -15,6 +15,7 @@ import {
   Clock,
   CreditCard,
   FileText,
+  MoreVertical,
   Pencil,
   Repeat,
   Tag,
@@ -31,11 +32,17 @@ import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
  * One movement, opened — the phone's copy of the web's detail sheet.
  *
  * What it is and how much, large; whether it has happened; then the facts in rows
- * the eye can run down. The one thing a person most often comes here to do —
- * mark it paid, or put it back to pending — is the big button. Editing opens the
- * same form it was made with, and deleting asks first, in place: a fixed entry is
- * asked whether to leave this month only or from here on, and a parcelled one says
- * it takes every instalment with it.
+ * the eye can run down.
+ *
+ * Editing and deleting live behind the three dots beside the cross, because they
+ * are things done to the entry rather than what the person came for. What they
+ * came for is marking it paid — and that button is only there while it is still
+ * pending: once something has happened it is not undone from here. To put it back
+ * to pending, edit it; the form has that switch.
+ *
+ * Editing opens the same form it was made with, and deleting asks first, in place:
+ * a fixed entry is asked whether to leave this month only or from here on, and a
+ * parcelled one says it takes every instalment with it.
  */
 
 const MONTHS_FULL = [
@@ -115,6 +122,7 @@ export default function TransactionSheet({
   onChanged: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /* The last one shown stays drawn while the sheet slides away. */
@@ -123,6 +131,7 @@ export default function TransactionSheet({
   useEffect(() => {
     if (asked) setTx(asked);
     setConfirming(false);
+    setMenuOpen(false);
     setError(null);
   }, [asked]);
 
@@ -152,7 +161,7 @@ export default function TransactionSheet({
     }
   };
 
-  const togglePaid = () => run(() => updateTransactionStatus(tx.id, isPaid ? "pendente" : "pago"));
+  const markPaid = () => run(() => updateTransactionStatus(tx.id, "pago"));
 
   const removeThisMonth = () => run(() => removeTransaction(tx, "month", { month, year, userId }));
   const removeAll = () => run(() => removeTransaction(tx, "all", { month, year, userId }));
@@ -160,6 +169,52 @@ export default function TransactionSheet({
   return (
     <BottomSheet open={!!asked} onClose={onClose}>
       <View style={{ paddingHorizontal: 20 }}>
+        {/* Anywhere outside the menu closes it. */}
+        {menuOpen && (
+          <Pressable
+            onPress={() => setMenuOpen(false)}
+            accessibilityLabel="Fechar menu"
+            style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0, zIndex: 15 }}
+          />
+        )}
+        {menuOpen && (
+          <Animated.View
+            entering={FadeIn.duration(140)}
+            style={{
+              position: "absolute",
+              top: 46,
+              right: 20,
+              zIndex: 20,
+              width: 188,
+              borderRadius: 18,
+              borderCurve: "continuous",
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.12)",
+              backgroundColor: "#1A1B1E",
+              overflow: "hidden",
+            }}
+          >
+            <MenuItem
+              icon={Pencil}
+              label="Editar"
+              onPress={() => {
+                setMenuOpen(false);
+                onEdit(tx);
+              }}
+            />
+            <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.07)" }} />
+            <MenuItem
+              icon={Trash2}
+              label="Excluir"
+              danger
+              onPress={() => {
+                setMenuOpen(false);
+                setConfirming(true);
+              }}
+            />
+          </Animated.View>
+        )}
+
         {/* ── What it is ── */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <View style={{ width: 48, height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
@@ -176,22 +231,41 @@ export default function TransactionSheet({
               </Text>
             </View>
           </View>
-          <Pressable
-            onPress={onClose}
-            accessibilityLabel="Fechar"
-            hitSlop={8}
-            style={({ pressed }) => ({
-              width: 34,
-              height: 34,
-              borderRadius: 17,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "rgba(255,255,255,0.06)",
-              opacity: pressed ? 0.6 : 1,
-            })}
-          >
-            <X size={16} color="rgba(255,255,255,0.74)" />
-          </Pressable>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Pressable
+              onPress={() => setMenuOpen((v) => !v)}
+              accessibilityLabel="Mais opções"
+              accessibilityState={{ expanded: menuOpen }}
+              hitSlop={8}
+              style={({ pressed }) => ({
+                width: 34,
+                height: 34,
+                borderRadius: 17,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: menuOpen ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.06)",
+                opacity: pressed ? 0.6 : 1,
+              })}
+            >
+              <MoreVertical size={17} color="rgba(255,255,255,0.8)" />
+            </Pressable>
+            <Pressable
+              onPress={onClose}
+              accessibilityLabel="Fechar"
+              hitSlop={8}
+              style={({ pressed }) => ({
+                width: 34,
+                height: 34,
+                borderRadius: 17,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "rgba(255,255,255,0.06)",
+                opacity: pressed ? 0.6 : 1,
+              })}
+            >
+              <X size={16} color="rgba(255,255,255,0.74)" />
+            </Pressable>
+          </View>
         </View>
 
         {/* ── How much, and whether it has happened ── */}
@@ -261,37 +335,36 @@ export default function TransactionSheet({
 
         {/* ── What can be done ── */}
         {!confirming ? (
-          <Animated.View entering={FadeIn.duration(180)} style={{ marginTop: 22, gap: 10 }}>
-            <Pressable
-              onPress={() => void togglePaid()}
-              disabled={busy}
-              style={({ pressed }) => ({
-                height: 54,
-                borderRadius: 999,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                backgroundColor: "#fff",
-                opacity: busy ? 0.5 : pressed ? 0.85 : 1,
-              })}
-            >
-              {busy ? (
-                <ActivityIndicator color="#0B0B0B" />
-              ) : (
-                <>
-                  {isPaid ? <Clock size={16} color="#0B0B0B" /> : <Check size={16} color="#0B0B0B" strokeWidth={3} />}
-                  <Text style={{ fontSize: 15.5, fontWeight: "700", color: "#0B0B0B" }}>
-                    {isPaid ? "Marcar como pendente" : isReceita ? "Marcar como recebida" : "Marcar como paga"}
-                  </Text>
-                </>
-              )}
-            </Pressable>
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <Action label="Editar" icon={Pencil} onPress={() => onEdit(tx)} />
-              <Action label="Excluir" icon={Trash2} danger onPress={() => setConfirming(true)} />
-            </View>
-          </Animated.View>
+          /* Only while it is still to happen. Once it has, there is nothing to offer. */
+          !isPaid && (
+            <Animated.View entering={FadeIn.duration(180)} style={{ marginTop: 22 }}>
+              <Pressable
+                onPress={() => void markPaid()}
+                disabled={busy}
+                style={({ pressed }) => ({
+                  height: 54,
+                  borderRadius: 999,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  backgroundColor: "#fff",
+                  opacity: busy ? 0.5 : pressed ? 0.85 : 1,
+                })}
+              >
+                {busy ? (
+                  <ActivityIndicator color="#0B0B0B" />
+                ) : (
+                  <>
+                    <Check size={16} color="#0B0B0B" strokeWidth={3} />
+                    <Text style={{ fontSize: 15.5, fontWeight: "700", color: "#0B0B0B" }}>
+                      {isReceita ? "Marcar como recebida" : "Marcar como paga"}
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            </Animated.View>
+          )
         ) : (
           <Animated.View entering={FadeInDown.duration(220)} style={{ marginTop: 22, gap: 10 }}>
             <View
@@ -370,14 +443,15 @@ function Fact({
   );
 }
 
-function Action({
-  label,
+/** One row of the menu behind the three dots. */
+function MenuItem({
   icon: Icon,
+  label,
   danger,
   onPress,
 }: {
-  label: string;
   icon: ComponentType<{ size?: number; color?: string }>;
+  label: string;
   danger?: boolean;
   onPress: () => void;
 }) {
@@ -385,21 +459,16 @@ function Action({
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        flex: 1,
-        height: 48,
-        borderRadius: 999,
+        height: 50,
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "center",
-        gap: 7,
-        borderWidth: 1,
-        borderColor: danger ? "rgba(248,113,113,0.22)" : "rgba(255,255,255,0.08)",
-        backgroundColor: danger ? "rgba(248,113,113,0.08)" : "rgba(255,255,255,0.04)",
-        opacity: pressed ? 0.7 : 1,
+        gap: 12,
+        paddingHorizontal: 16,
+        backgroundColor: pressed ? "rgba(255,255,255,0.06)" : "transparent",
       })}
     >
-      <Icon size={15} color={danger ? RED : "#fff"} />
-      <Text style={{ fontSize: 14, fontWeight: "600", color: danger ? RED : "#fff" }}>{label}</Text>
+      <Icon size={17} color={danger ? RED : "#fff"} />
+      <Text style={{ fontSize: 15, fontWeight: "600", color: danger ? RED : "#fff" }}>{label}</Text>
     </Pressable>
   );
 }

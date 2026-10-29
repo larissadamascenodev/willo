@@ -3,7 +3,9 @@ import { ActivityIndicator, Image, Pressable, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import BottomSheet from "~/components/BottomSheet";
+import SegmentedTabs from "~/components/SegmentedTabs";
 import { LogOut } from "~/components/icons";
+import { useHomeHero } from "~/lib/homeHero";
 import { useAuth } from "~/lib/auth";
 import { INK, RED } from "~/theme/tokens";
 
@@ -14,6 +16,9 @@ import { INK, RED } from "~/theme/tokens";
  * showing — which matters the moment someone has more than one — and signs out,
  * after asking, because signing out takes the person to the welcome and a stray
  * tap should not do that.
+ *
+ * It also holds the one switch that is for trying things out: what the top of the
+ * home is, the sphere or the stories. Both exist so they can be compared.
  *
  * The rest of what an account is — name, photo, deleting it — belongs to the
  * settings screen, which is still to come.
@@ -30,6 +35,7 @@ export default function ProfileSheet({
   avatarUrl?: string | null;
 }) {
   const { user, signOut } = useAuth();
+  const [hero, setHero] = useHomeHero();
   const [asking, setAsking] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
@@ -77,7 +83,24 @@ export default function ProfileSheet({
           {!!email && <Text style={{ marginTop: 3, fontSize: 14, color: INK.soft }}>{email}</Text>}
         </View>
 
-        <View style={{ marginTop: 28 }}>
+        {/* The top of the home. */}
+        <View style={{ marginTop: 26 }}>
+          <Text style={{ fontSize: 11.5, fontWeight: "600", letterSpacing: 1.3, textTransform: "uppercase", color: INK.softer, marginBottom: 10 }}>
+            Topo da tela inicial
+          </Text>
+          <SegmentedTabs
+            compact
+            height={36}
+            value={hero}
+            onChange={setHero}
+            options={[
+              { key: "orb" as const, label: "Orbe" },
+              { key: "stories" as const, label: "Stories" },
+            ]}
+          />
+        </View>
+
+        <View style={{ marginTop: 24 }}>
           {!asking ? (
             <Pressable
               onPress={() => setAsking(true)}
