@@ -12,10 +12,10 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { X } from "~/components/icons";
-import { GROUND_LIT, INK } from "~/theme/tokens";
+import { INK } from "~/theme/tokens";
 
 /**
- * A card lifted off the page into the middle of the screen.
+ * A pane of glass lifted off the page into the middle of the screen.
  *
  * For reading the whole of something the page only shows the start of — every
  * category, every month — without the page itself growing to hold it. It rises a
@@ -92,13 +92,16 @@ export default function CenterModal({
               borderRadius: 28,
               borderCurve: "continuous",
               borderWidth: 1,
-              borderColor: INK.edge,
-              backgroundColor: GROUND_LIT,
+              borderColor: "rgba(255,255,255,0.16)",
               overflow: "hidden",
             },
             card,
           ]}
         >
+          {/* Glass, not a grey card: the page shows through, softened. */}
+          <BlurView intensity={60} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.38)" }} />
+          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(255,255,255,0.22)" }} />
           <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 6 }}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>{title}</Text>

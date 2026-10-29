@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } 
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import {
   deleteAccount,
   getAccounts,
@@ -24,12 +24,12 @@ import GastosPorCategoria from "~/components/home/GastosPorCategoria";
 import CenterModal from "~/components/CenterModal";
 import FluxoPanel from "~/components/financeiro/FluxoPanel";
 import SpendRing from "~/components/analytics/SpendRing";
-import { CategoryRows, GroupCards, TopSpendRow } from "~/components/analytics/CategoryViews";
-import { groupCategoryAmounts } from "@/lib/categoryGroups";
+import { TopSpendRow } from "~/components/analytics/CategoryViews";
+import { EXPAND } from "~/lib/expand";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
-import { Check, ChevronRight, MoreVertical, Pencil, Trash2, X } from "~/components/icons";
+import { Check, ChevronDown, ChevronRight, MoreVertical, Pencil, Trash2, X } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
@@ -106,7 +106,6 @@ export default function ContaDetalhe() {
   /* The two things that open over the page: every category as a ring, and every
      movement the account has ever had. */
   const [ringOpen, setRingOpen] = useState(false);
-  const [view, setView] = useState<"categorias" | "grupos">("categorias");
   const [movesOpen, setMovesOpen] = useState(false);
   const [history, setHistory] = useState<Movement[] | null>(null);
   const [shownCount, setShownCount] = useState(80);
@@ -180,8 +179,6 @@ export default function ContaDetalhe() {
       })),
     [categoryData, totalDespesas, customCats],
   );
-
-  const groups = useMemo(() => groupCategoryAmounts(overview), [overview]);
 
   const ordered = useMemo(
     () => [...movements].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
@@ -396,11 +393,7 @@ export default function ContaDetalhe() {
           <SpendRing
             total={totalDespesas}
             caption={`saiu em ${MONTH_NAMES[selectedMonth].toLowerCase()}`}
-            segments={
-              view === "categorias"
-                ? overview.map((c) => ({ key: c.name, hex: c.hex, amount: c.amount }))
-                : groups.map((g) => ({ key: g.def.name, hex: g.def.hex, amount: g.amount }))
-            }
+            segments={overview.map((c) => ({ key: c.name, hex: c.hex, amount: c.amount }))}
           />
         </View>
 
@@ -411,20 +404,17 @@ export default function ContaDetalhe() {
           </View>
         )}
 
+        {/* Every category; opening one shows what it was spent on. */}
         <View style={{ marginTop: 14 }}>
-          <SegmentedTabs
-            value={view}
-            onChange={setView}
-            height={38}
-            options={[
-              { key: "categorias" as const, label: "Categorias" },
-              { key: "grupos" as const, label: "Grupos" },
-            ]}
-          />
-        </View>
-
-        <View style={{ marginTop: 14 }}>
-          {view === "categorias" ? <CategoryRows categories={overview} /> : <GroupCards groups={groups} />}
+          {overview.map((cat) => (
+            <CategorySpend
+              key={cat.name}
+              cat={cat}
+              spent={movements
+                .filter((t) => t.type === "despesa" && t.status === "pago" && t.category === cat.name)
+                .sort((x, y) => (x.date < y.date ? 1 : x.date > y.date ? -1 : 0))}
+            />
+          ))}
         </View>
       </CenterModal>
 
@@ -663,5 +653,58 @@ function MovementRow({ tx, customCats }: { tx: Movement; customCats: CustomCateg
         {money(Number(tx.amount))}
       </Text>
     </View>
+  );
+}
+
+/** A category of what left this account, and what it was spent on when opened. */
+function CategorySpend({ cat, spent }: { cat: { name: string; amount: number; percentage: number; hex: string; icon: any }; spent: Movement[] }) {
+  const [open, setOpen] = useState(false);
+  const Icon = cat.icon;
+  return (
+    <Animated.View layout={EXPAND} style={{ borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" }}>
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}
+      >
+        <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(cat.hex) }}>
+          <Icon size={20} color={chipInk(cat.hex)} strokeWidth={2} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "500", color: "#fff" }}>{cat.name}</Text>
+          <Text style={{ marginTop: 1, fontSize: 14, color: INK.soft }}>
+            {cat.percentage}% · {spent.length} {spent.length === 1 ? "gasto" : "gastos"}
+          </Text>
+        </View>
+        <Text style={{ fontSize: 16, fontWeight: "500", color: "#fff" }}>{money(cat.amount)}</Text>
+        <View style={{ transform: [{ rotate: open ? "180deg" : "0deg" }] }}>
+          <ChevronDown size={16} color={INK.soft} />
+        </View>
+      </Pressable>
+
+      {open && (
+        <Animated.View
+          entering={FadeIn.duration(220)}
+          style={{ marginLeft: 22, marginBottom: 12, paddingLeft: 14, borderLeftWidth: 2, borderLeftColor: cat.hex }}
+        >
+          {spent.map((t, i) => {
+            const day = new Date(`${t.date.slice(0, 10)}T12:00:00`);
+            return (
+              <View
+                key={t.id}
+                style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: "rgba(255,255,255,0.05)" }}
+              >
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={{ fontSize: 14, color: "#fff" }}>{t.name}</Text>
+                  <Text style={{ marginTop: 2, fontSize: 12, color: INK.softer }}>
+                    {day.toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>{money(Number(t.amount))}</Text>
+              </View>
+            );
+          })}
+        </Animated.View>
+      )}
+    </Animated.View>
   );
 }
