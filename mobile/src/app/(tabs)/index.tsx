@@ -190,7 +190,7 @@ export default function Home() {
   const pinnedHeight = pinnedTop + (orbHero ? ORB_HERO_BODY : PINNED_BODY);
 
   return (
-    <Room lit sky>
+    <Room lit sky skyStrong>
       {/* Pinned. It does not scroll; it recedes. Once it has gone far enough it
           stops taking taps, since by then you cannot read what you would tap. */}
       {/* Editing is about the board, so the readings stand down for it — leaving
