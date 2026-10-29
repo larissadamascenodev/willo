@@ -5,7 +5,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, FadeInDown, ReduceMotion, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
 import {
   createGoalDeposit,
   createGoalWithdraw,
@@ -20,7 +19,8 @@ import {
 import { getAccounts } from "@/services/transactionService";
 import { goalProgress } from "@/lib/goalPresets";
 import BackButton from "~/components/BackButton";
-import BottomSheet from "~/components/BottomSheet";
+import RoundButton from "~/components/RoundButton";
+import ConfirmGlass from "~/components/ConfirmGlass";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import GoalFormSheet from "~/components/metas/GoalFormSheet";
 import GoalMoveSheet from "~/components/metas/GoalMoveSheet";
@@ -31,7 +31,6 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   ChevronDown,
-  ChevronLeft,
   ChevronUp,
   ImageIcon,
   MoreVertical,
@@ -40,7 +39,6 @@ import {
 } from "~/components/icons";
 import { money } from "~/lib/money";
 import { monthYear, paceOf } from "~/lib/cofrinho";
-import GoalAnalysis from "~/components/metas/GoalAnalysis";
 import { useAuth } from "~/lib/auth";
 import { GREEN, GROUND_LIT, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
@@ -69,19 +67,6 @@ function Progress({ progress, color }: { progress: number; color: string }) {
     <View style={{ height: 6, borderRadius: 3, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.10)" }}>
       <Animated.View style={[{ height: 6, borderRadius: 3, backgroundColor: color }, fill]} />
     </View>
-  );
-}
-
-/** A round button over the picture: glass, so it reads on anything. */
-function Round({ children, onPress, label, hostRef }: { children: React.ReactNode; onPress: () => void; label: string; hostRef?: React.Ref<ComponentRef<typeof View>> }) {
-  return (
-    <Pressable ref={hostRef} accessibilityLabel={label} onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
-      <View style={{ width: 40, height: 40, borderRadius: 20, overflow: "hidden", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" }}>
-        <BlurView intensity={40} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.34)" }} />
-        <View style={{ zIndex: 1 }}>{children}</View>
-      </View>
-    </Pressable>
   );
 }
 
@@ -176,19 +161,11 @@ export default function MetaDetalhe() {
     showToast("Cofrinho atualizado");
   };
 
-  /* Adopting a plan from the analysis: the new monthly figure and the date it implies. */
-  const applyPlan = async (plan: { monthly: number; deadline: string }) => {
-    if (!goalId) return;
-    await updateGoal(goalId, { monthly_contribution: plan.monthly, deadline: plan.deadline });
-    await load();
-    announce();
-    showToast("Plano atualizado");
-  };
-
   /* The picture: chosen from the library, or taken away to return to the made one. */
   const changeCover = async () => {
     if (!goalId || !user || coverBusy) return;
     setCoverBusy(true);
+    setError(null);
     try {
       const uri = await pickGoalCover(user.id);
       if (!uri) return;
@@ -196,8 +173,9 @@ export default function MetaDetalhe() {
       await load();
       announce();
       showToast("Imagem atualizada");
-    } catch {
-      setError("Não foi possível enviar a imagem.");
+    } catch (e) {
+      /* Said where it is seen: the page's foot is far from the button that was pressed. */
+      showToast(e instanceof Error ? e.message : "Não foi possível enviar a imagem.");
     } finally {
       setCoverBusy(false);
     }
@@ -328,12 +306,10 @@ export default function MetaDetalhe() {
           />
 
           <View style={{ position: "absolute", top: insets.top + 8, left: 16, right: 16, height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Round label="Voltar" onPress={() => router.replace("/gestao" as never)}>
-              <ChevronLeftIcon />
-            </Round>
-            <Round label="Opções do cofrinho" hostRef={dots} onPress={openMenu}>
-              <MoreVertical size={19} color="#fff" />
-            </Round>
+            <BackButton to="/gestao" onImage />
+            <RoundButton label="Opções do cofrinho" hostRef={dots} onPress={openMenu} onImage>
+              <MoreVertical size={18} color="rgba(255,255,255,0.9)" />
+            </RoundButton>
           </View>
 
           <Animated.View entering={FadeInDown.duration(460)} style={{ position: "absolute", left: 20, right: 20, bottom: 6 }}>
@@ -410,11 +386,6 @@ export default function MetaDetalhe() {
               <ArrowUpRight size={20} color="#fff" strokeWidth={2.3} />
               <Text style={{ fontSize: 16.5, fontWeight: "600", color: "#fff" }}>Retirar</Text>
             </Pressable>
-          </Animated.View>
-
-          {/* ══ What the month leaves room for ══ */}
-          <Animated.View entering={FadeInDown.delay(190).duration(420)}>
-            <GoalAnalysis goal={goal} onApply={applyPlan} />
           </Animated.View>
 
           {/* ══ Every movement, as transactions are ══ */}
@@ -565,50 +536,19 @@ export default function MetaDetalhe() {
         />
       </AnchoredMenu>
 
-      <BottomSheet open={!!confirming} onClose={() => setConfirming(null)}>
-        {confirming && (
-          <View style={{ paddingHorizontal: 20 }}>
-            <Text style={{ fontSize: 17, fontWeight: "700", color: "#fff" }}>
-              {confirming === "meta" ? "Excluir meta" : "Remover depósito"}
-            </Text>
-            <Text style={{ marginTop: 8, fontSize: 14, lineHeight: 20, color: INK.soft }}>
-              {confirming === "meta"
-                ? `Tem certeza que deseja excluir “${goal.name}”? Esta ação não pode ser desfeita.`
-                : undoDescription(confirming)}
-            </Text>
-            <Pressable
-              onPress={() => (confirming === "meta" ? void removeGoal() : void removeDeposit(confirming))}
-              style={({ pressed }) => ({
-                marginTop: 22,
-                height: 52,
-                borderRadius: 26,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "rgba(248,113,113,0.16)",
-                borderWidth: 1,
-                borderColor: "rgba(248,113,113,0.30)",
-                opacity: pressed ? 0.8 : 1,
-              })}
-            >
-              <Text style={{ fontSize: 16, fontWeight: "700", color: RED }}>
-                {confirming === "meta" ? "Excluir" : "Remover"}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setConfirming(null)}
-              style={({ pressed }) => ({
-                marginTop: 10,
-                height: 48,
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: pressed ? 0.6 : 1,
-              })}
-            >
-              <Text style={{ fontSize: 15, fontWeight: "600", color: INK.soft }}>Cancelar</Text>
-            </Pressable>
-          </View>
-        )}
-      </BottomSheet>
+      <ConfirmGlass
+        open={!!confirming}
+        title={confirming === "meta" ? `Excluir ${goal.name}?` : "Remover depósito"}
+        confirmLabel={confirming === "meta" ? "Excluir" : "Remover"}
+        onConfirm={() => (confirming === "meta" ? void removeGoal() : confirming ? void removeDeposit(confirming) : undefined)}
+        onClose={() => setConfirming(null)}
+      >
+        {confirming === "meta"
+          ? "Esta ação não pode ser desfeita. O dinheiro guardado nele deixa de contar como cofrinho."
+          : confirming
+            ? undoDescription(confirming)
+            : ""}
+      </ConfirmGlass>
 
       <GoalMoveSheet
         open={!!moving}
@@ -646,9 +586,4 @@ function Reading({ label, value, late }: { label: string; value: string; late?: 
       </Text>
     </View>
   );
-}
-
-/** The chevron on the round back button. */
-function ChevronLeftIcon() {
-  return <ChevronLeft size={21} color="#fff" strokeWidth={2.4} />;
 }

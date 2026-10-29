@@ -14,6 +14,7 @@ import AccountSheet from "~/components/accounts/AccountSheet";
 import CofrinhoSheet from "~/components/accounts/CofrinhoSheet";
 import CofrinhoTile, { NewCofrinhoTile, TILE_W } from "~/components/accounts/CofrinhoTile";
 import Room from "~/components/Room";
+import RoundButton from "~/components/RoundButton";
 import BackButton from "~/components/BackButton";
 import Surface from "~/components/Surface";
 import BankMark from "~/components/BankMark";
@@ -139,23 +140,9 @@ export default function Gestao() {
       >
         <View style={{ height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <BackButton to="/" />
-          <Pressable
-            accessibilityLabel="Adicionar conta"
-            onPress={() => setAddingAccount(true)}
-            style={({ pressed }) => ({
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              alignItems: "center",
-              justifyContent: "center",
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.10)",
-              backgroundColor: "rgba(255,255,255,0.07)",
-              transform: [{ scale: pressed ? 0.95 : 1 }],
-            })}
-          >
-            <Plus size={18} color="#fff" strokeWidth={2.4} />
-          </Pressable>
+          <RoundButton label="Adicionar conta" onPress={() => setAddingAccount(true)}>
+            <Plus size={18} color="rgba(255,255,255,0.9)" strokeWidth={2.4} />
+          </RoundButton>
         </View>
 
         {accounts === null ? (

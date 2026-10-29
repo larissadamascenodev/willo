@@ -11,6 +11,7 @@ import { cardHex as hexFor } from "@/hooks/useCardsOverview";
 import { shade } from "@/lib/tone";
 import { categoryHex } from "@/lib/categoryData";
 import Room from "~/components/Room";
+import RoundButton from "~/components/RoundButton";
 import BackButton from "~/components/BackButton";
 import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
@@ -237,28 +238,17 @@ export default function Fatura() {
             </Text>
           </View>
 
-          <Pressable
-            ref={dotsRef}
-            accessibilityLabel="Opções do cartão"
+          <RoundButton
+            label="Opções do cartão"
+            hostRef={dotsRef}
             onPress={() => {
               dotsRef.current?.measureInWindow((x, y, w, h) =>
                 setMenuAt({ top: y, bottom: y + h, left: x, width: w }),
               );
             }}
-            style={({ pressed }) => ({
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              alignItems: "center",
-              justifyContent: "center",
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.10)",
-              backgroundColor: "rgba(255,255,255,0.07)",
-              opacity: pressed ? 0.6 : 1,
-            })}
           >
-            <MoreVertical size={16} color="rgba(255,255,255,0.82)" />
-          </Pressable>
+            <MoreVertical size={18} color="rgba(255,255,255,0.9)" />
+          </RoundButton>
         </View>
 
         {loading && user ? (

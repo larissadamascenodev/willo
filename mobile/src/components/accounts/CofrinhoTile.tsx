@@ -23,7 +23,19 @@ import { GREEN } from "~/theme/tokens";
 export const TILE_W = 196;
 export const TILE_H = 252;
 
-export default function CofrinhoTile({ goal, delay = 0, onPress }: { goal: Goal; delay?: number; onPress: () => void }) {
+export default function CofrinhoTile({
+  goal,
+  delay = 0,
+  width = TILE_W,
+  height = TILE_H,
+  onPress,
+}: {
+  goal: Goal;
+  delay?: number;
+  width?: number;
+  height?: number;
+  onPress: () => void;
+}) {
   const preset = goalPreset(goal);
   const { progress, percent, isComplete } = goalProgress(goal);
 
@@ -35,8 +47,8 @@ export default function CofrinhoTile({ goal, delay = 0, onPress }: { goal: Goal;
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.97 : 1 }] })}>
-      <View style={{ width: TILE_W, height: TILE_H, borderRadius: 28, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
-        <CofrinhoCover goal={goal} width={TILE_W} height={TILE_H} glyph={140} glyphTop={18} />
+      <View style={{ width, height, borderRadius: 28, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
+        <CofrinhoCover goal={goal} width={width} height={height} glyph={Math.round(width * 0.72)} glyphTop={Math.round(height * 0.07)} />
         <LinearGradient
           colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.55)", "rgba(8,9,10,0.92)"]}
           locations={[0.3, 0.62, 1]}
@@ -67,13 +79,13 @@ export default function CofrinhoTile({ goal, delay = 0, onPress }: { goal: Goal;
 }
 
 /** The last place on the shelf: a new one. Glass, so it reads as an empty frame. */
-export function NewCofrinhoTile({ onPress }: { onPress: () => void }) {
+export function NewCofrinhoTile({ onPress, width = 132, height = TILE_H }: { onPress: () => void; width?: number; height?: number }) {
   return (
     <Pressable onPress={onPress} accessibilityLabel="Novo cofrinho" style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.97 : 1 }] })}>
       <View
         style={{
-          width: 132,
-          height: TILE_H,
+          width,
+          height,
           borderRadius: 28,
           borderCurve: "continuous",
           overflow: "hidden",

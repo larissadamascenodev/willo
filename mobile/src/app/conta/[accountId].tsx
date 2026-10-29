@@ -15,6 +15,7 @@ import { categoryHex } from "@/lib/categoryData";
 import { colorFor } from "@/lib/banks";
 import { isWallet } from "~/lib/ensureWallet";
 import Room from "~/components/Room";
+import RoundButton from "~/components/RoundButton";
 import BackButton from "~/components/BackButton";
 import Surface, { Hairline } from "~/components/Surface";
 import BankMark from "~/components/BankMark";
@@ -246,21 +247,13 @@ export default function ContaDetalhe() {
       >
         <View style={{ height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <BackButton to="/gestao" />
-          {account && isWallet(account.name) ? <View style={{ width: 40, height: 40 }} /> : <Pressable
-            ref={dots}
-            accessibilityLabel="Ações da conta"
-            onPress={openMenu}
-            style={({ pressed }) => ({
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: pressed ? 0.6 : 1,
-            })}
-          >
-            <MoreVertical size={20} color={INK.full} />
-          </Pressable>}
+          {account && isWallet(account.name) ? (
+            <View style={{ width: 40, height: 40 }} />
+          ) : (
+            <RoundButton label="Ações da conta" hostRef={dots} onPress={openMenu}>
+              <MoreVertical size={18} color="rgba(255,255,255,0.9)" />
+            </RoundButton>
+          )}
         </View>
 
         {loading ? (
