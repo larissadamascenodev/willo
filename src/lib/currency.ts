@@ -56,10 +56,13 @@ const symbolCache = new Map<string, string>();
 export function currencySymbol(code: CurrencyCode = current): string {
   const hit = symbolCache.get(code);
   if (hit) return hit;
-  const part = new Intl.NumberFormat("pt-BR", { style: "currency", currency: code })
-    .formatToParts(0)
-    .find((p) => p.type === "currency");
-  const symbol = part?.value ?? code;
+  const format = new Intl.NumberFormat("pt-BR", { style: "currency", currency: code });
+  // The phone's JavaScript engine has no formatToParts: there the symbol is what is
+  // left of a formatted zero once the digits and spaces are taken out.
+  const symbol =
+    typeof format.formatToParts === "function"
+      ? (format.formatToParts(0).find((p) => p.type === "currency")?.value ?? code)
+      : format.format(0).replace(/[\d.,\s  ]/g, "") || code;
   symbolCache.set(code, symbol);
   return symbol;
 }
