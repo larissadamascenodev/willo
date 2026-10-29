@@ -9,10 +9,11 @@ import { ensureWallet } from "~/lib/ensureWallet";
 import { showToast } from "~/lib/toast";
 import { fetchGoals, type Goal } from "@/services/goalService";
 import { colorFor } from "@/lib/banks";
-import { paceOf } from "~/lib/cofrinho";
+import { ensureReserve } from "~/lib/ensureReserve";
+import { catchUpYields, earns, estimate, latestCdi, yieldEarned } from "~/lib/yields";
 import AccountSheet from "~/components/accounts/AccountSheet";
-import CofrinhoSheet from "~/components/accounts/CofrinhoSheet";
-import CofrinhoTile, { NewCofrinhoTile, TILE_W } from "~/components/accounts/CofrinhoTile";
+import CaixinhaSheet from "~/components/accounts/CaixinhaSheet";
+import CaixinhaTile, { NewCaixinhaTile, TILE_W } from "~/components/accounts/CaixinhaTile";
 import Room from "~/components/Room";
 import RoundButton from "~/components/RoundButton";
 import BackButton from "~/components/BackButton";
@@ -22,7 +23,7 @@ import { FlexBar } from "~/components/Bar";
 import { ChevronRight, Landmark, PiggyBank, Plus } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
-import { INK, RED } from "~/theme/tokens";
+import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 /**
@@ -56,8 +57,11 @@ export default function Gestao() {
   const { user } = useAuth();
   const [accounts, setAccounts] = useState<Account[] | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
+  /* What the caixinhas have earned so far, and the day's CDI the estimates are read from. */
+  const [earned, setEarned] = useState(0);
+  const [cdi, setCdi] = useState<number | null>(null);
   const [addingAccount, setAddingAccount] = useState(false);
-  const [addingCofrinho, setAddingCofrinho] = useState(false);
+  const [addingCaixinha, setAddingCaixinha] = useState(false);
 
   const announceChange = () => window.dispatchEvent(new CustomEvent("finance-data-changed"));
   const announce = announceChange;
@@ -77,9 +81,23 @@ export default function Gestao() {
     } catch {
       setAccounts([]);
     }
-    /* The cofrinhos are the goals; the accounts do not wait on them. */
+    /* The caixinhas are the goals; the accounts do not wait on them. */
     try {
-      setGoals(await fetchGoals());
+      let list = await fetchGoals();
+      /* The reserve is there from the start, and any days of yield missed while the app
+         was closed are credited before the figures are shown. */
+      const made = await ensureReserve(user.id, list);
+      const credited = await catchUpYields(list);
+      if (made || credited) list = await fetchGoals();
+      setGoals(list);
+      if (list.some(earns)) {
+        const [sum, rate] = await Promise.all([yieldEarned(user.id), latestCdi()]);
+        setEarned(sum);
+        setCdi(rate?.rate ?? null);
+      } else {
+        setEarned(0);
+      }
+      if (made || credited) announceChange();
     } catch {
       setGoals([]);
     }
@@ -112,18 +130,16 @@ export default function Gestao() {
   const previsto = month?.saldoPrevisto;
 
   const saldo = rows.reduce((s, r) => s + r.balance, 0);
-  /* Money in a cofrinho has left the account's balance but is still the person's, so
+  /* Money in a caixinha has left the account's balance but is still the person's, so
      the whole of what they have is the two together. */
   const guardado = goals.reduce((s, g) => s + (Number(g.current_amount) || 0), 0);
   const total = saldo + guardado;
-  /* The cofrinhos as one reading: what is set aside, what it is all for, and what
-     the dated ones ask of each month. */
-  const metaTotal = goals.reduce((s, g) => s + (Number(g.target_amount) || 0), 0);
-  const conquistado = metaTotal > 0 ? Math.min(1, guardado / metaTotal) : 0;
-  const porMes = goals.reduce((s, g) => {
-    const pace = paceOf(g);
-    return s + (pace.open || pace.late ? 0 : pace.monthly);
-  }, 0);
+  /* What the caixinhas that earn are expected to add in a month, from the latest CDI. */
+  const rendem = goals.some(earns);
+  const noMes =
+    cdi === null
+      ? 0
+      : goals.filter(earns).reduce((s, g) => s + estimate(Number(g.current_amount) || 0, cdi, Number(g.yield_percent)).month, 0);
   /* Only what is actually in hand can take up room on a share rule; an account in
      the red still gets its line, so the list stays the whole truth. */
   const positive = rows.reduce((s, r) => s + Math.max(r.balance, 0), 0);
@@ -316,23 +332,26 @@ export default function Gestao() {
               })}
             </Animated.View>
 
-            {/* ══ Cofrinhos: money set aside for something, still yours ══ */}
+            {/* ══ Caixinhas: money set aside for something, still yours ══ */}
             <Animated.View entering={FadeInDown.delay(120).duration(420)} style={{ marginTop: 30 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 4 }}>
-                <Text style={T.eyebrow}>Cofrinhos</Text>
+                <View>
+                  <Text style={T.eyebrow}>Caixinhas</Text>
+                  <Text style={{ marginTop: 3, fontSize: 12.5, color: INK.soft }}>Organize seus objetivos</Text>
+                </View>
                 <Pressable
-                  onPress={() => setAddingCofrinho(true)}
+                  onPress={() => setAddingCaixinha(true)}
                   hitSlop={8}
                   style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, opacity: pressed ? 0.6 : 1 })}
                 >
                   <Plus size={14} color="#fff" strokeWidth={2.6} />
-                  <Text style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>Novo</Text>
+                  <Text style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>Criar nova</Text>
                 </Pressable>
               </View>
 
               {goals.length === 0 ? (
                 <Pressable
-                  onPress={() => setAddingCofrinho(true)}
+                  onPress={() => setAddingCaixinha(true)}
                   style={({ pressed }) => ({
                     marginTop: 8,
                     flexDirection: "row",
@@ -350,7 +369,7 @@ export default function Gestao() {
                     <PiggyBank size={20} color="#fff" strokeWidth={2} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Crie seu primeiro cofrinho</Text>
+                    <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Crie sua primeira caixinha</Text>
                     <Text style={{ marginTop: 2, fontSize: 12.5, lineHeight: 17, color: INK.soft }}>
                       Para a viagem, a reserva de emergência, o carro. O dinheiro sai da conta, mas continua seu.
                     </Text>
@@ -359,37 +378,31 @@ export default function Gestao() {
                 </Pressable>
               ) : (
                 <>
-                  {/* The cofrinhos as numbers first, the way the accounts are. */}
+                  {/* The caixinhas as numbers first, the way the accounts are. Each one keeps its
+                      own goal and pace on its own page, so only the total and what it earns are here. */}
                   <View style={{ paddingHorizontal: 4, paddingTop: 10 }}>
-                    <Text style={{ fontSize: 13.5, color: "rgba(255,255,255,0.62)" }}>Guardado nos cofrinhos</Text>
+                    <Text style={{ fontSize: 13.5, color: "rgba(255,255,255,0.62)" }}>Total em caixinhas</Text>
                     <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 32, fontWeight: "800", letterSpacing: -1.2, color: "#fff" }}>
                       {money(guardado)}
                     </Text>
-                    <View style={{ marginTop: 12, flexDirection: "row", gap: 26 }}>
-                      <View style={{ flexShrink: 1, minWidth: 0 }}>
-                        <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>Meta total</Text>
-                        <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
-                          {money(metaTotal)}
-                        </Text>
-                      </View>
-                      <View style={{ flexShrink: 1, minWidth: 0 }}>
-                        <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>Conquistado</Text>
-                        <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
-                          {Math.round(conquistado * 100)}%
-                        </Text>
-                      </View>
-                      {porMes > 0 && (
+                    {rendem && (
+                      <View style={{ marginTop: 12, flexDirection: "row", gap: 26 }}>
                         <View style={{ flexShrink: 1, minWidth: 0 }}>
-                          <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>Guardar por mês</Text>
-                          <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
-                            {money(porMes)}
+                          <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>Rendimentos</Text>
+                          <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: GREEN }}>
+                            {money(earned)}
                           </Text>
                         </View>
-                      )}
-                    </View>
-                    <View style={{ marginTop: 14, height: 4, borderRadius: 2, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.09)" }}>
-                      <View style={{ width: `${conquistado * 100}%`, height: 4, borderRadius: 2, backgroundColor: "#fff" }} />
-                    </View>
+                        {noMes > 0 && (
+                          <View style={{ flexShrink: 1, minWidth: 0 }}>
+                            <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>Estimado em um mês</Text>
+                            <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
+                              {money(noMes)}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
                   </View>
 
                   {/* A shelf of them, each its own picture, running off the edge so it reads as more. */}
@@ -404,11 +417,11 @@ export default function Gestao() {
                   >
                     {goals.map((g, i) => (
                       <Animated.View key={g.id} entering={FadeInDown.delay(60 + i * 70).duration(420)}>
-                        <CofrinhoTile goal={g} delay={0.06 * i} onPress={() => router.push(`/metas/${g.id}` as never)} />
+                        <CaixinhaTile goal={g} delay={0.06 * i} onPress={() => router.push(`/metas/${g.id}` as never)} />
                       </Animated.View>
                     ))}
                     <Animated.View entering={FadeInDown.delay(60 + goals.length * 70).duration(420)}>
-                      <NewCofrinhoTile onPress={() => setAddingCofrinho(true)} />
+                      <NewCaixinhaTile onPress={() => setAddingCaixinha(true)} />
                     </Animated.View>
                   </ScrollView>
                 </>
@@ -429,15 +442,15 @@ export default function Gestao() {
           showToast("Conta adicionada");
         }}
       />
-      <CofrinhoSheet
-        open={addingCofrinho}
-        onClose={() => setAddingCofrinho(false)}
+      <CaixinhaSheet
+        open={addingCaixinha}
+        onClose={() => setAddingCaixinha(false)}
         existingNames={goals.map((g) => g.name)}
         onCreated={() => {
-          setAddingCofrinho(false);
+          setAddingCaixinha(false);
           void load();
           announce();
-          showToast("Cofrinho criado");
+          showToast("Caixinha criada");
         }}
       />
     </Room>

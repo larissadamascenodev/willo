@@ -93,7 +93,7 @@ export default function GoalMoveSheet({
       return;
     }
     if (overLimit) {
-      setError(`A meta tem ${money(maxAmount ?? 0)} guardados.`);
+      setError(`A caixinha tem ${money(maxAmount ?? 0)} guardados.`);
       return;
     }
     setSaving(true);
@@ -118,7 +118,7 @@ export default function GoalMoveSheet({
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={{ fontSize: 18, fontWeight: "700", color: "#fff" }}>
-              {isDeposit ? "Guardar dinheiro" : "Sacar da meta"}
+              {isDeposit ? "Guardar dinheiro" : "Sacar da caixinha"}
             </Text>
             <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: INK.soft }}>
               {goalName}
@@ -167,7 +167,7 @@ export default function GoalMoveSheet({
         </View>
         {!isDeposit && maxAmount !== undefined && (
           <Text style={{ marginTop: 4, fontSize: 12.5, color: INK.softer }}>
-            Disponível na meta: {money(maxAmount)}
+            Disponível na caixinha: {money(maxAmount)}
           </Text>
         )}
 
@@ -222,7 +222,7 @@ export default function GoalMoveSheet({
           <Text style={{ fontSize: 11.5, lineHeight: 16, color: INK.softer }}>
             {isDeposit
               ? "Sem conta marcada, o depósito entra como dinheiro vindo de fora do Willo."
-              : "Sem conta marcada, o saque sai da meta sem entrar em nenhuma conta."}
+              : "Sem conta marcada, o saque sai da caixinha sem entrar em nenhuma conta."}
           </Text>
         </View>
 

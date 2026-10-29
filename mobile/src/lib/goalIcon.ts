@@ -68,6 +68,8 @@ const KINDS: [RegExp, { icon: string; hex: string }][] = [
   [/bike|bicicleta/, { icon: "Bike", hex: "#86EFAC" }],
   [/sofa|sofá|movel|móvel|moveis|móveis|decoracao|decoração/, { icon: "Sofa", hex: "#D6B98C" }],
   [/saude|saúde|cirurgia|tratamento|dentista/, { icon: "Heart", hex: "#F87171" }],
+  [/carreira|profiss|promocao|promoção/, { icon: "Rocket", hex: "#F87171" }],
+  [/sonho de consumo|consumo|desejo/, { icon: "Gem", hex: "#C4B5FD" }],
 ];
 
 /** The preset a goal came from, with its glyph drawn. */

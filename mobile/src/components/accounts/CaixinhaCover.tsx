@@ -23,7 +23,7 @@ const deep = (hex: string, mix: number) => {
   return `rgb(${to(r, 13)},${to(g, 14)},${to(b, 16)})`;
 };
 
-export default function CofrinhoCover({
+export default function CaixinhaCover({
   goal,
   width,
   height,

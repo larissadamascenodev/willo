@@ -14,7 +14,7 @@ import type { EndedSubscription } from "~/lib/subscriptionCheck";
 import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
 import { ChevronRight } from "~/components/icons";
-import CofrinhoTile from "~/components/accounts/CofrinhoTile";
+import CaixinhaTile from "~/components/accounts/CaixinhaTile";
 import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
 import { AMBER, GREEN, INK } from "~/theme/tokens";
@@ -531,14 +531,14 @@ export function MetasTile({ size = "full" }: { size?: WidgetSize }) {
   }, [user]);
 
   if (goals === null) return <Skeleton size={size} />;
-  return <MetasCard goals={goals} size={size} onOpen={() => router.push("/metas")} onOpenGoal={(id) => router.push(`/metas/${id}` as never)} />;
+  return <MetasCard goals={goals} size={size} onOpen={() => router.push("/gestao")} onOpenGoal={(id) => router.push(`/metas/${id}` as never)} />;
 }
 
 const SHELF_W = 132;
 const SHELF_H = 172;
 
 /**
- * The goals card itself, drawn from what it is handed.
+ * The caixinhas card itself, drawn from what it is handed.
  *
  * Full width it is the same shelf of picture cards the accounts screen has, smaller:
  * a goal looks the same wherever it is met. The nearest to done come first.
@@ -557,8 +557,8 @@ export function MetasCard({
   if (goals.length === 0) {
     return (
       <Surface onPress={open} style={{ flex: 1, padding: 16 }}>
-        <Header title="Metas" />
-        <Empty text="Nenhuma meta ainda. Toque para criar a primeira." />
+        <Header title="Caixinhas" />
+        <Empty text="Nenhuma caixinha ainda. Toque para criar a primeira." />
       </Surface>
     );
   }
@@ -570,14 +570,18 @@ export function MetasCard({
   if (size !== "full") {
     return (
       <Surface onPress={open} style={{ flex: 1, padding: 16 }}>
-        <Header title="Metas" />
+        <Header title="Caixinhas" />
         <Lead value={money(guardado)} compact />
-        <View style={{ marginTop: 12 }}>
-          <Track share={overall} color={GREEN} height={5} />
-        </View>
-        <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 12, color: INK.soft }}>
-          {Math.round(overall * 100)}% de {money(objetivo)}
-        </Text>
+        {objetivo > 0 && (
+          <>
+            <View style={{ marginTop: 12 }}>
+              <Track share={overall} color={GREEN} height={5} />
+            </View>
+            <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 12, color: INK.soft }}>
+              {Math.round(overall * 100)}% de {money(objetivo)}
+            </Text>
+          </>
+        )}
       </Surface>
     );
   }
@@ -591,11 +595,13 @@ export function MetasCard({
   return (
     <Surface onPress={open} style={{ paddingTop: 16, paddingBottom: 16 }}>
       <View style={{ paddingHorizontal: 16 }}>
-        <Header title="Metas" aside={`${goals.length} ${goals.length === 1 ? "meta" : "metas"}`} />
+        <Header title="Caixinhas" aside={`${goals.length} ${goals.length === 1 ? "caixinha" : "caixinhas"}`} />
         <Lead value={money(guardado)} unit="guardados" />
-        <Text style={[nums, { marginTop: 2, fontSize: 12.5, color: INK.soft }]}>
-          {Math.round(overall * 100)}% de {money(objetivo)}
-        </Text>
+        {objetivo > 0 && (
+          <Text style={[nums, { marginTop: 2, fontSize: 12.5, color: INK.soft }]}>
+            {Math.round(overall * 100)}% de {money(objetivo)}
+          </Text>
+        )}
       </View>
 
       <ScrollView
@@ -606,7 +612,7 @@ export function MetasCard({
         decelerationRate="fast"
       >
         {ordered.map(({ goal }, i) => (
-          <CofrinhoTile
+          <CaixinhaTile
             key={goal.id}
             goal={goal}
             delay={0.05 * i}

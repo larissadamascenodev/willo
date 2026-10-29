@@ -17,9 +17,16 @@ export interface Goal {
   monthly_contribution: number | null;
   deadline: string | null;
   cover_image: string | null;
+  /** Null when the goal does not earn anything; `cdi` earns a share of the CDI. */
+  yield_type?: "cdi" | null;
+  /** The share of the CDI it earns, in percent: 100, 104, 115… */
+  yield_percent?: number | null;
   created_at: string;
   updated_at: string;
 }
+
+/** What a yield line is called in a goal's history. */
+export const YIELD_SOURCE = "Rendimento estimado";
 
 export interface GoalTransaction {
   id: string;
@@ -57,6 +64,8 @@ export async function createGoal(goal: {
   monthly_contribution?: number | null;
   deadline?: string | null;
   cover_image?: string | null;
+  yield_type?: "cdi" | null;
+  yield_percent?: number | null;
 }, userId: string): Promise<Goal> {
   const { data, error } = await supabase
     .from("goals")
@@ -67,6 +76,8 @@ export async function createGoal(goal: {
       monthly_contribution: goal.monthly_contribution ?? null,
       deadline: goal.deadline ?? null,
       cover_image: goal.cover_image ?? null,
+      /* Only sent when there is a yield, so a goal without one is written exactly as before. */
+      ...(goal.yield_type ? { yield_type: goal.yield_type, yield_percent: goal.yield_percent ?? 100 } : {}),
     } as any)
     .select()
     .single();
@@ -80,6 +91,8 @@ export async function updateGoal(id: string, updates: Partial<{
   monthly_contribution: number | null;
   deadline: string | null;
   cover_image: string | null;
+  yield_type: "cdi" | null;
+  yield_percent: number | null;
 }>): Promise<void> {
   const { error } = await supabase.from("goals").update(updates as any).eq("id", id);
   if (error) throw error;

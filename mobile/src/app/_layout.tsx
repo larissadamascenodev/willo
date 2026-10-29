@@ -86,7 +86,6 @@ function Door() {
         <Stack.Screen name="conta/[accountId]" />
         <Stack.Screen name="detalhe/[tipo]" />
         <Stack.Screen name="categorias" />
-        <Stack.Screen name="metas" />
         <Stack.Screen name="metas/[goalId]" />
         <Stack.Screen name="fluxo-de-caixa" />
         <Stack.Screen name="analytics/categorias" />

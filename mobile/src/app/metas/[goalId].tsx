@@ -13,6 +13,7 @@ import {
   fetchGoalById,
   fetchGoalTransactions,
   updateGoal,
+  YIELD_SOURCE,
   type Goal,
   type GoalTransaction,
 } from "@/services/goalService";
@@ -27,7 +28,7 @@ import GoalFormSheet from "~/components/metas/GoalFormSheet";
 import GoalMoveSheet from "~/components/metas/GoalMoveSheet";
 import { goalPreset } from "~/lib/goalIcon";
 import { pickGoalCover } from "~/lib/goalCover";
-import CofrinhoCover from "~/components/accounts/CofrinhoCover";
+import CaixinhaCover from "~/components/accounts/CaixinhaCover";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -39,19 +40,22 @@ import {
   Trash2,
 } from "~/components/icons";
 import { money } from "~/lib/money";
-import { monthYear, paceOf } from "~/lib/cofrinho";
+import { monthYear, paceOf } from "~/lib/caixinha";
+import { catchUpYields, earns, estimate, latestCdi, yieldEarned } from "~/lib/yields";
 import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 /**
- * One cofrinho, up close.
+ * One caixinha, up close.
  *
  * It opens on its picture — the one the person chose, or the cover made from the goal
  * itself — and what is held sits right under it, large, with how far that is along. Then
- * the four readings a goal is judged by, plain on the page: how much of it is kept, what
- * is left, what to put in each month, and when it arrives at that pace. Under them every
- * movement, laid out the way transactions are: what came in green, what went out in red.
+ * the readings a goal is judged by, plain on the page: what is left, what to put in each
+ * month, and when it arrives at that pace. One that earns says what it is expected to earn
+ * a day, a month and a year. Under them every movement, laid out the way transactions are:
+ * what came in green, what went out in red. A caixinha with no amount to reach, like the
+ * reserve, has no "how far" and no date; it is just what has been put by.
  */
 
 const PREVIEW = 5;
@@ -90,6 +94,9 @@ export default function MetaDetalhe() {
   const [confirming, setConfirming] = useState<"meta" | GoalTransaction | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [coverBusy, setCoverBusy] = useState(false);
+  /* The day's CDI the estimates are read from, and what has already been credited. */
+  const [cdi, setCdi] = useState<number | null>(null);
+  const [earned, setEarned] = useState(0);
 
   const load = useCallback(async () => {
     if (!goalId || !user) {
@@ -97,9 +104,22 @@ export default function MetaDetalhe() {
       return;
     }
     try {
-      const [g, txs] = await Promise.all([fetchGoalById(goalId), fetchGoalTransactions(goalId)]);
+      let [g, txs] = await Promise.all([fetchGoalById(goalId), fetchGoalTransactions(goalId)]);
+      /* Days of yield missed while the app was closed are credited before it is shown. */
+      if (earns(g) && (await catchUpYields([g]))) {
+        [g, txs] = await Promise.all([fetchGoalById(goalId), fetchGoalTransactions(goalId)]);
+        window.dispatchEvent(new CustomEvent("finance-data-changed"));
+      }
       setGoal(g);
       setMovements(txs);
+      if (earns(g)) {
+        const [rate, sum] = await Promise.all([latestCdi(), yieldEarned(user.id, goalId)]);
+        setCdi(rate?.rate ?? null);
+        setEarned(sum);
+      } else {
+        setCdi(null);
+        setEarned(0);
+      }
 
       const ids = [...new Set(txs.filter((t) => t.account_id).map((t) => t.account_id!))];
       if (ids.length > 0) {
@@ -153,13 +173,19 @@ export default function MetaDetalhe() {
     target_amount: number;
     monthly_contribution: number | null;
     deadline: string | null;
+    yield_type: "cdi" | null;
+    yield_percent: number | null;
   }) => {
     if (!goalId) return;
-    await updateGoal(goalId, data);
+    /* The yield is only written when it changed, so saving a name or an amount never
+       depends on it. */
+    const { yield_type, yield_percent, ...rest } = data;
+    const yieldChanged = (goal?.yield_type ?? null) !== yield_type || Number(goal?.yield_percent ?? 0) !== Number(yield_percent ?? 0);
+    await updateGoal(goalId, yieldChanged ? data : rest);
     setEditing(false);
     await load();
     announce();
-    showToast("Cofrinho atualizado");
+    showToast("Caixinha atualizada");
   };
 
   /* The picture: chosen from the library, or taken away to return to the made one. */
@@ -199,10 +225,10 @@ export default function MetaDetalhe() {
     try {
       await deleteGoal(goalId);
       announce();
-      showToast("Cofrinho excluído");
+      showToast("Caixinha excluída");
       router.replace("/gestao" as never);
     } catch {
-      setError("Não foi possível excluir a meta.");
+      setError("Não foi possível excluir a caixinha.");
       setConfirming(null);
     }
   };
@@ -229,9 +255,9 @@ export default function MetaDetalhe() {
       return `O valor de ${value} volta para a conta “${accountNames[tx.account_id]}”.`;
     }
     if (tx.source) {
-      return `Este depósito de ${value} veio de “${tx.source}”, fora do Willo. O valor sai da meta.`;
+      return `Este depósito de ${value} veio de “${tx.source}”, fora do Willo. O valor sai da caixinha.`;
     }
-    return `O depósito de ${value} sai da meta.`;
+    return `O depósito de ${value} sai da caixinha.`;
   };
 
   const openMenu = () => {
@@ -258,6 +284,8 @@ export default function MetaDetalhe() {
 
   const { progress, percent, remaining, isComplete } = goalProgress(goal);
   const preset = goalPreset(goal);
+  /* No amount to reach: nothing to be done, left or late for. */
+  const hasTarget = Number(goal.target_amount) > 0;
 
   const deposits = movements.filter((t) => Number(t.amount) > 0);
   const withdrawals = movements.filter((t) => Number(t.amount) < 0);
@@ -266,10 +294,10 @@ export default function MetaDetalhe() {
 
   const pace = paceOf(goal);
   /* With a date, the month's figure is what it takes to arrive on it. */
-  const dueIn = !isComplete && !pace.open && !pace.late;
+  const dueIn = hasTarget && !isComplete && !pace.open && !pace.late;
 
   const monthsLeft =
-    !dueIn && !isComplete && goal.monthly_contribution && goal.monthly_contribution > 0
+    hasTarget && !dueIn && !isComplete && goal.monthly_contribution && goal.monthly_contribution > 0
       ? Math.ceil(remaining / goal.monthly_contribution)
       : 0;
 
@@ -284,6 +312,7 @@ export default function MetaDetalhe() {
           ? `${monthsLeft} ${monthsLeft === 1 ? "mês" : "meses"}`
           : "—";
 
+  const forecast = earns(goal) && cdi !== null ? estimate(Number(goal.current_amount) || 0, cdi, Number(goal.yield_percent)) : null;
   const shown = showAll ? movements : movements.slice(0, PREVIEW);
   const heroH = HERO + insets.top;
 
@@ -295,7 +324,7 @@ export default function MetaDetalhe() {
       >
         {/* ══ Its picture, and across the foot of it what it is and what is kept ══ */}
         <View style={{ height: heroH, overflow: "hidden", borderBottomLeftRadius: 36, borderBottomRightRadius: 36, borderCurve: "continuous" }}>
-          <CofrinhoCover goal={goal} height={heroH} glyph={200} glyphTop={insets.top + 40} />
+          <CaixinhaCover goal={goal} height={heroH} glyph={200} glyphTop={insets.top + 40} />
           <LinearGradient
             colors={["rgba(0,0,0,0.45)", "rgba(0,0,0,0)"]}
             style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 100 }}
@@ -308,7 +337,7 @@ export default function MetaDetalhe() {
 
           <View style={{ position: "absolute", top: insets.top + 8, left: 16, right: 16, height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <BackButton to="/gestao" onImage />
-            <RoundButton label="Opções do cofrinho" hostRef={dots} onPress={openMenu} onImage>
+            <RoundButton label="Opções da caixinha" hostRef={dots} onPress={openMenu} onImage>
               <MoreVertical size={18} color="rgba(255,255,255,0.9)" />
             </RoundButton>
           </View>
@@ -328,6 +357,7 @@ export default function MetaDetalhe() {
 
         <View style={{ paddingHorizontal: 20 }}>
           {/* ══ How far along: the share on the left, what is left on the right ══ */}
+          {hasTarget ? (
           <Animated.View entering={FadeInDown.delay(60).duration(420)} style={{ marginTop: 14 }}>
             <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", marginBottom: 9 }}>
               <Text style={{ fontSize: 13.5, color: INK.soft }}>
@@ -339,13 +369,44 @@ export default function MetaDetalhe() {
             </View>
             <Progress progress={progress} color={isComplete ? GREEN : preset.hex} />
           </Animated.View>
+          ) : (
+            <Animated.Text entering={FadeInDown.delay(60).duration(420)} style={{ marginTop: 14, fontSize: 13.5, color: INK.soft }}>
+              Sem valor definido: é só ir guardando.
+            </Animated.Text>
+          )}
 
           {/* ══ What it asks of each month, and when it arrives ══ */}
-          <Animated.View entering={FadeInDown.delay(100).duration(420)} style={{ marginTop: 22, flexDirection: "row" }}>
-            <Reading label="Guardar por mês" value={perMonth > 0 ? money(perMonth) : "—"} />
-            <View style={{ width: 1, marginVertical: 2, marginRight: 16, backgroundColor: "rgba(255,255,255,0.08)" }} />
-            <Reading label="Previsão" value={arrives} late={pace.late && !isComplete} />
-          </Animated.View>
+          {hasTarget && (
+            <Animated.View entering={FadeInDown.delay(100).duration(420)} style={{ marginTop: 22, flexDirection: "row" }}>
+              <Reading label="Guardar por mês" value={perMonth > 0 ? money(perMonth) : "—"} />
+              <View style={{ width: 1, marginVertical: 2, marginRight: 16, backgroundColor: "rgba(255,255,255,0.08)" }} />
+              <Reading label="Previsão" value={arrives} late={pace.late && !isComplete} />
+            </Animated.View>
+          )}
+
+          {/* ══ What it earns: the rate it follows and what that is expected to come to ══ */}
+          {earns(goal) && (
+            <Animated.View entering={FadeInDown.delay(120).duration(420)} style={{ marginTop: 22 }}>
+              <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" }}>
+                <Text style={T.eyebrow}>Rendimento estimado</Text>
+                <Text style={{ fontSize: 12.5, color: INK.softer }}>{Number(goal.yield_percent)}% do CDI</Text>
+              </View>
+              {forecast ? (
+                <View style={{ marginTop: 10, flexDirection: "row" }}>
+                  <Reading label="Por dia" value={`+${money(forecast.day)}`} tone={GREEN} />
+                  <Reading label="Por mês" value={`+${money(forecast.month)}`} tone={GREEN} />
+                  <Reading label="Por ano" value={`+${money(forecast.year)}`} tone={GREEN} />
+                </View>
+              ) : (
+                <Text style={{ marginTop: 10, fontSize: 13.5, color: INK.soft }}>
+                  Calculando com o CDI de hoje. Volte em instantes.
+                </Text>
+              )}
+              <Text style={{ marginTop: 10, fontSize: 12, lineHeight: 16, color: INK.softer }}>
+                {earned > 0 ? `${money(earned)} já rendidos. ` : ""}Estimativa bruta de imposto, em dias úteis; o rendimento real pode variar.
+              </Text>
+            </Animated.View>
+          )}
 
           {/* ══ The two things done to a cofrinho; the rest is under the three dots ══ */}
           <Animated.View entering={FadeInDown.delay(140).duration(420)} style={{ marginTop: 26, flexDirection: "row", gap: 10 }}>
@@ -413,12 +474,13 @@ export default function MetaDetalhe() {
                   const heading = i === 0 || monthOf(shown[i - 1].date) !== monthOf(tx.date) ? monthOf(tx.date) : null;
                   const value = Number(tx.amount);
                   const isWithdraw = value < 0;
+                  const isYield = tx.source === YIELD_SOURCE;
                   const tone = isWithdraw ? RED : GREEN;
                   const Glyph = isWithdraw ? ArrowUpRight : ArrowDownLeft;
                   const day = new Date(`${tx.date.slice(0, 10)}T12:00:00`);
                   const sameYear = day.getFullYear() === new Date().getFullYear();
                   const date = day.toLocaleDateString("pt-BR", { day: "numeric", month: "long", ...(sameYear ? {} : { year: "numeric" }) });
-                  const under = [date, tx.source || null, tx.account_id ? accountNames[tx.account_id] || null : null]
+                  const under = [date, isYield ? "estimado" : tx.source || null, tx.account_id ? accountNames[tx.account_id] || null : null]
                     .filter(Boolean)
                     .join(" · ");
                   return (
@@ -429,9 +491,9 @@ export default function MetaDetalhe() {
                       </Text>
                     )}
                     <Pressable
-                      disabled={isWithdraw}
+                      disabled={isWithdraw || isYield}
                       onLongPress={() => setConfirming(tx)}
-                      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed && !isWithdraw ? 0.7 : 1 })}
+                      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed && !isWithdraw && !isYield ? 0.7 : 1 })}
                     >
                       <View
                         style={{
@@ -447,7 +509,7 @@ export default function MetaDetalhe() {
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>
-                          {isWithdraw ? "Retirada" : "Depósito"}
+                          {isWithdraw ? "Retirada" : isYield ? "Rendimento" : "Depósito"}
                         </Text>
                         <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>{under}</Text>
                       </View>
@@ -485,7 +547,7 @@ export default function MetaDetalhe() {
                 </Text>
               </Pressable>
             )}
-            {deposits.length > 0 && (
+            {deposits.some((t) => t.source !== YIELD_SOURCE) && (
               <Text style={{ marginTop: 10, paddingHorizontal: 4, fontSize: 11.5, color: INK.softer }}>
                 Segure um depósito para desfazê-lo.
               </Text>
@@ -497,10 +559,10 @@ export default function MetaDetalhe() {
       </ScrollView>
 
       <AnchoredMenu open={!!menu} anchor={menu} onClose={() => setMenu(null)}>
-        <MenuHeader title={goal.name} subtitle={`${percent}% de ${money(goal.target_amount)}`} />
+        <MenuHeader title={goal.name} subtitle={hasTarget ? `${percent}% de ${money(goal.target_amount)}` : "Sem valor definido"} />
         <MenuRow
           icon={Pencil}
-          label="Editar meta"
+          label="Editar caixinha"
           onPress={() => {
             setMenu(null);
             setEditing(true);
@@ -527,7 +589,7 @@ export default function MetaDetalhe() {
         ) : null}
         <MenuRow
           icon={Trash2}
-          label="Excluir meta"
+          label="Excluir caixinha"
           danger
           last
           onPress={() => {
@@ -545,7 +607,7 @@ export default function MetaDetalhe() {
         onClose={() => setConfirming(null)}
       >
         {confirming === "meta"
-          ? "Esta ação não pode ser desfeita. O dinheiro guardado nele deixa de contar como cofrinho."
+          ? "Esta ação não pode ser desfeita. O dinheiro guardado nela deixa de contar como caixinha."
           : confirming
             ? undoDescription(confirming)
             : ""}
@@ -564,12 +626,14 @@ export default function MetaDetalhe() {
         open={editing}
         onClose={() => setEditing(false)}
         onSubmit={save}
-        title="Editar meta"
+        title="Editar caixinha"
         initial={{
           name: goal.name,
           target_amount: goal.target_amount,
           monthly_contribution: goal.monthly_contribution ?? null,
           deadline: goal.deadline ?? null,
+          yield_type: goal.yield_type ?? null,
+          yield_percent: goal.yield_percent ?? null,
         }}
         saved={goal.current_amount}
       />
@@ -578,11 +642,11 @@ export default function MetaDetalhe() {
 }
 
 /** One of the readings, plain on the page, side by side. */
-function Reading({ label, value, late }: { label: string; value: string; late?: boolean }) {
+function Reading({ label, value, late, tone }: { label: string; value: string; late?: boolean; tone?: string }) {
   return (
     <View style={{ flex: 1, paddingRight: 12 }}>
       <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>{label}</Text>
-      <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 18, fontWeight: "700", letterSpacing: -0.4, color: late ? RED : "#fff" }}>
+      <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 18, fontWeight: "700", letterSpacing: -0.4, color: late ? RED : (tone ?? "#fff") }}>
         {value}
       </Text>
     </View>

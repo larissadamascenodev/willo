@@ -18,7 +18,7 @@ import { INK } from "~/theme/tokens";
 /**
  * The moment the thing exists.
  *
- * Whatever was made — its own mark, so an account arrives as that bank and a cofrinho
+ * Whatever was made — its own mark, so an account arrives as that bank and a caixinha
  * as that goal — springs in at the middle, a ring leaves it and fades, and a few
  * points fly off in every direction and go out. Then its name, and what it is.
  * It closes by itself after a few seconds; the button is for the impatient.

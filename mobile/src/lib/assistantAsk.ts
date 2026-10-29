@@ -22,7 +22,7 @@ const plain = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerC
 const PLACES: { match: RegExp; href: string; label: string }[] = [
   { match: /\b(fatura|faturas|cartao|cartoes|limite)\b/, href: "/cartoes", label: "Abrir faturas" },
   { match: /\b(parcela|parcelas|parcelamento|parcelamentos|parcelado|parcelei)\b/, href: "/parcelamentos", label: "Abrir parcelamentos" },
-  { match: /\b(meta|metas|objetivo|objetivos)\b/, href: "/metas", label: "Abrir metas" },
+  { match: /\b(meta|metas|objetivo|objetivos|caixinha|caixinhas|cofrinho|cofrinhos)\b/, href: "/gestao", label: "Abrir caixinhas" },
   { match: /\b(evento|eventos|calendario|vencimento|vencimentos|vencem|vence|a pagar|a receber|contas a pagar)\b/, href: "/eventos", label: "Abrir próximos eventos" },
   { match: /\b(fluxo|balanco|projecao|projecoes|previsao)\b/, href: "/fluxo-de-caixa", label: "Abrir fluxo de caixa" },
   { match: /\b(categoria|categorias)\b/, href: "/analytics/categorias", label: "Abrir categorias" },
