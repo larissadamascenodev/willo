@@ -68,13 +68,17 @@ export async function getInvoiceItems(invoiceId: string) {
 
   const { data: txs } = await supabase
     .from("transactions")
-    .select("id, name, category, date, status, recurrence_type, parent_transaction_id")
+    .select("id, name, category, date, status, recurrence_type, parent_transaction_id, installments, installment_current")
     .in("id", txIds);
 
   const txMap = new Map((txs ?? []).map((t: any) => [t.id, t]));
 
   return typedItems.map((item) => ({
     ...item,
+    /* An item written without its place in the plan takes it from the purchase, which
+       always carries it — otherwise an instalment reads as a purchase of its own. */
+    installment_number: item.installment_number ?? (txMap.get(item.transaction_id) as any)?.installment_current ?? null,
+    total_installments: item.total_installments ?? (txMap.get(item.transaction_id) as any)?.installments ?? null,
     transaction_name: (txMap.get(item.transaction_id) as any)?.name ?? "Transação",
     transaction_category: (txMap.get(item.transaction_id) as any)?.category ?? "",
     transaction_date: (txMap.get(item.transaction_id) as any)?.date ?? "",

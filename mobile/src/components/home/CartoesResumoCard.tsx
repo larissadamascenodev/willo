@@ -138,7 +138,7 @@ export default function CartoesResumoCard() {
               >
                 {money(r.owed)}
               </Text>
-              <Text style={{ fontSize: 11.5, color: shade(r.hex, 0.58) }}>
+              <Text style={{ fontSize: 11.5, color: INK.softer }}>
                 {money(r.available)} livres
               </Text>
             </View>

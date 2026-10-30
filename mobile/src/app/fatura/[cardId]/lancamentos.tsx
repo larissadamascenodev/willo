@@ -4,11 +4,12 @@ import { useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getInvoices, getInvoiceItems } from "@/services/invoiceService";
 import { getCreditCards } from "@/services/transactionService";
-import { readInvoice } from "@/lib/invoice/readModel";
+import { readInvoice, type InvoiceLine } from "@/lib/invoice/readModel";
 import { cardHex as hexFor } from "@/hooks/useCardsOverview";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import { InvoiceLineRow } from "~/components/fatura/InvoiceRecentCard";
+import LineDetail from "~/components/fatura/LineDetail";
 import SegmentedTabs from "~/components/SegmentedTabs";
 import { Search } from "~/components/icons";
 import { money } from "~/lib/money";
@@ -48,6 +49,9 @@ export default function Lancamentos() {
   const [hex, setHex] = useState("#8B5CF6");
   const [tab, setTab] = useState<"todos" | "parcelados">("todos");
   const [search, setSearch] = useState("");
+  const [openLine, setOpenLine] = useState<InvoiceLine | null>(null);
+  const [cardName, setCardName] = useState<string | undefined>(undefined);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -56,7 +60,10 @@ export default function Lancamentos() {
       const [cards, invs] = await Promise.all([getCreditCards(), getInvoices(cardId)]);
       if (!alive) return;
       const card = (cards as any[]).find((c) => c.id === cardId);
-      if (card) setHex(hexFor(card.color));
+      if (card) {
+        setHex(hexFor(card.color));
+        setCardName(card.name);
+      }
       const invoice = (invs as any[]).find((i) => i.month === month && i.year === year);
       if (!invoice) {
         setItems([]);
@@ -68,7 +75,7 @@ export default function Lancamentos() {
     return () => {
       alive = false;
     };
-  }, [cardId, user, month, year]);
+  }, [cardId, user, month, year, reload]);
 
   const { lines } = useMemo(() => readInvoice(items), [items]);
 
@@ -121,7 +128,7 @@ export default function Lancamentos() {
         <View style={{ marginTop: 20, flexDirection: "row", gap: 16, paddingHorizontal: 4 }}>
           <View style={{ flex: 1 }}>
             <Text style={[T.eyebrow, { fontSize: 11 }]}>Parcelado</Text>
-            <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 22, fontWeight: "800", letterSpacing: -0.7, color: hex }}>
+            <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 22, fontWeight: "800", letterSpacing: -0.7, color: "#fff" }}>
               {money(split.parcelado)}
             </Text>
           </View>
@@ -174,10 +181,12 @@ export default function Lancamentos() {
               {lines.length === 0 ? "Nenhum lançamento nesta fatura." : "Nada encontrado."}
             </Text>
           ) : (
-            shown.map((line) => <InvoiceLineRow key={line.id} line={line} />)
+            shown.map((line) => <InvoiceLineRow key={line.id} line={line} onPress={() => setOpenLine(line)} />)
           )}
         </View>
       </ScrollView>
+
+      <LineDetail line={openLine} cardName={cardName} onClose={() => setOpenLine(null)} onChanged={() => setReload((n) => n + 1)} />
     </Room>
   );
 }

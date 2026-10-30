@@ -106,6 +106,8 @@ interface Card {
   name: string;
   due_day: number;
   color: string | null;
+  limit?: number | null;
+  used_limit?: number | null;
 }
 
 export default function Novo() {
@@ -140,6 +142,7 @@ export default function Novo() {
   const [suggested, setSuggested] = useState<string | null>(null);
   const [thinking, setThinking] = useState(false);
   const chosen = useRef(false);
+  const editedOnCard = useRef<{ cardId: string; amount: number } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /* While the saved movement is on its way in, the form is not the person's yet. */
@@ -181,6 +184,7 @@ export default function Novo() {
         setMethod(tx.payment_method === "cartao" ? "cartao" : "conta");
         setAccountId(tx.account_id ?? null);
         setCreditCardId(tx.credit_card_id ?? null);
+        if (tx.payment_method === "cartao" && tx.credit_card_id) editedOnCard.current = { cardId: tx.credit_card_id, amount: Number(tx.amount) || 0 };
         setRecurrence(tx.recurrence_type === "parcelado" || tx.recurrence_type === "fixa" ? tx.recurrence_type : "unica");
         if (tx.installments) setInstallments(tx.installments);
         setStatus(tx.status === "pago" ? "pago" : "pendente");
@@ -227,6 +231,14 @@ export default function Novo() {
 
   const usingCard = !isReceita && method === "cartao";
 
+  /* What a card still has free, with the purchase being edited given back to it. */
+  const cardRoom = (id: string): number | null => {
+    const c = cards.find((x) => x.id === id);
+    if (!c || c.limit == null) return null;
+    const back = editedOnCard.current?.cardId === id ? editedOnCard.current.amount : 0;
+    return Number(c.limit) - (Number(c.used_limit) || 0) + back;
+  };
+
   const categories = useMemo(() => {
     const defaults = isReceita ? DEFAULT_INCOME_CATEGORIES : DEFAULT_EXPENSE_CATEGORIES;
     const custom = customCats.filter((c) => c.type === type).map((c) => c.name);
@@ -250,6 +262,15 @@ export default function Novo() {
     if (!user) {
       setError("Entre na sua conta para lançar.");
       return;
+    }
+    /* A card cannot take more than the room it has left. Paying or bringing a bill
+       forward frees the room again; until then the purchase does not fit. */
+    if (usingCard && creditCardId) {
+      const room = cardRoom(creditCardId);
+      if (room !== null && cents / 100 > room + 0.004) {
+        setError(`Esse cartão tem só ${money(Math.max(room, 0))} de limite disponível. Pague ou antecipe a fatura para liberar limite.`);
+        return;
+      }
     }
 
     setSaving(true);
@@ -455,7 +476,10 @@ export default function Novo() {
                     onPress={() => setCreditCardId(c.id)}
                     name={c.name}
                     hex={cardHex(c.color)}
-                    subtitle={`Vence dia ${c.due_day}`}
+                    subtitle={(() => {
+                      const room = cardRoom(c.id);
+                      return room === null ? `Vence dia ${c.due_day}` : `${money(Math.max(room, 0))} disponível · vence dia ${c.due_day}`;
+                    })()}
                   />
                 ))
               : accounts.map((a, i) => (

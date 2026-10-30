@@ -179,14 +179,14 @@ export default function CardFaceTile({
           }}
         >
           <Text numberOfLines={1} style={{ fontSize: 11.5, color: INK.softer }}>
-            Usado <Text style={{ fontWeight: "600", color: hex }}>{money(card.used)}</Text>
+            Usado <Text style={{ fontWeight: "600", color: "#fff" }}>{money(card.used)}</Text>
           </Text>
           <Text numberOfLines={1} style={{ fontSize: 11.5, color: INK.softer }}>
             Disponível{" "}
             <Text
               style={{
                 fontWeight: "600",
-                color: available > 0 ? freeTone : "rgba(255,255,255,0.55)",
+                color: available > 0 ? "#fff" : "rgba(255,255,255,0.55)",
               }}
             >
               {money(available)}

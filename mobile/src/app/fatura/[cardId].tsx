@@ -18,6 +18,7 @@ import Bar from "~/components/Bar";
 import { statusPill } from "~/components/wallet/CardFaceTile";
 import InvoiceForecastChart from "~/components/fatura/InvoiceForecastChart";
 import InvoiceRecentCard from "~/components/fatura/InvoiceRecentCard";
+import LineDetail from "~/components/fatura/LineDetail";
 import AnchoredMenu, { MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import { Check, MoreVertical, Pencil, Plus, Trash2, Wallet } from "~/components/icons";
 import { money } from "~/lib/money";
@@ -325,7 +326,7 @@ export default function Fatura() {
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: hex }} />
                     <Text style={{ fontSize: 11.5, color: INK.softer }}>Usado</Text>
                   </View>
-                  <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 16, fontWeight: "700", color: "rgba(255,255,255,0.72)" }}>
+                  <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 16, fontWeight: "700", color: "#fff" }}>
                     {money(usedLimit)}
                   </Text>
                 </View>
@@ -340,7 +341,7 @@ export default function Fatura() {
                       marginTop: 4,
                       fontSize: 16,
                       fontWeight: "700",
-                      color: available > 0 ? freeTone : "rgba(255,255,255,0.55)",
+                      color: available > 0 ? "#fff" : RED,
                     }}
                   >
                     {money(available)}
@@ -427,7 +428,7 @@ export default function Fatura() {
               />
             </View>
 
-            <View style={{ marginTop: 24 }}>
+            <View style={{ marginTop: 32 }}>
               <InvoiceRecentCard
                 items={items}
                 /* The month travels with the tap. Without it the list falls back to
@@ -445,6 +446,16 @@ export default function Fatura() {
           </>
         )}
       </ScrollView>
+
+      <LineDetail
+        line={openLine}
+        cardName={card?.name}
+        onClose={() => setOpenLine(null)}
+        onChanged={() => {
+          void load();
+          if (current) void getInvoiceItems(current.id).then((rows) => setItems(rows as any[])).catch(() => undefined);
+        }}
+      />
 
       {/* What can be done to the card itself. */}
       <AnchoredMenu open={!!menuAt} anchor={menuAt} onClose={() => setMenuAt(null)}>

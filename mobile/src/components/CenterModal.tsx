@@ -31,12 +31,15 @@ export default function CenterModal({
   onClose,
   title,
   subtitle,
+  actions,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   subtitle?: string;
+  /** Buttons that sit beside the cross — a menu of what can be done to what is shown. */
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   const insets = useSafeAreaInsets();
@@ -107,6 +110,7 @@ export default function CenterModal({
               <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>{title}</Text>
               {subtitle ? <Text style={{ marginTop: 3, fontSize: 13.5, color: INK.soft }}>{subtitle}</Text> : null}
             </View>
+            {actions}
             <Pressable
               onPress={onClose}
               hitSlop={10}
