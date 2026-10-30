@@ -27,9 +27,14 @@ import { cardHex } from "@/hooks/useCardsOverview";
 import Room from "~/components/Room";
 import BottomSheet from "~/components/BottomSheet";
 import SegmentedTabs from "~/components/SegmentedTabs";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Clock, CreditCard, FileText, Tag, Wallet, X, Sparkles } from "~/components/icons";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Clock, CreditCard, FileText, Tag, Wallet, X, Sparkles, Minus, Plus } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import CategoryPicker from "~/components/CategoryPicker";
+import BankMark from "~/components/BankMark";
+import CenterModal from "~/components/CenterModal";
+import MonthCalendar from "~/components/eventos/MonthCalendar";
+import { Group, Row as GRow, Segments, Stepper } from "~/components/accounts/caixinhaUi";
+import { money } from "~/lib/money";
 import { suggestCategory } from "~/lib/categorize";
 import { chipFill, chipInk } from "~/lib/chip";
 import { useAuth } from "~/lib/auth";
@@ -93,6 +98,7 @@ interface Account {
   name: string;
   is_default: boolean;
   color: string | null;
+  current_balance: number;
 }
 
 interface Card {
@@ -128,6 +134,8 @@ export default function Novo() {
   const [cards, setCards] = useState<Card[]>([]);
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
   const [pickingCategory, setPickingCategory] = useState(false);
+  const [pickingDate, setPickingDate] = useState(false);
+  const [calMonth, setCalMonth] = useState(() => ({ m: new Date().getMonth(), y: new Date().getFullYear() }));
   /* What Willo suggested for the name typed, and whether the person has chosen for themselves. */
   const [suggested, setSuggested] = useState<string | null>(null);
   const [thinking, setThinking] = useState(false);
@@ -419,172 +427,142 @@ export default function Novo() {
             </Row>
           </View>
 
+          {/* ══ How it was paid: from an account, or on a card ══ */}
           {!isReceita && (
             <>
               <Text style={SECTION}>Como pagou</Text>
-              <View style={{ marginBottom: 4 }}>
-                <SegmentedTabs
-                  compact
-                  height={34}
-                  value={method}
-                  onChange={setMethod}
-                  options={[
-                    { key: "conta" as const, label: "Conta" },
-                    { key: "cartao" as const, label: "Cartão" },
-                  ]}
-                />
-              </View>
+              <Segments
+                height={44}
+                value={method}
+                options={[
+                  { value: "conta" as const, label: "Débito / Pix" },
+                  { value: "cartao" as const, label: "Crédito" },
+                ]}
+                onChange={(v) => setMethod(v)}
+              />
             </>
           )}
 
-          {(isReceita || method === "conta") && (
-            <View>
-              {accounts.map((a, i) => (
-                <PickRow
-                  key={a.id}
-                  first={i === 0}
-                  selected={a.id === accountId}
-                  onPress={() => setAccountId(a.id)}
-                  hex={colorFor(a.name, a.color)}
-                  mark={initials(a.name)}
-                  title={a.name}
-                  subtitle={a.is_default ? "Conta padrão" : undefined}
-                />
-              ))}
-              {accounts.length === 0 && (
-                <Text style={{ paddingVertical: 20, textAlign: "center", fontSize: 14, color: INK.soft }}>
-                  Nenhuma conta cadastrada
-                </Text>
-              )}
-            </View>
-          )}
-
-          {usingCard && (
-            <View>
-              {cards.map((c, i) => (
-                <PickRow
-                  key={c.id}
-                  first={i === 0}
-                  selected={c.id === creditCardId}
-                  onPress={() => setCreditCardId(c.id)}
-                  hex={cardHex(c.color)}
-                  icon={CreditCard}
-                  title={c.name}
-                  subtitle={`Vence dia ${c.due_day}`}
-                />
-              ))}
-              {cards.length === 0 && (
-                <Text style={{ paddingVertical: 20, textAlign: "center", fontSize: 14, color: INK.soft }}>
-                  Nenhum cartão cadastrado
-                </Text>
-              )}
-            </View>
-          )}
-
-          {!editingId && (
-          <>
-          <Text style={SECTION}>Repetição</Text>
-          <SegmentedTabs
-            compact
-            height={34}
-            value={recurrence}
-            onChange={setRecurrence}
-            options={
-              isReceita
-                ? [
-                    { key: "unica" as const, label: "Única" },
-                    { key: "fixa" as const, label: "Todo mês" },
-                  ]
-                : [
-                    { key: "unica" as const, label: "Única" },
-                    { key: "parcelado" as const, label: "Parcelado" },
-                    { key: "fixa" as const, label: usingCard ? "Assinatura" : "Todo mês" },
-                  ]
-            }
-          />
-
-          {!isReceita && recurrence === "parcelado" && (
-            <View style={{ marginTop: 8 }}>
-              <Row icon={CreditCard} label="Parcelas">
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-                  <Text
-                    onPress={() => setInstallments((n) => Math.max(2, n - 1))}
-                    style={{ fontSize: 22, color: "#fff", paddingHorizontal: 8 }}
-                  >
-                    −
-                  </Text>
-                  <Text style={{ fontSize: 16, fontWeight: "700", color: "#fff", minWidth: 34, textAlign: "center" }}>
-                    {installments}x
-                  </Text>
-                  <Text
-                    onPress={() => setInstallments((n) => Math.min(48, n + 1))}
-                    style={{ fontSize: 22, color: "#fff", paddingHorizontal: 8 }}
-                  >
-                    +
-                  </Text>
-                </View>
-              </Row>
-              {cents > 0 && (
-                <Text style={{ marginTop: 8, paddingHorizontal: 4, fontSize: 13, color: INK.soft }}>
-                  <Text style={{ fontWeight: "600", color: "#fff" }}>
-                    {installments}x de R$ {brl(Math.round(cents / installments))}
-                  </Text>
-                </Text>
-              )}
-            </View>
-          )}
-
-          </>
-          )}
-
-          <Text style={SECTION}>Mais</Text>
-          <View>
-            {/* When it happened: today unless said otherwise, a day at a time either way. */}
-            <Row icon={CalendarDays} label="Data">
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                <Pressable onPress={() => setDate((d) => shiftDay(d, -1))} hitSlop={8} accessibilityLabel="Dia anterior" style={{ padding: 6 }}>
-                  <ChevronLeft size={18} color="rgba(255,255,255,0.8)" />
-                </Pressable>
-                <Text style={{ minWidth: 72, textAlign: "center", fontSize: 15, fontWeight: "600", color: "#fff" }}>
-                  {dayLabel(date)}
-                </Text>
-                <Pressable onPress={() => setDate((d) => shiftDay(d, 1))} hitSlop={8} accessibilityLabel="Dia seguinte" style={{ padding: 6 }}>
-                  <ChevronRight size={18} color="rgba(255,255,255,0.8)" />
-                </Pressable>
-              </View>
-            </Row>
-            {!usingCard && (
-              <Row
-                icon={status === "pago" ? Check : Clock}
-                label={status === "pago" ? (isReceita ? "Recebido" : "Pago") : isReceita ? "A receber" : "Pendente"}
-                onPress={() => setStatus((s) => (s === "pago" ? "pendente" : "pago"))}
-              >
-                <View
-                  style={{
-                    width: 48,
-                    height: 28,
-                    borderRadius: 999,
-                    padding: 3,
-                    justifyContent: "center",
-                    alignItems: status === "pago" ? "flex-end" : "flex-start",
-                    backgroundColor: status === "pago" ? GREEN : "rgba(255,255,255,0.15)",
-                  }}
-                >
-                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: "#fff" }} />
-                </View>
-              </Row>
+          {/* ══ Which account or which card, each as itself ══ */}
+          <Text style={SECTION}>{usingCard ? "Qual cartão" : isReceita ? "Entrou em qual conta" : "Saiu de qual conta"}</Text>
+          <Group>
+            {usingCard
+              ? cards.map((c, i) => (
+                  <PickRow
+                    key={c.id}
+                    last={i === cards.length - 1}
+                    selected={c.id === creditCardId}
+                    onPress={() => setCreditCardId(c.id)}
+                    name={c.name}
+                    hex={cardHex(c.color)}
+                    subtitle={`Vence dia ${c.due_day}`}
+                  />
+                ))
+              : accounts.map((a, i) => (
+                  <PickRow
+                    key={a.id}
+                    last={i === accounts.length - 1}
+                    selected={a.id === accountId}
+                    onPress={() => setAccountId(a.id)}
+                    name={a.name}
+                    hex={colorFor(a.name, a.color)}
+                    subtitle={`${money(Number(a.current_balance) || 0)}${a.is_default ? " · padrão" : ""}`}
+                  />
+                ))}
+            {(usingCard ? cards : accounts).length === 0 && (
+              <Text style={{ paddingVertical: 20, textAlign: "center", fontSize: 14, color: INK.soft }}>
+                {usingCard ? "Nenhum cartão cadastrado" : "Nenhuma conta cadastrada"}
+              </Text>
             )}
-            <Row icon={FileText} label="Observação">
-              <TextInput
-                placeholder="Opcional"
-                placeholderTextColor={INK.softer}
-                value={observation}
-                onChangeText={setObservation}
-                maxLength={200}
-                style={{ flex: 1, minWidth: 0, textAlign: "right", fontSize: 15, color: "#fff", padding: 0 }}
+          </Group>
+
+          {/* ══ Whether it comes back ══ */}
+          {!editingId && (
+            <>
+              <Text style={SECTION}>Repetição</Text>
+              <Segments
+                height={44}
+                value={recurrence}
+                onChange={(v) => setRecurrence(v)}
+                options={
+                  isReceita
+                    ? [
+                        { value: "unica" as const, label: "Única" },
+                        { value: "fixa" as const, label: "Todo mês" },
+                      ]
+                    : [
+                        { value: "unica" as const, label: "Única" },
+                        { value: "parcelado" as const, label: "Parcelado" },
+                        { value: "fixa" as const, label: usingCard ? "Assinatura" : "Todo mês" },
+                      ]
+                }
               />
-            </Row>
+
+              {!isReceita && recurrence === "parcelado" && (
+                <Group style={{ marginTop: 10 }}>
+                  <GRow last>
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                      <Stepper icon={Minus} label="Menos uma parcela" disabled={installments <= 2} onPress={() => setInstallments((n) => Math.max(2, n - 1))} />
+                      <View style={{ alignItems: "center" }}>
+                        <Text style={{ fontSize: 24, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>{installments}x</Text>
+                        {cents > 0 && (
+                          <Text style={{ marginTop: 1, fontSize: 13, color: INK.soft }}>de R$ {brl(Math.round(cents / installments))}</Text>
+                        )}
+                      </View>
+                      <Stepper icon={Plus} label="Mais uma parcela" disabled={installments >= 48} onPress={() => setInstallments((n) => Math.min(48, n + 1))} />
+                    </View>
+                  </GRow>
+                </Group>
+              )}
+            </>
+          )}
+
+          {/* ══ When: today and yesterday a tap away, any other day on the calendar ══ */}
+          <Text style={SECTION}>Quando</Text>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <DayChip label="Hoje" on={date === todayISO()} onPress={() => setDate(todayISO())} />
+            <DayChip label="Ontem" on={date === shiftDay(todayISO(), -1)} onPress={() => setDate(shiftDay(todayISO(), -1))} />
+            <DayChip
+              label={date !== todayISO() && date !== shiftDay(todayISO(), -1) ? dayLabel(date) : "Outra data"}
+              icon={CalendarDays}
+              on={date !== todayISO() && date !== shiftDay(todayISO(), -1)}
+              onPress={() => {
+                const d = new Date(`${date}T12:00:00`);
+                setCalMonth({ m: d.getMonth(), y: d.getFullYear() });
+                setPickingDate(true);
+              }}
+            />
           </View>
+
+          {/* ══ Whether it has happened yet ══ */}
+          {!usingCard && (
+            <>
+              <Text style={SECTION}>Situação</Text>
+              <Segments
+                height={44}
+                value={status}
+                onChange={(v) => setStatus(v)}
+                options={[
+                  { value: "pago" as const, label: isReceita ? "Recebido" : "Pago" },
+                  { value: "pendente" as const, label: isReceita ? "A receber" : "Pendente" },
+                ]}
+              />
+            </>
+          )}
+
+          {/* ══ Anything worth remembering about it ══ */}
+          <Text style={SECTION}>Observação</Text>
+          <Group>
+            <TextInput
+              placeholder="Escreva algo sobre esse lançamento (opcional)"
+              placeholderTextColor={INK.faint}
+              value={observation}
+              onChangeText={setObservation}
+              maxLength={200}
+              multiline
+              style={{ minHeight: 84, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14, fontSize: 15, lineHeight: 21, color: "#fff", textAlignVertical: "top" }}
+            />
+          </Group>
 
           {error && (
             <Text style={{ marginTop: 16, paddingHorizontal: 4, fontSize: 13.5, color: RED }}>{error}</Text>
@@ -623,6 +601,34 @@ export default function Novo() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      <CenterModal open={pickingDate} onClose={() => setPickingDate(false)} title="Escolher data">
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <Pressable accessibilityLabel="Mês anterior" hitSlop={8} onPress={() => setCalMonth(({ m, y }) => (m === 0 ? { m: 11, y: y - 1 } : { m: m - 1, y }))} style={{ padding: 6 }}>
+            <ChevronLeft size={18} color="#fff" />
+          </Pressable>
+          <Text style={{ fontSize: 16, fontWeight: "700", color: "#fff", textTransform: "capitalize" }}>
+            {new Date(calMonth.y, calMonth.m, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+          </Text>
+          <Pressable accessibilityLabel="Próximo mês" hitSlop={8} onPress={() => setCalMonth(({ m, y }) => (m === 11 ? { m: 0, y: y + 1 } : { m: m + 1, y }))} style={{ padding: 6 }}>
+            <ChevronRight size={18} color="#fff" />
+          </Pressable>
+        </View>
+        <MonthCalendar
+          month={calMonth.m}
+          year={calMonth.y}
+          events={[]}
+          selectedDay={(() => {
+            const d = new Date(`${date}T12:00:00`);
+            return d.getMonth() === calMonth.m && d.getFullYear() === calMonth.y ? d.getDate() : null;
+          })()}
+          onSelectDay={(day) => {
+            if (!day) return;
+            setDate(isoOf(new Date(calMonth.y, calMonth.m, day)));
+            setPickingDate(false);
+          }}
+        />
+      </CenterModal>
 
       <CategoryPicker
         open={pickingCategory}
@@ -687,78 +693,72 @@ function Row({
   );
 }
 
-/** An account or a card to pick, shown as itself rather than as a chip in a box. */
+/** An account or a card to pick, wearing its own mark — the bank's logo, the wallet's. */
 function PickRow({
   selected,
   onPress,
+  name,
   hex,
-  mark,
-  icon: Icon,
-  title,
   subtitle,
-  first,
+  last,
 }: {
   selected: boolean;
   onPress: () => void;
+  name: string;
   hex: string;
-  mark?: string;
-  icon?: React.ComponentType<{ size?: number; color?: string }>;
-  title: string;
   subtitle?: string;
-  first?: boolean;
+  last?: boolean;
 }) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+      <GRow last={last}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <BankMark name={name} hex={hex} size={38} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>{name}</Text>
+            {subtitle && <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12.5, color: INK.softer }}>{subtitle}</Text>}
+          </View>
+          <View
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: 12,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: selected ? 0 : 1.5,
+              borderColor: "rgba(255,255,255,0.28)",
+              backgroundColor: selected ? "#fff" : "transparent",
+            }}
+          >
+            {selected && <Check size={14} color="#0B0B0B" strokeWidth={3.2} />}
+          </View>
+        </View>
+      </GRow>
+    </Pressable>
+  );
+}
+
+/** One of the quick days, or the calendar. */
+function DayChip({ label, on, onPress, icon: Icon }: { label: string; on: boolean; onPress: () => void; icon?: React.ComponentType<{ size?: number; color?: string }> }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
+        flex: 1,
+        height: 44,
+        borderRadius: 22,
         flexDirection: "row",
         alignItems: "center",
-        gap: 14,
-        paddingHorizontal: 4,
-        paddingVertical: 12,
-        borderTopWidth: first ? 0 : 1,
-        borderTopColor: "rgba(255,255,255,0.055)",
-        opacity: pressed ? 0.7 : 1,
+        justifyContent: "center",
+        gap: 6,
+        borderWidth: 1,
+        borderColor: on ? "#fff" : "rgba(255,255,255,0.10)",
+        backgroundColor: on ? "#fff" : "rgba(255,255,255,0.06)",
+        transform: [{ scale: pressed ? 0.97 : 1 }],
       })}
     >
-      <View
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 18,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: hex,
-        }}
-      >
-        {Icon ? <Icon size={15} color="#fff" /> : (
-          <Text style={{ fontSize: 11.5, fontWeight: "700", color: "#fff" }}>{mark}</Text>
-        )}
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "500", color: "#fff" }}>
-          {title}
-        </Text>
-        {subtitle && (
-          <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>
-            {subtitle}
-          </Text>
-        )}
-      </View>
-      <View
-        style={{
-          width: 20,
-          height: 20,
-          borderRadius: 10,
-          alignItems: "center",
-          justifyContent: "center",
-          borderWidth: selected ? 0 : 1,
-          borderColor: "rgba(255,255,255,0.2)",
-          backgroundColor: selected ? "#fff" : "transparent",
-        }}
-      >
-        {selected && <Check size={12} color="#0B0B0B" strokeWidth={3.4} />}
-      </View>
+      {Icon && <Icon size={15} color={on ? "#0B0B0B" : "#fff"} />}
+      <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: on ? "#0B0B0B" : "#fff" }}>{label}</Text>
     </Pressable>
   );
 }
