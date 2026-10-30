@@ -128,9 +128,12 @@ export default function Lancamentos() {
         <View style={{ marginTop: 20, flexDirection: "row", gap: 16, paddingHorizontal: 4 }}>
           <View style={{ flex: 1 }}>
             <Text style={[T.eyebrow, { fontSize: 11 }]}>Parcelado</Text>
-            <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 22, fontWeight: "800", letterSpacing: -0.7, color: "#fff" }}>
-              {money(split.parcelado)}
-            </Text>
+            <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 22, fontWeight: "800", letterSpacing: -0.7, color: "#fff" }}>
+                {money(split.parcelado)}
+              </Text>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#A78BFA" }} />
+            </View>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[T.eyebrow, { fontSize: 11 }]}>À vista</Text>

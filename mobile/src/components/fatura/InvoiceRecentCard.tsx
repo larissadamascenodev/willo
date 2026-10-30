@@ -7,7 +7,7 @@ import { FastForward, Receipt, Undo2 } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
-import { GREEN, INK, RED } from "~/theme/tokens";
+import { GREEN, INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 /**
@@ -97,8 +97,10 @@ export function InvoiceLineRow({ line, onPress }: { line: InvoiceLine; onPress?:
         </Text>
         {plan && (
           <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <View style={{ flex: 1, maxWidth: 120, height: 4, borderRadius: 2, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.10)" }}>
-              <View style={{ width: `${(plan.current / plan.total) * 100}%`, height: 4, borderRadius: 2, backgroundColor: hex }} />
+            <View style={{ flex: 1, maxWidth: 120, height: 4, flexDirection: "row", gap: plan.total > 24 ? 1 : 2 }}>
+              {Array.from({ length: plan.total }, (_, i) => (
+                <View key={i} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i < plan.current ? hex : "rgba(255,255,255,0.12)" }} />
+              ))}
             </View>
             <Text style={{ fontSize: 11.5, fontWeight: "600", color: INK.soft }}>
               {plan.current} de {plan.total}
@@ -107,8 +109,8 @@ export function InvoiceLineRow({ line, onPress }: { line: InvoiceLine; onPress?:
         )}
       </View>
 
-      <Text style={{ fontSize: 15, fontWeight: "600", color: isRefund ? GREEN : RED }}>
-        {isRefund ? "+" : "−"}
+      <Text style={{ fontSize: 15, fontWeight: "600", color: isRefund ? GREEN : "#fff" }}>
+        {isRefund ? "+" : ""}
         {money(Math.abs(line.amount))}
       </Text>
     </Pressable>

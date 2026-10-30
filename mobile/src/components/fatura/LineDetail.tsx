@@ -6,7 +6,7 @@ import { categoryHex } from "@/lib/categoryData";
 import { deleteTransaction, getTransactionById } from "@/services/transactionService";
 import CenterModal from "~/components/CenterModal";
 import ConfirmGlass from "~/components/ConfirmGlass";
-import { MoreHorizontal, Pencil, Trash2 } from "~/components/icons";
+import { MoreVertical, Pencil, Trash2 } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
@@ -107,7 +107,7 @@ export default function LineDetail({
                 opacity: pressed ? 0.6 : 1,
               })}
             >
-              <MoreHorizontal size={16} color="rgba(255,255,255,0.86)" strokeWidth={2.4} />
+              <MoreVertical size={16} color="rgba(255,255,255,0.86)" strokeWidth={2.4} />
             </Pressable>
           ) : null
         }
@@ -160,7 +160,7 @@ export default function LineDetail({
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1, color: isRefund ? GREEN : "#fff" }}>
-              {isRefund ? "+" : "−"}
+              {isRefund ? "+" : ""}
               {money(each)}
             </Text>
             <Text style={{ marginTop: 1, fontSize: 13, color: INK.soft }}>{plan ? "Valor da parcela nesta fatura" : "Nesta fatura"}</Text>

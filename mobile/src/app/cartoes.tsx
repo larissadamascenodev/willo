@@ -12,7 +12,10 @@ import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import CardFaceTile, { FREE_LIMIT_HEX, USED_LIMIT_HEX } from "~/components/wallet/CardFaceTile";
+import CardFormSheet, { type CardDraft } from "~/components/wallet/CardFormSheet";
+import { createCreditCard, updateCreditCard } from "@/services/transactionService";
 import { CreditCard, Pencil, Plus, Trash2 } from "~/components/icons";
+import { showToast } from "~/lib/toast";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { INK, RED } from "~/theme/tokens";
@@ -33,9 +36,40 @@ export default function Cartoes() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { cards, invoices, items, loading } = useCardsOverview();
+  const { cards, invoices, items, loading, refresh } = useCardsOverview();
   const [held, setHeld] = useState<OverviewCard | null>(null);
   const [heldRect, setHeldRect] = useState<AnchorRect | null>(null);
+  /* The card sheet: { card: null } makes a new one, { card } changes that one. */
+  const [form, setForm] = useState<{ card: OverviewCard | null } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const saveCard = async (draft: CardDraft) => {
+    if (!user) return;
+    setSaving(true);
+    setFormError(null);
+    try {
+      if (form?.card) {
+        await updateCreditCard(form.card.id, {
+          name: draft.name,
+          limit: draft.limit,
+          closing_day: draft.closing_day,
+          due_day: draft.due_day,
+          last_four_digits: draft.last_four_digits,
+        });
+      } else {
+        await createCreditCard(draft, user.id);
+      }
+      const made = !form?.card;
+      setForm(null);
+      await refresh();
+      showToast(made ? "Cartão criado" : "Cartão atualizado");
+    } catch {
+      setFormError("Não foi possível salvar. Tente de novo.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const rows = useMemo(() => {
     const now = new Date();
@@ -272,6 +306,10 @@ export default function Cartoes() {
               ))}
 
               <Pressable
+                onPress={() => {
+                  setFormError(null);
+                  setForm({ card: null });
+                }}
                 style={({ pressed }) => ({
                   height: 54,
                   flexDirection: "row",
@@ -297,9 +335,38 @@ export default function Cartoes() {
 
       <AnchoredMenu open={!!held} anchor={heldRect} onClose={() => setHeld(null)}>
         <MenuHeader title={held?.name ?? ""} subtitle="Cartão de crédito" />
-        <MenuRow icon={Pencil} label="Editar" onPress={() => setHeld(null)} />
+        <MenuRow
+          icon={Pencil}
+          label="Editar"
+          onPress={() => {
+            setForm(held ? { card: held } : null);
+            setFormError(null);
+            setHeld(null);
+          }}
+        />
         <MenuRow icon={Trash2} label="Excluir" danger last onPress={() => setHeld(null)} />
       </AnchoredMenu>
+
+      <CardFormSheet
+        open={!!form}
+        initial={
+          form?.card
+            ? {
+                name: form.card.name,
+                last_four_digits: form.card.lastFour,
+                limit: form.card.limit,
+                closing_day: form.card.closingDay,
+                due_day: form.card.dueDay,
+                color: form.card.color,
+              }
+            : null
+        }
+        used={form?.card?.used ?? 0}
+        saving={saving}
+        error={formError}
+        onClose={() => setForm(null)}
+        onSave={(d) => void saveCard(d)}
+      />
     </Room>
   );
 }

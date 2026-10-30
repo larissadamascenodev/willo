@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { getInvoices, getInvoiceItems, type Invoice } from "@/services/invoiceService";
-import { getCreditCards } from "@/services/transactionService";
+import { getCreditCards, updateCreditCard } from "@/services/transactionService";
 import { invoicePeriodIndex } from "@/lib/installments";
 import type { InvoiceLine } from "@/lib/invoice/readModel";
 import { cardHex as hexFor } from "@/hooks/useCardsOverview";
@@ -15,12 +15,13 @@ import RoundButton from "~/components/RoundButton";
 import BackButton from "~/components/BackButton";
 import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
-import { statusPill } from "~/components/wallet/CardFaceTile";
+import CardFormSheet, { type CardDraft } from "~/components/wallet/CardFormSheet";
 import InvoiceForecastChart from "~/components/fatura/InvoiceForecastChart";
 import InvoiceRecentCard from "~/components/fatura/InvoiceRecentCard";
 import LineDetail from "~/components/fatura/LineDetail";
 import AnchoredMenu, { MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
-import { Check, MoreVertical, Pencil, Plus, Trash2, Wallet } from "~/components/icons";
+import { AlertTriangle, Check, Clock, Lock, MoreVertical, Pencil, Plus, Trash2, Wallet } from "~/components/icons";
+import { showToast } from "~/lib/toast";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
@@ -181,16 +182,45 @@ export default function Fatura() {
     return { line, overdue: toDue < 0 && outstanding > 0 };
   }, [card, month, year, total, outstanding]);
 
+  /* Where the bill stands, as a mark with its own colour and glyph: paid is green and
+     ticked, overdue is red, closed is locked and waiting for its due day, open is still
+     collecting purchases. */
   const status = useMemo(() => {
     if (!current) return null;
-    if (current.is_paid && outstanding <= 0)
-      return { label: "Paga", style: { backgroundColor: "rgba(200,243,109,0.12)", color: GREEN } };
+    if (current.is_paid && outstanding <= 0) return { label: "Paga", tone: GREEN, Icon: Check };
+    if (cycle?.overdue) return { label: "Vencida", tone: RED, Icon: AlertTriangle };
     if (card) {
       const closing = new Date(year, month - 1, card.closing_day);
-      if (new Date() > closing) return { label: "Fechada", style: statusPill(hex, true) };
+      if (new Date() > closing) return { label: "Fechada", tone: "#F5C26B", Icon: Lock };
     }
-    return { label: "Aberta", style: statusPill(hex) };
-  }, [current, card, month, year, outstanding, hex]);
+    return { label: "Aberta", tone: "#8FC7FF", Icon: Clock };
+  }, [current, card, month, year, outstanding, cycle]);
+  const paidOff = status?.label === "Paga";
+
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const saveCard = async (draft: CardDraft) => {
+    if (!card) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await updateCreditCard(card.id, {
+        name: draft.name,
+        limit: draft.limit,
+        closing_day: draft.closing_day,
+        due_day: draft.due_day,
+        last_four_digits: draft.last_four_digits,
+      });
+      setEditing(false);
+      await load();
+      showToast("Cartão atualizado");
+    } catch {
+      setSaveError("Não foi possível salvar. Tente de novo.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
 
   return (
@@ -266,24 +296,28 @@ export default function Fatura() {
                   Fatura de {MONTH_NAMES[month - 1]}
                 </Text>
                 {status && (
-                  <Text
+                  <View
                     style={{
-                      borderRadius: 999,
-                      overflow: "hidden",
-                      paddingHorizontal: 10,
-                      paddingVertical: 4,
-                      fontSize: 11,
-                      fontWeight: "700",
-                      ...status.style,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      height: 28,
+                      paddingLeft: 4,
+                      paddingRight: 11,
+                      borderRadius: 14,
+                      backgroundColor: `${status.tone}1F`,
                     }}
                   >
-                    {status.label}
-                  </Text>
+                    <View style={{ width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: status.tone }}>
+                      <status.Icon size={11} color="#0B0B0B" strokeWidth={3} />
+                    </View>
+                    <Text style={{ fontSize: 12.5, fontWeight: "700", color: status.tone }}>{status.label}</Text>
+                  </View>
                 )}
               </View>
               <Text
                 numberOfLines={1}
-                style={{ marginTop: 4, fontSize: 42, fontWeight: "800", letterSpacing: -1.7, color: "#fff" }}
+                style={{ marginTop: 4, fontSize: 42, fontWeight: "800", letterSpacing: -1.7, color: paidOff ? "rgba(255,255,255,0.55)" : "#fff" }}
               >
                 {money(headline)}
               </Text>
@@ -457,9 +491,27 @@ export default function Fatura() {
         }}
       />
 
+      <CardFormSheet
+        open={editing}
+        initial={card}
+        used={usedLimit}
+        saving={saving}
+        error={saveError}
+        onClose={() => setEditing(false)}
+        onSave={(d) => void saveCard(d)}
+      />
+
       {/* What can be done to the card itself. */}
       <AnchoredMenu open={!!menuAt} anchor={menuAt} onClose={() => setMenuAt(null)}>
-        <MenuRow icon={Pencil} label="Editar cartão" onPress={() => setMenuAt(null)} />
+        <MenuRow
+          icon={Pencil}
+          label="Editar cartão"
+          onPress={() => {
+            setMenuAt(null);
+            setSaveError(null);
+            setEditing(true);
+          }}
+        />
         <MenuRow icon={Trash2} label="Excluir cartão" danger last onPress={() => setMenuAt(null)} />
       </AnchoredMenu>
     </Room>

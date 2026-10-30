@@ -34,16 +34,6 @@ const BAR_W = 46;
 const GAP = 8;
 const TRACK = 96;
 
-/** R$ 1.743,20 is unreadable at 46px wide; "1,7k" is the same number you can see. */
-function short(v: number) {
-  if (v <= 0) return "—";
-  if (v >= 1000) {
-    const k = v / 1000;
-    return `${(k >= 10 ? Math.round(k) : Number(k.toFixed(1))).toLocaleString("pt-BR")}k`;
-  }
-  return Math.round(v).toLocaleString("pt-BR");
-}
-
 export default function InvoiceForecastChart({
   invoices,
   selectedMonth,
@@ -168,11 +158,6 @@ export default function InvoiceForecastChart({
               onPress={() => onSelect(bar.month, bar.year)}
               style={{ width: BAR_W, alignItems: "center", gap: 6 }}
             >
-              {/* The figure above its own bar: reading a chart should not need a tap. */}
-              <Text style={{ fontSize: 10.5, fontWeight: "600", color: selected ? "#fff" : INK.faint }}>
-                {short(bar.amount)}
-              </Text>
-
               <View style={{ height: TRACK, width: "100%", justifyContent: "flex-end" }}>
                 <View
                   style={{
