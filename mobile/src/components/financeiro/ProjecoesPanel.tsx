@@ -11,10 +11,9 @@ import {
   type ProjectionRowView,
 } from "@/lib/projectionRows";
 import { loadPastMonthFlows } from "@/services/pastMonths";
-import BottomSheet from "~/components/BottomSheet";
 import BalanceLine from "~/components/financeiro/BalanceLine";
 import MonthBreakdown from "~/components/financeiro/MonthBreakdown";
-import { CalendarDays, ChevronRight, X } from "~/components/icons";
+import { CalendarDays } from "~/components/icons";
 import { compact } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
@@ -26,7 +25,9 @@ import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
  * the next, so each month opens with what the one before closed with. It is drawn
  * as a line, because a projection is a trajectory, six months at a time — drag it
  * back through the months already lived or on through the year ahead. The large
- * figure above is the line's readout: tap a month and the figure becomes that month.
+ * figure above is the line's readout: tap a month and the figure becomes that month, and
+ * right under the line that month is written out — what came from the month before, what
+ * comes in, what goes out — so there is no list of months to read through.
  *
  * Like Balanço, the figures are white and colour lives in the small things: a dot
  * beside each month for how it goes — green when it adds to the balance, amber when
@@ -62,7 +63,6 @@ export default function ProjecoesPanel({ projection }: { projection: Projection 
   const router = useRouter();
   const { user } = useAuth();
   const { projections, data, loading, futureReady, selectedMonth, selectedYear } = projection;
-  const [open, setOpen] = useState<ProjectionRowView | null>(null);
   const [past, setPast] = useState<MonthFlow[] | null>(null);
 
   /* The months behind are read the way the months ahead are, so the line through
@@ -201,113 +201,34 @@ export default function ProjecoesPanel({ projection }: { projection: Projection 
         </View>
       )}
 
-      {/* ══ Each month, written out ══ */}
-      <Text style={{ marginTop: 38, fontSize: 17, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>
-        Mês a mês
-      </Text>
-
-      <View style={{ marginTop: 10 }}>
-        {rows.map((r) => (
-          <Pressable
-            key={`${r.year}-${r.month}`}
-            onPress={() => setOpen(r)}
-            style={({ pressed }) => ({
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 11,
-              paddingVertical: 14,
-              borderTopWidth: 1,
-              borderTopColor: RULE,
-              opacity: pressed ? 0.55 : 1,
-            })}
-          >
-            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: toneOf(r) }} />
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ fontSize: 16, color: "#fff" }}>
-                {r.name}
-                {r.yearTag ? <Text style={{ color: INK.softer }}> de 20{r.yearTag}</Text> : null}
-              </Text>
-              <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 12.5, color: INK.softer }}>
-                entra {compact(r.income)} e sai {compact(r.expense)}
-              </Text>
-            </View>
-            <Text style={[nums, { fontSize: 16, fontWeight: "600", color: r.fecha < 0 ? RED : "#fff" }]}>
-              {signedValue(r.fecha)}
-            </Text>
-            <ChevronRight size={15} color={INK.faint} />
-          </Pressable>
-        ))}
-      </View>
-
-      <View style={{ marginTop: 14, flexDirection: "row", gap: 16 }}>
-        <Key color={GREEN} label="aumenta o saldo" />
-        <Key color={AMBER} label="diminui" />
-        <Key color={RED} label="fica negativo" />
-      </View>
+      {/* ══ The month picked on the line, written out right under it ══ */}
+      <Animated.View
+        key={`detail-${selected}`}
+        entering={FadeIn.duration(220)}
+        style={{
+          marginTop: 22,
+          borderRadius: 24,
+          borderCurve: "continuous",
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.10)",
+          backgroundColor: "rgba(255,255,255,0.062)",
+          paddingHorizontal: 18,
+          paddingTop: 16,
+          paddingBottom: 18,
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: toneOf(pick) }} />
+          <Text style={{ flex: 1, fontSize: 16, fontWeight: "700", color: "#fff", textTransform: "capitalize" }}>{fullName(pick)}</Text>
+          <Text style={{ fontSize: 12.5, color: INK.softer }}>{offset === 0 ? "mês atual" : offset < 0 ? "já passou" : "previsto"}</Text>
+        </View>
+        <MonthBreakdown row={pick} prevName={MONTH_NAMES[(pick.month + 11) % 12]} />
+      </Animated.View>
 
       <Text style={{ marginTop: 14, fontSize: 12.5, lineHeight: 18, color: INK.softer }}>
-        Conta só o que já está previsto: contas fixas, parcelas lançadas e recorrências. Conforme
-        novos gastos entrarem, estes valores se ajustam sozinhos.
+        Toque num mês do gráfico para ver o que entra, o que sai e o que vem do mês anterior. Conta só o
+        que já está previsto: contas fixas, parcelas lançadas e recorrências.
       </Text>
-
-      <BottomSheet open={!!open} onClose={() => setOpen(null)} full>
-        {open && (
-          <View style={{ paddingHorizontal: 22 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-              <Text style={{ flex: 1, minWidth: 0, fontSize: 15, color: INK.soft }}>
-                Saldo no fim de {fullName(open)}
-              </Text>
-              <Pressable
-                accessibilityLabel="Fechar"
-                onPress={() => setOpen(null)}
-                hitSlop={10}
-                style={({ pressed }) => ({
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: "rgba(255,255,255,0.06)",
-                  opacity: pressed ? 0.6 : 1,
-                })}
-              >
-                <X size={16} color={INK.soft} />
-              </Pressable>
-            </View>
-
-            <Text
-              numberOfLines={1}
-              style={[
-                nums,
-                {
-                  marginTop: 4,
-                  fontSize: 44,
-                  fontWeight: "700",
-                  letterSpacing: -1.8,
-                  color: open.fecha < 0 ? RED : "#fff",
-                },
-              ]}
-            >
-              {signedValue(open.fecha)}
-            </Text>
-
-            <MonthBreakdown row={open} prevName={MONTH_NAMES[(open.month + 11) % 12]} />
-
-            <Text style={{ marginTop: 20, fontSize: 12.5, lineHeight: 18, color: INK.softer }}>
-              Só o que já está previsto entra nessa conta. Novos gastos ajustam o valor.
-            </Text>
-          </View>
-        )}
-      </BottomSheet>
-    </View>
-  );
-}
-
-function Key({ color, label }: { color: string; label: string }) {
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color }} />
-      <Text style={{ fontSize: 12, color: INK.softer }}>{label}</Text>
     </View>
   );
 }
