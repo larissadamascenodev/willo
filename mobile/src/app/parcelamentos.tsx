@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, ScrollView, Text, View, type TextStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
 import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import {
@@ -93,23 +94,16 @@ export function ParcelamentosView({
   cardsById: Record<string, CardBadge>;
 }) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [month, setMonth] = useState(0);
 
   const list = items ?? [];
   const stats = useMemo(() => installmentTotals(list), [list]);
   const byId = useMemo(() => new Map(list.map((i) => [i.id, i])), [list]);
 
-  /* Month by month. This month is read from the purchases themselves rather than
-     projected, so one that is running late still counts in it. */
-  const months = useMemo<ProjectionMonth[]>(() => {
-    const projection = installmentProjection(list, stats?.monthsUntilFree ?? 12);
-    if (projection.length === 0) return projection;
-    const parts = list
-      .map((i) => ({ id: i.id, name: i.name, category: i.category, amount: i.amount, number: i.installment_current, total: i.installments }))
-      .sort((a, b) => b.amount - a.amount);
-    projection[0] = { ...projection[0], parts, value: parts.reduce((s, x) => s + x.amount, 0) };
-    return projection;
-  }, [list, stats]);
+  /* Month by month, each instalment in the month it falls due — a card's in the month
+     of its invoice — and one running late in this month. */
+  const months = useMemo<ProjectionMonth[]>(() => installmentProjection(list, stats?.monthsUntilFree ?? 12), [list, stats]);
 
   const selected = Math.min(month, Math.max(months.length - 1, 0));
   const picked = months[selected];
@@ -235,6 +229,7 @@ export function ParcelamentosView({
                     emptyLabel={`Nenhuma parcela ${selected === 0 ? "este mês" : `em ${monthName}`}.`}
                     customCats={customCats}
                     cardsById={cardsById}
+                    onSeeAll={() => router.push({ pathname: "/parcelamentos/todos", params: { month: picked.month, year: picked.year } } as never)}
                   />
                 </View>
               </Animated.View>

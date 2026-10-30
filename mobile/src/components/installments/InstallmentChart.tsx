@@ -20,7 +20,6 @@ import { INK } from "~/theme/tokens";
  * Wide columns in white, so the page's colour stays with the figures that carry it:
  * this month solid, the months after softer. The chosen month's figure is the one
  * the page writes under the chart, so the columns carry none of their own.
- * A month in which some purchase ends carries a tick inside its column.
  *
  * It is also the page's month picker: tapping a column chooses the month the rest
  * of the page reads. When a month is chosen from elsewhere the strip brings it into
@@ -31,8 +30,9 @@ const MONTH_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Se
 const BAR_W = 46;
 const GAP = 8;
 const TRACK = 96;
-const NOW = "#F2F2F2";
-const LATER = "rgba(255,255,255,0.34)";
+/* Lavender, quiet against the page: this month solid, the months ahead a deeper tone. */
+const NOW = "#B9B0FF";
+const LATER = "#5B5785";
 
 export default function InstallmentChart({
   projection,
@@ -106,23 +106,6 @@ export default function InstallmentChart({
                   on={on}
                   delay={Math.min(i, 10) * 0.035}
                 />
-                {/* Something is paid off this month. */}
-                {ends && p.value > 0 && (
-                  <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 6, alignItems: "center" }}>
-                    <View
-                      style={{
-                        width: 17,
-                        height: 17,
-                        borderRadius: 9,
-                        alignItems: "center",
-                        justifyContent: "center",
-                        backgroundColor: "rgba(0,0,0,0.45)",
-                      }}
-                    >
-                      <Check size={11} color="#fff" strokeWidth={3.4} />
-                    </View>
-                  </View>
-                )}
               </View>
 
               <Text style={{ fontSize: 11, fontWeight: on ? "700" : "400", color: on ? "#fff" : INK.soft }}>
@@ -140,7 +123,6 @@ export default function InstallmentChart({
       <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", flexWrap: "wrap", columnGap: 16, rowGap: 6 }}>
         <Legend color={NOW} label="Este mês" />
         <Legend color={LATER} label="Próximos" />
-        <Legend color={LATER} label="Termina uma compra" tick />
       </View>
     </View>
   );

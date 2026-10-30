@@ -1,17 +1,14 @@
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { categoryHex } from "@/lib/categoryData";
 import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import type { CustomCategory } from "@/services/categoryService";
 import type { CardBadge } from "@/services/activeInstallments";
 import CenterModal from "~/components/CenterModal";
-import SegmentedTabs from "~/components/SegmentedTabs";
-import { ChevronDown } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
-import { EXPAND } from "~/lib/expand";
 import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
@@ -38,20 +35,17 @@ export default function InstallmentList({
   emptyLabel,
   customCats,
   cardsById,
+  onSeeAll,
 }: {
   entries: MonthPart[];
   title: string;
   emptyLabel: string;
   customCats: CustomCategory[];
   cardsById: Record<string, CardBadge>;
+  onSeeAll: () => void;
 }) {
-  const [all, setAll] = useState(false);
-  const [filter, setFilter] = useState<"todos" | "cartao" | "conta">("todos");
   const [opened, setOpened] = useState<MonthPart | null>(null);
-
-  const filtered = all
-    ? entries.filter(({ item }) => (filter === "todos" ? true : filter === "cartao" ? item.payment_method === "cartao" : item.payment_method !== "cartao"))
-    : entries.slice(0, FIRST);
+  const visible = entries.slice(0, FIRST);
 
   return (
     <View>
@@ -60,27 +54,11 @@ export default function InstallmentList({
         <Text style={{ fontSize: 12, color: INK.faint }}>{entries.length}</Text>
       </View>
 
-      {all && (
-        <Animated.View entering={FadeIn.duration(320)} style={{ marginTop: 12 }}>
-          <SegmentedTabs
-            value={filter}
-            onChange={setFilter}
-            height={32}
-            compact
-            options={[
-              { key: "todos" as const, label: "Todas" },
-              { key: "cartao" as const, label: "No cartão" },
-              { key: "conta" as const, label: "Na conta" },
-            ]}
-          />
-        </Animated.View>
-      )}
-
-      <Animated.View layout={EXPAND} style={{ marginTop: 6 }}>
-        {filtered.length === 0 ? (
+      <View style={{ marginTop: 6 }}>
+        {visible.length === 0 ? (
           <Text style={{ paddingVertical: 24, textAlign: "center", fontSize: 14, color: INK.softer }}>{emptyLabel}</Text>
         ) : (
-          filtered.map((entry, i) => (
+          visible.map((entry, i) => (
             <Animated.View key={entry.item.id} entering={FadeInDown.delay(Math.min(i, 8) * 35).duration(320)}>
               <InstallmentRow
                 entry={entry}
@@ -91,30 +69,24 @@ export default function InstallmentList({
             </Animated.View>
           ))
         )}
-      </Animated.View>
+      </View>
 
-      {entries.length > FIRST && (
+      {entries.length > 0 && (
         <Pressable
-          onPress={() => {
-            setAll((v) => !v);
-            setFilter("todos");
-          }}
+          onPress={onSeeAll}
           style={({ pressed }) => ({
             marginTop: 14,
-            height: 50,
-            borderRadius: 25,
-            flexDirection: "row",
+            height: 52,
+            borderRadius: 26,
             alignItems: "center",
             justifyContent: "center",
-            gap: 6,
             borderWidth: 1,
             borderColor: "rgba(255,255,255,0.08)",
             backgroundColor: "rgba(255,255,255,0.05)",
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          <Text style={{ fontSize: 15, fontWeight: "500", color: "#fff" }}>{all ? "Mostrar menos" : `Ver todas as parcelas (${entries.length})`}</Text>
-          <ChevronDown size={15} color="#fff" style={{ transform: [{ rotate: all ? "180deg" : "0deg" }] }} />
+          <Text style={{ fontSize: 15.5, fontWeight: "500", color: "#fff" }}>Ver todos os parcelamentos</Text>
         </Pressable>
       )}
 
@@ -128,7 +100,7 @@ export default function InstallmentList({
   );
 }
 
-function InstallmentRow({
+export function InstallmentRow({
   entry,
   customCats,
   card,
@@ -169,7 +141,7 @@ function InstallmentRow({
   );
 }
 
-function InstallmentDetail({
+export function InstallmentDetail({
   entry,
   customCats,
   card,
