@@ -35,12 +35,12 @@ const PER_CHAR_MS = 40;
 /** After a finger lets go without sending it away. */
 const RESUME_MS = 2200;
 /* In and out are slow enough to be seen and short enough in distance not to feel like a drop. */
-const IN_MS = 560;
-const WAY_MS = 460;
-const TRAVEL = 34;
+const IN_MS = 720;
+const WAY_MS = 620;
+const TRAVEL = 12;
 const OFFSCREEN = 130;
 const SOFT = Easing.bezier(0.22, 1, 0.36, 1);
-const SOFT_OUT = Easing.bezier(0.4, 0, 0.6, 1);
+const SOFT_OUT = Easing.bezier(0.33, 0, 0.67, 1);
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const MARK = require("../../assets/willo-icon.png") as number;
@@ -128,7 +128,7 @@ export default function ToastHost() {
     opacity: shown.get() * Math.max(0, 1 - Math.abs(drag.get()) / 220),
     transform: [
       { translateY: (1 - shown.get()) * DIR * TRAVEL + drag.get() },
-      { scale: 0.96 + shown.get() * 0.04 },
+      { scale: 0.985 + shown.get() * 0.015 },
     ],
   }));
 

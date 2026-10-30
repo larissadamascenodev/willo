@@ -167,8 +167,8 @@ export default function TransactionSheet({
 
   const markPaid = () => run(() => updateTransactionStatus(tx.id, "pago"), "Marcada como paga");
 
-  const removeThisMonth = () => run(() => removeTransaction(tx, "month", { month, year, userId }), "Transação excluída");
-  const removeAll = () => run(() => removeTransaction(tx, "all", { month, year, userId }), "Transação excluída");
+  const removeThisMonth = () => run(() => removeTransaction(tx, "month", { month, year, userId }), `“${tx.name}” excluído`);
+  const removeAll = () => run(() => removeTransaction(tx, "all", { month, year, userId }), `“${tx.name}” excluído`);
 
   return (
     <BottomSheet open={!!asked} onClose={onClose}>

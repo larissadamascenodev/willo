@@ -242,7 +242,7 @@ export default function MetaDetalhe() {
     try {
       await deleteGoal(goalId);
       announce();
-      showToast("Caixinha excluída");
+      showToast(goal?.name ? `Caixinha “${goal.name}” excluída` : "Caixinha excluída");
       router.replace("/gestao" as never);
     } catch {
       setError("Não foi possível excluir a caixinha.");

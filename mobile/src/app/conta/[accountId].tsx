@@ -222,7 +222,7 @@ export default function ContaDetalhe() {
       await deleteAccount(accountId);
       window.dispatchEvent(new CustomEvent("finance-data-changed"));
       setConfirming(false);
-      showToast("Conta excluída");
+      showToast(account?.name ? `Conta “${account.name}” excluída` : "Conta excluída");
       router.replace("/gestao");
     } catch {
       setError("Não foi possível excluir a conta.");

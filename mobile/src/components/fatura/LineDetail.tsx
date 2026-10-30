@@ -5,7 +5,7 @@ import type { InvoiceLine } from "@/lib/invoice/readModel";
 import { categoryHex } from "@/lib/categoryData";
 import { deleteTransaction, getTransactionById } from "@/services/transactionService";
 import CenterModal from "~/components/CenterModal";
-import ConfirmGlass from "~/components/ConfirmGlass";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { MoreVertical, Pencil, Trash2 } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
@@ -43,6 +43,7 @@ export default function LineDetail({
   useEffect(() => {
     setPurchaseId(null);
     setMenu(false);
+    setConfirming(false);
     if (!line) return;
     let alive = true;
     getTransactionById(line.transactionId)
@@ -71,11 +72,10 @@ export default function LineDetail({
     setBusy(true);
     try {
       await deleteTransaction(purchaseId);
-      setConfirming(false);
       onClose();
       onChanged();
       window.dispatchEvent(new CustomEvent("finance-data-changed"));
-      showToast(plan ? "Compra excluída" : "Lançamento excluído");
+      showToast(`“${shown.name}” excluído`);
     } catch {
       showToast("Não foi possível excluir.");
     } finally {
@@ -91,7 +91,7 @@ export default function LineDetail({
         title={shown.name}
         subtitle={cardName}
         actions={
-          !isRefund ? (
+          !isRefund && !confirming ? (
             <Pressable
               onPress={() => setMenu((v) => !v)}
               hitSlop={10}
@@ -153,6 +153,38 @@ export default function LineDetail({
           </View>
         )}
 
+        {confirming ? (
+          <Animated.View entering={FadeIn.duration(220)} style={{ alignItems: "center", paddingTop: 8 }}>
+            <View style={{ width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,107,107,0.14)" }}>
+              <Trash2 size={24} color={RED} />
+            </View>
+            <Text style={{ marginTop: 14, fontSize: 18, fontWeight: "700", color: "#fff", textAlign: "center" }}>
+              Excluir “{shown.name}”?
+            </Text>
+            <Text style={{ marginTop: 8, fontSize: 14, lineHeight: 20, color: INK.soft, textAlign: "center" }}>
+              {plan
+                ? `As ${plan.total} parcelas de ${money(each)} saem de todas as faturas e o limite do cartão volta a ficar livre.`
+                : "Sai da fatura e o limite do cartão volta a ficar livre."}
+            </Text>
+            <View style={{ marginTop: 22, alignSelf: "stretch", flexDirection: "row", gap: 10 }}>
+              <Pressable
+                onPress={() => setConfirming(false)}
+                disabled={busy}
+                style={({ pressed }) => ({ flex: 1, height: 50, borderRadius: 25, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.10)", opacity: pressed ? 0.7 : 1 })}
+              >
+                <Text style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>Cancelar</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => void remove()}
+                disabled={busy || !purchaseId}
+                style={({ pressed }) => ({ flex: 1, height: 50, borderRadius: 25, alignItems: "center", justifyContent: "center", backgroundColor: RED, opacity: busy || !purchaseId ? 0.5 : pressed ? 0.8 : 1 })}
+              >
+                <Text style={{ fontSize: 15.5, fontWeight: "700", color: "#fff" }}>{busy ? "Excluindo…" : "Excluir"}</Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        ) : (
+          <Animated.View entering={FadeIn.duration(220)} exiting={FadeOut.duration(120)}>
         {/* ══ What it costs on this bill ══ */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
           <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
@@ -195,21 +227,10 @@ export default function LineDetail({
           {plan && <Fact label="Ainda falta" value={money(each * (plan.total - plan.current + 1))} last />}
           {!plan && cardName && <Fact label="Cartão" value={cardName} last />}
         </View>
-
+          </Animated.View>
+        )}
       </CenterModal>
 
-      <ConfirmGlass
-        open={confirming}
-        busy={busy}
-        title={plan ? "Excluir a compra?" : "Excluir lançamento?"}
-        confirmLabel="Excluir"
-        onConfirm={() => void remove()}
-        onClose={() => setConfirming(false)}
-      >
-        {plan
-          ? `As ${plan.total} parcelas de ${money(each)} saem de todas as faturas, e o limite do cartão volta a ficar livre.`
-          : `${shown.name} sai da fatura e o limite do cartão volta a ficar livre.`}
-      </ConfirmGlass>
     </>
   );
 }
