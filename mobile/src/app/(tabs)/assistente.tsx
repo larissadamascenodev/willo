@@ -1,5 +1,6 @@
-import EmBreve from "~/components/EmBreve";
+import { Redirect } from "expo-router";
 
+/* Willo lives in one place: the conversation screen. */
 export default function Assistente() {
-  return <EmBreve title="Willo" note="O assistente chega depois das telas principais." />;
+  return <Redirect href={"/registro" as never} />;
 }

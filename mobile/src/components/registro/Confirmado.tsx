@@ -1,45 +1,90 @@
+import { useEffect } from "react";
 import { Text, View } from "react-native";
-import Animated, { FadeIn, FadeInDown, ZoomIn } from "react-native-reanimated";
-import BotMark from "~/components/BotMark";
+import Animated, {
+  Easing,
+  FadeIn,
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 import { Check } from "~/components/icons";
-import { GREEN } from "~/theme/tokens";
+import { money } from "~/lib/money";
+import { playCash } from "~/lib/sounds";
+import { GREEN, INK } from "~/theme/tokens";
 
 /**
- * The moment something lands.
+ * The moment something lands — a sticker, like a payment app's "pago".
  *
- * "Anotado" as a line of text read like any other sentence in the thread, and the
- * one thing a person needs to feel here is that it is done — they are about to put
- * the phone away. So it arrives as an event: the mark springs in beside Willo and
- * settles in under a second, celebratory the first time and invisible the hundredth.
+ * It is stamped onto the thread: a round seal drops in a little too big, a little
+ * turned, and settles; a ring of light pulses out of it once; the coins chime and the
+ * phone taps back. Celebratory the first time and quick enough to be nothing the
+ * hundredth. The amount, when there is one, is written on the seal.
  */
-export default function Confirmado({ text }: { text: string }) {
+export default function Confirmado({ text, total, income = false }: { text: string; total?: number; income?: boolean }) {
+  const stamp = useSharedValue(0);
+  const ring = useSharedValue(0);
+
+  useEffect(() => {
+    stamp.set(withSpring(1, { damping: 11, stiffness: 260, mass: 0.8, reduceMotion: ReduceMotion.System }));
+    ring.set(withDelay(120, withSequence(withTiming(1, { duration: 620, easing: Easing.out(Easing.cubic) }), withTiming(1, { duration: 0 }))));
+    playCash();
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+  }, [stamp, ring]);
+
+  const seal = useAnimatedStyle(() => ({
+    opacity: Math.min(1, stamp.get() * 1.6),
+    transform: [{ scale: 1.6 - stamp.get() * 0.6 }, { rotate: `${-14 + stamp.get() * 6}deg` }],
+  }));
+  const halo = useAnimatedStyle(() => ({
+    opacity: (1 - ring.get()) * 0.6,
+    transform: [{ scale: 0.8 + ring.get() * 0.9 }],
+  }));
+
+  const tone = income ? GREEN : "#7CC4FF";
+
   return (
-    <Animated.View entering={FadeInDown.duration(300)} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-      <BotMark size={30} />
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 8,
-          paddingVertical: 8,
-          paddingLeft: 8,
-          paddingRight: 16,
-          borderRadius: 999,
-          borderWidth: 1,
-          borderColor: "rgba(200,243,109,0.30)",
-          backgroundColor: "rgba(200,243,109,0.10)",
-        }}
-      >
+    <View style={{ alignItems: "center", paddingVertical: 10 }}>
+      <View style={{ width: 132, height: 132, alignItems: "center", justifyContent: "center" }}>
         <Animated.View
-          entering={ZoomIn.delay(60).springify().damping(12).stiffness(520)}
-          style={{ width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: GREEN }}
+          pointerEvents="none"
+          style={[{ position: "absolute", width: 132, height: 132, borderRadius: 66, borderWidth: 2, borderColor: tone }, halo]}
+        />
+        <Animated.View
+          style={[
+            {
+              width: 112,
+              height: 112,
+              borderRadius: 56,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: `${tone}1F`,
+              borderWidth: 2,
+              borderColor: tone,
+              borderStyle: "dashed",
+            },
+            seal,
+          ]}
         >
-          <Check size={13} color="#0B0B0B" strokeWidth={3.6} />
+          <View style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: tone }}>
+            <Check size={19} color="#0B0B0B" strokeWidth={3.6} />
+          </View>
+          <Text style={{ marginTop: 6, fontSize: 13, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase", color: tone }}>{text}</Text>
+          {total != null && total > 0 && (
+            <Text style={{ marginTop: 1, fontSize: 12, fontWeight: "700", color: "#fff" }}>
+              {income ? "+" : ""}
+              {money(total)}
+            </Text>
+          )}
         </Animated.View>
-        <Animated.Text entering={FadeIn.delay(160).duration(260)}>
-          <Text style={{ fontSize: 14.5, fontWeight: "600", letterSpacing: -0.2, color: GREEN }}>{text}</Text>
-        </Animated.Text>
       </View>
-    </Animated.View>
+      <Animated.Text entering={FadeIn.delay(380).duration(300)} style={{ marginTop: 2, fontSize: 12.5, color: INK.softer }}>
+        Está nas suas transações
+      </Animated.Text>
+    </View>
   );
 }

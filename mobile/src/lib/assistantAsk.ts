@@ -1,4 +1,5 @@
 import { supabase } from "~/supabase/client";
+import { getWilloPrefs } from "~/lib/willoPrefs";
 
 /**
  * What to do with a question put to the sphere.
@@ -73,11 +74,12 @@ const GIVE_UP_MS = 50_000;
  * the app's own numbers — and returns what it answered.
  */
 export async function askWillo(messages: Turn[], snapshot: unknown): Promise<string> {
+  const { style, length, agents } = getWilloPrefs();
   const timeout = new Promise<never>((_, reject) =>
     setTimeout(() => reject(new Error("O Willo demorou a responder. Tente de novo.")), GIVE_UP_MS),
   );
   const { data, error } = await Promise.race([
-    supabase.functions.invoke("willo-assistant", { body: { messages, snapshot } }),
+    supabase.functions.invoke("willo-assistant", { body: { messages, snapshot, prefs: { style, length, agents } } }),
     timeout,
   ]);
   if (error) {

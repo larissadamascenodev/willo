@@ -14,7 +14,11 @@ import Glass from "~/components/Glass";
 import Notinha, { type NotinhaLine } from "~/components/registro/Notinha";
 import Confirmado from "~/components/registro/Confirmado";
 import ParticleOrb, { type OrbMode } from "~/components/registro/ParticleOrb";
-import { ArrowUp, Camera, Mic, PenLine, Sparkles, X, Zap } from "~/components/icons";
+import { ArrowUp, Camera, Mic, PenLine, SlidersHorizontal, Sparkles, X, Zap } from "~/components/icons";
+import WilloSettings from "~/components/willo/WilloSettings";
+import AgentMark from "~/components/willo/AgentMark";
+import { AGENTS } from "~/lib/agents";
+import { useWilloPrefs } from "~/lib/willoPrefs";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
@@ -53,7 +57,7 @@ import { GREEN, INK } from "~/theme/tokens";
 type Item =
   | { kind: "msg"; id: string; role: "bot" | "user"; text: string }
   | { kind: "batch"; id: string }
-  | { kind: "done"; id: string; text: string };
+  | { kind: "done"; id: string; text: string; total?: number; income?: boolean };
 
 interface Line {
   batchId: string;
@@ -90,6 +94,15 @@ const EXAMPLES: { text: string; category: string }[] = [
   { text: "luz 180, água 60", category: "Conta de Luz" },
 ];
 
+/** Things worth asking, so the first visit shows what he is for. */
+const QUESTIONS = [
+  "Quanto posso gastar até o fim do mês?",
+  "Posso comprar algo de R$ 500 este mês?",
+  "Por que minha fatura aumentou?",
+  "Quando terminam meus parcelamentos?",
+  "Onde estou gastando mais?",
+];
+
 const INCOME_CATEGORIES = ["Salário", "Freelance", "Investimentos", "Vendas", "Aluguéis", "Bônus", "Comissão", "Mesada"];
 
 const spoken = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(2).replace(".", ","));
@@ -121,6 +134,8 @@ export default function Registro() {
   const [text, setText] = useState("");
   const [thinking, setThinking] = useState<string | null>(null);
   const [question, setQuestion] = useState<QuickQuestion | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const prefs = useWilloPrefs();
 
   const askedRef = useRef<Set<string>>(new Set());
   const savingRef = useRef<Set<string>>(new Set());
@@ -273,7 +288,17 @@ export default function Registro() {
         const key = `done:${b}`;
         if (own.length > 0 && own.every((l) => l.saved) && !askedRef.current.has(key)) {
           askedRef.current.add(key);
-          setItems((m) => [...m, { kind: "done", id: uid(), text: own.length > 1 ? `${own.length} lançamentos anotados` : "Anotado" }]);
+          const income = own.every((l) => l.draft.type === "receita");
+          setItems((m) => [
+            ...m,
+            {
+              kind: "done",
+              id: uid(),
+              text: income ? "Recebido" : "Anotado",
+              total: own.reduce((s, l) => s + l.draft.amount, 0),
+              income,
+            },
+          ]);
         }
       }
       return;
@@ -522,6 +547,16 @@ export default function Registro() {
             </View>
           </View>
           <Pressable
+            onPress={() => setSettingsOpen(true)}
+            accessibilityLabel="Personalizar o Willo"
+            hitSlop={8}
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+          >
+            <Glass radius={18} interactive style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+              <SlidersHorizontal size={16} color="rgba(255,255,255,0.88)" strokeWidth={2.2} />
+            </Glass>
+          </Pressable>
+          <Pressable
             onPress={close}
             accessibilityLabel={hasEntries ? "Concluir" : "Fechar"}
             hitSlop={8}
@@ -567,8 +602,64 @@ export default function Registro() {
                     </Animated.View>
                   )}
                 </View>
+
+                {/* His specialists, at work behind him. */}
+                {!listening && !reading && (
+                  <Animated.View entering={FadeIn.delay(240).duration(420)} style={{ marginTop: 6, alignItems: "center" }}>
+                    <Pressable onPress={() => setSettingsOpen(true)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? 0.7 : 1 })}>
+                      <View style={{ flexDirection: "row" }}>
+                        {AGENTS.map((a, i) => (
+                          <View key={a.id} style={{ marginLeft: i === 0 ? 0 : -8 }}>
+                            <AgentMark hex={a.hex} size={26} dim={!prefs.agents[a.id]} />
+                          </View>
+                        ))}
+                      </View>
+                      <Text style={{ fontSize: 12, color: INK.softer }}>
+                        {AGENTS.filter((a) => prefs.agents[a.id]).length} especialistas com ele
+                      </Text>
+                    </Pressable>
+                  </Animated.View>
+                )}
               </View>
             </View>
+
+            {/* ── What to ask him ── */}
+            {!listening && !reading && (
+              <Animated.View entering={FadeInDown.delay(100).duration(380)} style={{ paddingBottom: 14 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 22 }}>
+                  <Sparkles size={12} color="#B9B0FF" />
+                  <Text style={{ fontSize: 11.5, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase", color: INK.soft }}>Pergunte</Text>
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, gap: 8 }}
+                >
+                  {QUESTIONS.map((q) => (
+                    <Pressable
+                      key={q}
+                      onPress={() => {
+                        pushUser(q);
+                        void converse(q);
+                      }}
+                      style={({ pressed }) => ({
+                        height: 38,
+                        justifyContent: "center",
+                        paddingHorizontal: 14,
+                        borderRadius: 19,
+                        borderWidth: 1,
+                        borderColor: "rgba(185,176,255,0.28)",
+                        backgroundColor: "rgba(185,176,255,0.08)",
+                        transform: [{ scale: pressed ? 0.96 : 1 }],
+                      })}
+                    >
+                      <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>{q}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </Animated.View>
+            )}
 
             {/* ── The person's own shortcuts — or, before there are any, what a sentence can carry ── */}
             {!listening && !reading && (
@@ -617,7 +708,7 @@ export default function Registro() {
             {items.map((item) =>
               item.kind === "done" ? (
                 <View key={item.id} style={{ paddingVertical: 4 }}>
-                  <Confirmado text={item.text} />
+                  <Confirmado text={item.text} total={item.total} income={item.income} />
                 </View>
               ) : item.kind === "msg" ? (
                 <Bubble key={item.id} role={item.role} text={item.text} />
@@ -761,6 +852,7 @@ export default function Registro() {
 
       {/* What was heard, for a look before it is written. */}
       <VoiceEntrySheet entry={entry} />
+      <WilloSettings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </Room>
   );
 }
