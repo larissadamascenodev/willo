@@ -91,7 +91,7 @@ export default function FluxoCard({
         }}
       >
         <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.2, color: "#fff" }}>Fluxo de caixa</Text>
-        <Text numberOfLines={1} style={[nums, { flexShrink: 0, fontSize: 17, fontWeight: "500", color: short ? RED : "#fff" }]}>
+        <Text numberOfLines={1} style={[nums, { flexShrink: 0, fontSize: 18, fontWeight: "700", letterSpacing: -0.3, color: short ? RED : "#fff" }]}>
           {short ? "−" : ""}
           {money(Math.abs(balanco))}
         </Text>
@@ -118,7 +118,7 @@ function Flow({
     <View>
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
         <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.2, color: "#fff" }}>{label}</Text>
-        <Text style={[nums, { fontSize: 16, fontWeight: "400", color: inflow ? "#fff" : RED }]}>
+        <Text style={[nums, { fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: inflow ? "#fff" : RED }]}>
           {inflow ? "" : "−"}
           {money(amount)}
         </Text>

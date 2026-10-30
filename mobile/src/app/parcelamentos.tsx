@@ -14,8 +14,7 @@ import { getCustomCategories, type CustomCategory } from "@/services/categorySer
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import { FlexBar } from "~/components/Bar";
-import SegmentedTabs from "~/components/SegmentedTabs";
-import InstallmentPurchaseCard from "~/components/installments/InstallmentPurchaseCard";
+import InstallmentList from "~/components/installments/InstallmentList";
 import InstallmentChart from "~/components/installments/InstallmentChart";
 import InstallmentPayoffs from "~/components/installments/InstallmentPayoffs";
 import InstallmentCategories from "~/components/installments/InstallmentCategories";
@@ -94,7 +93,6 @@ export function ParcelamentosView({
   cardsById: Record<string, CardBadge>;
 }) {
   const insets = useSafeAreaInsets();
-  const [methodFilter, setMethodFilter] = useState<"todos" | "cartao" | "conta">("todos");
   const [month, setMonth] = useState(0);
 
   const list = items ?? [];
@@ -126,9 +124,6 @@ export function ParcelamentosView({
         .map((part) => ({ part, item: byId.get(part.id) }))
         .filter((x): x is { part: (typeof x)["part"]; item: ActiveInstallmentItem } => !!x.item),
     [picked, byId],
-  );
-  const visible = inMonth.filter(({ item }) =>
-    methodFilter === "todos" ? true : methodFilter === "cartao" ? item.payment_method === "cartao" : item.payment_method !== "cartao",
   );
 
   return (
@@ -232,44 +227,16 @@ export function ParcelamentosView({
                 </View>
 
                 {/* ══ The purchases with an instalment in it ══ */}
-            <View style={{ marginTop: 30, paddingHorizontal: 4, flexDirection: "row", alignItems: "baseline", gap: 8 }}>
-              <Text style={{ fontSize: 17, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>Parcelas {selected === 0 ? "do mês" : `de ${MONTHS[picked.month]}`}</Text>
-              <Text style={{ fontSize: 14, color: INK.faint }}>{visible.length}</Text>
-            </View>
-            <View style={{ marginTop: 12 }}>
-              <SegmentedTabs
-                value={methodFilter}
-                onChange={setMethodFilter}
-                height={32}
-                compact
-                options={[
-                  { key: "todos" as const, label: "Todas" },
-                  { key: "cartao" as const, label: "No cartão" },
-                  { key: "conta" as const, label: "Na conta" },
-                ]}
-              />
-            </View>
-
-            <View style={{ marginTop: 12, gap: 10 }}>
-              {visible.length === 0 ? (
-                <Text style={{ paddingVertical: 24, textAlign: "center", fontSize: 14, color: INK.softer }}>
-                  Nenhuma parcela {methodFilter === "cartao" ? "no cartão" : "na conta"}{" "}
-                  {selected === 0 ? "este mês" : `em ${monthName}`}.
-                </Text>
-              ) : (
-                visible.map(({ item, part }, i) => (
-                  <InstallmentPurchaseCard
-                    key={item.id}
-                    item={item}
-                    index={i}
+                <View style={{ marginTop: 32 }}>
+                  <InstallmentList
+                    key={picked.key}
+                    entries={inMonth.map(({ item, part }) => ({ item, number: part.number }))}
+                    title={selected === 0 ? "Parcelas do mês" : `Parcelas de ${MONTHS[picked.month]}`}
+                    emptyLabel={`Nenhuma parcela ${selected === 0 ? "este mês" : `em ${monthName}`}.`}
                     customCats={customCats}
-                    card={item.credit_card_id ? cardsById[item.credit_card_id] : undefined}
-                    focus={part.number}
-                    monthLabel={monthName}
+                    cardsById={cardsById}
                   />
-                ))
-              )}
-            </View>
+                </View>
               </Animated.View>
             )}
           </>

@@ -139,13 +139,14 @@ export default function InstallmentCategories({
                 />
                 {isOpen && (
                   <Animated.View
-                    entering={FadeIn.duration(200)}
+                    entering={FadeIn.delay(80).duration(360)}
                     style={{
-                      marginLeft: 29,
-                      marginBottom: 10,
-                      paddingLeft: 12,
-                      borderLeftWidth: 2,
-                      borderLeftColor: categoryHex(c.category, customCats),
+                      marginBottom: 12,
+                      paddingHorizontal: 12,
+                      paddingVertical: 4,
+                      borderRadius: 16,
+                      borderCurve: "continuous",
+                      backgroundColor: "rgba(255,255,255,0.04)",
                     }}
                   >
                     {c.parts.map((p, j) => {
@@ -161,13 +162,13 @@ export default function InstallmentCategories({
                             flexDirection: "row",
                             alignItems: "center",
                             gap: 10,
-                            paddingVertical: 8,
+                            paddingVertical: 10,
                             borderTopWidth: j > 0 ? 1 : 0,
                             borderTopColor: "rgba(255,255,255,0.05)",
                           }}
                         >
                           <View style={{ flex: 1, minWidth: 0 }}>
-                            <Text numberOfLines={1} style={{ fontSize: 13.5, color: "#fff" }}>
+                            <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>
                               {p.name}
                             </Text>
                             <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 6 }}>

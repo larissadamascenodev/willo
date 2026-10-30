@@ -12,14 +12,14 @@ import * as Haptics from "expo-haptics";
 import type { ProjectionMonth } from "@/services/activeInstallments";
 import { Check } from "~/components/icons";
 import { money } from "~/lib/money";
-import { AMBER, INK } from "~/theme/tokens";
+import { INK } from "~/theme/tokens";
 
 /**
  * The monthly figure, month by month, until it reaches nothing.
  *
- * Drawn the way the card's invoices are: wide columns with their figure written
- * above them, so the chart reads without a tap, in the colour the app gives to
- * what is still to pay — this month at full strength, the months after lighter.
+ * Wide columns in white, so the page's colour stays with the figures that carry it:
+ * this month solid, the months after softer. The chosen month's figure is the one
+ * the page writes under the chart, so the columns carry none of their own.
  * A month in which some purchase ends carries a tick inside its column.
  *
  * It is also the page's month picker: tapping a column chooses the month the rest
@@ -31,18 +31,8 @@ const MONTH_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Se
 const BAR_W = 46;
 const GAP = 8;
 const TRACK = 96;
-/* Amber halfway to white: the same hue, still to come. */
-const LATER = "#FCE6A6";
-
-/** R$ 1.743,20 is unreadable at 46px wide; "1,7k" is the same number you can see. */
-function short(v: number) {
-  if (v <= 0) return "—";
-  if (v >= 1000) {
-    const k = v / 1000;
-    return `${(k >= 10 ? Math.round(k) : Number(k.toFixed(1))).toLocaleString("pt-BR")}k`;
-  }
-  return Math.round(v).toLocaleString("pt-BR");
-}
+const NOW = "#F2F2F2";
+const LATER = "rgba(255,255,255,0.34)";
 
 export default function InstallmentChart({
   projection,
@@ -108,14 +98,11 @@ export default function InstallmentChart({
               accessibilityState={{ selected: on }}
               style={{ width: BAR_W, alignItems: "center", gap: 6 }}
             >
-              {/* The figure above its own column: reading a chart should not need a tap. */}
-              <Text style={{ fontSize: 10.5, fontWeight: "600", color: on ? "#fff" : INK.faint }}>{short(p.value)}</Text>
-
               <View style={{ height: TRACK, width: "100%", justifyContent: "flex-end" }}>
                 <Column
                   value={p.value}
                   max={max}
-                  color={i === 0 ? AMBER : LATER}
+                  color={i === 0 ? NOW : LATER}
                   on={on}
                   delay={Math.min(i, 10) * 0.035}
                 />
@@ -129,7 +116,7 @@ export default function InstallmentChart({
                         borderRadius: 9,
                         alignItems: "center",
                         justifyContent: "center",
-                        backgroundColor: "rgba(0,0,0,0.35)",
+                        backgroundColor: "rgba(0,0,0,0.45)",
                       }}
                     >
                       <Check size={11} color="#fff" strokeWidth={3.4} />
@@ -151,7 +138,7 @@ export default function InstallmentChart({
       </ScrollView>
 
       <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", flexWrap: "wrap", columnGap: 16, rowGap: 6 }}>
-        <Legend color={AMBER} label="Este mês" />
+        <Legend color={NOW} label="Este mês" />
         <Legend color={LATER} label="Próximos" />
         <Legend color={LATER} label="Termina uma compra" tick />
       </View>
@@ -178,7 +165,7 @@ function Column({ value, max, color, on, delay }: { value: number; max: number; 
     lit.set(withTiming(on ? 1 : 0, { duration: 200, easing: Easing.out(Easing.quad), reduceMotion: ReduceMotion.System }));
   }, [on, lit]);
 
-  const animated = useAnimatedStyle(() => ({ height: grow.get(), opacity: 0.72 + lit.get() * 0.28 }));
+  const animated = useAnimatedStyle(() => ({ height: grow.get(), opacity: 0.6 + lit.get() * 0.4 }));
 
   return (
     <Animated.View
