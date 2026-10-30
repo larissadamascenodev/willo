@@ -25,6 +25,7 @@ export interface WidgetDef {
 
 export const WIDGETS: WidgetDef[] = [
   { id: "saldo", label: "Saldo em contas", description: "Onde o dinheiro está agora", resizable: false, defaultSize: "full" },
+  { id: "plano", label: "Meu plano financeiro", description: "O mês dentro do seu plano, montado pelo Willo", resizable: false, defaultSize: "full" },
   { id: "fluxo", label: "Receitas e despesas", description: "O que entrou e o que saiu no mês", resizable: true, defaultSize: "full" },
   { id: "eventos", label: "Próximos eventos", description: "O que vence e o que cai nos próximos dias", resizable: true, defaultSize: "full" },
   { id: "cartoes", label: "Cartões de crédito", description: "Faturas e limite de cada cartão", resizable: true, defaultSize: "full" },

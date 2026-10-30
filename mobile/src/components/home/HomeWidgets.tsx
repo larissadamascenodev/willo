@@ -6,6 +6,7 @@ import type { EndedSubscription } from "~/lib/subscriptionCheck";
 import { upcoming } from "~/lib/events";
 import SaldoContasCard from "~/components/home/SaldoContasCard";
 import FluxoCard from "~/components/home/FluxoCard";
+import PlanoCard from "~/components/home/PlanoCard";
 import ProximosEventos from "~/components/home/ProximosEventos";
 import CartoesResumoCard from "~/components/home/CartoesResumoCard";
 import SaudeDoMesCard from "~/components/home/SaudeDoMesCard";
@@ -57,6 +58,9 @@ export function renderHomeWidget(
   switch (id) {
     case "saldo":
       return <SaldoContasCard saldoPrevisto={ctx.saldoPrevisto} />;
+
+    case "plano":
+      return <PlanoCard />;
 
     case "fluxo":
       return (
