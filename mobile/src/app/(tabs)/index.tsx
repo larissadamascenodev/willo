@@ -21,7 +21,7 @@ import ScrollEdge from "~/components/ScrollEdge";
 import HomeHeader from "~/components/home/HomeHeader";
 import ProfileSheet from "~/components/ProfileSheet";
 import Stories from "~/components/home/Stories";
-import OrbHero, { ORB_HERO_BODY } from "~/components/home/OrbHero";
+import OrbHero, { ORB_HERO_BODY, WilloGlow } from "~/components/home/OrbHero";
 import { useHomeHero } from "~/lib/homeHero";
 import WidgetBoard from "~/components/home/WidgetBoard";
 import EditBar from "~/components/home/EditBar";
@@ -116,6 +116,8 @@ export default function Home() {
     transform: [{ translateY: -progress.value * 26 }, { scale: 1 - progress.value * 0.06 }],
   }));
 
+  const glowStyle = useAnimatedStyle(() => ({ opacity: 1 - progress.value * 0.6 }));
+
   /* React Native has no filter: blur, so the blur is a layer over the block whose
      strength grows instead. */
   const blurProps = useAnimatedProps(() => ({ intensity: progress.value * 36 }));
@@ -137,8 +139,10 @@ export default function Home() {
       .sort((a, b) => a.due.getTime() - b.due.getTime())[0];
     if (!pending) return null;
     return {
+      cardId: pending.card.id,
       cardName: pending.card.name,
-      total: pending.invoice!.total,
+      /* What it still asks for: a payment made ahead has already left it. */
+      total: Math.max(0, pending.invoice!.total - pending.invoice!.paid),
       days: Math.round(
         (new Date(pending.due).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000,
       ),
@@ -197,6 +201,7 @@ export default function Home() {
   }, [refetch]);
 
   /* Where the readings sit, and therefore where the first card starts. */
+  /* Under the header, so neither the sphere nor the readings touch its icons. */
   const pinnedTop = insets.top + 72;
   const pinnedHeight = pinnedTop + (orbHero ? ORB_HERO_BODY : PINNED_BODY);
 
@@ -228,6 +233,13 @@ export default function Home() {
           blurStyle,
         ]}
       />
+      )}
+
+      {/* Willo's light, behind the page so the cards rise through it. */}
+      {!editing && orbHero && (
+        <Animated.View pointerEvents="none" style={[{ position: "absolute", top: 0, left: 0, right: 0 }, glowStyle]}>
+          <WilloGlow height={pinnedHeight + 220} />
+        </Animated.View>
       )}
 
       <Animated.ScrollView

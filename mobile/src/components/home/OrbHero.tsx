@@ -22,6 +22,7 @@ import { ChevronRight, Mic } from "~/components/icons";
 import { routeFor, type AssistantRoute } from "~/lib/assistantAsk";
 import { useVoiceEntry } from "~/lib/voiceEntry";
 import { GREEN, INK } from "~/theme/tokens";
+import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import Sun from "lucide-react-native/icons/sun";
 
 /**
@@ -47,14 +48,14 @@ import Sun from "lucide-react-native/icons/sun";
 /* The sphere as large as the room allows, with everything else packed under it in
    rows of fixed height — so that whatever is on show, a reading, an answer, the word
    that he is listening, the page does not move and nothing is taller than the rest. */
-const ORB = 230;
-const HINT = 16;
+const ORB = 300;
+const HINT = 0;
 /** Two lines of reading under a label; or three of an answer. */
 const CAPTION = 64;
 /** Under that: where you are in the readings, or the one thing the moment offers. */
 const FOOT = 28;
 /** What this takes of the screen, for the home to leave room for. */
-export const ORB_HERO_BODY = 4 + ORB + 4 + HINT + 2 + CAPTION + 4 + FOOT + 8;
+export const ORB_HERO_BODY = 4 + ORB + 6 + CAPTION + 4 + FOOT + 8;
 
 /** The answer to a question, from asking to being read. */
 type Talk =
@@ -100,7 +101,8 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
   const i = Math.min(index, Math.max(count - 1, 0));
   const slide = slides[i];
   const mode: OrbMode = listening ? "listening" : reading || talk?.phase === "thinking" ? "thinking" : "idle";
-  const orb = Math.min(ORB, width * 0.62);
+  /* As large as the width allows with a margin each side, so it is never cut. */
+  const orb = Math.min(ORB, width - 72);
 
   /* The clock moves on while nothing is being said to it or by it. */
   useEffect(() => {
@@ -154,18 +156,8 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
         />
       </Animated.View>
 
-      {/* What the sphere is for, on a line of its own. */}
-      <View style={{ marginTop: 4, height: HINT, flexDirection: "row", alignItems: "center", gap: 5 }}>
-        {!busy && !talk && (
-          <>
-            <Mic size={11} color={GREEN} strokeWidth={2.4} />
-            <Text style={{ fontSize: 12, color: INK.softer }}>toque para falar</Text>
-          </>
-        )}
-      </View>
-
       {/* What he has to say — or, while listening, that he is; or the answer. */}
-      <View style={{ height: CAPTION, marginTop: 2, alignSelf: "stretch", alignItems: "center", justifyContent: "flex-start" }}>
+      <View style={{ height: CAPTION, marginTop: 6, alignSelf: "stretch", alignItems: "center", justifyContent: "flex-start" }}>
         {listening ? (
           <Animated.View entering={FadeIn.duration(220)} style={{ alignItems: "center" }}>
             <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Estou ouvindo…</Text>
@@ -220,7 +212,12 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
               </Text>
             </Pressable>
           </Animated.View>
-        ) : null}
+        ) : (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6 }}>
+            <Mic size={11} color={GREEN} strokeWidth={2.4} />
+            <Text style={{ fontSize: 12.5, color: INK.softer }}>toque na esfera para falar com o Willo</Text>
+          </View>
+        )}
       </View>
 
       {/* The foot: the readings' dots, or the one thing the moment offers — a way out
@@ -306,5 +303,25 @@ export function Typewriter({ text, onDone, failed }: { text: string; onDone: () 
       {text.slice(0, shown)}
       <Text style={{ color: "transparent" }}>{text.slice(shown)}</Text>
     </Text>
+  );
+}
+
+/**
+ * Willo's light, spilling softly down the top of the home. Drawn behind the page, so
+ * the cards rise through it as they scroll.
+ */
+export function WilloGlow({ height }: { height: number }) {
+  const { width } = useWindowDimensions();
+  return (
+    <Svg pointerEvents="none" width={width} height={height} style={{ position: "absolute", top: 0, left: 0 }}>
+      <Defs>
+        <RadialGradient id="willo-light" cx="50%" cy="34%" rx="80%" ry="50%">
+          <Stop offset="0" stopColor="#CFE3FF" stopOpacity={0.16} />
+          <Stop offset="0.4" stopColor="#8DB8FF" stopOpacity={0.07} />
+          <Stop offset="1" stopColor="#000000" stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+      <Rect x={0} y={0} width={width} height={height} fill="url(#willo-light)" />
+    </Svg>
   );
 }
