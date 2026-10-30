@@ -106,7 +106,7 @@ export async function buildDashboardData(
 ): Promise<DashboardData> {
   const includeHistorical = options?.includeHistorical ?? false;
 
-  const { summary, transactions: rawTxs, events: rawEvents, creditCards, invoicesDetail: invoicesForMonth } = await getFinancialSummary(month, year, { includeHistorical, userId: options?.userId });
+  const { summary, transactions: rawTxs, events: rawEvents, creditCards, invoicesDetail: invoicesForMonth, invoiceAdvances } = await getFinancialSummary(month, year, { includeHistorical, userId: options?.userId });
 
   const invoiceByCard = new Map(
     (invoicesForMonth as any[]).map((inv: any) => [
@@ -183,6 +183,31 @@ export async function buildDashboardData(
       if (inv.isPaid) paid.push(entry);
       else pending.push(entry);
     }
+
+    /* Paid this month towards a later invoice: money that left now, so it is an
+       outgoing line of this month, named for what it was. */
+    (invoiceAdvances ?? []).forEach((a, i) => {
+      const cardInfo = cardMap.get(a.credit_card_id);
+      const cardName = cardInfo?.name || "Cartão";
+      const rawDate = new Date(a.paid_at).toISOString().split("T")[0];
+      paid.push({
+        id: `adiantamento-${a.credit_card_id}-${a.invoice_month}-${a.invoice_year}-${i}`,
+        name: `Pagamento antecipado · Fatura ${cardName}`,
+        category: "Cartão de Crédito",
+        date: new Date(rawDate + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "short" }),
+        rawDate,
+        time: new Date(a.paid_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false }),
+        paidAt: a.paid_at,
+        amount: a.amount,
+        type: "despesa" as const,
+        status: "pago",
+        isFatura: true,
+        creditCardId: a.credit_card_id,
+        creditCardName: cardName,
+        creditCardColor: cardInfo?.color || null,
+        faturaItemCount: 0,
+      });
+    });
 
     return { paid, pending };
   }

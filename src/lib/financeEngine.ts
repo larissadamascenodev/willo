@@ -234,33 +234,84 @@ function aggregate(transactions: RawTransaction[]) {
   return { income, expense, paidIncome, paidExpense, balance: paidIncome - paidExpense };
 }
 
-// Cache for invoice totals
-const invoiceTotalsCache = new Map<string, { data: { invoiceExpense: number; invoicePaidExpense: number }; timestamp: number }>();
+/** A payment made in a month towards an invoice of a later month — money that left then. */
+export interface InvoiceAdvance {
+  amount: number;
+  paid_at: string;
+  credit_card_id: string;
+  invoice_month: number;
+  invoice_year: number;
+}
 
-/** Fetch invoice totals for a given month and return expense/paidExpense from invoices */
-async function fetchInvoiceTotalsForMonth(month: number, year: number) {
+interface InvoiceTotals {
+  invoiceExpense: number;
+  invoicePaidExpense: number;
+  advances: InvoiceAdvance[];
+}
+
+// Cache for invoice totals
+const invoiceTotalsCache = new Map<string, { data: InvoiceTotals; timestamp: number }>();
+
+/**
+ * What the cards cost a month, on the day the money leaves.
+ *
+ * An invoice counts in the month it falls due — less whatever was paid towards it in
+ * an earlier month, because that money already left in that earlier month. And a
+ * payment made this month towards a later invoice counts here, where it left the
+ * account. Without both halves an invoice paid ahead left the account's balance lower
+ * than the month's leftover and no outgoing line to explain it, and the next month
+ * counted the same money a second time.
+ */
+async function fetchInvoiceTotalsForMonth(month: number, year: number): Promise<InvoiceTotals> {
   const cacheKey = `inv-${month}-${year}`;
   const cached = invoiceTotalsCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < MONTH_TX_CACHE_TTL) return cached.data;
 
   const dbMonth = month + 1;
-  const { data } = await supabase
-    .from("invoices")
-    .select("total_amount, is_paid, paid_amount")
-    .eq("month", dbMonth)
-    .eq("year", year);
+  const { start, end } = getMonthRange(month, year);
+  const period = year * 12 + month;
+
+  const [{ data }, { data: paidThisMonth }] = await Promise.all([
+    supabase.from("invoices").select("id, total_amount, is_paid").eq("month", dbMonth).eq("year", year),
+    (supabase.from("invoice_payments" as any) as any)
+      .select("amount, paid_at, invoice_id, invoices!inner(month, year, credit_card_id)")
+      .gte("paid_at", `${start}T00:00:00`)
+      .lte("paid_at", `${end}T23:59:59`),
+  ]);
+
+  const ids = (data ?? []).map((inv: any) => inv.id);
+  const { data: paidBefore } = ids.length
+    ? await (supabase.from("invoice_payments" as any) as any)
+        .select("amount, invoice_id")
+        .in("invoice_id", ids)
+        .lt("paid_at", `${start}T00:00:00`)
+    : { data: [] };
+  const early = new Map<string, number>();
+  for (const p of (paidBefore ?? []) as any[]) early.set(p.invoice_id, (early.get(p.invoice_id) ?? 0) + Number(p.amount));
 
   let invoiceExpense = 0;
   let invoicePaidExpense = 0;
-  for (const inv of data ?? []) {
-    const total = Number(inv.total_amount);
+  for (const inv of (data ?? []) as any[]) {
+    const total = Number(inv.total_amount) - (early.get(inv.id) ?? 0);
     if (total <= 0) continue;
     invoiceExpense += total;
-    if (inv.is_paid) {
-      invoicePaidExpense += total;
-    }
+    if (inv.is_paid) invoicePaidExpense += total;
   }
-  const result = { invoiceExpense, invoicePaidExpense };
+
+  const advances: InvoiceAdvance[] = ((paidThisMonth ?? []) as any[])
+    .filter((p) => p.invoices && p.invoices.year * 12 + (p.invoices.month - 1) > period)
+    .map((p) => ({
+      amount: Number(p.amount),
+      paid_at: p.paid_at,
+      credit_card_id: p.invoices.credit_card_id,
+      invoice_month: p.invoices.month,
+      invoice_year: p.invoices.year,
+    }));
+  const advanced = advances.reduce((s, a) => s + a.amount, 0);
+  invoiceExpense += advanced;
+  invoicePaidExpense += advanced;
+
+  const result = { invoiceExpense, invoicePaidExpense, advances };
   invoiceTotalsCache.set(cacheKey, { data: result, timestamp: Date.now() });
   return result;
 }
@@ -329,6 +380,8 @@ export async function getFinancialSummary(
   events: RawEvent[];
   creditCards: any[];
   invoicesDetail: any[];
+  /** Payments made this month towards later invoices. */
+  invoiceAdvances: InvoiceAdvance[];
 }> {
   const includeHistorical = options?.includeHistorical ?? true;
   const userId = options?.userId;
@@ -351,22 +404,7 @@ export async function getFinancialSummary(
       .select("credit_card_id, total_amount, is_paid, paid_amount, paid_at")
       .eq("month", dbMonth)
       .eq("year", year)
-      .then(({ data }) => {
-        // Pre-populate invoiceTotals cache from this detailed query
-        let invoiceExpense = 0;
-        let invoicePaidExpense = 0;
-        for (const inv of data ?? []) {
-          const total = Number(inv.total_amount);
-          if (total <= 0) continue;
-          invoiceExpense += total;
-          if (inv.is_paid) invoicePaidExpense += total;
-        }
-        invoiceTotalsCache.set(`inv-${month}-${year}`, {
-          data: { invoiceExpense, invoicePaidExpense },
-          timestamp: Date.now(),
-        });
-        return { data };
-      }),
+      .then(({ data }) => ({ data })),
     // Accounts created in this month with initial_balance > 0 → treated as income
     supabase
       .from("accounts")
@@ -526,6 +564,7 @@ export async function getFinancialSummary(
     events,
     creditCards: creditCardsData ?? [],
     invoicesDetail: invoicesDetailData ?? [],
+    invoiceAdvances: invoiceTotals.advances,
   };
 }
 
