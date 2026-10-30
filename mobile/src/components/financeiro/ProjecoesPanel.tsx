@@ -11,8 +11,8 @@ import {
   type ProjectionRowView,
 } from "@/lib/projectionRows";
 import { loadPastMonthFlows } from "@/services/pastMonths";
-import BalanceLine from "~/components/financeiro/BalanceLine";
 import MonthBreakdown from "~/components/financeiro/MonthBreakdown";
+import MonthBars from "~/components/financeiro/MonthBars";
 import { CalendarDays } from "~/components/icons";
 import { compact } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
@@ -94,9 +94,6 @@ export default function ProjecoesPanel({ projection }: { projection: Projection 
   const series = useMemo(() => [...history, ...rows], [history, rows]);
   const todayIndex = history.length;
 
-  /* Kept stable, so picking a month does not make the line draw itself again. */
-  const values = useMemo(() => series.map((r) => r.fecha), [series]);
-  const months = useMemo(() => series.map((r) => r.month), [series]);
 
   /* Opens on this month; stays on whatever month was picked after that. */
   const [picked, setPicked] = useState<number | null>(null);
@@ -161,10 +158,10 @@ export default function ProjecoesPanel({ projection }: { projection: Projection 
           style={[
             nums,
             {
-              marginTop: 6,
-              fontSize: 54,
-              fontWeight: "700",
-              letterSpacing: -2.2,
+              marginTop: 4,
+              fontSize: 44,
+              fontWeight: "800",
+              letterSpacing: -1.6,
               color: pick.fecha < 0 ? RED : "#fff",
             },
           ]}
@@ -178,15 +175,9 @@ export default function ProjecoesPanel({ projection }: { projection: Projection 
         </Text>
       </Animated.View>
 
-      {/* ══ The year, as one line ══ */}
+      {/* ══ The months as bars, as the invoices are drawn: tap one to read it ══ */}
       <View style={{ marginTop: 22, marginHorizontal: -4 }}>
-        <BalanceLine
-          values={values}
-          months={months}
-          todayIndex={todayIndex}
-          selected={selected}
-          onSelect={setPicked}
-        />
+        <MonthBars bars={series.map((r) => ({ month: r.month, year: r.year, value: r.fecha }))} todayIndex={todayIndex} selected={selected} onSelect={setPicked} />
       </View>
 
       {below.length > 0 && (
@@ -201,33 +192,19 @@ export default function ProjecoesPanel({ projection }: { projection: Projection 
         </View>
       )}
 
-      {/* ══ The month picked on the line, written out right under it ══ */}
-      <Animated.View
-        key={`detail-${selected}`}
-        entering={FadeIn.duration(220)}
-        style={{
-          marginTop: 22,
-          borderRadius: 24,
-          borderCurve: "continuous",
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.10)",
-          backgroundColor: "rgba(255,255,255,0.062)",
-          paddingHorizontal: 18,
-          paddingTop: 16,
-          paddingBottom: 18,
-        }}
-      >
+      {/* ══ The month picked, written out right under the bars, on the ground ══ */}
+      <Animated.View key={`detail-${selected}`} entering={FadeIn.duration(220)} style={{ marginTop: 26 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: toneOf(pick) }} />
-          <Text style={{ flex: 1, fontSize: 16, fontWeight: "700", color: "#fff", textTransform: "capitalize" }}>{fullName(pick)}</Text>
+          <Text style={{ flex: 1, fontSize: 17, fontWeight: "700", color: "#fff", textTransform: "capitalize" }}>{fullName(pick)}</Text>
           <Text style={{ fontSize: 12.5, color: INK.softer }}>{offset === 0 ? "mês atual" : offset < 0 ? "já passou" : "previsto"}</Text>
         </View>
         <MonthBreakdown row={pick} prevName={MONTH_NAMES[(pick.month + 11) % 12]} />
       </Animated.View>
 
       <Text style={{ marginTop: 14, fontSize: 12.5, lineHeight: 18, color: INK.softer }}>
-        Toque num mês do gráfico para ver o que entra, o que sai e o que vem do mês anterior. Conta só o
-        que já está previsto: contas fixas, parcelas lançadas e recorrências.
+        Toque numa barra para ver o mês. Conta só o que já está previsto: contas fixas, parcelas
+        lançadas e recorrências.
       </Text>
     </View>
   );

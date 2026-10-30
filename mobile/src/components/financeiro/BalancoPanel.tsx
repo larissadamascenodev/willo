@@ -5,6 +5,8 @@ import type { useFinancialProjection } from "@/hooks/useFinancialProjection";
 import { buildProjectionRows, MONTH_NAMES, type ProjectionRowView } from "@/lib/projectionRows";
 import type { DashboardData, FinanceEvent } from "@/types/finance";
 import Bar from "~/components/Bar";
+import MonthBars from "~/components/financeiro/MonthBars";
+import MonthBreakdown from "~/components/financeiro/MonthBreakdown";
 import BottomSheet from "~/components/BottomSheet";
 import { ChevronRight, X } from "~/components/icons";
 import { compact, money } from "~/lib/money";
@@ -61,7 +63,8 @@ export default function BalancoPanel({
   onOpenSide?: (side: "receitas" | "despesas") => void;
 }) {
   const { data, loading, futureReady, projections, monthData, selectedMonth, selectedYear } = projection;
-  const [open, setOpen] = useState<ProjectionRowView | null>(null);
+  /* The month picked on the bars; this month to start with. */
+  const [pickedMonth, setPickedMonth] = useState(0);
 
   const rows = useMemo(
     () => buildProjectionRows(projections, data.previousMonthEndingBalance),
@@ -97,56 +100,42 @@ export default function BalancoPanel({
 
   return (
     <View style={{ marginTop: 28, paddingHorizontal: 4 }}>
-      {/* ══ The answer ══ */}
+      {/* ══ The answer: a quiet label, the figure with its currency set small, and one
+          line of what it means ══ */}
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-        <Text style={{ fontSize: 15, color: INK.soft }}>{headline}</Text>
+        <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 1.3, textTransform: "uppercase", color: INK.soft }}>{headline}</Text>
         {isCurrent && (
-          <Text style={{ fontSize: 13, color: INK.softer }}>
+          <Text style={{ fontSize: 12.5, color: INK.softer }}>
             {daysLeft === 0 ? "último dia" : `faltam ${daysLeft} ${daysLeft === 1 ? "dia" : "dias"}`}
           </Text>
         )}
       </View>
-      <Text
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        style={[
-          nums,
-          {
-            marginTop: 6,
-            fontSize: 54,
-            fontWeight: "700",
-            letterSpacing: -2.2,
-            color: short ? RED : "#fff",
-          },
-        ]}
-      >
-        {compact(Math.abs(sobra))}
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { marginTop: 8, color: short ? RED : "#fff" }]}>
+        <Text style={{ fontSize: 22, fontWeight: "700", letterSpacing: -0.4 }}>{short ? "−R$ " : "R$ "}</Text>
+        <Text style={{ fontSize: 46, fontWeight: "800", letterSpacing: -1.8 }}>{money(Math.abs(sobra)).replace(/^R\$\s?/, "")}</Text>
+      </Text>
+      <Text style={{ marginTop: 4, fontSize: 13.5, color: INK.soft }}>
+        {data.receitas > 0
+          ? `${Math.round((data.despesas / data.receitas) * 100)}% do que entrou já está comprometido`
+          : "Nada entrou ainda neste mês"}
       </Text>
 
-      {/* ══ The month, as one bar ══ */}
-      <View
-        style={{
-          marginTop: 26,
-          height: 12,
-          flexDirection: "row",
-          gap: 3,
-          borderRadius: 999,
-          overflow: "hidden",
-          backgroundColor: TRACK,
-        }}
-      >
+      {/* ══ The month, as one thin bar: gone, still due, free ══ */}
+      <View style={{ marginTop: 22, height: 6, flexDirection: "row", gap: 2, borderRadius: 999, overflow: "hidden", backgroundColor: TRACK }}>
         <Bar share={data.despesasPagas / base} color={SPENT} delay={0.15} />
         <Bar share={data.despesasPendentes / base} color={DUE} delay={0.4} />
         <Bar share={free / base} color={FREE} delay={0.65} />
       </View>
 
-      <View style={{ marginTop: 16, flexDirection: "row", gap: 12 }}>
-        <Legend swatch={SPENT} label="Gasto" value={compact(data.despesasPagas)} />
-        <Legend swatch={DUE} label="A pagar" value={compact(data.despesasPendentes)} />
+      <View style={{ marginTop: 14, flexDirection: "row" }}>
+        <Legend swatch={SPENT} label="Gasto" value={money(data.despesasPagas)} />
+        <View style={{ width: 1, marginHorizontal: 12, backgroundColor: RULE }} />
+        <Legend swatch={DUE} label="A pagar" value={money(data.despesasPendentes)} />
+        <View style={{ width: 1, marginHorizontal: 12, backgroundColor: RULE }} />
         {short ? (
-          <Legend swatch={RED} label="Falta" value={compact(Math.abs(sobra))} tone={RED} />
+          <Legend swatch={RED} label="Falta" value={money(Math.abs(sobra))} tone={RED} />
         ) : (
-          <Legend swatch={FREE} label="Livre" value={compact(free)} />
+          <Legend swatch={FREE} label="Livre" value={money(free)} />
         )}
       </View>
 
@@ -157,19 +146,10 @@ export default function BalancoPanel({
         <Flow label="Despesas" amount={data.despesas} scale={Math.max(data.receitas, data.despesas, 1)} onPress={onOpenSide ? () => onOpenSide("despesas") : undefined} />
       </View>
 
-      {/* ══ The next few ══ */}
-      <View
-        style={{
-          marginTop: 38,
-          flexDirection: "row",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          gap: 12,
-        }}
-      >
-        <Text style={{ fontSize: 17, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>
-          Próximos meses
-        </Text>
+      {/* ══ Month by month: what each one leaves over, as bars; the picked one written out
+          under them. It opens on this month, which is the answer above. ══ */}
+      <View style={{ marginTop: 38, flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+        <Text style={{ fontSize: 17, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>Mês a mês</Text>
         {onOpenProjecoes && (
           <Pressable onPress={onOpenProjecoes} hitSlop={10} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
             <Text style={{ fontSize: 14, color: INK.soft }}>Ver projeções</Text>
@@ -177,43 +157,34 @@ export default function BalancoPanel({
         )}
       </View>
 
-      {!futureReady ? (
-        <View style={{ marginTop: 14, gap: 1 }}>
-          {Array.from({ length: AHEAD }, (_, i) => (
-            <View key={i} style={{ height: 52, borderTopWidth: 1, borderTopColor: RULE }} />
-          ))}
-        </View>
+      {!futureReady || rows.length === 0 ? (
+        <View style={{ marginTop: 16, height: 150, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.03)" }} />
       ) : (
-        <Animated.View entering={FadeIn.duration(260)} style={{ marginTop: 10 }}>
-          {rows.slice(1, 1 + AHEAD).map((r) => {
-            const behind = r.sobra < 0;
+        <Animated.View entering={FadeIn.duration(260)} style={{ marginTop: 16 }}>
+          <View style={{ marginHorizontal: -4 }}>
+            <MonthBars
+              bars={rows.slice(0, 12).map((r) => ({ month: r.month, year: r.year, value: r.sobra }))}
+              todayIndex={0}
+              selected={pickedMonth}
+              onSelect={setPickedMonth}
+            />
+          </View>
+          {(() => {
+            const r = rows[Math.min(pickedMonth, rows.length - 1)];
             return (
-              <Pressable
-                key={`${r.year}-${r.month}`}
-                onPress={() => setOpen(r)}
-                style={({ pressed }) => ({
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 10,
-                  paddingVertical: 16,
-                  borderTopWidth: 1,
-                  borderTopColor: RULE,
-                  opacity: pressed ? 0.55 : 1,
-                })}
-              >
-                <Dot color={behind ? RED : r.risk === "atencao" ? AMBER : GREEN} />
-                <Text style={{ flex: 1, minWidth: 0, fontSize: 16, color: "#fff" }}>
-                  {r.name}
-                  {r.yearTag ? <Text style={{ color: INK.softer }}> de 20{r.yearTag}</Text> : null}
-                </Text>
-                <Text style={[nums, { fontSize: 16, fontWeight: "600", color: behind ? RED : "#fff" }]}>
-                  {behind ? "−" : ""}
-                  {compact(Math.abs(r.sobra))}
-                </Text>
-                <ChevronRight size={15} color={INK.faint} />
-              </Pressable>
+              <Animated.View key={`month-${pickedMonth}`} entering={FadeIn.duration(220)} style={{ marginTop: 22 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Dot color={r.sobra < 0 ? RED : r.risk === "atencao" ? AMBER : GREEN} />
+                  <Text style={{ flex: 1, fontSize: 17, fontWeight: "700", color: "#fff" }}>
+                    {r.name}
+                    {r.yearTag ? <Text style={{ color: INK.softer, fontWeight: "500" }}> de 20{r.yearTag}</Text> : null}
+                  </Text>
+                  <Text style={{ fontSize: 12.5, color: INK.softer }}>{pickedMonth === 0 ? "mês atual" : "previsto"}</Text>
+                </View>
+                <MonthBreakdown row={r} prevName="" carry={false} />
+              </Animated.View>
             );
-          })}
+          })()}
         </Animated.View>
       )}
 
@@ -221,12 +192,6 @@ export default function BalancoPanel({
         Cada mês aqui conta só o que entra e sai nele. O saldo que passa de um mês para o outro está
         em Projeções.
       </Text>
-
-      <MonthSheet
-        row={open}
-        data={open ? monthData.get(`${open.month}-${open.year}`) : undefined}
-        onClose={() => setOpen(null)}
-      />
     </View>
   );
 }
@@ -245,18 +210,11 @@ function Legend({
 }) {
   return (
     <View style={{ flex: 1, minWidth: 0 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
-        <View
-          style={{
-            width: 9,
-            height: 9,
-            borderRadius: 3,
-            backgroundColor: swatch,
-          }}
-        />
-        <Text style={{ fontSize: 12.5, color: INK.soft }}>{label}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: swatch }} />
+        <Text style={{ fontSize: 12, color: INK.softer }}>{label}</Text>
       </View>
-      <Text numberOfLines={1} style={[nums, { marginTop: 6, fontSize: 16, fontWeight: "600", color: tone }]}>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[nums, { marginTop: 5, fontSize: 15, fontWeight: "600", color: tone }]}>
         {value}
       </Text>
     </View>

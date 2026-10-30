@@ -1,13 +1,13 @@
 import { Platform, Text, View, type TextStyle } from "react-native";
 import { compact } from "~/lib/money";
-import { INK, RED } from "~/theme/tokens";
+import { GREEN, INK, RED } from "~/theme/tokens";
 
 /**
  * The month as the two sums it actually is.
  *
- * What moved this month gives the leftover, and that plus what was left of last
- * month gives the close. The rules sit where an equals sign would, which is what
- * makes it read as a ledger rather than as a list of five rows.
+ * What was left from the month before, what comes in and what goes out, in that order,
+ * and under the rule the close. The rule sits where an equals sign would, which is what
+ * makes it read as a ledger rather than as a list of rows.
  *
  * Every figure is white; one turns red only when it is below zero, because that is
  * the only thing in a ledger worth raising a voice for.
@@ -43,28 +43,25 @@ export default function MonthBreakdown({
     : `Sobra de ${row.name.toLocaleLowerCase("pt-BR")}`;
 
   return (
-    <View style={{ marginTop: 22 }}>
-      <Line label="Entra" amount={row.income} />
-      <Line label="Sai" amount={-row.expense} />
-
+    <View style={{ marginTop: 10 }}>
+      {/* In the order the money arrives: what was left from the month before, then what
+          comes in and goes out in this one. */}
       {carry && (
-        <>
-          <View style={{ borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)" }}>
-            <Line label="Sobra do mês" amount={row.sobra} strong />
-          </View>
-          <Line label={`Saldo de ${prevName.toLocaleLowerCase("pt-BR")}`} amount={row.prevBalance} />
-        </>
+        <Line
+          label={row.prevBalance < 0 ? `Faltou em ${prevName.toLocaleLowerCase("pt-BR")}` : `Sobra de ${prevName.toLocaleLowerCase("pt-BR")}`}
+          amount={Math.abs(row.prevBalance)}
+          tone={row.prevBalance < 0 ? RED : undefined}
+        />
       )}
+      <Line label="Entra" amount={row.income} sign="+" tone={GREEN} />
+      <Line label="Sai" amount={row.expense} sign="−" />
 
       <View
         style={{
-          marginTop: 4,
           flexDirection: "row",
           alignItems: "baseline",
           justifyContent: "space-between",
           gap: 16,
-          borderTopWidth: 1,
-          borderTopColor: "rgba(255,255,255,0.18)",
           paddingTop: 14,
         }}
       >
@@ -80,7 +77,7 @@ export default function MonthBreakdown({
   );
 }
 
-function Line({ label, amount, strong = false }: { label: string; amount: number; strong?: boolean }) {
+function Line({ label, amount, sign = "", tone }: { label: string; amount: number; sign?: string; tone?: string }) {
   return (
     <View
       style={{
@@ -88,32 +85,17 @@ function Line({ label, amount, strong = false }: { label: string; amount: number
         alignItems: "baseline",
         justifyContent: "space-between",
         gap: 16,
-        paddingVertical: 11,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: "rgba(255,255,255,0.06)",
       }}
     >
-      <Text
-        numberOfLines={1}
-        style={{
-          flex: 1,
-          minWidth: 0,
-          fontSize: 14.5,
-          fontWeight: strong ? "600" : "400",
-          color: strong ? "#fff" : INK.soft,
-        }}
-      >
+      <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 15, color: INK.soft }}>
         {label}
       </Text>
-      <Text
-        style={[
-          nums,
-          {
-            fontSize: 15,
-            fontWeight: strong ? "700" : "500",
-            color: strong && amount < 0 ? RED : "#fff",
-          },
-        ]}
-      >
-        {value(amount)}
+      <Text style={[nums, { fontSize: 16, fontWeight: "600", color: tone ?? "#fff" }]}>
+        {sign}
+        {compact(Math.abs(amount))}
       </Text>
     </View>
   );
