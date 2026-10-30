@@ -1,179 +1,88 @@
-import { useState } from "react";
-import { Platform, Pressable, ScrollView, Text, View, type TextStyle } from "react-native";
+import { useEffect, useState } from "react";
+import { ScrollView, View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMonth } from "@/contexts/MonthContext";
 import { useFinancialProjection } from "@/hooks/useFinancialProjection";
-import { MONTH_NAMES } from "@/lib/projectionRows";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
-import Bar from "~/components/Bar";
-import { SURFACE_FILL } from "~/components/Surface";
-import { ChevronLeft, ChevronRight } from "~/components/icons";
-import EntriesModal, { type Side } from "~/components/financeiro/EntriesModal";
+import SegmentedTabs from "~/components/SegmentedTabs";
 import BalancoPanel from "~/components/financeiro/BalancoPanel";
 import ProjecoesPanel from "~/components/financeiro/ProjecoesPanel";
-import { money } from "~/lib/money";
-import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
+import EntriesModal, { type Side } from "~/components/financeiro/EntriesModal";
 
 /**
- * The month, read from top to bottom.
+ * Two views, one per question.
  *
- * It opens on one piece of glass that holds the month's answer and its two parts: how
- * much it is expected to leave over, and under that what came in and what went out, as
- * the home draws them — two bars on one scale. Each bar opens, in a pane in the middle of
- * the screen, into what was fixed and what varied. Then the next few months, each of which
- * opens into its own detail, and last the months ahead as a line.
- *
- * The month is chosen in the corner, out of the way of the answer; it is the month of the
- * whole page, and of the rest of the app, which shares it.
+ * Where the month lands (balanço) — with what came in and what went out drawn inside it,
+ * each opening into what was fixed and what varied — and where the months after it land
+ * (projeções). One screen, because the answer to the first is the setup for the second.
  */
 
-const nums: TextStyle = Platform.select({
-  ios: { fontVariant: ["tabular-nums"] },
-  default: {},
-}) as TextStyle;
+type Tool = "balanco" | "projecoes";
 
-const RULE = "rgba(255,255,255,0.08)";
-const SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-
-export default function SeuMes() {
+export default function FluxoDeCaixa() {
+  const { tool: initial } = useLocalSearchParams<{ tool?: string }>();
   const insets = useSafeAreaInsets();
-  const { selectedMonth, selectedYear, setMonth } = useMonth();
-  /* One projection for the page: the answer, the next months and the line read the same one. */
+  const { selectedMonth, selectedYear } = useMonth();
+  /* One projection for the screen, not one per tab: switching between Balanço and
+     Projeções does not ask for twelve months all over again. */
   const projection = useFinancialProjection();
+  const [tool, setTool] = useState<Tool>(initial === "projecoes" ? "projecoes" : "balanco");
   const [side, setSide] = useState<Side | null>(null);
+  /* A tab is mounted the first time it is opened and then kept, so its chart
+     draws itself once per visit to the screen rather than on every switch. */
+  const [visited, setVisited] = useState<Set<Tool>>(() => new Set([tool]));
+  useEffect(() => {
+    setVisited((v) => (v.has(tool) ? v : new Set(v).add(tool)));
+  }, [tool]);
 
-  const now = new Date();
-  const isCurrent = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
-  const isPast = selectedYear < now.getFullYear() || (selectedYear === now.getFullYear() && selectedMonth < now.getMonth());
-  const daysLeft = isCurrent ? new Date(selectedYear, selectedMonth + 1, 0).getDate() - now.getDate() : 0;
-
-  const step = (by: number) => {
-    const d = new Date(selectedYear, selectedMonth + by, 1);
-    setMonth(d.getMonth(), d.getFullYear());
-  };
-
-  const { receitas, despesas, despesasPendentes } = projection.data;
-  const loading = projection.loading;
-  const sobra = receitas - despesas;
-  const short = sobra < 0;
-  const scale = Math.max(receitas, despesas, 1);
-  const month = MONTH_NAMES[selectedMonth].toLocaleLowerCase("pt-BR");
-  const headline = isPast ? (short ? `Faltou em ${month}` : `Sobrou em ${month}`) : short ? `Deve faltar em ${month}` : `Deve sobrar em ${month}`;
+  const panel = (key: Tool) => ({ display: tool === key ? ("flex" as const) : ("none" as const) });
 
   return (
+    /* The sky behind, as on the home and the wallet: colour on the ground, and
+       something for the glass above it to catch. */
     <Room lit sky>
       <ScrollView
-        contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 48, paddingHorizontal: 16 }}
+        contentContainerStyle={{
+          paddingTop: insets.top + 8,
+          paddingBottom: insets.bottom + 40,
+          paddingHorizontal: 16,
+        }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ══ Back on the left, the month in the corner ══ */}
-        <View style={{ height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View style={{ height: 44, justifyContent: "center" }}>
           <BackButton to="/" />
-          <View style={{ height: 38, paddingHorizontal: 3, borderRadius: 19, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", backgroundColor: SURFACE_FILL }}>
-            <Pressable accessibilityLabel="Mês anterior" onPress={() => step(-1)} hitSlop={8} style={({ pressed }) => ({ width: 30, height: 32, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.5 : 1 })}>
-              <ChevronLeft size={16} color="rgba(255,255,255,0.8)" strokeWidth={2.4} />
-            </Pressable>
-            <Text style={{ minWidth: 64, textAlign: "center", fontSize: 14, fontWeight: "700", color: "#fff", textTransform: "capitalize" }}>
-              {SHORT[selectedMonth]}
-              {selectedYear !== now.getFullYear() ? ` ${String(selectedYear).slice(2)}` : ""}
-            </Text>
-            <Pressable accessibilityLabel="Próximo mês" onPress={() => step(1)} hitSlop={8} style={({ pressed }) => ({ width: 30, height: 32, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.5 : 1 })}>
-              <ChevronRight size={16} color="rgba(255,255,255,0.8)" strokeWidth={2.4} />
-            </Pressable>
+        </View>
+
+        <View style={{ marginTop: 10 }}>
+          <SegmentedTabs
+            glass
+            value={tool}
+            onChange={setTool}
+            options={[
+              { key: "balanco" as const, label: "Balanço" },
+              { key: "projecoes" as const, label: "Projeções" },
+            ]}
+          />
+        </View>
+
+        {/* Tabs are peers, so switching does not animate — the charts inside are
+            the motion, and they play once. Nothing here fades, either: the glass in
+            Projeções would flatten under a fading parent. */}
+        {visited.has("balanco") && (
+          <View style={panel("balanco")}>
+            <BalancoPanel projection={projection} onOpenProjecoes={() => setTool("projecoes")} onOpenSide={setSide} />
           </View>
-        </View>
-
-        {/* ══ The page's name ══ */}
-        <View style={{ marginTop: 18, paddingHorizontal: 4 }}>
-          <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1, color: "#fff" }}>Seu mês</Text>
-          <Text style={{ marginTop: 2, fontSize: 14, color: INK.soft }}>Receitas, despesas e o que vem pela frente</Text>
-        </View>
-
-        {/* ══ The answer and its two parts, in one piece of glass ══ */}
-        <View
-          style={{
-            marginTop: 18,
-            borderRadius: 28,
-            borderCurve: "continuous",
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.10)",
-            backgroundColor: SURFACE_FILL,
-            paddingHorizontal: 18,
-            paddingTop: 18,
-            paddingBottom: 8,
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-            <Text style={{ fontSize: 14, color: INK.soft }}>{headline}</Text>
-            {isCurrent && (
-              <Text style={{ fontSize: 12.5, color: INK.softer }}>
-                {daysLeft === 0 ? "último dia" : `faltam ${daysLeft} ${daysLeft === 1 ? "dia" : "dias"}`}
-              </Text>
-            )}
+        )}
+        {visited.has("projecoes") && (
+          <View style={panel("projecoes")}>
+            <ProjecoesPanel projection={projection} />
           </View>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[{ marginTop: 4, fontSize: 40, fontWeight: "800", letterSpacing: -1.4, color: short ? RED : "#fff" }, nums]}>
-            {loading ? "—" : money(Math.abs(sobra))}
-          </Text>
-          {!loading && !isPast && despesasPendentes > 0 && (
-            <Text style={{ marginTop: 2, fontSize: 13, color: INK.soft }}>
-              <Text style={{ color: AMBER, fontWeight: "600" }}>{money(despesasPendentes)}</Text> ainda a pagar
-            </Text>
-          )}
-
-          <View style={{ marginTop: 16, height: 1, backgroundColor: RULE }} />
-          <Flow label="Receitas" amount={receitas} scale={scale} inflow loading={loading} onPress={() => setSide("receitas")} />
-          <View style={{ height: 1, backgroundColor: RULE }} />
-          <Flow label="Despesas" amount={despesas} scale={scale} loading={loading} onPress={() => setSide("despesas")} />
-        </View>
-
-        {/* ══ The next few months ══ */}
-        <View style={{ marginTop: 34 }}>
-          <BalancoPanel projection={projection} nextOnly />
-        </View>
-
-        {/* ══ The months ahead, as a line ══ */}
-        <View style={{ marginTop: 40, marginBottom: 6, paddingHorizontal: 4 }}>
-          <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>Projeções</Text>
-          <Text style={{ marginTop: 2, fontSize: 13.5, color: INK.soft }}>Para onde o seu saldo vai, mês a mês</Text>
-        </View>
-        <ProjecoesPanel projection={projection} />
+        )}
       </ScrollView>
 
       <EntriesModal side={side} month={selectedMonth} year={selectedYear} onClose={() => setSide(null)} />
     </Room>
-  );
-}
-
-/** One of the two flows: its name and figure, and under them its bar. Tapping it opens its detail. */
-function Flow({
-  label,
-  amount,
-  scale,
-  inflow = false,
-  loading,
-  onPress,
-}: {
-  label: string;
-  amount: number;
-  scale: number;
-  inflow?: boolean;
-  loading: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => ({ paddingVertical: 14, opacity: pressed ? 0.6 : 1 })}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: inflow ? GREEN : RED }} />
-        <Text style={{ flex: 1, fontSize: 15, color: "rgba(255,255,255,0.86)" }}>{label}</Text>
-        <Text style={[{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }, nums]}>
-          {loading ? "—" : `${inflow ? "" : "−"}${money(amount)}`}
-        </Text>
-        <ChevronRight size={16} color={INK.faint} />
-      </View>
-      <View style={{ marginTop: 10, height: 6, borderRadius: 999, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.06)" }}>
-        {!loading && <Bar share={Math.max(amount / scale, amount > 0 ? 0.03 : 0)} color={inflow ? GREEN : RED} />}
-      </View>
-    </Pressable>
   );
 }

@@ -53,15 +53,12 @@ const lower = (s: string) => s.toLocaleLowerCase("pt-BR");
 export default function BalancoPanel({
   projection,
   onOpenProjecoes,
-  closeOnly = false,
-  nextOnly = false,
+  onOpenSide,
 }: {
   projection: Projection;
   onOpenProjecoes?: () => void;
-  /** Leaves out the month written out (entrou, saiu) — for a page that shows that above it. */
-  closeOnly?: boolean;
-  /** Only the next few months — for a page that draws the close itself. */
-  nextOnly?: boolean;
+  /** Opens what came in or what went out, as fixed and variable. */
+  onOpenSide?: (side: "receitas" | "despesas") => void;
 }) {
   const { data, loading, futureReady, projections, monthData, selectedMonth, selectedYear } = projection;
   const [open, setOpen] = useState<ProjectionRowView | null>(null);
@@ -84,7 +81,6 @@ export default function BalancoPanel({
 
   const sobra = data.receitas - data.despesas;
   const short = sobra < 0;
-  const ateAgora = data.receitasRecebidas - data.despesasPagas;
 
   /* The bar is the month's money: what comes in, or what goes out when that is
      more. Spent, still due and free are slices of it. */
@@ -100,9 +96,7 @@ export default function BalancoPanel({
       : `Deve sobrar em ${month}`;
 
   return (
-    <View style={{ marginTop: nextOnly ? 0 : 28, paddingHorizontal: 4 }}>
-      {!nextOnly && (
-      <>
+    <View style={{ marginTop: 28, paddingHorizontal: 4 }}>
       {/* ══ The answer ══ */}
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
         <Text style={{ fontSize: 15, color: INK.soft }}>{headline}</Text>
@@ -156,36 +150,12 @@ export default function BalancoPanel({
         )}
       </View>
 
-      </>
-      )}
-
-      {!closeOnly && !nextOnly && (
-      <>
-      {/* ══ The same month, written out ══ */}
-      <View style={{ marginTop: 34, borderTopWidth: 1, borderTopColor: RULE }}>
-        <LedgerRow
-          dot={GREEN}
-          label="Entrou"
-          value={money(data.receitas)}
-          note={`${money(data.receitasRecebidas)} recebido e ${money(data.receitasPendentes)} a receber`}
-        />
-        <LedgerRow
-          dot={RED}
-          label="Saiu"
-          value={money(data.despesas)}
-          note={`${money(data.despesasPagas)} pago e ${money(data.despesasPendentes)} a pagar`}
-        />
-        {!isPast && (
-          <LedgerRow
-            label="Até agora"
-            value={`${ateAgora < 0 ? "−" : ""}${money(Math.abs(ateAgora))}`}
-            note="O que já entrou menos o que já saiu"
-          />
-        )}
+      {/* ══ What came in and what went out, as the home draws them: two bars on one
+          scale, straight on the ground. Each opens into what was fixed and what varied. ══ */}
+      <View style={{ marginTop: 30, gap: 4 }}>
+        <Flow label="Receitas" amount={data.receitas} scale={Math.max(data.receitas, data.despesas, 1)} inflow onPress={onOpenSide ? () => onOpenSide("receitas") : undefined} />
+        <Flow label="Despesas" amount={data.despesas} scale={Math.max(data.receitas, data.despesas, 1)} onPress={onOpenSide ? () => onOpenSide("despesas") : undefined} />
       </View>
-
-      </>
-      )}
 
       {/* ══ The next few ══ */}
       <View
@@ -296,32 +266,6 @@ function Legend({
 /** A small mark of colour — the only place most of this screen carries any. */
 function Dot({ color }: { color: string }) {
   return <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: color }} />;
-}
-
-/** One line of the month written out, with what it is made of under it. */
-function LedgerRow({
-  label,
-  value,
-  note,
-  dot,
-}: {
-  label: string;
-  value: string;
-  note: string;
-  dot?: string;
-}) {
-  return (
-    <View style={{ paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: RULE }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
-          {dot && <Dot color={dot} />}
-          <Text style={{ fontSize: 16, color: "#fff" }}>{label}</Text>
-        </View>
-        <Text style={[nums, { fontSize: 16, fontWeight: "600", color: "#fff" }]}>{value}</Text>
-      </View>
-      <Text style={{ marginTop: 4, marginLeft: dot ? 16 : 0, fontSize: 12.5, color: INK.softer }}>{note}</Text>
-    </View>
-  );
 }
 
 function Skeleton() {
@@ -462,5 +406,26 @@ function EventList({
         ))
       )}
     </View>
+  );
+}
+
+/** One of the two flows, as on the home: its name and figure, and its bar under them. */
+function Flow({ label, amount, scale, inflow = false, onPress }: { label: string; amount: number; scale: number; inflow?: boolean; onPress?: () => void }) {
+  return (
+    <Pressable onPress={onPress} disabled={!onPress} style={({ pressed }) => ({ paddingVertical: 10, opacity: pressed ? 0.6 : 1 })}>
+      <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+        <Text style={{ fontSize: 14.5, color: INK.soft }}>{label}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Text style={[nums, { fontSize: 16, fontWeight: "600", color: "#fff" }]}>
+            {inflow ? "" : "−"}
+            {money(amount)}
+          </Text>
+          {onPress && <ChevronRight size={15} color={INK.faint} />}
+        </View>
+      </View>
+      <View style={{ marginTop: 8, height: 5, borderRadius: 999, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.06)" }}>
+        <Bar share={Math.max(amount / scale, amount > 0 ? 0.03 : 0)} color={inflow ? GREEN : RED} delay={inflow ? 0.05 : 0.12} />
+      </View>
+    </Pressable>
   );
 }
