@@ -3,8 +3,8 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { getInvoices, getInvoiceItems, type Invoice } from "@/services/invoiceService";
-import { getCreditCards, updateCreditCard } from "@/services/transactionService";
+import { getInvoices, getInvoiceItems, getInvoicePayments, type Invoice, type InvoicePayment } from "@/services/invoiceService";
+import { getAccounts, getCreditCards, updateCreditCard } from "@/services/transactionService";
 import { invoicePeriodIndex } from "@/lib/installments";
 import type { InvoiceLine } from "@/lib/invoice/readModel";
 import { cardHex as hexFor } from "@/hooks/useCardsOverview";
@@ -20,6 +20,7 @@ import InvoiceForecastChart from "~/components/fatura/InvoiceForecastChart";
 import InvoiceRecentCard from "~/components/fatura/InvoiceRecentCard";
 import LineDetail from "~/components/fatura/LineDetail";
 import CountUp from "~/components/CountUp";
+import { PaymentDetail, paymentName } from "~/components/fatura/InvoicePayments";
 import PayInvoiceSheet from "~/components/fatura/PayInvoiceSheet";
 import AddToCardSheet from "~/components/fatura/AddToCardSheet";
 import AnchoredMenu, { MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
@@ -68,6 +69,9 @@ export default function Fatura() {
   const [card, setCard] = useState<CardInfo | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [items, setItems] = useState<any[]>([]);
+  const [payments, setPayments] = useState<InvoicePayment[]>([]);
+  const [accountNames, setAccountNames] = useState<Record<string, string>>({});
+  const [openPayment, setOpenPayment] = useState<InvoicePayment | null>(null);
   const [loading, setLoading] = useState(true);
   const [openLine, setOpenLine] = useState<InvoiceLine | null>(null);
   const [menuAt, setMenuAt] = useState<AnchorRect | null>(null);
@@ -91,6 +95,12 @@ export default function Fatura() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    getAccounts()
+      .then((list) => setAccountNames(Object.fromEntries((list as any[]).map((a) => [a.id, a.name]))))
+      .catch(() => undefined);
+  }, []);
 
   /* Opening a card should land on the statement that still needs attention — the
      oldest one not yet settled, or the period currently collecting purchases when
@@ -124,11 +134,15 @@ export default function Fatura() {
     let alive = true;
     if (!current) {
       setItems([]);
+      setPayments([]);
       return;
     }
     getInvoiceItems(current.id)
       .then((rows) => alive && setItems(rows as any[]))
       .catch(() => alive && setItems([]));
+    getInvoicePayments(current.id)
+      .then((rows) => alive && setPayments(rows))
+      .catch(() => alive && setPayments([]));
     return () => {
       alive = false;
     };
@@ -190,7 +204,10 @@ export default function Fatura() {
   const [adding, setAdding] = useState(false);
   const refresh = () => {
     void load();
-    if (current) void getInvoiceItems(current.id).then((rows) => setItems(rows as any[])).catch(() => undefined);
+    if (current) {
+      void getInvoiceItems(current.id).then((rows) => setItems(rows as any[])).catch(() => undefined);
+      void getInvoicePayments(current.id).then(setPayments).catch(() => undefined);
+    }
   };
 
   /* Where the bill stands, as a mark with its own colour and glyph: paid is green and
@@ -478,6 +495,10 @@ export default function Fatura() {
             <View style={{ marginTop: 32 }}>
               <InvoiceRecentCard
                 items={items}
+                payments={payments}
+                accountNames={accountNames}
+                paymentLabel={(pay) => paymentName(pay, month, year, card?.closing_day)}
+                onOpenPayment={setOpenPayment}
                 /* The month travels with the tap. Without it the list falls back to
                    the calendar month, which is rarely the invoice you were reading —
                    past the closing day the open one is already the next. */
@@ -502,6 +523,14 @@ export default function Fatura() {
           void load();
           if (current) void getInvoiceItems(current.id).then((rows) => setItems(rows as any[])).catch(() => undefined);
         }}
+      />
+
+      <PaymentDetail
+        payment={openPayment}
+        name={openPayment ? paymentName(openPayment, month, year, card?.closing_day) : ""}
+        cardName={card?.name}
+        onClose={() => setOpenPayment(null)}
+        onChanged={refresh}
       />
 
       <PayInvoiceSheet

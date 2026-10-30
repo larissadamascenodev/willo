@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { Pressable, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { readInvoice, type InvoiceLine } from "@/lib/invoice/readModel";
+import type { InvoicePayment } from "@/services/invoiceService";
+import { mergeEntries, PaymentRow } from "~/components/fatura/InvoicePayments";
 import { categoryHex } from "@/lib/categoryData";
 import { FastForward, Receipt, Undo2 } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
@@ -19,17 +21,26 @@ import { type as T } from "~/theme/type";
  */
 export default function InvoiceRecentCard({
   items,
+  payments = [],
+  paymentLabel = () => "Pagamento da fatura",
+  accountNames = {},
   count = 5,
   onSeeAll,
   onOpen,
+  onOpenPayment,
 }: {
   items: any[];
+  payments?: InvoicePayment[];
+  paymentLabel?: (p: InvoicePayment) => string;
+  accountNames?: Record<string, string>;
   count?: number;
   onSeeAll: () => void;
   onOpen: (line: InvoiceLine) => void;
+  onOpenPayment?: (p: InvoicePayment) => void;
 }) {
   const { lines } = useMemo(() => readInvoice(items), [items]);
-  const visible = lines.slice(0, count);
+  const entries = useMemo(() => mergeEntries(lines, payments), [lines, payments]);
+  const visible = entries.slice(0, count);
 
   return (
     <View>
@@ -42,15 +53,24 @@ export default function InvoiceRecentCard({
         </View>
       ) : (
         <View style={{ marginTop: 6 }}>
-          {visible.map((line, i) => (
-            <Animated.View key={line.id} entering={FadeInDown.delay(40 + i * 35).duration(260)}>
-              <InvoiceLineRow line={line} onPress={() => onOpen(line)} />
+          {visible.map((entry, i) => (
+            <Animated.View key={entry.kind === "line" ? entry.line.id : entry.payment.id} entering={FadeInDown.delay(40 + i * 35).duration(260)}>
+              {entry.kind === "line" ? (
+                <InvoiceLineRow line={entry.line} onPress={() => onOpen(entry.line)} />
+              ) : (
+                <PaymentRow
+                  payment={entry.payment}
+                  name={paymentLabel(entry.payment)}
+                  accountName={entry.payment.account_id ? accountNames[entry.payment.account_id] : undefined}
+                  onPress={() => onOpenPayment?.(entry.payment)}
+                />
+              )}
             </Animated.View>
           ))}
         </View>
       )}
 
-      {lines.length > 0 && (
+      {entries.length > 0 && (
         <Pressable
           onPress={onSeeAll}
           style={({ pressed }) => ({

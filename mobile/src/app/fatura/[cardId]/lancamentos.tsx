@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { ScrollView, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { getInvoices, getInvoiceItems } from "@/services/invoiceService";
-import { getCreditCards } from "@/services/transactionService";
+import { getInvoices, getInvoiceItems, getInvoicePayments, type InvoicePayment } from "@/services/invoiceService";
+import { getAccounts, getCreditCards } from "@/services/transactionService";
 import { readInvoice, type InvoiceLine } from "@/lib/invoice/readModel";
 import { cardHex as hexFor } from "@/hooks/useCardsOverview";
 import Room from "~/components/Room";
@@ -11,11 +11,13 @@ import BackButton from "~/components/BackButton";
 import { InvoiceLineRow } from "~/components/fatura/InvoiceRecentCard";
 import LineDetail from "~/components/fatura/LineDetail";
 import CountUp from "~/components/CountUp";
+import MonthStrip from "~/components/MonthStrip";
+import { mergeEntries, PaymentDetail, PaymentRow, paymentName } from "~/components/fatura/InvoicePayments";
 import SegmentedTabs from "~/components/SegmentedTabs";
 import { Search } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
-import { INK } from "~/theme/tokens";
+import { GREEN, INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 /**
@@ -49,6 +51,10 @@ export default function Lancamentos() {
 
   const [invoices, setInvoices] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
+  const [payments, setPayments] = useState<InvoicePayment[]>([]);
+  const [closingDay, setClosingDay] = useState<number | null>(null);
+  const [accountNames, setAccountNames] = useState<Record<string, string>>({});
+  const [openPayment, setOpenPayment] = useState<InvoicePayment | null>(null);
   const [hex, setHex] = useState("#8B5CF6");
   const [tab, setTab] = useState<"todos" | "parcelados">("todos");
   const [search, setSearch] = useState("");
@@ -60,21 +66,26 @@ export default function Lancamentos() {
     let alive = true;
     if (!cardId || !user) return;
     void (async () => {
-      const [cards, invs] = await Promise.all([getCreditCards(), getInvoices(cardId)]);
+      const [cards, invs, accs] = await Promise.all([getCreditCards(), getInvoices(cardId), getAccounts()]);
       if (!alive) return;
       const card = (cards as any[]).find((c) => c.id === cardId);
       if (card) {
         setHex(hexFor(card.color));
         setCardName(card.name);
+        setClosingDay(card.closing_day);
       }
+      setAccountNames(Object.fromEntries((accs as any[]).map((a) => [a.id, a.name])));
       setInvoices(invs as any[]);
       const invoice = (invs as any[]).find((i) => i.month === month && i.year === year);
       if (!invoice) {
         setItems([]);
+        setPayments([]);
         return;
       }
-      const rows = await getInvoiceItems(invoice.id);
-      if (alive) setItems(rows as any[]);
+      const [rows, pays] = await Promise.all([getInvoiceItems(invoice.id), getInvoicePayments(invoice.id)]);
+      if (!alive) return;
+      setItems(rows as any[]);
+      setPayments(pays);
     })();
     return () => {
       alive = false;
@@ -94,38 +105,27 @@ export default function Lancamentos() {
     return { parcelado, avista };
   }, [lines]);
 
+  const nameOf = (pay: InvoicePayment) => paymentName(pay, month, year, closingDay);
+  /* Purchases and payments together, newest at the top. */
   const shown = useMemo(
     () =>
-      lines.filter((line) => {
-        if (tab === "parcelados" && !line.installment) return false;
-        if (search && !line.name.toLowerCase().includes(search.toLowerCase())) return false;
+      mergeEntries(lines, tab === "parcelados" ? [] : payments).filter((entry) => {
+        if (entry.kind === "line" && tab === "parcelados" && !entry.line.installment) return false;
+        const name = entry.kind === "line" ? entry.line.name : nameOf(entry.payment);
+        if (search && !name.toLowerCase().includes(search.toLowerCase())) return false;
         return true;
       }),
-    [lines, tab, search],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lines, payments, tab, search, closingDay, month, year],
   );
 
   const parceladoCount = lines.filter((l) => l.installment).length;
 
-  /* Every invoice the card has with something on it, oldest first, and the one open. */
-  const months = useMemo(
-    () =>
-      invoices
-        .filter((i) => Number(i.total_amount) !== 0 || (i.month === month && i.year === year))
-        .sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month)),
-    [invoices, month, year],
-  );
   const current = invoices.find((i) => i.month === month && i.year === year);
   const total = current ? Number(current.total_amount) : lines.reduce((sum, l) => sum + l.amount, 0);
-
-  const strip = useRef<ComponentRef<typeof ScrollView>>(null);
-  const chipX = useRef<Record<string, number>>({});
-  const parked = useRef(false);
-  const park = () => {
-    const x = chipX.current[`${year}-${month}`];
-    if (x == null || parked.current) return;
-    parked.current = true;
-    strip.current?.scrollTo({ x: Math.max(0, x - 120), animated: false });
-  };
+  const paid = current ? Number(current.paid_amount ?? 0) : 0;
+  /* What the invoice asks for now — what the bank shows: purchases less what was paid. */
+  const due = Math.max(0, total - paid);
 
   return (
     <Room>
@@ -142,56 +142,19 @@ export default function Lancamentos() {
           <BackButton />
         </View>
 
-        <Text style={[T.title, { marginTop: 8, paddingHorizontal: 4 }]}>Lançamentos</Text>
-
-        {/* Which invoice: every month the card has, the chosen one lit. */}
-        <ScrollView
-          ref={strip}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          onContentSizeChange={park}
-          style={{ marginTop: 16, marginHorizontal: -16 }}
-          contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}
-        >
-          {months.map((inv) => {
-            const on = inv.month === month && inv.year === year;
-            const label = MONTH_NAMES[inv.month - 1].slice(0, 3);
-            return (
-              <Pressable
-                key={`${inv.year}-${inv.month}`}
-                onLayout={(e) => {
-                  chipX.current[`${inv.year}-${inv.month}`] = e.nativeEvent.layout.x;
-                  park();
-                }}
-                onPress={() => {
-                  setMonth(inv.month);
-                  setYear(inv.year);
-                  setTab("todos");
-                  setSearch("");
-                }}
-                style={({ pressed }) => ({
-                  height: 36,
-                  paddingHorizontal: 15,
-                  borderRadius: 18,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 4,
-                  backgroundColor: on ? "#fff" : "rgba(255,255,255,0.07)",
-                  opacity: pressed ? 0.7 : 1,
-                })}
-              >
-                <Text style={{ fontSize: 14, fontWeight: on ? "700" : "500", color: on ? "#0B0B0B" : "rgba(255,255,255,0.78)", textTransform: "capitalize" }}>
-                  {label}
-                </Text>
-                {inv.year !== today.getFullYear() && (
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: on ? "rgba(11,11,11,0.5)" : INK.faint }}>
-                    {String(inv.year).slice(2)}
-                  </Text>
-                )}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <View style={{ marginTop: 8, paddingHorizontal: 4, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <Text style={T.title}>Lançamentos</Text>
+          <MonthStrip
+            month={month - 1}
+            year={year}
+            onChange={(m, y) => {
+              setMonth(m + 1);
+              setYear(y);
+              setTab("todos");
+              setSearch("");
+            }}
+          />
+        </View>
 
         {/* The invoice, then how it divides. */}
         <View style={{ marginTop: 22, paddingHorizontal: 4 }}>
@@ -200,8 +163,14 @@ export default function Lancamentos() {
             <Text style={{ color: "rgba(255,255,255,0.2)" }}> · </Text>
             {lines.length} {lines.length === 1 ? "lançamento" : "lançamentos"}
           </Text>
-          <CountUp value={total} numberOfLines={1} style={{ marginTop: 4, fontSize: 38, fontWeight: "800", letterSpacing: -1.5, color: "#fff", fontVariant: ["tabular-nums"] }} />
+          <CountUp value={due} numberOfLines={1} style={{ marginTop: 4, fontSize: 38, fontWeight: "800", letterSpacing: -1.5, color: "#fff", fontVariant: ["tabular-nums"] }} />
         </View>
+
+        {paid > 0 && (
+          <Text style={{ marginTop: 4, paddingHorizontal: 4, fontSize: 12.5, color: INK.softer }}>
+            {money(total)} em compras · <Text style={{ color: GREEN }}>{money(paid)} já pago</Text>
+          </Text>
+        )}
 
         {/* The split is the answer; the list below is the evidence for it. */}
         <View style={{ marginTop: 16, flexDirection: "row", gap: 16, paddingHorizontal: 4 }}>
@@ -259,10 +228,30 @@ export default function Lancamentos() {
               {lines.length === 0 ? "Nenhum lançamento nesta fatura." : "Nada encontrado."}
             </Text>
           ) : (
-            shown.map((line) => <InvoiceLineRow key={line.id} line={line} onPress={() => setOpenLine(line)} />)
+            shown.map((entry) =>
+              entry.kind === "line" ? (
+                <InvoiceLineRow key={entry.line.id} line={entry.line} onPress={() => setOpenLine(entry.line)} />
+              ) : (
+                <PaymentRow
+                  key={entry.payment.id}
+                  payment={entry.payment}
+                  name={nameOf(entry.payment)}
+                  accountName={entry.payment.account_id ? accountNames[entry.payment.account_id] : undefined}
+                  onPress={() => setOpenPayment(entry.payment)}
+                />
+              ),
+            )
           )}
         </View>
       </ScrollView>
+
+      <PaymentDetail
+        payment={openPayment}
+        name={openPayment ? nameOf(openPayment) : ""}
+        cardName={cardName}
+        onClose={() => setOpenPayment(null)}
+        onChanged={() => setReload((n) => n + 1)}
+      />
 
       <LineDetail line={openLine} cardName={cardName} onClose={() => setOpenLine(null)} onChanged={() => setReload((n) => n + 1)} />
     </Room>

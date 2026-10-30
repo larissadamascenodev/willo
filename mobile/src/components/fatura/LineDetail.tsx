@@ -65,7 +65,7 @@ export default function LineDetail({
   const Icon = categoryIcon(shown.category);
   const each = Math.abs(shown.amount);
   const plan = shown.installment;
-  const day = new Date(`${shown.date}T12:00:00`).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
+  const day = new Date(`${shown.date}T12:00:00`).toLocaleDateString("pt-BR", { day: "numeric", month: "short", year: "numeric" });
 
   const remove = async () => {
     if (!purchaseId) return;
@@ -258,7 +258,7 @@ function Fact({ label, value, last = false }: { label: string; value: string; la
       }}
     >
       <Text style={{ fontSize: 14.5, color: INK.soft }}>{label}</Text>
-      <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15, fontWeight: "600", color: "#fff", textAlign: "right" }}>
+      <Text numberOfLines={2} style={{ flexShrink: 1, fontSize: 15, fontWeight: "600", color: "#fff", textAlign: "right" }}>
         {value}
       </Text>
     </View>
