@@ -181,7 +181,7 @@ export default function InstallmentCategories({
                                 }}
                               />
                               <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: INK.softer }}>
-                                {last ? "Última parcela" : `Parcela ${p.number} de ${p.total}`} · {where}
+                                Parcela {p.number} de {p.total} · {where}
                               </Text>
                             </View>
                           </View>

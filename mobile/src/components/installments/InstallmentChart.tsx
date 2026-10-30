@@ -30,9 +30,9 @@ const MONTH_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Se
 const BAR_W = 46;
 const GAP = 8;
 const TRACK = 96;
-/* Lavender, quiet against the page: this month solid, the months ahead a deeper tone. */
-const NOW = "#B9B0FF";
-const LATER = "#5B5785";
+/* This month in blue; the months ahead in white, so the one being lived stands out. */
+const NOW = "#5AA9FF";
+const LATER = "#ECECEF";
 
 export default function InstallmentChart({
   projection,
@@ -147,7 +147,7 @@ function Column({ value, max, color, on, delay }: { value: number; max: number; 
     lit.set(withTiming(on ? 1 : 0, { duration: 200, easing: Easing.out(Easing.quad), reduceMotion: ReduceMotion.System }));
   }, [on, lit]);
 
-  const animated = useAnimatedStyle(() => ({ height: grow.get(), opacity: 0.6 + lit.get() * 0.4 }));
+  const animated = useAnimatedStyle(() => ({ height: grow.get(), opacity: 0.82 + lit.get() * 0.18 }));
 
   return (
     <Animated.View

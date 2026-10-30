@@ -208,7 +208,7 @@ export default function LineDetail({
               </Text>
               <Text style={{ fontSize: 13, color: INK.soft }}>
                 {plan.total - plan.current === 0
-                  ? "última parcela"
+                  ? ""
                   : `faltam ${money(each * (plan.total - plan.current))}`}
               </Text>
             </View>

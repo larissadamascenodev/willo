@@ -115,7 +115,6 @@ export function InstallmentRow({
   const hex = categoryHex(item.category, customCats);
   const Icon = categoryIcon(item.category, customCats);
   const where = item.payment_method === "cartao" ? (card?.name ?? "Cartão") : "Conta";
-  const last = number === item.installments;
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
@@ -133,7 +132,7 @@ export function InstallmentRow({
               <View key={i} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i < number ? hex : "rgba(255,255,255,0.12)" }} />
             ))}
           </View>
-          <Text style={{ fontSize: 11.5, fontWeight: "600", color: INK.soft }}>{last ? "última" : `${number} de ${item.installments}`}</Text>
+          <Text style={{ fontSize: 11.5, fontWeight: "600", color: INK.soft }}>{`${number} de ${item.installments}`}</Text>
         </View>
       </View>
       <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{money(item.amount)}</Text>
@@ -189,7 +188,7 @@ export function InstallmentDetail({
             Parcela {number} de {item.installments}
           </Text>
           <Text style={{ fontSize: 13, color: INK.soft }}>
-            {number === item.installments ? "última parcela" : `faltam ${money(item.amount * (item.installments - number))}`}
+            {number === item.installments ? "" : `faltam ${money(item.amount * (item.installments - number))}`}
           </Text>
         </View>
         <View style={{ marginTop: 10, height: 6, flexDirection: "row", gap: 3 }}>

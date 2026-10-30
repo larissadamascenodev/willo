@@ -246,17 +246,20 @@ export function ParcelamentosView({
  * itself: one bar, green for what is paid and amber for what is still to come, and
  * the two figures side by side under it in the same two colours.
  */
+const PAID = "#5AA9FF";
+const OWED = "rgba(255,255,255,0.18)";
+
 function Paid({ paid, left, total }: { paid: number; left: number; total: number }) {
   const share = total > 0 ? paid / total : 0;
   return (
     <View style={{ marginTop: 28, paddingHorizontal: 4 }}>
       <View style={{ flexDirection: "row", height: 8, gap: 3 }}>
-        {share > 0 && <FlexBar share={share} color={GREEN} delay={0.12} />}
-        {share < 1 && <FlexBar share={1 - share} color={AMBER} delay={0.2} />}
+        {share > 0 && <FlexBar share={share} color={PAID} delay={0.12} />}
+        {share < 1 && <FlexBar share={1 - share} color={OWED} delay={0.2} />}
       </View>
       <View style={{ marginTop: 14, flexDirection: "row", gap: 16 }}>
-        <Figure swatch={GREEN} label="Já pago" value={money(paid)} />
-        <Figure swatch={AMBER} label="Falta pagar" value={money(left)} />
+        <Figure swatch={PAID} label="Já pago" value={money(paid)} />
+        <Figure swatch={OWED} label="Falta pagar" value={money(left)} />
       </View>
       <Text style={{ marginTop: 10, fontSize: 12.5, color: INK.softer }}>
         <Text style={{ fontWeight: "700", color: "#fff" }}>{Math.round(share * 100)}%</Text> de {money(total)} em compras

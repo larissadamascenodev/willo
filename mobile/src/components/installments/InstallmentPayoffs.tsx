@@ -158,7 +158,7 @@ export default function InstallmentPayoffs({
                 <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{part.name}</Text>
                 <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 5 }}>
                   <Check size={11} color={GREEN} strokeWidth={3} />
-                  <Text style={{ fontSize: 12, color: INK.softer }}>Última de {part.total} parcelas</Text>
+                  <Text style={{ fontSize: 12, color: INK.softer }}>{part.total} de {part.total} parcelas</Text>
                 </View>
               </View>
               <Text style={[nums, { fontSize: 15, fontWeight: "600", color: "#fff" }]}>{money(part.amount)}</Text>

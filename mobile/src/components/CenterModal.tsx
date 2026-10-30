@@ -63,7 +63,7 @@ export default function CenterModal({
     };
   }, [open, shown]);
 
-  const blurProps = useAnimatedProps(() => ({ intensity: Math.max(0, shown.get()) * 14 }));
+  const blurProps = useAnimatedProps(() => ({ intensity: Math.max(0, shown.get()) * 32 }));
   const dim = useAnimatedStyle(() => ({ opacity: Math.min(1, Math.max(0, shown.get())) }));
   const card = useAnimatedStyle(() => ({
     opacity: Math.min(1, Math.max(0, shown.get() * 1.4)),
@@ -74,7 +74,7 @@ export default function CenterModal({
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityLabel="Fechar">
         <AnimatedBlur tint="dark" animatedProps={blurProps} style={{ position: "absolute", inset: 0 }} />
-        <Animated.View style={[{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.55)" }, dim]} />
+        <Animated.View style={[{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.62)" }, dim]} />
       </Pressable>
 
       <View
@@ -102,8 +102,8 @@ export default function CenterModal({
           ]}
         >
           {/* Glass, not a grey card: the page shows through, softened. */}
-          <BlurView intensity={60} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.38)" }} />
+          <BlurView intensity={80} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.62)" }} />
           <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(255,255,255,0.22)" }} />
           <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 6 }}>
             <View style={{ flex: 1, minWidth: 0 }}>
