@@ -22,6 +22,23 @@ import {
  */
 const purchaseDay = (date: string) => new Date(`${date.slice(0, 10)}T12:00:00`);
 
+/**
+ * The month (year * 12 + month) the first unpaid instalment falls in. On a card that is
+ * the month of the invoice it is billed on, which the closing day can push past the
+ * month of the purchase — a purchase on 8 October after an 8th closing is November's.
+ * Without an invoice to go by, it is the purchase's month plus what was already paid.
+ */
+const firstUnpaidPeriod = (item: ActiveInstallmentItem) => {
+  if (item.dueDate) {
+    const due = new Date(item.dueDate);
+    return due.getFullYear() * 12 + due.getMonth();
+  }
+  const base = purchaseDay(item.date);
+  return base.getFullYear() * 12 + base.getMonth() + item.installment_current - 1;
+};
+
+const periodToDate = (period: number) => new Date(Math.floor(period / 12), period % 12, 1, 12);
+
 export interface InstallmentStats {
   /** What the open instalments take out of a month. */
   totalMensal: number;
@@ -96,7 +113,6 @@ export function statsFor(items: ActiveInstallmentItem[]): InstallmentStats | nul
   let lastEndDate = new Date();
 
   items.forEach((item) => {
-    const baseDate = purchaseDay(item.date);
     const currentInstallment = item.installment_current;
     const unpaidInstallments = item.installments - currentInstallment + 1;
 
@@ -105,8 +121,7 @@ export function statsFor(items: ActiveInstallmentItem[]): InstallmentStats | nul
       totalRestante += item.amount * unpaidInstallments;
     }
 
-    const endDate = new Date(baseDate);
-    endDate.setMonth(endDate.getMonth() + (item.installments - currentInstallment));
+    const endDate = periodToDate(firstUnpaidPeriod(item) + (item.installments - currentInstallment));
     if (endDate > lastEndDate) lastEndDate = endDate;
   });
 
@@ -164,9 +179,7 @@ export function installmentTotals(items: ActiveInstallmentItem[]): InstallmentTo
       totalRestante += item.amount * unpaidCount;
     }
 
-    const baseDate = purchaseDay(item.date);
-    const endDate = new Date(baseDate);
-    endDate.setMonth(baseDate.getMonth() + (item.installments - 1));
+    const endDate = periodToDate(firstUnpaidPeriod(item) + (item.installments - item.installment_current));
     if (endDate > lastEndDate) lastEndDate = endDate;
 
     if (item.payment_method === "cartao") cardCount++;
@@ -235,14 +248,10 @@ export function installmentProjection(
 
     const parts: ProjectionPart[] = [];
     items.forEach((item) => {
-      const baseDate = purchaseDay(item.date);
       const paidCount = item.installment_current - 1;
       /* The month the first unpaid instalment falls in — or this month, for one that is
          running late, so a late instalment is counted now rather than nowhere. */
-      const startPeriod = Math.max(
-        baseDate.getFullYear() * 12 + baseDate.getMonth() + paidCount,
-        currentYear * 12 + currentMonth,
-      );
+      const startPeriod = Math.max(firstUnpaidPeriod(item), currentYear * 12 + currentMonth);
       const monthsDiff = y * 12 + m - startPeriod;
       const remainingInstallments = item.installments - paidCount;
       if (monthsDiff >= 0 && monthsDiff < remainingInstallments) {
