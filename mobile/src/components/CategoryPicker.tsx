@@ -88,7 +88,7 @@ export default function CategoryPicker({
 
   return (
     <Modal visible={open} animationType="slide" transparent onRequestClose={onClose} statusBarTranslucent>
-      <View style={{ flex: 1, marginTop: insets.top + 8, borderTopLeftRadius: 32, borderTopRightRadius: 32, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderBottomWidth: 0, borderColor: "rgba(255,255,255,0.14)" }}>
+      <View style={{ flex: 1, marginTop: insets.top + 8, borderTopLeftRadius: 32, borderTopRightRadius: 32, borderCurve: "continuous", overflow: "hidden" }}>
         <BlurView intensity={70} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
         <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(12,13,16,0.72)" }} />
 

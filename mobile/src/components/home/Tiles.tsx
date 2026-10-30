@@ -14,7 +14,8 @@ import type { EndedSubscription } from "~/lib/subscriptionCheck";
 import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
 import { ChevronRight } from "~/components/icons";
-import CaixinhaTile from "~/components/accounts/CaixinhaTile";
+import CaixinhaCover from "~/components/accounts/CaixinhaCover";
+import { goalPreset } from "~/lib/goalIcon";
 import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
 import { AMBER, GREEN, INK } from "~/theme/tokens";
@@ -534,14 +535,14 @@ export function MetasTile({ size = "full" }: { size?: WidgetSize }) {
   return <MetasCard goals={goals} size={size} onOpen={() => router.push("/gestao")} onOpenGoal={(id) => router.push(`/metas/${id}` as never)} />;
 }
 
-const SHELF_W = 132;
-const SHELF_H = 172;
 
 /**
  * The caixinhas card itself, drawn from what it is handed.
  *
- * Full width it is the same shelf of picture cards the accounts screen has, smaller:
- * a goal looks the same wherever it is met. The nearest to done come first.
+ * Full width it is a short list rather than the shelf of picture cards the accounts
+ * screen has: on the home a caixinha is a line to glance at — its picture small, its
+ * name, how far along, what it holds — and the shelf is one tap away. The nearest to
+ * done come first.
  */
 export function MetasCard({
   goals,
@@ -589,39 +590,64 @@ export function MetasCard({
   /* The ones still open first, the closest to done at the top. */
   const ordered = [...goals]
     .map((g) => ({ goal: g, ...goalProgress(g) }))
-    .sort((a, b) => Number(a.isComplete) - Number(b.isComplete) || b.progress - a.progress)
-    .slice(0, 6);
+    .sort((a, b) => Number(a.isComplete) - Number(b.isComplete) || b.progress - a.progress);
+  const shown = ordered.slice(0, 4);
 
   return (
-    <Surface onPress={open} style={{ paddingTop: 16, paddingBottom: 16 }}>
-      <View style={{ paddingHorizontal: 16 }}>
-        <Header title="Caixinhas" aside={`${goals.length} ${goals.length === 1 ? "caixinha" : "caixinhas"}`} />
-        <Lead value={money(guardado)} unit="guardados" />
-        {objetivo > 0 && (
-          <Text style={[nums, { marginTop: 2, fontSize: 12.5, color: INK.soft }]}>
-            {Math.round(overall * 100)}% de {money(objetivo)}
-          </Text>
-        )}
+    <Surface onPress={open} style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 6 }}>
+      <Header title="Caixinhas" aside={`${goals.length} ${goals.length === 1 ? "caixinha" : "caixinhas"}`} />
+      <Lead value={money(guardado)} unit="guardados" />
+      {objetivo > 0 && (
+        <Text style={[nums, { marginTop: 2, fontSize: 12.5, color: INK.soft }]}>
+          {Math.round(overall * 100)}% de {money(objetivo)}
+        </Text>
+      )}
+
+      <View style={{ marginTop: 10 }}>
+        {shown.map(({ goal, progress, percent, isComplete }, i) => {
+          const hasTarget = Number(goal.target_amount) > 0;
+          const hex = goalPreset(goal).hex;
+          return (
+            <Pressable
+              key={goal.id}
+              onPress={() => (onOpenGoal ? onOpenGoal(goal.id) : open())}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 12,
+                paddingVertical: 11,
+                borderTopWidth: i === 0 ? 0 : 1,
+                borderTopColor: "rgba(255,255,255,0.06)",
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <CaixinhaCover goal={goal} width={46} height={46} radius={14} glyph={24} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "600", color: "#fff" }}>{goal.name}</Text>
+                  <Text style={[nums, { fontSize: 15, fontWeight: "600", color: "#fff" }]}>{money(Number(goal.current_amount) || 0)}</Text>
+                </View>
+                {hasTarget ? (
+                  <View style={{ marginTop: 7, flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Track share={progress} color={isComplete ? GREEN : hex} height={4} delay={0.05 * i} />
+                    </View>
+                    <Text style={[nums, { fontSize: 12, color: isComplete ? GREEN : INK.soft }]}>{percent}%</Text>
+                  </View>
+                ) : (
+                  <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 12.5, color: INK.softer }}>sem valor definido</Text>
+                )}
+              </View>
+            </Pressable>
+          );
+        })}
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, gap: 10, marginTop: 14 }}
-        snapToInterval={SHELF_W + 10}
-        decelerationRate="fast"
-      >
-        {ordered.map(({ goal }, i) => (
-          <CaixinhaTile
-            key={goal.id}
-            goal={goal}
-            delay={0.05 * i}
-            width={SHELF_W}
-            height={SHELF_H}
-            onPress={() => (onOpenGoal ? onOpenGoal(goal.id) : open())}
-          />
-        ))}
-      </ScrollView>
+      {goals.length > shown.length && (
+        <Text style={{ paddingTop: 6, paddingBottom: 10, fontSize: 13, fontWeight: "600", color: INK.soft }}>
+          Ver todas as {goals.length}
+        </Text>
+      )}
     </Surface>
   );
 }

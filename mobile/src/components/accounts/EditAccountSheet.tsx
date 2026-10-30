@@ -97,14 +97,10 @@ export default function EditAccountSheet({
           borderTopRightRadius: 34,
           borderCurve: "continuous",
           overflow: "hidden",
-          borderWidth: 1,
-          borderBottomWidth: 0,
-          borderColor: "rgba(255,255,255,0.14)",
         }}
       >
         <BlurView intensity={70} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.5)" }} />
-        <View style={{ position: "absolute", top: 0, left: 36, right: 36, height: 1, backgroundColor: "rgba(255,255,255,0.24)" }} />
 
         <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: insets.bottom + 18 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>

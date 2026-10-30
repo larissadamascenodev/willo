@@ -102,9 +102,6 @@ export default function BottomSheet({
             borderTopRightRadius: 30,
             borderCurve: "continuous",
             overflow: "hidden",
-            borderWidth: 1,
-            borderBottomWidth: 0,
-            borderColor: "rgba(255,255,255,0.16)",
             paddingTop: 10,
             paddingBottom: insets.bottom + 16,
           },
@@ -113,8 +110,6 @@ export default function BottomSheet({
       >
         <BlurView intensity={60} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
         <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.38)" }} />
-        {/* The light catching the glass's upper edge. */}
-        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 36, right: 36, height: 1, backgroundColor: "rgba(255,255,255,0.22)" }} />
 
         {/* The grab handle, which says which way this came from. */}
         <View
