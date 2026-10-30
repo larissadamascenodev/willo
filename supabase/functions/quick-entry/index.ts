@@ -86,6 +86,58 @@ async function callGemini(system: string, parts: Part[], schema: Record<string, 
   throw new Error(lastError || "Gemini indisponível");
 }
 
+/**
+ * Claude first, as a tool it must fill in, so the answer has the same shape as Gemini's.
+ * It does not take audio, so a spoken entry goes straight to Gemini.
+ */
+const CLAUDE_MODEL = "claude-haiku-5-5";
+const CLAUDE_TIMEOUT_MS = 20_000;
+
+/** JSON Schema as Claude reads it: "nullable" becomes a union with null. */
+const toClaudeSchema = (v: any): any => {
+  if (Array.isArray(v)) return v.map(toClaudeSchema);
+  if (!v || typeof v !== "object") return v;
+  const out: any = {};
+  for (const [k, x] of Object.entries(v)) {
+    if (k === "nullable") continue;
+    out[k] = toClaudeSchema(x);
+  }
+  if (v.nullable && typeof v.type === "string") {
+    out.type = [v.type, "null"];
+    if (out.enum) out.enum = [...out.enum, null];
+  }
+  return out;
+};
+
+async function callClaude(system: string, text: string, schema: Record<string, unknown>) {
+  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!apiKey) throw new Error("claude: sem chave");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CLAUDE_TIMEOUT_MS);
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      signal: controller.signal,
+      headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({
+        model: CLAUDE_MODEL,
+        max_tokens: 1024,
+        system,
+        messages: [{ role: "user", content: text }],
+        tools: [{ name: "lancamentos", description: "Devolve os lançamentos lidos da frase.", input_schema: toClaudeSchema(schema) }],
+        tool_choice: { type: "tool", name: "lancamentos" },
+      }),
+    });
+    if (!res.ok) throw new Error(`claude: ${res.status} ${(await res.text()).slice(0, 200)}`);
+    const data = await res.json();
+    const call = (data.content ?? []).find((b: { type: string }) => b.type === "tool_use");
+    if (!call) throw new Error("claude: sem resposta");
+    return call.input;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const systemPrompt = (today: string, categories: string[]) => `
 Você lê uma frase em português brasileiro e extrai os lançamentos financeiros dela.
 Hoje é ${today} (formato ISO, fuso de São Paulo).
@@ -182,7 +234,17 @@ serve(async (req) => {
     }
     if (text) parts.push({ text });
 
-    const result = await callGemini(systemPrompt(today, categories), parts, SCHEMA);
+    /* Claude first for typed sentences; Gemini when Claude cannot, and always for audio. */
+    const system = systemPrompt(today, categories);
+    let result: any;
+    if (!audio?.data) {
+      try {
+        result = await callClaude(system, text, SCHEMA);
+      } catch (err) {
+        console.error("quick-entry claude:", err instanceof Error ? err.message : err);
+      }
+    }
+    result ??= await callGemini(system, parts, SCHEMA);
 
     // The model is told the category must come from the list; this is the check that it
     // did, because a category the app does not have would land as a dead filter.
