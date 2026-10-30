@@ -36,7 +36,11 @@ export default function SegmentedTabs<T extends string>({
   const x = useSharedValue(0);
 
   const index = Math.max(0, options.findIndex((o) => o.key === value));
-  const slot = width > 0 ? width / options.length : 0;
+  /* The track is measured from outside, so the padding on both sides (4 each) and the
+     border (1 each, when there is one) are taken off before it is shared out — otherwise
+     the pill is a few points wider than its place and runs past the edge. */
+  const inset = 8 + (compact && !glass ? 0 : 2);
+  const slot = width > 0 ? (width - inset) / options.length : 0;
 
   /* The pill follows wherever the chosen option now sits. Driven from an effect
      rather than from the render: a shared value written while rendering is a frame
