@@ -123,7 +123,14 @@ export function CategoryRows({
   );
 }
 
-export function GroupCards({ groups }: { groups: GroupedCategories<OverviewCategory>[] }) {
+export function GroupCards({
+  groups,
+  onOpen,
+}: {
+  groups: GroupedCategories<OverviewCategory>[];
+  /** Opens a group's own detail; without it a group unfolds in place. */
+  onOpen?: (group: GroupedCategories<OverviewCategory>) => void;
+}) {
   const [open, setOpen] = useState<string | null>(null);
 
   return (
@@ -145,7 +152,7 @@ export function GroupCards({ groups }: { groups: GroupedCategories<OverviewCateg
             }}
           >
             <Pressable
-              onPress={() => setOpen(isOpen ? null : g.def.name)}
+              onPress={() => (onOpen ? onOpen(g) : setOpen(isOpen ? null : g.def.name))}
               style={({ pressed }) => ({
                 flexDirection: "row",
                 alignItems: "center",
@@ -174,11 +181,15 @@ export function GroupCards({ groups }: { groups: GroupedCategories<OverviewCateg
                 <Text style={{ marginTop: 1, fontSize: 15, color: INK.soft }}>{g.percentage}%</Text>
               </View>
               <Text style={{ fontSize: 16, fontWeight: "500", color: "#fff" }}>{money(g.amount)}</Text>
-              <ChevronDown
-                size={16}
-                color="rgba(255,255,255,0.74)"
-                style={{ transform: [{ rotate: isOpen ? "180deg" : "0deg" }] }}
-              />
+              {onOpen ? (
+                <ChevronRight size={16} color="rgba(255,255,255,0.74)" />
+              ) : (
+                <ChevronDown
+                  size={16}
+                  color="rgba(255,255,255,0.74)"
+                  style={{ transform: [{ rotate: isOpen ? "180deg" : "0deg" }] }}
+                />
+              )}
             </Pressable>
 
             {isOpen && (

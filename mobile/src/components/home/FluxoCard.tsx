@@ -62,7 +62,7 @@ export default function FluxoCard({
   return (
     <Surface
       onPress={() => router.push("/fluxo-de-caixa" as never)}
-      style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 }}
+      style={{ paddingHorizontal: 18, paddingTop: 16, paddingBottom: 18 }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <Text numberOfLines={1} style={[T.cardLabel, { flex: 1 }]}>
@@ -72,45 +72,27 @@ export default function FluxoCard({
         <ChevronRight size={16} color={INK.faint} />
       </View>
 
-      <View style={{ marginTop: 14, gap: 12 }}>
+      <View style={{ marginTop: 16, gap: 16 }}>
         <Flow label="Entrada" amount={receitas} scale={scale} inflow delay={0.05} />
         <Flow label="Saída" amount={despesas} scale={scale} delay={0.12} />
       </View>
 
-      {/* The result, as a row of a statement: what it is and what it means on the
-          left, the figure on the right. */}
+      {/* What is left of the month, as the last line of a statement. */}
       <View
         style={{
-          marginTop: 16,
-          paddingTop: 12,
+          marginTop: 18,
+          paddingTop: 16,
           borderTopWidth: 1,
           borderTopColor: "rgba(255,255,255,0.07)",
           flexDirection: "row",
           alignItems: "center",
+          justifyContent: "space-between",
           gap: 12,
         }}
       >
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>
-            {short ? "Falta no mês" : "Sobra do mês"}
-          </Text>
-          <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>
-            {verdict}
-          </Text>
-        </View>
-        <Text
-          numberOfLines={1}
-          style={[
-            nums,
-            {
-              flexShrink: 0,
-              fontSize: 18,
-              fontWeight: "700",
-              letterSpacing: -0.3,
-              color: short ? RED : "#fff",
-            },
-          ]}
-        >
+        <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.2, color: "#fff" }}>Fluxo de caixa</Text>
+        <Text numberOfLines={1} style={[nums, { flexShrink: 0, fontSize: 17, fontWeight: "500", color: short ? RED : "#fff" }]}>
+          {short ? "−" : ""}
           {money(Math.abs(balanco))}
         </Text>
       </View>
@@ -118,7 +100,7 @@ export default function FluxoCard({
   );
 }
 
-/** One of the two flows. */
+/** One of the two flows: its name in bold, the figure plain, and a thick bar under them. */
 function Flow({
   label,
   amount,
@@ -135,26 +117,14 @@ function Flow({
   return (
     <View>
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-        <Text style={{ fontSize: 13.5, color: INK.soft }}>{label}</Text>
-        <Text style={[nums, { fontSize: 14.5, fontWeight: "600", color: "#fff" }]}>
+        <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.2, color: "#fff" }}>{label}</Text>
+        <Text style={[nums, { fontSize: 16, fontWeight: "400", color: inflow ? "#fff" : RED }]}>
           {inflow ? "" : "−"}
           {money(amount)}
         </Text>
       </View>
-      <View
-        style={{
-          marginTop: 7,
-          height: 5,
-          borderRadius: 999,
-          backgroundColor: "rgba(255,255,255,0.06)",
-          overflow: "hidden",
-        }}
-      >
-        <Bar
-          share={Math.max(amount / scale, amount > 0 ? 0.03 : 0)}
-          color={inflow ? GREEN : RED}
-          delay={delay}
-        />
+      <View style={{ marginTop: 10, height: 10, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+        <Bar share={Math.max(amount / scale, amount > 0 ? 0.03 : 0)} color={inflow ? GREEN : RED} delay={delay} />
       </View>
     </View>
   );

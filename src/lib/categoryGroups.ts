@@ -24,13 +24,13 @@ export const CATEGORY_GROUP_DEFS: CategoryGroupDef[] = [
     name: "Alimentação",
     hex: "#F97316",
     icon: "ShoppingCart",
-    categories: ["Alimentação", "Supermercado", "Bebidas", "Delivery", "Cafeteria", "Fast Food", "Restaurantes", "Padaria"],
+    categories: ["Alimentação", "Supermercado", "Bebidas", "Delivery", "Cafeteria", "Fast Food", "Restaurantes", "Padaria", "Alimentos e bebidas", "Restaurantes, bares e lanchonetes"],
   },
   {
     name: "Moradia",
     hex: "#6366F1",
     icon: "Home",
-    categories: ["Moradia", "Aluguel", "Condomínio", "Casa", "Contas", "Energia", "Conta de Luz", "Conta de Água", "Conta de Gás", "Internet"],
+    categories: ["Moradia", "Aluguel", "Condomínio", "Casa", "Contas", "Energia", "Conta de Luz", "Conta de Água", "Conta de Gás", "Internet", "Telefone e Internet", "Serviços"],
   },
   {
     name: "Transporte",
@@ -54,7 +54,7 @@ export const CATEGORY_GROUP_DEFS: CategoryGroupDef[] = [
     name: "Compras",
     hex: "#F59E0B",
     icon: "ShoppingBag",
-    categories: ["Compras", "Vestuário", "Tecnologia", "Eletrônicos"],
+    categories: ["Compras", "Vestuário", "Tecnologia", "Eletrônicos", "Compras online"],
   },
   {
     name: "Educação",
@@ -66,7 +66,7 @@ export const CATEGORY_GROUP_DEFS: CategoryGroupDef[] = [
     name: "Finanças",
     hex: "#22C55E",
     icon: "Landmark",
-    categories: ["Impostos", "Investimentos", "Transferência", "Cartão de Crédito", "Seguros", "Tarifas", "Empréstimos"],
+    categories: ["Impostos", "Investimentos", "Transferência", "Transferências", "Cartão de Crédito", "Seguros", "Tarifas", "Tarifas e juros", "Empréstimos", "Faturas", "Parcelamento", "Pix no crédito", "Pix Enviado", "Pix"],
   },
 ];
 

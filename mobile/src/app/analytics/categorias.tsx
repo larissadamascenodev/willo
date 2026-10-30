@@ -22,6 +22,8 @@ import SegmentedTabs from "~/components/SegmentedTabs";
 import SpendRing from "~/components/analytics/SpendRing";
 import { CategoryRows, GroupCards, TopSpendRow, type OverviewCategory } from "~/components/analytics/CategoryViews";
 import { categoryIcon } from "~/lib/categoryIcon";
+import { groupIcon } from "~/lib/groupIcon";
+import SpendModal, { groupOf, type SpendSubject } from "~/components/analytics/SpendModal";
 import { ChartPie, Plus, Trash2, X } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
@@ -130,8 +132,18 @@ export default function AnalyticsCategorias() {
   const total = summaries.reduce((s, c) => s + c.amount, 0);
   const monthLabel = MONTH_NAMES[selectedMonth];
 
-  const openCategory = (name: string) =>
-    router.push(`/analytics/categoria/${encodeURIComponent(name)}` as never);
+  /* A category or a group opens in a pane of glass over the page, not as a page of its own. */
+  const [subject, setSubject] = useState<SpendSubject | null>(null);
+  const openCategory = (name: string) => {
+    const g = groupOf(name);
+    setSubject({
+      name,
+      hex: categoryHex(name, data?.customCats),
+      icon: categoryIcon(name, data?.customCats),
+      categories: [name],
+      group: g ? { name: g.name, hex: g.hex } : undefined,
+    });
+  };
 
   return (
     <Room>
@@ -195,7 +207,17 @@ export default function AnalyticsCategorias() {
               {view === "categorias" ? (
                 <CategoryRows categories={categories} onOpen={openCategory} />
               ) : (
-                <GroupCards groups={groups} />
+                <GroupCards
+                  groups={groups}
+                  onOpen={(g) =>
+                    setSubject({
+                      name: g.def.name,
+                      hex: g.def.hex,
+                      icon: groupIcon(g.def.icon),
+                      categories: g.categories.map((c) => c.name),
+                    })
+                  }
+                />
               )}
             </View>
 
@@ -320,6 +342,7 @@ export default function AnalyticsCategorias() {
           void loadLimits();
         }}
       />
+      <SpendModal subject={subject} data={data} month={selectedMonth} year={selectedYear} onClose={() => setSubject(null)} />
     </Room>
   );
 }
