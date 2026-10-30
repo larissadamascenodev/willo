@@ -6,29 +6,29 @@ import { useFinancialProjection } from "@/hooks/useFinancialProjection";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import SegmentedTabs from "~/components/SegmentedTabs";
-import FluxoPanel from "~/components/financeiro/FluxoPanel";
+import ReceitasDespesasPanel from "~/components/financeiro/ReceitasDespesasPanel";
 import BalancoPanel from "~/components/financeiro/BalancoPanel";
 import ProjecoesPanel from "~/components/financeiro/ProjecoesPanel";
 
 /**
  * Three views, one per question.
  *
- * What moved (fluxo), where the month lands (balanço), and where the months after it
- * land (projeções). They are one screen rather than three because the questions are
+ * What came in and went out (receitas e despesas), where the month lands (balanço), and
+ * where the months after it land (projeções). They are one screen rather than three because the questions are
  * asked in that order and the answer to each is the setup for the next.
  */
 
-type Tool = "fluxo" | "balanco" | "projecoes";
+type Tool = "receitas" | "balanco" | "projecoes";
 
 export default function FluxoDeCaixa() {
   const { tool: initial } = useLocalSearchParams<{ tool?: string }>();
   const insets = useSafeAreaInsets();
   /* One projection for the screen, not one per tab: it starts loading while you
-     are still on Fluxo, and switching between Balanço and Projeções no longer asks
+     are still on Receitas e despesas, and switching between Balanço and Projeções no longer asks
      for twelve months all over again. */
   const projection = useFinancialProjection();
   const [tool, setTool] = useState<Tool>(
-    initial === "balanco" || initial === "projecoes" ? initial : "fluxo",
+    initial === "balanco" || initial === "projecoes" ? initial : "receitas",
   );
   /* A tab is mounted the first time it is opened and then kept, so its chart
      draws itself once per visit to the screen rather than on every switch. */
@@ -61,7 +61,7 @@ export default function FluxoDeCaixa() {
             value={tool}
             onChange={setTool}
             options={[
-              { key: "fluxo" as const, label: "Fluxo de caixa" },
+              { key: "receitas" as const, label: "Receitas e despesas" },
               { key: "balanco" as const, label: "Balanço" },
               { key: "projecoes" as const, label: "Projeções" },
             ]}
@@ -71,9 +71,9 @@ export default function FluxoDeCaixa() {
         {/* Tabs are peers, so switching does not animate — the charts inside are
             the motion, and they play once. Nothing here fades, either: the glass in
             Projeções would flatten under a fading parent. */}
-        {visited.has("fluxo") && (
-          <View style={panel("fluxo")}>
-            <FluxoPanel />
+        {visited.has("receitas") && (
+          <View style={panel("receitas")}>
+            <ReceitasDespesasPanel />
           </View>
         )}
         {visited.has("balanco") && (

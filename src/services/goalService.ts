@@ -237,26 +237,58 @@ export async function createGoalWithdraw(withdraw: {
 }
 
 /**
- * Delete a goal deposit and reverse the account transaction if it came from a registered account.
+ * The account entry a goal movement made when it happened: the "Aporte" debit of a
+ * deposit, or the "Saque" credit of a withdrawal. Matched on what they share — account,
+ * amount, day and kind — and on the name's prefix, since the goal may have been renamed.
+ */
+async function findMovementEntry(
+  move: GoalTransaction,
+  kind: { type: "investimento" | "receita"; prefix: string }
+): Promise<string | null> {
+  if (!move.account_id) return null;
+  const { data } = await supabase
+    .from("transactions")
+    .select("id")
+    .eq("account_id", move.account_id)
+    .eq("type", kind.type)
+    .eq("category", "Meta")
+    .eq("date", move.date)
+    .eq("amount", Math.abs(Number(move.amount)))
+    .ilike("name", `${kind.prefix}%`)
+    .limit(1);
+  return (data?.[0] as { id: string } | undefined)?.id ?? null;
+}
+
+/**
+ * Delete a goal deposit and give the money back to the account it came from.
+ *
+ * The deposit's own debit is removed, so the account is as it was and nothing new is
+ * recorded. Only when that debit cannot be found is a refund written instead — and as a
+ * movement between the person's own money, not as income, so the month's receitas are
+ * not inflated by money that was always theirs.
  */
 export async function deleteGoalDepositWithRefund(
   deposit: GoalTransaction,
   userId: string,
   goalName: string
 ): Promise<void> {
-  // Delete the goal transaction
+  const entry = deposit.account_id && Number(deposit.amount) > 0
+    ? await findMovementEntry(deposit, { type: "investimento", prefix: "Aporte:" })
+    : null;
+
   const { error } = await supabase.from("goal_transactions").delete().eq("id", deposit.id);
   if (error) throw error;
 
-  // If deposit came from a registered account, create a revenue to refund
-  if (deposit.account_id && Number(deposit.amount) > 0) {
+  if (entry) {
+    await supabase.from("transactions").delete().eq("id", entry);
+  } else if (deposit.account_id && Number(deposit.amount) > 0) {
     await supabase.from("transactions").insert({
       user_id: userId,
       name: `Estorno: ${goalName}`,
       category: "Meta",
       date: new Date().toISOString().split("T")[0],
-      amount: Math.abs(Number(deposit.amount)),
-      type: "receita",
+      amount: -Math.abs(Number(deposit.amount)),
+      type: "investimento",
       status: "pago",
       payment_method: "conta",
       recurrence_type: "unica",
@@ -270,17 +302,23 @@ export async function deleteGoalDepositWithRefund(
 
 /**
  * Undo a withdrawal: the money goes back into the goal and, if it had gone to a registered
- * account, leaves that account again — the same kind of movement a deposit makes.
+ * account, that account's credit is removed again.
  */
 export async function deleteGoalWithdrawWithReversal(
   withdraw: GoalTransaction,
   userId: string,
   goalName: string
 ): Promise<void> {
+  const entry = withdraw.account_id && Number(withdraw.amount) < 0
+    ? await findMovementEntry(withdraw, { type: "receita", prefix: "Saque:" })
+    : null;
+
   const { error } = await supabase.from("goal_transactions").delete().eq("id", withdraw.id);
   if (error) throw error;
 
-  if (withdraw.account_id && Number(withdraw.amount) < 0) {
+  if (entry) {
+    await supabase.from("transactions").delete().eq("id", entry);
+  } else if (withdraw.account_id && Number(withdraw.amount) < 0) {
     await supabase.from("transactions").insert({
       user_id: userId,
       name: `Estorno de saque: ${goalName}`,

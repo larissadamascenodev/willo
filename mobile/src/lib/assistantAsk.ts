@@ -24,7 +24,7 @@ const PLACES: { match: RegExp; href: string; label: string }[] = [
   { match: /\b(parcela|parcelas|parcelamento|parcelamentos|parcelado|parcelei)\b/, href: "/parcelamentos", label: "Abrir parcelamentos" },
   { match: /\b(meta|metas|objetivo|objetivos|caixinha|caixinhas|cofrinho|cofrinhos)\b/, href: "/gestao", label: "Abrir caixinhas" },
   { match: /\b(evento|eventos|calendario|vencimento|vencimentos|vencem|vence|a pagar|a receber|contas a pagar)\b/, href: "/eventos", label: "Abrir próximos eventos" },
-  { match: /\b(fluxo|balanco|projecao|projecoes|previsao)\b/, href: "/fluxo-de-caixa", label: "Abrir fluxo de caixa" },
+  { match: /\b(fluxo|balanco|projecao|projecoes|previsao)\b/, href: "/fluxo-de-caixa", label: "Abrir receitas e despesas" },
   { match: /\b(categoria|categorias)\b/, href: "/analytics/categorias", label: "Abrir categorias" },
   { match: /\b(transacao|transacoes|lancamento|lancamentos|extrato|movimentacao|movimentacoes)\b/, href: "/(tabs)/transacoes", label: "Abrir transações" },
 ];
