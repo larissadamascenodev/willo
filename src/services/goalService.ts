@@ -268,6 +268,37 @@ export async function deleteGoalDepositWithRefund(
   notifyFinanceDataChanged();
 }
 
+/**
+ * Undo a withdrawal: the money goes back into the goal and, if it had gone to a registered
+ * account, leaves that account again — the same kind of movement a deposit makes.
+ */
+export async function deleteGoalWithdrawWithReversal(
+  withdraw: GoalTransaction,
+  userId: string,
+  goalName: string
+): Promise<void> {
+  const { error } = await supabase.from("goal_transactions").delete().eq("id", withdraw.id);
+  if (error) throw error;
+
+  if (withdraw.account_id && Number(withdraw.amount) < 0) {
+    await supabase.from("transactions").insert({
+      user_id: userId,
+      name: `Estorno de saque: ${goalName}`,
+      category: "Meta",
+      date: new Date().toISOString().split("T")[0],
+      amount: Math.abs(Number(withdraw.amount)),
+      type: "investimento",
+      status: "pago",
+      payment_method: "conta",
+      recurrence_type: "unica",
+      account_id: withdraw.account_id,
+      observation: `Saque da meta "${goalName}" desfeito`,
+    });
+  }
+
+  notifyFinanceDataChanged();
+}
+
 export function computeGoalInsights(
   goal: Goal,
   transactions: GoalTransaction[],

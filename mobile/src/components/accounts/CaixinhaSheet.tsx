@@ -269,6 +269,10 @@ export default function CaixinhaSheet({
       setError("Escolha de qual conta sai o dinheiro.");
       return;
     }
+    if (key === "start" && start > 0 && account && start > Math.max(Number(account.current_balance) || 0, 0)) {
+      setError(`${account.name} tem só ${money(Math.max(Number(account.current_balance) || 0, 0))} disponíveis. Comece com até esse valor ou escolha outra conta.`);
+      return;
+    }
     if (!last) {
       setStep(step + 1);
       return;

@@ -86,6 +86,11 @@ export default function GoalMoveSheet({
 
   const amount = cents / 100;
   const overLimit = !isDeposit && maxAmount !== undefined && amount > maxAmount;
+  /* Money put away has to exist: a deposit from an account cannot be more than the
+     account holds. (One with no account is money from outside the app, with no balance here.) */
+  const from = isDeposit ? (accounts.find((a) => a.id === accountId) ?? null) : null;
+  const available = from ? Math.max(Number(from.current_balance) || 0, 0) : null;
+  const overBalance = available !== null && amount > available;
 
   const submit = async () => {
     if (amount <= 0) {
@@ -94,6 +99,10 @@ export default function GoalMoveSheet({
     }
     if (overLimit) {
       setError(`A caixinha tem ${money(maxAmount ?? 0)} guardados.`);
+      return;
+    }
+    if (overBalance && from) {
+      setError(`${from.name} tem só ${money(available ?? 0)} disponíveis. Guarde até esse valor ou escolha outra conta.`);
       return;
     }
     setSaving(true);
@@ -160,11 +169,16 @@ export default function GoalMoveSheet({
               fontSize: 40,
               fontWeight: "800",
               letterSpacing: -1.4,
-              color: cents === 0 ? INK.faint : isDeposit ? "#fff" : RED,
+              color: cents === 0 ? INK.faint : overBalance ? RED : isDeposit ? "#fff" : RED,
               padding: 0,
             }}
           />
         </View>
+        {isDeposit && from && available !== null && (
+          <Text style={{ marginTop: 4, fontSize: 12.5, color: overBalance ? RED : INK.softer }}>
+            {overBalance ? "Mais do que o saldo. " : ""}Disponível em {from.name}: {money(available)}
+          </Text>
+        )}
         {!isDeposit && maxAmount !== undefined && (
           <Text style={{ marginTop: 4, fontSize: 12.5, color: INK.softer }}>
             Disponível na caixinha: {money(maxAmount)}
@@ -253,7 +267,7 @@ export default function GoalMoveSheet({
 
         <Pressable
           onPress={submit}
-          disabled={saving}
+          disabled={saving || overBalance}
           style={({ pressed }) => ({
             marginTop: 24,
             height: 52,
@@ -263,7 +277,7 @@ export default function GoalMoveSheet({
             backgroundColor: isDeposit ? "#fff" : "rgba(248,113,113,0.16)",
             borderWidth: isDeposit ? 0 : 1,
             borderColor: "rgba(248,113,113,0.30)",
-            opacity: saving || amount <= 0 ? 0.55 : pressed ? 0.85 : 1,
+            opacity: saving || amount <= 0 || overBalance ? 0.55 : pressed ? 0.85 : 1,
           })}
         >
           <Text style={{ fontSize: 16, fontWeight: "700", color: isDeposit ? "#0B0B0B" : RED }}>

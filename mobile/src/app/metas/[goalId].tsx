@@ -10,6 +10,7 @@ import {
   createGoalWithdraw,
   deleteGoal,
   deleteGoalDepositWithRefund,
+  deleteGoalWithdrawWithReversal,
   fetchGoalById,
   fetchGoalTransactions,
   updateGoal,
@@ -249,30 +250,41 @@ export default function MetaDetalhe() {
     }
   };
 
-  const removeDeposit = async (tx: GoalTransaction) => {
+  /* Erasing a movement puts the money back where it was: a deposit returns to the account
+     it left, a withdrawal comes back into the caixinha and leaves the account it went to. */
+  const removeMovement = async (tx: GoalTransaction) => {
     if (!user || !goal) return;
+    const isWithdraw = Number(tx.amount) < 0;
+    /* A deposit that has since been taken out cannot be erased without leaving less than nothing. */
+    if (!isWithdraw && Number(tx.amount) > Number(goal.current_amount) + 0.005) {
+      setError("Esse depósito já foi retirado da caixinha. Apague a retirada primeiro.");
+      setConfirming(null);
+      return;
+    }
     try {
-      await deleteGoalDepositWithRefund(tx, user.id, goal.name);
+      if (isWithdraw) await deleteGoalWithdrawWithReversal(tx, user.id, goal.name);
+      else await deleteGoalDepositWithRefund(tx, user.id, goal.name);
       setConfirming(null);
       await load();
       announce();
-      showToast("Depósito desfeito");
+      showToast(isWithdraw ? "Retirada apagada" : "Depósito apagado");
     } catch {
-      setError("Não foi possível remover o depósito.");
+      setError("Não foi possível apagar a movimentação.");
       setConfirming(null);
     }
   };
 
-  /* Where a deposit came from decides where removing it sends the money back to,
-     and that is worth saying out loud before it happens. */
+  /* Where the money goes back to, said out loud before it happens. */
   const undoDescription = (tx: GoalTransaction) => {
     const value = money(Math.abs(Number(tx.amount)));
-    if (tx.account_id && accountNames[tx.account_id]) {
-      return `O valor de ${value} volta para a conta “${accountNames[tx.account_id]}”.`;
+    const account = tx.account_id ? accountNames[tx.account_id] : null;
+    if (Number(tx.amount) < 0) {
+      return account
+        ? `Os ${value} voltam para a caixinha e saem da conta “${account}”.`
+        : `Os ${value} voltam para a caixinha.`;
     }
-    if (tx.source) {
-      return `Este depósito de ${value} veio de “${tx.source}”, fora do Willo. O valor sai da caixinha.`;
-    }
+    if (account) return `Os ${value} saem da caixinha e voltam para a conta “${account}”.`;
+    if (tx.source) return `Este depósito de ${value} veio de “${tx.source}”, fora do Willo. O valor sai da caixinha.`;
     return `O depósito de ${value} sai da caixinha.`;
   };
 
@@ -309,13 +321,14 @@ export default function MetaDetalhe() {
   const totalOut = withdrawals.reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
 
   const pace = paceOf(goal);
-  /* The plan is what was set to go in each month; with only a date, what that date asks.
-     When it arrives is always worked out again from what is actually left, so a month with
-     more put in brings the date closer and a month with less pushes it out. */
-  const plan =
-    Number(goal.monthly_contribution) > 0 ? Number(goal.monthly_contribution) : !pace.open && !pace.late && pace.monthly > 0 ? pace.monthly : 0;
+  /* The plan is always worked out again from what is actually in it. With a date, the date
+     holds and the month's figure moves: put in more than planned and each month left asks
+     less; put in less and it asks more — what is left over the months left. Without a date,
+     the monthly figure that was set holds and the date moves instead. */
+  const dated = hasTarget && !isComplete && !pace.open && !pace.late && pace.monthly > 0;
+  const plan = dated ? pace.monthly : Number(goal.monthly_contribution) > 0 ? Number(goal.monthly_contribution) : 0;
   const monthsToGo = hasTarget && !isComplete && plan > 0 ? Math.max(1, Math.ceil(remaining / plan)) : 0;
-  const reachOn = monthsToGo > 0 ? monthYear(deadlineIn(monthsToGo)) : null;
+  const reachOn = dated ? monthYear(goal.deadline as string) : monthsToGo > 0 ? monthYear(deadlineIn(monthsToGo)) : null;
 
   const forecast = earns(goal) && cdi !== null ? estimate(Number(goal.current_amount) || 0, cdi, Number(goal.yield_percent)) : null;
   const shown = showAll ? movements : movements.slice(0, PREVIEW);
@@ -519,9 +532,9 @@ export default function MetaDetalhe() {
                       </Text>
                     )}
                     <Pressable
-                      disabled={isWithdraw || isYield}
-                      onLongPress={() => setConfirming(tx)}
-                      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed && !isWithdraw && !isYield ? 0.7 : 1 })}
+                      disabled={isYield}
+                      onPress={() => setConfirming(tx)}
+                      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed && !isYield ? 0.6 : 1 })}
                     >
                       <View
                         style={{
@@ -575,9 +588,9 @@ export default function MetaDetalhe() {
                 </Text>
               </Pressable>
             )}
-            {deposits.some((t) => t.source !== YIELD_SOURCE) && (
+            {movements.some((t) => t.source !== YIELD_SOURCE) && (
               <Text style={{ marginTop: 10, paddingHorizontal: 4, fontSize: 11.5, color: INK.softer }}>
-                Segure um depósito para desfazê-lo.
+                Toque numa movimentação para apagá-la. O dinheiro volta para onde estava.
               </Text>
             )}
           </Animated.View>
@@ -640,9 +653,9 @@ export default function MetaDetalhe() {
 
       <ConfirmGlass
         open={!!confirming}
-        title={confirming === "meta" ? `Excluir ${goal.name}?` : "Remover depósito"}
-        confirmLabel={confirming === "meta" ? "Excluir" : "Remover"}
-        onConfirm={() => (confirming === "meta" ? void removeGoal() : confirming ? void removeDeposit(confirming) : undefined)}
+        title={confirming === "meta" ? `Excluir ${goal.name}?` : confirming && Number(confirming.amount) < 0 ? "Apagar retirada?" : "Apagar depósito?"}
+        confirmLabel={confirming === "meta" ? "Excluir" : "Apagar"}
+        onConfirm={() => (confirming === "meta" ? void removeGoal() : confirming ? void removeMovement(confirming) : undefined)}
         onClose={() => setConfirming(null)}
       >
         {confirming === "meta"

@@ -20,9 +20,8 @@ import { onToast } from "~/lib/toast";
  * The notice, in the shape of the phone's own.
  *
  * Glass over whatever is behind it, the app's mark on the left, its name and a
- * sentence. It drops in from the top on a spring, with a little give at the end the
- * way a notification settles, stays long enough to be read, and leaves the way it
- * came. It can be sent away early: a flick up, or a tap. While a finger is on it the
+ * sentence. It glides in a short way from the top while it fades up, with no bounce,
+ * stays long enough to be read, and leaves the same way, softly. It can be sent away early: a flick up, or a tap. While a finger is on it the
  * clock stops — a notice you are holding should not leave your hand.
  *
  * Where it sits is one constant: the top here, and the bottom is a change of this line.
@@ -35,8 +34,13 @@ const BASE_MS = 3600;
 const PER_CHAR_MS = 40;
 /** After a finger lets go without sending it away. */
 const RESUME_MS = 2200;
-const WAY_MS = 240;
+/* In and out are slow enough to be seen and short enough in distance not to feel like a drop. */
+const IN_MS = 560;
+const WAY_MS = 460;
+const TRAVEL = 34;
 const OFFSCREEN = 130;
+const SOFT = Easing.bezier(0.22, 1, 0.36, 1);
+const SOFT_OUT = Easing.bezier(0.4, 0, 0.6, 1);
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const MARK = require("../../assets/willo-icon.png") as number;
@@ -63,7 +67,7 @@ export default function ToastHost() {
 
   const leave = useCallback(() => {
     stop();
-    shown.set(withTiming(0, { duration: WAY_MS, easing: Easing.in(Easing.cubic), reduceMotion: ReduceMotion.System }));
+    shown.set(withTiming(0, { duration: WAY_MS, easing: SOFT_OUT, reduceMotion: ReduceMotion.System }));
     clear.current = setTimeout(finish, WAY_MS + 30);
   }, [shown, finish]);
 
@@ -90,7 +94,7 @@ export default function ToastHost() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       drag.set(0);
       shown.set(0);
-      shown.set(withSpring(1, { duration: 620, dampingRatio: 0.6, reduceMotion: ReduceMotion.System }));
+      shown.set(withTiming(1, { duration: IN_MS, easing: SOFT, reduceMotion: ReduceMotion.System }));
       arm(BASE_MS + Math.max(0, message.length - 24) * PER_CHAR_MS);
     });
     return () => {
@@ -121,10 +125,10 @@ export default function ToastHost() {
     });
 
   const motion = useAnimatedStyle(() => ({
-    opacity: Math.min(1, Math.max(0, shown.get() * 1.4)) * Math.max(0, 1 - Math.abs(drag.get()) / 220),
+    opacity: shown.get() * Math.max(0, 1 - Math.abs(drag.get()) / 220),
     transform: [
-      { translateY: (1 - shown.get()) * DIR * OFFSCREEN + drag.get() },
-      { scale: 0.9 + Math.min(shown.get(), 1.04) * 0.1 },
+      { translateY: (1 - shown.get()) * DIR * TRAVEL + drag.get() },
+      { scale: 0.96 + shown.get() * 0.04 },
     ],
   }));
 
