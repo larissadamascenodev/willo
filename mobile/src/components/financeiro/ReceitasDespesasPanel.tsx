@@ -6,7 +6,7 @@ import { MONTH_NAMES } from "@/lib/projectionRows";
 import { categoryHex } from "@/lib/categoryData";
 import BottomSheet from "~/components/BottomSheet";
 import { SURFACE_FILL } from "~/components/Surface";
-import { ChevronLeft, ChevronRight } from "~/components/icons";
+import { ChevronRight } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
@@ -43,11 +43,8 @@ interface Month {
   openingIncome: number;
 }
 
-export default function ReceitasDespesasPanel() {
+export default function ReceitasDespesasPanel({ month, year }: { month: number; year: number }) {
   const { user } = useAuth();
-  const now = new Date();
-  const [month, setMonth] = useState(now.getMonth());
-  const [year, setYear] = useState(now.getFullYear());
   const [open, setOpen] = useState<(GroupData & { receita: boolean }) | null>(null);
   const [data, setData] = useState<Month | null>(null);
   const [failed, setFailed] = useState(false);
@@ -86,56 +83,19 @@ export default function ReceitasDespesasPanel() {
     return () => window.removeEventListener("finance-data-changed", again);
   }, [load]);
 
-  const step = (by: number) => {
-    const d = new Date(year, month + by, 1);
-    setMonth(d.getMonth());
-    setYear(d.getFullYear());
-  };
-
   const sum = (list: RawTransaction[]) => list.reduce((s, t) => s + Number(t.amount), 0);
 
   return (
-    <View style={{ marginTop: 18 }}>
-      {/* ══ Which month: one quiet capsule ══ */}
-      <View style={{ alignSelf: "center", height: 40, paddingHorizontal: 4, borderRadius: 20, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", backgroundColor: SURFACE_FILL }}>
-        <Pressable accessibilityLabel="Mês anterior" onPress={() => step(-1)} hitSlop={8} style={({ pressed }) => ({ width: 34, height: 34, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.5 : 1 })}>
-          <ChevronLeft size={18} color="rgba(255,255,255,0.8)" strokeWidth={2.3} />
-        </Pressable>
-        <Text style={{ minWidth: 120, textAlign: "center", fontSize: 15, fontWeight: "700", color: "#fff" }}>
-          {MONTH_NAMES[month]}
-          {year !== now.getFullYear() ? ` ${year}` : ""}
-        </Text>
-        <Pressable accessibilityLabel="Próximo mês" onPress={() => step(1)} hitSlop={8} style={({ pressed }) => ({ width: 34, height: 34, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.5 : 1 })}>
-          <ChevronRight size={18} color="rgba(255,255,255,0.8)" strokeWidth={2.3} />
-        </Pressable>
-      </View>
-
+    <View>
       {failed ? (
         <Text style={{ marginTop: 40, textAlign: "center", fontSize: 14, color: INK.soft }}>Não foi possível carregar o mês.</Text>
       ) : !data ? (
-        <View style={{ marginTop: 18, gap: 12 }}>
+        <View style={{ gap: 12 }}>
           <View style={{ height: 190, borderRadius: 26, backgroundColor: "rgba(255,255,255,0.04)" }} />
           <View style={{ height: 190, borderRadius: 26, backgroundColor: "rgba(255,255,255,0.04)" }} />
         </View>
       ) : (
-        <Animated.View entering={FadeIn.duration(260)} style={{ marginTop: 18, gap: 12 }}>
-          {/* ══ What is left of the month, first: the answer before the parts ══ */}
-          {(() => {
-            const r = sum(data.receitas) + data.openingIncome;
-            const d = sum(data.despesas);
-            const left = r - d;
-            return (
-              <View style={{ alignItems: "center", paddingVertical: 6 }}>
-                <Text style={{ fontSize: 13, color: INK.soft }}>{left >= 0 ? "Sobrou no mês" : "Faltou no mês"}</Text>
-                <Text style={[{ marginTop: 2, fontSize: 40, fontWeight: "800", letterSpacing: -1.5, color: left >= 0 ? "#fff" : RED }, nums]}>
-                  {money(Math.abs(left))}
-                </Text>
-                <Text style={{ marginTop: 2, fontSize: 13, color: INK.softer }}>
-                  {r > 0 ? `Você gastou ${Math.round((d / r) * 100)}% do que entrou` : "Nada entrou ainda neste mês"}
-                </Text>
-              </View>
-            );
-          })()}
+        <Animated.View entering={FadeIn.duration(260)} style={{ gap: 12 }}>
           <Side
             receita
             title="Receitas"

@@ -53,9 +53,12 @@ const lower = (s: string) => s.toLocaleLowerCase("pt-BR");
 export default function BalancoPanel({
   projection,
   onOpenProjecoes,
+  closeOnly = false,
 }: {
   projection: Projection;
-  onOpenProjecoes: () => void;
+  onOpenProjecoes?: () => void;
+  /** Only how the month closes — for a page that shows the rest in sections of its own. */
+  closeOnly?: boolean;
 }) {
   const { data, loading, futureReady, projections, monthData, selectedMonth, selectedYear } = projection;
   const [open, setOpen] = useState<ProjectionRowView | null>(null);
@@ -148,6 +151,8 @@ export default function BalancoPanel({
         )}
       </View>
 
+      {!closeOnly && (
+      <>
       {/* ══ The same month, written out ══ */}
       <View style={{ marginTop: 34, borderTopWidth: 1, borderTopColor: RULE }}>
         <LedgerRow
@@ -233,6 +238,9 @@ export default function BalancoPanel({
         Cada mês aqui conta só o que entra e sai nele. O saldo que passa de um mês para o outro está
         em Projeções.
       </Text>
+
+      </>
+      )}
 
       <MonthSheet
         row={open}
