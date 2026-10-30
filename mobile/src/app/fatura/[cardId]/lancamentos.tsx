@@ -10,6 +10,7 @@ import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import { InvoiceLineRow } from "~/components/fatura/InvoiceRecentCard";
 import LineDetail from "~/components/fatura/LineDetail";
+import CountUp from "~/components/CountUp";
 import SegmentedTabs from "~/components/SegmentedTabs";
 import { Search } from "~/components/icons";
 import { money } from "~/lib/money";
@@ -199,9 +200,7 @@ export default function Lancamentos() {
             <Text style={{ color: "rgba(255,255,255,0.2)" }}> · </Text>
             {lines.length} {lines.length === 1 ? "lançamento" : "lançamentos"}
           </Text>
-          <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 38, fontWeight: "800", letterSpacing: -1.5, color: "#fff" }}>
-            {money(total)}
-          </Text>
+          <CountUp value={total} numberOfLines={1} style={{ marginTop: 4, fontSize: 38, fontWeight: "800", letterSpacing: -1.5, color: "#fff", fontVariant: ["tabular-nums"] }} />
         </View>
 
         {/* The split is the answer; the list below is the evidence for it. */}
@@ -209,17 +208,13 @@ export default function Lancamentos() {
           <View style={{ flex: 1 }}>
             <Text style={[T.eyebrow, { fontSize: 11 }]}>Parcelado</Text>
             <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 18, fontWeight: "700", letterSpacing: -0.5, color: "#fff" }}>
-                {money(split.parcelado)}
-              </Text>
+              <CountUp value={split.parcelado} numberOfLines={1} style={{ flexShrink: 1, fontSize: 18, fontWeight: "700", letterSpacing: -0.5, color: "#fff", fontVariant: ["tabular-nums"] }} />
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#A78BFA" }} />
             </View>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[T.eyebrow, { fontSize: 11 }]}>À vista</Text>
-            <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 18, fontWeight: "700", letterSpacing: -0.5, color: "#fff" }}>
-              {money(split.avista)}
-            </Text>
+            <CountUp value={split.avista} numberOfLines={1} style={{ marginTop: 4, fontSize: 18, fontWeight: "700", letterSpacing: -0.5, color: "#fff", fontVariant: ["tabular-nums"] }} />
           </View>
         </View>
 

@@ -19,10 +19,11 @@ import CardFormSheet, { type CardDraft } from "~/components/wallet/CardFormSheet
 import InvoiceForecastChart from "~/components/fatura/InvoiceForecastChart";
 import InvoiceRecentCard from "~/components/fatura/InvoiceRecentCard";
 import LineDetail from "~/components/fatura/LineDetail";
+import CountUp from "~/components/CountUp";
 import PayInvoiceSheet from "~/components/fatura/PayInvoiceSheet";
 import AddToCardSheet from "~/components/fatura/AddToCardSheet";
 import AnchoredMenu, { MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
-import { AlertTriangle, Check, Clock, Lock, MoreVertical, Pencil, Plus, Trash2, Wallet } from "~/components/icons";
+import { AlertTriangle, CalendarClock, Check, Clock, Lock, MoreVertical, Pencil, Plus, Trash2, Wallet } from "~/components/icons";
 import { showToast } from "~/lib/toast";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
@@ -201,8 +202,11 @@ export default function Fatura() {
     if (current.is_paid && outstanding <= 0 && closed) return { label: "Paga", tone: GREEN, Icon: Check };
     if (cycle?.overdue) return { label: "Vencida", tone: RED, Icon: AlertTriangle };
     if (closed) return { label: "Fechada", tone: "#F5C26B", Icon: Lock };
+    /* Only the invoice collecting today's purchases is open; the ones after it are still to come. */
+    if (card && year * 12 + (month - 1) > invoicePeriodIndex(new Date().toISOString().slice(0, 10), card.closing_day))
+      return { label: "Futura", tone: "rgba(255,255,255,0.7)", Icon: CalendarClock };
     return { label: "Aberta", tone: "#8FC7FF", Icon: Clock };
-  }, [current, closed, outstanding, cycle]);
+  }, [current, closed, outstanding, cycle, card, month, year]);
   const paidOff = status?.label === "Paga";
 
   const [editing, setEditing] = useState(false);
@@ -323,12 +327,11 @@ export default function Fatura() {
                   </View>
                 )}
               </View>
-              <Text
+              <CountUp
+                value={headline}
                 numberOfLines={1}
-                style={{ marginTop: 4, fontSize: 42, fontWeight: "800", letterSpacing: -1.7, color: paidOff ? "rgba(255,255,255,0.55)" : "#fff" }}
-              >
-                {money(headline)}
-              </Text>
+                style={{ marginTop: 4, fontSize: 42, fontWeight: "800", letterSpacing: -1.7, color: paidOff ? "rgba(255,255,255,0.55)" : "#fff", fontVariant: ["tabular-nums"] }}
+              />
               {cycle && (
                 <Text style={{ marginTop: 10, fontSize: 13, color: cycle.overdue ? RED : INK.soft }}>
                   {cycle.line}

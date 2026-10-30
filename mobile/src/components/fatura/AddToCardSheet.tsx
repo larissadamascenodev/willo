@@ -3,8 +3,9 @@ import { ActionSheetIOS, ActivityIndicator, Platform, Pressable, Text, View } fr
 import { useRouter } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { importStatement, type ImportableItem } from "@/services/invoiceImport";
-import BottomSheet from "~/components/BottomSheet";
-import { Camera, Check, FileText, ImageIcon, PenLine, Receipt } from "~/components/icons";
+import { LinearGradient } from "expo-linear-gradient";
+import CenterModal from "~/components/CenterModal";
+import { Camera, Check, ChevronRight, FileText, ImageIcon, PenLine, Receipt } from "~/components/icons";
 import { NeedsNewBuild, pickFile, pickFromGallery, takePhoto, type PickedStatement } from "~/lib/pickStatement";
 import { processScanDocument, processScanPhoto, type ScanResult } from "~/lib/scanUpload";
 import { money } from "~/lib/money";
@@ -189,15 +190,18 @@ export default function AddToCardSheet({
   };
 
   return (
-    <BottomSheet open={open} onClose={close} full={step === "review"}>
-      <View style={{ paddingHorizontal: 20 }}>
+    <CenterModal
+      open={open}
+      onClose={close}
+      title={step === "review" ? "Confira antes de importar" : step === "choose" ? "Adicionar ao cartão" : "Enviar fatura"}
+      subtitle={`Fatura de ${MONTHS[month - 1]}`}
+    >
+      <View>
         {step === "choose" && (
           <Animated.View entering={FadeIn.duration(200)}>
-            <Text style={{ fontSize: 20, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Adicionar ao cartão</Text>
-            <Text style={{ marginTop: 4, fontSize: 13.5, color: INK.soft }}>Fatura de {MONTHS[month - 1]}</Text>
-            <View style={{ marginTop: 18, gap: 10 }}>
-              <Option icon={PenLine} title="Adicionar manualmente" note="Uma compra, digitada por você" onPress={manual} />
-              <Option icon={FileText} title="Enviar fatura" note="PDF, foto da galeria ou da câmera" onPress={upload} />
+            <View style={{ marginTop: 8, gap: 12 }}>
+              <Option icon={PenLine} hex="#A78BFA" title="Adicionar manualmente" note="Uma compra, digitada por você" onPress={manual} />
+              <Option icon={FileText} hex="#7CC4FF" title="Enviar fatura" note="O Willo lê o PDF ou a foto e separa cada compra" onPress={upload} />
             </View>
             {error && <Text style={{ marginTop: 14, fontSize: 13, color: RED }}>{error}</Text>}
           </Animated.View>
@@ -205,11 +209,10 @@ export default function AddToCardSheet({
 
         {step === "source" && (
           <Animated.View entering={FadeIn.duration(200)}>
-            <Text style={{ fontSize: 20, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Enviar fatura</Text>
-            <View style={{ marginTop: 18, gap: 10 }}>
-              <Option icon={FileText} title="Escolher arquivo" note="O PDF que o banco enviou" onPress={() => void read(pickFile)} />
-              <Option icon={ImageIcon} title="Escolher da galeria" note="Um print ou foto da fatura" onPress={() => void read(pickFromGallery)} />
-              <Option icon={Camera} title="Tirar foto" note="Da fatura impressa ou na tela" onPress={() => void read(takePhoto)} />
+            <View style={{ marginTop: 8, gap: 12 }}>
+              <Option icon={FileText} hex="#7CC4FF" title="Escolher arquivo" note="O PDF que o banco enviou" onPress={() => void read(pickFile)} />
+              <Option icon={ImageIcon} hex="#F9A8D4" title="Escolher da galeria" note="Um print ou foto da fatura" onPress={() => void read(pickFromGallery)} />
+              <Option icon={Camera} hex="#C8F36D" title="Tirar foto" note="Da fatura impressa ou na tela" onPress={() => void read(takePhoto)} />
             </View>
           </Animated.View>
         )}
@@ -226,9 +229,8 @@ export default function AddToCardSheet({
 
         {step === "review" && (
           <Animated.View entering={FadeIn.duration(220)}>
-            <Text style={{ fontSize: 20, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Confira antes de importar</Text>
-            <Text style={{ marginTop: 4, fontSize: 13.5, color: INK.soft }}>
-              {lines.length} {lines.length === 1 ? "lançamento encontrado" : "lançamentos encontrados"} · fatura de {MONTHS[month - 1]}
+            <Text style={{ fontSize: 13.5, color: INK.soft }}>
+              {lines.length} {lines.length === 1 ? "lançamento encontrado" : "lançamentos encontrados"}
             </Text>
 
             <View style={{ marginTop: 16, flexDirection: "row", gap: 16 }}>
@@ -314,41 +316,45 @@ export default function AddToCardSheet({
           </Animated.View>
         )}
       </View>
-    </BottomSheet>
+    </CenterModal>
   );
 }
 
 function Option({
   icon: Icon,
+  hex,
   title,
   note,
   onPress,
 }: {
   icon: typeof Receipt;
+  hex: string;
   title: string;
   note: string;
   onPress: () => void;
 }) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => ({
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 14,
-        padding: 14,
-        borderRadius: 20,
-        borderCurve: "continuous",
-        backgroundColor: "rgba(255,255,255,0.06)",
-        transform: [{ scale: pressed ? 0.98 : 1 }],
-      })}
-    >
-      <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.10)" }}>
-        <Icon size={19} color="#fff" strokeWidth={2} />
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ fontSize: 15.5, fontWeight: "700", color: "#fff" }}>{title}</Text>
-        <Text style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>{note}</Text>
+    <Pressable onPress={onPress} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+      <View style={{ borderRadius: 22, borderCurve: "continuous", overflow: "hidden" }}>
+        {/* The option's own colour, faint, washing in from the corner its glyph sits in. */}
+        <LinearGradient
+          colors={[`${hex}2E`, `${hex}0A`, "rgba(255,255,255,0.03)"]}
+          locations={[0, 0.55, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+        />
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 22, borderCurve: "continuous", borderWidth: 1, borderColor: `${hex}33` }} />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 18, paddingHorizontal: 16 }}>
+          <View style={{ width: 50, height: 50, borderRadius: 16, borderCurve: "continuous", alignItems: "center", justifyContent: "center", backgroundColor: `${hex}26` }}>
+            <Icon size={22} color={hex} strokeWidth={2} />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: "#fff" }}>{title}</Text>
+            <Text style={{ marginTop: 3, fontSize: 12.5, lineHeight: 17, color: INK.soft }}>{note}</Text>
+          </View>
+          <ChevronRight size={18} color="rgba(255,255,255,0.45)" />
+        </View>
       </View>
     </Pressable>
   );

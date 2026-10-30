@@ -199,7 +199,7 @@ export default function LineDetail({
           </View>
         </View>
 
-        {/* ══ Where the plan stands ══ */}
+        {/* ══ Where the plan stands: which one, how far, what is paid against the whole ══ */}
         {plan && (
           <View style={{ marginTop: 22 }}>
             <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" }}>
@@ -207,24 +207,33 @@ export default function LineDetail({
                 Parcela {plan.current} de {plan.total}
               </Text>
               <Text style={{ fontSize: 13, color: INK.soft }}>
-                {plan.total - plan.current === 0 ? "última parcela" : `faltam ${plan.total - plan.current}`}
+                {plan.total - plan.current === 0
+                  ? "última parcela"
+                  : `faltam ${money(each * (plan.total - plan.current))}`}
               </Text>
             </View>
-            <View style={{ marginTop: 10, height: 6, borderRadius: 3, overflow: "hidden", flexDirection: "row", gap: 2 }}>
+            <View style={{ marginTop: 10, height: 6, flexDirection: "row", gap: 3 }}>
               {Array.from({ length: plan.total }, (_, i) => (
-                <View key={i} style={{ flex: 1, backgroundColor: i < plan.current ? hex : "rgba(255,255,255,0.10)" }} />
+                <View key={i} style={{ flex: 1, borderRadius: 3, backgroundColor: i < plan.current ? hex : "rgba(255,255,255,0.10)" }} />
               ))}
+            </View>
+            <View style={{ marginTop: 10, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
+              <View>
+                <Text style={{ fontSize: 11.5, color: INK.softer }}>Pago até esta parcela</Text>
+                <Text style={{ marginTop: 2, fontSize: 14.5, fontWeight: "700", color: "#fff" }}>{money(each * plan.current)}</Text>
+              </View>
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={{ fontSize: 11.5, color: INK.softer }}>Total da compra</Text>
+                <Text style={{ marginTop: 2, fontSize: 17, fontWeight: "800", letterSpacing: -0.4, color: "#fff" }}>{money(each * plan.total)}</Text>
+              </View>
             </View>
           </View>
         )}
 
         {/* ══ The facts ══ */}
-        <View style={{ marginTop: 20 }}>
+        <View style={{ marginTop: 14 }}>
           <Fact label="Data da compra" value={day} />
-          <Fact label="Categoria" value={shown.category} />
-          {plan && <Fact label="Total da compra" value={money(each * plan.total)} />}
-          {plan && <Fact label="Já pago" value={money(each * (plan.current - 1))} />}
-          {plan && <Fact label="Ainda falta" value={money(each * (plan.total - plan.current + 1))} last />}
+          <Fact label="Categoria" value={shown.category} last={!(!plan && cardName)} />
           {!plan && cardName && <Fact label="Cartão" value={cardName} last />}
         </View>
           </Animated.View>
