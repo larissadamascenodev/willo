@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, ScrollView, Text, View, type TextStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -16,6 +16,7 @@ import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import { FlexBar } from "~/components/Bar";
 import InstallmentList from "~/components/installments/InstallmentList";
+import CountUp from "~/components/CountUp";
 import InstallmentChart from "~/components/installments/InstallmentChart";
 import InstallmentPayoffs from "~/components/installments/InstallmentPayoffs";
 import InstallmentCategories from "~/components/installments/InstallmentCategories";
@@ -105,6 +106,16 @@ export function ParcelamentosView({
      of its invoice — and one running late in this month. */
   const months = useMemo<ProjectionMonth[]>(() => installmentProjection(list, stats?.monthsUntilFree ?? 12), [list, stats]);
 
+  /* Open on the first month that has an instalment in it — this month is often empty
+     when everything runs through a card whose next invoice falls next month. */
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current || months.length === 0) return;
+    opened.current = true;
+    const first = months.findIndex((m) => m.value > 0);
+    if (first > 0) setMonth(first);
+  }, [months]);
+
   const selected = Math.min(month, Math.max(months.length - 1, 0));
   const picked = months[selected];
   const thisYear = months[0]?.year;
@@ -165,10 +176,16 @@ export function ParcelamentosView({
                     : ", todas na conta"}
               </Text>
 
-              <Text style={{ marginTop: 26, fontSize: 15, color: INK.soft }}>Comprometido por mês</Text>
-              <Text numberOfLines={1} adjustsFontSizeToFit style={[nums, { marginTop: 4, fontSize: 42, fontWeight: "700", letterSpacing: -1.6, color: "#fff" }]}>
-                {money(stats.totalMensal)}
+              {/* What the instalments take in the month chosen on the chart, following it. */}
+              <Text style={{ marginTop: 26, fontSize: 15, color: INK.soft }}>
+                Comprometido {selected === 0 ? "este mês" : `em ${monthName}`}
               </Text>
+              <CountUp
+                value={picked ? picked.value : stats.totalMensal}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                style={[nums, { marginTop: 4, fontSize: 42, fontWeight: "700", letterSpacing: -1.6, color: "#fff" }]}
+              />
               <Text style={{ marginTop: 4, fontSize: 14.5, color: INK.soft }}>
                 {stats.monthsUntilFree > 0 ? (
                   <>

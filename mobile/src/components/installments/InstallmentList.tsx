@@ -163,11 +163,12 @@ export function InstallmentDetail({
   const start = new Date(`${item.date.slice(0, 10)}T12:00:00`);
   const day = start.toLocaleDateString("pt-BR", { day: "numeric", month: "short", year: "numeric" });
   /* The instalments still to come, month by month. */
+  /* On a card, the month of the invoice the next one is billed on; otherwise the purchase's. */
+  const due = item.dueDate ? new Date(item.dueDate) : null;
+  const first = due ? due.getFullYear() * 12 + due.getMonth() : start.getFullYear() * 12 + start.getMonth() + paidCount;
   const ahead = Array.from({ length: item.installments - paidCount }, (_, k) => {
-    const n = paidCount + k + 1;
-    const d = new Date(start);
-    d.setMonth(d.getMonth() + n - 1);
-    return { n, label: `${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}` };
+    const p = first + k;
+    return { n: paidCount + k + 1, label: `${MONTHS_SHORT[p % 12]} ${Math.floor(p / 12)}` };
   });
 
   return (
