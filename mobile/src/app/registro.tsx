@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef, t
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeIn, FadeInDown, LinearTransition } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, LinearTransition, withTiming } from "react-native-reanimated";
+import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { categoryHex } from "@/lib/categoryData";
 import { createTransaction, deleteTransaction, getAccounts, getCreditCards, getRecentTransactions } from "@/services/transactionService";
@@ -82,6 +83,21 @@ interface Shortcut {
   type: "despesa" | "receita";
   text: string;
 }
+
+/** The sphere's size once a conversation is under it. */
+const COMPACT_ORB = 118;
+
+/** The sphere arrives from where it was: larger and lower, settling small and high. */
+const shrinkIn = () => {
+  "worklet";
+  return {
+    initialValues: { opacity: 0.5, transform: [{ translateY: 140 }, { scale: 2.2 }] },
+    animations: {
+      opacity: withTiming(1, { duration: 420 }),
+      transform: [{ translateY: withTiming(0, { duration: 620 }) }, { scale: withTiming(1, { duration: 620 }) }],
+    },
+  };
+};
 
 /** The room under the sphere for what it is saying. */
 const CAPTION_H = 84;
@@ -529,7 +545,8 @@ export default function Registro() {
      swollen it is a sixth wider than it is drawn. Measured, not guessed — the sphere
      was laid out against a height it did not have, and everything overlapped. */
   const orb = stageH > 0 ? Math.max(190, Math.min(width * 0.8, 320, stageH - CAPTION_H - 18 - 56)) : 250;
-  const stage = listening || reading || !started;
+  /* The full stage is the welcome; once there is a conversation the sphere stays, smaller and higher, above it. */
+  const stage = !started;
 
   return (
     <Room lit sky>
@@ -547,15 +564,9 @@ export default function Registro() {
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-            {started && !listening && !reading ? (
-              <Animated.View entering={FadeIn.duration(320)}>
-                <ParticleOrb size={44} mode={mode} onPress={() => void entry.toggle()} />
-              </Animated.View>
-            ) : (
-              <View style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
-                <Zap size={18} color={GREEN} />
-              </View>
-            )}
+            <View style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
+              <Zap size={18} color={GREEN} />
+            </View>
             <View style={{ minWidth: 0 }}>
               <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>Willo</Text>
               <Text style={{ fontSize: 12, color: INK.softer }}>
@@ -723,6 +734,14 @@ export default function Registro() {
             )}
           </View>
         ) : (
+          <View style={{ flex: 1 }}>
+          {/* The sphere, smaller and higher, keeps listening above the conversation. */}
+          <Animated.View entering={shrinkIn} style={{ alignItems: "center", paddingTop: 2, paddingBottom: 8 }}>
+            <ParticleOrb size={COMPACT_ORB} mode={mode} expanded={listening} onPress={() => void entry.toggle()} />
+            <Text style={{ marginTop: 6, fontSize: 12.5, color: listening ? "#fff" : INK.softer }}>
+              {listening ? "Estou ouvindo… toque para parar" : reading ? "Anotando…" : busy ? `${thinking}…` : "Toque na esfera para falar"}
+            </Text>
+          </Animated.View>
           <ScrollView
             ref={threadRef}
             style={{ flex: 1 }}
@@ -753,6 +772,7 @@ export default function Registro() {
               </Animated.View>
             )}
           </ScrollView>
+          </View>
         )}
 
         {/* ── The composer ── */}
@@ -987,16 +1007,18 @@ function Bubble({ role, text, agents, instant }: { role: "bot" | "user"; text: s
           paddingVertical: 10,
           borderRadius: 20,
           borderCurve: "continuous",
+          overflow: "hidden",
           ...(mine
-            ? { borderBottomRightRadius: 7, backgroundColor: GREEN }
+            ? { borderBottomRightRadius: 7, backgroundColor: "#fff" }
             : {
                 borderBottomLeftRadius: 7,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.09)",
-                backgroundColor: "rgba(255,255,255,0.06)",
+                borderColor: "rgba(255,255,255,0.12)",
+                backgroundColor: "rgba(255,255,255,0.07)",
               }),
         }}
       >
+        {!mine && <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />}
         <Text style={{ fontSize: 15, lineHeight: 20, fontWeight: mine ? "500" : "400", color: mine ? "#0B0B0B" : "rgba(255,255,255,0.92)" }}>
           {text}
         </Text>
