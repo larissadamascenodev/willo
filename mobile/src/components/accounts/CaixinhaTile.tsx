@@ -50,7 +50,10 @@ export default function CaixinhaTile({
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.97 : 1 }] })}>
-      <View style={{ width, height, borderRadius: 28, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" }}>
+      {/* No border on the clipped frame itself: a picture clipped to a rounded border shows a
+          thin bright fringe where the border's anti-aliasing meets it. The edge is drawn on top
+          instead, over the picture and its shade alike. */}
+      <View style={{ width, height, borderRadius: 28, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#0D0E10" }}>
         <CaixinhaCover goal={goal} width={width} height={height} glyph={Math.round(width * 0.72)} glyphTop={Math.round(height * 0.07)} />
         <LinearGradient
           colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.55)", "rgba(8,9,10,0.92)"]}
@@ -97,6 +100,7 @@ export default function CaixinhaTile({
             </Text>
           )}
         </View>
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 28, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
       </View>
     </Pressable>
   );

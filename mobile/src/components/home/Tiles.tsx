@@ -634,6 +634,11 @@ export function MetasCard({
                     </View>
                     <Text style={[nums, { fontSize: 12, color: isComplete ? GREEN : INK.soft }]}>{percent}%</Text>
                   </View>
+                ) : null}
+                {hasTarget ? (
+                  <Text numberOfLines={1} style={[nums, { marginTop: 4, fontSize: 12, color: INK.softer }]}>
+                    Meta de {money(Number(goal.target_amount) || 0)}
+                  </Text>
                 ) : (
                   <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 12.5, color: INK.softer }}>sem valor definido</Text>
                 )}

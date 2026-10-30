@@ -59,6 +59,10 @@ interface Props {
   onEditingChange: (editing: boolean) => void;
 }
 
+/* On the phone the goals are caixinhas; the shared list still says Metas for the web. */
+const phoneLabel = (id: string, label: string) => (id === "metas" ? "Caixinhas" : label);
+const phoneDescription = (id: string, description: string) => (id === "metas" ? "Quanto está guardado em cada caixinha" : description);
+
 export default function WidgetBoard({ userId, render, skip, gap = 16, editing, onEditingChange }: Props) {
   const [slots, setSlots] = useState<WidgetSlot[]>(() => loadPhoneLayout(userId));
   const [held, setHeld] = useState<WidgetMenuTarget | null>(null);
@@ -215,8 +219,8 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
                   if (!def) return;
                   setHeld({
                     id: slot.id,
-                    label: def.label,
-                    description: def.description,
+                    label: phoneLabel(def.id, def.label),
+                    description: phoneDescription(def.id, def.description),
                     size: slot.size,
                     resizable: def.resizable,
                     rect,
@@ -304,10 +308,10 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
               >
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>
-                    {w.label}
+                    {phoneLabel(w.id, w.label)}
                   </Text>
                   <Text numberOfLines={1} style={{ fontSize: 12.5, color: INK.softer }}>
-                    {w.description}
+                    {phoneDescription(w.id, w.description)}
                   </Text>
                 </View>
                 <Pressable
