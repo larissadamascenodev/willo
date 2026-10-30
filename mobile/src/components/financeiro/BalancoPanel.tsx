@@ -54,11 +54,14 @@ export default function BalancoPanel({
   projection,
   onOpenProjecoes,
   closeOnly = false,
+  nextOnly = false,
 }: {
   projection: Projection;
   onOpenProjecoes?: () => void;
   /** Leaves out the month written out (entrou, saiu) — for a page that shows that above it. */
   closeOnly?: boolean;
+  /** Only the next few months — for a page that draws the close itself. */
+  nextOnly?: boolean;
 }) {
   const { data, loading, futureReady, projections, monthData, selectedMonth, selectedYear } = projection;
   const [open, setOpen] = useState<ProjectionRowView | null>(null);
@@ -97,7 +100,9 @@ export default function BalancoPanel({
       : `Deve sobrar em ${month}`;
 
   return (
-    <View style={{ marginTop: 28, paddingHorizontal: 4 }}>
+    <View style={{ marginTop: nextOnly ? 0 : 28, paddingHorizontal: 4 }}>
+      {!nextOnly && (
+      <>
       {/* ══ The answer ══ */}
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
         <Text style={{ fontSize: 15, color: INK.soft }}>{headline}</Text>
@@ -151,7 +156,10 @@ export default function BalancoPanel({
         )}
       </View>
 
-      {!closeOnly && (
+      </>
+      )}
+
+      {!closeOnly && !nextOnly && (
       <>
       {/* ══ The same month, written out ══ */}
       <View style={{ marginTop: 34, borderTopWidth: 1, borderTopColor: RULE }}>

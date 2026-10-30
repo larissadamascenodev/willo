@@ -17,8 +17,9 @@ import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
  * that come every month whatever happens) and how much varies, and then the two parts
  * written out, each with its own total and every entry in it.
  *
- * It reads the same month the home does — the same entries, the same cards counted only
- * when their invoice is in this month — so the totals here are the ones on the page.
+ * It reads the same month the home does — every entry from an account, and each card as
+ * its invoice for the month rather than the purchases inside it — so the totals here are
+ * the ones on the page.
  * Money put into a caixinha is not here: it is not spent, only moved.
  */
 
@@ -65,18 +66,31 @@ export default function EntriesModal({
     if (!user) return;
     setFailed(false);
     try {
-      const { summary, transactions, invoicesDetail } = await getFinancialSummary(month, year, { includeHistorical: false, userId: user.id });
-      /* A card's purchases count in the month its invoice is, as on the home. */
-      const cardsWithInvoice = new Set(
-        (invoicesDetail as { credit_card_id: string; total_amount: number }[])
-          .filter((inv) => Number(inv.total_amount) > 0)
-          .map((inv) => inv.credit_card_id),
-      );
-      const counted = transactions.filter((t) =>
-        t.payment_method === "cartao" && t.credit_card_id ? cardsWithInvoice.has(t.credit_card_id) : true,
-      );
-      const receitas = counted.filter((t) => t.type === "receita");
-      const despesas = counted.filter((t) => t.type === "despesa");
+      const { summary, transactions, invoicesDetail, creditCards } = await getFinancialSummary(month, year, { includeHistorical: false, userId: user.id });
+      const invoices = (invoicesDetail as { credit_card_id: string; total_amount: number; is_paid: boolean }[]).filter((inv) => Number(inv.total_amount) > 0);
+      const cards = new Map((creditCards as { id: string; name: string; due_day: number | null }[]).map((c) => [c.id, c]));
+      /* A card is one bill, as on the home: its purchases are not listed one by one but
+         paid together as the invoice, so the invoice is the entry. */
+      const faturas = invoices.map((inv) => {
+        const card = cards.get(inv.credit_card_id);
+        const day = String(Math.min(Math.max(card?.due_day ?? 1, 1), 28)).padStart(2, "0");
+        const count = transactions.filter((t) => t.payment_method === "cartao" && t.credit_card_id === inv.credit_card_id).length;
+        return {
+          id: `fatura-${inv.credit_card_id}`,
+          name: `Fatura ${card?.name ?? "do cartão"}`,
+          category: "Cartão de Crédito",
+          date: `${year}-${String(month + 1).padStart(2, "0")}-${day}`,
+          amount: Number(inv.total_amount),
+          type: "despesa",
+          status: inv.is_paid ? "pago" : "pendente",
+          payment_method: "fatura",
+          recurrence_type: "unica",
+          purchases: count,
+        } as unknown as RawTransaction;
+      });
+      const regular = transactions.filter((t) => t.payment_method !== "cartao");
+      const receitas = regular.filter((t) => t.type === "receita");
+      const despesas = [...regular.filter((t) => t.type === "despesa"), ...faturas];
       const listed = receitas.reduce((s, t) => s + Number(t.amount), 0);
       setData({ receitas, despesas, openingIncome: Math.max(0, Number(summary.income) - listed) });
     } catch {
@@ -177,7 +191,15 @@ function Group({ title, hint, items, receita, extra = 0 }: { title: string; hint
           {extra > 0 && <Line name="Saldo inicial das contas" category="Outros" sub="Conta aberta neste mês" amount={extra} receita />}
           {sorted.map((t) => {
             const day = new Date(`${t.date}T12:00:00`).toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(".", "");
-            const kind = t.recurrence_type === "parcelado" ? "Parcela" : t.recurrence_type === "fixa" ? "Fixa" : t.payment_method === "cartao" ? "Cartão" : null;
+            const purchases = (t as RawTransaction & { purchases?: number }).purchases;
+            const kind =
+              t.payment_method === "fatura"
+                ? `Fatura${purchases ? ` · ${purchases} ${purchases === 1 ? "compra" : "compras"}` : ""}`
+                : t.recurrence_type === "parcelado"
+                  ? "Parcela"
+                  : t.recurrence_type === "fixa"
+                    ? "Fixa"
+                    : null;
             return (
               <Line
                 key={t.id}
