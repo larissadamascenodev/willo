@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { ScrollView, Text, TextInput, View } from "react-native";
+import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getInvoices, getInvoiceItems } from "@/services/invoiceService";
@@ -42,9 +42,11 @@ export default function Lancamentos() {
   const { user } = useAuth();
 
   const today = useMemo(() => new Date(), []);
-  const month = Number(qMonth) || today.getMonth() + 1;
-  const year = Number(qYear) || today.getFullYear();
+  /* Starts on the invoice the panel was showing; the strip at the top moves it. */
+  const [month, setMonth] = useState(Number(qMonth) || today.getMonth() + 1);
+  const [year, setYear] = useState(Number(qYear) || today.getFullYear());
 
+  const [invoices, setInvoices] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
   const [hex, setHex] = useState("#8B5CF6");
   const [tab, setTab] = useState<"todos" | "parcelados">("todos");
@@ -64,6 +66,7 @@ export default function Lancamentos() {
         setHex(hexFor(card.color));
         setCardName(card.name);
       }
+      setInvoices(invs as any[]);
       const invoice = (invs as any[]).find((i) => i.month === month && i.year === year);
       if (!invoice) {
         setItems([]);
@@ -102,6 +105,27 @@ export default function Lancamentos() {
 
   const parceladoCount = lines.filter((l) => l.installment).length;
 
+  /* Every invoice the card has with something on it, oldest first, and the one open. */
+  const months = useMemo(
+    () =>
+      invoices
+        .filter((i) => Number(i.total_amount) !== 0 || (i.month === month && i.year === year))
+        .sort((a, b) => a.year * 12 + a.month - (b.year * 12 + b.month)),
+    [invoices, month, year],
+  );
+  const current = invoices.find((i) => i.month === month && i.year === year);
+  const total = current ? Number(current.total_amount) : lines.reduce((sum, l) => sum + l.amount, 0);
+
+  const strip = useRef<ComponentRef<typeof ScrollView>>(null);
+  const chipX = useRef<Record<string, number>>({});
+  const parked = useRef(false);
+  const park = () => {
+    const x = chipX.current[`${year}-${month}`];
+    if (x == null || parked.current) return;
+    parked.current = true;
+    strip.current?.scrollTo({ x: Math.max(0, x - 120), animated: false });
+  };
+
   return (
     <Room>
       <ScrollView
@@ -118,18 +142,74 @@ export default function Lancamentos() {
         </View>
 
         <Text style={[T.title, { marginTop: 8, paddingHorizontal: 4 }]}>Lançamentos</Text>
-        <Text style={{ marginTop: 4, paddingHorizontal: 4, fontSize: 13, color: INK.soft }}>
-          Fatura de {MONTH_NAMES[month - 1]} de {year}
-          <Text style={{ color: "rgba(255,255,255,0.2)" }}> · </Text>
-          {lines.length} {lines.length === 1 ? "linha" : "linhas"}
-        </Text>
+
+        {/* Which invoice: every month the card has, the chosen one lit. */}
+        <ScrollView
+          ref={strip}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          onContentSizeChange={park}
+          style={{ marginTop: 16, marginHorizontal: -16 }}
+          contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}
+        >
+          {months.map((inv) => {
+            const on = inv.month === month && inv.year === year;
+            const label = MONTH_NAMES[inv.month - 1].slice(0, 3);
+            return (
+              <Pressable
+                key={`${inv.year}-${inv.month}`}
+                onLayout={(e) => {
+                  chipX.current[`${inv.year}-${inv.month}`] = e.nativeEvent.layout.x;
+                  park();
+                }}
+                onPress={() => {
+                  setMonth(inv.month);
+                  setYear(inv.year);
+                  setTab("todos");
+                  setSearch("");
+                }}
+                style={({ pressed }) => ({
+                  height: 36,
+                  paddingHorizontal: 15,
+                  borderRadius: 18,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                  backgroundColor: on ? "#fff" : "rgba(255,255,255,0.07)",
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Text style={{ fontSize: 14, fontWeight: on ? "700" : "500", color: on ? "#0B0B0B" : "rgba(255,255,255,0.78)", textTransform: "capitalize" }}>
+                  {label}
+                </Text>
+                {inv.year !== today.getFullYear() && (
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: on ? "rgba(11,11,11,0.5)" : INK.faint }}>
+                    {String(inv.year).slice(2)}
+                  </Text>
+                )}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        {/* The invoice, then how it divides. */}
+        <View style={{ marginTop: 22, paddingHorizontal: 4 }}>
+          <Text style={{ fontSize: 13, color: INK.soft }}>
+            Fatura de {MONTH_NAMES[month - 1]} de {year}
+            <Text style={{ color: "rgba(255,255,255,0.2)" }}> · </Text>
+            {lines.length} {lines.length === 1 ? "lançamento" : "lançamentos"}
+          </Text>
+          <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 38, fontWeight: "800", letterSpacing: -1.5, color: "#fff" }}>
+            {money(total)}
+          </Text>
+        </View>
 
         {/* The split is the answer; the list below is the evidence for it. */}
-        <View style={{ marginTop: 20, flexDirection: "row", gap: 16, paddingHorizontal: 4 }}>
+        <View style={{ marginTop: 16, flexDirection: "row", gap: 16, paddingHorizontal: 4 }}>
           <View style={{ flex: 1 }}>
             <Text style={[T.eyebrow, { fontSize: 11 }]}>Parcelado</Text>
             <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 22, fontWeight: "800", letterSpacing: -0.7, color: "#fff" }}>
+              <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 18, fontWeight: "700", letterSpacing: -0.5, color: "#fff" }}>
                 {money(split.parcelado)}
               </Text>
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#A78BFA" }} />
@@ -137,7 +217,7 @@ export default function Lancamentos() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[T.eyebrow, { fontSize: 11 }]}>À vista</Text>
-            <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 22, fontWeight: "800", letterSpacing: -0.7, color: "#fff" }}>
+            <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 18, fontWeight: "700", letterSpacing: -0.5, color: "#fff" }}>
               {money(split.avista)}
             </Text>
           </View>
