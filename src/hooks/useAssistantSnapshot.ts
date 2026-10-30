@@ -48,7 +48,7 @@ export function useAssistantSnapshot() {
       const prev = openByCard.get(inv.cardId);
       const earlier =
         !prev || inv.year < prev.year || (inv.year === prev.year && inv.month < prev.month);
-      if (earlier) openByCard.set(inv.cardId, { total: inv.total, month: inv.month, year: inv.year });
+      if (earlier) openByCard.set(inv.cardId, { total: Math.max(0, inv.total - (inv.paid ?? 0)), month: inv.month, year: inv.year });
     }
 
     return {

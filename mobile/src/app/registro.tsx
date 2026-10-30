@@ -25,7 +25,11 @@ import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { useVoiceEntry } from "~/lib/voiceEntry";
 import { useAssistantSnapshot } from "@/hooks/useAssistantSnapshot";
-import { askWillo, brief, converseAsking, type Turn } from "~/lib/assistantAsk";
+import { askWilloFull, brief, converseAsking, type Turn } from "~/lib/assistantAsk";
+import { localAnswer } from "~/lib/localAnswers";
+import { parseLocal } from "@/lib/quickEntry/parseLocal";
+import { loadActiveInstallments } from "@/services/activeInstallments";
+import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import VoiceEntrySheet from "~/components/registro/VoiceEntrySheet";
 import { GREEN, INK } from "~/theme/tokens";
 
@@ -55,7 +59,7 @@ import { GREEN, INK } from "~/theme/tokens";
  */
 
 type Item =
-  | { kind: "msg"; id: string; role: "bot" | "user"; text: string }
+  | { kind: "msg"; id: string; role: "bot" | "user"; text: string; agents?: string[]; instant?: boolean }
   | { kind: "batch"; id: string }
   | { kind: "done"; id: string; text: string; total?: number; income?: boolean };
 
@@ -143,7 +147,13 @@ export default function Registro() {
   const threadRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
 
-  const pushBot = useCallback((t: string) => setItems((m) => [...m, { kind: "msg", id: uid(), role: "bot", text: t }]), []);
+  const pushBot = useCallback(
+    (t: string, extra?: { agents?: string[]; instant?: boolean }) => setItems((m) => [...m, { kind: "msg", id: uid(), role: "bot", text: t, ...extra }]),
+    [],
+  );
+  /* What this person filed before under each name, so "uber" lands where Uber always did. */
+  const historyRef = useRef<Record<string, string>>({});
+  const installmentsRef = useRef<ActiveInstallmentItem[] | null>(null);
   const pushUser = useCallback((t: string) => setItems((m) => [...m, { kind: "msg", id: uid(), role: "user", text: t }]), []);
 
   /* ---- what this person has, which decides what is worth asking — and offering ---- */
@@ -161,11 +171,18 @@ export default function Registro() {
       .then((cards) => setSetup((s) => ({ ...s, cards: (cards as unknown as { id: string; name: string }[]) ?? [] })))
       .catch(() => undefined);
     allowedCategories().then(setCategories).catch(() => setCategories([]));
+    if (user)
+      loadActiveInstallments(user.id)
+        .then((a) => (installmentsRef.current = a.items))
+        .catch(() => undefined);
 
     /* The person's own frequent entries: the same thing, again, in one tap. */
     getRecentTransactions(80)
       .then((rows) => {
         const by = new Map<string, Shortcut & { count: number }>();
+        for (const r of rows as { name: string; category: string }[]) {
+          if (r.name && r.category && r.category !== "Outros") historyRef.current[r.name] ??= r.category;
+        }
         for (const r of rows as {
           name: string;
           amount: number;
@@ -335,9 +352,17 @@ export default function Registro() {
         for (let n = 0; n < 24 && !snapshotReady.current; n++) await new Promise((r) => setTimeout(r, 250));
         turns.current.push({ role: "user", content: said });
         const sent = turns.current.slice(-8).map((t, i, all) => (i === all.length - 1 ? { ...t, content: converseAsking(t.content) } : t));
-        const reply = brief(await askWillo(sent, build()), 700);
+        /* What the numbers alone can answer is answered at once, with no AI. */
+        const local = localAnswer(said, build() as never, installmentsRef.current);
+        if (local) {
+          turns.current.push({ role: "assistant", content: local.text });
+          pushBot(local.text, { agents: [local.agent], instant: true });
+          return;
+        }
+        const { reply: raw, agents } = await askWilloFull(sent, build());
+        const reply = brief(raw, 700);
         turns.current.push({ role: "assistant", content: reply });
-        pushBot(reply);
+        pushBot(reply, { agents });
       } catch (err) {
         pushBot(err instanceof Error ? err.message : "Não consegui falar com o Willo agora. Tenta de novo?");
       } finally {
@@ -357,7 +382,9 @@ export default function Registro() {
     async (said: string) => {
       setThinking("Anotando");
       try {
-        const { entries } = await readEntry({ text: said, categories });
+        /* A plain sentence is read on the phone; only what it cannot read goes to the AI reader. */
+        const local = parseLocal(said, { today: todayISO(), categories, history: historyRef.current });
+        const { entries } = local ? { entries: local } : await readEntry({ text: said, categories });
         if (entries.length === 0) {
           setThinking(null);
           await converse(said);
@@ -711,7 +738,7 @@ export default function Registro() {
                   <Confirmado text={item.text} total={item.total} income={item.income} />
                 </View>
               ) : item.kind === "msg" ? (
-                <Bubble key={item.id} role={item.role} text={item.text} />
+                <Bubble key={item.id} role={item.role} text={item.text} agents={item.agents} instant={item.instant} />
               ) : (
                 <View key={item.id} style={{ paddingVertical: 6 }}>
                   <Notinha lines={linesOf(item.id)} onUndo={() => void undo(item.id)} />
@@ -944,8 +971,9 @@ function Chip({
   );
 }
 
-function Bubble({ role, text }: { role: "bot" | "user"; text: string }) {
+function Bubble({ role, text, agents, instant }: { role: "bot" | "user"; text: string; agents?: string[]; instant?: boolean }) {
   const mine = role === "user";
+  const team = AGENTS.filter((a) => agents?.includes(a.id));
   return (
     <Animated.View
       entering={FadeInDown.duration(260)}
@@ -972,6 +1000,18 @@ function Bubble({ role, text }: { role: "bot" | "user"; text: string }) {
         <Text style={{ fontSize: 15, lineHeight: 20, fontWeight: mine ? "500" : "400", color: mine ? "#0B0B0B" : "rgba(255,255,255,0.92)" }}>
           {text}
         </Text>
+        {/* Who worked on it — and whether it came straight from the numbers. */}
+        {!mine && (team.length > 0 || instant) && (
+          <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 6 }}>
+            {team.map((a) => (
+              <View key={a.id} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                <AgentMark hex={a.hex} size={14} />
+                <Text style={{ fontSize: 11, color: INK.softer }}>{a.name}</Text>
+              </View>
+            ))}
+            {instant && <Text style={{ fontSize: 11, color: INK.faint }}>· direto dos seus números</Text>}
+          </View>
+        )}
       </View>
     </Animated.View>
   );

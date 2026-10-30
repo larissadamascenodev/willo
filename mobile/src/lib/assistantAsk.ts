@@ -74,6 +74,11 @@ const GIVE_UP_MS = 50_000;
  * the app's own numbers — and returns what it answered.
  */
 export async function askWillo(messages: Turn[], snapshot: unknown): Promise<string> {
+  return (await askWilloFull(messages, snapshot)).reply;
+}
+
+/** The reply and which of Willo's specialists worked on it. */
+export async function askWilloFull(messages: Turn[], snapshot: unknown): Promise<{ reply: string; agents: string[] }> {
   const { style, length, agents } = getWilloPrefs();
   const timeout = new Promise<never>((_, reject) =>
     setTimeout(() => reject(new Error("O Willo demorou a responder. Tente de novo.")), GIVE_UP_MS),
@@ -92,7 +97,7 @@ export async function askWillo(messages: Turn[], snapshot: unknown): Promise<str
     throw new Error(said || "Não consegui falar com o Willo agora.");
   }
   if (data?.error) throw new Error(data.error);
-  return String(data?.reply ?? "");
+  return { reply: String(data?.reply ?? ""), agents: Array.isArray(data?.especialistas) ? data.especialistas : [] };
 }
 
 /** In a chat the answer can run longer than under the sphere, but still plain. */
