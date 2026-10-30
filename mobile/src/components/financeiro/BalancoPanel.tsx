@@ -57,7 +57,7 @@ export default function BalancoPanel({
 }: {
   projection: Projection;
   onOpenProjecoes?: () => void;
-  /** Only how the month closes — for a page that shows the rest in sections of its own. */
+  /** Leaves out the month written out (entrou, saiu) — for a page that shows that above it. */
   closeOnly?: boolean;
 }) {
   const { data, loading, futureReady, projections, monthData, selectedMonth, selectedYear } = projection;
@@ -176,6 +176,9 @@ export default function BalancoPanel({
         )}
       </View>
 
+      </>
+      )}
+
       {/* ══ The next few ══ */}
       <View
         style={{
@@ -189,9 +192,11 @@ export default function BalancoPanel({
         <Text style={{ fontSize: 17, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>
           Próximos meses
         </Text>
-        <Pressable onPress={onOpenProjecoes} hitSlop={10} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
-          <Text style={{ fontSize: 14, color: INK.soft }}>Ver projeções</Text>
-        </Pressable>
+        {onOpenProjecoes && (
+          <Pressable onPress={onOpenProjecoes} hitSlop={10} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+            <Text style={{ fontSize: 14, color: INK.soft }}>Ver projeções</Text>
+          </Pressable>
+        )}
       </View>
 
       {!futureReady ? (
@@ -238,9 +243,6 @@ export default function BalancoPanel({
         Cada mês aqui conta só o que entra e sai nele. O saldo que passa de um mês para o outro está
         em Projeções.
       </Text>
-
-      </>
-      )}
 
       <MonthSheet
         row={open}
