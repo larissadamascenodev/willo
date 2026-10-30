@@ -26,9 +26,13 @@ export type Entry = { kind: "line"; line: InvoiceLine; at: string } | { kind: "p
 
 /** Purchases and payments together, newest first. */
 export function mergeEntries(lines: InvoiceLine[], payments: InvoicePayment[]): Entry[] {
+  /* A payment sits at the moment it was made. A line has only a day, and an instalment's
+     day is the invoice's own, often ahead of today — so a line counts from the start of
+     its day, never later than today, and what was paid today lands on top. */
+  const today = new Date().toISOString().slice(0, 10);
   const all: Entry[] = [
-    ...lines.map((line) => ({ kind: "line" as const, line, at: line.date })),
-    ...payments.map((payment) => ({ kind: "payment" as const, payment, at: String(payment.paid_at).slice(0, 10) })),
+    ...lines.map((line) => ({ kind: "line" as const, line, at: `${line.date < today ? line.date : today}T00:00:00` })),
+    ...payments.map((payment) => ({ kind: "payment" as const, payment, at: new Date(payment.paid_at).toISOString() })),
   ];
   return all.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
 }

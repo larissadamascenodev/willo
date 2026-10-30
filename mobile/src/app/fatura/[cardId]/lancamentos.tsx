@@ -15,9 +15,8 @@ import MonthStrip from "~/components/MonthStrip";
 import { mergeEntries, PaymentDetail, PaymentRow, paymentName } from "~/components/fatura/InvoicePayments";
 import SegmentedTabs from "~/components/SegmentedTabs";
 import { Search } from "~/components/icons";
-import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
-import { GREEN, INK } from "~/theme/tokens";
+import { INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 /**
@@ -138,12 +137,9 @@ export default function Lancamentos() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={{ height: 44, justifyContent: "center" }}>
+        {/* Back, and which invoice — on one line, as the transactions page has it. */}
+        <View style={{ height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <BackButton />
-        </View>
-
-        <View style={{ marginTop: 8, paddingHorizontal: 4, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <Text style={T.title}>Lançamentos</Text>
           <MonthStrip
             month={month - 1}
             year={year}
@@ -156,35 +152,23 @@ export default function Lancamentos() {
           />
         </View>
 
-        {/* The invoice, then how it divides. */}
-        <View style={{ marginTop: 22, paddingHorizontal: 4 }}>
+        <Text style={[T.title, { marginTop: 8, paddingHorizontal: 4 }]}>Lançamentos</Text>
+
+        {/* What the invoice asks for now, and how many lines make it. */}
+        <View style={{ marginTop: 18, paddingHorizontal: 4 }}>
           <Text style={{ fontSize: 13, color: INK.soft }}>
             Fatura de {MONTH_NAMES[month - 1]} de {year}
-            <Text style={{ color: "rgba(255,255,255,0.2)" }}> · </Text>
-            {lines.length} {lines.length === 1 ? "lançamento" : "lançamentos"}
           </Text>
           <CountUp value={due} numberOfLines={1} style={{ marginTop: 4, fontSize: 38, fontWeight: "800", letterSpacing: -1.5, color: "#fff", fontVariant: ["tabular-nums"] }} />
+          <Text style={{ marginTop: 2, fontSize: 13, color: INK.softer }}>
+            {lines.length} {lines.length === 1 ? "lançamento" : "lançamentos"}
+          </Text>
         </View>
 
-        {paid > 0 && (
-          <Text style={{ marginTop: 4, paddingHorizontal: 4, fontSize: 12.5, color: INK.softer }}>
-            {money(total)} em compras · <Text style={{ color: GREEN }}>{money(paid)} já pago</Text>
-          </Text>
-        )}
-
-        {/* The split is the answer; the list below is the evidence for it. */}
-        <View style={{ marginTop: 16, flexDirection: "row", gap: 16, paddingHorizontal: 4 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={[T.eyebrow, { fontSize: 11 }]}>Parcelado</Text>
-            <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <CountUp value={split.parcelado} numberOfLines={1} style={{ flexShrink: 1, fontSize: 18, fontWeight: "700", letterSpacing: -0.5, color: "#fff", fontVariant: ["tabular-nums"] }} />
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#A78BFA" }} />
-            </View>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[T.eyebrow, { fontSize: 11 }]}>À vista</Text>
-            <CountUp value={split.avista} numberOfLines={1} style={{ marginTop: 4, fontSize: 18, fontWeight: "700", letterSpacing: -0.5, color: "#fff", fontVariant: ["tabular-nums"] }} />
-          </View>
+        {/* How it divides, each half marked by its own dot. */}
+        <View style={{ marginTop: 18, flexDirection: "row", gap: 16, paddingHorizontal: 4 }}>
+          <SplitFigure dot="#A78BFA" label="Parcelado" value={split.parcelado} />
+          <SplitFigure dot="#7CC4FF" label="À vista" value={split.avista} />
         </View>
 
         <View style={{ marginTop: 20 }}>
@@ -255,5 +239,17 @@ export default function Lancamentos() {
 
       <LineDetail line={openLine} cardName={cardName} onClose={() => setOpenLine(null)} onChanged={() => setReload((n) => n + 1)} />
     </Room>
+  );
+}
+
+function SplitFigure({ dot, label, value }: { dot: string; label: string; value: number }) {
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: dot }} />
+        <Text style={{ fontSize: 12, color: INK.softer }}>{label}</Text>
+      </View>
+      <CountUp value={value} numberOfLines={1} style={{ marginTop: 3, fontSize: 15.5, fontWeight: "700", letterSpacing: -0.3, color: "#fff", fontVariant: ["tabular-nums"] }} />
+    </View>
   );
 }
