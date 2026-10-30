@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Platform, Text, View, type TextStyle } from "react-native";
 import type { CategoryAnalytics } from "@/services/categoryAnalytics";
-import { CATEGORY_GROUP_DEFS } from "@/lib/categoryGroups";
+import { appGroupOf } from "~/lib/taxonomy";
 import { categoryHex } from "@/lib/categoryData";
 import { MONTH_NAMES } from "@/lib/projectionRows";
 import BottomSheet from "~/components/BottomSheet";
@@ -39,8 +39,7 @@ const SHORT = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "O
 const TRACK = 120;
 
 /** The group a category is in, when it is in one. */
-export const groupOf = (category: string) =>
-  CATEGORY_GROUP_DEFS.find((g) => g.categories.some((c) => c.toLowerCase() === category.toLowerCase()));
+export const groupOf = appGroupOf;
 
 export default function SpendModal({
   subject,

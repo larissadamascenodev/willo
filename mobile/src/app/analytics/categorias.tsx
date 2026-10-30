@@ -11,6 +11,7 @@ import {
   type CategoryAnalytics,
 } from "@/services/categoryAnalytics";
 import { groupCategoryAmounts } from "@/lib/categoryGroups";
+import { APP_GROUP_DEFS } from "~/lib/taxonomy";
 import { MONTH_NAMES } from "@/lib/projectionRows";
 import { categoryHex } from "@/lib/categoryData";
 import Room from "~/components/Room";
@@ -128,7 +129,7 @@ export default function AnalyticsCategorias() {
     [summaries, data],
   );
 
-  const groups = useMemo(() => groupCategoryAmounts(categories), [categories]);
+  const groups = useMemo(() => groupCategoryAmounts(categories, APP_GROUP_DEFS), [categories]);
   const total = summaries.reduce((s, c) => s + c.amount, 0);
   const monthLabel = MONTH_NAMES[selectedMonth];
 

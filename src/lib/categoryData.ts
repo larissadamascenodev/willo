@@ -132,13 +132,23 @@ export function getDefaultCategoryHex(name: string): string {
   return match ? DEFAULT_CATEGORY_HEX[match] : "#64748b";
 }
 
-/** A category's colour, custom first, then the default — with nothing drawn. */
+/* Colours an app adds for category names of its own (the phone's list). Empty unless
+   an app registers some, so an app that does not sees nothing change. */
+let registeredHex: Record<string, string> = {};
+
+/** Adds colours for category names this list does not know. */
+export function registerCategoryHex(map: Record<string, string>) {
+  registeredHex = { ...registeredHex, ...map };
+}
+
+/** A category's colour, custom first, then any an app registered, then the default — with nothing drawn. */
 export function categoryHex(
   category: string,
   customCats?: { name: string; color?: string | null; is_hidden_default?: boolean }[],
 ): string {
   const custom = customCats?.find((c) => c.name === category && !c.is_hidden_default);
   if (custom?.color) return custom.color;
+  if (registeredHex[category]) return registeredHex[category];
   return getDefaultCategoryHex(category);
 }
 

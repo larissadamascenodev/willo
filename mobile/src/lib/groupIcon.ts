@@ -1,4 +1,5 @@
 import type { IconCmp } from "~/lib/categoryIconSlugs";
+import { TAXONOMY } from "~/lib/taxonomy";
 
 import Car from "lucide-react-native/icons/car";
 import Gamepad2 from "lucide-react-native/icons/gamepad-2";
@@ -22,4 +23,6 @@ const GROUP_ICONS: Record<string, IconCmp> = {
   ShoppingCart, Home, Car, HeartPulse, Gamepad2, ShoppingBag, GraduationCap, Landmark, MoreHorizontal,
 };
 
-export const groupIcon = (name: string): IconCmp => GROUP_ICONS[name] ?? MoreHorizontal;
+/* A group of the phone's own list is keyed "tax:<name>" and draws that group's glyph. */
+export const groupIcon = (name: string): IconCmp =>
+  (name.startsWith("tax:") ? TAXONOMY.find((g) => g.name === name.slice(4))?.icon : undefined) ?? GROUP_ICONS[name] ?? MoreHorizontal;

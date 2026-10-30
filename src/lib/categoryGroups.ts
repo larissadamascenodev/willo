@@ -87,13 +87,15 @@ export interface GroupedCategories<T> {
 
 export function groupCategoryAmounts<T extends { name: string; amount: number }>(
   categories: T[],
+  /** The groups to sort into; an app with a list of its own passes it. */
+  defs: CategoryGroupDef[] = CATEGORY_GROUP_DEFS,
 ): GroupedCategories<T>[] {
   const total = categories.reduce((s, c) => s + c.amount, 0);
   const byGroup = new Map<CategoryGroupDef, T[]>();
 
   for (const cat of categories) {
     const def =
-      CATEGORY_GROUP_DEFS.find((g) =>
+      defs.find((g) =>
         g.categories.some((c) => c.toLowerCase() === cat.name.toLowerCase()),
       ) ?? OTHER_GROUP_DEF;
     byGroup.set(def, [...(byGroup.get(def) ?? []), cat]);

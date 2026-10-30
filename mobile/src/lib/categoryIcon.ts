@@ -1,3 +1,4 @@
+import { findCategory } from "~/lib/taxonomy";
 import { iconNameFor, FALLBACK_ICON_NAME } from "@/lib/categoryIconNames";
 import type { CustomCategory } from "@/services/categoryService";
 import { iconForSlug, type IconCmp } from "~/lib/categoryIconSlugs";
@@ -72,6 +73,9 @@ const LUCIDE: Record<string, IconCmp> = {
 export function categoryIcon(category: string, customCats?: CustomCategory[]): IconCmp {
   const custom = customCats?.find((c) => c.name === category && !c.is_hidden_default);
   if (custom?.icon) return iconForSlug(custom.icon);
+  /* A name from the phone's own list draws its own glyph. */
+  const own = findCategory(category);
+  if (own) return own.category.icon;
   return LUCIDE[iconNameFor(category)] ?? LUCIDE[FALLBACK_ICON_NAME];
 }
 

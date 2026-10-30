@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { showToast } from "~/lib/toast";
 import {
   ActivityIndicator,
@@ -27,8 +27,10 @@ import { cardHex } from "@/hooks/useCardsOverview";
 import Room from "~/components/Room";
 import BottomSheet from "~/components/BottomSheet";
 import SegmentedTabs from "~/components/SegmentedTabs";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Clock, CreditCard, FileText, Tag, Wallet, X } from "~/components/icons";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Clock, CreditCard, FileText, Tag, Wallet, X, Sparkles } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
+import CategoryPicker from "~/components/CategoryPicker";
+import { suggestCategory } from "~/lib/categorize";
 import { chipFill, chipInk } from "~/lib/chip";
 import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
@@ -126,6 +128,10 @@ export default function Novo() {
   const [cards, setCards] = useState<Card[]>([]);
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
   const [pickingCategory, setPickingCategory] = useState(false);
+  /* What Willo suggested for the name typed, and whether the person has chosen for themselves. */
+  const [suggested, setSuggested] = useState<string | null>(null);
+  const [thinking, setThinking] = useState(false);
+  const chosen = useRef(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /* While the saved movement is on its way in, the form is not the person's yet. */
@@ -162,6 +168,7 @@ export default function Novo() {
         setCents(Math.round(Number(tx.amount) * 100));
         setName(tx.name ?? "");
         setCategory(tx.category ?? "");
+        chosen.current = true;
         setDate(String(tx.date).slice(0, 10));
         setMethod(tx.payment_method === "cartao" ? "cartao" : "conta");
         setAccountId(tx.account_id ?? null);
@@ -183,6 +190,32 @@ export default function Novo() {
   useEffect(() => {
     if (method === "cartao" && !loadingEdit) setStatus("pendente");
   }, [method, loadingEdit]);
+
+  /* Willo reads the name as it is typed and fills in the category — until the person
+     picks one themselves, after which their choice stands. */
+  useEffect(() => {
+    if (editingId || chosen.current) return;
+    const text = name.trim();
+    if (text.length < 3) {
+      setSuggested(null);
+      return;
+    }
+    let alive = true;
+    const t = setTimeout(() => {
+      setThinking(true);
+      void suggestCategory({ name: text, amount: cents / 100, type })
+        .then((cat) => {
+          if (!alive || chosen.current || !cat) return;
+          setSuggested(cat);
+          setCategory(cat);
+        })
+        .finally(() => alive && setThinking(false));
+    }, 700);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [name, type, editingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const usingCard = !isReceita && method === "cartao";
 
@@ -295,6 +328,8 @@ export default function Novo() {
               onChange={(k) => {
                 setType(k);
                 setCategory("");
+                setSuggested(null);
+                chosen.current = false;
               }}
               options={[
                 { key: "receita" as const, label: "Receita" },
@@ -363,14 +398,22 @@ export default function Novo() {
             </Row>
             <Row icon={Tag} label="Categoria" onPress={() => setPickingCategory(true)}>
               {category && CatIcon ? (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <CatIcon size={16} color={categoryHex(category, customCats)} />
-                  <Text numberOfLines={1} style={{ fontSize: 15, color: "#fff" }}>
-                    {category}
-                  </Text>
+                <View style={{ flexShrink: 1, alignItems: "flex-end" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <CatIcon size={16} color={categoryHex(category, customCats)} />
+                    <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15, color: "#fff" }}>
+                      {category}
+                    </Text>
+                  </View>
+                  {suggested === category && !chosen.current && (
+                    <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <Sparkles size={10} color={GREEN} />
+                      <Text style={{ fontSize: 11.5, color: GREEN }}>sugerida pelo Willo</Text>
+                    </View>
+                  )}
                 </View>
               ) : (
-                <Text style={{ fontSize: 15, color: INK.faint }}>Escolher</Text>
+                <Text style={{ fontSize: 15, color: INK.faint }}>{thinking ? "Willo está pensando…" : "Escolher"}</Text>
               )}
               <ChevronRight size={16} color={INK.faint} />
             </Row>
@@ -581,77 +624,24 @@ export default function Novo() {
         </View>
       </KeyboardAvoidingView>
 
-      <BottomSheet open={pickingCategory} onClose={() => setPickingCategory(false)} full>
-        <View style={{ paddingHorizontal: 20 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <Text style={{ fontSize: 22, fontWeight: "700", color: "#fff" }}>Categoria</Text>
-            {/* The way out of choosing and into changing what there is to choose from. */}
-            <Pressable
-              onPress={() => {
-                setPickingCategory(false);
-                router.push("/categorias" as never);
-              }}
-              style={({ pressed }) => ({
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-                borderRadius: 999,
-                backgroundColor: "rgba(255,255,255,0.07)",
-                paddingHorizontal: 12,
-                paddingVertical: 7,
-                opacity: pressed ? 0.7 : 1,
-              })}
-            >
-              <Tag size={13} color={INK.soft} />
-              <Text style={{ fontSize: 12.5, fontWeight: "600", color: INK.soft }}>Gerenciar</Text>
-            </Pressable>
-          </View>
-          <View style={{ marginTop: 16, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {categories.map((cat) => {
-              const Icon = categoryIcon(cat, customCats);
-              const hex = categoryHex(cat, customCats);
-              const on = category === cat;
-              return (
-                <Pressable
-                  key={cat}
-                  onPress={() => {
-                    setCategory(cat);
-                    setPickingCategory(false);
-                    setError(null);
-                  }}
-                  style={{
-                    width: "31%",
-                    alignItems: "center",
-                    gap: 8,
-                    borderRadius: 20,
-                    borderWidth: 1,
-                    borderColor: on ? "#fff" : "rgba(255,255,255,0.06)",
-                    backgroundColor: on ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.03)",
-                    paddingVertical: 14,
-                    paddingHorizontal: 8,
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 22,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: chipFill(hex),
-                    }}
-                  >
-                    <Icon size={20} color={chipInk(hex)} />
-                  </View>
-                  <Text numberOfLines={2} style={{ fontSize: 12, textAlign: "center", color: "rgba(255,255,255,0.85)" }}>
-                    {cat}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-      </BottomSheet>
+      <CategoryPicker
+        open={pickingCategory}
+        type={type}
+        value={category}
+        suggested={suggested}
+        customCats={customCats}
+        onClose={() => setPickingCategory(false)}
+        onManage={() => {
+          setPickingCategory(false);
+          router.push("/categorias" as never);
+        }}
+        onPick={(cat) => {
+          chosen.current = true;
+          setCategory(cat);
+          setPickingCategory(false);
+          setError(null);
+        }}
+      />
     </Room>
   );
 }
