@@ -15,6 +15,13 @@ import {
  * apps ask it the same way and get the same answer.
  */
 
+/**
+ * A purchase's day, read as a day where the person is. "2026-04-01" parsed as is is
+ * midnight in UTC — the evening of 31 March in Brazil — which put every plan one month
+ * early: the instalment due in November was counted in October.
+ */
+const purchaseDay = (date: string) => new Date(`${date.slice(0, 10)}T12:00:00`);
+
 export interface InstallmentStats {
   /** What the open instalments take out of a month. */
   totalMensal: number;
@@ -89,7 +96,7 @@ export function statsFor(items: ActiveInstallmentItem[]): InstallmentStats | nul
   let lastEndDate = new Date();
 
   items.forEach((item) => {
-    const baseDate = new Date(item.date);
+    const baseDate = purchaseDay(item.date);
     const currentInstallment = item.installment_current;
     const unpaidInstallments = item.installments - currentInstallment + 1;
 
@@ -157,7 +164,7 @@ export function installmentTotals(items: ActiveInstallmentItem[]): InstallmentTo
       totalRestante += item.amount * unpaidCount;
     }
 
-    const baseDate = new Date(item.date);
+    const baseDate = purchaseDay(item.date);
     const endDate = new Date(baseDate);
     endDate.setMonth(baseDate.getMonth() + (item.installments - 1));
     if (endDate > lastEndDate) lastEndDate = endDate;
@@ -228,12 +235,15 @@ export function installmentProjection(
 
     const parts: ProjectionPart[] = [];
     items.forEach((item) => {
-      const baseDate = new Date(item.date);
+      const baseDate = purchaseDay(item.date);
       const paidCount = item.installment_current - 1;
-      const itemStartMonth = baseDate.getMonth() + paidCount;
-      const itemStartYear = baseDate.getFullYear() + Math.floor(itemStartMonth / 12);
-      const normalizedStartMonth = itemStartMonth % 12;
-      const monthsDiff = (y - itemStartYear) * 12 + (m - normalizedStartMonth);
+      /* The month the first unpaid instalment falls in — or this month, for one that is
+         running late, so a late instalment is counted now rather than nowhere. */
+      const startPeriod = Math.max(
+        baseDate.getFullYear() * 12 + baseDate.getMonth() + paidCount,
+        currentYear * 12 + currentMonth,
+      );
+      const monthsDiff = y * 12 + m - startPeriod;
       const remainingInstallments = item.installments - paidCount;
       if (monthsDiff >= 0 && monthsDiff < remainingInstallments) {
         parts.push({

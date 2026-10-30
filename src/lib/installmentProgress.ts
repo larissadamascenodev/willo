@@ -199,7 +199,7 @@ export const buildActiveInstallmentItems = ({
           parsed.setHours(0, 0, 0, 0);
           return parsed < today;
         })() : (() => {
-          const baseDate = new Date(group.date);
+          const baseDate = new Date(`${group.date.slice(0, 10)}T12:00:00`);
           const expectedDate = new Date(baseDate);
           expectedDate.setMonth(expectedDate.getMonth() + paidInstallments);
           expectedDate.setHours(0, 0, 0, 0);
