@@ -19,6 +19,8 @@ import CardFormSheet, { type CardDraft } from "~/components/wallet/CardFormSheet
 import InvoiceForecastChart from "~/components/fatura/InvoiceForecastChart";
 import InvoiceRecentCard from "~/components/fatura/InvoiceRecentCard";
 import LineDetail from "~/components/fatura/LineDetail";
+import PayInvoiceSheet from "~/components/fatura/PayInvoiceSheet";
+import AddToCardSheet from "~/components/fatura/AddToCardSheet";
 import AnchoredMenu, { MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import { AlertTriangle, Check, Clock, Lock, MoreVertical, Pencil, Plus, Trash2, Wallet } from "~/components/icons";
 import { showToast } from "~/lib/toast";
@@ -182,19 +184,25 @@ export default function Fatura() {
     return { line, overdue: toDue < 0 && outstanding > 0 };
   }, [card, month, year, total, outstanding]);
 
+  const closed = !!card && new Date() > new Date(year, month - 1, card.closing_day);
+  const [paying, setPaying] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const refresh = () => {
+    void load();
+    if (current) void getInvoiceItems(current.id).then((rows) => setItems(rows as any[])).catch(() => undefined);
+  };
+
   /* Where the bill stands, as a mark with its own colour and glyph: paid is green and
      ticked, overdue is red, closed is locked and waiting for its due day, open is still
      collecting purchases. */
   const status = useMemo(() => {
     if (!current) return null;
-    if (current.is_paid && outstanding <= 0) return { label: "Paga", tone: GREEN, Icon: Check };
+    /* Paid ahead while still collecting purchases, it is still open — only a closed one is "paga". */
+    if (current.is_paid && outstanding <= 0 && closed) return { label: "Paga", tone: GREEN, Icon: Check };
     if (cycle?.overdue) return { label: "Vencida", tone: RED, Icon: AlertTriangle };
-    if (card) {
-      const closing = new Date(year, month - 1, card.closing_day);
-      if (new Date() > closing) return { label: "Fechada", tone: "#F5C26B", Icon: Lock };
-    }
+    if (closed) return { label: "Fechada", tone: "#F5C26B", Icon: Lock };
     return { label: "Aberta", tone: "#8FC7FF", Icon: Clock };
-  }, [current, card, month, year, outstanding, cycle]);
+  }, [current, closed, outstanding, cycle]);
   const paidOff = status?.label === "Paga";
 
   const [editing, setEditing] = useState(false);
@@ -392,6 +400,7 @@ export default function Fatura() {
             <View style={{ marginTop: 24, flexDirection: "row", gap: 10, paddingHorizontal: 4 }}>
               {current && outstanding > 0 ? (
                 <Pressable
+                  onPress={() => setPaying(true)}
                   style={({ pressed }) => ({
                     flex: 1,
                     height: 56,
@@ -431,6 +440,7 @@ export default function Fatura() {
               )}
               <Pressable
                 accessibilityLabel="Adicionar lançamento"
+                onPress={() => setAdding(true)}
                 style={({ pressed }) => ({
                   width: 56,
                   height: 56,
@@ -489,6 +499,24 @@ export default function Fatura() {
           void load();
           if (current) void getInvoiceItems(current.id).then((rows) => setItems(rows as any[])).catch(() => undefined);
         }}
+      />
+
+      <PayInvoiceSheet
+        open={paying}
+        invoiceId={current?.id ?? null}
+        outstanding={outstanding}
+        closed={closed}
+        onClose={() => setPaying(false)}
+        onPaid={refresh}
+      />
+
+      <AddToCardSheet
+        open={adding}
+        card={card ? { id: card.id, dueDay: card.due_day } : null}
+        month={month}
+        year={year}
+        onClose={() => setAdding(false)}
+        onImported={refresh}
       />
 
       <CardFormSheet

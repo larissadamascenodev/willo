@@ -114,7 +114,9 @@ export default function Novo() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const params = useLocalSearchParams<{ tipo?: string; editar?: string }>();
+  const params = useLocalSearchParams<{ tipo?: string; editar?: string; cartao?: string }>();
+  /* Opened from a card: the purchase starts on that card. */
+  const fromCard = typeof params.cartao === "string" && params.cartao ? params.cartao : null;
   const editingId = typeof params.editar === "string" && params.editar ? params.editar : null;
 
   const [type, setType] = useState<"receita" | "despesa">(
@@ -124,9 +126,9 @@ export default function Novo() {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [date, setDate] = useState(todayISO());
-  const [method, setMethod] = useState<"conta" | "cartao">("conta");
+  const [method, setMethod] = useState<"conta" | "cartao">(fromCard ? "cartao" : "conta");
   const [accountId, setAccountId] = useState<string | null>(null);
-  const [creditCardId, setCreditCardId] = useState<string | null>(null);
+  const [creditCardId, setCreditCardId] = useState<string | null>(fromCard);
   const [recurrence, setRecurrence] = useState<"unica" | "parcelado" | "fixa">("unica");
   const [installments, setInstallments] = useState(2);
   const [status, setStatus] = useState<"pago" | "pendente">("pago");
