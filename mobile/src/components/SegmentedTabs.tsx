@@ -92,7 +92,11 @@ export default function SegmentedTabs<T extends string>({
           >
             <Text
               numberOfLines={1}
+              /* A long label shrinks a little to fit its third rather than being cut. */
+              adjustsFontSizeToFit
+              minimumFontScale={0.78}
               style={{
+                paddingHorizontal: 6,
                 fontSize: compact ? 12 : 13,
                 fontWeight: "600",
                 color: on ? "#0B0B0B" : glass ? "rgba(255,255,255,0.78)" : INK.soft,

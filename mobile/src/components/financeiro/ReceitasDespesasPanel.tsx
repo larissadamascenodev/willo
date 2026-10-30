@@ -119,7 +119,25 @@ export default function ReceitasDespesasPanel() {
         </View>
       ) : (
         <Animated.View entering={FadeIn.duration(260)} style={{ marginTop: 18, gap: 12 }}>
+          {/* ══ What is left of the month, first: the answer before the parts ══ */}
+          {(() => {
+            const r = sum(data.receitas) + data.openingIncome;
+            const d = sum(data.despesas);
+            const left = r - d;
+            return (
+              <View style={{ alignItems: "center", paddingVertical: 6 }}>
+                <Text style={{ fontSize: 13, color: INK.soft }}>{left >= 0 ? "Sobrou no mês" : "Faltou no mês"}</Text>
+                <Text style={[{ marginTop: 2, fontSize: 40, fontWeight: "800", letterSpacing: -1.5, color: left >= 0 ? "#fff" : RED }, nums]}>
+                  {money(Math.abs(left))}
+                </Text>
+                <Text style={{ marginTop: 2, fontSize: 13, color: INK.softer }}>
+                  {r > 0 ? `Você gastou ${Math.round((d / r) * 100)}% do que entrou` : "Nada entrou ainda neste mês"}
+                </Text>
+              </View>
+            );
+          })()}
           <Side
+            receita
             title="Receitas"
             tone={GREEN}
             fixed={{ label: "Fixas", hint: "Salário e o que entra todo mês", items: data.receitas.filter(isFixed) }}
@@ -133,6 +151,7 @@ export default function ReceitasDespesasPanel() {
             sum={sum}
           />
           <Side
+            receita={false}
             title="Despesas"
             tone={RED}
             fixed={{ label: "Fixas e parcelas", hint: "Contas, assinaturas e parcelas", items: data.despesas.filter(isFixed) }}
@@ -199,6 +218,7 @@ interface GroupData {
  * fixed and how much varies, and the two parts as rows that open their entries.
  */
 function Side({
+  receita,
   title,
   tone,
   fixed,
@@ -206,6 +226,7 @@ function Side({
   onOpen,
   sum,
 }: {
+  receita: boolean;
   title: string;
   tone: string;
   fixed: GroupData;
@@ -240,13 +261,16 @@ function Side({
 
       <View style={{ marginTop: 8 }}>
         <Row group={fixed} value={a} dot={tone} onPress={() => onOpen(fixed)} />
+        <Peek items={fixed.items} receita={receita} onMore={() => onOpen(fixed)} />
+        <View style={{ height: 1, marginTop: 4, backgroundColor: RULE }} />
         <Row group={varied} value={b} dot={`${tone}55`} onPress={() => onOpen(varied)} last />
+        <Peek items={varied.items} receita={receita} onMore={() => onOpen(varied)} />
       </View>
     </View>
   );
 }
 
-function Row({ group, value, dot, onPress, last = false }: { group: GroupData; value: number; dot: string; onPress: () => void; last?: boolean }) {
+function Row({ group, value, dot, onPress }: { group: GroupData; value: number; dot: string; onPress: () => void; last?: boolean }) {
   const count = group.items.length + ((group.extra ?? 0) > 0 ? 1 : 0);
   return (
     <Pressable
@@ -256,8 +280,6 @@ function Row({ group, value, dot, onPress, last = false }: { group: GroupData; v
         alignItems: "center",
         gap: 12,
         paddingVertical: 13,
-        borderBottomWidth: last ? 0 : 1,
-        borderBottomColor: RULE,
         opacity: pressed ? 0.6 : 1,
       })}
     >
@@ -271,6 +293,37 @@ function Row({ group, value, dot, onPress, last = false }: { group: GroupData; v
       <Text style={[{ fontSize: 16, fontWeight: "700", color: "#fff" }, nums]}>{money(value)}</Text>
       <ChevronRight size={16} color={INK.softer} />
     </Pressable>
+  );
+}
+
+/** The three largest entries of a group, small, under its row; the rest a tap away. */
+function Peek({ items, receita, onMore }: { items: RawTransaction[]; receita: boolean; onMore: () => void }) {
+  if (items.length === 0) return null;
+  const top = [...items].sort((x, y) => Number(y.amount) - Number(x.amount)).slice(0, 3);
+  return (
+    <View style={{ paddingLeft: 22, paddingBottom: 8 }}>
+      {top.map((t) => {
+        const Icon = categoryIcon(t.category);
+        const hex = categoryHex(t.category);
+        return (
+          <View key={t.id} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6 }}>
+            <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
+              <Icon size={14} color={chipInk(hex)} strokeWidth={2.2} />
+            </View>
+            <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 14, color: "rgba(255,255,255,0.82)" }}>{t.name}</Text>
+            <Text style={[{ fontSize: 14, fontWeight: "600", color: receita ? GREEN : "rgba(255,255,255,0.82)" }, nums]}>
+              {receita ? "+" : "−"}
+              {money(Math.abs(Number(t.amount)))}
+            </Text>
+          </View>
+        );
+      })}
+      {items.length > 3 && (
+        <Pressable onPress={onMore} hitSlop={6} style={({ pressed }) => ({ paddingVertical: 6, opacity: pressed ? 0.6 : 1 })}>
+          <Text style={{ fontSize: 13, fontWeight: "600", color: INK.soft }}>Ver todos os {items.length}</Text>
+        </Pressable>
+      )}
+    </View>
   );
 }
 
