@@ -39,7 +39,7 @@ export default function InvoiceRecentCard({
   onOpenPayment?: (p: InvoicePayment) => void;
 }) {
   const { lines } = useMemo(() => readInvoice(items), [items]);
-  const entries = useMemo(() => mergeEntries(lines, payments), [lines, payments]);
+  const entries = useMemo(() => mergeEntries(lines, payments, Object.fromEntries(items.map((i) => [i.id, i.created_at]))), [lines, payments, items]);
   const visible = entries.slice(0, count);
 
   return (

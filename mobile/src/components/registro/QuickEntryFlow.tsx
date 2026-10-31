@@ -11,7 +11,7 @@ import BankMark from "~/components/BankMark";
 import CategoryPicker from "~/components/CategoryPicker";
 import ParticleOrb from "~/components/registro/ParticleOrb";
 import ReceiptCard from "~/components/registro/ReceiptCard";
-import { Banknote, CalendarClock, ChevronLeft, ChevronRight, CreditCard, Download, Landmark, Share2, Tag } from "~/components/icons";
+import { Banknote, CalendarClock, ChevronLeft, ChevronRight, CreditCard, Download, Landmark, Minus, Plus, Share2, Tag } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
@@ -100,9 +100,9 @@ type Kind = "despesa" | "receita";
 type Plan = "avista" | "parcelado";
 type Question = "method" | "where" | "plan" | "parts" | "category";
 
-/* How many instalments, first the usual ones, then the long ones. */
-const PARTS_FIRST = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-const PARTS_MORE = [13, 14, 15, 16, 18, 20, 21, 24, 30, 36, 48];
+/* How many instalments: the usual ones in the bar, any other on the stepper behind "Mais". */
+const QUICK_PARTS = [2, 3, 4, 5];
+const MAX_PARTS = 48;
 
 const EXAMPLES = ["mercado 130", "uber 22 crédito", "recebi 300"];
 
@@ -150,6 +150,8 @@ export default function QuickEntryFlow({
   const [pickedWhere, setPickedWhere] = useState<string | null>(null);
   const [pickedPlan, setPickedPlan] = useState<Plan | null>(null);
   const [pickedParts, setPickedParts] = useState<number | null>(null);
+  /* Chosen in the bar but not yet confirmed: the value of one instalment shows meanwhile. */
+  const [partsDraft, setPartsDraft] = useState<number | null>(null);
   const [moreParts, setMoreParts] = useState(false);
   /* Asked again from the check: the words no longer decide it. */
   const [askAgain, setAskAgain] = useState(false);
@@ -242,7 +244,8 @@ export default function QuickEntryFlow({
   const picked = list.find((o) => o.id === whereId) ?? null;
   const payLabel = type === "receita" ? (picked?.name ?? null) : how ? `${how === "cartao" ? "Crédito" : "Débito"}${picked ? ` · ${picked.name}` : ""}` : null;
   const split = plan === "parcelado" && parts ? parts : null;
-  const partsLabel = split ? `${split}x de ${money(cents / 100 / split)}` : plan === "avista" ? "À vista" : null;
+  const shownParts = plan === "parcelado" ? (parts ?? partsDraft) : null;
+  const partsLabel = shownParts ? `${shownParts}x de ${money(cents / 100 / shownParts)}` : plan === "avista" ? "À vista" : null;
 
   /* What is still missing, asked one at a time under the card. */
   const hasEntry = initial ? loaded : !!draft;
@@ -277,6 +280,8 @@ export default function QuickEntryFlow({
     setPickedWhere(null);
     setPickedPlan(null);
     setPickedParts(null);
+    setPartsDraft(null);
+    setMoreParts(false);
     setAskAgain(false);
     setPlanAgain(false);
   };
@@ -293,6 +298,10 @@ export default function QuickEntryFlow({
     setPickedWhere(pw);
     setPickedPlan(pp);
     setPickedParts(pn);
+    if (next.plan || next.method) {
+      setPartsDraft(null);
+      setMoreParts(false);
+    }
     if (next.category) setCategory(next.category);
     if (!pending(pm, pw, pp, pn, cat).question) setStep("confirm");
   };
@@ -334,7 +343,8 @@ export default function QuickEntryFlow({
         {
           name: name.trim().replace(/^./, (c) => c.toUpperCase()),
           type,
-          amount: cents / 100,
+          /* In instalments the purchase carries one instalment's value; the invoices repeat it. */
+          amount: split ? Math.round(cents / split) / 100 : cents / 100,
           category: category ?? "Outros",
           date,
           status: type === "despesa" && how === "cartao" ? "pendente" : "pago",
@@ -500,30 +510,41 @@ export default function QuickEntryFlow({
                     </View>
                   )}
 
-                  {/* Each count with what one instalment comes to */}
+                  {/* One bar — 2x to 5x, and "Mais" for the stepper — then what one instalment comes to */}
                   {question === "parts" && (
-                    <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                      {(moreParts ? PARTS_MORE : PARTS_FIRST).map((n) => (
-                        <Pressable
-                          key={n}
-                          onPress={() => {
-                            void Haptics.selectionAsync().catch(() => undefined);
-                            answered({ parts: n });
-                          }}
-                          style={({ pressed }) => ({ flexBasis: "22%", flexGrow: 1, height: 54, borderRadius: 16, borderCurve: "continuous", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", backgroundColor: pressed ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.07)" })}
-                        >
-                          <Text style={{ fontSize: 16, fontWeight: "700", color: "#fff" }}>{n}x</Text>
-                          <Text numberOfLines={1} style={[nums, { marginTop: 1, fontSize: 11.5, color: INK.soft }]}>
-                            {money(cents / 100 / n)}
+                    <View style={{ marginTop: 12 }}>
+                      {moreParts ? (
+                        <View style={{ height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 6, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", backgroundColor: "rgba(255,255,255,0.07)" }}>
+                          <Step icon={<Minus size={18} color="#fff" strokeWidth={2.4} />} label="Menos uma parcela" disabled={(partsDraft ?? 6) <= 2} onPress={() => setPartsDraft((n) => Math.max(2, (n ?? 6) - 1))} />
+                          <Text style={[nums, { fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }]}>{partsDraft ?? 6}x</Text>
+                          <Step icon={<Plus size={18} color="#fff" strokeWidth={2.4} />} label="Mais uma parcela" disabled={(partsDraft ?? 6) >= MAX_PARTS} onPress={() => setPartsDraft((n) => Math.min(MAX_PARTS, (n ?? 6) + 1))} />
+                        </View>
+                      ) : (
+                        <View style={{ flexDirection: "row", gap: 8 }}>
+                          {QUICK_PARTS.map((n) => (
+                            <PartsChip key={n} label={`${n}x`} on={partsDraft === n} onPress={() => setPartsDraft(n)} />
+                          ))}
+                          <PartsChip
+                            label="Mais"
+                            on={false}
+                            onPress={() => {
+                              setMoreParts(true);
+                              setPartsDraft((n) => (n && n > QUICK_PARTS[QUICK_PARTS.length - 1] ? n : 6));
+                            }}
+                          />
+                        </View>
+                      )}
+                      {partsDraft ? (
+                        <>
+                          <Text style={[nums, { marginTop: 12, fontSize: 14.5, color: INK.soft }]}>
+                            <Text style={{ fontWeight: "800", color: "#fff" }}>
+                              {partsDraft}x de {money(cents / 100 / partsDraft)}
+                            </Text>
+                            {"  ·  "}total {money(cents / 100)}
                           </Text>
-                        </Pressable>
-                      ))}
-                      <Pressable
-                        onPress={() => setMoreParts((v) => !v)}
-                        style={({ pressed }) => ({ flexBasis: "22%", flexGrow: 1, height: 54, borderRadius: 16, borderCurve: "continuous", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.04)", opacity: pressed ? 0.6 : 1 })}
-                      >
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: INK.soft }}>{moreParts ? "Menos" : "Mais"}</Text>
-                      </Pressable>
+                          <Primary label="Continuar" onPress={() => answered({ parts: partsDraft })} tight />
+                        </>
+                      ) : null}
                     </View>
                   )}
 
@@ -604,6 +625,8 @@ export default function QuickEntryFlow({
                     onPress={() => {
                       setPickedPlan(null);
                       setPickedParts(null);
+                      setPartsDraft(null);
+                      setMoreParts(false);
                       setPlanAgain(true);
                       setStep("ask");
                     }}
@@ -807,6 +830,47 @@ function Choice({ icon, label, wide, onPress }: { icon: React.ReactNode; label: 
       <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 16, fontWeight: "700", color: "#fff" }}>
         {label}
       </Text>
+    </Pressable>
+  );
+}
+
+/** One count in the bar; the chosen one lit. */
+function PartsChip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={() => {
+        void Haptics.selectionAsync().catch(() => undefined);
+        onPress();
+      }}
+      style={({ pressed }) => ({
+        flex: 1,
+        height: 48,
+        borderRadius: 18,
+        borderCurve: "continuous",
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: on ? "#fff" : "rgba(255,255,255,0.14)",
+        backgroundColor: on ? "#fff" : pressed ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.07)",
+      })}
+    >
+      <Text style={{ fontSize: 16, fontWeight: "700", color: on ? "#0B0B0B" : "#fff" }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function Step({ icon, label, disabled, onPress }: { icon: React.ReactNode; label: string; disabled?: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      disabled={disabled}
+      onPress={() => {
+        void Haptics.selectionAsync().catch(() => undefined);
+        onPress();
+      }}
+      style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)", opacity: disabled ? 0.3 : pressed ? 0.6 : 1 })}
+    >
+      {icon}
     </Pressable>
   );
 }

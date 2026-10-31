@@ -22,19 +22,33 @@ import { GREEN, INK, RED } from "~/theme/tokens";
  * time, the account's balance and the card's limit following it.
  */
 
-export type Entry = { kind: "line"; line: InvoiceLine; at: string } | { kind: "payment"; payment: InvoicePayment; at: string };
+export type Entry = { kind: "line"; line: InvoiceLine; at: number } | { kind: "payment"; payment: InvoicePayment; at: number };
 
-/** Purchases and payments together, newest first. */
-export function mergeEntries(lines: InvoiceLine[], payments: InvoicePayment[]): Entry[] {
+const localDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+/**
+ * Purchases and payments together, newest first.
+ *
+ * `addedAt`: when each line was written down, by the line's id — from the invoice items.
+ */
+export function mergeEntries(lines: InvoiceLine[], payments: InvoicePayment[], addedAt: Record<string, string | null | undefined> = {}): Entry[] {
   /* A payment sits at the moment it was made. A line has only a day, and an instalment's
      day is the invoice's own, often ahead of today — so a line counts from the start of
-     its day, never later than today, and what was paid today lands on top. */
-  const today = new Date().toISOString().slice(0, 10);
+     its day, never later than today. One written down on that very day sits at the hour
+     it was: a purchase made today comes above the instalments that only fall due today,
+     and of two on one day the later is on top. */
+  const today = localDay(new Date());
+  const lineAt = (line: InvoiceLine) => {
+    const day = line.date < today ? line.date : today;
+    const start = new Date(`${day}T00:00:00`).getTime();
+    const added = addedAt[line.id] ? new Date(addedAt[line.id] as string) : null;
+    return added && localDay(added) === day ? added.getTime() : start;
+  };
   const all: Entry[] = [
-    ...lines.map((line) => ({ kind: "line" as const, line, at: `${line.date < today ? line.date : today}T00:00:00` })),
-    ...payments.map((payment) => ({ kind: "payment" as const, payment, at: new Date(payment.paid_at).toISOString() })),
+    ...lines.map((line) => ({ kind: "line" as const, line, at: lineAt(line) })),
+    ...payments.map((payment) => ({ kind: "payment" as const, payment, at: new Date(payment.paid_at).getTime() })),
   ];
-  return all.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+  return all.sort((a, b) => b.at - a.at);
 }
 
 /** "Pagamento antecipado" before the invoice closes, "Pagamento da fatura" after. */

@@ -308,6 +308,8 @@ export default function Novo() {
           account_id: usingCard ? null : accountId,
           credit_card_id: usingCard ? creditCardId : null,
           recurrence_type: recurrence,
+          /* What was typed is the total; the purchase carries one instalment, and the instalments repeat it. */
+          ...(recurrence === "parcelado" && installments > 1 ? { amount: Math.round(cents / installments) / 100 } : {}),
           installments: recurrence === "parcelado" ? installments : null,
           installment_current: recurrence === "parcelado" ? 1 : null,
           observation: observation.trim() || null,

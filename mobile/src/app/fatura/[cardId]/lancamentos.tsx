@@ -108,14 +108,14 @@ export default function Lancamentos() {
   /* Purchases and payments together, newest at the top. */
   const shown = useMemo(
     () =>
-      mergeEntries(lines, tab === "parcelados" ? [] : payments).filter((entry) => {
+      mergeEntries(lines, tab === "parcelados" ? [] : payments, Object.fromEntries(items.map((i) => [i.id, i.created_at]))).filter((entry) => {
         if (entry.kind === "line" && tab === "parcelados" && !entry.line.installment) return false;
         const name = entry.kind === "line" ? entry.line.name : nameOf(entry.payment);
         if (search && !name.toLowerCase().includes(search.toLowerCase())) return false;
         return true;
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [lines, payments, tab, search, closingDay, month, year],
+    [lines, payments, items, tab, search, closingDay, month, year],
   );
 
   const parceladoCount = lines.filter((l) => l.installment).length;
