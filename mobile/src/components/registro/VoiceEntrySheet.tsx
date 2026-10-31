@@ -11,7 +11,7 @@ import { BlurView } from "expo-blur";
 import Svg, { Circle, Path } from "react-native-svg";
 import BankMark from "~/components/BankMark";
 import { colorFor } from "@/lib/banks";
-import { playCash } from "~/lib/sounds";
+import { preloadCash } from "~/lib/sounds";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
@@ -79,11 +79,10 @@ export default function VoiceEntrySheet({ entry }: { entry: VoiceEntry }) {
     if (state === "idle") setEditing(false);
   }, [state]);
 
-  /* Landing: the coins, and the phone taps back. It stays until Concluir. */
+  /* Ready for the moment the receipt's seal chimes. It stays until Concluir. */
   useEffect(() => {
-    if (!saved) return;
-    playCash();
-  }, [saved]);
+    if (open) preloadCash();
+  }, [open]);
 
   const total = lines.reduce((t, l) => t + (l.draft.type === "receita" ? l.draft.amount : -l.draft.amount), 0);
   const options = question && question.kind !== "category" ? question.options : [];
@@ -103,12 +102,9 @@ export default function VoiceEntrySheet({ entry }: { entry: VoiceEntry }) {
       <View style={{ paddingHorizontal: 20, paddingBottom: 6 }}>
         {saved ? (
           <View style={{ paddingTop: 4 }}>
-            <View style={{ alignItems: "center", marginBottom: 14 }}>
-              <DrawnTick />
-              <Animated.Text entering={FadeIn.delay(520).duration(300)} style={{ marginTop: 10, fontSize: 17, fontWeight: "800", letterSpacing: -0.3, color: "#fff" }}>
-                {lines.every((l) => l.draft.type === "receita") ? "Recebido!" : "Anotado!"}
-              </Animated.Text>
-            </View>
+            <Text style={{ marginBottom: 14, fontSize: 20, fontWeight: "800", letterSpacing: -0.4, color: "#fff" }}>
+              {lines.every((l) => l.draft.type === "receita") ? "Receita registrada." : "Gasto registrado."}
+            </Text>
             <ReceiptCard lines={receipt} />
           </View>
         ) : (

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { createTransaction, getAccounts, getCreditCards, getRecentTransactions } from "@/services/transactionService";
@@ -9,7 +8,7 @@ import { allowedCategories, readEntry, todayISO } from "@/services/quickEntry";
 import { parseLocal } from "@/lib/quickEntry/parseLocal";
 import { categoryHex } from "@/lib/categoryData";
 import { colorFor } from "@/lib/banks";
-import Room from "~/components/Room";
+import BottomSheet from "~/components/BottomSheet";
 import BankMark from "~/components/BankMark";
 import CategoryPicker from "~/components/CategoryPicker";
 import ReceiptCard from "~/components/registro/ReceiptCard";
@@ -17,7 +16,7 @@ import { ChevronLeft, CreditCard, Download, Landmark, Share2, Tag, X } from "~/c
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
-import { playCash } from "~/lib/sounds";
+import { preloadCash } from "~/lib/sounds";
 import { saveReceipt, shareReceipt } from "~/lib/receiptShare";
 import { showToast } from "~/lib/toast";
 import { useAuth } from "~/lib/auth";
@@ -54,7 +53,6 @@ const EXAMPLES = ["padaria 48", "uber 22 no crédito", "mercado 130", "recebi 30
 
 export default function Rapido() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const receiptRef = useRef<ComponentRef<typeof View>>(null);
 
@@ -174,7 +172,6 @@ export default function Rapido() {
       );
       window.dispatchEvent(new CustomEvent("transaction-created"));
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-      playCash();
       setSavedAt(new Date());
       setStep("done");
     } catch {
@@ -184,7 +181,22 @@ export default function Rapido() {
     }
   };
 
-  const close = () => (router.canGoBack() ? router.back() : router.replace("/" as never));
+  /* The sheet leaves first; the screen behind it is already there. */
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    preloadCash();
+    const t = setTimeout(() => setOpen(true), 30);
+    return () => clearTimeout(t);
+  }, []);
+  const leave = (then?: () => void) => {
+    setOpen(false);
+    setTimeout(() => {
+      if (router.canGoBack()) router.back();
+      else router.replace("/" as never);
+      then?.();
+    }, 260);
+  };
+  const close = () => leave();
   const back = () => {
     setError(null);
     if (step === "method") setStep("write");
@@ -199,10 +211,10 @@ export default function Rapido() {
   const hex = category ? categoryHex(category) : "#8B8D94";
 
   return (
-    <Room lit sky>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <>
+      <BottomSheet open={open} onClose={close} full={step === "done"}>
         {/* ── Where in it, and the ways out ── */}
-        <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View style={{ paddingHorizontal: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           {step !== "write" && step !== "done" ? (
             <Pressable onPress={back} hitSlop={10} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, height: 36, paddingHorizontal: 10, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.08)", opacity: pressed ? 0.6 : 1 })}>
               <ChevronLeft size={16} color="#fff" />
@@ -216,24 +228,24 @@ export default function Rapido() {
           </Pressable>
         </View>
 
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 18, paddingBottom: insets.bottom + 24, flexGrow: 1 }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8 }}>
           {step !== "done" && (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: "#5AA9FF" }}>REGISTRO RÁPIDO · ETAPA {stepNo} DE 4</Text>
+              <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: "rgba(255,255,255,0.72)" }}>REGISTRO RÁPIDO · ETAPA {stepNo} DE 4</Text>
             </View>
           )}
           {step !== "done" && (
             <View style={{ marginTop: 8, flexDirection: "row", gap: 4 }}>
               {steps.map((s, i) => (
-                <View key={s} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: i < stepNo ? "#5AA9FF" : "rgba(255,255,255,0.10)" }} />
+                <View key={s} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: i < stepNo ? "#fff" : "rgba(255,255,255,0.12)" }} />
               ))}
             </View>
           )}
 
           {/* ── 1 · What happened ── */}
           {step === "write" && (
-            <Animated.View key="write" entering={FadeInDown.duration(320)} style={{ marginTop: 22 }}>
-              <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: -0.9, color: "#fff" }}>O que aconteceu?</Text>
+            <Animated.View key="write" entering={FadeIn.duration(260)} style={{ marginTop: 18 }}>
+              <Text style={{ fontSize: 26, fontWeight: "800", letterSpacing: -0.7, color: "#fff" }}>O que aconteceu?</Text>
               <Text style={{ marginTop: 6, fontSize: 14.5, lineHeight: 20, color: INK.soft }}>
                 Escreva do seu jeito: o que foi e quanto. Eu entendo a categoria e o resto.
               </Text>
@@ -248,7 +260,7 @@ export default function Rapido() {
                 returnKeyType="next"
                 placeholder="Ex.: padaria 48"
                 placeholderTextColor={INK.faint}
-                style={{ marginTop: 20, minHeight: 58, borderRadius: 20, paddingHorizontal: 18, fontSize: 19, fontWeight: "600", color: "#fff", backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: said.trim() ? "rgba(90,169,255,0.6)" : "rgba(255,255,255,0.10)" }}
+                style={{ marginTop: 20, minHeight: 58, borderRadius: 20, paddingHorizontal: 18, fontSize: 19, fontWeight: "600", color: "#fff", backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: said.trim() ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)" }}
               />
               <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {EXAMPLES.map((e) => (
@@ -266,10 +278,10 @@ export default function Rapido() {
           {step === "method" && (
             <Animated.View key="method" entering={FadeInDown.duration(320)} style={{ marginTop: 22 }}>
               <Summary name={name} cents={cents} />
-              <Text style={{ marginTop: 20, fontSize: 24, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>Foi no débito ou no crédito?</Text>
-              <View style={{ marginTop: 16, gap: 10 }}>
-                <Choice icon={<Landmark size={20} color="#fff" strokeWidth={2.1} />} label="Débito" note="Saiu da conta: pix, débito, dinheiro" onPress={() => afterMethod("conta")} />
-                <Choice icon={<CreditCard size={20} color="#fff" strokeWidth={2.1} />} label="Crédito" note="Vai para a fatura do cartão" onPress={() => afterMethod("cartao")} />
+              <Text style={{ marginTop: 14, fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>Foi no débito ou no crédito?</Text>
+              <View style={{ marginTop: 14, flexDirection: "row", gap: 10 }}>
+                <Choice icon={<Landmark size={20} color="#fff" strokeWidth={2.1} />} label="Débito" onPress={() => afterMethod("conta")} />
+                <Choice icon={<CreditCard size={20} color="#fff" strokeWidth={2.1} />} label="Crédito" onPress={() => afterMethod("cartao")} />
               </View>
             </Animated.View>
           )}
@@ -278,10 +290,10 @@ export default function Rapido() {
           {step === "where" && (
             <Animated.View key="where" entering={FadeInDown.duration(320)} style={{ marginTop: 22 }}>
               <Summary name={name} cents={cents} />
-              <Text style={{ marginTop: 20, fontSize: 24, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>
+              <Text style={{ marginTop: 14, fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>
                 {method === "cartao" ? "Em qual cartão?" : type === "receita" ? "Entrou em qual conta?" : "De qual conta?"}
               </Text>
-              <View style={{ marginTop: 16, gap: 10 }}>
+              <View style={{ marginTop: 14, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
                 {options.map((o) => (
                   <Choice
                     key={o.id}
@@ -359,12 +371,12 @@ export default function Rapido() {
 
           {/* ── Saved: the receipt, and what to do with it ── */}
           {step === "done" && savedAt && (
-            <Animated.View key="done" entering={FadeIn.duration(300)} style={{ flex: 1, justifyContent: "center", paddingTop: 10 }}>
+            <Animated.View key="done" entering={FadeIn.duration(240)} style={{ paddingTop: 2 }}>
               <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: GREEN }}>SALVO</Text>
               <Text style={{ marginTop: 4, fontSize: 28, fontWeight: "800", letterSpacing: -0.8, color: "#fff" }}>
                 {type === "receita" ? "Receita registrada." : "Gasto registrado."}
               </Text>
-              <View ref={receiptRef} collapsable={false} style={{ marginTop: 22, paddingVertical: 8, backgroundColor: "#0B0C0E" }}>
+              <View ref={receiptRef} collapsable={false} style={{ marginTop: 16, paddingHorizontal: 6, paddingTop: 6, paddingBottom: 10, borderRadius: 24, backgroundColor: "#0B0C0E" }}>
                 <ReceiptCard
                   when={savedAt}
                   lines={[{ id: "1", name: name.trim(), category: category ?? "Outros", amount: cents / 100, type, method: type === "receita" ? whereName : `${methodLabel}${whereName ? ` · ${whereName}` : ""}` }]}
@@ -390,13 +402,13 @@ export default function Rapido() {
                 />
               </View>
               <Primary label="Concluir" onPress={close} />
-              <Pressable onPress={() => router.replace("/(tabs)/transacoes" as never)} style={({ pressed }) => ({ marginTop: 6, height: 44, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
+              <Pressable onPress={() => leave(() => router.push("/(tabs)/transacoes" as never))} style={({ pressed }) => ({ marginTop: 6, height: 44, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
                 <Text style={{ fontSize: 15, fontWeight: "600", color: INK.soft }}>Ver transações</Text>
               </Pressable>
             </Animated.View>
           )}
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
+      </BottomSheet>
 
       <CategoryPicker
         open={picking}
@@ -408,7 +420,7 @@ export default function Rapido() {
         }}
         onClose={() => setPicking(false)}
       />
-    </Room>
+    </>
   );
 }
 
@@ -426,12 +438,14 @@ function Choice({ icon, label, note, onPress }: { icon: React.ReactNode; label: 
     <Pressable
       onPress={onPress}
       style={({ pressed }) => ({
-        minHeight: 66,
+        flexGrow: 1,
+        flexBasis: "45%",
+        minHeight: 62,
         flexDirection: "row",
         alignItems: "center",
-        gap: 14,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        gap: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
         borderRadius: 22,
         borderCurve: "continuous",
         borderWidth: 1,
@@ -440,9 +454,9 @@ function Choice({ icon, label, note, onPress }: { icon: React.ReactNode; label: 
         transform: [{ scale: pressed ? 0.98 : 1 }],
       })}
     >
-      <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" }}>{icon}</View>
+      <View style={{ width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" }}>{icon}</View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ fontSize: 17, fontWeight: "700", color: "#fff" }}>{label}</Text>
+        <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "700", color: "#fff" }}>{label}</Text>
         {note ? <Text style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>{note}</Text> : null}
       </View>
     </Pressable>
