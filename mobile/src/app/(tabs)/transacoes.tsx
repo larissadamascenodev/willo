@@ -138,7 +138,7 @@ export default function Transacoes() {
            line still carries the money, so these are shown, not counted. */
         supabase
           .from("transactions")
-          .select("id,name,category,date,amount,type,status,payment_method,recurrence_type,installment_current,installments,observation,account_id,credit_card_id")
+          .select("id,name,category,date,amount,type,status,payment_method,recurrence_type,installment_current,installments,observation,account_id,credit_card_id,created_at")
           .eq("payment_method", "cartao")
           .eq("type", "despesa")
           .is("parent_transaction_id", null)
@@ -188,10 +188,12 @@ export default function Transacoes() {
     [transactions, tab, search],
   );
 
-  /* Grouped by day, newest first, each day carrying what it did to the balance. */
+  /* Grouped by day, newest first, each day carrying what it did to the balance — and
+     within a day by the hour it was written down, the latest on top. */
   const days = useMemo(() => {
     const groups: Record<string, Row[]> = {};
     for (const tx of filtered) (groups[tx.date] ??= []).push(tx);
+    for (const rows of Object.values(groups)) rows.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
   }, [filtered]);
 

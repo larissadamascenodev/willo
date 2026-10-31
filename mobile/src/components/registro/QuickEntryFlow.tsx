@@ -37,8 +37,8 @@ import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
  * goes straight to the check. The check: out or in, the amount, the words, the category
  * and how it was paid — and Registrar. It lands on the receipt: at the moment its seal
  * ticks, the chime, the notice at the top and a burst of sparkles, all at once; and the
- * ways on — share it, keep it in the gallery, see the transactions. Concluir lets a last
- * few sparkles fall over the screen underneath as the sheet goes.
+ * ways on — share it, keep it in the gallery, see the transactions. The sparkles belong
+ * to that moment and go with the sheet.
  *
  * It closes with a tap outside it; there is no X to take room at the top.
  */
@@ -320,11 +320,7 @@ export default function QuickEntryFlow({
   /* The seal ticks: the notice and the sparkles come with the chime. */
   const landed = () => {
     showToast(`${type === "receita" ? "Receita" : "Despesa"} adicionada · ${name.trim()}, ${money(cents / 100)}`);
-    sparkle("burst");
-  };
-  const finish = () => {
-    sparkle("rain");
-    onClose();
+    sparkle();
   };
 
   const stageNo = step === "ask" ? 1 : 2;
@@ -573,11 +569,11 @@ export default function QuickEntryFlow({
                 <Text style={{ marginTop: 1, fontSize: 13, color: INK.soft }}>Anotado pelo Willo às {hhmm(savedAt)}</Text>
               </View>
             </View>
-            <View ref={receiptRef} collapsable={false} style={{ marginTop: 14, paddingTop: 4, paddingBottom: 6 }}>
+            <View ref={receiptRef} collapsable={false} style={{ marginTop: 10, paddingTop: 2, paddingBottom: 4 }}>
               <ReceiptCard when={savedAt} onLanded={landed} lines={[{ id: "1", name: name.trim(), category: category ?? "Outros", amount: cents / 100, type, method: payLabel }]} />
             </View>
 
-            <View style={{ marginTop: 20, flexDirection: "row", gap: 10 }}>
+            <View style={{ marginTop: 14, flexDirection: "row", gap: 10 }}>
               <Secondary
                 icon={<Share2 size={16} color="#fff" />}
                 label="Compartilhar"
@@ -595,8 +591,8 @@ export default function QuickEntryFlow({
                 }
               />
             </View>
-            <Primary label="Concluir" onPress={finish} />
-            <Pressable onPress={onSeeTransactions} style={({ pressed }) => ({ marginTop: 6, height: 44, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
+            <Primary label="Concluir" onPress={onClose} tight />
+            <Pressable onPress={onSeeTransactions} style={({ pressed }) => ({ marginTop: 2, height: 40, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
               <Text style={{ fontSize: 15, fontWeight: "600", color: INK.soft }}>Ver transações</Text>
             </Pressable>
           </Animated.View>
@@ -706,12 +702,12 @@ function Field({ label, changeable, children, style }: { label: string; changeab
   );
 }
 
-function Primary({ label, onPress, disabled, busy }: { label: string; onPress: () => void; disabled?: boolean; busy?: boolean }) {
+function Primary({ label, onPress, disabled, busy, tight }: { label: string; onPress: () => void; disabled?: boolean; busy?: boolean; tight?: boolean }) {
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => ({ marginTop: 16, height: 54, borderRadius: 27, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, backgroundColor: "#fff", opacity: disabled && !busy ? 0.35 : pressed ? 0.85 : 1 })}
+      style={({ pressed }) => ({ marginTop: tight ? 10 : 16, height: 54, borderRadius: 27, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, backgroundColor: "#fff", opacity: disabled && !busy ? 0.35 : pressed ? 0.85 : 1 })}
     >
       {busy && <ActivityIndicator color="#0B0B0B" />}
       <Text style={{ fontSize: 17, fontWeight: "700", color: "#0B0B0B" }}>{label}</Text>
@@ -723,7 +719,7 @@ function Secondary({ icon, label, onPress }: { icon: React.ReactNode; label: str
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => ({ flex: 1, height: 50, borderRadius: 25, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", backgroundColor: "rgba(255,255,255,0.07)", opacity: pressed ? 0.7 : 1 })}
+      style={({ pressed }) => ({ flex: 1, height: 46, borderRadius: 23, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", backgroundColor: "rgba(255,255,255,0.07)", opacity: pressed ? 0.7 : 1 })}
     >
       {icon}
       <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{label}</Text>

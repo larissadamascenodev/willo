@@ -5,16 +5,15 @@ import { onSparkle, type SparkleShower } from "~/lib/sparkles";
 import { GREEN } from "~/theme/tokens";
 
 /**
- * Where the sparkles are drawn: over everything, touching nothing.
+ * Where the sparkles are drawn: over the sheet, touching nothing.
  *
- * A burst throws them out from the middle of the screen, where the receipt's seal is,
- * and lets them drift down slowly, twinkling; rain lets them fall from the top. Every
- * piece is worked out from the shower's seed and the time since it began, so two layers
- * drawing the same shower draw the same thing at the same moment.
+ * A burst throws them out from where the receipt's seal is and lets them drift down
+ * slowly, twinkling. Every piece is worked out from the burst's seed and the time since
+ * it began.
  */
 
-const COUNT = { burst: 54, rain: 40 } as const;
-const LENGTH_S = { burst: 4.4, rain: 3.6 } as const;
+const COUNT = 54;
+const LENGTH_S = 4.4;
 const COLORS = ["#FFFFFF", "#FFFFFF", GREEN, "#E8FFD0", "rgba(255,255,255,0.7)"];
 
 interface Piece {
@@ -45,21 +44,25 @@ function seeded(seed: number) {
 
 function piecesOf(shower: SparkleShower, w: number, h: number): Piece[] {
   const r = seeded(shower.seed);
-  return Array.from({ length: COUNT[shower.kind] }, () => {
-    const common = {
+  return Array.from({ length: COUNT }, () => {
+    const angle = r() * Math.PI * 2;
+    const speed = 140 + r() * 460;
+    return {
       size: 2 + r() * 3,
       long: r() < 0.35,
       color: COLORS[Math.floor(r() * COLORS.length)],
       spin: (r() - 0.5) * 720,
       phase: r() * Math.PI * 2,
       twinkle: 5 + r() * 9,
+      x0: w / 2 + (r() - 0.5) * 50,
+      y0: h * 0.3 + (r() - 0.5) * 40,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 110,
+      drag: 1.7,
+      fall: 210,
+      delay: r() * 0.12,
+      life: 2.6 + r() * 1.7,
     };
-    if (shower.kind === "burst") {
-      const angle = r() * Math.PI * 2;
-      const speed = 140 + r() * 460;
-      return { ...common, x0: w / 2 + (r() - 0.5) * 50, y0: h * 0.3 + (r() - 0.5) * 40, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 110, drag: 1.7, fall: 210, delay: r() * 0.12, life: 2.6 + r() * 1.7 };
-    }
-    return { ...common, x0: r() * w, y0: -16 - r() * h * 0.3, vx: (r() - 0.5) * 50, vy: 70 + r() * 110, drag: 0.6, fall: 150, delay: r() * 0.7, life: 2.3 + r() * 0.6 };
   });
 }
 
@@ -92,11 +95,10 @@ function Bit({ p, clock }: { p: Piece; clock: SharedValue<number> }) {
 
 function Shower({ shower, w, h, onDone }: { shower: SparkleShower; w: number; h: number; onDone: (id: number) => void }) {
   const pieces = useMemo(() => piecesOf(shower, w, h), [shower, w, h]);
-  const length = LENGTH_S[shower.kind];
+  const length = LENGTH_S;
   const clock = useSharedValue(0);
 
   useEffect(() => {
-    /* Heard of late — a layer that mounts as the sheet closes — it starts where the others are. */
     const since = Math.min(length, Math.max(0, (Date.now() - shower.at) / 1000));
     clock.set(since);
     clock.set(withTiming(length, { duration: (length - since) * 1000, easing: Easing.linear }));

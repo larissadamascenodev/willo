@@ -172,7 +172,7 @@ function Seal({ sound, onLanded }: { sound: boolean; onLanded?: () => void }) {
 /** One row of facts, printed in its turn. */
 function Fact({ label, value, delay }: { label: string; value: string; delay: number }) {
   return (
-    <Animated.View entering={FadeIn.delay(delay).duration(320)} style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, paddingVertical: 6 }}>
+    <Animated.View entering={FadeIn.delay(delay).duration(320)} style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, paddingVertical: 4.5 }}>
       <Text style={{ fontSize: 12.5, color: DIM }}>{label}</Text>
       <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 13, fontWeight: "600", color: INK, textAlign: "right" }}>
         {value}
@@ -224,7 +224,7 @@ export default function ReceiptCard({
 
         <View style={{ borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: "hidden" }}>
           <LinearGradient colors={[PAPER, PAPER_FOOT]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-          <View style={{ paddingHorizontal: 22, paddingTop: SEAL / 2 + 10, paddingBottom: 16 }}>
+          <View style={{ paddingHorizontal: 22, paddingTop: SEAL / 2 + 8, paddingBottom: 14 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
               <Text style={{ fontSize: 10.5, fontWeight: "700", letterSpacing: 3.5, color: DIM }}>COMPROVANTE</Text>
               <Text style={{ fontSize: 11, color: DIM }}>{code}</Text>
@@ -233,9 +233,9 @@ export default function ReceiptCard({
             {single ? (
               <>
                 {/* The figure, large, and what it was. */}
-                <Animated.View entering={FadeIn.delay(820).duration(380)} style={{ marginTop: 18, alignItems: "center" }}>
+                <Animated.View entering={FadeIn.delay(820).duration(380)} style={{ marginTop: 12, alignItems: "center" }}>
                   <Text style={{ fontSize: 12, color: DIM }}>{single.type === "receita" ? "Você recebeu" : "Você pagou"}</Text>
-                  <Text style={[nums, { marginTop: 4, fontSize: 38, fontWeight: "800", letterSpacing: -1.4, color: single.type === "receita" ? IN : INK }]}>
+                  <Text style={[nums, { marginTop: 2, fontSize: 36, fontWeight: "800", letterSpacing: -1.3, color: single.type === "receita" ? IN : INK }]}>
                     {single.type === "receita" ? "+" : "−"}
                     {money(single.amount)}
                   </Text>
@@ -248,7 +248,7 @@ export default function ReceiptCard({
                     <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: "700", color: INK }}>{single.name}</Text>
                   </View>
                 </Animated.View>
-                <View style={{ marginTop: 18 }}>
+                <View style={{ marginTop: 14 }}>
                   <Dashed />
                 </View>
                 <View style={{ marginTop: 6 }}>
@@ -289,7 +289,7 @@ export default function ReceiptCard({
             )}
 
             {/* Willo's mark in the corner. */}
-            <Animated.View entering={FadeIn.delay(1360).duration(360)} style={{ marginTop: 18, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Animated.View entering={FadeIn.delay(1360).duration(360)} style={{ marginTop: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <Image source={LOGO} contentFit="contain" style={{ height: 20, width: 20 * LOGO_RATIO }} accessibilityLabel="Willo" />
               <Text style={{ fontSize: 11, color: DIM }}>Registrado pelo Willo</Text>
             </Animated.View>

@@ -100,7 +100,7 @@ export default function BottomSheet({
             left: 0,
             right: 0,
             bottom: lift,
-            maxHeight: full ? "88%" : "72%",
+            maxHeight: full ? "92%" : "72%",
             borderTopLeftRadius: 30,
             borderTopRightRadius: 30,
             borderCurve: "continuous",

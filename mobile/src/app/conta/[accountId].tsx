@@ -80,7 +80,11 @@ interface Movement {
   type: string;
   status: string;
   account_id: string | null;
+  created_at?: string;
 }
+
+/** Newest day first, and within a day the one written down last on top. */
+const newestFirst = (a: Movement, b: Movement) => b.date.localeCompare(a.date) || (b.created_at ?? "").localeCompare(a.created_at ?? "");
 
 export default function ContaDetalhe() {
   const { accountId } = useLocalSearchParams<{ accountId: string }>();
@@ -167,7 +171,7 @@ export default function ContaDetalhe() {
   );
 
   const ordered = useMemo(
-    () => [...movements].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
+    () => [...movements].sort(newestFirst),
     [movements],
   );
 
@@ -179,7 +183,7 @@ export default function ContaDetalhe() {
       .then((txs) => {
         if (!alive) return;
         const mine = (txs as unknown as Movement[]).filter((t) => t.account_id === accountId);
-        setHistory(mine.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)));
+        setHistory(mine.sort(newestFirst));
       })
       .catch(() => alive && setHistory([]));
     return () => {
@@ -390,7 +394,7 @@ export default function ContaDetalhe() {
               cat={cat}
               spent={movements
                 .filter((t) => t.type === "despesa" && t.status === "pago" && t.category === cat.name)
-                .sort((x, y) => (x.date < y.date ? 1 : x.date > y.date ? -1 : 0))}
+                .sort(newestFirst)}
             />
           ))}
         </View>

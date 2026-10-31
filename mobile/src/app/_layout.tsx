@@ -8,7 +8,6 @@ import { installShims, hydrateShims } from "~/lib/shims";
 import { AuthProvider, useAuth } from "~/lib/auth";
 import { useApplyOnboarding } from "~/lib/onboarding";
 import { MonthProvider } from "@/contexts/MonthContext";
-import SparkleLayer from "~/components/SparkleLayer";
 import ToastHost from "~/components/ToastHost";
 import { GREEN, GROUND } from "~/theme/tokens";
 
@@ -47,7 +46,6 @@ export default function RootLayout() {
           <MonthProvider>
             <StatusBar style="light" />
             <Door />
-            <SparkleLayer />
             <ToastHost />
           </MonthProvider>
         </AuthProvider>
