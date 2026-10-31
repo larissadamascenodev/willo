@@ -11,13 +11,14 @@ import BankMark from "~/components/BankMark";
 import CategoryPicker from "~/components/CategoryPicker";
 import ParticleOrb from "~/components/registro/ParticleOrb";
 import ReceiptCard from "~/components/registro/ReceiptCard";
-import { ChevronLeft, ChevronRight, CreditCard, Download, Landmark, Share2, Tag, X } from "~/components/icons";
+import { ChevronLeft, ChevronRight, CreditCard, Download, Landmark, Share2, Tag } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
 import { paymentMention } from "~/lib/paymentMention";
 import { preloadCash } from "~/lib/sounds";
 import { saveReceipt, shareReceipt } from "~/lib/receiptShare";
+import { sparkle } from "~/lib/sparkles";
 import { showToast } from "~/lib/toast";
 import { useAuth } from "~/lib/auth";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
@@ -34,8 +35,12 @@ import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
  * card, then the category — each answer landing on the card. Whatever the sentence
  * already said ("no débito, na conta Nubank") is not asked again; with nothing missing it
  * goes straight to the check. The check: out or in, the amount, the words, the category
- * and how it was paid — and Registrar. It lands on the receipt, the coins, and the ways
- * on: share it, keep it in the gallery, see the transactions.
+ * and how it was paid — and Registrar. It lands on the receipt: at the moment its seal
+ * ticks, the chime, the notice at the top and a burst of sparkles, all at once; and the
+ * ways on — share it, keep it in the gallery, see the transactions. Concluir lets a last
+ * few sparkles fall over the screen underneath as the sheet goes.
+ *
+ * It closes with a tap outside it; there is no X to take room at the top.
  */
 
 export type Step = "ask" | "confirm" | "done";
@@ -53,8 +58,6 @@ export interface StartingEntry {
   date?: string;
 }
 
-/* Both steps take the same room, their action at the same place at the foot. */
-const STEP_MIN_H = 476;
 /* How long the typing pauses before the keyboard steps aside. */
 const PAUSE_MS = 1400;
 
@@ -231,6 +234,16 @@ export default function QuickEntryFlow({
     if (!question) setStep("confirm");
   }, [initial, loaded, question]);
 
+  /* What is written, typed or picked from the examples: the words decide again. */
+  const write = (t: string) => {
+    setSaid(t);
+    setAiRead(null);
+    setError(null);
+    setPickedMethod(null);
+    setPickedWhere(null);
+    setAskAgain(false);
+  };
+
   /* An answer lands on the card; the last one goes to the check. */
   const answered = (next: { method?: Method; where?: string; category?: string }) => {
     Keyboard.dismiss();
@@ -294,7 +307,6 @@ export default function QuickEntryFlow({
         user.id,
       );
       window.dispatchEvent(new CustomEvent("transaction-created"));
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       setSavedAt(new Date());
       setStep("done");
       onSaved?.(`${name.trim()}, ${money(cents / 100)}`);
@@ -305,6 +317,16 @@ export default function QuickEntryFlow({
     }
   };
 
+  /* The seal ticks: the notice and the sparkles come with the chime. */
+  const landed = () => {
+    showToast(`${type === "receita" ? "Receita" : "Despesa"} adicionada · ${name.trim()}, ${money(cents / 100)}`);
+    sparkle("burst");
+  };
+  const finish = () => {
+    sparkle("rain");
+    onClose();
+  };
+
   const stageNo = step === "ask" ? 1 : 2;
   const Icon = category ? categoryIcon(category) : Tag;
   const hex = category ? categoryHex(category) : "#8B8D94";
@@ -312,32 +334,26 @@ export default function QuickEntryFlow({
 
   return (
     <>
-      {/* ── Where in it, and the ways out ── */}
-      {step !== "done" && (
-        <View style={{ paddingHorizontal: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          {step === "confirm" ? (
-            <Pressable
-              onPress={() => {
-                setError(null);
-                setStep("ask");
-              }}
-              hitSlop={10}
-              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, height: 36, paddingHorizontal: 10, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.08)", opacity: pressed ? 0.6 : 1 })}
-            >
-              <ChevronLeft size={16} color="#fff" />
-              <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>Voltar</Text>
-            </Pressable>
-          ) : (
-            <View style={{ width: 36 }} />
-          )}
-          <CloseButton onPress={onClose} />
-        </View>
-      )}
-
-      <View style={{ paddingHorizontal: 20, paddingTop: step === "done" ? 4 : 14, paddingBottom: 8, minHeight: step === "done" || typing ? undefined : STEP_MIN_H }}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 2, paddingBottom: 8 }}>
+        {/* ── Where in it, and the way back ── */}
         {step !== "done" && (
           <>
-            <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: "rgba(255,255,255,0.72)" }}>REGISTRO RÁPIDO · ETAPA {stageNo} DE 2</Text>
+            <View style={{ minHeight: 30, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: "rgba(255,255,255,0.72)" }}>REGISTRO RÁPIDO · ETAPA {stageNo} DE 2</Text>
+              {step === "confirm" && (
+                <Pressable
+                  onPress={() => {
+                    setError(null);
+                    setStep("ask");
+                  }}
+                  hitSlop={10}
+                  style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, height: 30, paddingLeft: 6, paddingRight: 11, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.08)", opacity: pressed ? 0.6 : 1 })}
+                >
+                  <ChevronLeft size={15} color="#fff" />
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#fff" }}>Voltar</Text>
+                </Pressable>
+              )}
+            </View>
             <View style={{ marginTop: 8, flexDirection: "row", gap: 4 }}>
               {[1, 2].map((n) => (
                 <View key={n} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: n <= stageNo ? "#fff" : "rgba(255,255,255,0.12)" }} />
@@ -348,7 +364,7 @@ export default function QuickEntryFlow({
 
         {/* ── What happened, the card it became, and what is still missing ── */}
         {step === "ask" && (
-          <Animated.View entering={FadeIn.duration(240)} style={{ marginTop: 18, flexGrow: 1 }}>
+          <Animated.View entering={FadeIn.duration(240)} style={{ marginTop: 18 }}>
             {initial ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <ParticleOrb size={34} />
@@ -367,14 +383,7 @@ export default function QuickEntryFlow({
                 <TextInput
                   autoFocus
                   value={said}
-                  onChangeText={(t) => {
-                    setSaid(t);
-                    setAiRead(null);
-                    setError(null);
-                    setPickedMethod(null);
-                    setPickedWhere(null);
-                    setAskAgain(false);
-                  }}
+                  onChangeText={write}
                   onSubmitEditing={() => {
                     if (!draft) return void readHard();
                     pausedOn.current = said;
@@ -389,7 +398,13 @@ export default function QuickEntryFlow({
                 {!said.trim() && (
                   <View style={{ marginTop: 10, flexDirection: "row", gap: 8 }}>
                     {EXAMPLES.map((e) => (
-                      <Pressable key={e} onPress={() => setSaid(e)} style={({ pressed }) => ({ flex: 1, height: 32, alignItems: "center", justifyContent: "center", paddingHorizontal: 8, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.06)", opacity: pressed ? 0.6 : 1 })}>
+                      <Pressable
+                        key={e}
+                        onPress={() => {
+                          write(e);
+                          Keyboard.dismiss();
+                        }}
+                        style={({ pressed }) => ({ flex: 1, height: 32, alignItems: "center", justifyContent: "center", paddingHorizontal: 8, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.06)", opacity: pressed ? 0.6 : 1 })}>
                         <Text numberOfLines={1} style={{ fontSize: 13, color: INK.soft }}>
                           {e}
                         </Text>
@@ -407,7 +422,7 @@ export default function QuickEntryFlow({
               </Animated.View>
             )}
 
-            <View style={{ flexGrow: 1, justifyContent: "flex-end" }}>
+            <View>
               {question && !typing ? (
                 <Animated.View key={question} entering={FadeIn.duration(220)} style={{ marginTop: 16 }}>
                   <Text style={{ fontSize: 15.5, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>
@@ -475,7 +490,7 @@ export default function QuickEntryFlow({
 
         {/* ── Check before saving ── */}
         {step === "confirm" && (
-          <Animated.View key="confirm" entering={FadeInDown.duration(320)} style={{ marginTop: 18, flexGrow: 1 }}>
+          <Animated.View key="confirm" entering={FadeInDown.duration(320)} style={{ marginTop: 18 }}>
             <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>Confira antes de salvar</Text>
             {said.trim() ? (
               <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 12.5, color: INK.softer }}>
@@ -543,7 +558,6 @@ export default function QuickEntryFlow({
               </Field>
             </View>
 
-            <View style={{ flexGrow: 1 }} />
             {error && <Text style={{ marginTop: 14, fontSize: 13.5, color: RED }}>{error}</Text>}
             <Primary label={saving ? "Registrando…" : "Registrar"} busy={saving} disabled={saving || cents <= 0 || !name.trim() || !whereId} onPress={() => void register()} />
           </Animated.View>
@@ -558,10 +572,9 @@ export default function QuickEntryFlow({
                 <Text style={{ fontSize: 21, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>{type === "receita" ? "Receita registrada" : "Gasto registrado"}</Text>
                 <Text style={{ marginTop: 1, fontSize: 13, color: INK.soft }}>Anotado pelo Willo às {hhmm(savedAt)}</Text>
               </View>
-              <CloseButton onPress={onClose} />
             </View>
             <View ref={receiptRef} collapsable={false} style={{ marginTop: 14, paddingTop: 4, paddingBottom: 6 }}>
-              <ReceiptCard when={savedAt} lines={[{ id: "1", name: name.trim(), category: category ?? "Outros", amount: cents / 100, type, method: payLabel }]} />
+              <ReceiptCard when={savedAt} onLanded={landed} lines={[{ id: "1", name: name.trim(), category: category ?? "Outros", amount: cents / 100, type, method: payLabel }]} />
             </View>
 
             <View style={{ marginTop: 20, flexDirection: "row", gap: 10 }}>
@@ -582,7 +595,7 @@ export default function QuickEntryFlow({
                 }
               />
             </View>
-            <Primary label="Concluir" onPress={onClose} />
+            <Primary label="Concluir" onPress={finish} />
             <Pressable onPress={onSeeTransactions} style={({ pressed }) => ({ marginTop: 6, height: 44, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
               <Text style={{ fontSize: 15, fontWeight: "600", color: INK.soft }}>Ver transações</Text>
             </Pressable>
@@ -602,14 +615,6 @@ export default function QuickEntryFlow({
         onClose={() => setPicking(false)}
       />
     </>
-  );
-}
-
-function CloseButton({ onPress }: { onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} accessibilityLabel="Fechar" hitSlop={10} style={({ pressed }) => ({ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)", opacity: pressed ? 0.6 : 1 })}>
-      <X size={17} color="rgba(255,255,255,0.88)" strokeWidth={2.4} />
-    </Pressable>
   );
 }
 

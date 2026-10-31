@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Keyboard, Modal, Platform, Pressable, ScrollView, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
+import SparkleLayer from "~/components/SparkleLayer";
+import ToastHost from "~/components/ToastHost";
 import Animated, {
   Easing,
   ReduceMotion,
@@ -68,7 +70,8 @@ export default function BottomSheet({
     }
     const ios = Platform.OS === "ios";
     const show = Keyboard.addListener(ios ? "keyboardWillChangeFrame" : "keyboardDidShow", (e) => {
-      setLift(Math.max(0, e.endCoordinates.height - (ios ? insets.bottom : 0)));
+      /* The keyboard's height already runs to the foot of the screen, home bar and all. */
+      setLift(Math.max(0, e.endCoordinates.height));
     });
     const hide = Keyboard.addListener(ios ? "keyboardWillHide" : "keyboardDidHide", () => setLift(0));
     return () => {
@@ -124,6 +127,10 @@ export default function BottomSheet({
         />
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">{children}</ScrollView>
       </Animated.View>
+
+      {/* Over the sheet: what lands while it is open is seen at once, not after it closes. */}
+      <SparkleLayer />
+      <ToastHost quiet />
     </Modal>
   );
 }

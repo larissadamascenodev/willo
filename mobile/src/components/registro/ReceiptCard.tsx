@@ -11,6 +11,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, Line, Path } from "react-native-svg";
 import { categoryHex } from "@/lib/categoryData";
@@ -57,6 +58,10 @@ const TICK = 34;
 /** When the tick starts being written: the moment of the sound. */
 const TICK_AT = 520;
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const LOGO = require("../../../assets/images/willo-logo-ink.png") as number;
+const LOGO_RATIO = 725 / 222;
+
 const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }, default: {} }) as TextStyle;
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -98,7 +103,7 @@ function Ray({ angle, delay }: { angle: number; delay: number }) {
 }
 
 /** The seal: drawn, not stamped — and it is what chimes. */
-function Seal({ sound }: { sound: boolean }) {
+function Seal({ sound, onLanded }: { sound: boolean; onLanded?: () => void }) {
   const pop = useSharedValue(0);
   const ring = useSharedValue(0);
   const tick = useSharedValue(0);
@@ -108,10 +113,15 @@ function Seal({ sound }: { sound: boolean }) {
     pop.set(withDelay(180, withSpring(1, { damping: 11, stiffness: 240, reduceMotion: ReduceMotion.System })));
     ring.set(withDelay(200, withTiming(1, { duration: 360, easing: Easing.out(Easing.cubic) })));
     tick.set(withDelay(TICK_AT, withTiming(1, { duration: 300, easing: Easing.out(Easing.quad) })));
-    const t = sound ? setTimeout(playCash, TICK_AT) : null;
+    /* One moment for all of it: the tick begins, the chime, and whatever lands with them. */
+    const t = setTimeout(() => {
+      if (sound) playCash();
+      onLanded?.();
+    }, TICK_AT);
     return () => {
       if (t) clearTimeout(t);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pop, ring, tick, sound]);
 
   const ringProps = useAnimatedProps(() => ({ strokeDashoffset: RING * (1 - ring.get()) }));
@@ -171,7 +181,18 @@ function Fact({ label, value, delay }: { label: string; value: string; delay: nu
   );
 }
 
-export default function ReceiptCard({ lines, when = new Date(), sound = true }: { lines: ReceiptLine[]; when?: Date; sound?: boolean }) {
+export default function ReceiptCard({
+  lines,
+  when = new Date(),
+  sound = true,
+  onLanded,
+}: {
+  lines: ReceiptLine[];
+  when?: Date;
+  sound?: boolean;
+  /** Called the moment the tick starts and the chime plays — for the notice and the sparkles. */
+  onLanded?: () => void;
+}) {
   const total = lines.reduce((t, l) => t + (l.type === "receita" ? l.amount : -l.amount), 0);
   const date = when.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
   const time = when.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -197,7 +218,7 @@ export default function ReceiptCard({ lines, when = new Date(), sound = true }: 
         {/* The seal, sitting on the top edge. */}
         <View style={{ alignItems: "center", height: SEAL / 2, zIndex: 2 }}>
           <View style={{ position: "absolute", top: 0 }}>
-            <Seal sound={sound} />
+            <Seal sound={sound} onLanded={onLanded} />
           </View>
         </View>
 
@@ -269,10 +290,7 @@ export default function ReceiptCard({ lines, when = new Date(), sound = true }: 
 
             {/* Willo's mark in the corner. */}
             <Animated.View entering={FadeIn.delay(1360).duration(360)} style={{ marginTop: 18, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                <Text style={{ fontSize: 17, fontWeight: "800", letterSpacing: -0.4, color: INK }}>willo</Text>
-                <View style={{ width: 5, height: 5, borderRadius: 3, marginTop: 2, backgroundColor: IN }} />
-              </View>
+              <Image source={LOGO} contentFit="contain" style={{ height: 20, width: 20 * LOGO_RATIO }} accessibilityLabel="Willo" />
               <Text style={{ fontSize: 11, color: DIM }}>Registrado pelo Willo</Text>
             </Animated.View>
           </View>

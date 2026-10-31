@@ -45,7 +45,12 @@ const SOFT_OUT = Easing.bezier(0.33, 0, 0.67, 1);
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const MARK = require("../../assets/willo-icon.png") as number;
 
-export default function ToastHost() {
+/**
+ * `quiet`: the copy drawn inside an open sheet. A sheet is its own window, over the app's,
+ * so a notice drawn only at the root would wait behind it; both copies show the same
+ * notice at the same moment, and only the root's taps the phone.
+ */
+export default function ToastHost({ quiet = false }: { quiet?: boolean }) {
   const insets = useSafeAreaInsets();
   const [text, setText] = useState<string | null>(null);
   /* 0 is away, 1 is in place; the spring lets it pass 1 a little. */
@@ -91,7 +96,7 @@ export default function ToastHost() {
       stop();
       if (clear.current) clearTimeout(clear.current);
       setText(message);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+      if (!quiet) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       drag.set(0);
       shown.set(0);
       shown.set(withTiming(1, { duration: IN_MS, easing: SOFT, reduceMotion: ReduceMotion.System }));
@@ -102,7 +107,7 @@ export default function ToastHost() {
       stop();
       if (clear.current) clearTimeout(clear.current);
     };
-  }, [arm, shown, drag]);
+  }, [arm, shown, drag, quiet]);
 
   const pan = Gesture.Pan()
     .activeOffsetY([-6, 6])
