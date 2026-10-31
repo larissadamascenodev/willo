@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, Text, TextInput, View, type TextStyle } from "react-native";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, FadeInDown, ReduceMotion, useAnimatedProps, useSharedValue, withDelay, withSpring, withTiming, useAnimatedStyle } from "react-native-reanimated";
 import { categoryHex } from "@/lib/categoryData";
 import type { QuickDraft, QuickSetup } from "@/lib/quickEntry/types";
 import BottomSheet from "~/components/BottomSheet";
 import ParticleOrb from "~/components/registro/ParticleOrb";
 import ReceiptCard, { type ReceiptLine } from "~/components/registro/ReceiptCard";
-import { Check, Pencil, Tag, Undo2 } from "~/components/icons";
+import { Check, CreditCard, Landmark, Pencil, Tag, Undo2 } from "~/components/icons";
+import { BlurView } from "expo-blur";
+import Svg, { Circle, Path } from "react-native-svg";
+import BankMark from "~/components/BankMark";
+import { colorFor } from "@/lib/banks";
+import { playCash } from "~/lib/sounds";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
@@ -29,7 +34,6 @@ import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
  * was quick.
  */
 
-const SAVED_FOR_MS = 7500;
 const GLASS = { borderRadius: 22, borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.05)" } as const;
 
 const nums: TextStyle = Platform.select({
@@ -75,12 +79,11 @@ export default function VoiceEntrySheet({ entry }: { entry: VoiceEntry }) {
     if (state === "idle") setEditing(false);
   }, [state]);
 
-  /* It goes by itself, a while after the receipt has finished arriving. */
+  /* Landing: the coins, and the phone taps back. It stays until Concluir. */
   useEffect(() => {
     if (!saved) return;
-    const t = setTimeout(entry.reset, SAVED_FOR_MS);
-    return () => clearTimeout(t);
-  }, [saved, entry.reset]);
+    playCash();
+  }, [saved]);
 
   const total = lines.reduce((t, l) => t + (l.draft.type === "receita" ? l.draft.amount : -l.draft.amount), 0);
   const options = question && question.kind !== "category" ? question.options : [];
@@ -96,10 +99,16 @@ export default function VoiceEntrySheet({ entry }: { entry: VoiceEntry }) {
   }));
 
   return (
-    <BottomSheet open={open} onClose={() => (saved ? entry.reset() : busy ? undefined : entry.reset())}>
+    <BottomSheet open={open} onClose={() => (saved || busy ? undefined : entry.reset())}>
       <View style={{ paddingHorizontal: 20, paddingBottom: 6 }}>
         {saved ? (
           <View style={{ paddingTop: 4 }}>
+            <View style={{ alignItems: "center", marginBottom: 14 }}>
+              <DrawnTick />
+              <Animated.Text entering={FadeIn.delay(520).duration(300)} style={{ marginTop: 10, fontSize: 17, fontWeight: "800", letterSpacing: -0.3, color: "#fff" }}>
+                {lines.every((l) => l.draft.type === "receita") ? "Recebido!" : "Anotado!"}
+              </Animated.Text>
+            </View>
             <ReceiptCard lines={receipt} />
           </View>
         ) : (
@@ -109,7 +118,7 @@ export default function VoiceEntrySheet({ entry }: { entry: VoiceEntry }) {
               <ParticleOrb size={38} mode={busy ? "thinking" : "idle"} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={{ fontSize: 16.5, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
-                  {editing ? "Corrija o que precisar" : "Confirme o que ouvi"}
+                  {editing ? "Corrija o que precisar" : entry.source === "text" ? "Confirme o que você digitou" : "Confirme o que ouvi"}
                 </Text>
                 {transcript && !editing ? (
                   <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 13, fontStyle: "italic", color: INK.softer }}>
@@ -175,27 +184,44 @@ export default function VoiceEntrySheet({ entry }: { entry: VoiceEntry }) {
                 <Text style={{ fontSize: 15.5, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>{question.prompt}</Text>
                 {options.length > 0 && (
                   <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-                    {options.map((o) => (
-                      <Pressable
-                        key={o.id}
-                        onPress={() => entry.answer(question, o.id)}
-                        style={({ pressed }) => ({
-                          flexGrow: 1,
-                          flexBasis: options.length <= 3 ? 0 : "45%",
-                          minWidth: 96,
-                          height: 54,
-                          borderRadius: 18,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          backgroundColor: "#fff",
-                          transform: [{ scale: pressed ? 0.97 : 1 }],
-                        })}
-                      >
-                        <Text numberOfLines={1} style={{ paddingHorizontal: 10, fontSize: 16, fontWeight: "700", color: "#0B0B0B" }}>
-                          {o.label}
-                        </Text>
-                      </Pressable>
-                    ))}
+                    {options.map((o) => {
+                      /* How it was paid has its glyph; an account or a card, its bank's mark. */
+                      const MethodIcon = question.kind === "paymentMethod" ? (o.id === "cartao" ? CreditCard : Landmark) : null;
+                      return (
+                        <Pressable
+                          key={o.id}
+                          onPress={() => entry.answer(question, o.id)}
+                          style={({ pressed }) => ({
+                            flexGrow: 1,
+                            flexBasis: options.length <= 3 ? 0 : "45%",
+                            minWidth: 120,
+                            height: 58,
+                            borderRadius: 20,
+                            borderCurve: "continuous",
+                            overflow: "hidden",
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 10,
+                            paddingHorizontal: 12,
+                            borderWidth: 1,
+                            borderColor: "rgba(255,255,255,0.16)",
+                            backgroundColor: "rgba(255,255,255,0.08)",
+                            transform: [{ scale: pressed ? 0.97 : 1 }],
+                          })}
+                        >
+                          <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+                          {MethodIcon ? (
+                            <MethodIcon size={19} color="#fff" strokeWidth={2.1} />
+                          ) : (
+                            <BankMark name={o.label} hex={colorFor(o.label, null)} size={30} />
+                          )}
+                          <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 16, fontWeight: "700", color: "#fff" }}>
+                            {o.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
                   </View>
                 )}
                 {categoryChips.length > 0 && (
@@ -437,5 +463,40 @@ function Pill({ label, warn }: { label: string; warn?: boolean }) {
     >
       <Text style={{ fontSize: 13, fontWeight: "500", color: warn ? AMBER : "rgba(255,255,255,0.8)" }}>{label}</Text>
     </View>
+  );
+}
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const TICK = 46;
+const RING = 2 * Math.PI * 34;
+
+/**
+ * The tick, drawn: a ring closes round, then the check is written into it stroke by
+ * stroke, while the seal springs up — the "pago" sticker of a payment app.
+ */
+function DrawnTick() {
+  const ring = useSharedValue(0);
+  const tick = useSharedValue(0);
+  const pop = useSharedValue(0);
+
+  useEffect(() => {
+    pop.set(withSpring(1, { damping: 10, stiffness: 220, reduceMotion: ReduceMotion.System }));
+    ring.set(withTiming(1, { duration: 420, easing: Easing.out(Easing.cubic) }));
+    tick.set(withDelay(300, withTiming(1, { duration: 360, easing: Easing.out(Easing.cubic) })));
+  }, [ring, tick, pop]);
+
+  const ringProps = useAnimatedProps(() => ({ strokeDashoffset: RING * (1 - ring.get()) }));
+  const tickProps = useAnimatedProps(() => ({ strokeDashoffset: TICK * (1 - tick.get()) }));
+  const seal = useAnimatedStyle(() => ({ transform: [{ scale: 0.6 + pop.get() * 0.4 }, { rotate: `${-10 + pop.get() * 10}deg` }], opacity: Math.min(1, pop.get() * 1.5) }));
+
+  return (
+    <Animated.View style={[{ width: 84, height: 84, alignItems: "center", justifyContent: "center" }, seal]}>
+      <Svg width={84} height={84} viewBox="0 0 84 84">
+        <Circle cx={42} cy={42} r={34} fill="rgba(200,243,109,0.12)" />
+        <AnimatedCircle cx={42} cy={42} r={34} stroke={GREEN} strokeWidth={3} fill="none" strokeDasharray={`${RING} ${RING}`} strokeLinecap="round" rotation={-90} origin="42, 42" animatedProps={ringProps} />
+        <AnimatedPath d="M27 43 L37 53 L57 32" stroke={GREEN} strokeWidth={5} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${TICK} ${TICK}`} animatedProps={tickProps} />
+      </Svg>
+    </Animated.View>
   );
 }

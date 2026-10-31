@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as Haptics from "expo-haptics";
 import { createTransaction, deleteTransaction, getAccounts, getCreditCards } from "@/services/transactionService";
 import { allowedCategories, readEntry, todayISO } from "@/services/quickEntry";
+import { parseLocal } from "@/lib/quickEntry/parseLocal";
 import { applyDefaults, answer as answerDraft, nextQuestion, statusFor } from "@/lib/quickEntry/resolve";
 import type { QuickDraft, QuickQuestion, QuickSetup } from "@/lib/quickEntry/types";
 import { useAuth } from "~/lib/auth";
@@ -58,9 +59,13 @@ const LONGEST_MS = 40_000;
 /** A voice is this far above the quietest the room has been. */
 const ABOVE_FLOOR = 13;
 
-export function useVoiceEntry(options: { onQuestion?: (said: string) => void } = {}) {
+export function useVoiceEntry(options: { onQuestion?: (said: string) => void; history?: () => Record<string, string> } = {}) {
   const onQuestion = useRef(options.onQuestion);
   onQuestion.current = options.onQuestion;
+  const history = useRef(options.history);
+  history.current = options.history;
+  /* Whether what is on the sheet was said or typed, for the sheet's own words. */
+  const [source, setSource] = useState<"voice" | "text">("voice");
   const { user } = useAuth();
   const voice = useVoice();
 
@@ -106,6 +111,7 @@ export function useVoiceEntry(options: { onQuestion?: (said: string) => void } =
     if (reading.current) return;
     reading.current = true;
     setState("reading");
+    setSource("voice");
     try {
       const clip = await voice.stop();
       if (!clip || clip.seconds < 1) {
@@ -165,6 +171,55 @@ export function useVoiceEntry(options: { onQuestion?: (said: string) => void } =
       reading.current = false;
     }
   }, [voice, ensureSetup]);
+
+  /**
+   * A typed sentence, through the same look before it is written. A plain one is read
+   * on the phone; only what it cannot read goes to the AI reader. Words with no money in
+   * them go to `otherwise` — a question.
+   */
+  const readText = useCallback(
+    async (said: string, otherwise: () => void) => {
+      if (state !== "idle" && state !== "saved") return;
+      setMessage(null);
+      setSource("text");
+      setTranscript(said);
+      setState("reading");
+      try {
+        const ctx = await ensureSetup();
+        const local = parseLocal(said, { today: todayISO(), categories: ctx.categories, history: history.current?.() });
+        const entries = local ?? (await readEntry({ text: said, categories: ctx.categories })).entries;
+        if (entries.length === 0) {
+          setState("idle");
+          otherwise();
+          return;
+        }
+        setLines(
+          entries.map((e) => ({
+            draft: applyDefaults(
+              {
+                id: uid(),
+                name: e.name,
+                type: e.type,
+                amount: e.amount,
+                category: e.category,
+                date: e.date || todayISO(),
+                status: statusFor(e.settled, e.date || todayISO(), todayISO()),
+                paymentMethod: e.paymentMethod,
+                accountId: null,
+                creditCardId: null,
+              },
+              ctx.setup,
+            ),
+          })),
+        );
+        setState("confirm");
+      } catch (err) {
+        setMessage(err instanceof Error ? err.message : "Não consegui ler agora. Tente de novo.");
+        setState("idle");
+      }
+    },
+    [state, ensureSetup],
+  );
 
   /** Tap to start, tap to stop. */
   const toggle = useCallback(async () => {
@@ -335,6 +390,8 @@ export function useVoiceEntry(options: { onQuestion?: (said: string) => void } =
 
   return {
     state,
+    source,
+    readText,
     seconds: voice.seconds,
     lines,
     transcript,

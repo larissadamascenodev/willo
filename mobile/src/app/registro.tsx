@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef, type ComponentType } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown, LinearTransition, withTiming } from "react-native-reanimated";
@@ -114,13 +114,18 @@ const EXAMPLES: { text: string; category: string }[] = [
   { text: "luz 180, água 60", category: "Conta de Luz" },
 ];
 
-/** Things worth asking, so the first visit shows what he is for. */
+/** Things worth asking, one or two for each part of the app. */
 const QUESTIONS = [
   "Quanto posso gastar até o fim do mês?",
-  "Posso comprar algo de R$ 500 este mês?",
-  "Por que minha fatura aumentou?",
+  "Quanto está minha fatura?",
   "Quando terminam meus parcelamentos?",
-  "Onde estou gastando mais?",
+  "Onde estou gastando mais este mês?",
+  "Posso comprar algo de R$ 500?",
+  "Por que minha fatura aumentou?",
+  "Tenho algum gasto fora do padrão?",
+  "Quais assinaturas eu pago?",
+  "Qual o melhor plano para minha renda?",
+  "Quanto tenho de limite no cartão?",
 ];
 
 const INCOME_CATEGORIES = ["Salário", "Freelance", "Investimentos", "Vendas", "Aluguéis", "Bônus", "Comissão", "Mesada"];
@@ -136,7 +141,8 @@ export default function Registro() {
   const { user } = useAuth();
   /* What is said with no money in it is a question, whether it was typed or spoken. */
   const askRef = useRef<(said: string) => void>(() => {});
-  const entry = useVoiceEntry({ onQuestion: (said) => askRef.current(said) });
+  const historyRef = useRef<Record<string, string>>({});
+  const entry = useVoiceEntry({ onQuestion: (said) => askRef.current(said), history: () => historyRef.current });
   const { build, loading: snapshotLoading } = useAssistantSnapshot();
   const turns = useRef<Turn[]>([]);
   const snapshotReady = useRef(true);
@@ -155,6 +161,15 @@ export default function Registro() {
   const [thinking, setThinking] = useState<string | null>(null);
   const [question, setQuestion] = useState<QuickQuestion | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [keyboardUp, setKeyboardUp] = useState(false);
+  useEffect(() => {
+    const show = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow", () => setKeyboardUp(true));
+    const hide = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide", () => setKeyboardUp(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
   const prefs = useWilloPrefs();
 
   const askedRef = useRef<Set<string>>(new Set());
@@ -167,8 +182,6 @@ export default function Registro() {
     (t: string, extra?: { agents?: string[]; instant?: boolean }) => setItems((m) => [...m, { kind: "msg", id: uid(), role: "bot", text: t, ...extra }]),
     [],
   );
-  /* What this person filed before under each name, so "uber" lands where Uber always did. */
-  const historyRef = useRef<Record<string, string>>({});
   const installmentsRef = useRef<ActiveInstallmentItem[] | null>(null);
   const pushUser = useCallback((t: string) => setItems((m) => [...m, { kind: "msg", id: uid(), role: "user", text: t }]), []);
 
@@ -372,13 +385,14 @@ export default function Registro() {
         const local = localAnswer(said, build() as never, installmentsRef.current);
         if (local) {
           turns.current.push({ role: "assistant", content: local.text });
-          pushBot(local.text, { agents: [local.agent], instant: true });
+          pushBot(local.text);
           return;
         }
         const { reply: raw, agents } = await askWilloFull(sent, build());
         const reply = brief(raw, 700);
         turns.current.push({ role: "assistant", content: reply });
-        pushBot(reply, { agents });
+        void agents;
+        pushBot(reply);
       } catch (err) {
         pushBot(err instanceof Error ? err.message : "Não consegui falar com o Willo agora. Tenta de novo?");
       } finally {
@@ -479,15 +493,24 @@ export default function Registro() {
   const send = useCallback(
     (said: string) => {
       if (!said || thinking) return;
-      if (question?.kind === "category") {
-        void answerCategory(question, said);
-        return;
-      }
+      Keyboard.dismiss();
       pushUser(said);
-      void ingest(said);
+      /* An entry opens the same sheet a spoken one does; anything else is a question. */
+      void entry.readText(said, () => void converse(said));
     },
-    [thinking, question, answerCategory, ingest, pushUser],
+    [thinking, entry, converse, pushUser],
   );
+
+  /* What was written lands in the thread as a line from him once it is in. */
+  const lastSaved = useRef<string | null>(null);
+  useEffect(() => {
+    if (entry.state !== "saved" || entry.lines.length === 0) return;
+    const key = entry.lines.map((l) => l.txId ?? l.draft.id).join(",");
+    if (lastSaved.current === key) return;
+    lastSaved.current = key;
+    const what = entry.lines.map((l) => `${l.draft.name}, ${money(l.draft.amount)}`).join("; ");
+    pushBot(entry.lines.length > 1 ? `Anotei: ${what}.` : `Anotado: ${what}.`);
+  }, [entry.state, entry.lines, pushBot]);
 
   const submitText = useCallback(() => {
     const said = text.trim();
@@ -545,8 +568,9 @@ export default function Registro() {
      swollen it is a sixth wider than it is drawn. Measured, not guessed — the sphere
      was laid out against a height it did not have, and everything overlapped. */
   const orb = stageH > 0 ? Math.max(190, Math.min(width * 0.8, 320, stageH - CAPTION_H - 18 - 56)) : 250;
-  /* The full stage is the welcome; once there is a conversation the sphere stays, smaller and higher, above it. */
-  const stage = !started;
+  /* The full stage is the welcome; once there is a conversation — or the keyboard is up —
+     the sphere stays, smaller and higher, above it. */
+  const stage = !started && !keyboardUp;
 
   return (
     <Room lit sky>
@@ -641,23 +665,6 @@ export default function Registro() {
                   )}
                 </View>
 
-                {/* His specialists, at work behind him. */}
-                {!listening && !reading && (
-                  <Animated.View entering={FadeIn.delay(240).duration(420)} style={{ marginTop: 6, alignItems: "center" }}>
-                    <Pressable onPress={() => setSettingsOpen(true)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? 0.7 : 1 })}>
-                      <View style={{ flexDirection: "row" }}>
-                        {AGENTS.map((a, i) => (
-                          <View key={a.id} style={{ marginLeft: i === 0 ? 0 : -8 }}>
-                            <AgentMark hex={a.hex} size={26} dim={!prefs.agents[a.id]} />
-                          </View>
-                        ))}
-                      </View>
-                      <Text style={{ fontSize: 12, color: INK.softer }}>
-                        {AGENTS.filter((a) => prefs.agents[a.id]).length} especialistas com ele
-                      </Text>
-                    </Pressable>
-                  </Animated.View>
-                )}
               </View>
             </View>
 
@@ -699,39 +706,6 @@ export default function Registro() {
               </Animated.View>
             )}
 
-            {/* ── The person's own shortcuts — or, before there are any, what a sentence can carry ── */}
-            {!listening && !reading && (
-              <Animated.View entering={FadeInDown.delay(160).duration(380)} style={{ paddingBottom: 12 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 22 }}>
-                  {shortcuts.length > 0 ? <Zap size={12} color={GREEN} /> : <Sparkles size={12} color={GREEN} />}
-                  <Text style={{ fontSize: 11.5, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase", color: INK.soft }}>
-                    {shortcuts.length > 0 ? "Seus atalhos" : "Experimente"}
-                  </Text>
-                </View>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                  contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, gap: 8 }}
-                >
-                  {shortcuts.length > 0
-                    ? shortcuts.slice(0, 8).map((sc) => (
-                        <ShortcutChip key={sc.key} label={sc.name} note={money(sc.amount)} category={sc.category} income={sc.type === "receita"} onPress={() => send(sc.text)} />
-                      ))
-                    : EXAMPLES.map((e) => (
-                        <ShortcutChip
-                          key={e.text}
-                          label={e.text}
-                          category={e.category}
-                          onPress={() => {
-                            setText(e.text);
-                            inputRef.current?.focus();
-                          }}
-                        />
-                      ))}
-                </ScrollView>
-              </Animated.View>
-            )}
           </View>
         ) : (
           <View style={{ flex: 1 }}>
@@ -757,7 +731,7 @@ export default function Registro() {
                   <Confirmado text={item.text} total={item.total} income={item.income} />
                 </View>
               ) : item.kind === "msg" ? (
-                <Bubble key={item.id} role={item.role} text={item.text} agents={item.agents} instant={item.instant} />
+                <Bubble key={item.id} role={item.role} text={item.text} onTyped={() => threadRef.current?.scrollToEnd({ animated: false })} />
               ) : (
                 <View key={item.id} style={{ paddingVertical: 6 }}>
                   <Notinha lines={linesOf(item.id)} onUndo={() => void undo(item.id)} />
@@ -777,7 +751,7 @@ export default function Registro() {
 
         {/* ── The composer ── */}
         <View style={{ paddingTop: 8, paddingBottom: insets.bottom + 8 }}>
-          {started && !listening && (
+          {(started || keyboardUp) && !listening && (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -812,22 +786,17 @@ export default function Registro() {
               ))}
               {!question &&
                 !text &&
-                (shortcuts.length > 0
-                  ? shortcuts.map((s) => (
-                      <Chip key={s.key} label={`${s.name} · ${money(s.amount)}`} tone="shortcut" category={s.category} onPress={() => send(s.text)} />
-                    ))
-                  : EXAMPLES.map((e) => (
-                      <Chip
-                        key={e.text}
-                        label={e.text}
-                        tone="shortcut"
-                        category={e.category}
-                        onPress={() => {
-                          setText(e.text);
-                          inputRef.current?.focus();
-                        }}
-                      />
-                    )))}
+                QUESTIONS.map((q) => (
+                  <Chip
+                    key={q}
+                    label={q}
+                    tone="shortcut"
+                    onPress={() => {
+                      pushUser(q);
+                      void converse(q);
+                    }}
+                  />
+                ))}
             </ScrollView>
           )}
 
@@ -841,7 +810,7 @@ export default function Registro() {
                 paddingHorizontal: 6,
                 gap: 4,
                 borderWidth: 1,
-                borderColor: typed ? "rgba(200,243,109,0.45)" : "rgba(255,255,255,0.10)",
+                borderColor: typed ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.10)",
               }}
             >
               <Pressable
@@ -991,9 +960,26 @@ function Chip({
   );
 }
 
-function Bubble({ role, text, agents, instant }: { role: "bot" | "user"; text: string; agents?: string[]; instant?: boolean }) {
+function Bubble({ role, text, onTyped }: { role: "bot" | "user"; text: string; agents?: string[]; instant?: boolean; onTyped?: () => void }) {
   const mine = role === "user";
-  const team = AGENTS.filter((a) => agents?.includes(a.id));
+  /* His words arrive as he writes them; yours are already written. */
+  const [shown, setShown] = useState(mine ? text.length : 0);
+  useEffect(() => {
+    if (mine) return;
+    const step = Math.max(1, Math.round(text.length / 90));
+    const iv = setInterval(() => {
+      setShown((n) => {
+        if (n >= text.length) {
+          clearInterval(iv);
+          return n;
+        }
+        onTyped?.();
+        return Math.min(text.length, n + step);
+      });
+    }, 18);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, mine]);
   return (
     <Animated.View
       entering={FadeInDown.duration(260)}
@@ -1020,20 +1006,9 @@ function Bubble({ role, text, agents, instant }: { role: "bot" | "user"; text: s
       >
         {!mine && <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />}
         <Text style={{ fontSize: 15, lineHeight: 20, fontWeight: mine ? "500" : "400", color: mine ? "#0B0B0B" : "rgba(255,255,255,0.92)" }}>
-          {text}
+          {text.slice(0, shown)}
+          <Text style={{ color: "transparent" }}>{text.slice(shown)}</Text>
         </Text>
-        {/* Who worked on it — and whether it came straight from the numbers. */}
-        {!mine && (team.length > 0 || instant) && (
-          <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 6 }}>
-            {team.map((a) => (
-              <View key={a.id} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                <AgentMark hex={a.hex} size={14} />
-                <Text style={{ fontSize: 11, color: INK.softer }}>{a.name}</Text>
-              </View>
-            ))}
-            {instant && <Text style={{ fontSize: 11, color: INK.faint }}>· direto dos seus números</Text>}
-          </View>
-        )}
       </View>
     </Animated.View>
   );
@@ -1053,7 +1028,7 @@ function SendButton({ disabled, onPress }: { disabled: boolean; onPress: () => v
           borderRadius: 22,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: GREEN,
+          backgroundColor: "#fff",
           opacity: disabled ? 0.4 : 1,
           transform: [{ scale: pressed ? 0.94 : 1 }],
         })}
