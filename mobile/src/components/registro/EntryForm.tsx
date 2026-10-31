@@ -1,21 +1,24 @@
 import { useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Switch, Text, TextInput, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { categoryHex } from "@/lib/categoryData";
 import { colorFor } from "@/lib/banks";
 import BankMark from "~/components/BankMark";
 import MonthCalendar from "~/components/eventos/MonthCalendar";
-import { Chip, Choice, Field, PartsBar, REPEAT_LABEL, REPEAT_NOTE, RepeatList, dayLabel, invoiceMonthOf, nums, type Account, type Card, type Kind, type Method, type Repeat } from "~/components/registro/entryParts";
-import { ChevronLeft, ChevronRight, CreditCard, Landmark, Tag } from "~/components/icons";
+import { Chip, Choice, PartsBar, REPEAT_LABEL, RepeatList, dayLabel, invoiceMonthOf, nums, type Account, type Card, type Kind, type Method, type Repeat } from "~/components/registro/entryParts";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, CreditCard, Landmark, Repeat as RepeatIcon, Tag } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
 import { AMBER, GREEN, INK } from "~/theme/tokens";
 
 /**
- * Everything about one entry on one page, each part changeable where it is: out or in,
- * the amount, the words, the category, how it was paid, whether it repeats, when, and
- * whether it is settled. The check of the guided entry, and the editor.
+ * Everything about one entry on one page — the check of the guided entry, and the editor.
+ *
+ * Out or in at the top, then the amount, large, and the words. Under them one group of
+ * rows — category, how it was paid, repetition, the day — each showing what it is and
+ * opening its own choices under it when touched, one at a time. Apart from the day,
+ * whether it is settled: a switch. On a card that row says which invoice it falls in.
  */
 
 export type { Repeat };
@@ -33,9 +36,9 @@ export interface EntryValues {
   parts: number | null;
   date: string;
   status: "pago" | "pendente";
+  /** Kept as it was; the check no longer asks for one. */
   note: string;
 }
-
 
 const pad = (n: number) => String(n).padStart(2, "0");
 export const isoOf = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -44,6 +47,8 @@ const yesterdayIso = () => isoOf(new Date(Date.now() - 86_400_000));
 
 /** Ahead of today: not paid yet — scheduled. */
 export const isAhead = (iso: string) => iso > todayIso();
+
+type Open = "pay" | "repeat" | "date" | null;
 
 export default function EntryForm({
   values,
@@ -65,29 +70,34 @@ export default function EntryForm({
   onPickCategory: () => void;
 }) {
   const v = values;
-  const [paying, setPaying] = useState(false);
-  const [repeating, setRepeating] = useState(false);
+  const [open, setOpen] = useState<Open>(null);
+  const toggle = (o: Exclude<Open, null>) => setOpen((cur) => (cur === o ? null : o));
 
   const income = v.type === "receita";
   const credit = !income && v.method === "cartao";
   const list: (Account | Card)[] = credit ? cards : accounts;
   const picked = list.find((o) => o.id === v.whereId) ?? null;
-  const Icon = v.category ? categoryIcon(v.category) : Tag;
+  const card = credit ? (cards.find((c) => c.id === v.whereId) ?? null) : null;
+  const CatIcon = v.category ? categoryIcon(v.category) : Tag;
   const hex = v.category ? categoryHex(v.category) : "#8B8D94";
   const parcelado = v.repeat === "parcelado" && !!v.parts;
+
+  const payValue = picked ? (income ? picked.name : `${credit ? "Crédito" : "Débito"} · ${picked.name}`) : null;
+  const repeatValue = partOf ?? (parcelado && v.parts ? `${v.parts}x de ${money(v.cents / 100 / v.parts)}` : REPEAT_LABEL[v.repeat]);
+  const dateValue = isAhead(v.date) ? `${dayLabel(v.date)} · agendado` : dayLabel(v.date);
 
   return (
     <View>
       {/* Out or in */}
       {!lockedCard && (
-        <View style={{ marginTop: 14, flexDirection: "row", gap: 8 }}>
+        <View style={{ marginTop: 14, flexDirection: "row", padding: 3, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.06)" }}>
           {(["despesa", "receita"] as const).map((t) => {
             const on = v.type === t;
             return (
               <Pressable
                 key={t}
                 onPress={() => onChange(t === "receita" ? { type: t, method: "conta", whereId: v.method === "conta" ? v.whereId : null, repeat: v.repeat === "parcelado" ? "unica" : v.repeat, parts: null } : { type: t })}
-                style={({ pressed }) => ({ flex: 1, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: on ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.10)", backgroundColor: on ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.04)", opacity: pressed ? 0.7 : 1 })}
+                style={({ pressed }) => ({ flex: 1, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: on ? "rgba(255,255,255,0.16)" : "transparent", opacity: pressed ? 0.7 : 1 })}
               >
                 <Text style={{ fontSize: 14, fontWeight: "700", color: on ? (t === "receita" ? GREEN : "#fff") : INK.soft }}>{t === "despesa" ? "Despesa" : "Receita"}</Text>
               </Pressable>
@@ -96,140 +106,211 @@ export default function EntryForm({
         </View>
       )}
 
-      {/* The amount, large; in instalments, the total with the split beside it */}
-      <Field label={partOf ? "Valor da parcela" : parcelado ? "Valor total" : v.repeat === "fixa" ? "Valor por mês" : "Valor"}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <TextInput
-            value={money(v.cents / 100)}
-            onChangeText={(t) => onChange({ cents: Math.min(Number(t.replace(/\D/g, "") || "0"), 99999999) })}
-            keyboardType="number-pad"
-            style={[nums, { flex: 1, minWidth: 0, padding: 0, fontSize: 30, fontWeight: "800", letterSpacing: -1, color: income ? GREEN : "#FF8A9A" }]}
-          />
-          {parcelado && v.parts ? (
-            <Text numberOfLines={1} style={[nums, { fontSize: 13.5, fontWeight: "700", color: INK.soft }]}>
-              {v.parts}x de {money(v.cents / 100 / v.parts)}
-            </Text>
-          ) : null}
-        </View>
-      </Field>
-      <Field label="Descrição">
-        <TextInput value={v.name} onChangeText={(name) => onChange({ name })} maxLength={40} placeholder="O que foi?" placeholderTextColor={INK.faint} style={{ padding: 0, fontSize: 17, fontWeight: "600", color: "#fff" }} />
-      </Field>
-
-      {/* Category and how it was paid, side by side, the names in full */}
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        <Field label="Categoria" changeable style={{ flex: 1 }}>
-          <Pressable onPress={onPickCategory} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, opacity: pressed ? 0.7 : 1 })}>
-            <View style={{ width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-              <Icon size={12} color={chipInk(hex)} strokeWidth={2.2} />
-            </View>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ flex: 1, fontSize: 15, fontWeight: "600", color: v.category ? "#fff" : AMBER }}>
-              {v.category ?? "Escolher"}
-            </Text>
-          </Pressable>
-        </Field>
-        <Field label={income ? "Entrou em" : `Pagamento · ${credit ? "Crédito" : "Débito"}`} changeable={!lockedCard} style={{ flex: 1 }}>
-          <Pressable disabled={lockedCard} onPress={() => setPaying((p) => !p)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, opacity: pressed ? 0.7 : 1 })}>
-            {picked ? <BankMark name={picked.name} hex={colorFor(picked.name, picked.color)} size={24} /> : null}
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ flex: 1, fontSize: 15, fontWeight: "600", color: picked ? "#fff" : AMBER }}>
-              {picked?.name ?? "Escolher"}
-            </Text>
-          </Pressable>
-        </Field>
+      {/* The amount, large, and the words */}
+      <View style={{ marginTop: 18, alignItems: "center" }}>
+        <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.4, color: INK.softer }}>
+          {partOf ? "VALOR DA PARCELA" : parcelado ? "VALOR TOTAL" : v.repeat === "fixa" ? "VALOR POR MÊS" : "VALOR"}
+        </Text>
+        <TextInput
+          value={money(v.cents / 100)}
+          onChangeText={(t) => onChange({ cents: Math.min(Number(t.replace(/\D/g, "") || "0"), 99999999) })}
+          keyboardType="number-pad"
+          style={[nums, { marginTop: 2, padding: 0, minWidth: 160, textAlign: "center", fontSize: 40, fontWeight: "800", letterSpacing: -1.4, color: income ? GREEN : "#fff" }]}
+        />
+        {parcelado && v.parts ? (
+          <Text style={[nums, { marginTop: 2, fontSize: 13.5, color: INK.soft }]}>
+            {v.parts}x de {money(v.cents / 100 / v.parts)}
+          </Text>
+        ) : null}
       </View>
+      <TextInput
+        value={v.name}
+        onChangeText={(name) => onChange({ name })}
+        maxLength={40}
+        placeholder="Descrição"
+        placeholderTextColor={INK.faint}
+        style={{ marginTop: 14, height: 50, borderRadius: 18, paddingHorizontal: 16, textAlign: "center", fontSize: 17, fontWeight: "600", color: "#fff", backgroundColor: "rgba(255,255,255,0.06)" }}
+      />
 
-      {/* How it was paid, changed right here */}
-      {paying && !lockedCard && (
-        <Animated.View entering={FadeIn.duration(180)} style={{ marginTop: 10, gap: 10 }}>
-          {!income && (
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <Choice icon={<Landmark size={18} color="#fff" strokeWidth={2.1} />} label="Débito" onPress={() => onChange({ method: "conta", whereId: accounts.length === 1 ? accounts[0].id : null })} />
-              <Choice icon={<CreditCard size={18} color="#fff" strokeWidth={2.1} />} label="Crédito" onPress={() => onChange({ method: "cartao", whereId: cards.length === 1 ? cards[0].id : null })} />
+      {/* What it is, how it was paid, whether it repeats, the day */}
+      <View style={{ marginTop: 14, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.04)", overflow: "hidden" }}>
+        <Row
+          first
+          icon={
+            <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
+              <CatIcon size={15} color={chipInk(hex)} strokeWidth={2.2} />
             </View>
-          )}
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {list.map((o) => (
-              <Choice
-                key={o.id}
-                wide
-                icon={<BankMark name={o.name} hex={colorFor(o.name, o.color)} size={26} />}
-                label={o.name}
-                onPress={() => {
-                  onChange({ whereId: o.id });
-                  setPaying(false);
-                }}
-              />
-            ))}
-          </View>
-        </Animated.View>
-      )}
+          }
+          label="Categoria"
+          value={v.category}
+          missing="Escolher"
+          onPress={onPickCategory}
+        />
 
-      {/* Whether it repeats */}
-      <Field label="Repetição" changeable={!partOf}>
-        {partOf ? (
-          <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{partOf}</Text>
-        ) : (
-          <View style={{ gap: 10 }}>
-            <Pressable onPress={() => setRepeating((r) => !r)} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
-              <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>
-                {REPEAT_LABEL[v.repeat]}
-                <Text style={{ fontWeight: "400", color: INK.soft }}>
-                  {"  ·  "}
-                  {parcelado && v.parts ? `${v.parts}x de ${money(v.cents / 100 / v.parts)}` : REPEAT_NOTE[v.repeat]}
-                </Text>
-              </Text>
-            </Pressable>
-            {repeating && (
-              <Animated.View entering={FadeIn.duration(180)} style={{ gap: 10 }}>
-                <RepeatList
-                  value={v.repeat}
-                  income={income}
-                  onPick={(r: Repeat) => {
-                    onChange({ repeat: r, parts: r === "parcelado" ? (v.parts ?? 2) : null });
-                    if (r !== "parcelado") setRepeating(false);
+        <Row
+          icon={<RowMark>{picked ? <BankMark name={picked.name} hex={colorFor(picked.name, picked.color)} size={32} /> : credit ? <CreditCard size={15} color="#fff" /> : <Landmark size={15} color="#fff" />}</RowMark>}
+          label={income ? "Entrou em" : "Pagamento"}
+          value={payValue}
+          missing="Escolher"
+          open={open === "pay"}
+          disabled={lockedCard}
+          onPress={() => toggle("pay")}
+        />
+        {open === "pay" && !lockedCard && (
+          <Animated.View entering={FadeIn.duration(180)} style={{ paddingHorizontal: 12, paddingBottom: 12, gap: 8 }}>
+            {!income && (
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <Choice icon={<Landmark size={18} color="#fff" strokeWidth={2.1} />} label="Débito" on={v.method === "conta"} onPress={() => onChange({ method: "conta", whereId: accounts.length === 1 ? accounts[0].id : null })} />
+                <Choice icon={<CreditCard size={18} color="#fff" strokeWidth={2.1} />} label="Crédito" on={v.method === "cartao"} onPress={() => onChange({ method: "cartao", whereId: cards.length === 1 ? cards[0].id : null })} />
+              </View>
+            )}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {list.map((o) => (
+                <Choice
+                  key={o.id}
+                  wide
+                  on={v.whereId === o.id}
+                  icon={<BankMark name={o.name} hex={colorFor(o.name, o.color)} size={26} />}
+                  label={o.name}
+                  onPress={() => {
+                    onChange({ whereId: o.id });
+                    setOpen(null);
                   }}
                 />
-                {v.repeat === "parcelado" && <PartsBar cents={v.cents} value={v.parts} onChange={(parts) => onChange({ parts })} />}
-              </Animated.View>
-            )}
-          </View>
+              ))}
+            </View>
+          </Animated.View>
         )}
-      </Field>
 
-      {/* When, and whether it is settled — together */}
-      <Field label={credit ? "Quando" : "Quando · Situação"}>
-        <WhenPicker values={v} onChange={onChange} cards={cards} />
-      </Field>
+        <Row
+          icon={
+            <RowMark>
+              <RepeatIcon size={15} color="#fff" strokeWidth={2.1} />
+            </RowMark>
+          }
+          label="Repetição"
+          value={repeatValue}
+          open={open === "repeat"}
+          disabled={!!partOf}
+          onPress={() => toggle("repeat")}
+        />
+        {open === "repeat" && !partOf && (
+          <Animated.View entering={FadeIn.duration(180)} style={{ paddingHorizontal: 12, paddingBottom: 12, gap: 10 }}>
+            <RepeatList
+              value={v.repeat}
+              income={income}
+              onPick={(r: Repeat) => {
+                onChange({ repeat: r, parts: r === "parcelado" ? (v.parts ?? 2) : null });
+                if (r !== "parcelado") setOpen(null);
+              }}
+            />
+            {v.repeat === "parcelado" && <PartsBar cents={v.cents} value={v.parts} onChange={(parts) => onChange({ parts })} />}
+          </Animated.View>
+        )}
 
-      <Field label="Observação">
-        <TextInput value={v.note} onChangeText={(note) => onChange({ note })} placeholder="Opcional" placeholderTextColor={INK.faint} multiline maxLength={200} style={{ padding: 0, fontSize: 15, color: "#fff", minHeight: 22 }} />
-      </Field>
+        <Row
+          icon={
+            <RowMark>
+              <CalendarDays size={15} color="#fff" strokeWidth={2.1} />
+            </RowMark>
+          }
+          label={v.repeat === "fixa" ? "A partir de" : "Data"}
+          value={dateValue}
+          open={open === "date"}
+          onPress={() => toggle("date")}
+        />
+        {open === "date" && (
+          <Animated.View entering={FadeIn.duration(180)} style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+            <DatePick values={v} onChange={onChange} cards={cards} quiet />
+          </Animated.View>
+        )}
+      </View>
+
+      {/* Whether it is settled: a switch, apart. On a card, the invoice it falls in. */}
+      <View style={{ marginTop: 10, minHeight: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.04)" }}>
+        <RowMark>{credit ? <CreditCard size={15} color="#fff" strokeWidth={2.1} /> : <Check size={15} color="#fff" strokeWidth={2.4} />}</RowMark>
+        {credit ? (
+          <Text style={{ flex: 1, fontSize: 14.5, color: INK.soft }}>
+            Entra na fatura de <Text style={{ fontWeight: "700", color: "#fff" }}>{invoiceMonthOf(v.date, card?.closing_day).label}</Text>
+            {card ? ` do ${card.name}` : ""}
+          </Text>
+        ) : (
+          <>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{income ? "Já recebi" : "Já está pago"}</Text>
+              <Text style={{ marginTop: 1, fontSize: 12.5, color: INK.soft }}>
+                {v.status === "pago" ? (income ? "Entrou na conta" : "Saiu da conta") : isAhead(v.date) ? "Agendado" : income ? "A receber" : "Pendente"}
+              </Text>
+            </View>
+            <Switch value={v.status === "pago"} onValueChange={(on) => onChange({ status: on ? "pago" : "pendente" })} trackColor={{ true: GREEN, false: "rgba(255,255,255,0.15)" }} thumbColor="#fff" />
+          </>
+        )}
+      </View>
     </View>
   );
 }
 
-/** The day and, off a card, whether it is settled — together, for the form. */
-export function WhenPicker({ values: v, onChange, cards }: { values: EntryValues; onChange: (patch: Partial<EntryValues>) => void; cards: Card[] }) {
-  const income = v.type === "receita";
-  const credit = !income && v.method === "cartao";
+/** The round mark at the start of a row. */
+function RowMark({ children }: { children: React.ReactNode }) {
+  return <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>{children}</View>;
+}
+
+/** One line of the group: its mark, what it is, what it is set to; touched, its choices open under it. */
+function Row({
+  icon,
+  label,
+  value,
+  missing,
+  open,
+  first,
+  disabled,
+  onPress,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | null;
+  missing?: string;
+  open?: boolean;
+  first?: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
   return (
-    <View>
-      <DatePick values={v} onChange={onChange} cards={cards} />
-      {!credit && (
-        <View style={{ marginTop: 10, flexDirection: "row", gap: 8 }}>
-          <Chip height={38} label={income ? "Recebido" : "Pago"} on={v.status === "pago"} onPress={() => onChange({ status: "pago" })} />
-          <Chip height={38} label={income ? "A receber" : "Pendente"} on={v.status === "pendente"} onPress={() => onChange({ status: "pendente" })} />
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => ({
+        minHeight: 56,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderTopWidth: first ? 0 : 1,
+        borderTopColor: "rgba(255,255,255,0.07)",
+        backgroundColor: pressed ? "rgba(255,255,255,0.06)" : "transparent",
+      })}
+    >
+      {icon}
+      <Text style={{ fontSize: 14.5, color: INK.soft }}>{label}</Text>
+      <Text numberOfLines={1} style={{ flex: 1, textAlign: "right", fontSize: 15, fontWeight: "600", color: value ? "#fff" : AMBER }}>
+        {value ?? missing ?? ""}
+      </Text>
+      {!disabled && (
+        <View style={{ transform: [{ rotate: open ? "90deg" : "0deg" }] }}>
+          <ChevronRight size={16} color={INK.softer} />
         </View>
       )}
-    </View>
+    </Pressable>
   );
 }
 
 /**
  * The day: today, yesterday or one from the calendar. A day ahead makes it scheduled;
- * on a card it says which invoice it falls in, by the card's closing day.
+ * on a card it says which invoice it falls in, by the card's closing day — unless the
+ * page already says so (`quiet`).
  */
-export function DatePick({ values: v, onChange, cards }: { values: EntryValues; onChange: (patch: Partial<EntryValues>) => void; cards: Card[] }) {
+export function DatePick({ values: v, onChange, cards, quiet }: { values: EntryValues; onChange: (patch: Partial<EntryValues>) => void; cards: Card[]; quiet?: boolean }) {
   const [calendar, setCalendar] = useState(false);
   const [cal, setCal] = useState(() => {
     const d = new Date(`${v.date}T12:00:00`);
@@ -246,9 +327,9 @@ export function DatePick({ values: v, onChange, cards }: { values: EntryValues; 
   return (
     <View>
       <View style={{ flexDirection: "row", gap: 8 }}>
-        <Chip height={38} label="Hoje" on={v.date === todayIso()} onPress={() => setDate(todayIso())} />
-        <Chip height={38} label="Ontem" on={v.date === yesterdayIso()} onPress={() => setDate(yesterdayIso())} />
-        <Chip height={38} label={custom ? dayLabel(v.date) : "Outra data"} on={custom} onPress={() => setCalendar((c) => !c)} />
+        <Chip height={40} label="Hoje" on={v.date === todayIso()} onPress={() => setDate(todayIso())} />
+        <Chip height={40} label="Ontem" on={v.date === yesterdayIso()} onPress={() => setDate(yesterdayIso())} />
+        <Chip height={40} label={custom ? dayLabel(v.date) : "Outra data"} on={custom} onPress={() => setCalendar((c) => !c)} />
       </View>
       {calendar && (
         <Animated.View entering={FadeIn.duration(180)} style={{ marginTop: 10 }}>
@@ -277,7 +358,7 @@ export function DatePick({ values: v, onChange, cards }: { values: EntryValues; 
           />
         </Animated.View>
       )}
-      {credit ? (
+      {quiet ? null : credit ? (
         <Text style={{ marginTop: 10, fontSize: 12.5, color: INK.soft }}>
           {card ? `Entra na fatura de ${invoiceMonthOf(v.date, card.closing_day).label} do ${card.name}.` : "Entra na fatura do cartão."}
         </Text>

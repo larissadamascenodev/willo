@@ -5,7 +5,7 @@ import * as Haptics from "expo-haptics";
 import { categoryHex } from "@/lib/categoryData";
 import ParticleOrb from "~/components/registro/ParticleOrb";
 import ReceiptCard, { type ReceiptLine } from "~/components/registro/ReceiptCard";
-import { ChevronRight, Download, Minus, Plus, Share2, Tag } from "~/components/icons";
+import { Banknote, CalendarClock, Check, ChevronRight, Download, Minus, Plus, Repeat as RepeatIcon, Share2, Tag } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
@@ -255,13 +255,19 @@ export type Repeat = "unica" | "parcelado" | "fixa";
 export const REPEAT_LABEL: Record<Repeat, string> = { unica: "Única", parcelado: "Parcelada", fixa: "Recorrente" };
 export const REPEAT_NOTE: Record<Repeat, string> = { unica: "Só desta vez", parcelado: "Dividida em parcelas", fixa: "Todo mês, até você cancelar" };
 
-/** Once, in instalments or every month: one under the other, each with what it means. */
+const REPEAT_ICON: Record<Repeat, typeof Banknote> = { unica: Banknote, parcelado: CalendarClock, fixa: RepeatIcon };
+
+/**
+ * Once, in instalments or every month: one tile under the other, each with its mark,
+ * what it is and what it means; the chosen one lit, with a tick.
+ */
 export function RepeatList({ value, income, onPick }: { value: Repeat | null; income: boolean; onPick: (r: Repeat) => void }) {
   const options: Repeat[] = income ? ["unica", "fixa"] : ["unica", "parcelado", "fixa"];
   return (
-    <View style={{ borderRadius: 18, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", backgroundColor: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
-      {options.map((r, i) => {
+    <View style={{ gap: 8 }}>
+      {options.map((r) => {
         const on = value === r;
+        const Icon = REPEAT_ICON[r];
         return (
           <Pressable
             key={r}
@@ -270,24 +276,32 @@ export function RepeatList({ value, income, onPick }: { value: Repeat | null; in
               onPick(r);
             }}
             style={({ pressed }) => ({
-              minHeight: 50,
+              minHeight: 64,
               flexDirection: "row",
               alignItems: "center",
-              gap: 12,
+              gap: 14,
               paddingHorizontal: 14,
-              paddingVertical: 8,
-              borderTopWidth: i === 0 ? 0 : 1,
-              borderTopColor: "rgba(255,255,255,0.07)",
-              backgroundColor: pressed ? "rgba(255,255,255,0.08)" : on ? "rgba(255,255,255,0.06)" : "transparent",
+              paddingVertical: 10,
+              borderRadius: 20,
+              borderCurve: "continuous",
+              borderWidth: on ? 1.5 : 1,
+              borderColor: on ? "#fff" : "rgba(255,255,255,0.12)",
+              backgroundColor: pressed ? "rgba(255,255,255,0.12)" : on ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.05)",
+              transform: [{ scale: pressed ? 0.98 : 1 }],
             })}
           >
+            <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: on ? "#fff" : "rgba(255,255,255,0.08)" }}>
+              <Icon size={19} color={on ? "#0B0B0B" : "#fff"} strokeWidth={2.1} />
+            </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ fontSize: 15.5, fontWeight: "700", color: "#fff" }}>{REPEAT_LABEL[r]}</Text>
-              <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12.5, color: INK.soft }}>
+              <Text style={{ fontSize: 16.5, fontWeight: "700", letterSpacing: -0.2, color: "#fff" }}>{REPEAT_LABEL[r]}</Text>
+              <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: INK.soft }}>
                 {REPEAT_NOTE[r]}
               </Text>
             </View>
-            <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: on ? 6 : 1.5, borderColor: on ? "#fff" : "rgba(255,255,255,0.35)" }} />
+            <View style={{ width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", borderWidth: on ? 0 : 1.5, borderColor: "rgba(255,255,255,0.3)", backgroundColor: on ? "#fff" : "transparent" }}>
+              {on ? <Check size={14} color="#0B0B0B" strokeWidth={3} /> : null}
+            </View>
           </Pressable>
         );
       })}

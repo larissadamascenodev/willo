@@ -37,6 +37,10 @@ export type ManualStep = "value" | "ask" | "confirm" | "done";
 type Question = "name" | "category" | "method" | "where" | "repeat" | "parts" | "when" | "status";
 const ORDER: Question[] = ["name", "category", "method", "where", "repeat", "parts", "when", "status"];
 
+/* The bar at the top moves part by part: the amount, what it was, how it was paid, whether it repeats, when, the check. */
+type Stage = "value" | "what" | "pay" | "repeat" | "when" | "confirm";
+const STAGE_OF: Record<Question, Stage> = { name: "what", category: "what", method: "pay", where: "pay", repeat: "repeat", parts: "repeat", when: "when", status: "when" };
+
 export default function ManualEntryFlow({
   cardId,
   onClose,
@@ -241,7 +245,8 @@ export default function ManualEntryFlow({
     sparkle();
   };
 
-  const stageNo = step === "value" ? 1 : step === "ask" ? 2 : 3;
+  const stages: Stage[] = locked ? ["value", "what", "repeat", "when", "confirm"] : ["value", "what", "pay", "repeat", "when", "confirm"];
+  const stageNo = stages.indexOf(step === "value" ? "value" : step === "ask" ? STAGE_OF[q] : "confirm") + 1;
 
   const title: Record<Question, string> = {
     name: income ? "De onde veio esse dinheiro?" : "Com o que foi esse gasto?",
@@ -262,7 +267,7 @@ export default function ManualEntryFlow({
           <>
             <View style={{ minHeight: 30, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: "rgba(255,255,255,0.72)" }}>
-                {locked ? "NO CARTÃO" : "ADICIONAR"} · ETAPA {stageNo} DE 3
+                {locked ? "NO CARTÃO" : "ADICIONAR"} · ETAPA {stageNo} DE {stages.length}
               </Text>
               {step !== "value" && (
                 <Pressable
@@ -276,7 +281,7 @@ export default function ManualEntryFlow({
               )}
             </View>
             <View style={{ marginTop: 8, flexDirection: "row", gap: 4 }}>
-              {[1, 2, 3].map((n) => (
+              {stages.map((_, i) => i + 1).map((n) => (
                 <View key={n} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: n <= stageNo ? "#fff" : "rgba(255,255,255,0.12)" }} />
               ))}
             </View>
