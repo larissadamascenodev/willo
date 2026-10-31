@@ -97,6 +97,7 @@ function Door() {
         {/* Registro rápido and the receipt camera come up the same way: they are
             where the add button leads, and both hand over to the form. */}
         <Stack.Screen name="registro" options={{ animation: "slide_from_bottom" }} />
+        <Stack.Screen name="rapido" options={{ animation: "slide_from_bottom" }} />
         <Stack.Screen name="scanner" options={{ animation: "fade", contentStyle: { backgroundColor: "#000" } }} />
       </Stack.Protected>
 

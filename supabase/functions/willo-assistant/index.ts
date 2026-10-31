@@ -114,16 +114,95 @@ O app registra sozinho quando a pessoa diz um valor ("mercado 90 no crédito"): 
 `;
 
 const STYLE_PROMPT: Record<string, string> = {
-  amigavel: "Fale de forma acolhedora, próxima e encorajadora, como um amigo que entende de dinheiro.",
-  direto: "Fale de forma neutra e direta: objetivo, claro, sem rodeios nem brincadeiras.",
-  descontraido: "Fale de forma leve e descontraída, informal, com bom humor na medida certa. Pode usar um emoji de vez em quando.",
-  firme: "Fale de forma firme e disciplinada: direta, exigente e focada em responsabilidade, sem ser grosseiro nem constranger.",
+  amigavel:
+    "Você é acolhedor e próximo, como um amigo que entende muito de dinheiro e torce pela pessoa. Reconheça o que ela fez de bom antes de apontar o que dá para melhorar. Nada de sermão.",
+  direto:
+    "Você é neutro e direto: vai ao ponto, sem rodeios, sem brincadeira e sem floreio. Números primeiro, conclusão em seguida.",
+  descontraido:
+    "Você é descontraído e leve, fala como um amigo esperto conversando no WhatsApp: informal, com bom humor e algumas expressões do dia a dia (\"bora\", \"olha só\", \"tá tranquilo\", \"aí complica\"). Um emoji ou dois quando combinar, nunca em toda frase. Brinca com a situação, nunca com a pessoa, e o bom humor nunca esconde um risco.",
+  firme:
+    "Você é firme e disciplinado: exigente, direto e focado em responsabilidade, como um treinador. Diga com clareza o que precisa mudar e o que fazer agora, sem ofender nem constranger.",
 };
 
 const LENGTH_PROMPT: Record<string, string> = {
-  curtas: "Responda curto: no máximo quatro frases, a não ser que a pessoa peça detalhes.",
-  detalhadas: "Pode responder com mais detalhe quando ajudar a decidir, com listas curtas de no máximo cinco itens.",
+  curtas:
+    "Seja enxuto, mas nunca genérico: de duas a cinco frases, sempre com os números da pessoa e uma conclusão ou próximo passo prático.",
+  detalhadas:
+    "Responda com profundidade quando houver algo a decidir ou entender: explique o porquê com os números dela, compare com o mês anterior quando fizer sentido e feche com uma recomendação clara. Use listas curtas (até cinco itens) quando ajudarem a ler.",
 };
+
+/**
+ * How every answer should feel, whatever the voice: specific to this person and this
+ * month, never a template.
+ */
+const CRAFT_PROMPT = `
+# Como montar cada resposta
+
+- Responda SOMENTE à última mensagem da pessoa. As mensagens anteriores são contexto: não repita nem responda de novo o que já foi respondido.
+- Comece pela resposta, sem "Claro!", sem repetir a pergunta.
+- Seja específico: cite os valores, as categorias, os nomes das compras e os meses que estão no contexto. Uma resposta que serviria para qualquer pessoa está errada.
+- Dê sentido aos números: compare (com o mês passado, com a renda, com a média), mostre o que pesa mais e explique o porquê.
+- Feche com algo útil: uma sugestão prática, um alerta que importa ou uma pergunta que ajude a pessoa a decidir.
+- Use **negrito** só nos números ou na conclusão principal. Listas com "- " quando houver três ou mais itens. Sem títulos e sem tabelas.
+- O app mostra um gráfico ou cartão junto da sua resposta com os mesmos números; não precisa listar tudo, destaque o que importa.
+`;
+
+/** The person's month gathered up front, so most questions need no tool round at all. */
+async function monthContext(supabase: any): Promise<string> {
+  const today = new Date();
+  const ym = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const cur = monthRange(ym(today));
+  const prevDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const prev = monthRange(ym(prevDate));
+  const [now, before, top, subs, inv] = await Promise.all([
+    spendByCategory(supabase, cur.start, cur.end),
+    spendByCategory(supabase, prev.start, prev.end),
+    supabase
+      .from("transactions")
+      .select("name,amount,category,date,payment_method")
+      .eq("type", "despesa")
+      .gte("date", cur.start)
+      .lte("date", cur.end)
+      .order("amount", { ascending: false })
+      .limit(8),
+    supabase.from("transactions").select("name,amount").eq("type", "despesa").eq("recurrence_type", "fixa").is("parent_transaction_id", null).limit(40),
+    supabase
+      .from("invoices")
+      .select("month,year,total_amount,paid_amount,is_paid,credit_cards(name,due_day)")
+      .eq("is_paid", false)
+      .gte("year", today.getFullYear())
+      .order("year")
+      .order("month")
+      .limit(12),
+  ]);
+  const lines: string[] = [];
+  const fmt = (m: Map<string, number>) =>
+    [...m.entries()]
+      .filter(([, v]) => v > 0)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([c, v]) => `${c} ${money(v)}`)
+      .join("; ");
+  const total = (m: Map<string, number>) => [...m.values()].reduce((a, b) => a + b, 0);
+  lines.push(`GASTOS DE ${MONTHS[today.getMonth()].toUpperCase()} POR CATEGORIA (sem pagamento de fatura): total ${money(total(now))}. ${fmt(now) || "nenhum"}.`);
+  if (before.size) lines.push(`GASTOS DE ${MONTHS[prevDate.getMonth()].toUpperCase()}: total ${money(total(before))}. ${fmt(before)}.`);
+  const topRows = (top.data ?? []) as any[];
+  if (topRows.length)
+    lines.push(`MAIORES GASTOS DO MÊS: ${topRows.map((t) => `${t.name} ${money(Number(t.amount))} (${t.category}, ${t.payment_method === "cartao" ? "crédito" : "conta"}, ${t.date})`).join("; ")}.`);
+  const subRows = (subs.data ?? []) as any[];
+  if (subRows.length) {
+    const sum = subRows.reduce((s, t) => s + Number(t.amount), 0);
+    lines.push(`FIXOS E ASSINATURAS: ${subRows.length} itens, ${money(sum)} por mês (${subRows.slice(0, 8).map((t) => `${t.name} ${money(Number(t.amount))}`).join(", ")}).`);
+  }
+  const invRows = ((inv.data ?? []) as any[]).filter((i) => Number(i.total_amount) - Number(i.paid_amount ?? 0) > 0).slice(0, 6);
+  if (invRows.length)
+    lines.push(
+      `FATURAS A PAGAR: ${invRows
+        .map((i) => `${i.credit_cards?.name} ${MONTHS[i.month - 1]}: falta ${money(Number(i.total_amount) - Number(i.paid_amount ?? 0))}, vence dia ${i.credit_cards?.due_day}`)
+        .join("; ")}.`,
+    );
+  return lines.join("\n");
+}
 
 type Decl = { name: string; description: string; parameters: Record<string, unknown> };
 
@@ -573,7 +652,7 @@ async function gemini(model: string, system: string, contents: GContent[]) {
         systemInstruction: { parts: [{ text: system }] },
         contents,
         tools: [{ functionDeclarations: TOOLS }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 2048 },
+        generationConfig: { temperature: 0.6, maxOutputTokens: 2048 },
       }),
     });
     if (!res.ok) throw new Error(`${model}: ${res.status} ${(await res.text()).slice(0, 300)}`);
@@ -597,8 +676,13 @@ const CLAUDE_MODEL = "claude-sonnet-5-5";
 type Runner = (name: string, args: any) => Promise<unknown>;
 
 /** Claude's turn: the tool loop, with every result for a turn sent back together. */
+/* Once Claude is known to be down — a bad key, no credit — it is skipped for a while
+   rather than tried on every message, so the fallback answers without the wait. */
+let claudeDownUntil = 0;
+
 async function askClaude(system: string, incoming: { role: "user" | "assistant"; content: string }[], run: Runner): Promise<string> {
   if (!Deno.env.get("ANTHROPIC_API_KEY")) throw new Error("claude: sem chave");
+  if (Date.now() < claudeDownUntil) throw new Error("claude: fora do ar há pouco");
   const anthropic = new Anthropic();
   const messages: any[] = incoming.map((m) => ({ role: m.role, content: m.content }));
   const call = () =>
@@ -679,12 +763,16 @@ serve(async (req) => {
     /* A specialist switched off loses its tools (Argos never does). */
     const off = new Set(Object.entries(enabled).filter(([id, on]) => !on && id !== "argos").map(([id]) => id));
 
+    const context = await monthContext(supabase).catch(() => "");
     const system = [
       WILLO_SYSTEM,
       SPECIALISTS_PROMPT,
+      CRAFT_PROMPT,
       prefs.style || prefs.length
         ? `# Seu jeito de falar\n${STYLE_PROMPT[prefs.style] ?? ""}\n${LENGTH_PROMPT[prefs.length] ?? ""}`
         : "",
+      prefs.nome ? `A pessoa se chama ${String(prefs.nome).split(" ")[0]}. Use o nome dela de vez em quando, com naturalidade.` : "",
+      context ? `# Contexto detalhado do mês\n${context}` : "",
       off.size ? `As especialidades ${[...off].join(", ")} estão desligadas pela pessoa: não use as ferramentas delas.` : "",
       `# Retrato financeiro agora\n\n${describeSnapshot(body?.snapshot)}`,
     ].filter(Boolean).join("\n\n");
@@ -715,7 +803,9 @@ serve(async (req) => {
     try {
       reply = await askClaude(system, turns, run);
     } catch (err) {
-      console.error("willo-assistant claude:", err instanceof Error ? err.message : err);
+      const why = err instanceof Error ? err.message : String(err);
+      console.error("willo-assistant claude:", why);
+      if (/401|403|api.?key|authentication|credit|billing/i.test(why)) claudeDownUntil = Date.now() + 10 * 60_000;
       motor = "gemini";
       used.clear();
       reply = await askGemini(system, turns, run);

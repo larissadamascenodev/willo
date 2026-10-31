@@ -25,8 +25,10 @@ import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { useVoiceEntry } from "~/lib/voiceEntry";
+import { useTapOrDouble } from "~/lib/doubleTap";
 import { useAssistantSnapshot } from "@/hooks/useAssistantSnapshot";
-import { askWilloFull, brief, converseAsking, type Turn } from "~/lib/assistantAsk";
+import { askWilloFull, converseAsking, tidyReply, type Turn } from "~/lib/assistantAsk";
+import { useProfile } from "@/hooks/useProfile";
 import { localAnswer } from "~/lib/localAnswers";
 import AnswerCardView, { type AnswerCard, type Simulation } from "~/components/willo/AnswerCards";
 import { cardsFor, STEPS, workingOn } from "~/lib/answerCards";
@@ -165,6 +167,9 @@ export default function Registro() {
   const [thinking, setThinking] = useState<string | null>(null);
   /* Bigger questions show the steps he is going through. */
   const [stepping, setStepping] = useState(false);
+  const { profile } = useProfile();
+  /* Replies already typed out stay typed, whatever redraws the thread. */
+  const typedRef = useRef<Set<string>>(new Set());
   const { data: monthData } = useFinanceData(new Date().getMonth(), new Date().getFullYear(), { includeHistorical: false });
   const [question, setQuestion] = useState<QuickQuestion | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -391,24 +396,26 @@ export default function Registro() {
         /* What the numbers alone can answer is answered at once, with no AI. */
         const local = localAnswer(said, build() as never, installmentsRef.current);
         const snapshot = build() as never;
-        const show = async (simulation: Simulation | null = null) => {
+        const show = async (simulation: Simulation | null = null, after = "") => {
+          /* The picture comes once the words have been written out, not over them. */
+          await new Promise((r) => setTimeout(r, Math.min(2600, 16 * Math.min(after.length, 120) + 250)));
           const cards = await cardsFor(said, { snapshot, categories: monthData.categories ?? [], installments: installmentsRef.current, simulation });
           if (cards.length) setItems((m) => [...m, ...cards.map((card) => ({ kind: "card" as const, id: uid(), card }))]);
         };
         if (local) {
           /* A moment of "working" even here, so the answer is seen arriving. */
-          await new Promise((r) => setTimeout(r, 650));
+          await new Promise((r) => setTimeout(r, 250));
           turns.current.push({ role: "assistant", content: local.text });
           pushBot(local.text);
-          await show();
+          await show(null, local.text);
           return;
         }
         setStepping(true);
-        const { reply: raw, simulation } = await askWilloFull(sent, build());
-        const reply = brief(raw, 700);
+        const { reply: raw, simulation } = await askWilloFull(sent, build(), profile?.display_name ?? null);
+        const reply = tidyReply(raw);
         turns.current.push({ role: "assistant", content: reply });
         pushBot(reply);
-        await show(simulation);
+        await show(simulation, reply);
       } catch (err) {
         pushBot(err instanceof Error ? err.message : "Não consegui falar com o Willo agora. Tenta de novo?");
       } finally {
@@ -416,7 +423,7 @@ export default function Registro() {
         setStepping(false);
       }
     },
-    [build, pushBot, monthData],
+    [build, pushBot, monthData, profile],
   );
 
   /* A spoken question lands in the thread like a typed one. */
@@ -573,7 +580,11 @@ export default function Registro() {
     return (typed ? pool.filter((c) => c.toLowerCase().includes(typed)) : pool).slice(0, 14);
   }, [question, lines, categories, text]);
 
+  /* One tap listens; two open Registro rápido. */
+  const tapOrDouble = useTapOrDouble(() => void entry.toggle(), () => router.push("/rapido" as never));
+  const orbTap = () => (entry.state === "idle" ? tapOrDouble() : void entry.toggle());
   const started = items.length > 0;
+  const lastBotId = [...items].reverse().find((i) => i.kind === "msg" && i.role === "bot")?.id ?? null;
   const hasEntries = lines.length > 0;
   const allSaved = hasEntries && lines.every((l) => l.saved);
   const optionChips = question && question.kind !== "category" ? question.options : [];
@@ -652,7 +663,7 @@ export default function Registro() {
           <View style={{ flex: 1 }}>
             <View style={{ flex: 1 }} onLayout={(e) => setStageH(e.nativeEvent.layout.height)}>
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 }}>
-                <ParticleOrb size={orb} mode={mode} expanded={listening} onPress={() => void entry.toggle()} />
+                <ParticleOrb size={orb} mode={mode} expanded={listening} onPress={orbTap} />
 
                 {/* What the sphere is saying, in the same place whichever it is. */}
                 <View style={{ marginTop: 18, height: CAPTION_H, alignSelf: "stretch", alignItems: "center" }}>
@@ -726,13 +737,6 @@ export default function Registro() {
           </View>
         ) : (
           <View style={{ flex: 1 }}>
-          {/* The sphere, smaller and higher, keeps listening above the conversation. */}
-          <Animated.View entering={shrinkIn} style={{ alignItems: "center", paddingTop: 2, paddingBottom: 8 }}>
-            <ParticleOrb size={COMPACT_ORB} mode={mode} expanded={listening} onPress={() => void entry.toggle()} />
-            <Text style={{ marginTop: 6, fontSize: 12.5, color: listening ? "#fff" : INK.softer }}>
-              {listening ? "Estou ouvindo… toque para parar" : reading ? "Anotando…" : busy ? `${thinking}…` : "Toque na esfera para falar"}
-            </Text>
-          </Animated.View>
           <ScrollView
             ref={threadRef}
             style={{ flex: 1 }}
@@ -750,12 +754,27 @@ export default function Registro() {
               ) : item.kind === "card" ? (
                 <AnswerCardView key={item.id} card={item.card} />
               ) : item.kind === "msg" ? (
-                <Bubble key={item.id} role={item.role} text={item.text} onTyped={() => threadRef.current?.scrollToEnd({ animated: false })} />
+                <Bubble
+                  key={item.id}
+                  role={item.role}
+                  text={item.text}
+                  avatar={item.id === lastBotId && !busy && !listening && !reading}
+                  instant={typedRef.current.has(item.id)}
+                  onDone={() => typedRef.current.add(item.id)}
+                  onTyped={() => threadRef.current?.scrollToEnd({ animated: false })}
+                />
               ) : (
                 <View key={item.id} style={{ paddingVertical: 6 }}>
                   <Notinha lines={linesOf(item.id)} onUndo={() => void undo(item.id)} />
                 </View>
               ),
+            )}
+
+            {(listening || reading) && (
+              <Animated.View entering={FadeIn.duration(200)} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <ParticleOrb size={34} mode={listening ? "listening" : "thinking"} onPress={() => void entry.toggle()} />
+                <Text style={{ fontSize: 13.5, color: listening ? "#fff" : INK.soft }}>{listening ? "Estou ouvindo… toque na esfera para parar" : "Anotando…"}</Text>
+              </Animated.View>
             )}
 
             {busy && (
@@ -863,7 +882,27 @@ export default function Registro() {
                 style={{ flex: 1, minWidth: 0, height: "100%", paddingHorizontal: 4, fontSize: 16, color: "#fff" }}
               />
               {/* Only once there is something to send: the microphone is the sphere. */}
-              {typed && <SendButton disabled={busy || reading} onPress={submitText} />}
+              {typed ? (
+                <SendButton disabled={busy || reading} onPress={submitText} />
+              ) : (
+                started && (
+                  <Pressable
+                    onPress={() => void entry.toggle()}
+                    accessibilityLabel={listening ? "Parar" : "Falar"}
+                    style={({ pressed }) => ({
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: listening ? "#fff" : "rgba(255,255,255,0.10)",
+                      transform: [{ scale: pressed ? 0.94 : 1 }],
+                    })}
+                  >
+                    <Mic size={19} color={listening ? "#0B0B0B" : "#fff"} strokeWidth={2.2} />
+                  </Pressable>
+                )
+              )}
             </Glass>
           </View>
 
@@ -982,35 +1021,58 @@ function Chip({
   );
 }
 
-function Bubble({ role, text, onTyped }: { role: "bot" | "user"; text: string; agents?: string[]; instant?: boolean; onTyped?: () => void }) {
+function Bubble({
+  role,
+  text,
+  avatar = false,
+  instant = false,
+  onTyped,
+  onDone,
+}: {
+  role: "bot" | "user";
+  text: string;
+  /** The sphere beside his latest words. */
+  avatar?: boolean;
+  /** Already typed out once: shown whole. */
+  instant?: boolean;
+  onTyped?: () => void;
+  onDone?: () => void;
+}) {
   const mine = role === "user";
-  /* His words arrive as he writes them; yours are already written. */
-  const [shown, setShown] = useState(mine ? text.length : 0);
+  /* His words arrive as he writes them, once; yours are already written. */
+  const [shown, setShown] = useState(mine || instant ? text.length : 0);
+  const typing = shown < text.length;
   useEffect(() => {
-    if (mine) return;
-    const step = Math.max(1, Math.round(text.length / 90));
-    const iv = setInterval(() => {
-      setShown((n) => {
-        if (n >= text.length) {
-          clearInterval(iv);
-          return n;
-        }
-        onTyped?.();
-        return Math.min(text.length, n + step);
-      });
-    }, 18);
+    if (mine || instant) return;
+    const step = Math.max(1, Math.round(text.length / 120));
+    const iv = setInterval(() => setShown((n) => Math.min(text.length, n + step)), 16);
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, mine]);
+  }, [text]);
+  useEffect(() => {
+    if (mine) return;
+    if (typing) onTyped?.();
+    else onDone?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shown]);
+
   return (
     <Animated.View
       entering={FadeInDown.duration(260)}
-      layout={LinearTransition.duration(200)}
-      style={{ flexDirection: "row", justifyContent: mine ? "flex-end" : "flex-start" }}
+      style={{ flexDirection: "row", alignItems: "flex-end", gap: 8, justifyContent: mine ? "flex-end" : "flex-start" }}
     >
+      {!mine && (
+        <View style={{ width: 28, height: 28 }}>
+          {avatar && (
+            <Animated.View entering={FadeIn.duration(300)}>
+              <ParticleOrb size={28} mode={typing ? "thinking" : "idle"} />
+            </Animated.View>
+          )}
+        </View>
+      )}
       <View
         style={{
-          maxWidth: "84%",
+          maxWidth: mine ? "84%" : "80%",
           paddingHorizontal: 14,
           paddingVertical: 10,
           borderRadius: 20,
@@ -1027,12 +1089,37 @@ function Bubble({ role, text, onTyped }: { role: "bot" | "user"; text: string; a
         }}
       >
         {!mine && <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />}
-        <Text style={{ fontSize: 15, lineHeight: 20, fontWeight: mine ? "500" : "400", color: mine ? "#0B0B0B" : "rgba(255,255,255,0.92)" }}>
-          {text.slice(0, shown)}
-          <Text style={{ color: "transparent" }}>{text.slice(shown)}</Text>
+        <Text style={{ fontSize: 15, lineHeight: 21, fontWeight: mine ? "500" : "400", color: mine ? "#0B0B0B" : "rgba(255,255,255,0.92)" }}>
+          {mine ? text : <Rich text={text} shown={shown} />}
         </Text>
       </View>
     </Animated.View>
+  );
+}
+
+/**
+ * **Bold** and plain runs, typed up to `shown`; the rest laid out invisibly so the
+ * bubble keeps its final size while the words arrive.
+ */
+function Rich({ text, shown }: { text: string; shown: number }) {
+  const parts: { t: string; bold: boolean }[] = [];
+  text.split("**").forEach((t, i) => t && parts.push({ t, bold: i % 2 === 1 }));
+  let left = shown;
+  return (
+    <>
+      {parts.map((p, i) => {
+        const seen = p.t.slice(0, Math.max(0, left));
+        const unseen = p.t.slice(seen.length);
+        left -= p.t.length;
+        const style = p.bold ? { fontWeight: "700" as const, color: "#fff" } : undefined;
+        return (
+          <Text key={i} style={style}>
+            {seen}
+            {unseen ? <Text style={{ color: "transparent" }}>{unseen}</Text> : null}
+          </Text>
+        );
+      })}
+    </>
   );
 }
 

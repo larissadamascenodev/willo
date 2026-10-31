@@ -210,8 +210,7 @@ export default function VoiceEntrySheet({ entry }: { entry: VoiceEntry }) {
                             transform: [{ scale: pressed ? 0.97 : 1 }],
                           })}
                         >
-                          <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-                          {MethodIcon ? (
+                                {MethodIcon ? (
                             <MethodIcon size={19} color="#fff" strokeWidth={2.1} />
                           ) : (
                             <BankMark name={o.label} hex={colorFor(o.label, null)} size={30} />
@@ -475,7 +474,7 @@ const RING = 2 * Math.PI * 34;
  * The tick, drawn: a ring closes round, then the check is written into it stroke by
  * stroke, while the seal springs up — the "pago" sticker of a payment app.
  */
-function DrawnTick() {
+export function DrawnTick() {
   const ring = useSharedValue(0);
   const tick = useSharedValue(0);
   const pop = useSharedValue(0);

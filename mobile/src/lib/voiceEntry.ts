@@ -51,7 +51,7 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const INCOME_CATEGORIES = ["Salário", "Freelance", "Investimentos", "Vendas", "Aluguéis", "Bônus", "Comissão", "Mesada"];
 
 /** How long it has to be quiet, after something was said, for the person to be done. */
-const QUIET_MS = 1250;
+const QUIET_MS = 850;
 /** How long it waits for a first word before deciding nobody is going to say one. */
 const NOTHING_MS = 9000;
 /** Never listen longer than this. */

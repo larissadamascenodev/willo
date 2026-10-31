@@ -79,13 +79,13 @@ export async function askWillo(messages: Turn[], snapshot: unknown): Promise<str
 }
 
 /** The reply and which of Willo's specialists worked on it. */
-export async function askWilloFull(messages: Turn[], snapshot: unknown): Promise<{ reply: string; agents: string[]; simulation: Simulation | null }> {
+export async function askWilloFull(messages: Turn[], snapshot: unknown, nome?: string | null): Promise<{ reply: string; agents: string[]; simulation: Simulation | null }> {
   const { style, length, agents } = getWilloPrefs();
   const timeout = new Promise<never>((_, reject) =>
     setTimeout(() => reject(new Error("O Willo demorou a responder. Tente de novo.")), GIVE_UP_MS),
   );
   const { data, error } = await Promise.race([
-    supabase.functions.invoke("willo-assistant", { body: { messages, snapshot, prefs: { style, length, agents } } }),
+    supabase.functions.invoke("willo-assistant", { body: { messages, snapshot, prefs: { style, length, agents, nome: nome ?? undefined } } }),
     timeout,
   ]);
   if (error) {
@@ -106,7 +106,26 @@ export async function askWilloFull(messages: Turn[], snapshot: unknown): Promise
 }
 
 /** In a chat the answer can run longer than under the sphere, but still plain. */
-export const converseAsking = (question: string) =>
-  `${question.trim()}
+export const converseAsking = (question: string) => `${question.trim()}
 
-[Responda em português, de forma direta: no máximo quatro frases curtas, sem listas longas.]`;
+[Responda em português, só a esta mensagem.]`;
+
+/**
+ * A reply as the thread shows it: bold and short lists kept, headings and tables gone,
+ * and a ceiling on length that only a runaway answer reaches.
+ */
+export function tidyReply(reply: string, max = 1800): string {
+  let text = reply
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^\s*[-*•]\s+/gm, "• ")
+    .replace(/\|/g, " ")
+    .replace(/R\$ ?(?=\d)/g, "R$\u00A0")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  if (text.length > max) {
+    const cut = text.slice(0, max);
+    const stop = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("\n"));
+    text = `${cut.slice(0, stop > max * 0.6 ? stop + 1 : max).trim()}…`;
+  }
+  return text;
+}

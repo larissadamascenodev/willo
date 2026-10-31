@@ -21,6 +21,7 @@ import { GLYPHS } from "~/components/home/Stories";
 import { ChevronRight, Mic } from "~/components/icons";
 import { routeFor, type AssistantRoute } from "~/lib/assistantAsk";
 import { useVoiceEntry } from "~/lib/voiceEntry";
+import { useTapOrDouble } from "~/lib/doubleTap";
 import { GREEN, INK } from "~/theme/tokens";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import Sun from "lucide-react-native/icons/sun";
@@ -140,6 +141,18 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
 
   const Icon = slide ? (GLYPHS[slide.icon] ?? Sun) : Sun;
 
+  /* One tap listens; two open Registro rápido. While listening, a tap stops at once. */
+  const tapOrDouble = useTapOrDouble(
+    () => {
+      /* Speaking over an answer clears it. */
+      if (goTimer.current) clearTimeout(goTimer.current);
+      setTalk(null);
+      void entry.toggle();
+    },
+    () => router.push("/rapido" as never),
+  );
+  const tap = () => (entry.state === "idle" ? tapOrDouble() : void entry.toggle());
+
   return (
     <View style={{ alignItems: "center", paddingTop: 4 }}>
       <Animated.View style={float}>
@@ -147,12 +160,7 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
           size={orb}
           mode={mode}
           expanded={listening}
-          onPress={() => {
-            /* Speaking over an answer clears it. */
-            if (goTimer.current) clearTimeout(goTimer.current);
-            setTalk(null);
-            void entry.toggle();
-          }}
+          onPress={tap}
         />
       </Animated.View>
 

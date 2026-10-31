@@ -55,8 +55,11 @@ export default function TransactionRow({
   const isRecurring = tx.recurrence_type === "fixa" || !!(tx.installments && tx.installments > 1);
   const isPending = tx.status !== "pago";
 
+  const onCard = tx.payment_method === "cartao" && !isFatura;
+  const cardName = onCard ? creditCards?.find((c: any) => c.id === tx.credit_card_id)?.name : null;
   const under = [
     tx.category,
+    onCard ? `Crédito${cardName ? ` · ${cardName}` : ""}` : null,
     tx.installments && tx.installment_current ? `${tx.installment_current}/${tx.installments}x` : null,
     accountName || null,
     tx.time || null,
