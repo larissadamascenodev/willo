@@ -136,7 +136,7 @@ export default function LineDetail({
                 if (!purchaseId) return;
                 setMenu(false);
                 onClose();
-                router.push({ pathname: "/novo", params: { editar: purchaseId } } as never);
+                router.push({ pathname: "/manual", params: { editar: purchaseId } } as never);
               }}
             />
             <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />

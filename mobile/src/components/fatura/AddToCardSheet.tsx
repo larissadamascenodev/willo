@@ -76,7 +76,7 @@ export default function AddToCardSheet({
 
   const manual = () => {
     onClose();
-    if (card) router.push({ pathname: "/novo", params: { cartao: card.id } } as never);
+    if (card) router.push({ pathname: "/manual", params: { cartao: card.id } } as never);
   };
 
   const read = async (get: () => Promise<PickedStatement | null>) => {

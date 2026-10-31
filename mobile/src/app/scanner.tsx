@@ -284,7 +284,7 @@ export default function Scanner() {
         <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 24, paddingBottom: insets.bottom + 26 }}>
           <View style={{ alignItems: "center" }}>
             <Pressable
-              onPress={() => router.replace("/novo" as never)}
+              onPress={() => router.replace("/manual" as never)}
               style={({ pressed }) => ({
                 marginBottom: 24,
                 flexDirection: "row",
@@ -390,7 +390,7 @@ export default function Scanner() {
             <Text style={{ fontSize: 15, fontWeight: "700", color: "#0B0B0B" }}>Tentar outra foto</Text>
           </Pressable>
           <Pressable
-            onPress={() => router.replace("/novo" as never)}
+            onPress={() => router.replace("/manual" as never)}
             style={({ pressed }) => ({
               height: 48,
               borderRadius: 999,

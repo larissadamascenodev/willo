@@ -79,8 +79,8 @@ export default function Transacoes() {
   const [holdError, setHoldError] = useState<string | null>(null);
   const [detail, setDetail] = useState<Row | null>(null);
 
-  /* The same form it was made with, filled in. */
-  const edit = (tx: Row) => router.push({ pathname: "/novo", params: { editar: tx.id } } as never);
+  /* The check it was made with, filled in — for a recurring one, in the month on screen. */
+  const edit = (tx: Row) => router.push({ pathname: "/manual", params: { editar: tx.id, mes: String(month), ano: String(year) } } as never);
 
   /* Only real movements open or hold: an invoice line opens its invoice, and an
      opening balance is a record of when the account was created. */

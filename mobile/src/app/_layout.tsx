@@ -98,6 +98,7 @@ function Door() {
             where the add button leads, and both hand over to the form. */}
         <Stack.Screen name="registro" options={{ animation: "slide_from_bottom" }} />
         <Stack.Screen name="rapido" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />
+        <Stack.Screen name="manual" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />
         <Stack.Screen name="scanner" options={{ animation: "fade", contentStyle: { backgroundColor: "#000" } }} />
       </Stack.Protected>
 

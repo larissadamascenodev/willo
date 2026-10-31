@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
-import { ActivityIndicator, Keyboard, Platform, Pressable, Text, TextInput, View, type TextStyle } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Keyboard, Platform, Pressable, Text, TextInput, View } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { createTransaction, getAccounts, getCreditCards, getRecentTransactions } from "@/services/transactionService";
@@ -10,14 +10,13 @@ import { colorFor } from "@/lib/banks";
 import BankMark from "~/components/BankMark";
 import CategoryPicker from "~/components/CategoryPicker";
 import ParticleOrb from "~/components/registro/ParticleOrb";
-import ReceiptCard from "~/components/registro/ReceiptCard";
-import { Banknote, CalendarClock, ChevronLeft, ChevronRight, CreditCard, Download, Landmark, Minus, Plus, Share2, Tag } from "~/components/icons";
+import { CategoryButton, Choice, EntryCard, Field, GLASS, PartsBar, Primary, SavedView, dayLabel, hhmm, nums, type Account, type Card, type Kind, type Method } from "~/components/registro/entryParts";
+import { Banknote, CalendarClock, ChevronLeft, CreditCard, Landmark, Tag } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
 import { paymentMention } from "~/lib/paymentMention";
 import { preloadCash } from "~/lib/sounds";
-import { saveReceipt, shareReceipt } from "~/lib/receiptShare";
 import { sparkle } from "~/lib/sparkles";
 import { showToast } from "~/lib/toast";
 import { useAuth } from "~/lib/auth";
@@ -63,46 +62,9 @@ export interface StartingEntry {
 /* How long the typing pauses before the keyboard steps aside. */
 const PAUSE_MS = 1400;
 
-const GLASS = { borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.05)" } as const;
-
-const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }, default: {} }) as TextStyle;
-
-const MONTHS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-
-function dayLabel(iso: string) {
-  const [y, m, d] = iso.split("-").map(Number);
-  const then = new Date(y, m - 1, d);
-  const now = new Date();
-  const diff = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() - then.getTime()) / 86_400_000);
-  if (diff === 0) return "Hoje";
-  if (diff === 1) return "Ontem";
-  return `${d} ${MONTHS[m - 1]}`;
-}
-
-const hhmm = (d: Date) => d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-
-interface Account {
-  id: string;
-  name: string;
-  color: string | null;
-  type?: string;
-}
-interface Card {
-  id: string;
-  name: string;
-  color: string | null;
-  limit?: number | null;
-  used_limit?: number | null;
-}
-
-type Method = "conta" | "cartao";
-type Kind = "despesa" | "receita";
 type Plan = "avista" | "parcelado";
 type Question = "method" | "where" | "plan" | "parts" | "category";
 
-/* How many instalments: the usual ones in the bar, any other on the stepper behind "Mais". */
-const QUICK_PARTS = [2, 3, 4, 5];
-const MAX_PARTS = 48;
 
 const EXAMPLES = ["mercado 130", "uber 22 crédito", "recebi 300"];
 
@@ -128,7 +90,6 @@ export default function QuickEntryFlow({
   onSaved?: (summary: string) => void;
 }) {
   const { user } = useAuth();
-  const receiptRef = useRef<ComponentRef<typeof View>>(null);
   const [opened] = useState(() => new Date());
 
   const [step, setStep] = useState<Step>("ask");
@@ -152,7 +113,9 @@ export default function QuickEntryFlow({
   const [pickedParts, setPickedParts] = useState<number | null>(null);
   /* Chosen in the bar but not yet confirmed: the value of one instalment shows meanwhile. */
   const [partsDraft, setPartsDraft] = useState<number | null>(null);
-  const [moreParts, setMoreParts] = useState(false);
+  /* The questions answered, in order — Voltar walks them back, the answer still chosen. */
+  const [trail, setTrail] = useState<Question[]>([]);
+  const [reopen, setReopen] = useState<Question | null>(null);
   /* Asked again from the check: the words no longer decide it. */
   const [askAgain, setAskAgain] = useState(false);
   const [planAgain, setPlanAgain] = useState(false);
@@ -249,7 +212,7 @@ export default function QuickEntryFlow({
 
   /* What is still missing, asked one at a time under the card. */
   const hasEntry = initial ? loaded : !!draft;
-  const question = !hasEntry || !loaded ? null : missing;
+  const question = !hasEntry || !loaded ? null : (reopen ?? missing);
 
   /* Once it reads as an entry and the typing pauses, the keyboard steps aside — and with nothing missing, the check. */
   const pausedOn = useRef<string | null>(null);
@@ -281,14 +244,17 @@ export default function QuickEntryFlow({
     setPickedPlan(null);
     setPickedParts(null);
     setPartsDraft(null);
-    setMoreParts(false);
     setAskAgain(false);
     setPlanAgain(false);
+    setTrail([]);
+    setReopen(null);
   };
 
   /* An answer lands on the card; the last one goes to the check. */
   const answered = (next: { method?: Method; where?: string; plan?: Plan; parts?: number; category?: string }) => {
     Keyboard.dismiss();
+    if (question) setTrail((t) => [...t, question]);
+    setReopen(null);
     const pm = next.method ?? pickedMethod;
     const pw = next.method ? null : (next.where ?? pickedWhere);
     const pp = next.method ? null : (next.plan ?? pickedPlan);
@@ -300,7 +266,6 @@ export default function QuickEntryFlow({
     setPickedParts(pn);
     if (next.plan || next.method) {
       setPartsDraft(null);
-      setMoreParts(false);
     }
     if (next.category) setCategory(next.category);
     if (!pending(pm, pw, pp, pn, cat).question) setStep("confirm");
@@ -374,6 +339,18 @@ export default function QuickEntryFlow({
     sparkle();
   };
 
+  /* One step back, always: the last question answered, its answer still chosen. */
+  const back = () => {
+    setError(null);
+    const last = trail[trail.length - 1];
+    if (last) {
+      setTrail((t) => t.slice(0, -1));
+      if (last === "parts") setPartsDraft(parts);
+      setReopen(last);
+    }
+    setStep("ask");
+  };
+
   const stageNo = step === "ask" ? 1 : 2;
   const Icon = category ? categoryIcon(category) : Tag;
   const hex = category ? categoryHex(category) : "#8B8D94";
@@ -387,12 +364,9 @@ export default function QuickEntryFlow({
           <>
             <View style={{ minHeight: 30, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: "rgba(255,255,255,0.72)" }}>REGISTRO RÁPIDO · ETAPA {stageNo} DE 2</Text>
-              {step === "confirm" && (
+              {(step === "confirm" || (step === "ask" && trail.length > 0)) && (
                 <Pressable
-                  onPress={() => {
-                    setError(null);
-                    setStep("ask");
-                  }}
+                  onPress={back}
                   hitSlop={10}
                   style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, height: 30, paddingLeft: 6, paddingRight: 11, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.08)", opacity: pressed ? 0.6 : 1 })}
                 >
@@ -490,77 +464,43 @@ export default function QuickEntryFlow({
 
                   {question === "method" && (
                     <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
-                      <Choice icon={<Landmark size={19} color="#fff" strokeWidth={2.1} />} label="Débito" onPress={() => answered({ method: "conta" })} />
-                      <Choice icon={<CreditCard size={19} color="#fff" strokeWidth={2.1} />} label="Crédito" onPress={() => answered({ method: "cartao" })} />
+                      <Choice icon={<Landmark size={19} color="#fff" strokeWidth={2.1} />} label="Débito" on={reopen === "method" && how === "conta"} onPress={() => answered({ method: "conta" })} />
+                      <Choice icon={<CreditCard size={19} color="#fff" strokeWidth={2.1} />} label="Crédito" on={reopen === "method" && how === "cartao"} onPress={() => answered({ method: "cartao" })} />
                     </View>
                   )}
 
                   {question === "where" && (
                     <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
                       {list.map((o) => (
-                        <Choice key={o.id} wide={list.length > 3} icon={<BankMark name={o.name} hex={colorFor(o.name, o.color)} size={30} />} label={o.name} onPress={() => answered({ where: o.id })} />
+                        <Choice key={o.id} wide={list.length > 3} on={reopen === "where" && whereId === o.id} icon={<BankMark name={o.name} hex={colorFor(o.name, o.color)} size={30} />} label={o.name} onPress={() => answered({ where: o.id })} />
                       ))}
                     </View>
                   )}
 
                   {question === "plan" && (
                     <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
-                      <Choice icon={<Banknote size={19} color="#fff" strokeWidth={2.1} />} label="À vista" onPress={() => answered({ plan: "avista" })} />
-                      <Choice icon={<CalendarClock size={19} color="#fff" strokeWidth={2.1} />} label="Parcelado" onPress={() => answered({ plan: "parcelado" })} />
+                      <Choice icon={<Banknote size={19} color="#fff" strokeWidth={2.1} />} label="À vista" on={reopen === "plan" && plan === "avista"} onPress={() => answered({ plan: "avista" })} />
+                      <Choice icon={<CalendarClock size={19} color="#fff" strokeWidth={2.1} />} label="Parcelado" on={reopen === "plan" && plan === "parcelado"} onPress={() => answered({ plan: "parcelado" })} />
                     </View>
                   )}
 
-                  {/* One bar — 2x to 5x, and "Mais" for the stepper — then what one instalment comes to */}
+                  {/* How many: the bar, then Continuar */}
                   {question === "parts" && (
                     <View style={{ marginTop: 12 }}>
-                      {moreParts ? (
-                        <View style={{ height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 6, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", backgroundColor: "rgba(255,255,255,0.07)" }}>
-                          <Step icon={<Minus size={18} color="#fff" strokeWidth={2.4} />} label="Menos uma parcela" disabled={(partsDraft ?? 6) <= 2} onPress={() => setPartsDraft((n) => Math.max(2, (n ?? 6) - 1))} />
-                          <Text style={[nums, { fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }]}>{partsDraft ?? 6}x</Text>
-                          <Step icon={<Plus size={18} color="#fff" strokeWidth={2.4} />} label="Mais uma parcela" disabled={(partsDraft ?? 6) >= MAX_PARTS} onPress={() => setPartsDraft((n) => Math.min(MAX_PARTS, (n ?? 6) + 1))} />
-                        </View>
-                      ) : (
-                        <View style={{ flexDirection: "row", gap: 8 }}>
-                          {QUICK_PARTS.map((n) => (
-                            <PartsChip key={n} label={`${n}x`} on={partsDraft === n} onPress={() => setPartsDraft(n)} />
-                          ))}
-                          <PartsChip
-                            label="Mais"
-                            on={false}
-                            onPress={() => {
-                              setMoreParts(true);
-                              setPartsDraft((n) => (n && n > QUICK_PARTS[QUICK_PARTS.length - 1] ? n : 6));
-                            }}
-                          />
-                        </View>
-                      )}
-                      {partsDraft ? (
-                        <>
-                          <Text style={[nums, { marginTop: 12, fontSize: 14.5, color: INK.soft }]}>
-                            <Text style={{ fontWeight: "800", color: "#fff" }}>
-                              {partsDraft}x de {money(cents / 100 / partsDraft)}
-                            </Text>
-                            {"  ·  "}total {money(cents / 100)}
-                          </Text>
-                          <Primary label="Continuar" onPress={() => answered({ parts: partsDraft })} tight />
-                        </>
-                      ) : null}
+                      <PartsBar cents={cents} value={partsDraft} onChange={setPartsDraft} />
+                      {partsDraft ? <Primary label="Continuar" onPress={() => answered({ parts: partsDraft })} tight /> : null}
                     </View>
                   )}
 
-                  {/* One field that opens the categories, not a row of guesses */}
                   {question === "category" && (
-                    <Pressable
-                      onPress={() => {
-                        Keyboard.dismiss();
-                        setPicking(true);
-                      }}
-                      style={({ pressed }) => ({ marginTop: 12, height: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", backgroundColor: pressed ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.08)" })}
-                    >
-                      <Tag size={18} color="#fff" strokeWidth={2.1} />
-                      <Text style={{ flex: 1, fontSize: 16, fontWeight: "600", color: "#fff" }}>Escolher categoria</Text>
-                      <ChevronRight size={18} color={INK.soft} />
-                    </Pressable>
+                    <View style={{ marginTop: 12 }}>
+                      <CategoryButton
+                        onPress={() => {
+                          Keyboard.dismiss();
+                          setPicking(true);
+                        }}
+                      />
+                    </View>
                   )}
                 </Animated.View>
               ) : (
@@ -626,7 +566,6 @@ export default function QuickEntryFlow({
                       setPickedPlan(null);
                       setPickedParts(null);
                       setPartsDraft(null);
-                      setMoreParts(false);
                       setPlanAgain(true);
                       setStep("ask");
                     }}
@@ -684,44 +623,14 @@ export default function QuickEntryFlow({
 
         {/* ── Saved: the receipt, and what to do with it ── */}
         {step === "done" && savedAt && (
-          <Animated.View key="done" entering={FadeIn.duration(240)}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <ParticleOrb size={34} />
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ fontSize: 21, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>{type === "receita" ? "Receita registrada" : "Gasto registrado"}</Text>
-                <Text style={{ marginTop: 1, fontSize: 13, color: INK.soft }}>Anotado pelo Willo às {hhmm(savedAt)}</Text>
-              </View>
-            </View>
-            <View ref={receiptRef} collapsable={false} style={{ marginTop: 10, paddingTop: 2, paddingBottom: 4 }}>
-              <ReceiptCard when={savedAt} onLanded={landed} lines={[{ id: "1", name: name.trim(), category: category ?? "Outros", amount: cents / 100, type, method: payLabel, installments: split }]} />
-            </View>
-
-            <View style={{ marginTop: 14, flexDirection: "row", gap: 10 }}>
-              <Secondary
-                icon={<Share2 size={16} color="#fff" />}
-                label="Compartilhar"
-                onPress={() =>
-                  void shareReceipt(receiptRef, `Willo · ${name.trim()} · ${type === "receita" ? "+" : "−"}${money(cents / 100)} · ${category ?? "Outros"} · ${savedAt.toLocaleDateString("pt-BR")}`)
-                }
-              />
-              <Secondary
-                icon={<Download size={16} color="#fff" />}
-                label="Salvar"
-                onPress={() =>
-                  void saveReceipt(receiptRef).then((r) =>
-                    showToast(r === "saved" ? "Comprovante salvo na galeria" : r === "denied" ? "Libere o acesso às fotos para salvar" : "Salvar na galeria chega com a nova versão do app"),
-                  )
-                }
-              />
-            </View>
-            <Primary label="Concluir" onPress={onClose} tight />
-            <Pressable
-              onPress={() => (credit && whereId && onSeeCard ? onSeeCard(whereId) : onSeeTransactions())}
-              style={({ pressed }) => ({ marginTop: 2, height: 40, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
-            >
-              <Text style={{ fontSize: 15, fontWeight: "600", color: INK.soft }}>{credit && onSeeCard ? "Ver na fatura do cartão" : "Ver transações"}</Text>
-            </Pressable>
-          </Animated.View>
+          <SavedView
+            line={{ id: "1", name: name.trim(), category: category ?? "Outros", amount: cents / 100, type, method: payLabel, installments: split }}
+            savedAt={savedAt}
+            onLanded={landed}
+            onClose={onClose}
+            onSee={() => (credit && whereId && onSeeCard ? onSeeCard(whereId) : onSeeTransactions())}
+            seeLabel={credit && onSeeCard ? "Ver na fatura do cartão" : "Ver transações"}
+          />
         )}
       </View>
 
@@ -740,176 +649,3 @@ export default function QuickEntryFlow({
   );
 }
 
-/** What it became, small: what and its category, the amount, when, and how it was paid. */
-function EntryCard({
-  name,
-  cents,
-  type,
-  category,
-  when,
-  pay,
-  parts,
-  payMissing,
-}: {
-  name: string;
-  cents: number;
-  type: Kind;
-  category: string | null;
-  when: string;
-  pay: string | null;
-  /** "5x de R$ 100,00", "À vista" — on a card, once known. */
-  parts?: string | null;
-  payMissing: string;
-}) {
-  const Icon = category ? categoryIcon(category) : Tag;
-  const hex = category ? categoryHex(category) : "#8B8D94";
-  const income = type === "receita";
-  return (
-    <View>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-          <Icon size={18} color={chipInk(hex)} strokeWidth={2} />
-        </View>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
-            {name}
-          </Text>
-          <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 13, color: category ? INK.soft : AMBER }}>
-            {category ?? "Falta a categoria"}
-          </Text>
-        </View>
-        <Text style={[nums, { fontSize: 17, fontWeight: "800", letterSpacing: -0.4, color: income ? GREEN : "#fff" }]}>
-          {income ? "+" : "−"}
-          {money(cents / 100)}
-        </Text>
-      </View>
-      <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-        <Pill label={when} />
-        {pay ? <Pill label={pay} /> : <Pill label={payMissing} warn />}
-        {parts ? <Pill label={parts} /> : null}
-      </View>
-    </View>
-  );
-}
-
-function Pill({ label, warn }: { label: string; warn?: boolean }) {
-  return (
-    <View style={{ height: 26, paddingHorizontal: 10, borderRadius: 13, justifyContent: "center", backgroundColor: warn ? "rgba(249,206,78,0.12)" : "rgba(255,255,255,0.07)" }}>
-      <Text style={{ fontSize: 12.5, fontWeight: "500", color: warn ? AMBER : "rgba(255,255,255,0.8)" }}>{label}</Text>
-    </View>
-  );
-}
-
-/** An answer, as a large glass button: two or three share a row, more go two by two. */
-function Choice({ icon, label, wide, onPress }: { icon: React.ReactNode; label: string; wide?: boolean; onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={() => {
-        void Haptics.selectionAsync().catch(() => undefined);
-        onPress();
-      }}
-      style={({ pressed }) => ({
-        flexGrow: 1,
-        flexBasis: wide ? "45%" : 0,
-        minWidth: 120,
-        height: 56,
-        borderRadius: 20,
-        borderCurve: "continuous",
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 10,
-        paddingHorizontal: 12,
-        borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.16)",
-        backgroundColor: pressed ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.08)",
-        transform: [{ scale: pressed ? 0.97 : 1 }],
-      })}
-    >
-      {icon}
-      <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 16, fontWeight: "700", color: "#fff" }}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
-/** One count in the bar; the chosen one lit. */
-function PartsChip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={() => {
-        void Haptics.selectionAsync().catch(() => undefined);
-        onPress();
-      }}
-      style={({ pressed }) => ({
-        flex: 1,
-        height: 48,
-        borderRadius: 18,
-        borderCurve: "continuous",
-        alignItems: "center",
-        justifyContent: "center",
-        borderWidth: 1,
-        borderColor: on ? "#fff" : "rgba(255,255,255,0.14)",
-        backgroundColor: on ? "#fff" : pressed ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.07)",
-      })}
-    >
-      <Text style={{ fontSize: 16, fontWeight: "700", color: on ? "#0B0B0B" : "#fff" }}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function Step({ icon, label, disabled, onPress }: { icon: React.ReactNode; label: string; disabled?: boolean; onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityLabel={label}
-      disabled={disabled}
-      onPress={() => {
-        void Haptics.selectionAsync().catch(() => undefined);
-        onPress();
-      }}
-      style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)", opacity: disabled ? 0.3 : pressed ? 0.6 : 1 })}
-    >
-      {icon}
-    </Pressable>
-  );
-}
-
-function Field({ label, changeable, children, style }: { label: string; changeable?: boolean; children: React.ReactNode; style?: object }) {
-  return (
-    <View style={[{ marginTop: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", backgroundColor: "rgba(255,255,255,0.04)" }, style]}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 4, marginBottom: 5 }}>
-        <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 11, color: INK.softer }}>
-          {label}
-        </Text>
-        {changeable ? <ChevronRight size={12} color={INK.softer} /> : null}
-      </View>
-      {children}
-    </View>
-  );
-}
-
-function Primary({ label, onPress, disabled, busy, tight }: { label: string; onPress: () => void; disabled?: boolean; busy?: boolean; tight?: boolean }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => ({ marginTop: tight ? 10 : 16, height: 54, borderRadius: 27, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, backgroundColor: "#fff", opacity: disabled && !busy ? 0.35 : pressed ? 0.85 : 1 })}
-    >
-      {busy && <ActivityIndicator color="#0B0B0B" />}
-      <Text style={{ fontSize: 17, fontWeight: "700", color: "#0B0B0B" }}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function Secondary({ icon, label, onPress }: { icon: React.ReactNode; label: string; onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => ({ flex: 1, height: 46, borderRadius: 23, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", backgroundColor: "rgba(255,255,255,0.07)", opacity: pressed ? 0.7 : 1 })}
-    >
-      {icon}
-      <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{label}</Text>
-    </Pressable>
-  );
-}

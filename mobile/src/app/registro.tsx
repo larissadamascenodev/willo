@@ -908,7 +908,7 @@ export default function Registro() {
 
           {!listening && !reading && (
             <Pressable
-              onPress={() => router.replace("/novo" as never)}
+              onPress={() => router.push("/manual" as never)}
               style={({ pressed }) => ({
                 alignSelf: "center",
                 marginTop: 6,
