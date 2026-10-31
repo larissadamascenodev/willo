@@ -15,7 +15,7 @@ import Glass from "~/components/Glass";
 import Notinha, { type NotinhaLine } from "~/components/registro/Notinha";
 import Confirmado from "~/components/registro/Confirmado";
 import ParticleOrb, { type OrbMode } from "~/components/registro/ParticleOrb";
-import { ArrowUp, Camera, Mic, PenLine, SlidersHorizontal, Sparkles, X, Zap } from "~/components/icons";
+import { ArrowUp, Camera, Check, Mic, PenLine, SlidersHorizontal, Sparkles, X, Zap } from "~/components/icons";
 import WilloSettings from "~/components/willo/WilloSettings";
 import AgentMark from "~/components/willo/AgentMark";
 import { AGENTS } from "~/lib/agents";
@@ -28,6 +28,9 @@ import { useVoiceEntry } from "~/lib/voiceEntry";
 import { useAssistantSnapshot } from "@/hooks/useAssistantSnapshot";
 import { askWilloFull, brief, converseAsking, type Turn } from "~/lib/assistantAsk";
 import { localAnswer } from "~/lib/localAnswers";
+import AnswerCardView, { type AnswerCard, type Simulation } from "~/components/willo/AnswerCards";
+import { cardsFor, STEPS, workingOn } from "~/lib/answerCards";
+import { useFinanceData } from "@/hooks/useFinanceData";
 import { parseLocal } from "@/lib/quickEntry/parseLocal";
 import { loadActiveInstallments } from "@/services/activeInstallments";
 import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
@@ -62,7 +65,8 @@ import { GREEN, INK } from "~/theme/tokens";
 type Item =
   | { kind: "msg"; id: string; role: "bot" | "user"; text: string; agents?: string[]; instant?: boolean }
   | { kind: "batch"; id: string }
-  | { kind: "done"; id: string; text: string; total?: number; income?: boolean };
+  | { kind: "done"; id: string; text: string; total?: number; income?: boolean }
+  | { kind: "card"; id: string; card: AnswerCard };
 
 interface Line {
   batchId: string;
@@ -159,6 +163,9 @@ export default function Registro() {
   const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
   const [text, setText] = useState("");
   const [thinking, setThinking] = useState<string | null>(null);
+  /* Bigger questions show the steps he is going through. */
+  const [stepping, setStepping] = useState(false);
+  const { data: monthData } = useFinanceData(new Date().getMonth(), new Date().getFullYear(), { includeHistorical: false });
   const [question, setQuestion] = useState<QuickQuestion | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [keyboardUp, setKeyboardUp] = useState(false);
@@ -375,7 +382,7 @@ export default function Registro() {
   /** Puts the thread so far to the assistant and writes what it answers. */
   const converse = useCallback(
     async (said: string) => {
-      setThinking("Pensando");
+      setThinking(workingOn(said).replace(/…$/, ""));
       try {
         /* The snapshot takes a moment the first time; wait for it rather than ask blind. */
         for (let n = 0; n < 24 && !snapshotReady.current; n++) await new Promise((r) => setTimeout(r, 250));
@@ -383,23 +390,33 @@ export default function Registro() {
         const sent = turns.current.slice(-8).map((t, i, all) => (i === all.length - 1 ? { ...t, content: converseAsking(t.content) } : t));
         /* What the numbers alone can answer is answered at once, with no AI. */
         const local = localAnswer(said, build() as never, installmentsRef.current);
+        const snapshot = build() as never;
+        const show = async (simulation: Simulation | null = null) => {
+          const cards = await cardsFor(said, { snapshot, categories: monthData.categories ?? [], installments: installmentsRef.current, simulation });
+          if (cards.length) setItems((m) => [...m, ...cards.map((card) => ({ kind: "card" as const, id: uid(), card }))]);
+        };
         if (local) {
+          /* A moment of "working" even here, so the answer is seen arriving. */
+          await new Promise((r) => setTimeout(r, 650));
           turns.current.push({ role: "assistant", content: local.text });
           pushBot(local.text);
+          await show();
           return;
         }
-        const { reply: raw, agents } = await askWilloFull(sent, build());
+        setStepping(true);
+        const { reply: raw, simulation } = await askWilloFull(sent, build());
         const reply = brief(raw, 700);
         turns.current.push({ role: "assistant", content: reply });
-        void agents;
         pushBot(reply);
+        await show(simulation);
       } catch (err) {
         pushBot(err instanceof Error ? err.message : "Não consegui falar com o Willo agora. Tenta de novo?");
       } finally {
         setThinking(null);
+        setStepping(false);
       }
     },
-    [build, pushBot],
+    [build, pushBot, monthData],
   );
 
   /* A spoken question lands in the thread like a typed one. */
@@ -730,6 +747,8 @@ export default function Registro() {
                 <View key={item.id} style={{ paddingVertical: 4 }}>
                   <Confirmado text={item.text} total={item.total} income={item.income} />
                 </View>
+              ) : item.kind === "card" ? (
+                <AnswerCardView key={item.id} card={item.card} />
               ) : item.kind === "msg" ? (
                 <Bubble key={item.id} role={item.role} text={item.text} onTyped={() => threadRef.current?.scrollToEnd({ animated: false })} />
               ) : (
@@ -740,9 +759,12 @@ export default function Registro() {
             )}
 
             {busy && (
-              <Animated.View entering={FadeIn.duration(200)} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <ParticleOrb size={30} mode="thinking" />
-                <Text style={{ fontSize: 13.5, color: INK.soft }}>{thinking}…</Text>
+              <Animated.View entering={FadeIn.duration(200)}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <ParticleOrb size={30} mode="thinking" />
+                  <Text style={{ fontSize: 13.5, color: INK.soft }}>{thinking}…</Text>
+                </View>
+                {stepping && <Steps />}
               </Animated.View>
             )}
           </ScrollView>
@@ -1036,5 +1058,38 @@ function SendButton({ disabled, onPress }: { disabled: boolean; onPress: () => v
         <ArrowUp size={20} color="#0B0B0B" strokeWidth={2.8} />
       </Pressable>
     </Animated.View>
+  );
+}
+
+/** What he is going through on a bigger question: each step lights as he reaches it. */
+function Steps() {
+  const [at, setAt] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setAt((n) => Math.min(n + 1, STEPS.length - 1)), 1600);
+    return () => clearInterval(iv);
+  }, []);
+  return (
+    <View style={{ marginTop: 10, marginLeft: 40, gap: 8 }}>
+      {STEPS.map((step, i) => (
+        <View key={step} style={{ flexDirection: "row", alignItems: "center", gap: 8, opacity: i <= at ? 1 : 0.35 }}>
+          <View
+            style={{
+              width: 14,
+              height: 14,
+              borderRadius: 7,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: i === at ? 2 : 0,
+              borderColor: "#5AA9FF",
+              backgroundColor: i < at ? "#5AA9FF" : "transparent",
+            }}
+          >
+            {i < at && <Check size={9} color="#0B0B0B" strokeWidth={3.5} />}
+          </View>
+          <Text style={{ fontSize: 13, fontWeight: i === at ? "600" : "400", color: i === at ? "#fff" : INK.soft }}>{step}</Text>
+        </View>
+      ))}
+      <Text style={{ fontSize: 11, color: INK.faint }}>Nada muda sem a sua aprovação.</Text>
+    </View>
   );
 }

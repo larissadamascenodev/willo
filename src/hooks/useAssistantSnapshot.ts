@@ -90,7 +90,11 @@ export function useAssistantSnapshot() {
         fatura_aberta: openByCard.get(c.id)?.total ?? 0,
         vencimento: c.dueDay,
         fechamento: c.closingDay,
-        vence_em: invoiceDueDate(c, year, month + 1).toLocaleDateString("pt-BR"),
+        /* The due date of the invoice actually open, not of this calendar month's. */
+        vence_em: (() => {
+          const open = openByCard.get(c.id);
+          return invoiceDueDate(c, open?.year ?? year, open?.month ?? month + 1).toLocaleDateString("pt-BR");
+        })(),
       })),
 
       proximos_eventos: (data.events ?? [])

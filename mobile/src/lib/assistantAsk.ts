@@ -1,5 +1,6 @@
 import { supabase } from "~/supabase/client";
 import { getWilloPrefs } from "~/lib/willoPrefs";
+import type { Simulation } from "~/components/willo/AnswerCards";
 
 /**
  * What to do with a question put to the sphere.
@@ -78,7 +79,7 @@ export async function askWillo(messages: Turn[], snapshot: unknown): Promise<str
 }
 
 /** The reply and which of Willo's specialists worked on it. */
-export async function askWilloFull(messages: Turn[], snapshot: unknown): Promise<{ reply: string; agents: string[] }> {
+export async function askWilloFull(messages: Turn[], snapshot: unknown): Promise<{ reply: string; agents: string[]; simulation: Simulation | null }> {
   const { style, length, agents } = getWilloPrefs();
   const timeout = new Promise<never>((_, reject) =>
     setTimeout(() => reject(new Error("O Willo demorou a responder. Tente de novo.")), GIVE_UP_MS),
@@ -97,7 +98,11 @@ export async function askWilloFull(messages: Turn[], snapshot: unknown): Promise
     throw new Error(said || "Não consegui falar com o Willo agora.");
   }
   if (data?.error) throw new Error(data.error);
-  return { reply: String(data?.reply ?? ""), agents: Array.isArray(data?.especialistas) ? data.especialistas : [] };
+  return {
+    reply: String(data?.reply ?? ""),
+    agents: Array.isArray(data?.especialistas) ? data.especialistas : [],
+    simulation: (data?.simulacao as Simulation | undefined) ?? null,
+  };
 }
 
 /** In a chat the answer can run longer than under the sphere, but still plain. */

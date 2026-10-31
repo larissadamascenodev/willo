@@ -225,6 +225,9 @@ const SPECIALIST_OF: Record<string, string> = {
   conferir_dados: "argos",
 };
 
+/** Paying an invoice is not spending: its purchases are already counted in their own categories. */
+const INVOICE_PAYMENT = /^(faturas?|pagamento de fatura|cart[aã]o de cr[eé]dito)$/i;
+
 const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const round = (v: number) => Math.round(v * 100) / 100;
 const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
@@ -244,7 +247,10 @@ async function spendByCategory(supabase: any, start: string, end: string) {
     .lte("date", end);
   if (error) throw error;
   const by = new Map<string, number>();
-  for (const r of data ?? []) by.set(r.category, (by.get(r.category) ?? 0) + Number(r.amount));
+  for (const r of data ?? []) {
+    if (INVOICE_PAYMENT.test(String(r.category ?? "").trim())) continue;
+    by.set(r.category, (by.get(r.category) ?? 0) + Number(r.amount));
+  }
   return by;
 }
 
@@ -335,6 +341,7 @@ async function runTool(supabase: any, name: string, input: any, snapshot: any): 
       if (error) throw error;
       const by = new Map<string, { soma: number; itens: number }>();
       for (const r of data ?? []) {
+        if (tipo === "despesa" && INVOICE_PAYMENT.test(String(r.category ?? "").trim())) continue;
         const p = by.get(r.category) ?? { soma: 0, itens: 0 };
         by.set(r.category, { soma: p.soma + Number(r.amount), itens: p.itens + 1 });
       }
@@ -687,12 +694,15 @@ serve(async (req) => {
       .map((m: any) => ({ role: m.role as "user" | "assistant", content: String(m.content) }));
 
     const used = new Set<string>();
+    /* The last purchase simulated, so the app can draw it beside the answer. */
+    let simulacao: unknown = null;
     const run: Runner = async (name, args) => {
       const owner = SPECIALIST_OF[name];
       if (owner && off.has(owner)) return { erro: "Especialidade desligada pela pessoa." };
       try {
         const out = await runTool(supabase, name, args ?? {}, body?.snapshot);
         if (owner) used.add(owner);
+        if (name === "simular_compra" && out && !(out as any).erro) simulacao = out;
         return out;
       } catch (err) {
         return { erro: `Falha ao consultar: ${err instanceof Error ? err.message : "erro"}` };
@@ -710,7 +720,7 @@ serve(async (req) => {
       used.clear();
       reply = await askGemini(system, turns, run);
     }
-    return json({ reply, especialistas: [...used], motor });
+    return json({ reply, especialistas: [...used], motor, simulacao });
   } catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
     console.error("willo-assistant error:", raw);
