@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, Text, TextInput, View, type TextStyle } from "react-native";
 import Animated, { Easing, FadeIn, FadeInDown, ReduceMotion, useAnimatedProps, useSharedValue, withDelay, withSpring, withTiming, useAnimatedStyle } from "react-native-reanimated";
 import { categoryHex } from "@/lib/categoryData";
 import type { QuickDraft, QuickSetup } from "@/lib/quickEntry/types";
+import { useRouter } from "expo-router";
 import BottomSheet from "~/components/BottomSheet";
+import QuickEntryFlow, { type StartingEntry, type Step } from "~/components/registro/QuickEntryFlow";
 import ParticleOrb from "~/components/registro/ParticleOrb";
 import ReceiptCard, { type ReceiptLine } from "~/components/registro/ReceiptCard";
 import { Check, CreditCard, Landmark, Pencil, Tag, Undo2 } from "~/components/icons";
@@ -32,6 +34,10 @@ import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
  * Once it is written the sheet shows the receipt, arriving, and offers to take it
  * back; it goes by itself after a while, since the point of speaking was that it
  * was quick.
+ *
+ * A single entry goes the Registro rápido way instead — the card, what is still missing
+ * asked under it, the check, and the receipt — so it is the same whether it was typed
+ * after a double tap, said, or written to Willo.
  */
 
 const GLASS = { borderRadius: 22, borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.05)" } as const;
@@ -67,12 +73,27 @@ function how(draft: QuickDraft, setup: QuickSetup) {
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export default function VoiceEntrySheet({ entry }: { entry: VoiceEntry }) {
+export default function VoiceEntrySheet({ entry, onSaved }: { entry: VoiceEntry; onSaved?: (summary: string) => void }) {
+  const router = useRouter();
   const { state, lines, transcript, question, categoryChips, setup, message } = entry;
   const open = state === "confirm" || state === "saving" || state === "saved";
   const saved = state === "saved";
   const busy = state === "saving";
   const [editing, setEditing] = useState(false);
+  const [flowStep, setFlowStep] = useState<Step>("ask");
+
+  /* One entry, in the Registro rápido steps; kept through the sheet's way out. */
+  const one = state === "confirm" && lines.length === 1 ? lines[0].draft : null;
+  const starting = useMemo<StartingEntry | null>(
+    () =>
+      one
+        ? { name: one.name, amount: one.amount, type: one.type, category: one.category, method: one.paymentMethod, accountId: one.accountId, cardId: one.creditCardId, date: one.date }
+        : null,
+    [one],
+  );
+  const held = useRef<{ id: string; entry: StartingEntry; heard: string | null } | null>(null);
+  if (one && starting && held.current?.id !== one.id) held.current = { id: one.id, entry: starting, heard: transcript };
+  const flow = starting || !open ? held.current : null;
 
   /* A new round starts out of the editor. */
   useEffect(() => {
@@ -87,6 +108,26 @@ export default function VoiceEntrySheet({ entry }: { entry: VoiceEntry }) {
   const total = lines.reduce((t, l) => t + (l.draft.type === "receita" ? l.draft.amount : -l.draft.amount), 0);
   const options = question && question.kind !== "category" ? question.options : [];
   const single = lines.length === 1 ? lines[0].draft : null;
+
+  if (flow) {
+    return (
+      <BottomSheet open={open} onClose={entry.reset} full={flowStep === "done"}>
+        <QuickEntryFlow
+          key={flow.id}
+          initial={flow.entry}
+          heard={flow.heard}
+          spoken={entry.source !== "text"}
+          onClose={entry.reset}
+          onSeeTransactions={() => {
+            entry.reset();
+            setTimeout(() => router.push("/(tabs)/transacoes" as never), 260);
+          }}
+          onStep={setFlowStep}
+          onSaved={onSaved}
+        />
+      </BottomSheet>
+    );
+  }
 
   const receipt: ReceiptLine[] = lines.map((l) => ({
     id: l.draft.id,

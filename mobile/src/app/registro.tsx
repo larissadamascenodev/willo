@@ -928,7 +928,7 @@ export default function Registro() {
       </KeyboardAvoidingView>
 
       {/* What was heard, for a look before it is written. */}
-      <VoiceEntrySheet entry={entry} />
+      <VoiceEntrySheet entry={entry} onSaved={(what) => pushBot(`Anotado: ${what}.`)} />
       <WilloSettings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </Room>
   );
