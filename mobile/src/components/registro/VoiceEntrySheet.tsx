@@ -122,6 +122,10 @@ export default function VoiceEntrySheet({ entry, onSaved }: { entry: VoiceEntry;
             entry.reset();
             setTimeout(() => router.push("/(tabs)/transacoes" as never), 260);
           }}
+          onSeeCard={(cardId) => {
+            entry.reset();
+            setTimeout(() => router.push(`/fatura/${cardId}` as never), 260);
+          }}
           onStep={setFlowStep}
           onSaved={onSaved}
         />

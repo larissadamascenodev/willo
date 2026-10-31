@@ -11,7 +11,7 @@ import BankMark from "~/components/BankMark";
 import CategoryPicker from "~/components/CategoryPicker";
 import ParticleOrb from "~/components/registro/ParticleOrb";
 import ReceiptCard from "~/components/registro/ReceiptCard";
-import { ChevronLeft, ChevronRight, CreditCard, Download, Landmark, Share2, Tag } from "~/components/icons";
+import { Banknote, CalendarClock, ChevronLeft, ChevronRight, CreditCard, Download, Landmark, Share2, Tag } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
@@ -32,7 +32,9 @@ import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
  * what it became fills in as they type: what, the category, the amount, the day and the
  * hour. When the typing pauses the keyboard steps aside, and what is still missing is
  * asked under the card, one question at a time — debit or credit, then which account or
- * card, then the category — each answer landing on the card. Whatever the sentence
+ * card; on a card, at once or in instalments, and how many; then the category — each
+ * answer landing on the card. In instalments it is a purchase on the card: the total is
+ * written once and the card's invoices take it month by month, as the form does. Whatever the sentence
  * already said ("no débito, na conta Nubank") is not asked again; with nothing missing it
  * goes straight to the check. The check: out or in, the amount, the words, the category
  * and how it was paid — and Registrar. It lands on the receipt: at the moment its seal
@@ -95,6 +97,12 @@ interface Card {
 
 type Method = "conta" | "cartao";
 type Kind = "despesa" | "receita";
+type Plan = "avista" | "parcelado";
+type Question = "method" | "where" | "plan" | "parts" | "category";
+
+/* How many instalments, first the usual ones, then the long ones. */
+const PARTS_FIRST = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const PARTS_MORE = [13, 14, 15, 16, 18, 20, 21, 24, 30, 36, 48];
 
 const EXAMPLES = ["mercado 130", "uber 22 crédito", "recebi 300"];
 
@@ -104,6 +112,7 @@ export default function QuickEntryFlow({
   spoken,
   onClose,
   onSeeTransactions,
+  onSeeCard,
   onStep,
   onSaved,
 }: {
@@ -113,6 +122,8 @@ export default function QuickEntryFlow({
   spoken?: boolean;
   onClose: () => void;
   onSeeTransactions: () => void;
+  /** A purchase on a card is seen on its invoice. */
+  onSeeCard?: (cardId: string) => void;
   onStep?: (step: Step) => void;
   onSaved?: (summary: string) => void;
 }) {
@@ -126,15 +137,23 @@ export default function QuickEntryFlow({
   const [reading, setReading] = useState(false);
   const [aiRead, setAiRead] = useState<ParsedEntry | null>(null);
   const [name, setName] = useState(initial?.name ?? "");
-  const [cents, setCents] = useState(initial ? Math.round(initial.amount * 100) : 0);
+  const [cents, setCents] = useState(() => {
+    if (!initial) return 0;
+    const heardOf = paymentMention(heard ?? "", [], []);
+    return Math.round(initial.amount * 100) * (heardOf.perPart && heardOf.installments ? heardOf.installments : 1);
+  });
   const [type, setType] = useState<Kind>(initial?.type ?? "despesa");
   const [category, setCategory] = useState<string | null>(initial?.category ?? null);
   const [date, setDate] = useState(initial?.date ?? todayISO());
   /* What the person chose on the card; what the words said comes after it. */
   const [pickedMethod, setPickedMethod] = useState<Method | null>(null);
   const [pickedWhere, setPickedWhere] = useState<string | null>(null);
+  const [pickedPlan, setPickedPlan] = useState<Plan | null>(null);
+  const [pickedParts, setPickedParts] = useState<number | null>(null);
+  const [moreParts, setMoreParts] = useState(false);
   /* Asked again from the check: the words no longer decide it. */
   const [askAgain, setAskAgain] = useState(false);
+  const [planAgain, setPlanAgain] = useState(false);
   const [picking, setPicking] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -190,11 +209,11 @@ export default function QuickEntryFlow({
   useEffect(() => {
     if (!draft) return;
     setName(draft.name);
-    setCents(Math.round(draft.amount * 100));
+    setCents(Math.round(draft.amount * 100) * (mention.perPart && mention.installments ? mention.installments : 1));
     setType(draft.type);
     setCategory(draft.category);
     setDate(draft.date || todayISO());
-  }, [draft]);
+  }, [draft, mention.perPart, mention.installments]);
 
   /* The way it was paid and where: chosen on the card, else said, else read. */
   const baseMethod = initial ? initial.method : (draft?.paymentMethod ?? null);
@@ -206,13 +225,28 @@ export default function QuickEntryFlow({
     const whereId = inList(pw) ?? said_ ?? (how && list.length === 1 ? list[0].id : null);
     return { how, list, whereId };
   };
-  const { how, list, whereId } = resolve(pickedMethod, pickedWhere);
+  /* On a card, at once or in instalments, and how many: chosen, else said. */
+  const saidPlan: Plan | null = askAgain || planAgain ? null : mention.installments || mention.split ? "parcelado" : mention.inCash ? "avista" : null;
+  const saidParts = askAgain || planAgain ? null : mention.installments;
+
+  /* What would still be asked, for a given set of answers. */
+  const pending = (pm: Method | null, pw: string | null, pp: Plan | null, pn: number | null, cat: string | null) => {
+    const r = resolve(pm, pw);
+    const credit = type === "despesa" && r.how === "cartao";
+    const plan = credit ? (pp ?? saidPlan) : null;
+    const parts = plan === "parcelado" ? (pn ?? saidParts) : null;
+    const question: Question | null = !r.how ? "method" : !r.whereId ? "where" : credit && !plan ? "plan" : plan === "parcelado" && !parts ? "parts" : !cat ? "category" : null;
+    return { ...r, credit, plan, parts, question };
+  };
+  const { how, list, whereId, credit, plan, parts, question: missing } = pending(pickedMethod, pickedWhere, pickedPlan, pickedParts, category);
   const picked = list.find((o) => o.id === whereId) ?? null;
   const payLabel = type === "receita" ? (picked?.name ?? null) : how ? `${how === "cartao" ? "Crédito" : "Débito"}${picked ? ` · ${picked.name}` : ""}` : null;
+  const split = plan === "parcelado" && parts ? parts : null;
+  const partsLabel = split ? `${split}x de ${money(cents / 100 / split)}` : plan === "avista" ? "À vista" : null;
 
   /* What is still missing, asked one at a time under the card. */
   const hasEntry = initial ? loaded : !!draft;
-  const question = !hasEntry || !loaded ? null : !how ? "method" : !whereId ? "where" : !category ? "category" : null;
+  const question = !hasEntry || !loaded ? null : missing;
 
   /* Once it reads as an entry and the typing pauses, the keyboard steps aside — and with nothing missing, the check. */
   const pausedOn = useRef<string | null>(null);
@@ -241,22 +275,26 @@ export default function QuickEntryFlow({
     setError(null);
     setPickedMethod(null);
     setPickedWhere(null);
+    setPickedPlan(null);
+    setPickedParts(null);
     setAskAgain(false);
+    setPlanAgain(false);
   };
 
   /* An answer lands on the card; the last one goes to the check. */
-  const answered = (next: { method?: Method; where?: string; category?: string }) => {
+  const answered = (next: { method?: Method; where?: string; plan?: Plan; parts?: number; category?: string }) => {
     Keyboard.dismiss();
     const pm = next.method ?? pickedMethod;
     const pw = next.method ? null : (next.where ?? pickedWhere);
-    if (next.method) {
-      setPickedMethod(next.method);
-      setPickedWhere(null);
-    }
-    if (next.where) setPickedWhere(next.where);
+    const pp = next.method ? null : (next.plan ?? pickedPlan);
+    const pn = next.method || next.plan ? (next.parts ?? null) : (next.parts ?? pickedParts);
+    const cat = next.category ?? category;
+    setPickedMethod(pm);
+    setPickedWhere(pw);
+    setPickedPlan(pp);
+    setPickedParts(pn);
     if (next.category) setCategory(next.category);
-    const r = resolve(pm, pw);
-    if (r.how && r.whereId && (next.category ?? category)) setStep("confirm");
+    if (!pending(pm, pw, pp, pn, cat).question) setStep("confirm");
   };
 
   /* Nothing on the phone could read it: the AI reader tries. */
@@ -303,13 +341,16 @@ export default function QuickEntryFlow({
           payment_method: how,
           account_id: how === "conta" ? whereId : null,
           credit_card_id: how === "cartao" ? whereId : null,
+          recurrence_type: split ? "parcelado" : "unica",
+          installments: split,
+          installment_current: split ? 1 : null,
         } as never,
         user.id,
       );
       window.dispatchEvent(new CustomEvent("transaction-created"));
       setSavedAt(new Date());
       setStep("done");
-      onSaved?.(`${name.trim()}, ${money(cents / 100)}`);
+      onSaved?.(`${name.trim()}, ${money(cents / 100)}${split ? ` em ${split}x` : ""}`);
     } catch {
       setError("Não consegui salvar agora. Tente de novo.");
     } finally {
@@ -319,7 +360,7 @@ export default function QuickEntryFlow({
 
   /* The seal ticks: the notice and the sparkles come with the chime. */
   const landed = () => {
-    showToast(`${type === "receita" ? "Receita" : "Despesa"} adicionada · ${name.trim()}, ${money(cents / 100)}`);
+    showToast(`${type === "receita" ? "Receita" : "Despesa"} adicionada · ${name.trim()}, ${money(cents / 100)}${split ? ` em ${split}x` : ""}`);
     sparkle();
   };
 
@@ -414,7 +455,7 @@ export default function QuickEntryFlow({
             {/* The card fills in as it is typed, and stays while the questions change under it */}
             {hasEntry && (
               <Animated.View entering={FadeInDown.duration(260)} style={[GLASS, { marginTop: 14, padding: 14 }]}>
-                <EntryCard name={name} cents={cents} type={type} category={category} when={when} pay={payLabel} payMissing={type === "receita" ? "Falta a conta" : "Falta a forma de pagamento"} />
+                <EntryCard name={name} cents={cents} type={type} category={category} when={when} pay={payLabel} parts={credit ? partsLabel : null} payMissing={type === "receita" ? "Falta a conta" : "Falta a forma de pagamento"} />
               </Animated.View>
             )}
 
@@ -430,7 +471,11 @@ export default function QuickEntryFlow({
                           : type === "receita"
                             ? "Entrou em qual conta?"
                             : "Que conta você usou?"
-                        : "De que categoria é?"}
+                        : question === "plan"
+                          ? "À vista ou parcelado?"
+                          : question === "parts"
+                            ? "Em quantas vezes?"
+                            : "De que categoria é?"}
                   </Text>
 
                   {question === "method" && (
@@ -445,6 +490,40 @@ export default function QuickEntryFlow({
                       {list.map((o) => (
                         <Choice key={o.id} wide={list.length > 3} icon={<BankMark name={o.name} hex={colorFor(o.name, o.color)} size={30} />} label={o.name} onPress={() => answered({ where: o.id })} />
                       ))}
+                    </View>
+                  )}
+
+                  {question === "plan" && (
+                    <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
+                      <Choice icon={<Banknote size={19} color="#fff" strokeWidth={2.1} />} label="À vista" onPress={() => answered({ plan: "avista" })} />
+                      <Choice icon={<CalendarClock size={19} color="#fff" strokeWidth={2.1} />} label="Parcelado" onPress={() => answered({ plan: "parcelado" })} />
+                    </View>
+                  )}
+
+                  {/* Each count with what one instalment comes to */}
+                  {question === "parts" && (
+                    <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                      {(moreParts ? PARTS_MORE : PARTS_FIRST).map((n) => (
+                        <Pressable
+                          key={n}
+                          onPress={() => {
+                            void Haptics.selectionAsync().catch(() => undefined);
+                            answered({ parts: n });
+                          }}
+                          style={({ pressed }) => ({ flexBasis: "22%", flexGrow: 1, height: 54, borderRadius: 16, borderCurve: "continuous", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", backgroundColor: pressed ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.07)" })}
+                        >
+                          <Text style={{ fontSize: 16, fontWeight: "700", color: "#fff" }}>{n}x</Text>
+                          <Text numberOfLines={1} style={[nums, { marginTop: 1, fontSize: 11.5, color: INK.soft }]}>
+                            {money(cents / 100 / n)}
+                          </Text>
+                        </Pressable>
+                      ))}
+                      <Pressable
+                        onPress={() => setMoreParts((v) => !v)}
+                        style={({ pressed }) => ({ flexBasis: "22%", flexGrow: 1, height: 54, borderRadius: 16, borderCurve: "continuous", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.04)", opacity: pressed ? 0.6 : 1 })}
+                      >
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: INK.soft }}>{moreParts ? "Menos" : "Mais"}</Text>
+                      </Pressable>
                     </View>
                   )}
 
@@ -511,13 +590,32 @@ export default function QuickEntryFlow({
             </View>
 
             {/* The amount, large, and the words */}
-            <Field label="Valor">
-              <TextInput
-                value={money(cents / 100)}
-                onChangeText={(t) => setCents(Math.min(Number(t.replace(/\D/g, "") || "0"), 99999999))}
-                keyboardType="number-pad"
-                style={[nums, { padding: 0, fontSize: 30, fontWeight: "800", letterSpacing: -1, color: type === "receita" ? GREEN : "#FF8A9A" }]}
-              />
+            <Field label={split ? "Valor total" : "Valor"} changeable={credit}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <TextInput
+                  value={money(cents / 100)}
+                  onChangeText={(t) => setCents(Math.min(Number(t.replace(/\D/g, "") || "0"), 99999999))}
+                  keyboardType="number-pad"
+                  style={[nums, { flex: 1, padding: 0, fontSize: 30, fontWeight: "800", letterSpacing: -1, color: type === "receita" ? GREEN : "#FF8A9A" }]}
+                />
+                {/* On a card: at once or in instalments, changed on the card */}
+                {credit && (
+                  <Pressable
+                    onPress={() => {
+                      setPickedPlan(null);
+                      setPickedParts(null);
+                      setPlanAgain(true);
+                      setStep("ask");
+                    }}
+                    hitSlop={8}
+                    style={({ pressed }) => ({ height: 32, paddingHorizontal: 12, borderRadius: 16, justifyContent: "center", backgroundColor: "rgba(255,255,255,0.09)", opacity: pressed ? 0.6 : 1 })}
+                  >
+                    <Text numberOfLines={1} style={[nums, { fontSize: 13.5, fontWeight: "700", color: "#fff" }]}>
+                      {partsLabel ?? "Parcelas"}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
             </Field>
             <Field label="Descrição">
               <TextInput value={name} onChangeText={setName} maxLength={40} style={{ padding: 0, fontSize: 17, fontWeight: "600", color: "#fff" }} />
@@ -541,6 +639,8 @@ export default function QuickEntryFlow({
                     /* Asked again, on the card. */
                     setPickedMethod(null);
                     setPickedWhere(null);
+                    setPickedPlan(null);
+                    setPickedParts(null);
                     setAskAgain(true);
                     setStep("ask");
                   }}
@@ -570,7 +670,7 @@ export default function QuickEntryFlow({
               </View>
             </View>
             <View ref={receiptRef} collapsable={false} style={{ marginTop: 10, paddingTop: 2, paddingBottom: 4 }}>
-              <ReceiptCard when={savedAt} onLanded={landed} lines={[{ id: "1", name: name.trim(), category: category ?? "Outros", amount: cents / 100, type, method: payLabel }]} />
+              <ReceiptCard when={savedAt} onLanded={landed} lines={[{ id: "1", name: name.trim(), category: category ?? "Outros", amount: cents / 100, type, method: payLabel, installments: split }]} />
             </View>
 
             <View style={{ marginTop: 14, flexDirection: "row", gap: 10 }}>
@@ -592,8 +692,11 @@ export default function QuickEntryFlow({
               />
             </View>
             <Primary label="Concluir" onPress={onClose} tight />
-            <Pressable onPress={onSeeTransactions} style={({ pressed }) => ({ marginTop: 2, height: 40, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
-              <Text style={{ fontSize: 15, fontWeight: "600", color: INK.soft }}>Ver transações</Text>
+            <Pressable
+              onPress={() => (credit && whereId && onSeeCard ? onSeeCard(whereId) : onSeeTransactions())}
+              style={({ pressed }) => ({ marginTop: 2, height: 40, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
+            >
+              <Text style={{ fontSize: 15, fontWeight: "600", color: INK.soft }}>{credit && onSeeCard ? "Ver na fatura do cartão" : "Ver transações"}</Text>
             </Pressable>
           </Animated.View>
         )}
@@ -615,7 +718,26 @@ export default function QuickEntryFlow({
 }
 
 /** What it became, small: what and its category, the amount, when, and how it was paid. */
-function EntryCard({ name, cents, type, category, when, pay, payMissing }: { name: string; cents: number; type: Kind; category: string | null; when: string; pay: string | null; payMissing: string }) {
+function EntryCard({
+  name,
+  cents,
+  type,
+  category,
+  when,
+  pay,
+  parts,
+  payMissing,
+}: {
+  name: string;
+  cents: number;
+  type: Kind;
+  category: string | null;
+  when: string;
+  pay: string | null;
+  /** "5x de R$ 100,00", "À vista" — on a card, once known. */
+  parts?: string | null;
+  payMissing: string;
+}) {
   const Icon = category ? categoryIcon(category) : Tag;
   const hex = category ? categoryHex(category) : "#8B8D94";
   const income = type === "receita";
@@ -641,6 +763,7 @@ function EntryCard({ name, cents, type, category, when, pay, payMissing }: { nam
       <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
         <Pill label={when} />
         {pay ? <Pill label={pay} /> : <Pill label={payMissing} warn />}
+        {parts ? <Pill label={parts} /> : null}
       </View>
     </View>
   );

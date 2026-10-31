@@ -142,7 +142,8 @@ export default function Transacoes() {
           .eq("payment_method", "cartao")
           .eq("type", "despesa")
           .is("parent_transaction_id", null)
-          .neq("recurrence_type", "fixa")
+          /* In instalments it lives on the card; the card's line here carries it. */
+          .not("recurrence_type", "in", "(fixa,parcelado)")
           .gte("date", `${year}-${pad(month + 1)}-01`)
           .lte("date", `${year}-${pad(month + 1)}-${pad(new Date(year, month + 1, 0).getDate())}`),
       ]);

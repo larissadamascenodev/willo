@@ -6,6 +6,10 @@
  * A debit word wins over "cartão": "no débito, no cartão do Nubank" is the account, since
  * a debit card takes from it. A bank named with no way of paying decides it when only the
  * accounts, or only the cards, carry that name.
+ *
+ * Instalments too: "parcelado", "em 5x", "5 vezes", "cinco parcelas", "à vista". Split
+ * into instalments is on credit unless a debit word was said. "5x de 100" is a hundred
+ * each, so five hundred in all — `perPart` says the amount read is one instalment.
  */
 
 const plain = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -15,6 +19,16 @@ const DEBIT = new Set(["debito", "pix", "dinheiro", "especie"]);
 const CREDIT = new Set(["credito", "cartao"]);
 /* Small words that only lead into how it was paid: "no", "pelo", "com o meu"… */
 const LINKS = new Set(["no", "na", "nos", "nas", "pelo", "pela", "com", "em", "via", "do", "da", "de", "o", "a", "meu", "minha"]);
+/* "Em cinco vezes": instalments said in words. */
+const COUNTS: Record<string, number> = { duas: 2, dois: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9, dez: 10, onze: 11, doze: 12 };
+const PARTS = new Set(["vezes", "vez", "parcelas", "parcela", "x"]);
+const SPLIT = new Set(["parcelado", "parcelada", "parcelei", "parcelou", "parcelar"]);
+const countOf = (w: string | undefined) => {
+  if (!w) return null;
+  const n = /^\d{1,2}$/.test(w) ? Number(w) : COUNTS[w];
+  return n && n >= 2 && n <= 48 ? n : null;
+};
+
 /* First words too common to name a bank by themselves. */
 const VAGUE = new Set(["conta", "cartao", "banco", "credito", "debito"]);
 
@@ -27,6 +41,14 @@ export interface PaymentMention {
   method: "conta" | "cartao" | null;
   accountId: string | null;
   cardId: string | null;
+  /** Instalments said ("5x", "cinco vezes"), or null. */
+  installments: number | null;
+  /** "Parcelado" said, with or without how many. */
+  split: boolean;
+  /** "À vista" said. */
+  inCash: boolean;
+  /** "5x de 100": the amount in the sentence is one instalment. */
+  perPart: boolean;
   /** The sentence without the way it was paid. */
   rest: string;
 }
@@ -80,13 +102,43 @@ export function paymentMention(sentence: string, accounts: Named[], cards: Named
     }
   });
 
+  /* How many instalments, and whether at all. */
+  let installments: number | null = null;
+  let split = false;
+  let inCash = false;
+  let perPart = false;
+  words.forEach((w, i) => {
+    const times = /^(\d{1,2})x$/.exec(w);
+    let at = -1;
+    if (times && countOf(times[1])) {
+      installments = countOf(times[1]);
+      drop.add(i);
+      at = i;
+    } else if (PARTS.has(w) && countOf(words[i - 1])) {
+      installments = countOf(words[i - 1]);
+      drop.add(i - 1);
+      drop.add(i);
+      at = i;
+    }
+    if (at >= 0 && words[at + 1] === "de" && /^(r\$)?\d/.test(words[at + 2] ?? "")) perPart = true;
+    if (SPLIT.has(w)) {
+      split = true;
+      drop.add(i);
+    }
+    if (w === "vista" && words[i - 1] === "a") {
+      inCash = true;
+      drop.add(i - 1);
+      drop.add(i);
+    }
+  });
+
   /* The little words leading into what was dropped go with it. */
   for (let i = words.length - 1; i > 0; i--) if (drop.has(i) && !drop.has(i - 1) && LINKS.has(words[i - 1])) drop.add(i - 1);
   for (let i = words.length - 1; i > 0; i--) if (drop.has(i) && !drop.has(i - 1) && LINKS.has(words[i - 1])) drop.add(i - 1);
 
   const method: PaymentMention["method"] = debit
     ? "conta"
-    : credit
+    : credit || installments || split
       ? "cartao"
       : byAccount
         ? "conta"
@@ -104,5 +156,5 @@ export function paymentMention(sentence: string, accounts: Named[], cards: Named
     .replace(/^[\s,;]+|[\s,;]+$/g, "")
     .trim();
 
-  return { method, accountId: account?.id ?? null, cardId: card?.id ?? null, rest };
+  return { method, accountId: account?.id ?? null, cardId: card?.id ?? null, installments, split, inCash, perPart, rest };
 }

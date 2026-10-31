@@ -28,7 +28,12 @@ export default function Rapido() {
 
   return (
     <BottomSheet open={open} onClose={() => leave()} full={step === "done"}>
-      <QuickEntryFlow onClose={() => leave()} onSeeTransactions={() => leave(() => router.push("/(tabs)/transacoes" as never))} onStep={setStep} />
+      <QuickEntryFlow
+        onClose={() => leave()}
+        onSeeTransactions={() => leave(() => router.push("/(tabs)/transacoes" as never))}
+        onSeeCard={(cardId) => leave(() => router.push(`/fatura/${cardId}` as never))}
+        onStep={setStep}
+      />
     </BottomSheet>
   );
 }

@@ -41,6 +41,8 @@ export interface ReceiptLine {
   type: "despesa" | "receita";
   /** "Crédito · Nubank", "Débito" — whatever it was settled on. */
   method?: string | null;
+  /** Split on a card into this many instalments. */
+  installments?: number | null;
 }
 
 /* A white slip: dark ink on paper, a deeper green for money in, which lime would not carry. */
@@ -234,7 +236,7 @@ export default function ReceiptCard({
               <>
                 {/* The figure, large, and what it was. */}
                 <Animated.View entering={FadeIn.delay(820).duration(380)} style={{ marginTop: 12, alignItems: "center" }}>
-                  <Text style={{ fontSize: 12, color: DIM }}>{single.type === "receita" ? "Você recebeu" : "Você pagou"}</Text>
+                  <Text style={{ fontSize: 12, color: DIM }}>{single.type === "receita" ? "Você recebeu" : single.installments ? "Você parcelou" : "Você pagou"}</Text>
                   <Text style={[nums, { marginTop: 2, fontSize: 36, fontWeight: "800", letterSpacing: -1.3, color: single.type === "receita" ? IN : INK }]}>
                     {single.type === "receita" ? "+" : "−"}
                     {money(single.amount)}
@@ -254,6 +256,7 @@ export default function ReceiptCard({
                 <View style={{ marginTop: 6 }}>
                   <Fact label="Categoria" value={single.category} delay={960} />
                   {single.method ? <Fact label={single.type === "receita" ? "Entrou em" : "Pagamento"} value={single.method} delay={1060} /> : null}
+                  {single.installments ? <Fact label="Parcelas" value={`${single.installments}x de ${money(single.amount / single.installments)}`} delay={1110} /> : null}
                   <Fact label="Data" value={date} delay={1160} />
                   <Fact label="Hora" value={time} delay={1260} />
                 </View>
