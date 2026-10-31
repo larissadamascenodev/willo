@@ -7,9 +7,9 @@ import { parseLocal } from "@/lib/quickEntry/parseLocal";
 import { colorFor } from "@/lib/banks";
 import BankMark from "~/components/BankMark";
 import CategoryPicker from "~/components/CategoryPicker";
-import EntryForm, { DatePick, todayIso, type EntryValues } from "~/components/registro/EntryForm";
-import { CategoryButton, Choice, EntryCard, GLASS, PartsBar, Primary, REPEAT_LABEL, RepeatList, SavedView, dayLabel, nums, type Account, type Card, type Repeat } from "~/components/registro/entryParts";
-import { Check, ChevronLeft, Clock, CreditCard, Landmark } from "~/components/icons";
+import EntryForm, { todayIso, type EntryValues } from "~/components/registro/EntryForm";
+import { CategoryButton, Choice, EntryCard, GLASS, Primary, SavedView, dayLabel, nums, type Account, type Card } from "~/components/registro/entryParts";
+import { ChevronLeft, CreditCard, Landmark } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { suggestCategory } from "~/lib/categorize";
 import { money } from "~/lib/money";
@@ -25,21 +25,20 @@ import { GREEN, INK, RED } from "~/theme/tokens";
  *
  * First the amount, and whether it went out or came in. Then the card of what it is fills
  * in while the questions change under it: what it was (the category follows from the
- * words, or Willo suggests one), how it was paid, from which account or on which card,
- * whether it repeats, the day, and whether it is settled — a day ahead is scheduled.
- * Started inside a card it is a purchase on that card, and neither the way it was paid
- * nor the card is asked. Voltar always goes one question back, with what was chosen
- * still chosen; Continuar goes on from there. Then the check, every part changeable, and
- * the receipt.
+ * words, or Willo suggests one), how it was paid, from which account or on which card.
+ * Started inside a card it is a purchase on that card, and neither is asked. Voltar
+ * always goes one question back, with what was chosen still chosen; Continuar goes on
+ * from there. Then the check — where repetition, the day and whether it is settled are
+ * set (once, today, not yet paid unless switched on) — and the receipt.
  */
 
 export type ManualStep = "value" | "ask" | "confirm" | "done";
-type Question = "name" | "category" | "method" | "where" | "repeat" | "parts" | "when" | "status";
-const ORDER: Question[] = ["name", "category", "method", "where", "repeat", "parts", "when", "status"];
+type Question = "name" | "category" | "method" | "where";
+const ORDER: Question[] = ["name", "category", "method", "where"];
 
-/* The bar at the top moves part by part: the amount, what it was, how it was paid, whether it repeats, when, the check. */
-type Stage = "value" | "what" | "pay" | "repeat" | "when" | "confirm";
-const STAGE_OF: Record<Question, Stage> = { name: "what", category: "what", method: "pay", where: "pay", repeat: "repeat", parts: "repeat", when: "when", status: "when" };
+/* The bar at the top moves part by part: the amount, what it was, how it was paid, the check. */
+type Stage = "value" | "what" | "pay" | "confirm";
+const STAGE_OF: Record<Question, Stage> = { name: "what", category: "what", method: "pay", where: "pay" };
 
 export default function ManualEntryFlow({
   cardId,
@@ -68,7 +67,7 @@ export default function ManualEntryFlow({
     repeat: "unica",
     parts: null,
     date: todayIso(),
-    status: "pago",
+    status: "pendente",
     note: "",
   });
   const set = (patch: Partial<EntryValues>) => setV((p) => ({ ...p, ...patch }));
@@ -79,7 +78,6 @@ export default function ManualEntryFlow({
   /* Every question answered at least once: its answer shows as chosen when it comes round again. */
   const [seen, setSeen] = useState<Question[]>([]);
   const [nameDraft, setNameDraft] = useState("");
-  const [partsDraft, setPartsDraft] = useState<number | null>(null);
   const [suggested, setSuggested] = useState<string | null>(null);
   const [thinking, setThinking] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -131,10 +129,6 @@ export default function ManualEntryFlow({
         return !locked && !xIncome;
       case "where":
         return !locked && xList.length !== 1;
-      case "parts":
-        return x.repeat === "parcelado";
-      case "status":
-        return !(!xIncome && xHow === "cartao");
       default:
         return true;
     }
@@ -149,7 +143,6 @@ export default function ManualEntryFlow({
     setSeen((s) => (s.includes(q) ? s : [...s, q]));
     const next = ORDER.slice(ORDER.indexOf(q) + 1).find((question) => asks(x, question));
     if (next) {
-      if (next === "parts") setPartsDraft(x.parts);
       setQ(next);
       return;
     }
@@ -167,7 +160,6 @@ export default function ManualEntryFlow({
       if (step === "ask" && !last) return setStep("value");
       if (last) {
         setTrail((t) => t.slice(0, -1));
-        if (last === "parts") setPartsDraft(v.parts);
         if (last === "name") setNameDraft(v.name);
         setQ(last);
       }
@@ -236,7 +228,7 @@ export default function ManualEntryFlow({
   const split = v.repeat === "parcelado" && v.parts ? v.parts : null;
   const payLabel = income ? (picked?.name ?? null) : how ? `${credit ? "Crédito" : "Débito"}${picked ? ` · ${picked.name}` : ""}` : null;
   const passed = (question: Question) => seen.includes(question);
-  const repeatLabel = split ? `${split}x de ${money(v.cents / 100 / split)}` : passed("repeat") ? REPEAT_LABEL[v.repeat] : null;
+  const repeatLabel = split ? `${split}x de ${money(v.cents / 100 / split)}` : null;
 
   /* The seal ticks: the notice and the sparkles come with the chime. */
   const landed = () => {
@@ -245,7 +237,7 @@ export default function ManualEntryFlow({
     sparkle();
   };
 
-  const stages: Stage[] = locked ? ["value", "what", "repeat", "when", "confirm"] : ["value", "what", "pay", "repeat", "when", "confirm"];
+  const stages: Stage[] = locked ? ["value", "what", "confirm"] : ["value", "what", "pay", "confirm"];
   const stageNo = stages.indexOf(step === "value" ? "value" : step === "ask" ? STAGE_OF[q] : "confirm") + 1;
 
   const title: Record<Question, string> = {
@@ -253,10 +245,6 @@ export default function ManualEntryFlow({
     category: "Em qual categoria ele entra?",
     method: "Como você pagou?",
     where: credit ? "Em qual cartão?" : income ? "Em qual conta entrou?" : "De qual conta saiu?",
-    repeat: income ? "Essa entrada se repete?" : "Esse gasto se repete?",
-    parts: "Em quantas parcelas?",
-    when: credit ? "Quando foi a compra?" : v.repeat === "fixa" ? "A partir de quando?" : income ? "Quando entrou?" : "Quando foi?",
-    status: income ? "Já recebeu?" : "Já está pago?",
   };
 
   return (
@@ -340,7 +328,7 @@ export default function ManualEntryFlow({
                 cents={v.cents}
                 type={v.type}
                 category={v.category}
-                when={passed("when") || q === "when" || q === "status" ? dayLabel(v.date) : null}
+                when={dayLabel(v.date)}
                 pay={passed("method") || passed("where") || locked ? payLabel : null}
                 parts={repeatLabel}
               />
@@ -400,38 +388,6 @@ export default function ManualEntryFlow({
                 </View>
               )}
 
-              {q === "repeat" && (
-                <View style={{ marginTop: 12 }}>
-                  <RepeatList
-                    value={passed("repeat") ? v.repeat : null}
-                    income={income}
-                    onPick={(r: Repeat) => {
-                      advance({ repeat: r, parts: r === "parcelado" ? v.parts : null });
-                    }}
-                  />
-                </View>
-              )}
-
-              {q === "parts" && (
-                <View style={{ marginTop: 12 }}>
-                  <PartsBar cents={v.cents} value={partsDraft} onChange={setPartsDraft} />
-                  {partsDraft ? <Primary label="Continuar" onPress={() => advance({ parts: partsDraft })} tight /> : null}
-                </View>
-              )}
-
-              {q === "when" && (
-                <View style={{ marginTop: 12 }}>
-                  <DatePick values={{ ...v, method: how, whereId }} onChange={set} cards={cards} />
-                  <Primary label="Continuar" onPress={() => advance()} tight />
-                </View>
-              )}
-
-              {q === "status" && (
-                <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
-                  <Choice icon={<Check size={19} color="#fff" strokeWidth={2.4} />} label={income ? "Já recebi" : "Já paguei"} on={passed("status") && v.status === "pago"} onPress={() => advance({ status: "pago" })} />
-                  <Choice icon={<Clock size={19} color="#fff" strokeWidth={2.1} />} label="Ainda não" on={passed("status") && v.status === "pendente"} onPress={() => advance({ status: "pendente" })} />
-                </View>
-              )}
             </Animated.View>
           </Animated.View>
         )}

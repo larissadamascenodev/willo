@@ -15,10 +15,10 @@ import { AMBER, GREEN, INK } from "~/theme/tokens";
 /**
  * Everything about one entry on one page — the check of the guided entry, and the editor.
  *
- * Out or in at the top, then the amount, large, and the words. Under them one group of
- * rows — category, how it was paid, repetition, the day — each showing what it is and
- * opening its own choices under it when touched, one at a time. Apart from the day,
- * whether it is settled: a switch. On a card that row says which invoice it falls in.
+ * Out or in at the top, then the amount, large; whether it is settled, a switch — off
+ * until switched on — and on a card, which invoice it falls in; then the words. Under them
+ * one group of rows — category, how it was paid, repetition, the day — each showing what
+ * it is and opening its own choices under it when touched, one at a time.
  */
 
 export type { Repeat };
@@ -123,6 +123,26 @@ export default function EntryForm({
           </Text>
         ) : null}
       </View>
+      {/* Whether it is settled — off until switched on. On a card, the invoice it falls in. */}
+      <View style={{ marginTop: 14, minHeight: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.04)" }}>
+        <RowMark>{credit ? <CreditCard size={15} color="#fff" strokeWidth={2.1} /> : <Check size={15} color="#fff" strokeWidth={2.4} />}</RowMark>
+        {credit ? (
+          <Text style={{ flex: 1, fontSize: 14.5, color: INK.soft }}>
+            Entra na fatura de <Text style={{ fontWeight: "700", color: "#fff" }}>{invoiceMonthOf(v.date, card?.closing_day).label}</Text>
+            {card ? ` do ${card.name}` : ""}
+          </Text>
+        ) : (
+          <>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{income ? "Já recebi" : "Já está pago"}</Text>
+              <Text style={{ marginTop: 1, fontSize: 12.5, color: INK.soft }}>
+                {v.status === "pago" ? (income ? "Entrou na conta" : "Saiu da conta") : isAhead(v.date) ? "Agendado" : income ? "A receber" : "Pendente"}
+              </Text>
+            </View>
+            <Switch value={v.status === "pago"} onValueChange={(on) => onChange({ status: on ? "pago" : "pendente" })} trackColor={{ true: "rgba(200,243,109,0.42)", false: "rgba(255,255,255,0.14)" }} ios_backgroundColor="rgba(255,255,255,0.14)" thumbColor="#fff" />
+          </>
+        )}
+      </View>
       <TextInput
         value={v.name}
         onChangeText={(name) => onChange({ name })}
@@ -221,31 +241,11 @@ export default function EntryForm({
         />
         {open === "date" && (
           <Animated.View entering={FadeIn.duration(180)} style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
-            <DatePick values={v} onChange={onChange} cards={cards} quiet />
+            <DatePick values={v} onChange={onChange} cards={cards} quiet onPicked={() => setOpen(null)} />
           </Animated.View>
         )}
       </View>
 
-      {/* Whether it is settled: a switch, apart. On a card, the invoice it falls in. */}
-      <View style={{ marginTop: 10, minHeight: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.04)" }}>
-        <RowMark>{credit ? <CreditCard size={15} color="#fff" strokeWidth={2.1} /> : <Check size={15} color="#fff" strokeWidth={2.4} />}</RowMark>
-        {credit ? (
-          <Text style={{ flex: 1, fontSize: 14.5, color: INK.soft }}>
-            Entra na fatura de <Text style={{ fontWeight: "700", color: "#fff" }}>{invoiceMonthOf(v.date, card?.closing_day).label}</Text>
-            {card ? ` do ${card.name}` : ""}
-          </Text>
-        ) : (
-          <>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{income ? "Já recebi" : "Já está pago"}</Text>
-              <Text style={{ marginTop: 1, fontSize: 12.5, color: INK.soft }}>
-                {v.status === "pago" ? (income ? "Entrou na conta" : "Saiu da conta") : isAhead(v.date) ? "Agendado" : income ? "A receber" : "Pendente"}
-              </Text>
-            </View>
-            <Switch value={v.status === "pago"} onValueChange={(on) => onChange({ status: on ? "pago" : "pendente" })} trackColor={{ true: GREEN, false: "rgba(255,255,255,0.15)" }} thumbColor="#fff" />
-          </>
-        )}
-      </View>
     </View>
   );
 }
@@ -310,7 +310,20 @@ function Row({
  * on a card it says which invoice it falls in, by the card's closing day — unless the
  * page already says so (`quiet`).
  */
-export function DatePick({ values: v, onChange, cards, quiet }: { values: EntryValues; onChange: (patch: Partial<EntryValues>) => void; cards: Card[]; quiet?: boolean }) {
+export function DatePick({
+  values: v,
+  onChange,
+  cards,
+  quiet,
+  onPicked,
+}: {
+  values: EntryValues;
+  onChange: (patch: Partial<EntryValues>) => void;
+  cards: Card[];
+  quiet?: boolean;
+  /** A day was chosen: the calendar, and whatever holds it, can close. */
+  onPicked?: () => void;
+}) {
   const [calendar, setCalendar] = useState(false);
   const [cal, setCal] = useState(() => {
     const d = new Date(`${v.date}T12:00:00`);
@@ -321,8 +334,12 @@ export function DatePick({ values: v, onChange, cards, quiet }: { values: EntryV
   const card = credit ? (cards.find((c) => c.id === v.whereId) ?? null) : null;
   const custom = v.date !== todayIso() && v.date !== yesterdayIso();
 
-  /* A day ahead is scheduled; back to today it is settled again. */
-  const setDate = (date: string) => onChange({ date, status: isAhead(date) ? "pendente" : isAhead(v.date) ? "pago" : v.status });
+  /* A day ahead is not settled yet; choosing a day closes the calendar. */
+  const setDate = (date: string) => {
+    onChange({ date, status: isAhead(date) ? "pendente" : v.status });
+    setCalendar(false);
+    onPicked?.();
+  };
 
   return (
     <View>
@@ -353,7 +370,6 @@ export function DatePick({ values: v, onChange, cards, quiet }: { values: EntryV
             onSelectDay={(day) => {
               if (!day) return;
               setDate(isoOf(new Date(cal.y, cal.m, day)));
-              setCalendar(false);
             }}
           />
         </Animated.View>
