@@ -103,7 +103,7 @@ export default function BottomSheet({
             borderCurve: "continuous",
             overflow: "hidden",
             paddingTop: 10,
-            paddingBottom: insets.bottom + 16,
+            paddingBottom: lift > 0 ? 12 : insets.bottom + 16,
           },
           rise,
         ]}

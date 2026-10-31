@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import { createTransaction, deleteTransaction, getAccounts, getCreditCards } from "@/services/transactionService";
 import { allowedCategories, readEntry, todayISO } from "@/services/quickEntry";
 import { parseLocal } from "@/lib/quickEntry/parseLocal";
+import { paymentMention } from "~/lib/paymentMention";
 import { applyDefaults, answer as answerDraft, nextQuestion, statusFor } from "@/lib/quickEntry/resolve";
 import type { QuickDraft, QuickQuestion, QuickSetup } from "@/lib/quickEntry/types";
 import { useAuth } from "~/lib/auth";
@@ -143,6 +144,7 @@ export function useVoiceEntry(options: { onQuestion?: (said: string) => void; hi
         return;
       }
 
+      const paid = paymentMention(heard ?? "", ctx.setup.accounts, ctx.setup.cards);
       setLines(
         entries.map((e) => ({
           draft: applyDefaults(
@@ -154,9 +156,9 @@ export function useVoiceEntry(options: { onQuestion?: (said: string) => void; hi
               category: e.category,
               date: e.date || todayISO(),
               status: statusFor(e.settled, e.date || todayISO(), todayISO()),
-              paymentMethod: e.paymentMethod,
-              accountId: null,
-              creditCardId: null,
+              paymentMethod: paid.method ?? e.paymentMethod,
+              accountId: paid.accountId,
+              creditCardId: paid.cardId,
             },
             ctx.setup,
           ),
@@ -186,7 +188,10 @@ export function useVoiceEntry(options: { onQuestion?: (said: string) => void; hi
       setState("reading");
       try {
         const ctx = await ensureSetup();
-        const local = parseLocal(said, { today: todayISO(), categories: ctx.categories, history: history.current?.() });
+        /* "23 na padaria, no débito, na conta Nubank": the way it was paid comes out first, the rest is read. */
+        const paid = paymentMention(said, ctx.setup.accounts, ctx.setup.cards);
+        const options = { today: todayISO(), categories: ctx.categories, history: history.current?.() };
+        const local = (paid.rest ? parseLocal(paid.rest, options) : null) ?? parseLocal(said, options);
         const entries = local ?? (await readEntry({ text: said, categories: ctx.categories })).entries;
         if (entries.length === 0) {
           setState("idle");
@@ -204,9 +209,9 @@ export function useVoiceEntry(options: { onQuestion?: (said: string) => void; hi
                 category: e.category,
                 date: e.date || todayISO(),
                 status: statusFor(e.settled, e.date || todayISO(), todayISO()),
-                paymentMethod: e.paymentMethod,
-                accountId: null,
-                creditCardId: null,
+                paymentMethod: paid.method ?? e.paymentMethod,
+                accountId: paid.accountId,
+                creditCardId: paid.cardId,
               },
               ctx.setup,
             ),

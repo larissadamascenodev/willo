@@ -15,7 +15,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, Line, Path } from "react-native-svg";
 import { categoryHex } from "@/lib/categoryData";
 import { categoryIcon } from "~/lib/categoryIcon";
-import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
 import { playCash, preloadCash } from "~/lib/sounds";
 import { GREEN } from "~/theme/tokens";
@@ -43,9 +42,13 @@ export interface ReceiptLine {
   method?: string | null;
 }
 
-const INK = "#F6F6F4";
-const DIM = "rgba(255,255,255,0.48)";
-const RULE = "rgba(255,255,255,0.14)";
+/* A white slip: dark ink on paper, a deeper green for money in, which lime would not carry. */
+const PAPER = "#FFFFFF";
+const PAPER_FOOT = "#F2F3F5";
+const INK = "#121317";
+const DIM = "rgba(18,19,23,0.52)";
+const RULE = "rgba(18,19,23,0.16)";
+const IN = "#1E9E57";
 const RAYS = 12;
 const SEAL = 64;
 const R = 26;
@@ -76,7 +79,7 @@ function TornEdge() {
   d += " Z";
   return (
     <Svg width="100%" height={10} viewBox="0 0 100 3" preserveAspectRatio="none" style={{ marginTop: -1 }}>
-      <Path d={d} fill="#131417" />
+      <Path d={d} fill={PAPER_FOOT} />
     </Svg>
   );
 }
@@ -125,7 +128,7 @@ function Seal({ sound }: { sound: boolean }) {
       ))}
       <Animated.View style={body}>
         <Svg width={SEAL} height={SEAL} viewBox={`0 0 ${SEAL} ${SEAL}`}>
-          <Circle cx={SEAL / 2} cy={SEAL / 2} r={R + 4} fill="#0D0E10" />
+          <Circle cx={SEAL / 2} cy={SEAL / 2} r={R + 4} fill="#121317" />
           <Circle cx={SEAL / 2} cy={SEAL / 2} r={R} fill="rgba(200,243,109,0.14)" />
           <AnimatedCircle
             cx={SEAL / 2}
@@ -186,7 +189,7 @@ export default function ReceiptCard({ lines, when = new Date(), sound = true }: 
   }));
 
   const Icon = single ? categoryIcon(single.category) : null;
-  const hex = single ? (single.type === "receita" ? GREEN : categoryHex(single.category)) : GREEN;
+  const hex = single ? (single.type === "receita" ? IN : categoryHex(single.category)) : IN;
 
   return (
     <View style={{ width: "100%", maxWidth: 360, alignSelf: "center" }}>
@@ -198,9 +201,8 @@ export default function ReceiptCard({ lines, when = new Date(), sound = true }: 
           </View>
         </View>
 
-        <View style={{ borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: "hidden", borderWidth: 1, borderBottomWidth: 0, borderColor: "rgba(255,255,255,0.10)" }}>
-          <LinearGradient colors={["#1E2024", "#131417"]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 30, right: 30, height: 1, backgroundColor: "rgba(255,255,255,0.22)" }} />
+        <View style={{ borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: "hidden" }}>
+          <LinearGradient colors={[PAPER, PAPER_FOOT]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
           <View style={{ paddingHorizontal: 22, paddingTop: SEAL / 2 + 10, paddingBottom: 16 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
               <Text style={{ fontSize: 10.5, fontWeight: "700", letterSpacing: 3.5, color: DIM }}>COMPROVANTE</Text>
@@ -212,14 +214,14 @@ export default function ReceiptCard({ lines, when = new Date(), sound = true }: 
                 {/* The figure, large, and what it was. */}
                 <Animated.View entering={FadeIn.delay(820).duration(380)} style={{ marginTop: 18, alignItems: "center" }}>
                   <Text style={{ fontSize: 12, color: DIM }}>{single.type === "receita" ? "Você recebeu" : "Você pagou"}</Text>
-                  <Text style={[nums, { marginTop: 4, fontSize: 38, fontWeight: "800", letterSpacing: -1.4, color: single.type === "receita" ? GREEN : INK }]}>
+                  <Text style={[nums, { marginTop: 4, fontSize: 38, fontWeight: "800", letterSpacing: -1.4, color: single.type === "receita" ? IN : INK }]}>
                     {single.type === "receita" ? "+" : "−"}
                     {money(single.amount)}
                   </Text>
                   <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 8 }}>
                     {Icon && (
-                      <View style={{ width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-                        <Icon size={13} color={chipInk(hex)} strokeWidth={2.2} />
+                      <View style={{ width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: `${hex}22` }}>
+                        <Icon size={13} color={hex} strokeWidth={2.4} />
                       </View>
                     )}
                     <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: "700", color: INK }}>{single.name}</Text>
@@ -244,7 +246,7 @@ export default function ReceiptCard({ lines, when = new Date(), sound = true }: 
                   <Animated.View key={l.id} entering={FadeIn.delay(820 + i * 140).duration(320)} style={{ paddingTop: 14 }}>
                     <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
                       <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: "600", color: INK }}>{l.name}</Text>
-                      <Text style={[nums, { fontSize: 16, fontWeight: "700", color: l.type === "receita" ? GREEN : INK }]}>
+                      <Text style={[nums, { fontSize: 16, fontWeight: "700", color: l.type === "receita" ? IN : INK }]}>
                         {l.type === "receita" ? "+" : "−"}
                         {money(l.amount)}
                       </Text>
@@ -256,7 +258,7 @@ export default function ReceiptCard({ lines, when = new Date(), sound = true }: 
                   <Dashed />
                   <View style={{ marginTop: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
                     <Text style={{ fontSize: 12.5, fontWeight: "500", color: DIM }}>Total · {date}</Text>
-                    <Text style={[nums, { fontSize: 20, fontWeight: "800", color: total >= 0 ? GREEN : INK }]}>
+                    <Text style={[nums, { fontSize: 20, fontWeight: "800", color: total >= 0 ? IN : INK }]}>
                       {total >= 0 ? "+" : "−"}
                       {money(Math.abs(total))}
                     </Text>
@@ -269,7 +271,7 @@ export default function ReceiptCard({ lines, when = new Date(), sound = true }: 
             <Animated.View entering={FadeIn.delay(1360).duration(360)} style={{ marginTop: 18, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                 <Text style={{ fontSize: 17, fontWeight: "800", letterSpacing: -0.4, color: INK }}>willo</Text>
-                <View style={{ width: 5, height: 5, borderRadius: 3, marginTop: 2, backgroundColor: GREEN }} />
+                <View style={{ width: 5, height: 5, borderRadius: 3, marginTop: 2, backgroundColor: IN }} />
               </View>
               <Text style={{ fontSize: 11, color: DIM }}>Registrado pelo Willo</Text>
             </Animated.View>

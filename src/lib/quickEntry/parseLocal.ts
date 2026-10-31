@@ -39,6 +39,22 @@ const KEYWORDS: Record<string, string[]> = {
   Cashback: ["cashback"],
 };
 
+/** Where a word's category goes when the person does not keep that one: "farmácia" is then Saúde. */
+const BROADER: Record<string, string> = {
+  Farmácia: "Saúde",
+  Academia: "Saúde",
+  Restaurante: "Alimentação",
+  Cafeteria: "Alimentação",
+  Delivery: "Alimentação",
+  Combustível: "Transporte",
+  Estacionamento: "Transporte",
+  Streaming: "Assinaturas",
+  Energia: "Conta de Luz",
+  Água: "Conta de Água",
+  Internet: "Telefone e Internet",
+  Telefonia: "Telefone e Internet",
+};
+
 const INCOME_WORDS = /^(recebi|ganhei|caiu|entrou|vendi|me pagaram|pagaram)\b/;
 const CREDIT = /\b(no |pelo |com o |com )?(credito|cartao)\b/;
 const DEBIT = /\b(no |pelo |com o |com |em |via )?(debito|pix|dinheiro|especie|conta)\b/;
@@ -59,10 +75,11 @@ function categoryFor(name: string, type: "despesa" | "receita", allowed: Set<str
   const key = plain(name);
   if (history[key] && allowed.has(history[key])) return history[key];
   for (const [category, words] of Object.entries(KEYWORDS)) {
-    if (!allowed.has(category)) continue;
+    const kept = allowed.has(category) ? category : BROADER[category] && allowed.has(BROADER[category]) ? BROADER[category] : null;
+    if (!kept) continue;
     const income = ["Salário", "Freelance", "Reembolso", "Cashback"].includes(category);
     if (income !== (type === "receita")) continue;
-    if (words.some((w) => key === w || key.startsWith(`${w} `) || key.endsWith(` ${w}`) || key.includes(` ${w} `))) return category;
+    if (words.some((w) => key === w || key.startsWith(`${w} `) || key.endsWith(` ${w}`) || key.includes(` ${w} `))) return kept;
   }
   return null;
 }

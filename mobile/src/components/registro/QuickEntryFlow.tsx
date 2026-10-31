@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
-import { ActivityIndicator, Keyboard, Platform, Pressable, ScrollView, Text, TextInput, View, type TextStyle } from "react-native";
+import { ActivityIndicator, Keyboard, Platform, Pressable, Text, TextInput, View, type TextStyle } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { createTransaction, getAccounts, getCreditCards, getRecentTransactions } from "@/services/transactionService";
 import { allowedCategories, readEntry, todayISO, type ParsedEntry } from "@/services/quickEntry";
 import { parseLocal } from "@/lib/quickEntry/parseLocal";
-import { categoryHex, DEFAULT_INCOME_CATEGORIES } from "@/lib/categoryData";
+import { categoryHex } from "@/lib/categoryData";
 import { colorFor } from "@/lib/banks";
 import BankMark from "~/components/BankMark";
 import CategoryPicker from "~/components/CategoryPicker";
@@ -15,6 +15,7 @@ import { ChevronLeft, ChevronRight, CreditCard, Download, Landmark, Share2, Tag,
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
+import { paymentMention } from "~/lib/paymentMention";
 import { preloadCash } from "~/lib/sounds";
 import { saveReceipt, shareReceipt } from "~/lib/receiptShare";
 import { showToast } from "~/lib/toast";
@@ -28,12 +29,13 @@ import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
  *
  * "O que aconteceu?" — the person writes it their own way, "padaria 48", and the card of
  * what it became fills in as they type: what, the category, the amount, the day and the
- * hour. The card stays put while what is still missing is asked under it, one question
- * at a time — debit or credit, then which account or card, then the category if it could
- * not tell — and each answer lands on the card. Then everything on one page to check —
- * out or in, amount, words, category, how it was paid — and Registrar. It lands on the
- * receipt, the coins, and the ways on: share it, keep it in the gallery, see the
- * transactions.
+ * hour. When the typing pauses the keyboard steps aside, and what is still missing is
+ * asked under the card, one question at a time — debit or credit, then which account or
+ * card, then the category — each answer landing on the card. Whatever the sentence
+ * already said ("no débito, na conta Nubank") is not asked again; with nothing missing it
+ * goes straight to the check. The check: out or in, the amount, the words, the category
+ * and how it was paid — and Registrar. It lands on the receipt, the coins, and the ways
+ * on: share it, keep it in the gallery, see the transactions.
  */
 
 export type Step = "ask" | "confirm" | "done";
@@ -51,8 +53,10 @@ export interface StartingEntry {
   date?: string;
 }
 
-/* Both steps take the same room, so the sheet does not jump between them. */
-const STEP_MIN_H = 400;
+/* Both steps take the same room, their action at the same place at the foot. */
+const STEP_MIN_H = 476;
+/* How long the typing pauses before the keyboard steps aside. */
+const PAUSE_MS = 1400;
 
 const GLASS = { borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.05)" } as const;
 
@@ -69,6 +73,8 @@ function dayLabel(iso: string) {
   if (diff === 1) return "Ontem";
   return `${d} ${MONTHS[m - 1]}`;
 }
+
+const hhmm = (d: Date) => d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
 interface Account {
   id: string;
@@ -121,12 +127,16 @@ export default function QuickEntryFlow({
   const [type, setType] = useState<Kind>(initial?.type ?? "despesa");
   const [category, setCategory] = useState<string | null>(initial?.category ?? null);
   const [date, setDate] = useState(initial?.date ?? todayISO());
-  const [method, setMethod] = useState<Method | null>(initial?.method ?? null);
-  const [where, setWhere] = useState<string | null>(initial ? ((initial.method === "cartao" ? initial.cardId : initial.accountId) ?? null) : null);
+  /* What the person chose on the card; what the words said comes after it. */
+  const [pickedMethod, setPickedMethod] = useState<Method | null>(null);
+  const [pickedWhere, setPickedWhere] = useState<string | null>(null);
+  /* Asked again from the check: the words no longer decide it. */
+  const [askAgain, setAskAgain] = useState(false);
   const [picking, setPicking] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [typing, setTyping] = useState(false);
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
@@ -153,11 +163,26 @@ export default function QuickEntryFlow({
     onStep?.(step);
   }, [step, onStep]);
 
+  /* While the keyboard is up the sheet holds only what is being typed and its card. */
+  useEffect(() => {
+    const ios = Platform.OS === "ios";
+    const up = Keyboard.addListener(ios ? "keyboardWillShow" : "keyboardDidShow", () => setTyping(true));
+    const down = Keyboard.addListener(ios ? "keyboardWillHide" : "keyboardDidHide", () => setTyping(false));
+    return () => {
+      up.remove();
+      down.remove();
+    };
+  }, []);
+
+  /* How it was paid, if the words say — and the words without it, to read the rest. */
+  const mention = useMemo(() => paymentMention(said, accounts, cards), [said, accounts, cards]);
+
   /* What is written becomes the card as it is typed — on the phone, no waiting. */
   const typed = useMemo(() => {
     if (initial || !said.trim()) return null;
-    return parseLocal(said, { today: todayISO(), categories, history: history.current })?.[0] ?? null;
-  }, [initial, said, categories]);
+    const options = { today: todayISO(), categories, history: history.current };
+    return (mention.rest ? parseLocal(mention.rest, options)?.[0] : null) ?? parseLocal(said, options)?.[0] ?? null;
+  }, [initial, said, mention.rest, categories]);
   const draft = typed ?? aiRead;
   useEffect(() => {
     if (!draft) return;
@@ -166,12 +191,19 @@ export default function QuickEntryFlow({
     setType(draft.type);
     setCategory(draft.category);
     setDate(draft.date || todayISO());
-    if (draft.paymentMethod) setMethod(draft.paymentMethod);
   }, [draft]);
 
-  const how: Method | null = type === "receita" ? "conta" : method;
-  const list = how === "cartao" ? cards : accounts;
-  const whereId = where && list.some((o) => o.id === where) ? where : how && list.length === 1 ? list[0].id : null;
+  /* The way it was paid and where: chosen on the card, else said, else read. */
+  const baseMethod = initial ? initial.method : (draft?.paymentMethod ?? null);
+  const resolve = (pm: Method | null, pw: string | null) => {
+    const how: Method | null = type === "receita" ? "conta" : (pm ?? (askAgain ? null : (mention.method ?? baseMethod)));
+    const list: (Account | Card)[] = how === "cartao" ? cards : accounts;
+    const inList = (id?: string | null) => (id && list.some((o) => o.id === id) ? id : null);
+    const said_ = askAgain ? null : (inList(how === "cartao" ? mention.cardId : mention.accountId) ?? inList(how === "cartao" ? initial?.cardId : initial?.accountId));
+    const whereId = inList(pw) ?? said_ ?? (how && list.length === 1 ? list[0].id : null);
+    return { how, list, whereId };
+  };
+  const { how, list, whereId } = resolve(pickedMethod, pickedWhere);
   const picked = list.find((o) => o.id === whereId) ?? null;
   const payLabel = type === "receita" ? (picked?.name ?? null) : how ? `${how === "cartao" ? "Crédito" : "Débito"}${picked ? ` · ${picked.name}` : ""}` : null;
 
@@ -179,20 +211,39 @@ export default function QuickEntryFlow({
   const hasEntry = initial ? loaded : !!draft;
   const question = !hasEntry || !loaded ? null : !how ? "method" : !whereId ? "where" : !category ? "category" : null;
 
-  const chips = useMemo(() => categories.filter((c) => DEFAULT_INCOME_CATEGORIES.includes(c) === (type === "receita")).slice(0, 12), [categories, type]);
+  /* Once it reads as an entry and the typing pauses, the keyboard steps aside — and with nothing missing, the check. */
+  const pausedOn = useRef<string | null>(null);
+  useEffect(() => {
+    if (initial || step !== "ask" || !typed || !loaded || pausedOn.current === said) return;
+    const t = setTimeout(() => {
+      pausedOn.current = said;
+      Keyboard.dismiss();
+      if (!question) setStep("confirm");
+    }, PAUSE_MS);
+    return () => clearTimeout(t);
+  }, [initial, step, said, typed, loaded, question]);
+
+  /* Said or written to Willo with everything in it: straight to the check. */
+  const jumped = useRef(false);
+  useEffect(() => {
+    if (!initial || !loaded || jumped.current) return;
+    jumped.current = true;
+    if (!question) setStep("confirm");
+  }, [initial, loaded, question]);
 
   /* An answer lands on the card; the last one goes to the check. */
   const answered = (next: { method?: Method; where?: string; category?: string }) => {
     Keyboard.dismiss();
-    const m = next.method ?? how;
-    const l = m === "cartao" ? cards : accounts;
-    const w = next.where ?? (next.method ? (l.length === 1 ? l[0].id : null) : whereId);
-    const c = next.category ?? category;
-    if (next.method) setMethod(next.method);
-    if (next.method) setWhere(null);
-    if (next.where) setWhere(next.where);
+    const pm = next.method ?? pickedMethod;
+    const pw = next.method ? null : (next.where ?? pickedWhere);
+    if (next.method) {
+      setPickedMethod(next.method);
+      setPickedWhere(null);
+    }
+    if (next.where) setPickedWhere(next.where);
     if (next.category) setCategory(next.category);
-    if (m && w && c) setStep("confirm");
+    const r = resolve(pm, pw);
+    if (r.how && r.whereId && (next.category ?? category)) setStep("confirm");
   };
 
   /* Nothing on the phone could read it: the AI reader tries. */
@@ -257,33 +308,33 @@ export default function QuickEntryFlow({
   const stageNo = step === "ask" ? 1 : 2;
   const Icon = category ? categoryIcon(category) : Tag;
   const hex = category ? categoryHex(category) : "#8B8D94";
-  const when = date === todayISO() ? `${dayLabel(date)}, ${opened.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : dayLabel(date);
+  const when = date === todayISO() ? `${dayLabel(date)}, ${hhmm(opened)}` : dayLabel(date);
 
   return (
     <>
       {/* ── Where in it, and the ways out ── */}
-      <View style={{ paddingHorizontal: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        {step === "confirm" ? (
-          <Pressable
-            onPress={() => {
-              setError(null);
-              setStep("ask");
-            }}
-            hitSlop={10}
-            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, height: 36, paddingHorizontal: 10, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.08)", opacity: pressed ? 0.6 : 1 })}
-          >
-            <ChevronLeft size={16} color="#fff" />
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>Voltar</Text>
-          </Pressable>
-        ) : (
-          <View style={{ width: 36 }} />
-        )}
-        <Pressable onPress={onClose} accessibilityLabel="Fechar" hitSlop={10} style={({ pressed }) => ({ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)", opacity: pressed ? 0.6 : 1 })}>
-          <X size={17} color="rgba(255,255,255,0.88)" strokeWidth={2.4} />
-        </Pressable>
-      </View>
+      {step !== "done" && (
+        <View style={{ paddingHorizontal: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          {step === "confirm" ? (
+            <Pressable
+              onPress={() => {
+                setError(null);
+                setStep("ask");
+              }}
+              hitSlop={10}
+              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, height: 36, paddingHorizontal: 10, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.08)", opacity: pressed ? 0.6 : 1 })}
+            >
+              <ChevronLeft size={16} color="#fff" />
+              <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>Voltar</Text>
+            </Pressable>
+          ) : (
+            <View style={{ width: 36 }} />
+          )}
+          <CloseButton onPress={onClose} />
+        </View>
+      )}
 
-      <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8, minHeight: step === "done" ? undefined : STEP_MIN_H }}>
+      <View style={{ paddingHorizontal: 20, paddingTop: step === "done" ? 4 : 14, paddingBottom: 8, minHeight: step === "done" || typing ? undefined : STEP_MIN_H }}>
         {step !== "done" && (
           <>
             <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: "rgba(255,255,255,0.72)" }}>REGISTRO RÁPIDO · ETAPA {stageNo} DE 2</Text>
@@ -297,7 +348,7 @@ export default function QuickEntryFlow({
 
         {/* ── What happened, the card it became, and what is still missing ── */}
         {step === "ask" && (
-          <Animated.View entering={FadeIn.duration(240)} style={{ marginTop: 18 }}>
+          <Animated.View entering={FadeIn.duration(240)} style={{ marginTop: 18, flexGrow: 1 }}>
             {initial ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <ParticleOrb size={34} />
@@ -320,8 +371,16 @@ export default function QuickEntryFlow({
                     setSaid(t);
                     setAiRead(null);
                     setError(null);
+                    setPickedMethod(null);
+                    setPickedWhere(null);
+                    setAskAgain(false);
                   }}
-                  onSubmitEditing={() => (draft ? Keyboard.dismiss() : void readHard())}
+                  onSubmitEditing={() => {
+                    if (!draft) return void readHard();
+                    pausedOn.current = said;
+                    Keyboard.dismiss();
+                    if (!question) setStep("confirm");
+                  }}
                   returnKeyType={draft ? "done" : "next"}
                   placeholder="Ex.: padaria 48"
                   placeholderTextColor={INK.faint}
@@ -348,72 +407,75 @@ export default function QuickEntryFlow({
               </Animated.View>
             )}
 
-            {question ? (
-              <Animated.View key={question} entering={FadeIn.duration(220)} style={{ marginTop: 16 }}>
-                <Text style={{ fontSize: 15.5, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>
-                  {question === "method"
-                    ? "Foi no débito ou no crédito?"
-                    : question === "where"
-                      ? how === "cartao"
-                        ? "Em qual cartão?"
-                        : type === "receita"
-                          ? "Entrou em qual conta?"
-                          : "Que conta você usou?"
-                      : "De que categoria é?"}
-                </Text>
+            <View style={{ flexGrow: 1, justifyContent: "flex-end" }}>
+              {question && !typing ? (
+                <Animated.View key={question} entering={FadeIn.duration(220)} style={{ marginTop: 16 }}>
+                  <Text style={{ fontSize: 15.5, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>
+                    {question === "method"
+                      ? "Foi no débito ou no crédito?"
+                      : question === "where"
+                        ? how === "cartao"
+                          ? "Em qual cartão?"
+                          : type === "receita"
+                            ? "Entrou em qual conta?"
+                            : "Que conta você usou?"
+                        : "De que categoria é?"}
+                  </Text>
 
-                {question === "method" && (
-                  <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
-                    <Choice icon={<Landmark size={19} color="#fff" strokeWidth={2.1} />} label="Débito" onPress={() => answered({ method: "conta" })} />
-                    <Choice icon={<CreditCard size={19} color="#fff" strokeWidth={2.1} />} label="Crédito" onPress={() => answered({ method: "cartao" })} />
-                  </View>
-                )}
+                  {question === "method" && (
+                    <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
+                      <Choice icon={<Landmark size={19} color="#fff" strokeWidth={2.1} />} label="Débito" onPress={() => answered({ method: "conta" })} />
+                      <Choice icon={<CreditCard size={19} color="#fff" strokeWidth={2.1} />} label="Crédito" onPress={() => answered({ method: "cartao" })} />
+                    </View>
+                  )}
 
-                {question === "where" && (
-                  <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-                    {list.map((o) => (
-                      <Choice key={o.id} wide={list.length > 3} icon={<BankMark name={o.name} hex={colorFor(o.name, o.color)} size={30} />} label={o.name} onPress={() => answered({ where: o.id })} />
-                    ))}
-                  </View>
-                )}
+                  {question === "where" && (
+                    <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+                      {list.map((o) => (
+                        <Choice key={o.id} wide={list.length > 3} icon={<BankMark name={o.name} hex={colorFor(o.name, o.color)} size={30} />} label={o.name} onPress={() => answered({ where: o.id })} />
+                      ))}
+                    </View>
+                  )}
 
-                {question === "category" && (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ marginTop: 12, marginHorizontal: -20 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
-                    {[...chips, "Outra…"].map((c) => (
-                      <Pressable
-                        key={c}
-                        onPress={() => (c === "Outra…" ? setPicking(true) : answered({ category: c }))}
-                        style={({ pressed }) => ({ height: 44, paddingHorizontal: 16, borderRadius: 22, justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", backgroundColor: "rgba(255,255,255,0.07)", transform: [{ scale: pressed ? 0.95 : 1 }] })}
-                      >
-                        <Text style={{ fontSize: 14.5, fontWeight: "600", color: "rgba(255,255,255,0.9)" }}>{c}</Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                )}
-              </Animated.View>
-            ) : (
-              <>
-                {error && <Text style={{ marginTop: 14, fontSize: 13.5, color: RED }}>{error}</Text>}
-                {(hasEntry || said.trim()) && (
-                  <Primary
-                    label={reading ? "Lendo…" : "Continuar"}
-                    busy={reading}
-                    disabled={reading || (!hasEntry && !said.trim())}
-                    onPress={() => {
-                      Keyboard.dismiss();
-                      if (hasEntry) setStep("confirm");
-                      else void readHard();
-                    }}
-                  />
-                )}
-              </>
-            )}
+                  {/* One field that opens the categories, not a row of guesses */}
+                  {question === "category" && (
+                    <Pressable
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setPicking(true);
+                      }}
+                      style={({ pressed }) => ({ marginTop: 12, height: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", backgroundColor: pressed ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.08)" })}
+                    >
+                      <Tag size={18} color="#fff" strokeWidth={2.1} />
+                      <Text style={{ flex: 1, fontSize: 16, fontWeight: "600", color: "#fff" }}>Escolher categoria</Text>
+                      <ChevronRight size={18} color={INK.soft} />
+                    </Pressable>
+                  )}
+                </Animated.View>
+              ) : (
+                <>
+                  {error && <Text style={{ marginTop: 14, fontSize: 13.5, color: RED }}>{error}</Text>}
+                  {!question && (hasEntry || said.trim()) && (
+                    <Primary
+                      label={reading ? "Lendo…" : "Continuar"}
+                      busy={reading}
+                      disabled={reading}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        if (hasEntry) setStep("confirm");
+                        else void readHard();
+                      }}
+                    />
+                  )}
+                </>
+              )}
+            </View>
           </Animated.View>
         )}
 
         {/* ── Check before saving ── */}
         {step === "confirm" && (
-          <Animated.View key="confirm" entering={FadeInDown.duration(320)} style={{ marginTop: 18 }}>
+          <Animated.View key="confirm" entering={FadeInDown.duration(320)} style={{ marginTop: 18, flexGrow: 1 }}>
             <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>Confira antes de salvar</Text>
             {said.trim() ? (
               <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 12.5, color: INK.softer }}>
@@ -437,53 +499,51 @@ export default function QuickEntryFlow({
               })}
             </View>
 
-            {/* The amount and the words, side by side */}
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <Field label="Valor" style={{ flex: 1 }}>
-                <TextInput
-                  value={money(cents / 100)}
-                  onChangeText={(t) => setCents(Math.min(Number(t.replace(/\D/g, "") || "0"), 99999999))}
-                  keyboardType="number-pad"
-                  style={[nums, { padding: 0, fontSize: 21, fontWeight: "800", letterSpacing: -0.6, color: type === "receita" ? GREEN : "#FF8A9A" }]}
-                />
-              </Field>
-              <Field label="Descrição" style={{ flex: 1.1 }}>
-                <TextInput value={name} onChangeText={setName} maxLength={40} style={{ padding: 0, fontSize: 16, fontWeight: "600", color: "#fff" }} />
-              </Field>
-            </View>
+            {/* The amount, large, and the words */}
+            <Field label="Valor">
+              <TextInput
+                value={money(cents / 100)}
+                onChangeText={(t) => setCents(Math.min(Number(t.replace(/\D/g, "") || "0"), 99999999))}
+                keyboardType="number-pad"
+                style={[nums, { padding: 0, fontSize: 30, fontWeight: "800", letterSpacing: -1, color: type === "receita" ? GREEN : "#FF8A9A" }]}
+              />
+            </Field>
+            <Field label="Descrição">
+              <TextInput value={name} onChangeText={setName} maxLength={40} style={{ padding: 0, fontSize: 17, fontWeight: "600", color: "#fff" }} />
+            </Field>
 
-            {/* Category and how it was paid, side by side */}
+            {/* Category and how it was paid, side by side, the names in full */}
             <View style={{ flexDirection: "row", gap: 8 }}>
-              <Field label="Categoria" style={{ flex: 1 }}>
+              <Field label="Categoria" changeable style={{ flex: 1 }}>
                 <Pressable onPress={() => setPicking(true)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, opacity: pressed ? 0.7 : 1 })}>
-                  <View style={{ width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-                    <Icon size={13} color={chipInk(hex)} strokeWidth={2.2} />
+                  <View style={{ width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
+                    <Icon size={12} color={chipInk(hex)} strokeWidth={2.2} />
                   </View>
-                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 14.5, fontWeight: "600", color: category ? "#fff" : AMBER }}>
+                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ flex: 1, fontSize: 15, fontWeight: "600", color: category ? "#fff" : AMBER }}>
                     {category ?? "Escolher"}
                   </Text>
-                  <ChevronRight size={14} color={INK.softer} />
                 </Pressable>
               </Field>
-              <Field label={type === "receita" ? "Entrou em" : `Pagamento · ${how === "cartao" ? "Crédito" : "Débito"}`} style={{ flex: 1 }}>
+              <Field label={type === "receita" ? "Entrou em" : `Pagamento · ${how === "cartao" ? "Crédito" : "Débito"}`} changeable style={{ flex: 1 }}>
                 <Pressable
                   onPress={() => {
                     /* Asked again, on the card. */
-                    if (type === "despesa") setMethod(null);
-                    setWhere(null);
+                    setPickedMethod(null);
+                    setPickedWhere(null);
+                    setAskAgain(true);
                     setStep("ask");
                   }}
                   style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, opacity: pressed ? 0.7 : 1 })}
                 >
-                  {picked ? <BankMark name={picked.name} hex={colorFor(picked.name, picked.color)} size={26} /> : null}
-                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 14.5, fontWeight: "600", color: "#fff" }}>
+                  {picked ? <BankMark name={picked.name} hex={colorFor(picked.name, picked.color)} size={24} /> : null}
+                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ flex: 1, fontSize: 15, fontWeight: "600", color: "#fff" }}>
                     {picked?.name ?? "Escolher"}
                   </Text>
-                  <ChevronRight size={14} color={INK.softer} />
                 </Pressable>
               </Field>
             </View>
 
+            <View style={{ flexGrow: 1 }} />
             {error && <Text style={{ marginTop: 14, fontSize: 13.5, color: RED }}>{error}</Text>}
             <Primary label={saving ? "Registrando…" : "Registrar"} busy={saving} disabled={saving || cents <= 0 || !name.trim() || !whereId} onPress={() => void register()} />
           </Animated.View>
@@ -491,16 +551,20 @@ export default function QuickEntryFlow({
 
         {/* ── Saved: the receipt, and what to do with it ── */}
         {step === "done" && savedAt && (
-          <Animated.View key="done" entering={FadeIn.duration(240)} style={{ paddingTop: 2 }}>
-            <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: GREEN }}>SALVO</Text>
-            <Text style={{ marginTop: 4, fontSize: 28, fontWeight: "800", letterSpacing: -0.8, color: "#fff" }}>
-              {type === "receita" ? "Receita registrada." : "Gasto registrado."}
-            </Text>
-            <View ref={receiptRef} collapsable={false} style={{ marginTop: 16, paddingTop: 4, paddingBottom: 6 }}>
+          <Animated.View key="done" entering={FadeIn.duration(240)}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <ParticleOrb size={34} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ fontSize: 21, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>{type === "receita" ? "Receita registrada" : "Gasto registrado"}</Text>
+                <Text style={{ marginTop: 1, fontSize: 13, color: INK.soft }}>Anotado pelo Willo às {hhmm(savedAt)}</Text>
+              </View>
+              <CloseButton onPress={onClose} />
+            </View>
+            <View ref={receiptRef} collapsable={false} style={{ marginTop: 14, paddingTop: 4, paddingBottom: 6 }}>
               <ReceiptCard when={savedAt} lines={[{ id: "1", name: name.trim(), category: category ?? "Outros", amount: cents / 100, type, method: payLabel }]} />
             </View>
 
-            <View style={{ marginTop: 22, flexDirection: "row", gap: 10 }}>
+            <View style={{ marginTop: 20, flexDirection: "row", gap: 10 }}>
               <Secondary
                 icon={<Share2 size={16} color="#fff" />}
                 label="Compartilhar"
@@ -538,6 +602,14 @@ export default function QuickEntryFlow({
         onClose={() => setPicking(false)}
       />
     </>
+  );
+}
+
+function CloseButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} accessibilityLabel="Fechar" hitSlop={10} style={({ pressed }) => ({ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)", opacity: pressed ? 0.6 : 1 })}>
+      <X size={17} color="rgba(255,255,255,0.88)" strokeWidth={2.4} />
+    </Pressable>
   );
 }
 
@@ -615,10 +687,15 @@ function Choice({ icon, label, wide, onPress }: { icon: React.ReactNode; label: 
   );
 }
 
-function Field({ label, children, style }: { label: string; children: React.ReactNode; style?: object }) {
+function Field({ label, changeable, children, style }: { label: string; changeable?: boolean; children: React.ReactNode; style?: object }) {
   return (
     <View style={[{ marginTop: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", backgroundColor: "rgba(255,255,255,0.04)" }, style]}>
-      <Text style={{ fontSize: 11, color: INK.softer, marginBottom: 5 }}>{label}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 4, marginBottom: 5 }}>
+        <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 11, color: INK.softer }}>
+          {label}
+        </Text>
+        {changeable ? <ChevronRight size={12} color={INK.softer} /> : null}
+      </View>
       {children}
     </View>
   );
