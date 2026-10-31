@@ -205,26 +205,27 @@ export function Toggle({ value, onChange, label }: { value: boolean; onChange: (
 }
 
 /**
- * Where in the steps: the step, centred, with Voltar at the left when there is a step
- * to go back to, and the bars under them.
+ * Where in the steps: Voltar at the left when there is a step to go back to, the step
+ * centred in the room beside it, and the bars under them.
  */
 export function StepHeader({ label, stage, total, onBack }: { label: string; stage: number; total: number; onBack?: () => void }) {
   return (
     <>
-      <View style={{ minHeight: 30, justifyContent: "center" }}>
-        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ marginHorizontal: 74, textAlign: "center", fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: "rgba(255,255,255,0.72)" }}>
-          {label}
-        </Text>
+      {/* Voltar first, then the step centred in the room left beside it — never touching. */}
+      <View style={{ minHeight: 30, flexDirection: "row", alignItems: "center", gap: 16 }}>
         {onBack && (
           <Pressable
             onPress={onBack}
             hitSlop={10}
-            style={({ pressed }) => ({ position: "absolute", left: 0, flexDirection: "row", alignItems: "center", gap: 2, height: 30, paddingLeft: 6, paddingRight: 11, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.08)", opacity: pressed ? 0.6 : 1 })}
+            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, height: 30, paddingLeft: 6, paddingRight: 11, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.08)", opacity: pressed ? 0.6 : 1 })}
           >
             <ChevronLeft size={15} color="#fff" />
             <Text style={{ fontSize: 13, fontWeight: "600", color: "#fff" }}>Voltar</Text>
           </Pressable>
         )}
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ flex: 1, textAlign: "center", fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: "rgba(255,255,255,0.72)" }}>
+          {label}
+        </Text>
       </View>
       <View style={{ marginTop: 8, flexDirection: "row", gap: 4 }}>
         {Array.from({ length: total }, (_, i) => (
