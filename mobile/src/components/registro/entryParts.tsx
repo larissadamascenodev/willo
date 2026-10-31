@@ -11,7 +11,7 @@ import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
 import { saveReceipt, shareReceipt } from "~/lib/receiptShare";
 import { showToast } from "~/lib/toast";
-import { AMBER, GREEN, INK } from "~/theme/tokens";
+import { AMBER, INCOME, INK } from "~/theme/tokens";
 
 /**
  * The pieces the entry flows share — Registro rápido, the guided manual entry and the
@@ -108,7 +108,7 @@ export function EntryCard({
             {category ?? "Falta a categoria"}
           </Text>
         </View>
-        <Text style={[nums, { fontSize: 17, fontWeight: "800", letterSpacing: -0.4, color: income ? GREEN : "#fff" }]}>
+        <Text style={[nums, { fontSize: 17, fontWeight: "800", letterSpacing: -0.4, color: income ? INCOME : "#fff" }]}>
           {income ? "+" : "−"}
           {money(cents / 100)}
         </Text>

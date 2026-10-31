@@ -12,6 +12,8 @@ export const GROUND = "#08090A";
 export const GROUND_LIT = "#0D0E10";
 
 export const GREEN = "#C8F36D";
+/** Money coming in, on the entry flows: a soft mint, quieter than the brand's lime. */
+export const INCOME = "#4FD8A4";
 export const AMBER = "#F9CE4E";
 export const RED = "#F87171";
 

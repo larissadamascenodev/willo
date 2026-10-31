@@ -5,22 +5,20 @@ import * as Haptics from "expo-haptics";
 import { createTransaction, getAccounts, getCreditCards, getRecentTransactions } from "@/services/transactionService";
 import { allowedCategories, readEntry, todayISO, type ParsedEntry } from "@/services/quickEntry";
 import { parseLocal } from "@/lib/quickEntry/parseLocal";
-import { categoryHex } from "@/lib/categoryData";
 import { colorFor } from "@/lib/banks";
 import BankMark from "~/components/BankMark";
 import CategoryPicker from "~/components/CategoryPicker";
 import ParticleOrb from "~/components/registro/ParticleOrb";
-import { CategoryButton, Choice, EntryCard, Field, GLASS, PartsBar, Primary, SavedView, dayLabel, hhmm, nums, type Account, type Card, type Kind, type Method } from "~/components/registro/entryParts";
-import { Banknote, CalendarClock, ChevronLeft, CreditCard, Landmark, Tag } from "~/components/icons";
-import { categoryIcon } from "~/lib/categoryIcon";
-import { chipFill, chipInk } from "~/lib/chip";
+import EntryForm, { type EntryValues } from "~/components/registro/EntryForm";
+import { CategoryButton, Choice, EntryCard, GLASS, PartsBar, Primary, SavedView, dayLabel, hhmm, type Account, type Card, type Kind, type Method } from "~/components/registro/entryParts";
+import { Banknote, CalendarClock, ChevronLeft, CreditCard, Landmark } from "~/components/icons";
 import { money } from "~/lib/money";
 import { paymentMention } from "~/lib/paymentMention";
 import { preloadCash } from "~/lib/sounds";
 import { sparkle } from "~/lib/sparkles";
 import { showToast } from "~/lib/toast";
 import { useAuth } from "~/lib/auth";
-import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
+import { INK, RED } from "~/theme/tokens";
 
 /**
  * Registro rápido — the same steps wherever an entry starts: a double tap on the sphere
@@ -105,7 +103,9 @@ export default function QuickEntryFlow({
   });
   const [type, setType] = useState<Kind>(initial?.type ?? "despesa");
   const [category, setCategory] = useState<string | null>(initial?.category ?? null);
-  const [date, setDate] = useState(initial?.date ?? todayISO());
+  const [date, setDate] = useState(() => paymentMention(heard ?? "", [], []).date ?? initial?.date ?? todayISO());
+  /* What goes on the check, set when it opens; changed there before Registrar. */
+  const [form, setForm] = useState<EntryValues | null>(null);
   /* What the person chose on the card; what the words said comes after it. */
   const [pickedMethod, setPickedMethod] = useState<Method | null>(null);
   const [pickedWhere, setPickedWhere] = useState<string | null>(null);
@@ -177,8 +177,8 @@ export default function QuickEntryFlow({
     setCents(Math.round(draft.amount * 100) * (mention.perPart && mention.installments ? mention.installments : 1));
     setType(draft.type);
     setCategory(draft.category);
-    setDate(draft.date || todayISO());
-  }, [draft, mention.perPart, mention.installments]);
+    setDate(mention.date ?? (draft.date || todayISO()));
+  }, [draft, mention.perPart, mention.installments, mention.date]);
 
   /* The way it was paid and where: chosen on the card, else said, else read. */
   const baseMethod = initial ? initial.method : (draft?.paymentMethod ?? null);
@@ -194,21 +194,43 @@ export default function QuickEntryFlow({
   const saidPlan: Plan | null = askAgain || planAgain ? null : mention.installments || mention.split ? "parcelado" : mention.inCash ? "avista" : null;
   const saidParts = askAgain || planAgain ? null : mention.installments;
 
-  /* What would still be asked, for a given set of answers. */
+  /* Every month, when the words say so: nothing about instalments is asked. */
+  const recurring = mention.recurring;
+
+  /* What would still be asked, for a given set of answers. On a card, at once or in
+     instalments; on the account, in instalments only when the words said so. */
   const pending = (pm: Method | null, pw: string | null, pp: Plan | null, pn: number | null, cat: string | null) => {
     const r = resolve(pm, pw);
     const credit = type === "despesa" && r.how === "cartao";
-    const plan = credit ? (pp ?? saidPlan) : null;
+    const plan = recurring || type === "receita" ? null : credit ? (pp ?? saidPlan) : saidPlan === "parcelado" ? (pp ?? "parcelado") : null;
     const parts = plan === "parcelado" ? (pn ?? saidParts) : null;
-    const question: Question | null = !r.how ? "method" : !r.whereId ? "where" : credit && !plan ? "plan" : plan === "parcelado" && !parts ? "parts" : !cat ? "category" : null;
+    const question: Question | null = !r.how ? "method" : !r.whereId ? "where" : credit && !recurring && !plan ? "plan" : plan === "parcelado" && !parts ? "parts" : !cat ? "category" : null;
     return { ...r, credit, plan, parts, question };
   };
-  const { how, list, whereId, credit, plan, parts, question: missing } = pending(pickedMethod, pickedWhere, pickedPlan, pickedParts, category);
+  const now = pending(pickedMethod, pickedWhere, pickedPlan, pickedParts, category);
+  const { how, list, whereId, plan, parts, question: missing } = now;
   const picked = list.find((o) => o.id === whereId) ?? null;
   const payLabel = type === "receita" ? (picked?.name ?? null) : how ? `${how === "cartao" ? "Crédito" : "Débito"}${picked ? ` · ${picked.name}` : ""}` : null;
-  const split = plan === "parcelado" && parts ? parts : null;
   const shownParts = plan === "parcelado" ? (parts ?? partsDraft) : null;
-  const partsLabel = shownParts ? `${shownParts}x de ${money(cents / 100 / shownParts)}` : plan === "avista" ? "À vista" : null;
+  const partsLabel = recurring ? "Recorrente" : shownParts ? `${shownParts}x de ${money(cents / 100 / shownParts)}` : plan === "avista" ? "À vista" : null;
+
+  /* The check opens with everything as it stands: settled, unless on a card or on a day ahead. */
+  const toConfirm = (p: ReturnType<typeof pending>, cat: string | null) => {
+    setForm({
+      type,
+      cents,
+      name: name.trim(),
+      category: cat,
+      method: p.how,
+      whereId: p.whereId,
+      repeat: recurring ? "fixa" : p.plan === "parcelado" && p.parts ? "parcelado" : "unica",
+      parts: p.plan === "parcelado" ? p.parts : null,
+      date,
+      status: p.credit || date > todayISO() ? "pendente" : "pago",
+      note: "",
+    });
+    setStep("confirm");
+  };
 
   /* What is still missing, asked one at a time under the card. */
   const hasEntry = initial ? loaded : !!draft;
@@ -221,9 +243,10 @@ export default function QuickEntryFlow({
     const t = setTimeout(() => {
       pausedOn.current = said;
       Keyboard.dismiss();
-      if (!question) setStep("confirm");
+      if (!question) toConfirm(now, category);
     }, PAUSE_MS);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial, step, said, typed, loaded, question]);
 
   /* Said or written to Willo with everything in it: straight to the check. */
@@ -231,7 +254,8 @@ export default function QuickEntryFlow({
   useEffect(() => {
     if (!initial || !loaded || jumped.current) return;
     jumped.current = true;
-    if (!question) setStep("confirm");
+    if (!question) toConfirm(now, category);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial, loaded, question]);
 
   /* What is written, typed or picked from the examples: the words decide again. */
@@ -268,7 +292,8 @@ export default function QuickEntryFlow({
       setPartsDraft(null);
     }
     if (next.category) setCategory(next.category);
-    if (!pending(pm, pw, pp, pn, cat).question) setStep("confirm");
+    const after = pending(pm, pw, pp, pn, cat);
+    if (!after.question) toConfirm(after, cat);
   };
 
   /* Nothing on the phone could read it: the AI reader tries. */
@@ -291,12 +316,21 @@ export default function QuickEntryFlow({
     }
   };
 
+  /* As it stands on the check. */
+  const f = form;
+  const fCredit = !!f && f.type === "despesa" && f.method === "cartao";
+  const fParts = f && f.repeat === "parcelado" && f.parts && f.parts > 1 ? f.parts : null;
+  const fList: (Account | Card)[] = fCredit ? cards : accounts;
+  const fPicked = f ? (fList.find((o) => o.id === f.whereId) ?? null) : null;
+  const fPay = f ? (f.type === "receita" ? (fPicked?.name ?? null) : `${fCredit ? "Crédito" : "Débito"}${fPicked ? ` · ${fPicked.name}` : ""}`) : null;
+  const scheduled = !!f && !fCredit && f.status === "pendente";
+
   const register = async () => {
-    if (!user || !how || !whereId || cents <= 0 || !name.trim()) return;
-    if (type === "despesa" && how === "cartao") {
-      const card = cards.find((c) => c.id === whereId);
+    if (!user || !f || !f.method || !f.whereId || f.cents <= 0 || !f.name.trim()) return;
+    if (fCredit) {
+      const card = cards.find((c) => c.id === f.whereId);
       const room = card?.limit != null ? Number(card.limit) - (Number(card.used_limit) || 0) : null;
-      if (room !== null && cents / 100 > room + 0.004) {
+      if (room !== null && f.cents / 100 > room + 0.004) {
         setError(`Esse cartão tem só ${money(Math.max(room, 0))} de limite disponível.`);
         return;
       }
@@ -306,26 +340,26 @@ export default function QuickEntryFlow({
     try {
       await createTransaction(
         {
-          name: name.trim().replace(/^./, (c) => c.toUpperCase()),
-          type,
-          /* In instalments the purchase carries one instalment's value; the invoices repeat it. */
-          amount: split ? Math.round(cents / split) / 100 : cents / 100,
-          category: category ?? "Outros",
-          date,
-          status: type === "despesa" && how === "cartao" ? "pendente" : "pago",
-          payment_method: how,
-          account_id: how === "conta" ? whereId : null,
-          credit_card_id: how === "cartao" ? whereId : null,
-          recurrence_type: split ? "parcelado" : "unica",
-          installments: split,
-          installment_current: split ? 1 : null,
+          name: f.name.trim().replace(/^./, (c) => c.toUpperCase()),
+          type: f.type,
+          /* In instalments the purchase carries one instalment's value; the instalments repeat it. */
+          amount: fParts ? Math.round(f.cents / fParts) / 100 : f.cents / 100,
+          category: f.category ?? "Outros",
+          date: f.date,
+          status: fCredit ? "pendente" : f.status,
+          payment_method: f.type === "receita" ? "conta" : f.method,
+          account_id: fCredit ? null : f.whereId,
+          credit_card_id: fCredit ? f.whereId : null,
+          recurrence_type: fParts ? "parcelado" : f.repeat === "fixa" ? "fixa" : "unica",
+          installments: fParts,
+          installment_current: fParts ? 1 : null,
         } as never,
         user.id,
       );
       window.dispatchEvent(new CustomEvent("transaction-created"));
       setSavedAt(new Date());
       setStep("done");
-      onSaved?.(`${name.trim()}, ${money(cents / 100)}${split ? ` em ${split}x` : ""}`);
+      onSaved?.(`${f.name.trim()}, ${money(f.cents / 100)}${fParts ? ` em ${fParts}x` : f.repeat === "fixa" ? ", todo mês" : ""}`);
     } catch {
       setError("Não consegui salvar agora. Tente de novo.");
     } finally {
@@ -335,7 +369,8 @@ export default function QuickEntryFlow({
 
   /* The seal ticks: the notice and the sparkles come with the chime. */
   const landed = () => {
-    showToast(`${type === "receita" ? "Receita" : "Despesa"} adicionada · ${name.trim()}, ${money(cents / 100)}${split ? ` em ${split}x` : ""}`);
+    if (!f) return;
+    showToast(`${f.type === "receita" ? "Receita" : "Despesa"} ${scheduled ? "agendada" : "adicionada"} · ${f.name.trim()}, ${money(f.cents / 100)}${fParts ? ` em ${fParts}x` : ""}`);
     sparkle();
   };
 
@@ -352,8 +387,6 @@ export default function QuickEntryFlow({
   };
 
   const stageNo = step === "ask" ? 1 : 2;
-  const Icon = category ? categoryIcon(category) : Tag;
-  const hex = category ? categoryHex(category) : "#8B8D94";
   const when = date === todayISO() ? `${dayLabel(date)}, ${hhmm(opened)}` : dayLabel(date);
 
   return (
@@ -409,7 +442,7 @@ export default function QuickEntryFlow({
                     if (!draft) return void readHard();
                     pausedOn.current = said;
                     Keyboard.dismiss();
-                    if (!question) setStep("confirm");
+                    if (!question) toConfirm(now, category);
                   }}
                   returnKeyType={draft ? "done" : "next"}
                   placeholder="Ex.: padaria 48"
@@ -439,7 +472,7 @@ export default function QuickEntryFlow({
             {/* The card fills in as it is typed, and stays while the questions change under it */}
             {hasEntry && (
               <Animated.View entering={FadeInDown.duration(260)} style={[GLASS, { marginTop: 14, padding: 14 }]}>
-                <EntryCard name={name} cents={cents} type={type} category={category} when={when} pay={payLabel} parts={credit ? partsLabel : null} payMissing={type === "receita" ? "Falta a conta" : "Falta a forma de pagamento"} />
+                <EntryCard name={name} cents={cents} type={type} category={category} when={when} pay={payLabel} parts={partsLabel} payMissing={type === "receita" ? "Falta a conta" : "Falta a forma de pagamento"} />
               </Animated.View>
             )}
 
@@ -513,7 +546,7 @@ export default function QuickEntryFlow({
                       disabled={reading}
                       onPress={() => {
                         Keyboard.dismiss();
-                        if (hasEntry) setStep("confirm");
+                        if (hasEntry) toConfirm(now, category);
                         else void readHard();
                       }}
                     />
@@ -524,8 +557,8 @@ export default function QuickEntryFlow({
           </Animated.View>
         )}
 
-        {/* ── Check before saving ── */}
-        {step === "confirm" && (
+        {/* ── Check before saving: the same page as the guided entry's ── */}
+        {step === "confirm" && f && (
           <Animated.View key="confirm" entering={FadeInDown.duration(320)} style={{ marginTop: 18 }}>
             <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>Confira antes de salvar</Text>
             {said.trim() ? (
@@ -533,103 +566,27 @@ export default function QuickEntryFlow({
                 {spoken ? "Você disse" : "Você escreveu"} <Text style={{ fontStyle: "italic", color: INK.soft }}>“{said.trim()}”</Text>
               </Text>
             ) : null}
-
-            {/* Out or in */}
-            <View style={{ marginTop: 14, flexDirection: "row", gap: 8 }}>
-              {(["despesa", "receita"] as const).map((t) => {
-                const on = type === t;
-                return (
-                  <Pressable
-                    key={t}
-                    onPress={() => setType(t)}
-                    style={({ pressed }) => ({ flex: 1, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: on ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.10)", backgroundColor: on ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.04)", opacity: pressed ? 0.7 : 1 })}
-                  >
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: on ? (t === "receita" ? GREEN : "#fff") : INK.soft }}>{t === "despesa" ? "Despesa" : "Receita"}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {/* The amount, large, and the words */}
-            <Field label={split ? "Valor total" : "Valor"} changeable={credit}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <TextInput
-                  value={money(cents / 100)}
-                  onChangeText={(t) => setCents(Math.min(Number(t.replace(/\D/g, "") || "0"), 99999999))}
-                  keyboardType="number-pad"
-                  style={[nums, { flex: 1, minWidth: 0, padding: 0, fontSize: 30, fontWeight: "800", letterSpacing: -1, color: type === "receita" ? GREEN : "#FF8A9A" }]}
-                />
-                {/* On a card: at once or in instalments, changed on the card */}
-                {credit && (
-                  <Pressable
-                    onPress={() => {
-                      setPickedPlan(null);
-                      setPickedParts(null);
-                      setPartsDraft(null);
-                      setPlanAgain(true);
-                      setStep("ask");
-                    }}
-                    hitSlop={8}
-                    style={({ pressed }) => ({ height: 32, paddingHorizontal: 12, borderRadius: 16, justifyContent: "center", backgroundColor: "rgba(255,255,255,0.09)", opacity: pressed ? 0.6 : 1 })}
-                  >
-                    <Text numberOfLines={1} style={[nums, { fontSize: 13.5, fontWeight: "700", color: "#fff" }]}>
-                      {partsLabel ?? "Parcelas"}
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
-            </Field>
-            <Field label="Descrição">
-              <TextInput value={name} onChangeText={setName} maxLength={40} style={{ padding: 0, fontSize: 17, fontWeight: "600", color: "#fff" }} />
-            </Field>
-
-            {/* Category and how it was paid, side by side, the names in full */}
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <Field label="Categoria" changeable style={{ flex: 1 }}>
-                <Pressable onPress={() => setPicking(true)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, opacity: pressed ? 0.7 : 1 })}>
-                  <View style={{ width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-                    <Icon size={12} color={chipInk(hex)} strokeWidth={2.2} />
-                  </View>
-                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ flex: 1, fontSize: 15, fontWeight: "600", color: category ? "#fff" : AMBER }}>
-                    {category ?? "Escolher"}
-                  </Text>
-                </Pressable>
-              </Field>
-              <Field label={type === "receita" ? "Entrou em" : `Pagamento · ${how === "cartao" ? "Crédito" : "Débito"}`} changeable style={{ flex: 1 }}>
-                <Pressable
-                  onPress={() => {
-                    /* Asked again, on the card. */
-                    setPickedMethod(null);
-                    setPickedWhere(null);
-                    setPickedPlan(null);
-                    setPickedParts(null);
-                    setAskAgain(true);
-                    setStep("ask");
-                  }}
-                  style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 8, opacity: pressed ? 0.7 : 1 })}
-                >
-                  {picked ? <BankMark name={picked.name} hex={colorFor(picked.name, picked.color)} size={24} /> : null}
-                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ flex: 1, fontSize: 15, fontWeight: "600", color: "#fff" }}>
-                    {picked?.name ?? "Escolher"}
-                  </Text>
-                </Pressable>
-              </Field>
-            </View>
-
+            <EntryForm values={f} onChange={(patch) => setForm((cur) => (cur ? { ...cur, ...patch } : cur))} accounts={accounts} cards={cards} onPickCategory={() => setPicking(true)} />
             {error && <Text style={{ marginTop: 14, fontSize: 13.5, color: RED }}>{error}</Text>}
-            <Primary label={saving ? "Registrando…" : "Registrar"} busy={saving} disabled={saving || cents <= 0 || !name.trim() || !whereId} onPress={() => void register()} />
+            <Primary
+              label={saving ? "Registrando…" : scheduled ? "Agendar" : "Registrar"}
+              busy={saving}
+              disabled={saving || f.cents <= 0 || !f.name.trim() || !f.whereId || (f.repeat === "parcelado" && !f.parts)}
+              onPress={() => void register()}
+            />
           </Animated.View>
         )}
 
         {/* ── Saved: the receipt, and what to do with it ── */}
-        {step === "done" && savedAt && (
+        {step === "done" && savedAt && f && (
           <SavedView
-            line={{ id: "1", name: name.trim(), category: category ?? "Outros", amount: cents / 100, type, method: payLabel, installments: split }}
+            line={{ id: "1", name: f.name.trim(), category: f.category ?? "Outros", amount: f.cents / 100, type: f.type, method: fPay, installments: fParts }}
             savedAt={savedAt}
+            title={scheduled ? (f.type === "receita" ? "Receita agendada" : "Gasto agendado") : undefined}
             onLanded={landed}
             onClose={onClose}
-            onSee={() => (credit && whereId && onSeeCard ? onSeeCard(whereId) : onSeeTransactions())}
-            seeLabel={credit && onSeeCard ? "Ver na fatura do cartão" : "Ver transações"}
+            onSee={() => (fCredit && f.whereId && onSeeCard ? onSeeCard(f.whereId) : onSeeTransactions())}
+            seeLabel={fCredit && onSeeCard ? "Ver na fatura do cartão" : "Ver transações"}
           />
         )}
       </View>
@@ -641,7 +598,7 @@ export default function QuickEntryFlow({
         onPick={(c: string) => {
           setPicking(false);
           if (step === "ask") answered({ category: c });
-          else setCategory(c);
+          else setForm((cur) => (cur ? { ...cur, category: c } : cur));
         }}
         onClose={() => setPicking(false)}
       />

@@ -10,7 +10,7 @@ import { CalendarDays, Check, ChevronLeft, ChevronRight, CreditCard, Landmark, R
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
-import { AMBER, GREEN, INK } from "~/theme/tokens";
+import { AMBER, INCOME, INK } from "~/theme/tokens";
 
 /**
  * Everything about one entry on one page — the check of the guided entry, and the editor.
@@ -99,7 +99,7 @@ export default function EntryForm({
                 onPress={() => onChange(t === "receita" ? { type: t, method: "conta", whereId: v.method === "conta" ? v.whereId : null, repeat: v.repeat === "parcelado" ? "unica" : v.repeat, parts: null } : { type: t })}
                 style={({ pressed }) => ({ flex: 1, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: on ? "rgba(255,255,255,0.16)" : "transparent", opacity: pressed ? 0.7 : 1 })}
               >
-                <Text style={{ fontSize: 14, fontWeight: "700", color: on ? (t === "receita" ? GREEN : "#fff") : INK.soft }}>{t === "despesa" ? "Despesa" : "Receita"}</Text>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: on ? (t === "receita" ? INCOME : "#fff") : INK.soft }}>{t === "despesa" ? "Despesa" : "Receita"}</Text>
               </Pressable>
             );
           })}
@@ -115,7 +115,7 @@ export default function EntryForm({
           value={money(v.cents / 100)}
           onChangeText={(t) => onChange({ cents: Math.min(Number(t.replace(/\D/g, "") || "0"), 99999999) })}
           keyboardType="number-pad"
-          style={[nums, { marginTop: 2, padding: 0, minWidth: 160, textAlign: "center", fontSize: 40, fontWeight: "800", letterSpacing: -1.4, color: income ? GREEN : "#fff" }]}
+          style={[nums, { marginTop: 2, padding: 0, minWidth: 160, textAlign: "center", fontSize: 40, fontWeight: "800", letterSpacing: -1.4, color: income ? INCOME : "#fff" }]}
         />
         {parcelado && v.parts ? (
           <Text style={[nums, { marginTop: 2, fontSize: 13.5, color: INK.soft }]}>
@@ -139,7 +139,7 @@ export default function EntryForm({
                 {v.status === "pago" ? (income ? "Entrou na conta" : "Saiu da conta") : isAhead(v.date) ? "Agendado" : income ? "A receber" : "Pendente"}
               </Text>
             </View>
-            <Switch value={v.status === "pago"} onValueChange={(on) => onChange({ status: on ? "pago" : "pendente" })} trackColor={{ true: "rgba(200,243,109,0.42)", false: "rgba(255,255,255,0.14)" }} ios_backgroundColor="rgba(255,255,255,0.14)" thumbColor="#fff" />
+            <Switch value={v.status === "pago"} onValueChange={(on) => onChange({ status: on ? "pago" : "pendente" })} trackColor={{ true: "rgba(79,216,164,0.45)", false: "rgba(255,255,255,0.14)" }} ios_backgroundColor="rgba(255,255,255,0.14)" thumbColor="#fff" />
           </>
         )}
       </View>

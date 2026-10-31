@@ -111,7 +111,7 @@ export default function VoiceEntrySheet({ entry, onSaved }: { entry: VoiceEntry;
 
   if (flow) {
     return (
-      <BottomSheet open={open} onClose={entry.reset} full={flowStep === "done"}>
+      <BottomSheet open={open} onClose={entry.reset} full={flowStep !== "ask"}>
         <QuickEntryFlow
           key={flow.id}
           initial={flow.entry}

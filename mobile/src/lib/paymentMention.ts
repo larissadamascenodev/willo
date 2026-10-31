@@ -7,9 +7,14 @@
  * a debit card takes from it. A bank named with no way of paying decides it when only the
  * accounts, or only the cards, carry that name.
  *
- * Instalments too: "parcelado", "em 5x", "5 vezes", "cinco parcelas", "à vista". Split
- * into instalments is on credit unless a debit word was said. "5x de 100" is a hundred
- * each, so five hundred in all — `perPart` says the amount read is one instalment.
+ * Instalments too: "parcelado", "em 5x", "5 vezes", "cinco parcelas", "à vista" — on a
+ * card or, said with a debit word, on the account; said alone, the way it was paid is
+ * still asked. "5x de 100" is a hundred each, so five hundred in all — `perPart` says the
+ * amount read is one instalment.
+ *
+ * And when, and whether every month: "recorrente", "todo mês", "mensal", "todo dia 15"
+ * (the next 15th that can still be paid: this month's if it has not passed, else next
+ * month's), "dia 15 de novembro", "15/11", "amanhã" — the day it starts.
  */
 
 const plain = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -28,6 +33,14 @@ const countOf = (w: string | undefined) => {
   const n = /^\d{1,2}$/.test(w) ? Number(w) : COUNTS[w];
   return n && n >= 2 && n <= 48 ? n : null;
 };
+
+/* Months by name, whole or short; "março" read without its accent. */
+const MONTH_OF: Record<string, number> = {
+  janeiro: 1, fevereiro: 2, marco: 3, abril: 4, maio: 5, junho: 6, julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12,
+  jan: 1, fev: 2, mar: 3, abr: 4, mai: 5, jun: 6, jul: 7, ago: 8, set: 9, out: 10, nov: 11, dez: 12,
+};
+const RECURRING = new Set(["recorrente", "mensal", "mensalmente"]);
+const pad = (n: number) => String(n).padStart(2, "0");
 
 /* First words too common to name a bank by themselves. */
 const VAGUE = new Set(["conta", "cartao", "banco", "credito", "debito"]);
@@ -49,6 +62,10 @@ export interface PaymentMention {
   inCash: boolean;
   /** "5x de 100": the amount in the sentence is one instalment. */
   perPart: boolean;
+  /** Every month, until cancelled. */
+  recurring: boolean;
+  /** yyyy-mm-dd — the day said, or the next one a recurring "todo dia 15" falls on. */
+  date: string | null;
   /** The sentence without the way it was paid. */
   rest: string;
 }
@@ -71,7 +88,7 @@ function find(words: string[], list: Named[]) {
   return null;
 }
 
-export function paymentMention(sentence: string, accounts: Named[], cards: Named[]): PaymentMention {
+export function paymentMention(sentence: string, accounts: Named[], cards: Named[], today: Date = new Date()): PaymentMention {
   const tokens = sentence.trim().split(/\s+/).filter(Boolean);
   const words = tokens.map(bare);
   const drop = new Set<number>();
@@ -132,13 +149,102 @@ export function paymentMention(sentence: string, accounts: Named[], cards: Named
     }
   });
 
+  /* Every month, and from which day. */
+  let recurring = false;
+  let day: number | null = null;
+  let month: number | null = null;
+  let year: number | null = null;
+  let tomorrow = false;
+  words.forEach((w, i) => {
+    if (RECURRING.has(w)) {
+      recurring = true;
+      drop.add(i);
+    }
+    if (w === "todo" && words[i + 1] === "mes") {
+      recurring = true;
+      drop.add(i);
+      drop.add(i + 1);
+    }
+    if (w === "todos" && words[i + 1] === "os" && words[i + 2] === "meses") {
+      recurring = true;
+      [i, i + 1, i + 2].forEach((k) => drop.add(k));
+    }
+    if (w === "amanha") {
+      tomorrow = true;
+      drop.add(i);
+    }
+    /* "dia 15", "todo dia 15", "dia 15 de novembro (de 2026)" */
+    if (w === "dia" && /^\d{1,2}$/.test(words[i + 1] ?? "") && Number(words[i + 1]) >= 1 && Number(words[i + 1]) <= 31) {
+      day = Number(words[i + 1]);
+      drop.add(i);
+      drop.add(i + 1);
+      if (words[i - 1] === "todo") {
+        recurring = true;
+        drop.add(i - 1);
+      }
+      let j = i + 2;
+      if (words[j] === "de" && MONTH_OF[words[j + 1] ?? ""]) {
+        month = MONTH_OF[words[j + 1]];
+        drop.add(j);
+        drop.add(j + 1);
+        j += 2;
+      } else if (MONTH_OF[words[j] ?? ""]) {
+        month = MONTH_OF[words[j]];
+        drop.add(j);
+        j += 1;
+      }
+      if (month && words[j] === "de" && /^\d{4}$/.test(words[j + 1] ?? "")) {
+        year = Number(words[j + 1]);
+        drop.add(j);
+        drop.add(j + 1);
+      }
+    }
+    /* "15 de novembro" */
+    if (day === null && /^\d{1,2}$/.test(w) && words[i + 1] === "de" && MONTH_OF[words[i + 2] ?? ""]) {
+      day = Number(w);
+      month = MONTH_OF[words[i + 2]];
+      [i, i + 1, i + 2].forEach((k) => drop.add(k));
+    }
+    /* "15/11", "15/11/2026" */
+    const slash = /^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/.exec(w);
+    if (slash && Number(slash[2]) >= 1 && Number(slash[2]) <= 12) {
+      day = Number(slash[1]);
+      month = Number(slash[2]);
+      if (slash[3]) year = slash[3].length === 2 ? 2000 + Number(slash[3]) : Number(slash[3]);
+      drop.add(i);
+      if (words[i - 1] === "dia") drop.add(i - 1);
+      if (words[i - 2] === "todo" && words[i - 1] === "dia") {
+        recurring = true;
+        drop.add(i - 2);
+      }
+    }
+  });
+
+  let date: string | null = null;
+  if (day) {
+    let y = year ?? today.getFullYear();
+    let m = month ?? today.getMonth() + 1;
+    /* Every month from "dia 15": the next 15th that can still be paid. */
+    if (!month && recurring && day < today.getDate()) {
+      m += 1;
+      if (m > 12) {
+        m = 1;
+        y += 1;
+      }
+    }
+    date = `${y}-${pad(m)}-${pad(Math.min(day, new Date(y, m, 0).getDate()))}`;
+  } else if (tomorrow) {
+    const t = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    date = `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
+  }
+
   /* The little words leading into what was dropped go with it. */
   for (let i = words.length - 1; i > 0; i--) if (drop.has(i) && !drop.has(i - 1) && LINKS.has(words[i - 1])) drop.add(i - 1);
   for (let i = words.length - 1; i > 0; i--) if (drop.has(i) && !drop.has(i - 1) && LINKS.has(words[i - 1])) drop.add(i - 1);
 
   const method: PaymentMention["method"] = debit
     ? "conta"
-    : credit || installments || split
+    : credit
       ? "cartao"
       : byAccount
         ? "conta"
@@ -156,5 +262,5 @@ export function paymentMention(sentence: string, accounts: Named[], cards: Named
     .replace(/^[\s,;]+|[\s,;]+$/g, "")
     .trim();
 
-  return { method, accountId: account?.id ?? null, cardId: card?.id ?? null, installments, split, inCash, perPart, rest };
+  return { method, accountId: account?.id ?? null, cardId: card?.id ?? null, installments, split, inCash, perPart, recurring, date, rest };
 }

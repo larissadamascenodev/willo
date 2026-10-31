@@ -17,7 +17,7 @@ import { preloadCash } from "~/lib/sounds";
 import { sparkle } from "~/lib/sparkles";
 import { showToast } from "~/lib/toast";
 import { useAuth } from "~/lib/auth";
-import { GREEN, INK, RED } from "~/theme/tokens";
+import { INCOME, INK, RED } from "~/theme/tokens";
 
 /**
  * Adicionar manualmente, guided — the Registro rápido's way, with nothing taken from a
@@ -289,7 +289,7 @@ export default function ManualEntryFlow({
                       onPress={() => set(t === "receita" ? { type: t, method: "conta", repeat: v.repeat === "parcelado" ? "unica" : v.repeat, parts: null } : { type: t, method: null })}
                       style={({ pressed }) => ({ flex: 1, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: on ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.10)", backgroundColor: on ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.04)", opacity: pressed ? 0.7 : 1 })}
                     >
-                      <Text style={{ fontSize: 14, fontWeight: "700", color: on ? (t === "receita" ? GREEN : "#fff") : INK.soft }}>{t === "despesa" ? "Despesa" : "Receita"}</Text>
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: on ? (t === "receita" ? INCOME : "#fff") : INK.soft }}>{t === "despesa" ? "Despesa" : "Receita"}</Text>
                     </Pressable>
                   );
                 })}
@@ -306,7 +306,7 @@ export default function ManualEntryFlow({
               onSubmitEditing={() => v.cents > 0 && setStep("ask")}
               keyboardType="number-pad"
               returnKeyType="next"
-              style={[nums, { marginTop: 14, height: 64, borderRadius: 20, paddingHorizontal: 18, fontSize: 34, fontWeight: "800", letterSpacing: -1, color: income ? GREEN : "#fff", backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: v.cents > 0 ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)" }]}
+              style={[nums, { marginTop: 14, height: 64, borderRadius: 20, paddingHorizontal: 18, fontSize: 34, fontWeight: "800", letterSpacing: -1, color: income ? INCOME : "#fff", backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: v.cents > 0 ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)" }]}
             />
             <Primary
               label="Continuar"

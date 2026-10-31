@@ -27,7 +27,7 @@ export default function Rapido() {
   };
 
   return (
-    <BottomSheet open={open} onClose={() => leave()} full={step === "done"}>
+    <BottomSheet open={open} onClose={() => leave()} full={step !== "ask"}>
       <QuickEntryFlow
         onClose={() => leave()}
         onSeeTransactions={() => leave(() => router.push("/(tabs)/transacoes" as never))}
