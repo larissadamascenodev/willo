@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ComponentRef } from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View, type TextStyle } from "react-native";
-import Animated, { Easing, FadeIn, interpolateColor, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { categoryHex } from "@/lib/categoryData";
 import ParticleOrb from "~/components/registro/ParticleOrb";
 import ReceiptCard, { type ReceiptLine } from "~/components/registro/ReceiptCard";
-import { Banknote, CalendarClock, Check, ChevronRight, Download, Minus, Plus, Repeat as RepeatIcon, Share2, Tag } from "~/components/icons";
+import { Banknote, CalendarClock, Check, ChevronLeft, ChevronRight, Download, Minus, Plus, Repeat as RepeatIcon, Share2, Tag } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
@@ -171,49 +171,67 @@ const KNOB_W = 36;
 const KNOB_H = 24;
 const INSET = 2;
 const TRAVEL = TRACK_W - KNOB_W - INSET * 2;
-const SWITCH_ON = "#67CD67";
 const SWITCH_OFF = "rgba(120,120,128,0.36)";
 
 /**
- * On or off, the way the phone draws it now: a white capsule inside the track. Touched,
- * the capsule swells into a lens of glass — clear, the track's colour showing through,
- * a dark rim — slides across, and settles back to white; the track turns green behind it.
+ * On or off, the way the phone draws it: a white capsule inside the track, sliding
+ * across with a soft ease while the track turns green behind it.
  */
 export function Toggle({ value, onChange, label }: { value: boolean; onChange: (on: boolean) => void; label: string }) {
   const at = useSharedValue(value ? 1 : 0);
-  const lens = useSharedValue(0);
   useEffect(() => {
-    at.set(withSpring(value ? 1 : 0, { damping: 17, stiffness: 190, mass: 0.9 }));
+    at.set(withTiming(value ? 1 : 0, { duration: 260, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }));
   }, [value, at]);
 
-  const flip = () => {
-    void Haptics.selectionAsync().catch(() => undefined);
-    lens.set(withSequence(withTiming(1, { duration: 140, easing: Easing.out(Easing.quad) }), withDelay(200, withTiming(0, { duration: 260, easing: Easing.inOut(Easing.quad) }))));
-    onChange(!value);
-  };
-
-  const track = useAnimatedStyle(() => ({ backgroundColor: interpolateColor(at.get(), [0, 1], [SWITCH_OFF, SWITCH_ON]) }));
-  const knob = useAnimatedStyle(() => {
-    const l = lens.get();
-    return {
-      backgroundColor: interpolateColor(l, [0, 1], ["rgba(255,255,255,1)", "rgba(255,255,255,0.16)"]),
-      borderColor: `rgba(20,22,26,${0.55 * l})`,
-      shadowOpacity: 0.22 + l * 0.2,
-      transform: [{ translateX: at.get() * TRAVEL }, { scaleX: 1 + l * 0.55 }, { scaleY: 1 + l * 0.75 }],
-    };
-  });
+  const track = useAnimatedStyle(() => ({ backgroundColor: interpolateColor(at.get(), [0, 1], [SWITCH_OFF, INCOME]) }));
+  const knob = useAnimatedStyle(() => ({ transform: [{ translateX: at.get() * TRAVEL }] }));
 
   return (
-    <Pressable accessibilityRole="switch" accessibilityLabel={label} accessibilityState={{ checked: value }} hitSlop={8} onPress={flip}>
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: value }}
+      hitSlop={8}
+      onPress={() => {
+        void Haptics.selectionAsync().catch(() => undefined);
+        onChange(!value);
+      }}
+    >
       <Animated.View style={[{ width: TRACK_W, height: TRACK_H, borderRadius: TRACK_H / 2, padding: INSET, justifyContent: "center" }, track]}>
-        <Animated.View
-          style={[
-            { width: KNOB_W, height: KNOB_H, borderRadius: KNOB_H / 2, borderWidth: 1, shadowColor: "#000", shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
-            knob,
-          ]}
-        />
+        <Animated.View style={[{ width: KNOB_W, height: KNOB_H, borderRadius: KNOB_H / 2, backgroundColor: "#fff", shadowColor: "#000", shadowOpacity: 0.22, shadowRadius: 3, shadowOffset: { width: 0, height: 2 } }, knob]} />
       </Animated.View>
     </Pressable>
+  );
+}
+
+/**
+ * Where in the steps: the step, centred, with Voltar at the left when there is a step
+ * to go back to, and the bars under them.
+ */
+export function StepHeader({ label, stage, total, onBack }: { label: string; stage: number; total: number; onBack?: () => void }) {
+  return (
+    <>
+      <View style={{ minHeight: 30, justifyContent: "center" }}>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ marginHorizontal: 74, textAlign: "center", fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: "rgba(255,255,255,0.72)" }}>
+          {label}
+        </Text>
+        {onBack && (
+          <Pressable
+            onPress={onBack}
+            hitSlop={10}
+            style={({ pressed }) => ({ position: "absolute", left: 0, flexDirection: "row", alignItems: "center", gap: 2, height: 30, paddingLeft: 6, paddingRight: 11, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.08)", opacity: pressed ? 0.6 : 1 })}
+          >
+            <ChevronLeft size={15} color="#fff" />
+            <Text style={{ fontSize: 13, fontWeight: "600", color: "#fff" }}>Voltar</Text>
+          </Pressable>
+        )}
+      </View>
+      <View style={{ marginTop: 8, flexDirection: "row", gap: 4 }}>
+        {Array.from({ length: total }, (_, i) => (
+          <View key={i} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: i < stage ? "#fff" : "rgba(255,255,255,0.12)" }} />
+        ))}
+      </View>
+    </>
   );
 }
 

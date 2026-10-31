@@ -71,7 +71,20 @@ export default function EntryForm({
 }) {
   const v = values;
   const [open, setOpen] = useState<Open>(null);
-  const toggle = (o: Exclude<Open, null>) => setOpen((cur) => (cur === o ? null : o));
+  /* Changing how it was paid goes as making it did: debit or credit first, then which one. */
+  const [payStep, setPayStep] = useState<"method" | "where">("method");
+  const toggle = (o: Exclude<Open, null>) => {
+    if (o === "pay") setPayStep(v.type === "receita" ? "where" : "method");
+    setOpen((cur) => (cur === o ? null : o));
+  };
+  const pickMethod = (method: Method) => {
+    const options: (Account | Card)[] = method === "cartao" ? cards : accounts;
+    const only = options.length === 1 ? options[0].id : null;
+    const keep = method === v.method && v.whereId && options.some((o) => o.id === v.whereId) ? v.whereId : null;
+    onChange({ method, whereId: only ?? keep });
+    if (only) setOpen(null);
+    else setPayStep("where");
+  };
 
   const income = v.type === "receita";
   const credit = !income && v.method === "cartao";
@@ -139,10 +152,13 @@ export default function EntryForm({
             <RowMark>
               <CreditCard size={15} color="#fff" strokeWidth={2.1} />
             </RowMark>
-            <Text style={{ flex: 1, fontSize: 14.5, color: INK.soft }}>
-              Entra na fatura de <Text style={{ fontWeight: "700", color: "#fff" }}>{invoiceMonthOf(v.date, card?.closing_day).label}</Text>
-              {card ? ` do ${card.name}` : ""}
-            </Text>
+            {card ? (
+              <Text style={{ flex: 1, fontSize: 14.5, color: INK.soft }}>
+                Entra na fatura de <Text style={{ fontWeight: "700", color: "#fff" }}>{invoiceMonthOf(v.date, card.closing_day).label}</Text> do {card.name}
+              </Text>
+            ) : (
+              <Text style={{ flex: 1, fontSize: 14.5, color: INK.soft }}>Entra na fatura do cartão</Text>
+            )}
           </View>
         ) : (
           <Pressable
@@ -184,27 +200,31 @@ export default function EntryForm({
         />
         {open === "pay" && !lockedCard && (
           <Animated.View entering={FadeIn.duration(180)} style={{ paddingHorizontal: 12, paddingBottom: 12, gap: 8 }}>
-            {!income && (
+            <Text style={{ paddingHorizontal: 2, fontSize: 13, color: INK.soft }}>
+              {payStep === "method" ? "Foi no débito ou no crédito?" : credit ? "Em qual cartão?" : income ? "Em qual conta entrou?" : "De qual conta saiu?"}
+            </Text>
+            {payStep === "method" ? (
               <View style={{ flexDirection: "row", gap: 8 }}>
-                <Choice icon={<Landmark size={18} color="#fff" strokeWidth={2.1} />} label="Débito" on={v.method === "conta"} onPress={() => onChange({ method: "conta", whereId: accounts.length === 1 ? accounts[0].id : null })} />
-                <Choice icon={<CreditCard size={18} color="#fff" strokeWidth={2.1} />} label="Crédito" on={v.method === "cartao"} onPress={() => onChange({ method: "cartao", whereId: cards.length === 1 ? cards[0].id : null })} />
+                <Choice icon={<Landmark size={18} color="#fff" strokeWidth={2.1} />} label="Débito" on={v.method === "conta"} onPress={() => pickMethod("conta")} />
+                <Choice icon={<CreditCard size={18} color="#fff" strokeWidth={2.1} />} label="Crédito" on={v.method === "cartao"} onPress={() => pickMethod("cartao")} />
+              </View>
+            ) : (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {list.map((o) => (
+                  <Choice
+                    key={o.id}
+                    wide
+                    on={v.whereId === o.id}
+                    icon={<BankMark name={o.name} hex={colorFor(o.name, o.color)} size={26} />}
+                    label={o.name}
+                    onPress={() => {
+                      onChange({ whereId: o.id });
+                      setOpen(null);
+                    }}
+                  />
+                ))}
               </View>
             )}
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {list.map((o) => (
-                <Choice
-                  key={o.id}
-                  wide
-                  on={v.whereId === o.id}
-                  icon={<BankMark name={o.name} hex={colorFor(o.name, o.color)} size={26} />}
-                  label={o.name}
-                  onPress={() => {
-                    onChange({ whereId: o.id });
-                    setOpen(null);
-                  }}
-                />
-              ))}
-            </View>
           </Animated.View>
         )}
 

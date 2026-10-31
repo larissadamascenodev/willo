@@ -10,7 +10,7 @@ import BankMark from "~/components/BankMark";
 import CategoryPicker from "~/components/CategoryPicker";
 import ParticleOrb from "~/components/registro/ParticleOrb";
 import EntryForm, { type EntryValues } from "~/components/registro/EntryForm";
-import { CategoryButton, Choice, EntryCard, GLASS, PartsBar, Primary, SavedView, dayLabel, hhmm, type Account, type Card, type Kind, type Method } from "~/components/registro/entryParts";
+import { CategoryButton, Choice, EntryCard, GLASS, StepHeader, PartsBar, Primary, SavedView, dayLabel, hhmm, type Account, type Card, type Kind, type Method } from "~/components/registro/entryParts";
 import { Banknote, CalendarClock, ChevronLeft, CreditCard, Landmark } from "~/components/icons";
 import { money } from "~/lib/money";
 import { paymentMention } from "~/lib/paymentMention";
@@ -395,24 +395,7 @@ export default function QuickEntryFlow({
         {/* ── Where in it, and the way back ── */}
         {step !== "done" && (
           <>
-            <View style={{ minHeight: 30, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: "rgba(255,255,255,0.72)" }}>REGISTRO RÁPIDO · ETAPA {stageNo} DE 2</Text>
-              {(step === "confirm" || (step === "ask" && trail.length > 0)) && (
-                <Pressable
-                  onPress={back}
-                  hitSlop={10}
-                  style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, height: 30, paddingLeft: 6, paddingRight: 11, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.08)", opacity: pressed ? 0.6 : 1 })}
-                >
-                  <ChevronLeft size={15} color="#fff" />
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#fff" }}>Voltar</Text>
-                </Pressable>
-              )}
-            </View>
-            <View style={{ marginTop: 8, flexDirection: "row", gap: 4 }}>
-              {[1, 2].map((n) => (
-                <View key={n} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: n <= stageNo ? "#fff" : "rgba(255,255,255,0.12)" }} />
-              ))}
-            </View>
+            <StepHeader label={`REGISTRO RÁPIDO · ETAPA ${stageNo} DE 2`} stage={stageNo} total={2} onBack={step === "confirm" || (step === "ask" && trail.length > 0) ? back : undefined} />
           </>
         )}
 

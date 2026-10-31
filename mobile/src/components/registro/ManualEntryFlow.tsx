@@ -8,7 +8,7 @@ import { colorFor } from "@/lib/banks";
 import BankMark from "~/components/BankMark";
 import CategoryPicker from "~/components/CategoryPicker";
 import EntryForm, { todayIso, type EntryValues } from "~/components/registro/EntryForm";
-import { CategoryButton, Choice, EntryCard, GLASS, Primary, SavedView, dayLabel, nums, type Account, type Card } from "~/components/registro/entryParts";
+import { CategoryButton, Choice, EntryCard, GLASS, StepHeader, Primary, SavedView, dayLabel, nums, type Account, type Card } from "~/components/registro/entryParts";
 import { ChevronLeft, CreditCard, Landmark } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { suggestCategory } from "~/lib/categorize";
@@ -253,26 +253,7 @@ export default function ManualEntryFlow({
         {/* ── Where in it, and the way back ── */}
         {step !== "done" && (
           <>
-            <View style={{ minHeight: 30, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: "rgba(255,255,255,0.72)" }}>
-                {locked ? "NO CARTÃO" : "ADICIONAR"} · ETAPA {stageNo} DE {stages.length}
-              </Text>
-              {step !== "value" && (
-                <Pressable
-                  onPress={back}
-                  hitSlop={10}
-                  style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, height: 30, paddingLeft: 6, paddingRight: 11, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.08)", opacity: pressed ? 0.6 : 1 })}
-                >
-                  <ChevronLeft size={15} color="#fff" />
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#fff" }}>Voltar</Text>
-                </Pressable>
-              )}
-            </View>
-            <View style={{ marginTop: 8, flexDirection: "row", gap: 4 }}>
-              {stages.map((_, i) => i + 1).map((n) => (
-                <View key={n} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: n <= stageNo ? "#fff" : "rgba(255,255,255,0.12)" }} />
-              ))}
-            </View>
+            <StepHeader label={`${locked ? "NO CARTÃO" : "ADICIONAR"} · ETAPA ${stageNo} DE ${stages.length}`} stage={stageNo} total={stages.length} onBack={step !== "value" ? back : undefined} />
           </>
         )}
 
