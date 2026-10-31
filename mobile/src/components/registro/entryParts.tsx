@@ -1,6 +1,6 @@
-import { useRef, useState, type ComponentRef } from "react";
+import { useEffect, useRef, useState, type ComponentRef } from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View, type TextStyle } from "react-native";
-import Animated, { FadeIn } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, interpolateColor, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { categoryHex } from "@/lib/categoryData";
 import ParticleOrb from "~/components/registro/ParticleOrb";
@@ -160,6 +160,59 @@ export function Choice({ icon, label, wide, on, onPress }: { icon: React.ReactNo
       <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 16, fontWeight: "700", color: "#fff" }}>
         {label}
       </Text>
+    </Pressable>
+  );
+}
+
+/* The phone's own switch, measured: a 63×28 track, a 36×24 capsule inside it. */
+const TRACK_W = 63;
+const TRACK_H = 28;
+const KNOB_W = 36;
+const KNOB_H = 24;
+const INSET = 2;
+const TRAVEL = TRACK_W - KNOB_W - INSET * 2;
+const SWITCH_ON = "#67CD67";
+const SWITCH_OFF = "rgba(120,120,128,0.36)";
+
+/**
+ * On or off, the way the phone draws it now: a white capsule inside the track. Touched,
+ * the capsule swells into a lens of glass — clear, the track's colour showing through,
+ * a dark rim — slides across, and settles back to white; the track turns green behind it.
+ */
+export function Toggle({ value, onChange, label }: { value: boolean; onChange: (on: boolean) => void; label: string }) {
+  const at = useSharedValue(value ? 1 : 0);
+  const lens = useSharedValue(0);
+  useEffect(() => {
+    at.set(withSpring(value ? 1 : 0, { damping: 17, stiffness: 190, mass: 0.9 }));
+  }, [value, at]);
+
+  const flip = () => {
+    void Haptics.selectionAsync().catch(() => undefined);
+    lens.set(withSequence(withTiming(1, { duration: 140, easing: Easing.out(Easing.quad) }), withDelay(200, withTiming(0, { duration: 260, easing: Easing.inOut(Easing.quad) }))));
+    onChange(!value);
+  };
+
+  const track = useAnimatedStyle(() => ({ backgroundColor: interpolateColor(at.get(), [0, 1], [SWITCH_OFF, SWITCH_ON]) }));
+  const knob = useAnimatedStyle(() => {
+    const l = lens.get();
+    return {
+      backgroundColor: interpolateColor(l, [0, 1], ["rgba(255,255,255,1)", "rgba(255,255,255,0.16)"]),
+      borderColor: `rgba(20,22,26,${0.55 * l})`,
+      shadowOpacity: 0.22 + l * 0.2,
+      transform: [{ translateX: at.get() * TRAVEL }, { scaleX: 1 + l * 0.55 }, { scaleY: 1 + l * 0.75 }],
+    };
+  });
+
+  return (
+    <Pressable accessibilityRole="switch" accessibilityLabel={label} accessibilityState={{ checked: value }} hitSlop={8} onPress={flip}>
+      <Animated.View style={[{ width: TRACK_W, height: TRACK_H, borderRadius: TRACK_H / 2, padding: INSET, justifyContent: "center" }, track]}>
+        <Animated.View
+          style={[
+            { width: KNOB_W, height: KNOB_H, borderRadius: KNOB_H / 2, borderWidth: 1, shadowColor: "#000", shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+            knob,
+          ]}
+        />
+      </Animated.View>
     </Pressable>
   );
 }

@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Pressable, Switch, Text, TextInput, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { categoryHex } from "@/lib/categoryData";
 import { colorFor } from "@/lib/banks";
 import BankMark from "~/components/BankMark";
 import MonthCalendar from "~/components/eventos/MonthCalendar";
-import { Chip, Choice, PartsBar, REPEAT_LABEL, RepeatList, dayLabel, invoiceMonthOf, nums, type Account, type Card, type Kind, type Method, type Repeat } from "~/components/registro/entryParts";
+import { Chip, Choice, PartsBar, REPEAT_LABEL, RepeatList, Toggle, dayLabel, invoiceMonthOf, nums, type Account, type Card, type Kind, type Method, type Repeat } from "~/components/registro/entryParts";
 import { CalendarDays, Check, ChevronLeft, ChevronRight, CreditCard, Landmark, Repeat as RepeatIcon, Tag } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
@@ -15,10 +15,10 @@ import { AMBER, INCOME, INK } from "~/theme/tokens";
 /**
  * Everything about one entry on one page — the check of the guided entry, and the editor.
  *
- * Out or in at the top, then the amount, large; whether it is settled, a switch — off
- * until switched on — and on a card, which invoice it falls in; then the words. Under them
- * one group of rows — category, how it was paid, repetition, the day — each showing what
- * it is and opening its own choices under it when touched, one at a time.
+ * Out or in at the top, then the amount, large, and the words. Under them one group of
+ * rows: first whether it is settled — a switch, off until switched on; on a card, which
+ * invoice it falls in — then category, how it was paid, repetition, the day, each showing
+ * what it is and opening its own choices under it when touched, one at a time.
  */
 
 export type { Repeat };
@@ -123,26 +123,6 @@ export default function EntryForm({
           </Text>
         ) : null}
       </View>
-      {/* Whether it is settled — off until switched on. On a card, the invoice it falls in. */}
-      <View style={{ marginTop: 14, minHeight: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.04)" }}>
-        <RowMark>{credit ? <CreditCard size={15} color="#fff" strokeWidth={2.1} /> : <Check size={15} color="#fff" strokeWidth={2.4} />}</RowMark>
-        {credit ? (
-          <Text style={{ flex: 1, fontSize: 14.5, color: INK.soft }}>
-            Entra na fatura de <Text style={{ fontWeight: "700", color: "#fff" }}>{invoiceMonthOf(v.date, card?.closing_day).label}</Text>
-            {card ? ` do ${card.name}` : ""}
-          </Text>
-        ) : (
-          <>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{income ? "Já recebi" : "Já está pago"}</Text>
-              <Text style={{ marginTop: 1, fontSize: 12.5, color: INK.soft }}>
-                {v.status === "pago" ? (income ? "Entrou na conta" : "Saiu da conta") : isAhead(v.date) ? "Agendado" : income ? "A receber" : "Pendente"}
-              </Text>
-            </View>
-            <Switch value={v.status === "pago"} onValueChange={(on) => onChange({ status: on ? "pago" : "pendente" })} trackColor={{ true: "rgba(79,216,164,0.45)", false: "rgba(255,255,255,0.14)" }} ios_backgroundColor="rgba(255,255,255,0.14)" thumbColor="#fff" />
-          </>
-        )}
-      </View>
       <TextInput
         value={v.name}
         onChangeText={(name) => onChange({ name })}
@@ -152,10 +132,36 @@ export default function EntryForm({
         style={{ marginTop: 14, height: 50, borderRadius: 18, paddingHorizontal: 16, textAlign: "center", fontSize: 17, fontWeight: "600", color: "#fff", backgroundColor: "rgba(255,255,255,0.06)" }}
       />
 
-      {/* What it is, how it was paid, whether it repeats, the day */}
+      {/* Whether it is settled, then what it is, how it was paid, whether it repeats, the day */}
       <View style={{ marginTop: 14, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.04)", overflow: "hidden" }}>
+        {credit ? (
+          <View style={{ minHeight: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
+            <RowMark>
+              <CreditCard size={15} color="#fff" strokeWidth={2.1} />
+            </RowMark>
+            <Text style={{ flex: 1, fontSize: 14.5, color: INK.soft }}>
+              Entra na fatura de <Text style={{ fontWeight: "700", color: "#fff" }}>{invoiceMonthOf(v.date, card?.closing_day).label}</Text>
+              {card ? ` do ${card.name}` : ""}
+            </Text>
+          </View>
+        ) : (
+          <Pressable
+            onPress={() => onChange({ status: v.status === "pago" ? "pendente" : "pago" })}
+            style={({ pressed }) => ({ minHeight: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: pressed ? "rgba(255,255,255,0.06)" : "transparent" })}
+          >
+            <RowMark>
+              <Check size={15} color="#fff" strokeWidth={2.4} />
+            </RowMark>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{income ? "Já recebi" : "Já está pago"}</Text>
+              <Text style={{ marginTop: 1, fontSize: 12.5, color: INK.soft }}>
+                {v.status === "pago" ? (income ? "Entrou na conta" : "Saiu da conta") : isAhead(v.date) ? "Agendado" : income ? "A receber" : "Pendente"}
+              </Text>
+            </View>
+            <Toggle value={v.status === "pago"} onChange={(on) => onChange({ status: on ? "pago" : "pendente" })} label={income ? "Já recebi" : "Já está pago"} />
+          </Pressable>
+        )}
         <Row
-          first
           icon={
             <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
               <CatIcon size={15} color={chipInk(hex)} strokeWidth={2.2} />

@@ -303,9 +303,7 @@ export default function ManualEntryFlow({
               autoFocus
               value={money(v.cents / 100)}
               onChangeText={(t) => set({ cents: Math.min(Number(t.replace(/\D/g, "") || "0"), 99999999) })}
-              onSubmitEditing={() => v.cents > 0 && setStep("ask")}
               keyboardType="number-pad"
-              returnKeyType="next"
               style={[nums, { marginTop: 14, height: 64, borderRadius: 20, paddingHorizontal: 18, fontSize: 34, fontWeight: "800", letterSpacing: -1, color: income ? INCOME : "#fff", backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: v.cents > 0 ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)" }]}
             />
             <Primary
