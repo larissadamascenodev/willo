@@ -57,6 +57,12 @@
         }
       ],
       [
+        "expo-media-library",
+        {
+          "savePhotosPermission": "O Willo salva na sua galeria os comprovantes que você pedir para salvar."
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "O Willo usa suas fotos para ler comprovantes e para a capa dos seus cofrinhos, só as que você escolher."
