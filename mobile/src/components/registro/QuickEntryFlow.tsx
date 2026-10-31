@@ -596,7 +596,7 @@ export default function QuickEntryFlow({
                   value={money(cents / 100)}
                   onChangeText={(t) => setCents(Math.min(Number(t.replace(/\D/g, "") || "0"), 99999999))}
                   keyboardType="number-pad"
-                  style={[nums, { flex: 1, padding: 0, fontSize: 30, fontWeight: "800", letterSpacing: -1, color: type === "receita" ? GREEN : "#FF8A9A" }]}
+                  style={[nums, { flex: 1, minWidth: 0, padding: 0, fontSize: 30, fontWeight: "800", letterSpacing: -1, color: type === "receita" ? GREEN : "#FF8A9A" }]}
                 />
                 {/* On a card: at once or in instalments, changed on the card */}
                 {credit && (
