@@ -30,6 +30,7 @@ import { boardAnswer, buildBoard, radarForAssistant, type BoardLine } from "~/li
 import { saveChat, type ChatItem, type SavedChat } from "~/lib/willoChats";
 import { voiced } from "~/lib/voiceTone";
 import { face } from "~/lib/chatFont";
+import { pauseAfter, splitReply, TYPING_STARTS_AFTER, typingMs } from "~/lib/chatText";
 import AgentMark from "~/components/willo/AgentMark";
 import { AGENTS } from "~/lib/agents";
 import { useWilloPrefs } from "~/lib/willoPrefs";
@@ -123,6 +124,7 @@ const shrinkIn = () => {
 const CAPTION_H = 100;
 
 const uid = () => Math.random().toString(36).slice(2, 10);
+const isHisMessage = (item?: Item) => item?.kind === "msg" && item.role === "bot";
 
 /** Examples that between them show the range: one thing, several, income, card, a past day. */
 const EXAMPLES: { text: string; category: string }[] = [
@@ -214,11 +216,16 @@ export default function Registro() {
   const threadRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
 
-  const pushBot = useCallback(
+  /* His reply in short messages, each written out before the next begins; done when the last is. */
+  const pushBot = useCallback(async (t: string, extra?: { agents?: string[]; instant?: boolean }) => {
+    const chat = chatId.current;
     /* A negative figure stays whole when the line breaks. */
-    (t: string, extra?: { agents?: string[]; instant?: boolean }) => setItems((m) => [...m, { kind: "msg", id: uid(), role: "bot", text: t.replace(/-R\$[\s ]?/g, "−R$ "), ...extra }]),
-    [],
-  );
+    for (const part of splitReply(t.replace(/-R\$[\s\u00A0]?/g, "\u2212R$\u00A0"))) {
+      if (chatId.current !== chat) return;
+      setItems((m) => [...m, { kind: "msg", id: uid(), role: "bot", text: part, ...extra }]);
+      await new Promise((r) => setTimeout(r, typingMs(part) + 320));
+    }
+  }, []);
   const installmentsRef = useRef<ActiveInstallmentItem[] | null>(null);
   const pushUser = useCallback((t: string) => setItems((m) => [...m, { kind: "msg", id: uid(), role: "user", text: t }]), []);
 
@@ -411,10 +418,9 @@ export default function Registro() {
 
   const board = useMemo(() => (radar && !snapshotLoading ? buildBoard(radar, build() as never) : []), [radar, snapshotLoading, build]);
 
-  /** The picture that goes with an answer, once the words have been written out, not over them. */
+  /** The picture that goes with an answer, for once the words have been written out. */
   const showCards = useCallback(
-    async (said: string, after: string, simulation: Simulation | null = null) => {
-      await new Promise((r) => setTimeout(r, Math.min(2600, 16 * Math.min(after.length, 120) + 250)));
+    async (said: string, simulation: Simulation | null = null) => {
       const cards = await cardsFor(said, { snapshot: build() as never, categories: monthData.categories ?? [], installments: installmentsRef.current, simulation });
       if (cards.length) setItems((m) => [...m, ...cards.map((card) => ({ kind: "card" as const, id: uid(), card }))]);
     },
@@ -426,8 +432,7 @@ export default function Registro() {
     (line: BoardLine) => {
       const reply = voiced(line.answer, line.mood);
       turns.current.push({ role: "assistant", content: reply });
-      pushBot(reply);
-      void showCards(line.ask, reply);
+      void pushBot(reply).then(() => showCards(line.ask));
     },
     [pushBot, showCards],
   );
@@ -452,8 +457,9 @@ export default function Registro() {
         if (local) {
           const reply = voiced(local.text, local.mood);
           turns.current.push({ role: "assistant", content: reply });
-          pushBot(reply);
-          void showCards(said, reply);
+          setThinking(null);
+          await pushBot(reply);
+          await showCards(said);
           return;
         }
         const sent = turns.current.slice(-8).map((t, i, all) => (i === all.length - 1 ? { ...t, content: converseAsking(t.content) } : t));
@@ -461,9 +467,10 @@ export default function Registro() {
         const { reply: raw, simulation } = await askWilloFull(sent, snapshot, profile?.display_name ?? null);
         const reply = tidyReply(raw);
         turns.current.push({ role: "assistant", content: reply });
-        pushBot(reply);
-        /* A picture only beside an answer about her money: "receita de bolo" is not about income. */
-        if (simulation || /R\$/.test(reply)) void showCards(said, reply, simulation);
+        setThinking(null);
+        await pushBot(reply);
+        /* A picture only beside an answer about the person's money: "receita de bolo" is not about income. */
+        if (simulation || /R\$/.test(reply)) await showCards(said, simulation);
       } catch (err) {
         pushBot(err instanceof Error ? err.message : "Não consegui falar com o Willo agora. Tenta de novo?");
       } finally {
@@ -625,8 +632,8 @@ export default function Registro() {
     justSaved.current = null;
     setItems((m) => [...m, { kind: "receipt", id: uid(), line: saved.line, when: saved.when }]);
     const { name, category, amount, type, installments, day, repeat, scheduled } = saved.line;
-    void commentAfter({ name, category, amount, type, installments, day: day ?? saved.when.toISOString().slice(0, 10), repeat: repeat ?? "unica", scheduled }).then((said) => pushBot(said));
-  }, [entry.state, pushBot]);
+    void commentAfter({ name, category, amount, type, installments, day: day ?? saved.when.toISOString().slice(0, 10), repeat: repeat ?? "unica", scheduled }, radar?.forecast.endBalance).then((said) => pushBot(said));
+  }, [entry.state, pushBot, radar]);
 
   /* What was written lands in the thread as a line from him once it is in. */
   const lastSaved = useRef<string | null>(null);
@@ -859,7 +866,7 @@ export default function Registro() {
             onContentSizeChange={() => threadRef.current?.scrollToEnd({ animated: true })}
             showsVerticalScrollIndicator={false}
           >
-            {items.map((item) =>
+            {items.map((item, at) =>
               item.kind === "done" ? (
                 <View key={item.id} style={{ paddingVertical: 4 }}>
                   <Confirmado text={item.text} total={item.total} income={item.income} />
@@ -875,6 +882,7 @@ export default function Registro() {
                   key={item.id}
                   role={item.role}
                   text={item.text}
+                  named={!isHisMessage(items[at - 1])}
                   avatar={item.id === lastBotId && !busy && !listening && !reading}
                   instant={typedRef.current.has(item.id)}
                   onDone={() => typedRef.current.add(item.id)}
@@ -1146,6 +1154,7 @@ function Chip({
 function Bubble({
   role,
   text,
+  named = false,
   avatar = false,
   instant = false,
   onTyped,
@@ -1153,6 +1162,8 @@ function Bubble({
 }: {
   role: "bot" | "user";
   text: string;
+  /** The first of his messages in a row carries his name, as in any chat. */
+  named?: boolean;
   /** The sphere beside his latest words. */
   avatar?: boolean;
   /** Already typed out once: shown whole. */
@@ -1166,9 +1177,16 @@ function Bubble({
   const typing = shown < text.length;
   useEffect(() => {
     if (mine || instant) return;
-    const step = Math.max(1, Math.round(text.length / 120));
-    const iv = setInterval(() => setShown((n) => Math.min(text.length, n + step)), 16);
-    return () => clearInterval(iv);
+    /* One letter at a time, stopping a moment at the end of a phrase, as if writing live. */
+    let n = 0;
+    let t: ReturnType<typeof setTimeout>;
+    const write = () => {
+      n += 1;
+      setShown(n);
+      if (n < text.length) t = setTimeout(write, pauseAfter(text[n - 1]));
+    };
+    t = setTimeout(write, TYPING_STARTS_AFTER);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text]);
   useEffect(() => {
@@ -1211,6 +1229,7 @@ function Bubble({
         }}
       >
         {!mine && <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />}
+        {!mine && named && <Text style={{ marginBottom: 3, fontSize: 14, letterSpacing: -0.1, ...face(800), color: "#fff" }}>Willo</Text>}
         <Text style={{ fontSize: 16, lineHeight: 23, letterSpacing: -0.15, ...face(mine ? 600 : 500), color: mine ? "#0B0B0B" : "rgba(255,255,255,0.95)" }}>
           {mine ? text : <Rich text={text} shown={shown} />}
         </Text>

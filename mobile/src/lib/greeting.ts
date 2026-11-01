@@ -47,7 +47,7 @@ const ASKS = [
 ];
 
 /** Things to go on to once he has said hello. */
-const NEXT: Greeting[] = [
+export const NEXT: Greeting[] = [
   { title: "Pensando em comprar algo?", sub: "Me diz o valor e eu vejo se cabe." },
   { title: "Gastou agora há pouco?", sub: "Fala que eu anoto na hora." },
   { title: "Quer saber quanto sobra?", sub: "É só perguntar." },

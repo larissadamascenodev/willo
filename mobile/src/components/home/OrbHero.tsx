@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, View, useWindowDimensions } from "react-native";
 import { useRouter } from "expo-router";
 import Animated, {
@@ -18,10 +18,13 @@ import ParticleOrb, { type OrbMode } from "~/components/registro/ParticleOrb";
 import VoiceEntrySheet from "~/components/registro/VoiceEntrySheet";
 import AssistantAsk from "~/components/home/AssistantAsk";
 import { GLYPHS } from "~/components/home/Stories";
-import { ChevronRight, Mic } from "~/components/icons";
+import { ChevronRight, Mic, Sparkles } from "~/components/icons";
 import { routeFor, type AssistantRoute } from "~/lib/assistantAsk";
 import { useVoiceEntry } from "~/lib/voiceEntry";
 import { useTapOrDouble } from "~/lib/doubleTap";
+import { face } from "~/lib/chatFont";
+import { NEXT } from "~/lib/greeting";
+import { BlurView } from "expo-blur";
 import { GREEN, INK } from "~/theme/tokens";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import Sun from "lucide-react-native/icons/sun";
@@ -29,9 +32,10 @@ import Sun from "lucide-react-native/icons/sun";
 /**
  * The top of the home, with Willo in it.
  *
- * The sphere floats, turning slowly, and under it the app says what it has noticed
- * — the same readings the stories carry, one at a time, as though he were telling
- * you. So it is three things at once: the assistant that has something to say, the
+ * The sphere floats, and under it he sends messages: what he has noticed in the
+ * person's numbers, the same readings the stories carry and so always current, mixed
+ * with things worth asking him, in a new order each time, so it does not sound like a
+ * loop. So it is three things at once: the assistant that has something to say, the
  * quickest way into Registro rápido, and someone to ask.
  *
  * Touch the sphere and it turns; tap it and it swells and listens, and stops by
@@ -49,14 +53,23 @@ import Sun from "lucide-react-native/icons/sun";
 /* The sphere as large as the room allows, with everything else packed under it in
    rows of fixed height — so that whatever is on show, a reading, an answer, the word
    that he is listening, the page does not move and nothing is taller than the rest. */
-const ORB = 300;
+const ORB = 250;
 const HINT = 0;
-/** Two lines of reading under a label; or three of an answer. */
-const CAPTION = 64;
+/** His message: his name, two lines of it and a line under them. */
+const CAPTION = 114;
 /** Under that: where you are in the readings, or the one thing the moment offers. */
 const FOOT = 28;
 /** What this takes of the screen, for the home to leave room for. */
 export const ORB_HERO_BODY = 4 + ORB + 6 + CAPTION + 4 + FOOT + 8;
+
+/** One message under the sphere. */
+interface Message {
+  id: string;
+  body: { text: string; bold?: boolean }[];
+  foot: string;
+  /** A reading's own mark; none on what is only something to ask. */
+  icon: string | null;
+}
 
 /** The answer to a question, from asking to being read. */
 type Talk =
@@ -98,9 +111,28 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
   const listening = entry.state === "listening";
   const reading = entry.state === "reading";
   const busy = entry.state !== "idle";
-  const count = slides.length;
+  /* What he has noticed, with something to ask him after every two. The order of those is
+     chosen once, so the readings can update under them without the rest jumping about. */
+  const [asks] = useState(() => [...NEXT].sort(() => Math.random() - 0.5));
+  const messages = useMemo(() => {
+    const out: Message[] = [];
+    let a = 0;
+    slides.forEach((s, n) => {
+      out.push({ id: s.id, body: s.body, foot: s.quip ?? s.label, icon: s.icon });
+      if (n % 2 === 1 && a < asks.length) {
+        const ask = asks[a++];
+        out.push({ id: `ask-${a}`, body: [{ text: ask.title, bold: true }], foot: ask.sub, icon: null });
+      }
+    });
+    while (a < asks.length && out.length < 4) {
+      const ask = asks[a++];
+      out.push({ id: `ask-${a}`, body: [{ text: ask.title, bold: true }], foot: ask.sub, icon: null });
+    }
+    return out;
+  }, [slides, asks]);
+  const count = messages.length;
   const i = Math.min(index, Math.max(count - 1, 0));
-  const slide = slides[i];
+  const slide = messages[i];
   const mode: OrbMode = listening ? "listening" : reading || talk?.phase === "thinking" ? "thinking" : "idle";
   /* As large as the width allows with a margin each side, so it is never cut. */
   const orb = Math.min(ORB, width - 72);
@@ -139,7 +171,7 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
   const onFail = useCallback((reason: string) => setTalk((t) => (t ? { phase: "typing", text: reason, route: null, failed: true } : t)), []);
   const typed = useCallback(() => setTalk((t) => (t && t.phase === "typing" ? { ...t, phase: "done" } : t)), []);
 
-  const Icon = slide ? (GLYPHS[slide.icon] ?? Sun) : Sun;
+  const Icon = slide?.icon ? (GLYPHS[slide.icon] ?? Sun) : Sparkles;
 
   /* One tap listens; two open Registro rápido. While listening, a tap stops at once. */
   const tapOrDouble = useTapOrDouble(
@@ -193,24 +225,16 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
           </Animated.View>
         ) : slide ? (
           <Animated.View key={slide.id} entering={FadeIn.duration(420)} style={{ alignSelf: "stretch", alignItems: "center" }}>
-            <Pressable onPress={() => setIndex((n) => (n + 1) % Math.max(count, 1))} style={{ alignSelf: "stretch", alignItems: "center", paddingHorizontal: 8 }}>
-              {/* Every reading takes the same room: a label on one line and the reading
-                  on two. A long one is set a little smaller rather than a third line. */}
-              <View style={{ height: 14, flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Icon size={12} color={slide.accent} strokeWidth={2.3} />
-                <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: "600", letterSpacing: 1.4, textTransform: "uppercase", color: INK.soft, flexShrink: 1 }}>
-                  {slide.label}
-                </Text>
-              </View>
-              <Text
-                numberOfLines={2}
-                adjustsFontSizeToFit
-                minimumFontScale={0.8}
-                style={{ marginTop: 6, height: 44, fontSize: 15.5, fontWeight: "500", lineHeight: 21, letterSpacing: -0.2, color: "rgba(255,255,255,0.76)", textAlign: "center" }}
-              >
+            <Pressable
+              onPress={() => setIndex((n) => (n + 1) % Math.max(count, 1))}
+              style={{ alignSelf: "stretch", marginHorizontal: 20, paddingHorizontal: 16, paddingVertical: 11, borderRadius: 22, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.06)" }}
+            >
+              <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+              <Text style={{ fontSize: 13.5, letterSpacing: -0.1, ...face(800), color: "#fff" }}>Willo</Text>
+              <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 2, fontSize: 16, lineHeight: 21, letterSpacing: -0.2, ...face(600), color: "rgba(255,255,255,0.9)" }}>
                 {slide.body.map((part, n) =>
                   part.bold ? (
-                    <Text key={n} style={{ fontWeight: "800", color: "#fff" }}>
+                    <Text key={n} style={{ ...face(800), color: "#fff" }}>
                       {part.text}
                     </Text>
                   ) : (
@@ -218,6 +242,12 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
                   ),
                 )}
               </Text>
+              <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Icon size={13} color={INK.soft} strokeWidth={2.2} />
+                <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, ...face(500), color: INK.soft }}>
+                  {slide.foot}
+                </Text>
+              </View>
             </Pressable>
           </Animated.View>
         ) : (
@@ -259,12 +289,6 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
               <ChevronRight size={14} color="#fff" />
             </Pressable>
           </Animated.View>
-        ) : !busy && !talk && count > 1 ? (
-          <View style={{ flexDirection: "row", gap: 4, alignItems: "center" }}>
-            {slides.map((s, n) => (
-              <View key={s.id + n} style={{ width: n === i ? 14 : 4, height: 4, borderRadius: 2, backgroundColor: n === i ? "rgba(255,255,255,0.75)" : "rgba(255,255,255,0.22)" }} />
-            ))}
-          </View>
         ) : null}
       </View>
 
