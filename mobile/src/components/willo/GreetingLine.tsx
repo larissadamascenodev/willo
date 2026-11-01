@@ -44,7 +44,7 @@ export default function GreetingLine({ name, notice }: { name: string | null; no
       setChosen(greetings(name));
       return;
     }
-    const t = setTimeout(() => setChosen(greetings(null)), 1500);
+    const t = setTimeout(() => setChosen(greetings(null)), 4000);
     return () => clearTimeout(t);
   }, [name, chosen]);
   const lines = chosen ? (notice ? [chosen[0], { title: "Vi uma coisa no Radar.", sub: notice }, ...chosen.slice(1)] : chosen) : [];
