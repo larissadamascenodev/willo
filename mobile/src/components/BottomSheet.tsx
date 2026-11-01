@@ -100,7 +100,8 @@ export default function BottomSheet({
             left: 0,
             right: 0,
             bottom: lift,
-            maxHeight: full ? "92%" : "72%",
+            /* Never up under the status bar, however tall the content. */
+            maxHeight: full ? Math.min(height * 0.92, height - insets.top - 16) : "72%",
             borderTopLeftRadius: 30,
             borderTopRightRadius: 30,
             borderCurve: "continuous",

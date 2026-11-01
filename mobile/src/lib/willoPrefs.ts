@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * How Willo talks to this person, and which of his specialists are at work.
+ * How Willo talks to this person.
  *
  * Kept on the phone for now, read from the same synchronous store the home's choices
  * use, and sent with every question so the assistant answers in the chosen voice. The
@@ -32,8 +32,8 @@ const read = (): WilloPrefs => {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULTS;
     const saved = JSON.parse(raw) as Partial<WilloPrefs>;
-    /* Argos checks the numbers; he is never switched off. */
-    return { ...DEFAULTS, ...saved, agents: { ...DEFAULTS.agents, ...(saved.agents ?? {}), argos: true } };
+    /* All his specialties are always at work: a choice saved when they could be switched off no longer counts. */
+    return { ...DEFAULTS, ...saved, agents: DEFAULTS.agents };
   } catch {
     return DEFAULTS;
   }
