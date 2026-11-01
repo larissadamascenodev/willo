@@ -88,6 +88,7 @@ export default function ParticleOrb({
   const angle = useSharedValue(0);
   const tilt = useSharedValue(TILT);
   const clock = useSharedValue(0);
+  const drawnAt = useSharedValue(0);
   const breath = useSharedValue(mode === "listening" ? 1 : 0);
   const breathTarget = useSharedValue(mode === "listening" ? 1 : 0);
 
@@ -127,6 +128,11 @@ export default function ParticleOrb({
     const ease = Math.min(1, dt * 3);
     breath.set(breath.get() + (breathTarget.get() - breath.get()) * ease);
     clock.set(clock.get() + dt);
+    /* The points drift slowly: redrawing them a few times a second is enough, and leaves
+       the frame free for whatever else is on the screen. Faster while it breathes. */
+    if (clock.get() - drawnAt.get() > (breath.get() > 0.02 ? 0.05 : 0.14)) {
+      drawnAt.set(clock.get());
+    }
 
     if (held.get() === 0) {
       /* Let go: the flick carries on and fades, and the tilt settles back. */
@@ -234,7 +240,7 @@ export default function ParticleOrb({
   /* One pass over the points per frame, written into three paths by depth. */
   const paths = useDerivedValue(() => {
     const a = angle.get();
-    const t = clock.get();
+    const t = drawnAt.get();
     const pulse = 1 + breath.get() * (0.045 * Math.sin(t * 5.2) + 0.02 * Math.sin(t * 8.3));
     const ca = Math.cos(a);
     const sa = Math.sin(a);

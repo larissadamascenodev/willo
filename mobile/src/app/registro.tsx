@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef, type ComponentType, type ReactNode } from "react";
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown, LinearTransition, withTiming } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
@@ -31,7 +31,8 @@ import { saveChat, type ChatItem, type SavedChat } from "~/lib/willoChats";
 import { voiced } from "~/lib/voiceTone";
 import { face } from "~/lib/chatFont";
 import { parseCommand, runCommand } from "~/lib/chatCommands";
-import { pauseAfter, splitReply, TYPING_STARTS_AFTER, typingMs } from "~/lib/chatText";
+import { splitReply, typingMs } from "~/lib/chatText";
+import ChatBubble from "~/components/willo/ChatBubble";
 import AgentMark from "~/components/willo/AgentMark";
 import { AGENTS } from "~/lib/agents";
 import { useWilloPrefs } from "~/lib/willoPrefs";
@@ -167,6 +168,10 @@ export default function Registro() {
   const historyRef = useRef<Record<string, string>>({});
   const entry = useVoiceEntry({ onQuestion: (said) => askRef.current(said), history: () => historyRef.current });
   const { build, loading: snapshotLoading } = useAssistantSnapshot();
+  /* Always the latest: a question can be waiting for the numbers while they arrive, and the
+     build it started with would still see them empty, and say so as a fact. */
+  const buildRef = useRef(build);
+  buildRef.current = build;
   const turns = useRef<Turn[]>([]);
   const snapshotReady = useRef(true);
   snapshotReady.current = !snapshotLoading;
@@ -217,14 +222,22 @@ export default function Registro() {
   const threadRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
 
+  const written = useRef(new Map<string, () => void>());
   /* His reply in short messages, each written out before the next begins; done when the last is. */
   const pushBot = useCallback(async (t: string, extra?: { agents?: string[]; instant?: boolean }) => {
     const chat = chatId.current;
     /* A negative figure stays whole when the line breaks. */
     for (const part of splitReply(t.replace(/-R\$[\s\u00A0]?/g, "\u2212R$\u00A0"))) {
       if (chatId.current !== chat) return;
-      setItems((m) => [...m, { kind: "msg", id: uid(), role: "bot", text: part, ...extra }]);
-      await new Promise((r) => setTimeout(r, typingMs(part) + 320));
+      const id = uid();
+      setItems((m) => [...m, { kind: "msg", id, role: "bot", text: part, ...extra }]);
+      /* The next one starts only when this one has really finished, with a time limit in case
+         it is off the screen and never does. */
+      await new Promise<void>((r) => {
+        written.current.set(id, r);
+        setTimeout(r, typingMs(part) * 2 + 2000);
+      });
+      await new Promise((r) => setTimeout(r, 180));
     }
   }, []);
   const installmentsRef = useRef<ActiveInstallmentItem[] | null>(null);
@@ -422,10 +435,10 @@ export default function Registro() {
   /** The picture that goes with an answer, for once the words have been written out. */
   const showCards = useCallback(
     async (said: string, simulation: Simulation | null = null) => {
-      const cards = await cardsFor(said, { snapshot: build() as never, categories: monthData.categories ?? [], installments: installmentsRef.current, simulation });
+      const cards = await cardsFor(said, { snapshot: buildRef.current() as never, categories: monthData.categories ?? [], installments: installmentsRef.current, simulation });
       if (cards.length) setItems((m) => [...m, ...cards.map((card) => ({ kind: "card" as const, id: uid(), card }))]);
     },
-    [build, monthData],
+    [monthData],
   );
 
   /** A line of the Radar, said and answered from its own numbers. */
@@ -469,7 +482,7 @@ export default function Registro() {
            the truth; past that, he goes without them and looks up what he needs. */
         for (let n = 0; n < 12 && !snapshotReady.current; n++) await new Promise((r) => setTimeout(r, 250));
         const ready = snapshotReady.current;
-        const local = ready ? localAnswer(said, build() as never, installmentsRef.current) : null;
+        const local = ready ? localAnswer(said, buildRef.current() as never, installmentsRef.current) : null;
         if (local) {
           const reply = voiced(local.text, local.mood);
           turns.current.push({ role: "assistant", content: reply });
@@ -479,7 +492,7 @@ export default function Registro() {
           return;
         }
         const sent = turns.current.slice(-8).map((t, i, all) => (i === all.length - 1 ? { ...t, content: converseAsking(t.content) } : t));
-        const snapshot = ready ? { ...(build() as object), ...(radar ? { radar: radarForAssistant(radar) } : {}) } : null;
+        const snapshot = ready ? { ...(buildRef.current() as object), ...(radar ? { radar: radarForAssistant(radar) } : {}) } : null;
         const { reply: raw, simulation } = await askWilloFull(sent, snapshot, profile?.display_name ?? null);
         const reply = tidyReply(raw);
         turns.current.push({ role: "assistant", content: reply });
@@ -493,7 +506,7 @@ export default function Registro() {
         setThinking(null);
       }
     },
-    [build, pushBot, showCards, answerLine, board, radar, profile, categories, user],
+    [pushBot, showCards, answerLine, board, radar, profile, categories, user],
   );
 
   /* The conversation is kept as it goes, so leaving at any point loses nothing. */
@@ -533,6 +546,16 @@ export default function Registro() {
     pushUser(said);
     void converse(said);
   };
+
+  /* A question put to him from the home: the conversation opens with it already asked. */
+  const { ask } = useLocalSearchParams<{ ask?: string }>();
+  const askedFromHome = useRef(false);
+  useEffect(() => {
+    if (!ask || askedFromHome.current || (categories.length === 0 && snapshotLoading)) return;
+    askedFromHome.current = true;
+    pushUser(ask);
+    void converse(ask);
+  }, [ask, categories, snapshotLoading, pushUser, converse]);
 
   /* Tapped on the Radar: over to the conversation, already answered. */
   const askFromBoard = useCallback(
@@ -894,15 +917,18 @@ export default function Registro() {
               ) : item.kind === "card" ? (
                 <AnswerCardView key={item.id} card={item.card} />
               ) : item.kind === "msg" ? (
-                <Bubble
+                <ChatBubble
                   key={item.id}
                   role={item.role}
                   text={item.text}
                   named={!isHisMessage(items[at - 1])}
                   avatar={item.id === lastBotId && !busy && !listening && !reading}
                   instant={typedRef.current.has(item.id)}
-                  onDone={() => typedRef.current.add(item.id)}
-                  onTyped={() => threadRef.current?.scrollToEnd({ animated: false })}
+                  onDone={() => {
+                    typedRef.current.add(item.id);
+                    written.current.get(item.id)?.();
+                    written.current.delete(item.id);
+                  }}
                 />
               ) : (
                 <View key={item.id} style={{ paddingVertical: 6 }}>
@@ -1164,119 +1190,6 @@ function Chip({
         {label}
       </Text>
     </Pressable>
-  );
-}
-
-function Bubble({
-  role,
-  text,
-  named = false,
-  avatar = false,
-  instant = false,
-  onTyped,
-  onDone,
-}: {
-  role: "bot" | "user";
-  text: string;
-  /** The first of his messages in a row carries his name, as in any chat. */
-  named?: boolean;
-  /** The sphere beside his latest words. */
-  avatar?: boolean;
-  /** Already typed out once: shown whole. */
-  instant?: boolean;
-  onTyped?: () => void;
-  onDone?: () => void;
-}) {
-  const mine = role === "user";
-  /* His words arrive as he writes them, once; yours are already written. */
-  const [shown, setShown] = useState(mine || instant ? text.length : 0);
-  const typing = shown < text.length;
-  useEffect(() => {
-    if (mine || instant) return;
-    /* One letter at a time, stopping a moment at the end of a phrase, as if writing live. */
-    let n = 0;
-    let t: ReturnType<typeof setTimeout>;
-    const write = () => {
-      n += 1;
-      setShown(n);
-      if (n < text.length) t = setTimeout(write, pauseAfter(text[n - 1]));
-    };
-    t = setTimeout(write, TYPING_STARTS_AFTER);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text]);
-  useEffect(() => {
-    if (mine) return;
-    if (typing) onTyped?.();
-    else onDone?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shown]);
-
-  return (
-    <Animated.View
-      entering={FadeInDown.duration(260)}
-      style={{ flexDirection: "row", alignItems: "flex-end", gap: 8, justifyContent: mine ? "flex-end" : "flex-start" }}
-    >
-      {!mine && (
-        <View style={{ width: 28, height: 28 }}>
-          {avatar && (
-            <Animated.View entering={FadeIn.duration(300)}>
-              <ParticleOrb size={28} mode={typing ? "thinking" : "idle"} />
-            </Animated.View>
-          )}
-        </View>
-      )}
-      <View
-        style={{
-          maxWidth: mine ? "84%" : "82%",
-          paddingHorizontal: 15,
-          paddingVertical: 11,
-          borderRadius: 22,
-          borderCurve: "continuous",
-          overflow: "hidden",
-          ...(mine
-            ? { borderBottomRightRadius: 7, backgroundColor: "#fff" }
-            : {
-                borderBottomLeftRadius: 7,
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.09)",
-                backgroundColor: "rgba(255,255,255,0.07)",
-              }),
-        }}
-      >
-        {!mine && <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />}
-        {!mine && named && <Text style={{ marginBottom: 3, fontSize: 14, letterSpacing: -0.1, ...face(800), color: "#fff" }}>Willo</Text>}
-        <Text style={{ fontSize: 16, lineHeight: 23, letterSpacing: -0.15, ...face(mine ? 600 : 500), color: mine ? "#0B0B0B" : "rgba(255,255,255,0.95)" }}>
-          {mine ? text : <Rich text={text} shown={shown} />}
-        </Text>
-      </View>
-    </Animated.View>
-  );
-}
-
-/**
- * **Bold** and plain runs, typed up to `shown`; the rest laid out invisibly so the
- * bubble keeps its final size while the words arrive.
- */
-function Rich({ text, shown }: { text: string; shown: number }) {
-  const parts: { t: string; bold: boolean }[] = [];
-  text.split("**").forEach((t, i) => t && parts.push({ t, bold: i % 2 === 1 }));
-  let left = shown;
-  return (
-    <>
-      {parts.map((p, i) => {
-        const seen = p.t.slice(0, Math.max(0, left));
-        const unseen = p.t.slice(seen.length);
-        left -= p.t.length;
-        const style = p.bold ? { ...face(800), color: "#fff" } : undefined;
-        return (
-          <Text key={i} style={style}>
-            {seen}
-            {unseen ? <Text style={{ color: "transparent" }}>{unseen}</Text> : null}
-          </Text>
-        );
-      })}
-    </>
   );
 }
 

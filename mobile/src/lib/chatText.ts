@@ -26,19 +26,25 @@ export function splitReply(reply: string): string[] {
   return parts.length ? parts : [reply];
 }
 
-/** How long to wait after this character before the next. */
-export function pauseAfter(char: string): number {
-  if (/[.!?…]/.test(char)) return 240;
-  if (/[,;:]/.test(char)) return 110;
-  if (char === "\n") return 200;
-  return 24;
+/** Where each word ends: the text comes a word at a time, not a letter. */
+export function wordEnds(text: string): number[] {
+  const ends: number[] = [];
+  const word = /\S+\s*/g;
+  while (word.exec(text)) ends.push(word.lastIndex);
+  return ends.length ? ends : [text.length];
+}
+
+/** How long to wait after the word ending here, a moment longer at the end of a phrase. */
+export function pauseAfterWord(text: string, end: number): number {
+  const last = text.slice(0, end).trimEnd().slice(-1);
+  if (/[.!?…]/.test(last)) return 230;
+  if (/[,;:]/.test(last)) return 130;
+  return 75;
 }
 
 export const TYPING_STARTS_AFTER = 120;
 
-/** How long a message takes to write out. */
+/** About how long a message takes to write out. */
 export function typingMs(text: string): number {
-  let ms = TYPING_STARTS_AFTER;
-  for (const char of text) ms += pauseAfter(char);
-  return ms;
+  return wordEnds(text).reduce((ms, end) => ms + pauseAfterWord(text, end), TYPING_STARTS_AFTER);
 }
