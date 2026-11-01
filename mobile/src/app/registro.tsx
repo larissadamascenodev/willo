@@ -29,6 +29,7 @@ import { useRaioX, type RaioXData } from "@/hooks/useRaioX";
 import { boardAnswer, buildBoard, radarForAssistant, type BoardLine } from "~/lib/radarBoard";
 import { saveChat, type ChatItem, type SavedChat } from "~/lib/willoChats";
 import { voiced } from "~/lib/voiceTone";
+import { face } from "~/lib/chatFont";
 import AgentMark from "~/components/willo/AgentMark";
 import { AGENTS } from "~/lib/agents";
 import { useWilloPrefs } from "~/lib/willoPrefs";
@@ -214,7 +215,8 @@ export default function Registro() {
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
 
   const pushBot = useCallback(
-    (t: string, extra?: { agents?: string[]; instant?: boolean }) => setItems((m) => [...m, { kind: "msg", id: uid(), role: "bot", text: t, ...extra }]),
+    /* A negative figure stays whole when the line breaks. */
+    (t: string, extra?: { agents?: string[]; instant?: boolean }) => setItems((m) => [...m, { kind: "msg", id: uid(), role: "bot", text: t.replace(/-R\$[\s ]?/g, "−R$ "), ...extra }]),
     [],
   );
   const installmentsRef = useRef<ActiveInstallmentItem[] | null>(null);
@@ -1192,10 +1194,10 @@ function Bubble({
       )}
       <View
         style={{
-          maxWidth: mine ? "84%" : "80%",
-          paddingHorizontal: 14,
-          paddingVertical: 10,
-          borderRadius: 20,
+          maxWidth: mine ? "84%" : "82%",
+          paddingHorizontal: 15,
+          paddingVertical: 11,
+          borderRadius: 22,
           borderCurve: "continuous",
           overflow: "hidden",
           ...(mine
@@ -1203,13 +1205,13 @@ function Bubble({
             : {
                 borderBottomLeftRadius: 7,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.12)",
+                borderColor: "rgba(255,255,255,0.09)",
                 backgroundColor: "rgba(255,255,255,0.07)",
               }),
         }}
       >
         {!mine && <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />}
-        <Text style={{ fontSize: 15, lineHeight: 21, fontWeight: mine ? "500" : "400", color: mine ? "#0B0B0B" : "rgba(255,255,255,0.92)" }}>
+        <Text style={{ fontSize: 16, lineHeight: 23, letterSpacing: -0.15, ...face(mine ? 600 : 500), color: mine ? "#0B0B0B" : "rgba(255,255,255,0.95)" }}>
           {mine ? text : <Rich text={text} shown={shown} />}
         </Text>
       </View>
@@ -1231,7 +1233,7 @@ function Rich({ text, shown }: { text: string; shown: number }) {
         const seen = p.t.slice(0, Math.max(0, left));
         const unseen = p.t.slice(seen.length);
         left -= p.t.length;
-        const style = p.bold ? { fontWeight: "700" as const, color: "#fff" } : undefined;
+        const style = p.bold ? { ...face(800), color: "#fff" } : undefined;
         return (
           <Text key={i} style={style}>
             {seen}

@@ -55,6 +55,28 @@ const NEXT: Greeting[] = [
   { title: "Curioso com a fatura?", sub: "Eu te digo como ela está." },
 ];
 
+/**
+ * How a sentence sits under the sphere. Never one word alone on a second line: what nearly
+ * fits is set a little smaller on one line, and what is really longer is split at the space
+ * nearest the middle, so the two lines come out even.
+ */
+export function layOut(text: string, perLine: number, size: number): { lines: string[]; size: number } {
+  if (text.length <= perLine) return { lines: [text], size };
+  if (text.length <= perLine * 1.3) return { lines: [text], size: size * (perLine / text.length) };
+  const words = text.split(" ");
+  let best = 1;
+  let gap = Infinity;
+  for (let i = 1; i < words.length; i++) {
+    const first = words.slice(0, i).join(" ").length;
+    const second = text.length - first - 1;
+    if (Math.abs(first - second) < gap) {
+      gap = Math.abs(first - second);
+      best = i;
+    }
+  }
+  return { lines: [words.slice(0, best).join(" "), words.slice(best).join(" ")], size };
+}
+
 export function firstName(display: string | null | undefined): string | null {
   const first = display?.trim().split(/\s+/)[0];
   return first || null;

@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { installShims, hydrateShims } from "~/lib/shims";
+import { loadChatFonts } from "~/lib/chatFont";
 import { AuthProvider, useAuth } from "~/lib/auth";
 import { useApplyOnboarding } from "~/lib/onboarding";
 import { MonthProvider } from "@/contexts/MonthContext";
@@ -32,6 +33,7 @@ export default function RootLayout() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    void loadChatFonts();
     hydrateShims().finally(() => setReady(true));
   }, []);
 

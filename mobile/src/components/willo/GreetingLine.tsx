@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Text, View } from "react-native";
+import { Text, View, useWindowDimensions } from "react-native";
 import Animated, { Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
-import { greetings, type Greeting } from "~/lib/greeting";
+import { greetings, layOut, type Greeting } from "~/lib/greeting";
+import { face } from "~/lib/chatFont";
 import { INK } from "~/theme/tokens";
 
 /**
@@ -11,8 +12,10 @@ import { INK } from "~/theme/tokens";
 
 const HOLD_MS = 7000;
 const WORD_MS = 75;
+const TITLE = 20;
+const SUB = 14;
 
-function Word({ text, delay }: { text: string; delay: number }) {
+function Word({ text, delay, size }: { text: string; delay: number; size: number }) {
   const shown = useSharedValue(0);
   useEffect(() => {
     shown.set(withDelay(delay, withTiming(1, { duration: 380, easing: Easing.out(Easing.cubic), reduceMotion: ReduceMotion.System })));
@@ -20,7 +23,7 @@ function Word({ text, delay }: { text: string; delay: number }) {
   const style = useAnimatedStyle(() => ({ opacity: shown.get(), transform: [{ translateY: (1 - shown.get()) * 7 }] }));
   return (
     <Animated.View style={style}>
-      <Text style={{ fontSize: 20, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>{text}</Text>
+      <Text style={{ fontSize: size, ...face(700), letterSpacing: -0.4, color: "#fff" }}>{text}</Text>
     </Animated.View>
   );
 }
@@ -50,6 +53,7 @@ export default function GreetingLine({ name, notice }: { name: string | null; no
   const lines = chosen ? (notice ? [chosen[0], { title: "Vi uma coisa no Radar.", sub: notice }, ...chosen.slice(1)] : chosen) : [];
   const [at, setAt] = useState(0);
   const out = useSharedValue(1);
+  const { width } = useWindowDimensions();
 
   useEffect(() => {
     if (lines.length === 0) return;
@@ -70,18 +74,22 @@ export default function GreetingLine({ name, notice }: { name: string | null; no
 
   if (lines.length === 0) return null;
   const line = lines[at % lines.length];
-  const words = line.title.split(" ");
+  /* Bold at this size runs about half its size a letter; the sub line, a little less. */
+  const room = width - 44;
+  const title = layOut(line.title, Math.floor(room / (TITLE * 0.53)), TITLE);
+  const sub = layOut(line.sub, Math.floor(room / (SUB * 0.5)), SUB);
+  let spoken = 0;
   return (
     <Animated.View key={at} style={[{ alignItems: "center", paddingHorizontal: 22 }, fading]}>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", columnGap: 5 }}>
-        {words.map((w, i) => (
-          <Word key={i} text={w} delay={i * WORD_MS} />
-        ))}
-      </View>
-      <Rising delay={words.length * WORD_MS + 120}>
-        <Text numberOfLines={2} style={{ marginTop: 4, fontSize: 14, lineHeight: 19, color: INK.soft, textAlign: "center" }}>
-          {line.sub}
-        </Text>
+      {title.lines.map((text) => (
+        <View key={text} style={{ flexDirection: "row", justifyContent: "center", columnGap: title.size * 0.25 }}>
+          {text.split(" ").map((w, i) => (
+            <Word key={i} text={w} delay={spoken++ * WORD_MS} size={title.size} />
+          ))}
+        </View>
+      ))}
+      <Rising delay={line.title.split(" ").length * WORD_MS + 120}>
+        <Text style={{ marginTop: 4, fontSize: sub.size, lineHeight: sub.size * 1.36, ...face(500), color: INK.soft, textAlign: "center" }}>{sub.lines.join("\n")}</Text>
       </Rising>
     </Animated.View>
   );

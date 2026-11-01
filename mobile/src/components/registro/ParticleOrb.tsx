@@ -12,21 +12,21 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import Svg, { Circle, Defs, LinearGradient, Path, RadialGradient, Rect, Stop } from "react-native-svg";
+import Svg, { Circle, Defs, Ellipse, Path, RadialGradient, Stop } from "react-native-svg";
 
 /**
- * Willo himself: a sphere of particles with the face from the app's icon in it.
+ * Willo himself: a still sphere of fine particles with the face from the app's icon in it.
  *
- * Fine points scattered at random over a sphere, turned about a tilted axis and drawn in
- * three passes: the rim brightest, where the surface folds away from the eye and the
- * points crowd together, the face towards us softer, the far side faint. Nothing fills
- * it, so the screen shows through. Inside floats a band of almost clear glass, there to
- * set off the two upright eyes, and it is the eyes that make him alive: he blinks, he
- * looks around, he leans.
+ * The points are scattered at random over a sphere and drawn in three passes: the rim
+ * brightest, where the surface folds away from the eye and the points crowd together, the
+ * face towards us softer, the far side faint. Nothing fills it, so the screen shows
+ * through. The sphere does not turn by itself; the points only drift a little, and they
+ * thin out and stop before the band of clear glass in the middle, so the eyes sit on
+ * nothing but the glass. It is the eyes that make him alive: he blinks, he looks around,
+ * he leans.
  *
- * Idle, he looks about at his own pace and now and then sheds a few sparks. Listening,
- * he opens up, his eyes taller, and breathes. Working, his eyes dart and the sparks rise
- * off the top of the sphere. Everything is worked out on the UI thread, so the
+ * Listening, he opens up, his eyes taller, and the sphere breathes. Working, his eyes
+ * dart and sparks rise off the top. Everything is worked out on the UI thread, so the
  * conversation can be busy without him stuttering.
  *
  * With `onPress` he is something to touch. A finger on him turns the sphere, and he looks
@@ -39,10 +39,7 @@ export type OrbMode = "idle" | "listening" | "thinking";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-const SPEED: Record<OrbMode, number> = { idle: 0.32, listening: 0.95, thinking: 2.2 };
 const SPARKS = 34;
-/** The colours his band turns through: the sky of the screens he lives on, up to ice. */
-const BAND = ["#1FA9BC", "#4C97F0", "#B5DEFF"];
 const TILT = 0.38;
 /** How far a drag turns it: radians per point, at the size the orb is drawn. */
 const DRAG = 0.0135;
@@ -87,13 +84,11 @@ export default function ParticleOrb({
   expanded?: boolean;
 }) {
   const reduce = useReducedMotion();
-  const count = density ?? (size >= 180 ? 1100 : size >= 60 ? 420 : 150);
+  const count = density ?? (size >= 180 ? 1000 : size >= 60 ? 400 : 140);
   const points = useMemo(() => cloud(count), [count]);
 
   const angle = useSharedValue(0);
   const tilt = useSharedValue(TILT);
-  const speed = useSharedValue(SPEED[mode]);
-  const target = useSharedValue(SPEED[mode]);
   const clock = useSharedValue(0);
   const breath = useSharedValue(mode === "listening" ? 1 : 0);
   const breathTarget = useSharedValue(mode === "listening" ? 1 : 0);
@@ -119,12 +114,11 @@ export default function ParticleOrb({
   const still = useSharedValue(reduce ? 1 : 0);
 
   useEffect(() => {
-    target.set(reduce ? SPEED.idle * 0.3 : SPEED[mode]);
     breathTarget.set(mode === "listening" && !reduce ? 1 : mode === "thinking" && !reduce ? 0.35 : 0);
     working.set(mode === "thinking" ? 1 : 0);
     hearing.set(mode === "listening" ? 1 : 0);
     still.set(reduce ? 1 : 0);
-  }, [mode, reduce, target, breathTarget, working, hearing, still]);
+  }, [mode, reduce, breathTarget, working, hearing, still]);
 
   useEffect(() => {
     swell.set(withSpring(expanded ? 1 : 0, { duration: 620, dampingRatio: 0.66, reduceMotion: ReduceMotion.System }));
@@ -133,7 +127,6 @@ export default function ParticleOrb({
   useFrameCallback((frame) => {
     const dt = Math.min(0.05, (frame.timeSincePreviousFrame ?? 16) / 1000);
     const ease = Math.min(1, dt * 3);
-    speed.set(speed.get() + (target.get() - speed.get()) * ease);
     breath.set(breath.get() + (breathTarget.get() - breath.get()) * ease);
     clock.set(clock.get() + dt);
 
@@ -141,7 +134,7 @@ export default function ParticleOrb({
       /* Let go: the flick carries on and fades, and the tilt settles back. */
       spin.set(spin.get() * Math.exp(-dt * 2.3));
       tilt.set(tilt.get() + (TILT - tilt.get()) * Math.min(1, dt * 2.6));
-      angle.set(angle.get() + (speed.get() + spin.get()) * dt);
+      angle.set(angle.get() + spin.get() * dt);
       finger.set({ x: finger.get().x * Math.exp(-dt * 4), y: finger.get().y * Math.exp(-dt * 4) });
     }
 
@@ -234,12 +227,11 @@ export default function ParticleOrb({
 
   const half = size / 2;
   const radius = size * 0.42;
-  const dot = Math.max(0.7, size / 250);
+  const dot = Math.max(0.6, size / 340);
   const bandW = size * 0.5;
   const bandH = size * 0.26;
-  const eyeW = Math.max(1.8, size * 0.03);
+  const eyeW = Math.max(1.6, size * 0.026);
   const eyeH = size * 0.105;
-  const colours = bandW * 1.2;
 
   /* One pass over the points per frame, written into three paths by depth. */
   const paths = useDerivedValue(() => {
@@ -264,8 +256,14 @@ export default function ParticleOrb({
       const z1 = -x0 * sa + z0 * ca;
       const y2 = y0 * ct - z1 * st;
       const z2 = y0 * st + z1 * ct;
-      const px = half + x1 * r;
-      const py = half + y2 * r;
+      /* Each point drifts a little on its own, instead of the whole sphere turning. */
+      const px = half + x1 * r + Math.sin(t * 0.5 + i) * size * 0.003;
+      const py = half + y2 * r + Math.cos(t * 0.42 + i * 1.3) * size * 0.003;
+      /* The middle stays clear for the eyes: thinning first, then none at all. */
+      const dx = (px - half) / (bandW * 0.72);
+      const dy = (py - half) / (bandH * 1.05);
+      const clear = dx * dx + dy * dy;
+      if (clear < 1 || (clear < 1.7 && (i / 3) % 3 !== 0)) continue;
       if (z2 > -0.42 && z2 < 0.42) {
         /* The rim. */
         const s = dot * 1.25;
@@ -320,9 +318,6 @@ export default function ParticleOrb({
     };
   });
 
-  /* The colours inside the band go round, faster at work. */
-  const turning = useAnimatedStyle(() => ({ transform: [{ rotate: `${angle.get() * 34}deg` }] }));
-
   /* The eyes travel further than the band, which is what makes it a look. */
   const eyes = useAnimatedStyle(() => {
     const l = look.get();
@@ -362,10 +357,10 @@ export default function ParticleOrb({
             </RadialGradient>
           </Defs>
           <Circle cx={half} cy={half} r={half} fill="url(#orb-glow)" />
-          <AnimatedPath animatedProps={farProps} fill="#FFFFFF" fillOpacity={0.24} />
-          <AnimatedPath animatedProps={midProps} fill="#FFFFFF" fillOpacity={0.45} />
-          <AnimatedPath animatedProps={nearProps} fill="#FFFFFF" fillOpacity={0.92} />
-          <AnimatedPath animatedProps={sparkProps} fill="#FFFFFF" fillOpacity={0.85} />
+          <AnimatedPath animatedProps={farProps} fill="#FFFFFF" fillOpacity={0.1} />
+          <AnimatedPath animatedProps={midProps} fill="#FFFFFF" fillOpacity={0.24} />
+          <AnimatedPath animatedProps={nearProps} fill="#FFFFFF" fillOpacity={0.62} />
+          <AnimatedPath animatedProps={sparkProps} fill="#FFFFFF" fillOpacity={0.7} />
         </Svg>
 
         {/* The face */}
@@ -375,32 +370,26 @@ export default function ParticleOrb({
               width: bandW,
               height: bandH,
               borderRadius: bandH * 0.47,
-              overflow: "hidden",
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: "rgba(255,255,255,0.05)",
-              borderWidth: Math.max(0.6, size * 0.003),
-              borderColor: "rgba(255,255,255,0.2)",
+              backgroundColor: "rgba(255,255,255,0.045)",
+              borderWidth: Math.max(0.5, size * 0.0028),
+              borderColor: "rgba(255,255,255,0.15)",
             }}
           >
-            {/* The barest colour, turning, so the glass is alive */}
-            <Animated.View style={[{ position: "absolute", width: colours, height: colours, opacity: 0.09 }, turning]}>
-              <Svg width={colours} height={colours}>
-                <Defs>
-                  <LinearGradient id="orb-band" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <Stop offset="0.25" stopColor={BAND[0]} />
-                    <Stop offset="0.5" stopColor={BAND[1]} />
-                    <Stop offset="0.75" stopColor={BAND[2]} />
-                  </LinearGradient>
-                </Defs>
-                <Rect width={colours} height={colours} fill="url(#orb-band)" />
-              </Svg>
-            </Animated.View>
             <Animated.View style={[{ flexDirection: "row", gap: size * 0.125 }, eyes]}>
               {[0, 1].map((n) => (
                 <View key={n} style={{ width: eyeW, height: eyeH, alignItems: "center", justifyContent: "center" }}>
-                  <View style={{ position: "absolute", width: eyeW * 3.6, height: eyeH * 1.3, borderRadius: eyeW * 2, backgroundColor: "#FFFFFF", opacity: 0.14 }} />
-                  <View style={{ position: "absolute", width: eyeW * 2, height: eyeH * 1.12, borderRadius: eyeW * 1.2, backgroundColor: "#FFFFFF", opacity: 0.26 }} />
+                  {/* A light's edge is soft: the glow fades out rather than stepping. */}
+                  <Svg width={eyeW * 6} height={eyeH * 1.7} style={{ position: "absolute" }}>
+                    <Defs>
+                      <RadialGradient id="orb-eye" cx="50%" cy="50%" r="50%">
+                        <Stop offset="0.2" stopColor="#FFFFFF" stopOpacity={0.3} />
+                        <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
+                      </RadialGradient>
+                    </Defs>
+                    <Ellipse cx={eyeW * 3} cy={eyeH * 0.85} rx={eyeW * 3} ry={eyeH * 0.85} fill="url(#orb-eye)" />
+                  </Svg>
                   <View style={{ width: eyeW, height: eyeH, borderRadius: eyeW, backgroundColor: "#FFFFFF" }} />
                 </View>
               ))}
