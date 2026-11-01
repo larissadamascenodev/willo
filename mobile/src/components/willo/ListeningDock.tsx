@@ -12,7 +12,7 @@ import ParticleOrb from "~/components/registro/ParticleOrb";
  */
 
 /** Clears the field (56 tall, 8 from the foot), less the empty margin around his sphere. */
-const FIELD_TOP = 66;
+const FIELD_TOP = 70;
 
 export default function ListeningDock({ reading, bottom, onStop }: { reading: boolean; bottom: number; onStop: () => void }) {
   useEffect(() => {

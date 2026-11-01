@@ -15,21 +15,19 @@ import * as Haptics from "expo-haptics";
 import Svg, { Circle, Defs, Ellipse, Path, RadialGradient, Stop } from "react-native-svg";
 
 /**
- * Willo himself: a still sphere of fine particles with the face from the app's icon in it.
+ * Willo himself: a still shell of fine particles with two large eyes in its clear middle.
  *
  * The points are scattered at random over a sphere and drawn in three passes: the rim
  * brightest, where the surface folds away from the eye and the points crowd together, the
- * face towards us softer, the far side faint. Nothing fills it, so the screen shows
- * through. The sphere does not turn by itself; the points only drift a little, and they
- * thin out and stop before the band of clear glass in the middle, so the eyes sit on
- * nothing but the glass. It is the eyes that make him alive: he blinks, he looks around,
- * he leans.
+ * rest soft. Nothing fills it, so the screen shows through, and no point crosses the
+ * middle, so the eyes sit on nothing. The sphere does not turn by itself; the points only
+ * drift a little. It is the eyes that make him alive: he blinks, he looks around, he leans.
  *
- * Listening, he opens up, his eyes taller, and the sphere breathes. Working, his eyes
- * dart and sparks rise off the top. Everything is worked out on the UI thread, so the
- * conversation can be busy without him stuttering.
+ * Listening, his eyes grow taller and the shell breathes. Working, his eyes dart and sparks
+ * rise off the top. Everything is worked out on the UI thread, so the conversation can be
+ * busy without him stuttering.
  *
- * With `onPress` he is something to touch. A finger on him turns the sphere, and he looks
+ * With `onPress` he is something to touch. A finger on him turns the shell, and he looks
  * where the finger goes; a flick keeps turning for a moment, slowing as if it had weight;
  * and a tap, a touch that did not travel, presses him in and calls `onPress`. `expanded`
  * is what a tap leads to: he swells and settles a little larger.
@@ -84,7 +82,7 @@ export default function ParticleOrb({
   expanded?: boolean;
 }) {
   const reduce = useReducedMotion();
-  const count = density ?? (size >= 180 ? 1000 : size >= 60 ? 400 : 140);
+  const count = density ?? (size >= 180 ? 1500 : size >= 60 ? 650 : 260);
   const points = useMemo(() => cloud(count), [count]);
 
   const angle = useSharedValue(0);
@@ -226,12 +224,12 @@ export default function ParticleOrb({
   );
 
   const half = size / 2;
-  const radius = size * 0.42;
-  const dot = Math.max(0.6, size / 340);
-  const bandW = size * 0.5;
-  const bandH = size * 0.26;
-  const eyeW = Math.max(1.6, size * 0.026);
-  const eyeH = size * 0.105;
+  const radius = size * 0.45;
+  const dot = Math.max(0.7, size / 300);
+  const eyeW = Math.max(1.8, size * 0.052);
+  const eyeH = size * 0.2;
+  /* Past this the shell begins: the eyes have the middle to themselves. */
+  const clearing = radius * 0.58;
 
   /* One pass over the points per frame, written into three paths by depth. */
   const paths = useDerivedValue(() => {
@@ -259,21 +257,17 @@ export default function ParticleOrb({
       /* Each point drifts a little on its own, instead of the whole sphere turning. */
       const px = half + x1 * r + Math.sin(t * 0.5 + i) * size * 0.003;
       const py = half + y2 * r + Math.cos(t * 0.42 + i * 1.3) * size * 0.003;
-      /* The middle stays clear for the eyes: thinning first, then none at all. */
-      const dx = (px - half) / (bandW * 0.72);
-      const dy = (py - half) / (bandH * 1.05);
-      const clear = dx * dx + dy * dy;
-      if (clear < 1 || (clear < 1.7 && (i / 3) % 3 !== 0)) continue;
+      if (Math.hypot(px - half, py - half) < clearing) continue;
       if (z2 > -0.42 && z2 < 0.42) {
         /* The rim. */
-        const s = dot * 1.25;
+        const s = dot;
         near += `M${px.toFixed(1)} ${py.toFixed(1)}h${s}v${s}h-${s}z`;
       } else if (z2 >= 0.42) {
         /* The face towards us. */
         const s = dot;
         mid += `M${px.toFixed(1)} ${py.toFixed(1)}h${s}v${s}h-${s}z`;
       } else {
-        const s = dot * 0.8;
+        const s = dot;
         far += `M${px.toFixed(1)} ${py.toFixed(1)}h${s}v${s}h-${s}z`;
       }
     }
@@ -357,44 +351,31 @@ export default function ParticleOrb({
             </RadialGradient>
           </Defs>
           <Circle cx={half} cy={half} r={half} fill="url(#orb-glow)" />
-          <AnimatedPath animatedProps={farProps} fill="#FFFFFF" fillOpacity={0.1} />
-          <AnimatedPath animatedProps={midProps} fill="#FFFFFF" fillOpacity={0.24} />
-          <AnimatedPath animatedProps={nearProps} fill="#FFFFFF" fillOpacity={0.62} />
+          <AnimatedPath animatedProps={farProps} fill="#FFFFFF" fillOpacity={0.22} />
+          <AnimatedPath animatedProps={midProps} fill="#FFFFFF" fillOpacity={0.22} />
+          <AnimatedPath animatedProps={nearProps} fill="#FFFFFF" fillOpacity={0.7} />
           <AnimatedPath animatedProps={sparkProps} fill="#FFFFFF" fillOpacity={0.7} />
         </Svg>
 
-        {/* The face */}
-        <Animated.View style={[{ width: bandW, height: bandH, alignItems: "center", justifyContent: "center" }, face]}>
-          <View
-            style={{
-              width: bandW,
-              height: bandH,
-              borderRadius: bandH * 0.47,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "rgba(255,255,255,0.045)",
-              borderWidth: Math.max(0.5, size * 0.0028),
-              borderColor: "rgba(255,255,255,0.15)",
-            }}
-          >
-            <Animated.View style={[{ flexDirection: "row", gap: size * 0.125 }, eyes]}>
-              {[0, 1].map((n) => (
-                <View key={n} style={{ width: eyeW, height: eyeH, alignItems: "center", justifyContent: "center" }}>
-                  {/* A light's edge is soft: the glow fades out rather than stepping. */}
-                  <Svg width={eyeW * 6} height={eyeH * 1.7} style={{ position: "absolute" }}>
-                    <Defs>
-                      <RadialGradient id="orb-eye" cx="50%" cy="50%" r="50%">
-                        <Stop offset="0.2" stopColor="#FFFFFF" stopOpacity={0.3} />
-                        <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
-                      </RadialGradient>
-                    </Defs>
-                    <Ellipse cx={eyeW * 3} cy={eyeH * 0.85} rx={eyeW * 3} ry={eyeH * 0.85} fill="url(#orb-eye)" />
-                  </Svg>
-                  <View style={{ width: eyeW, height: eyeH, borderRadius: eyeW, backgroundColor: "#FFFFFF" }} />
-                </View>
-              ))}
-            </Animated.View>
-          </View>
+        {/* The eyes */}
+        <Animated.View style={[{ alignItems: "center", justifyContent: "center" }, face]}>
+          <Animated.View style={[{ flexDirection: "row", gap: size * 0.17 }, eyes]}>
+            {[0, 1].map((n) => (
+              <View key={n} style={{ width: eyeW, height: eyeH, alignItems: "center", justifyContent: "center" }}>
+                {/* A light's edge is soft: the glow fades out rather than stepping. */}
+                <Svg width={size * 0.16} height={size * 0.28} style={{ position: "absolute" }}>
+                  <Defs>
+                    <RadialGradient id="orb-eye" cx="50%" cy="50%" r="50%">
+                      <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.55} />
+                      <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
+                    </RadialGradient>
+                  </Defs>
+                  <Ellipse cx={size * 0.08} cy={size * 0.14} rx={size * 0.08} ry={size * 0.14} fill="url(#orb-eye)" />
+                </Svg>
+                <View style={{ width: eyeW, height: eyeH, borderRadius: eyeW, backgroundColor: "#FFFFFF" }} />
+              </View>
+            ))}
+          </Animated.View>
         </Animated.View>
       </View>
     </Animated.View>
