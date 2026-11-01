@@ -43,6 +43,11 @@ export interface ReceiptLine {
   method?: string | null;
   /** Split on a card into this many instalments. */
   installments?: number | null;
+  /** yyyy-mm-dd: the day it belongs to, which need not be the day it was written down. */
+  day?: string | null;
+  repeat?: "unica" | "parcelado" | "fixa";
+  /** Not settled yet. */
+  scheduled?: boolean;
 }
 
 /* A white slip: dark ink on paper, a deeper green for money in, which lime would not carry. */
@@ -196,8 +201,11 @@ export default function ReceiptCard({
   onLanded?: () => void;
 }) {
   const total = lines.reduce((t, l) => t + (l.type === "receita" ? l.amount : -l.amount), 0);
-  const date = when.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
-  const time = when.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const onlyLine = lines.length === 1 ? lines[0] : null;
+  const dayOf = onlyLine?.day ? new Date(`${onlyLine.day}T12:00:00`) : when;
+  const date = dayOf.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+  /* The hour only when it is that same day: a purchase of last week was not made just now. */
+  const time = dayOf.toDateString() === when.toDateString() ? when.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : null;
   const code = useMemo(() => `WL-${when.getTime().toString(36).slice(-6).toUpperCase()}`, [when]);
   const single = lines.length === 1 ? lines[0] : null;
 
@@ -236,7 +244,7 @@ export default function ReceiptCard({
               <>
                 {/* The figure, large, and what it was. */}
                 <Animated.View entering={FadeIn.delay(820).duration(380)} style={{ marginTop: 12, alignItems: "center" }}>
-                  <Text style={{ fontSize: 12, color: DIM }}>{single.type === "receita" ? "Você recebeu" : single.installments ? "Você parcelou" : "Você pagou"}</Text>
+                  <Text style={{ fontSize: 12, color: DIM }}>{single.scheduled ? (single.type === "receita" ? "Você vai receber" : "Você vai pagar") : single.type === "receita" ? "Você recebeu" : single.installments ? "Você parcelou" : "Você pagou"}</Text>
                   <Text style={[nums, { marginTop: 2, fontSize: 36, fontWeight: "800", letterSpacing: -1.3, color: single.type === "receita" ? IN : INK }]}>
                     {single.type === "receita" ? "+" : "−"}
                     {money(single.amount)}
@@ -257,8 +265,9 @@ export default function ReceiptCard({
                   <Fact label="Categoria" value={single.category} delay={960} />
                   {single.method ? <Fact label={single.type === "receita" ? "Entrou em" : "Pagamento"} value={single.method} delay={1060} /> : null}
                   {single.installments ? <Fact label="Parcelas" value={`${single.installments}x de ${money(single.amount / single.installments)}`} delay={1110} /> : null}
-                  <Fact label="Data" value={date} delay={1160} />
-                  <Fact label="Hora" value={time} delay={1260} />
+                  {single.repeat && single.repeat !== "parcelado" ? <Fact label="Repetição" value={single.repeat === "fixa" ? `Todo mês, dia ${dayOf.getDate()}` : "Única"} delay={1130} /> : null}
+                  <Fact label={single.repeat === "fixa" ? "A partir de" : "Data"} value={date} delay={1160} />
+                  {time ? <Fact label="Hora" value={time} delay={1260} /> : null}
                 </View>
               </>
             ) : (

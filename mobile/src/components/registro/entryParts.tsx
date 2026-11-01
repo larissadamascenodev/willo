@@ -475,7 +475,7 @@ export function SavedView({
         <Secondary
           icon={<Share2 size={16} color="#fff" />}
           label="Compartilhar"
-          onPress={() => void shareReceipt(receiptRef, `Willo · ${line.name} · ${sign}${money(line.amount)} · ${line.category} · ${savedAt.toLocaleDateString("pt-BR")}`)}
+          onPress={() => void shareReceipt(receiptRef, `Willo · ${line.name} · ${sign}${money(line.amount)} · ${line.category} · ${(line.day ? new Date(`${line.day}T12:00:00`) : savedAt).toLocaleDateString("pt-BR")}`)}
         />
         <Secondary
           icon={<Download size={16} color="#fff" />}

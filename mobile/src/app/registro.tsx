@@ -15,7 +15,9 @@ import Glass from "~/components/Glass";
 import Notinha, { type NotinhaLine } from "~/components/registro/Notinha";
 import Confirmado from "~/components/registro/Confirmado";
 import ParticleOrb, { type OrbMode } from "~/components/registro/ParticleOrb";
-import { ArrowUp, Camera, Check, Mic, PenLine, SlidersHorizontal, Sparkles, X, Zap } from "~/components/icons";
+import { ArrowUp, Camera, Check, ChevronLeft, Mic, PenLine, SlidersHorizontal, Sparkles, X, Zap } from "~/components/icons";
+import ReceiptCard, { type ReceiptLine } from "~/components/registro/ReceiptCard";
+import { commentAfter } from "~/lib/afterEntry";
 import WilloSettings from "~/components/willo/WilloSettings";
 import AgentMark from "~/components/willo/AgentMark";
 import { AGENTS } from "~/lib/agents";
@@ -68,7 +70,8 @@ type Item =
   | { kind: "msg"; id: string; role: "bot" | "user"; text: string; agents?: string[]; instant?: boolean }
   | { kind: "batch"; id: string }
   | { kind: "done"; id: string; text: string; total?: number; income?: boolean }
-  | { kind: "card"; id: string; card: AnswerCard };
+  | { kind: "card"; id: string; card: AnswerCard }
+  | { kind: "receipt"; id: string; line: ReceiptLine; when: Date };
 
 interface Line {
   batchId: string;
@@ -525,6 +528,18 @@ export default function Registro() {
     [thinking, entry, converse, pushUser],
   );
 
+  /* Written from the sheet: once it closes, the receipt lands in the conversation and he
+     says what he makes of it. */
+  const justSaved = useRef<{ line: ReceiptLine; when: Date } | null>(null);
+  useEffect(() => {
+    const saved = justSaved.current;
+    if (entry.state !== "idle" || !saved) return;
+    justSaved.current = null;
+    setItems((m) => [...m, { kind: "receipt", id: uid(), line: saved.line, when: saved.when }]);
+    const { name, category, amount, type, installments, day, repeat, scheduled } = saved.line;
+    void commentAfter({ name, category, amount, type, installments, day: day ?? saved.when.toISOString().slice(0, 10), repeat: repeat ?? "unica", scheduled }).then((said) => pushBot(said));
+  }, [entry.state, pushBot]);
+
   /* What was written lands in the thread as a line from him once it is in. */
   const lastSaved = useRef<string | null>(null);
   useEffect(() => {
@@ -598,7 +613,11 @@ export default function Registro() {
   const orb = stageH > 0 ? Math.max(190, Math.min(width * 0.8, 320, stageH - CAPTION_H - 18 - 56)) : 250;
   /* The full stage is the welcome; once there is a conversation — or the keyboard is up —
      the sphere stays, smaller and higher, above it. */
-  const stage = !started && !keyboardUp;
+  const [atSphere, setAtSphere] = useState(false);
+  useEffect(() => {
+    setAtSphere(false);
+  }, [items.length]);
+  const stage = (!started || atSphere) && !keyboardUp;
 
   return (
     <Room lit sky>
@@ -616,9 +635,25 @@ export default function Registro() {
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-            <View style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
-              <Zap size={18} color={GREEN} />
-            </View>
+            {stage ? (
+              <View style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
+                <Zap size={18} color={GREEN} />
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setAtSphere(true);
+                }}
+                accessibilityLabel="Voltar para a esfera"
+                hitSlop={8}
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+              >
+                <Glass radius={18} interactive style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+                  <ChevronLeft size={18} color="rgba(255,255,255,0.88)" strokeWidth={2.4} />
+                </Glass>
+              </Pressable>
+            )}
             <View style={{ minWidth: 0 }}>
               <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>Willo</Text>
               <Text style={{ fontSize: 12, color: INK.softer }}>
@@ -696,6 +731,13 @@ export default function Registro() {
               </View>
             </View>
 
+            {/* Back to where the conversation was */}
+            {started && !listening && !reading && (
+              <Pressable onPress={() => setAtSphere(false)} hitSlop={8} style={({ pressed }) => ({ alignSelf: "center", marginBottom: 12, paddingVertical: 6, paddingHorizontal: 14, opacity: pressed ? 0.6 : 1 })}>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.75)" }}>Voltar à conversa</Text>
+              </Pressable>
+            )}
+
             {/* ── What to ask him ── */}
             {!listening && !reading && (
               <Animated.View entering={FadeInDown.delay(100).duration(380)} style={{ paddingBottom: 14 }}>
@@ -751,6 +793,10 @@ export default function Registro() {
                 <View key={item.id} style={{ paddingVertical: 4 }}>
                   <Confirmado text={item.text} total={item.total} income={item.income} />
                 </View>
+              ) : item.kind === "receipt" ? (
+                <View key={item.id} style={{ paddingVertical: 8 }}>
+                  <ReceiptCard sound={false} lines={[item.line]} when={item.when} />
+                </View>
               ) : item.kind === "card" ? (
                 <AnswerCardView key={item.id} card={item.card} />
               ) : item.kind === "msg" ? (
@@ -792,7 +838,7 @@ export default function Registro() {
 
         {/* ── The composer ── */}
         <View style={{ paddingTop: 8, paddingBottom: insets.bottom + 8 }}>
-          {(started || keyboardUp) && !listening && (
+          {!stage && !listening && (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -885,7 +931,7 @@ export default function Registro() {
               {typed ? (
                 <SendButton disabled={busy || reading} onPress={submitText} />
               ) : (
-                started && (
+                !stage && (
                   <Pressable
                     onPress={() => void entry.toggle()}
                     accessibilityLabel={listening ? "Parar" : "Falar"}
@@ -928,7 +974,12 @@ export default function Registro() {
       </KeyboardAvoidingView>
 
       {/* What was heard, for a look before it is written. */}
-      <VoiceEntrySheet entry={entry} onSaved={(what) => pushBot(`Anotado: ${what}.`)} />
+      <VoiceEntrySheet
+        entry={entry}
+        onSaved={(line, when) => {
+          justSaved.current = { line, when };
+        }}
+      />
       <WilloSettings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </Room>
   );

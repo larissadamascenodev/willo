@@ -5,7 +5,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { removeInitialBalance } from "@/services/transactionService";
 import { loadMonthTransactions, type AccountRow, type TransactionRow as Row } from "@/services/monthTransactions";
-import { supabase } from "@/integrations/supabase/client";
 import { useMonth } from "@/contexts/MonthContext";
 import MonthStrip from "~/components/MonthStrip";
 import type { CustomCategory } from "@/services/categoryService";
@@ -131,23 +130,9 @@ export default function Transacoes() {
       return;
     }
     try {
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const [m, card] = await Promise.all([
-        loadMonthTransactions(month, year),
-        /* Card purchases on the day they were made, as a debit purchase is — the invoice
-           line still carries the money, so these are shown, not counted. */
-        supabase
-          .from("transactions")
-          .select("id,name,category,date,amount,type,status,payment_method,recurrence_type,installment_current,installments,observation,account_id,credit_card_id,created_at")
-          .eq("payment_method", "cartao")
-          .eq("type", "despesa")
-          .is("parent_transaction_id", null)
-          /* In instalments it lives on the card; the card's line here carries it. */
-          .not("recurrence_type", "in", "(fixa,parcelado)")
-          .gte("date", `${year}-${pad(month + 1)}-01`)
-          .lte("date", `${year}-${pad(month + 1)}-${pad(new Date(year, month + 1, 0).getDate())}`),
-      ]);
-      setTransactions([...m.transactions, ...((card.data ?? []) as unknown as Row[])]);
+      /* What is on a card lives on the card; its invoice's line here carries it. */
+      const m = await loadMonthTransactions(month, year);
+      setTransactions(m.transactions);
       setAccounts(m.accounts);
       setCreditCards(m.creditCards);
       setCustomCategories(m.customCategories);
@@ -281,10 +266,7 @@ export default function Transacoes() {
 
             {days.map(([date, rows], i) => {
               const { label, isToday } = formatDateHeader(date, today);
-              /* A card purchase does not move the day's money; its invoice does, later. */
-              const net = rows
-                .filter((t) => !(t.payment_method === "cartao" && !t.id.startsWith("fatura-")))
-                .reduce((sum, t) => sum + (t.type === "receita" ? Number(t.amount) : -Number(t.amount)), 0);
+              const net = rows.reduce((sum, t) => sum + (t.type === "receita" ? Number(t.amount) : -Number(t.amount)), 0);
               return (
                 <Animated.View key={date} entering={FadeInDown.delay(120 + i * 45).duration(380)}>
                   <DayHeader label={isToday ? `Hoje · ${label}` : label} today={isToday} net={net} />

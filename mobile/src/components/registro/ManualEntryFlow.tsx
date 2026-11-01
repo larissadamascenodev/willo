@@ -389,7 +389,7 @@ export default function ManualEntryFlow({
         {/* ── Saved: the receipt, and what to do with it ── */}
         {step === "done" && savedAt && (
           <SavedView
-            line={{ id: "1", name: v.name.trim(), category: v.category ?? "Outros", amount: v.cents / 100, type: v.type, method: payLabel, installments: split }}
+            line={{ id: "1", name: v.name.trim(), category: v.category ?? "Outros", amount: v.cents / 100, type: v.type, method: payLabel, installments: split, day: v.date, repeat: v.repeat, scheduled }}
             savedAt={savedAt}
             title={scheduled ? (income ? "Receita agendada" : "Gasto agendado") : undefined}
             onLanded={landed}

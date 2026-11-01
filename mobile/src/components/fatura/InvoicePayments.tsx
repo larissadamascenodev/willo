@@ -33,16 +33,15 @@ const localDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).pad
  */
 export function mergeEntries(lines: InvoiceLine[], payments: InvoicePayment[], addedAt: Record<string, string | null | undefined> = {}): Entry[] {
   /* A payment sits at the moment it was made. A line has only a day, and an instalment's
-     day is the invoice's own, often ahead of today — so a line counts from the start of
-     its day, never later than today. One written down on that very day sits at the hour
-     it was: a purchase made today comes above the instalments that only fall due today,
-     and of two on one day the later is on top. */
-  const today = localDay(new Date());
+     day is the invoice's own, often ahead of when it was written down — so a line counts
+     from its day, but never later than it was written down, or than now. A purchase made
+     this week comes above older instalments dated ahead, and of two on one day the one
+     written last is on top. */
   const lineAt = (line: InvoiceLine) => {
-    const day = line.date < today ? line.date : today;
-    const start = new Date(`${day}T00:00:00`).getTime();
+    const start = new Date(`${line.date}T00:00:00`).getTime();
     const added = addedAt[line.id] ? new Date(addedAt[line.id] as string) : null;
-    return added && localDay(added) === day ? added.getTime() : start;
+    if (!added) return Math.min(start, Date.now());
+    return localDay(added) === line.date ? added.getTime() : Math.min(start, added.getTime());
   };
   const all: Entry[] = [
     ...lines.map((line) => ({ kind: "line" as const, line, at: lineAt(line) })),

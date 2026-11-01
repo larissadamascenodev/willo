@@ -73,7 +73,7 @@ function how(draft: QuickDraft, setup: QuickSetup) {
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export default function VoiceEntrySheet({ entry, onSaved }: { entry: VoiceEntry; onSaved?: (summary: string) => void }) {
+export default function VoiceEntrySheet({ entry, onSaved }: { entry: VoiceEntry; onSaved?: (line: ReceiptLine, when: Date) => void }) {
   const router = useRouter();
   const { state, lines, transcript, question, categoryChips, setup, message } = entry;
   const open = state === "confirm" || state === "saving" || state === "saved";

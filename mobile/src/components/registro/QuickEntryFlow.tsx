@@ -9,6 +9,7 @@ import { colorFor } from "@/lib/banks";
 import BankMark from "~/components/BankMark";
 import CategoryPicker from "~/components/CategoryPicker";
 import ParticleOrb from "~/components/registro/ParticleOrb";
+import type { ReceiptLine } from "~/components/registro/ReceiptCard";
 import EntryForm, { type EntryValues } from "~/components/registro/EntryForm";
 import { CategoryButton, Choice, EntryCard, GLASS, StepHeader, PartsBar, Primary, SavedView, dayLabel, hhmm, type Account, type Card, type Kind, type Method } from "~/components/registro/entryParts";
 import { Banknote, CalendarClock, ChevronLeft, CreditCard, Landmark } from "~/components/icons";
@@ -85,7 +86,8 @@ export default function QuickEntryFlow({
   /** A purchase on a card is seen on its invoice. */
   onSeeCard?: (cardId: string) => void;
   onStep?: (step: Step) => void;
-  onSaved?: (summary: string) => void;
+  /** Written: the receipt's line, and when it was written. */
+  onSaved?: (line: ReceiptLine, when: Date) => void;
 }) {
   const { user } = useAuth();
   const [opened] = useState(() => new Date());
@@ -359,7 +361,10 @@ export default function QuickEntryFlow({
       window.dispatchEvent(new CustomEvent("transaction-created"));
       setSavedAt(new Date());
       setStep("done");
-      onSaved?.(`${f.name.trim()}, ${money(f.cents / 100)}${fParts ? ` em ${fParts}x` : f.repeat === "fixa" ? ", todo mês" : ""}`);
+      onSaved?.(
+        { id: "1", name: f.name.trim(), category: f.category ?? "Outros", amount: f.cents / 100, type: f.type, method: fPay, installments: fParts, day: f.date, repeat: f.repeat, scheduled },
+        new Date(),
+      );
     } catch {
       setError("Não consegui salvar agora. Tente de novo.");
     } finally {
@@ -563,7 +568,7 @@ export default function QuickEntryFlow({
         {/* ── Saved: the receipt, and what to do with it ── */}
         {step === "done" && savedAt && f && (
           <SavedView
-            line={{ id: "1", name: f.name.trim(), category: f.category ?? "Outros", amount: f.cents / 100, type: f.type, method: fPay, installments: fParts }}
+            line={{ id: "1", name: f.name.trim(), category: f.category ?? "Outros", amount: f.cents / 100, type: f.type, method: fPay, installments: fParts, day: f.date, repeat: f.repeat, scheduled }}
             savedAt={savedAt}
             title={scheduled ? (f.type === "receita" ? "Receita agendada" : "Gasto agendado") : undefined}
             onLanded={landed}
