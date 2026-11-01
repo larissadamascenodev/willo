@@ -113,10 +113,6 @@ export default function ParticleOrb({
   const working = useSharedValue(mode === "thinking" ? 1 : 0);
   const hearing = useSharedValue(mode === "listening" ? 1 : 0);
   const finger = useSharedValue({ x: 0, y: 0 });
-  /* Every so often he smiles a little more, for no reason. */
-  const beam = useSharedValue(0);
-  const beamUntil = useSharedValue(0);
-  const nextBeam = useSharedValue(6);
   const talking = useSharedValue(0);
   const loud = useSharedValue(-1);
   useEffect(() => {
@@ -180,11 +176,6 @@ export default function ParticleOrb({
     const since = t - from;
     lid.set({ shut: from >= 0 && since < 0.17 ? Math.sin((since / 0.17) * Math.PI) : 0, from, next: nextLid });
 
-    if (t > nextBeam.get() && !calm) {
-      beamUntil.set(t + 1.8);
-      nextBeam.set(t + 8 + Math.random() * 9);
-    }
-    beam.set(beam.get() + ((t < beamUntil.get() ? 1 : 0) - beam.get()) * Math.min(1, dt * 5));
     /* With a voice to follow he follows it; otherwise he moves as if talking. */
     const wantsTalk = hearing.get() && loud.get() >= 0 ? loud.get() : Math.max(working.get(), hearing.get()) * (0.5 + 0.5 * Math.sin(t * 7.5) * Math.sin(t * 3.1));
     talking.set(talking.get() + (wantsTalk - talking.get()) * Math.min(1, dt * 12));
@@ -351,23 +342,6 @@ export default function ParticleOrb({
     };
   });
 
-  /* The mouth: a short straight line in the eyes' own white, that opens with the voice. */
-  const mouthW = Math.max(3, size * 0.105);
-  const mouthH = Math.max(1.3, size * 0.024);
-  const mouth = useAnimatedStyle(() => {
-    const l = look.get();
-    const f = finger.get();
-    const talk = talking.get();
-    return {
-      transform: [
-        { translateX: (l.x + f.x) * size * 0.022 },
-        { translateY: (l.y + f.y) * size * 0.01 },
-        { scaleX: 1 + beam.get() * 0.22 - talk * 0.3 },
-        { scaleY: 1 + talk * 2.6 },
-      ],
-    };
-  });
-
   const farProps = useAnimatedProps(() => ({ d: paths.get().far }));
   const midProps = useAnimatedProps(() => ({ d: paths.get().mid }));
   const nearProps = useAnimatedProps(() => ({ d: paths.get().near }));
@@ -400,7 +374,7 @@ export default function ParticleOrb({
           <AnimatedPath animatedProps={sparkProps} fill="#FFFFFF" fillOpacity={0.7} />
         </Svg>
 
-        {/* The eyes, and the mouth under them */}
+        {/* The eyes */}
         <Animated.View style={[{ alignItems: "center", justifyContent: "center" }, face]}>
           <Animated.View style={[{ flexDirection: "row", gap: size * 0.17 }, eyes]}>
             {[0, 1].map((n) => (
@@ -419,7 +393,6 @@ export default function ParticleOrb({
               </View>
             ))}
           </Animated.View>
-          <Animated.View style={[{ marginTop: size * 0.06, width: mouthW, height: mouthH, borderRadius: mouthH, backgroundColor: "#FFFFFF" }, mouth]} />
         </Animated.View>
       </View>
     </Animated.View>
