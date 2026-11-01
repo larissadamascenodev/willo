@@ -17,22 +17,23 @@ import { DWELL, type InsightSlide } from "@/lib/insights";
 import ParticleOrb, { type OrbMode } from "~/components/registro/ParticleOrb";
 import VoiceEntrySheet from "~/components/registro/VoiceEntrySheet";
 import { Mic } from "~/components/icons";
-import ChatBubble from "~/components/willo/ChatBubble";
+import GreetingLine from "~/components/willo/GreetingLine";
+import { useProfile } from "@/hooks/useProfile";
 import { routeFor } from "~/lib/assistantAsk";
 import { useVoiceEntry } from "~/lib/voiceEntry";
 import { useTapOrDouble } from "~/lib/doubleTap";
-import { NEXT } from "~/lib/greeting";
-import { GREEN, INK } from "~/theme/tokens";
+import { firstName } from "~/lib/greeting";
+import { INK } from "~/theme/tokens";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
 /**
  * The top of the home, with Willo in it.
  *
- * The sphere floats, and under it he sends messages: what he has noticed in the
- * person's numbers, the same readings the stories carry and so always current, mixed
- * with things worth asking him, in a new order each time, so it does not sound like a
- * loop. So it is three things at once: the assistant that has something to say, the
- * quickest way into Registro rápido, and someone to ask.
+ * The sphere floats, and under it, with no box, he says something: hello, what he has
+ * noticed in the person's numbers, the same readings the stories carry and so always
+ * current, and things worth asking him, the same way as on the sphere in the conversation.
+ * So it is three things at once: the assistant that has something to say, the quickest
+ * way into Registro rápido, and someone to ask.
  *
  * Touch the sphere and it turns; tap it and it swells and listens, and stops by itself
  * when you do. If what you said was an expense or an income, a sheet comes up with what
@@ -47,9 +48,9 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
    that he is listening, the page does not move and nothing is taller than the rest. */
 const ORB = 250;
 const HINT = 0;
-/** His message, the same as in the conversation: his name and up to three lines. */
-const CAPTION = 114;
-/** Under that: the way out of listening. */
+/** What he says: a line or two, and under it a line or two more. */
+const CAPTION = 106;
+/** Under that: how to talk to him, or the way out of listening. */
 const FOOT = 28;
 /** What this takes of the screen, for the home to leave room for. */
 export const ORB_HERO_BODY = 4 + ORB + 6 + CAPTION + 4 + FOOT + 8;
@@ -57,7 +58,7 @@ export const ORB_HERO_BODY = 4 + ORB + 6 + CAPTION + 4 + FOOT + 8;
 export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const [index, setIndex] = useState(0);
+  const { profile } = useProfile();
 
   const entry = useVoiceEntry({
     onQuestion: (said) => {
@@ -75,41 +76,14 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
   const listening = entry.state === "listening";
   const reading = entry.state === "reading";
   const busy = entry.state !== "idle";
-  /* What he has noticed, with something to ask him after every two. The order of those is
-     chosen once, so the readings can update under them without the rest jumping about. */
-  const [asks] = useState(() => [...NEXT].sort(() => Math.random() - 0.5));
-  const messages = useMemo(() => {
-    const out: { id: string; text: string }[] = [];
-    const written = (body: { text: string; bold?: boolean }[]) => body.map((p) => (p.bold ? `**${p.text}**` : p.text)).join("");
-    let a = 0;
-    const askNext = () => {
-      const ask = asks[a++];
-      out.push({ id: `ask-${a}`, text: `${ask.title} ${ask.sub}` });
-    };
-    slides.forEach((s, n) => {
-      out.push({ id: s.id, text: written(s.body) });
-      if (n % 2 === 1 && a < asks.length) askNext();
-    });
-    while (a < asks.length && out.length < 4) askNext();
-    return out;
-  }, [slides, asks]);
-  const count = messages.length;
-  const i = Math.min(index, Math.max(count - 1, 0));
-  const slide = messages[i];
+  /* A reading's sentence is what he says; its quip, if any, goes under it. */
+  const readings = useMemo(
+    () => slides.map((s) => ({ title: s.body.map((p) => p.text).join(""), sub: s.quip ?? "" })),
+    [slides],
+  );
   const mode: OrbMode = listening ? "listening" : reading ? "thinking" : "idle";
   /* As large as the width allows with a margin each side, so it is never cut. */
   const orb = Math.min(ORB, width - 72);
-
-  /* The next message, a while after this one has been written out. */
-  const [written, setWritten] = useState(false);
-  useEffect(() => {
-    setWritten(false);
-  }, [i]);
-  useEffect(() => {
-    if (busy || !written || count <= 1) return;
-    const t = setTimeout(() => setIndex((n) => (n + 1) % count), DWELL);
-    return () => clearTimeout(t);
-  }, [written, busy, count]);
 
   /* Afloat: a slow rise and fall, the same either way round. */
   const bob = useSharedValue(0);
@@ -163,25 +137,23 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
           <Animated.View entering={FadeIn.duration(220)} style={{ paddingHorizontal: 12 }}>
             <Text numberOfLines={3} style={{ fontSize: 14.5, lineHeight: 20, color: "#F9CE4E", textAlign: "center" }}>{entry.message}</Text>
           </Animated.View>
-        ) : slide ? (
-          <Pressable key={slide.id} onPress={() => setIndex((n) => (n + 1) % Math.max(count, 1))} style={{ alignSelf: "stretch", paddingHorizontal: 20 }}>
-            <ChatBubble role="bot" named avatarRoom={false} text={slide.text} onDone={() => setWritten(true)} />
-          </Pressable>
         ) : (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 6 }}>
-            <Mic size={11} color={GREEN} strokeWidth={2.4} />
-            <Text style={{ fontSize: 12.5, color: INK.softer }}>toque na esfera para falar com o Willo</Text>
-          </View>
+          <GreetingLine name={firstName(profile?.display_name)} readings={readings} />
         )}
       </View>
 
-      {/* The foot: the way out of listening. */}
-      <View style={{ marginTop: 4, height: FOOT, flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
-        {listening && (
+      {/* The foot: how to talk to him, or the way out of listening. */}
+      <View style={{ marginTop: 4, height: FOOT, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 }}>
+        {listening ? (
           <Pressable onPress={() => void entry.cancel()} hitSlop={10} style={({ pressed }) => ({ paddingVertical: 4, paddingHorizontal: 14, opacity: pressed ? 0.6 : 1 })}>
             <Text style={{ fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.7)" }}>Cancelar</Text>
           </Pressable>
-        )}
+        ) : !reading ? (
+          <>
+            <Mic size={12} color={INK.softer} strokeWidth={2.2} />
+            <Text style={{ fontSize: 12.5, color: INK.softer }}>Toque nele para falar</Text>
+          </>
+        ) : null}
       </View>
 
       <VoiceEntrySheet entry={entry} />

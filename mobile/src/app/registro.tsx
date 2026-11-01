@@ -831,7 +831,7 @@ export default function Registro() {
                     </Animated.View>
                   ) : (
                     <>
-                      <GreetingLine name={firstName(profile?.display_name)} notice={board.find((l) => l.level === "alerta" || l.level === "atencao")?.title} />
+                      <GreetingLine name={firstName(profile?.display_name)} readings={board.filter((l) => l.level === "alerta" || l.level === "atencao").slice(0, 1).map((l) => ({ title: "Vi uma coisa no Radar.", sub: l.title }))} />
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 8 }}>
                         <Mic size={12} color={INK.softer} strokeWidth={2.2} />
                         <Text style={{ fontSize: 12.5, color: INK.softer }}>Toque nele para falar</Text>

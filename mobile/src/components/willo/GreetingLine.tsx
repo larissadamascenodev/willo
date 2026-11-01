@@ -37,7 +37,7 @@ function Rising({ delay, children }: { delay: number; children: ReactNode }) {
   return <Animated.View style={style}>{children}</Animated.View>;
 }
 
-export default function GreetingLine({ name, notice }: { name: string | null; notice?: string | null }) {
+export default function GreetingLine({ name, readings = [] }: { name: string | null; /** What he has noticed in the numbers, mixed in. */ readings?: Greeting[] }) {
   /* Chosen once, when the name is known, so the hello does not change under the reader's
      eyes as things load. The name gets a moment to arrive. */
   const [chosen, setChosen] = useState<Greeting[] | null>(null);
@@ -50,7 +50,17 @@ export default function GreetingLine({ name, notice }: { name: string | null; no
     const t = setTimeout(() => setChosen(greetings(null)), 4000);
     return () => clearTimeout(t);
   }, [name, chosen]);
-  const lines = chosen ? (notice ? [chosen[0], { title: "Vi uma coisa no Radar.", sub: notice }, ...chosen.slice(1)] : chosen) : [];
+  /* The hello, then what he has noticed with something to ask after every two. */
+  const lines: Greeting[] = [];
+  if (chosen) {
+    const asks = chosen.slice(1);
+    lines.push(chosen[0]);
+    readings.forEach((r, n) => {
+      lines.push(r);
+      if (n % 2 === 1 && asks.length) lines.push(asks.shift()!);
+    });
+    lines.push(...asks);
+  }
   const [at, setAt] = useState(0);
   const out = useSharedValue(1);
   const { width } = useWindowDimensions();

@@ -210,7 +210,7 @@ function SimulacaoCard({ s }: { s: Simulation }) {
       </View>
       {s.melhor_mes_para_comecar && (
         <Text style={{ marginTop: 14, fontSize: 13.5, ...face(500), color: INK.soft }}>
-          Melhor momento: <Text style={{ ...face(700), color: "#fff", textTransform: "capitalize" }}>{s.melhor_mes_para_comecar}</Text>
+          Melhor momento: <Text style={{ ...face(700), color: "#fff" }}>{s.melhor_mes_para_comecar.replace(/^./, (c) => c.toUpperCase())}</Text>
         </Text>
       )}
       {s.cartao && (
