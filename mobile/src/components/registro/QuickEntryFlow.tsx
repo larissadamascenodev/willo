@@ -5,7 +5,7 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { resolveReceiptDate } from "@/lib/receiptDate";
 import { processScanPhoto } from "~/lib/scanUpload";
-import { MicrophoneDenied, useVoice } from "~/lib/voice";
+import { loudnessOf, MicrophoneDenied, useVoice } from "~/lib/voice";
 import { createTransaction, getAccounts, getCreditCards, getRecentTransactions } from "@/services/transactionService";
 import { allowedCategories, readEntry, todayISO, type ParsedEntry } from "@/services/quickEntry";
 import { parseLocal } from "@/lib/quickEntry/parseLocal";
@@ -83,7 +83,7 @@ export default function QuickEntryFlow({
   onHearing,
 }: {
   /** Listening or reading: for Willo to show above the sheet, and how to stop him. */
-  onHearing?: (hearing: { reading: boolean; stop: () => void } | null) => void;
+  onHearing?: (hearing: { reading: boolean; loudness?: number; stop: () => void } | null) => void;
   initial?: StartingEntry | null;
   /** What was said or written, shown over the card. */
   heard?: string | null;
@@ -331,8 +331,8 @@ export default function QuickEntryFlow({
       void Haptics.selectionAsync().catch(() => undefined);
       goWhenWhole.current = true;
       setAiRead(entries[0]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não consegui ouvir agora. Tente de novo.");
+    } catch {
+      setError("Não consegui entender o áudio agora. Tente de novo ou escreva aqui.");
     } finally {
       setReading(false);
     }
@@ -433,9 +433,9 @@ export default function QuickEntryFlow({
   const stopHearing = useRef(() => undefined as void);
   stopHearing.current = () => void toggleVoice();
   useEffect(() => {
-    onHearing?.(listening || reading ? { reading: !listening, stop: () => stopHearing.current() } : null);
+    onHearing?.(listening || reading ? { reading: !listening, loudness: listening ? loudnessOf(voice.level) : undefined, stop: () => stopHearing.current() } : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listening, reading]);
+  }, [listening, reading, voice.level]);
 
   const readHard = async () => {
     const text = said.trim();

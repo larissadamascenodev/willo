@@ -86,13 +86,13 @@ export default function GreetingLine({ name, readings = [] }: { name: string | n
   const line = lines[at % lines.length];
   /* Bold at this size runs about half its size a letter; the sub line, a little less. */
   const room = width - 44;
-  const title = layOut(line.title, Math.floor(room / (TITLE * 0.53)), TITLE);
-  const sub = layOut(line.sub, Math.floor(room / (SUB * 0.5)), SUB);
+  const title = layOut(line.title, Math.floor(room / (TITLE * 0.58)), TITLE);
+  const sub = layOut(line.sub, Math.floor(room / (SUB * 0.54)), SUB);
   let spoken = 0;
   return (
     <Animated.View key={at} style={[{ alignItems: "center", paddingHorizontal: 22 }, fading]}>
       {title.lines.map((text) => (
-        <View key={text} style={{ flexDirection: "row", justifyContent: "center", columnGap: title.size * 0.25 }}>
+        <View key={text} style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", columnGap: title.size * 0.25 }}>
           {text.split(" ").map((w, i) => (
             <Word key={i} text={w} delay={spoken++ * WORD_MS} size={title.size} />
           ))}

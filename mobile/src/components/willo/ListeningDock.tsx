@@ -21,7 +21,7 @@ const FIELD_CLEAR = 64;
 /* Blur that builds up: each layer starts lower and adds to those above it. */
 const BLUR_HEIGHTS = [230, 190, 150, 110, 70];
 
-export default function ListeningDock({ reading, bottom, onStop }: { reading: boolean; bottom: number; onStop: () => void }) {
+export default function ListeningDock({ reading, bottom, loudness, onStop }: { reading: boolean; bottom: number; loudness?: number; onStop: () => void }) {
   useEffect(() => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
   }, []);
@@ -35,7 +35,7 @@ export default function ListeningDock({ reading, bottom, onStop }: { reading: bo
         <LinearGradient colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.72)"]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
       </Animated.View>
       <Animated.View entering={FadeIn.duration(220)} exiting={FadeOut.duration(180)} style={{ marginBottom: bottom + FIELD_TOP }}>
-        <ParticleOrb size={116} mode={reading ? "thinking" : "listening"} onPress={reading ? undefined : onStop} />
+        <ParticleOrb size={116} mode={reading ? "thinking" : "listening"} loudness={loudness} onPress={reading ? undefined : onStop} />
       </Animated.View>
     </View>
   );

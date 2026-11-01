@@ -71,6 +71,7 @@ export default function ParticleOrb({
   density,
   onPress,
   expanded = false,
+  loudness,
 }: {
   size: number;
   mode?: OrbMode;
@@ -80,6 +81,8 @@ export default function ParticleOrb({
   onPress?: () => void;
   /** Swollen, as when it has been tapped and is now listening. */
   expanded?: boolean;
+  /** How loud the voice is right now, 0 to 1: he moves with it, and is still when it is quiet. */
+  loudness?: number;
 }) {
   const reduce = useReducedMotion();
   const count = density ?? (size >= 180 ? 1500 : size >= 60 ? 650 : 260);
@@ -115,6 +118,10 @@ export default function ParticleOrb({
   const beamUntil = useSharedValue(0);
   const nextBeam = useSharedValue(6);
   const talking = useSharedValue(0);
+  const loud = useSharedValue(-1);
+  useEffect(() => {
+    loud.set(loudness ?? -1);
+  }, [loudness, loud]);
   const still = useSharedValue(reduce ? 1 : 0);
 
   useEffect(() => {
@@ -135,7 +142,7 @@ export default function ParticleOrb({
     clock.set(clock.get() + dt);
     /* The points drift slowly: redrawing them a few times a second is enough, and leaves
        the frame free for whatever else is on the screen. Faster while it breathes. */
-    if (clock.get() - drawnAt.get() > (breath.get() > 0.02 ? 0.05 : 0.14)) {
+    if (clock.get() - drawnAt.get() > (breath.get() > 0.02 || talking.get() > 0.02 ? 0.05 : 0.14)) {
       drawnAt.set(clock.get());
     }
 
@@ -178,7 +185,9 @@ export default function ParticleOrb({
       nextBeam.set(t + 8 + Math.random() * 9);
     }
     beam.set(beam.get() + ((t < beamUntil.get() ? 1 : 0) - beam.get()) * Math.min(1, dt * 5));
-    talking.set(talking.get() + (Math.max(working.get(), hearing.get()) - talking.get()) * Math.min(1, dt * 7));
+    /* With a voice to follow he follows it; otherwise he moves as if talking. */
+    const wantsTalk = hearing.get() && loud.get() >= 0 ? loud.get() : Math.max(working.get(), hearing.get()) * (0.5 + 0.5 * Math.sin(t * 7.5) * Math.sin(t * 3.1));
+    talking.set(talking.get() + (wantsTalk - talking.get()) * Math.min(1, dt * 12));
     open.set(open.get() + ((hearing.get() ? 1 : 0) - open.get()) * Math.min(1, dt * 6));
 
     /* Sparks: all the time at work, a little when listening, every so often idle. */
@@ -252,7 +261,7 @@ export default function ParticleOrb({
   const paths = useDerivedValue(() => {
     const a = angle.get();
     const t = drawnAt.get();
-    const pulse = 1 + breath.get() * (0.045 * Math.sin(t * 5.2) + 0.02 * Math.sin(t * 8.3));
+    const pulse = loud.get() >= 0 && hearing.get() ? 1 + talking.get() * 0.07 : 1 + breath.get() * (0.045 * Math.sin(t * 5.2) + 0.02 * Math.sin(t * 8.3));
     const ca = Math.cos(a);
     const sa = Math.sin(a);
     const tl = tilt.get();
@@ -324,7 +333,7 @@ export default function ParticleOrb({
         { translateY: y },
         { rotate: `${calm * Math.sin(t * 0.8) * 2.6 + l.x * 5}deg` },
         { scaleX: 1 + o * 0.08 + calm * 0.015 * Math.sin(t * 1.7) },
-        { scaleY: 1 + o * 0.1 * (1 + 0.4 * Math.sin(t * 5.2)) - calm * 0.015 * Math.sin(t * 1.7) },
+        { scaleY: 1 + o * 0.04 + talking.get() * 0.06 - calm * 0.015 * Math.sin(t * 1.7) },
       ],
     };
   });
@@ -342,24 +351,21 @@ export default function ParticleOrb({
     };
   });
 
-  /* The mouth: a curve in the eyes' own white that smiles at rest, deepens when he beams, and
-     opens and closes while he listens or answers. */
-  const mouthW = size * 0.26;
-  const mouthH = size * 0.13;
-  const mouthProps = useAnimatedProps(() => {
-    const t = clock.get();
-    const talk = talking.get();
-    const w = size * (0.058 + beam.get() * 0.014) * (1 - talk * 0.32);
-    const smile = size * (0.05 + beam.get() * 0.035 + 0.006 * Math.sin(t * 0.9)) * (1 - talk * 0.55);
-    const gape = talk * size * 0.05 * (0.55 + 0.45 * Math.sin(t * 7.5) * Math.sin(t * 3.1));
-    const c = mouthW / 2;
-    const y = size * 0.03;
-    return { d: `M${(c - w).toFixed(2)} ${y.toFixed(2)}Q${c.toFixed(2)} ${(y + smile).toFixed(2)} ${(c + w).toFixed(2)} ${y.toFixed(2)}Q${c.toFixed(2)} ${(y + smile + gape * 2).toFixed(2)} ${(c - w).toFixed(2)} ${y.toFixed(2)}Z` };
-  });
-  const mouthFollows = useAnimatedStyle(() => {
+  /* The mouth: a short straight line in the eyes' own white, that opens with the voice. */
+  const mouthW = Math.max(3, size * 0.105);
+  const mouthH = Math.max(1.3, size * 0.024);
+  const mouth = useAnimatedStyle(() => {
     const l = look.get();
     const f = finger.get();
-    return { transform: [{ translateX: (l.x + f.x) * size * 0.022 }, { translateY: (l.y + f.y) * size * 0.01 }] };
+    const talk = talking.get();
+    return {
+      transform: [
+        { translateX: (l.x + f.x) * size * 0.022 },
+        { translateY: (l.y + f.y) * size * 0.01 },
+        { scaleX: 1 + beam.get() * 0.22 - talk * 0.3 },
+        { scaleY: 1 + talk * 2.6 },
+      ],
+    };
   });
 
   const farProps = useAnimatedProps(() => ({ d: paths.get().far }));
@@ -413,11 +419,7 @@ export default function ParticleOrb({
               </View>
             ))}
           </Animated.View>
-          <Animated.View style={[{ marginTop: size * 0.015, width: mouthW, height: mouthH }, mouthFollows]}>
-            <Svg width={mouthW} height={mouthH}>
-              <AnimatedPath animatedProps={mouthProps} fill="#FFFFFF" stroke="#FFFFFF" strokeWidth={Math.max(1, size * 0.018)} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
-          </Animated.View>
+          <Animated.View style={[{ marginTop: size * 0.06, width: mouthW, height: mouthH, borderRadius: mouthH, backgroundColor: "#FFFFFF" }, mouth]} />
         </Animated.View>
       </View>
     </Animated.View>

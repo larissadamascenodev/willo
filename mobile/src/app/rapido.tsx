@@ -14,7 +14,7 @@ export default function Rapido() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("ask");
-  const [hearing, setHearing] = useState<{ reading: boolean; stop: () => void } | null>(null);
+  const [hearing, setHearing] = useState<{ reading: boolean; loudness?: number; stop: () => void } | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setOpen(true), 30);
@@ -38,7 +38,7 @@ export default function Rapido() {
       above={
         hearing ? (
           <Animated.View entering={FadeIn.duration(220)} exiting={FadeOut.duration(180)}>
-            <ParticleOrb size={116} mode={hearing.reading ? "thinking" : "listening"} onPress={hearing.reading ? undefined : hearing.stop} />
+            <ParticleOrb size={116} mode={hearing.reading ? "thinking" : "listening"} loudness={hearing.loudness} onPress={hearing.reading ? undefined : hearing.stop} />
           </Animated.View>
         ) : null
       }

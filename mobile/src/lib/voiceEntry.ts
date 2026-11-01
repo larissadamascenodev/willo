@@ -8,7 +8,7 @@ import { isAsking, isConversation } from "~/lib/saidKind";
 import { applyDefaults, answer as answerDraft, nextQuestion, statusFor } from "@/lib/quickEntry/resolve";
 import type { QuickDraft, QuickQuestion, QuickSetup } from "@/lib/quickEntry/types";
 import { useAuth } from "~/lib/auth";
-import { MicrophoneDenied, useVoice } from "~/lib/voice";
+import { loudnessOf, MicrophoneDenied, useVoice } from "~/lib/voice";
 
 /**
  * Say it, and have it noted — with one look before it is.
@@ -404,6 +404,7 @@ export function useVoiceEntry(options: { onQuestion?: (said: string) => void; hi
     source,
     readText,
     seconds: voice.seconds,
+    loudness: state === "listening" ? loudnessOf(voice.level) : undefined,
     lines,
     transcript,
     message,

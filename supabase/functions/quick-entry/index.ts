@@ -19,7 +19,7 @@ const corsHeaders = {
  */
 
 const GEMINI_MODELS = ["gemini-3.5-flash-lite", "gemini-3.6-flash"];
-const GEMINI_TIMEOUT_MS = 20_000;
+const GEMINI_TIMEOUT_MS = 12_000;
 
 const FALLBACK_CATEGORIES = [
   "Alimentação", "Supermercado", "Transporte", "Saúde", "Assinaturas", "Lazer", "Moradia",
@@ -57,6 +57,8 @@ async function callGemini(system: string, parts: Part[], schema: Record<string, 
               temperature: 0,
               responseMimeType: "application/json",
               responseSchema: schema,
+              /* Reading a short sentence needs no long think: left to itself it ran out the clock. */
+              thinkingConfig: { thinkingLevel: "low" },
             },
           }),
         },

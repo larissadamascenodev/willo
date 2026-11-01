@@ -117,6 +117,7 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
           size={orb}
           mode={mode}
           expanded={listening}
+          loudness={entry.loudness}
           onPress={tap}
         />
       </Animated.View>

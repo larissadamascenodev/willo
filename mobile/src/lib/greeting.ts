@@ -51,8 +51,12 @@ export const NEXT: Greeting[] = [
   { title: "Pensando em comprar algo?", sub: "Me diz o valor e eu vejo se cabe." },
   { title: "Gastou agora há pouco?", sub: "Fala que eu anoto na hora." },
   { title: "Quer saber quanto sobra?", sub: "É só perguntar." },
-  { title: "Pode perguntar de tudo.", sub: "Não precisa ser sobre dinheiro." },
   { title: "Curioso com a fatura?", sub: "Eu te digo como ela está." },
+  { title: "Eu crio limites para você.", sub: "“Limite de R$ 300 em farmácia.”" },
+  { title: "Eu lembro das suas contas.", sub: "“Me lembra da luz dia 10.”" },
+  { title: "Eu aviso antes de apertar.", sub: "Fico de olho no seu mês." },
+  { title: "Tem um comprovante aí?", sub: "Manda a foto que eu anoto." },
+  { title: "Quer organizar a renda?", sub: "Eu monto um plano com seus números." },
 ];
 
 /**
@@ -74,7 +78,10 @@ export function layOut(text: string, perLine: number, size: number): { lines: st
       best = i;
     }
   }
-  return { lines: [words.slice(0, best).join(" "), words.slice(best).join(" ")], size };
+  const lines = [words.slice(0, best).join(" "), words.slice(best).join(" ")];
+  /* A long sentence goes smaller rather than off the screen. */
+  const longest = Math.max(...lines.map((l) => l.length));
+  return { lines, size: longest > perLine ? size * (perLine / longest) : size };
 }
 
 export function firstName(display: string | null | undefined): string | null {

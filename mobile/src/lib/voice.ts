@@ -26,6 +26,9 @@ export class MicrophoneDenied extends Error {}
 /* Defined once: the recorder is rebuilt if the options it is given change. */
 const OPTIONS = { ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true };
 
+/** The recorder's level, in decibels, as how loud the voice is from 0 to 1. */
+export const loudnessOf = (level: number | undefined) => (typeof level === "number" ? Math.min(1, Math.max(0, (level + 48) / 34)) : undefined);
+
 export function useVoice() {
   const recorder = useAudioRecorder(OPTIONS);
   const state = useAudioRecorderState(recorder, 120);

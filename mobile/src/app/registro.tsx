@@ -850,7 +850,7 @@ export default function Registro() {
           <View style={{ flex: 1 }}>
             <View style={{ flex: 1 }} onLayout={(e) => setStageH(e.nativeEvent.layout.height)}>
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 }}>
-                <ParticleOrb size={orb} mode={mode} expanded={listening} onPress={orbTap} />
+                <ParticleOrb size={orb} mode={mode} expanded={listening} loudness={entry.loudness} onPress={orbTap} />
 
                 {/* What the sphere is saying, in the same place whichever it is. */}
                 <View style={{ marginTop: 12, height: CAPTION_H, alignSelf: "stretch", alignItems: "center" }}>
@@ -1126,7 +1126,7 @@ export default function Registro() {
         </View>
         )}
         {/* Over the field while he listens, as the phone's own assistant comes up. */}
-        {view === "chat" && !stage && (listening || reading) && <ListeningDock reading={reading} bottom={insets.bottom} onStop={() => void entry.toggle()} />}
+        {view === "chat" && !stage && (listening || reading) && <ListeningDock reading={reading} bottom={insets.bottom} loudness={entry.loudness} onStop={() => void entry.toggle()} />}
       </KeyboardAvoidingView>
 
       {/* What was heard, for a look before it is written. */}
