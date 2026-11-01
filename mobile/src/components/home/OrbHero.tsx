@@ -78,7 +78,11 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
   const busy = entry.state !== "idle";
   /* A reading's sentence is what he says; its quip, if any, goes under it. */
   const readings = useMemo(
-    () => slides.map((s) => ({ title: s.body.map((p) => p.text).join(""), sub: s.quip ?? "" })),
+    () =>
+      slides.map((s) => {
+        const title = s.body.map((p) => p.text).join("");
+        return { title, sub: s.quip ?? "", ask: `Me explica melhor: ${title}` };
+      }),
     [slides],
   );
   const mode: OrbMode = listening ? "listening" : reading ? "thinking" : "idle";
@@ -125,21 +129,25 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
       {/* What he has to say, or, while listening, that he is. */}
       <View style={{ height: CAPTION, marginTop: 6, alignSelf: "stretch", alignItems: "center", justifyContent: "flex-start", overflow: "hidden" }}>
         {listening ? (
-          <Animated.View entering={FadeIn.duration(220)} style={{ alignItems: "center" }}>
+          /* Swollen, the sphere reaches further down: the words keep clear of it. */
+          <Animated.View entering={FadeIn.duration(220)} style={{ alignItems: "center", marginTop: orb * 0.09 }}>
             <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Estou ouvindo…</Text>
             <Text style={{ marginTop: 3, fontSize: 13.5, color: INK.soft, textAlign: "center" }}>Pode falar. Eu paro quando você parar.</Text>
           </Animated.View>
         ) : reading ? (
           <Animated.View entering={FadeIn.duration(220)} style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Anotando…</Text>
-            <Text style={{ marginTop: 3, fontSize: 13.5, color: INK.soft }}>Só um instante.</Text>
+            <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Pensando…</Text>
           </Animated.View>
         ) : entry.message ? (
           <Animated.View entering={FadeIn.duration(220)} style={{ paddingHorizontal: 12 }}>
             <Text numberOfLines={3} style={{ fontSize: 14.5, lineHeight: 20, color: "#F9CE4E", textAlign: "center" }}>{entry.message}</Text>
           </Animated.View>
         ) : (
-          <GreetingLine name={firstName(profile?.display_name)} readings={readings} />
+          <GreetingLine
+            name={firstName(profile?.display_name)}
+            readings={readings}
+            onPick={(line) => router.push({ pathname: "/registro", params: line.ask ? { ask: line.ask } : { say: line.say ?? line.title } } as never)}
+          />
         )}
       </View>
 

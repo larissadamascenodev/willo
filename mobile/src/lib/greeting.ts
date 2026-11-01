@@ -1,15 +1,51 @@
 /**
- * What Willo says when you come in, instead of a label.
+ * What Willo says under the sphere, instead of a label.
  *
- * Told by the hour and the day, with the person's name, and never the same opening twice
- * running. No "bem-vindo" or "bem-vinda": the app does not know which of them is right,
- * and these read better anyway. After the opening he goes on through things worth asking,
- * so the sphere is not left repeating itself.
+ * The hello is told by the hour and the day, with the person's name. After it he goes
+ * through what he has noticed in their numbers and a long list of things he can do, always
+ * starting from what has gone longest without being said, so a day does not sound like the
+ * one before. No "bem-vindo" or "bem-vinda": the app does not know which is right.
+ *
+ * Every line leads somewhere. Touching it opens the conversation: with `ask`, that question
+ * already asked; with `say`, Willo speaking first.
  */
 
 export interface Greeting {
   title: string;
   sub: string;
+  ask?: string;
+  say?: string;
+}
+
+const SEEN = "willo-said";
+
+const readSeen = (): Record<string, number> => {
+  try {
+    return JSON.parse(localStorage.getItem(SEEN) ?? "{}") as Record<string, number>;
+  } catch {
+    return {};
+  }
+};
+
+/** Noted as said, so it goes to the back of the queue. */
+export function markSaid(title: string) {
+  const seen = readSeen();
+  seen[title] = Date.now();
+  const kept = Object.entries(seen).sort((a, b) => b[1] - a[1]).slice(0, 150);
+  try {
+    localStorage.setItem(SEEN, JSON.stringify(Object.fromEntries(kept)));
+  } catch {
+    /* Only means it might repeat. */
+  }
+}
+
+/** Longest unsaid first; what has never been said in no particular order. */
+export function longestUnsaid<T extends { title: string }>(list: T[]): T[] {
+  const seen = readSeen();
+  return list
+    .map((item) => ({ item, at: seen[item.title] ?? 0, tie: Math.random() }))
+    .sort((a, b) => a.at - b.at || a.tie - b.tie)
+    .map((x) => x.item);
 }
 
 const KEY = "willo-last-greeting";
@@ -46,17 +82,53 @@ const ASKS = [
   "Gastou alguma coisa? Me fala.",
 ];
 
-/** Things to go on to once he has said hello. */
+/** What he can do and what can be asked of him. */
 export const NEXT: Greeting[] = [
-  { title: "Pensando em comprar algo?", sub: "Me diz o valor e eu vejo se cabe." },
-  { title: "Gastou agora há pouco?", sub: "Fala que eu anoto na hora." },
-  { title: "Quer saber quanto sobra?", sub: "É só perguntar." },
-  { title: "Curioso com a fatura?", sub: "Eu te digo como ela está." },
-  { title: "Eu crio limites para você.", sub: "“Limite de R$ 300 em farmácia.”" },
-  { title: "Eu lembro das suas contas.", sub: "“Me lembra da luz dia 10.”" },
-  { title: "Eu aviso antes de apertar.", sub: "Fico de olho no seu mês." },
-  { title: "Tem um comprovante aí?", sub: "Manda a foto que eu anoto." },
-  { title: "Quer organizar a renda?", sub: "Eu monto um plano com seus números." },
+  /* Noting things down */
+  { title: "Gastou agora há pouco?", sub: "Fala que eu anoto na hora.", say: "Qual foi o gasto? Me fala o que foi e quanto, tipo “café 12”." },
+  { title: "Tem um comprovante aí?", sub: "Manda a foto que eu anoto.", say: "Manda a foto: é só tocar na câmera aqui embaixo, ao lado do campo." },
+  { title: "Recebeu alguma coisa?", sub: "Me conta que eu registro.", say: "Quanto entrou, e de onde? Pode falar assim: “recebi 200 de freela”." },
+  { title: "Pagou alguma conta hoje?", sub: "Eu deixo tudo em dia.", say: "Qual conta você pagou, e de quanto?" },
+  { title: "Comprou no cartão?", sub: "Eu coloco na fatura certa.", say: "O que você comprou, de quanto e em qual cartão?" },
+  { title: "Dividiu em parcelas?", sub: "Eu conto cada uma para você.", say: "O que foi, quanto e em quantas vezes? Tipo “tênis 600 em 3x no crédito”." },
+  { title: "Falar é mais rápido.", sub: "É só tocar em mim e dizer.", say: "Pode falar comigo pelo microfone aqui embaixo: me diz o que gastou." },
+  /* The bill */
+  { title: "Curioso com a fatura?", sub: "Eu te digo como ela está.", ask: "Quanto está minha fatura?" },
+  { title: "A fatura subiu?", sub: "Eu descubro o porquê.", ask: "Por que minha fatura aumentou?" },
+  { title: "Quanto resta no limite?", sub: "Eu olho para você.", ask: "Quanto tenho de limite no cartão?" },
+  { title: "O que pesou na fatura?", sub: "Eu separo as maiores.", ask: "O que mais pesou na fatura?" },
+  /* The month */
+  { title: "Quer saber quanto sobra?", sub: "É só perguntar.", ask: "Quanto posso gastar até o fim do mês?" },
+  { title: "Como vai fechar o mês?", sub: "Eu faço a conta agora.", ask: "Como meu mês vai fechar?" },
+  { title: "Quanto dá para gastar hoje?", sub: "Eu calculo com o seu mês.", ask: "Quanto posso gastar hoje?" },
+  { title: "Como fica o mês que vem?", sub: "Eu já olhei lá na frente.", ask: "Como fica o mês que vem?" },
+  { title: "Eu aviso antes de apertar.", sub: "Fico de olho no seu mês.", ask: "Tem algo que vai apertar nos próximos dias?" },
+  { title: "Vai vencer alguma coisa?", sub: "Eu vejo os próximos dias.", ask: "O que vence nos próximos 7 dias?" },
+  /* Where it goes */
+  { title: "Para onde foi o dinheiro?", sub: "Eu mostro onde pesou.", ask: "Onde estou gastando mais este mês?" },
+  { title: "Algum gasto estranho?", sub: "Eu procuro o que fugiu do normal.", ask: "Tenho algum gasto fora do padrão?" },
+  { title: "Sabe quanto vai em assinatura?", sub: "Eu somo tudo para você.", ask: "Quais assinaturas eu pago?" },
+  { title: "Quer cortar gastos?", sub: "Eu mostro por onde começar.", ask: "Onde consigo economizar este mês?" },
+  { title: "Gastou mais que mês passado?", sub: "Eu comparo os dois.", ask: "Gastei mais este mês do que no mês passado?" },
+  { title: "Como foi a sua semana?", sub: "Eu resumo os gastos.", ask: "Quanto gastei nos últimos 7 dias?" },
+  /* Decisions */
+  { title: "Pensando em comprar algo?", sub: "Me diz o valor e eu vejo se cabe.", say: "O que você quer comprar, e de quanto? Eu vejo se cabe no seu mês." },
+  { title: "À vista ou parcelado?", sub: "Eu simulo os dois.", say: "Qual é a compra e o valor? Eu comparo à vista e parcelado para você." },
+  { title: "Qual o melhor mês para comprar?", sub: "Eu olho os próximos meses.", say: "O que você quer comprar, e de quanto? Eu vejo qual mês é melhor." },
+  { title: "Quando acabam as parcelas?", sub: "Eu te digo o mês certinho.", ask: "Quando terminam meus parcelamentos?" },
+  /* Doing things for you */
+  { title: "Eu crio limites para você.", sub: "“Limite de R$ 300 em farmácia.”", say: "Em qual categoria, e de quanto? Pode falar assim: “cria um limite de R$ 300 para farmácia”." },
+  { title: "Eu lembro das suas contas.", sub: "“Me lembra da luz dia 10.”", say: "Do que eu te lembro, e quando? Pode falar assim: “me lembra da luz dia 10”." },
+  { title: "Gasta demais em algo?", sub: "Vamos colocar um limite nisso.", say: "Em qual categoria você quer um limite, e de quanto?" },
+  { title: "Medo de esquecer um boleto?", sub: "Eu te aviso antes.", say: "Qual boleto, e em que dia vence? Tipo “me lembra do boleto da escola dia 20”." },
+  /* Planning */
+  { title: "Quer organizar a renda?", sub: "Eu monto um plano com seus números.", ask: "Qual o melhor plano para minha renda?" },
+  { title: "Dá para guardar mais?", sub: "Eu vejo quanto cabe.", ask: "Quanto consigo guardar por mês?" },
+  { title: "Tem uma meta em mente?", sub: "Eu digo quanto falta.", ask: "Em quanto tempo chego na minha meta?" },
+  { title: "Sonhando com uma viagem?", sub: "Eu faço as contas com você.", say: "Para onde, e quanto você acha que custa? Eu vejo como guardar para isso." },
+  { title: "Quer sair do aperto?", sub: "A gente monta um caminho.", ask: "Como evito fechar o mês no negativo?" },
+  { title: "Dúvida sobre dinheiro?", sub: "Pode perguntar, sem vergonha.", say: "Pode perguntar! O que você quer entender melhor sobre o seu dinheiro?" },
+  { title: "Quer entender o seu cartão?", sub: "Eu explico sem complicar.", say: "O que você quer entender do cartão? Fechamento, juros, fatura..." },
 ];
 
 /**
@@ -88,7 +160,7 @@ export function firstName(display: string | null | undefined): string | null {
   return first || null;
 }
 
-/** The opening, then the rest in a shuffled order. */
+/** The opening, then the rest from what has gone longest unsaid. */
 export function greetings(name: string | null, now = new Date()): Greeting[] {
   let last: string | null = null;
   try {
@@ -102,6 +174,6 @@ export function greetings(name: string | null, now = new Date()): Greeting[] {
   } catch {
     /* Only means it might repeat. */
   }
-  const rest = [...NEXT].sort(() => Math.random() - 0.5);
-  return [{ title, sub: pick(ASKS) }, ...rest];
+  const sub = pick(ASKS);
+  return [{ title, sub, say: `${name ? `Oi, ${name}! ` : "Oi! "}${sub}` }, ...longestUnsaid(NEXT)];
 }

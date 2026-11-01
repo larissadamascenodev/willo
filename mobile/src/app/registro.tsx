@@ -580,8 +580,16 @@ export default function Registro() {
     void converse(said);
   };
 
+  const { ask, say } = useLocalSearchParams<{ ask?: string; say?: string }>();
+  /* Something touched on the home that he takes up himself: he speaks first. */
+  const saidFromHome = useRef(false);
+  useEffect(() => {
+    if (!say || saidFromHome.current) return;
+    saidFromHome.current = true;
+    void pushBot(say);
+  }, [say, pushBot]);
+
   /* A question put to him from the home: the conversation opens with it already asked. */
-  const { ask } = useLocalSearchParams<{ ask?: string }>();
   const askedFromHome = useRef(false);
   useEffect(() => {
     if (!ask || askedFromHome.current || (categories.length === 0 && snapshotLoading)) return;
@@ -855,7 +863,8 @@ export default function Registro() {
                 {/* What the sphere is saying, in the same place whichever it is. */}
                 <View style={{ marginTop: 12, height: CAPTION_H, alignSelf: "stretch", alignItems: "center" }}>
                   {listening ? (
-                    <Animated.View entering={FadeIn.duration(240)} style={{ alignItems: "center" }}>
+                    /* Swollen, the sphere reaches further down: the words keep clear of it. */
+                    <Animated.View entering={FadeIn.duration(240)} style={{ alignItems: "center", marginTop: orb * 0.09 }}>
                       <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Estou ouvindo…</Text>
                       <Pressable onPress={() => void entry.cancel()} hitSlop={10} style={({ pressed }) => ({ marginTop: 4, paddingVertical: 4, paddingHorizontal: 14, opacity: pressed ? 0.6 : 1 })}>
                         <Text style={{ fontSize: 13, fontWeight: "600", color: "rgba(255,255,255,0.7)" }}>Cancelar</Text>
@@ -867,7 +876,14 @@ export default function Registro() {
                     </Animated.View>
                   ) : (
                     <>
-                      <GreetingLine name={firstName(profile?.display_name)} readings={board.filter((l) => l.level === "alerta" || l.level === "atencao").slice(0, 1).map((l) => ({ title: "Vi uma coisa no Radar.", sub: l.title }))} />
+                      <GreetingLine name={firstName(profile?.display_name)} readings={board.filter((l) => l.level === "alerta" || l.level === "atencao").slice(0, 1).map((l) => ({ title: "Vi uma coisa no Radar.", sub: l.title, ask: l.ask }))}
+                        onPick={(line) => {
+                          if (line.ask) {
+                            pushUser(line.ask);
+                            void converse(line.ask);
+                          } else void pushBot(line.say ?? line.title);
+                        }}
+                      />
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 8 }}>
                         <Mic size={12} color={INK.softer} strokeWidth={2.2} />
                         <Text style={{ fontSize: 12.5, color: INK.softer }}>Toque nele para falar</Text>

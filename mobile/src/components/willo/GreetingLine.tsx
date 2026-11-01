@@ -1,7 +1,7 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { Text, View, useWindowDimensions } from "react-native";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Pressable, Text, View, useWindowDimensions } from "react-native";
 import Animated, { Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
-import { greetings, layOut, type Greeting } from "~/lib/greeting";
+import { greetings, layOut, longestUnsaid, markSaid, type Greeting } from "~/lib/greeting";
 import { face } from "~/lib/chatFont";
 import { INK } from "~/theme/tokens";
 
@@ -37,7 +37,17 @@ function Rising({ delay, children }: { delay: number; children: ReactNode }) {
   return <Animated.View style={style}>{children}</Animated.View>;
 }
 
-export default function GreetingLine({ name, readings = [] }: { name: string | null; /** What he has noticed in the numbers, mixed in. */ readings?: Greeting[] }) {
+export default function GreetingLine({
+  name,
+  readings = [],
+  onPick,
+}: {
+  name: string | null;
+  /** What he has noticed in the numbers, mixed in. */
+  readings?: Greeting[];
+  /** The line on show was touched. */
+  onPick?: (line: Greeting) => void;
+}) {
   /* Chosen once, when the name is known, so the hello does not change under the reader's
      eyes as things load. The name gets a moment to arrive. */
   const [chosen, setChosen] = useState<Greeting[] | null>(null);
@@ -50,12 +60,17 @@ export default function GreetingLine({ name, readings = [] }: { name: string | n
     const t = setTimeout(() => setChosen(greetings(null)), 4000);
     return () => clearTimeout(t);
   }, [name, chosen]);
+  /* Their order is settled once: lines must not swap places while one is on show. */
+  const titles = readings.map((r) => r.title).join("|");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const noticed = useMemo(() => longestUnsaid(readings).slice(0, 6), [titles]);
+
   /* The hello, then what he has noticed with something to ask after every two. */
   const lines: Greeting[] = [];
   if (chosen) {
     const asks = chosen.slice(1);
     lines.push(chosen[0]);
-    readings.forEach((r, n) => {
+    noticed.forEach((r, n) => {
       lines.push(r);
       if (n % 2 === 1 && asks.length) lines.push(asks.shift()!);
     });
@@ -82,6 +97,11 @@ export default function GreetingLine({ name, readings = [] }: { name: string | n
   }, [at, lines.length, out]);
   const fading = useAnimatedStyle(() => ({ opacity: out.get() }));
 
+  const shownTitle = lines.length ? lines[at % lines.length].title : null;
+  useEffect(() => {
+    if (shownTitle) markSaid(shownTitle);
+  }, [shownTitle]);
+
   if (lines.length === 0) return null;
   const line = lines[at % lines.length];
   /* Bold at this size runs about half its size a letter; the sub line, a little less. */
@@ -90,7 +110,8 @@ export default function GreetingLine({ name, readings = [] }: { name: string | n
   const sub = layOut(line.sub, Math.floor(room / (SUB * 0.54)), SUB);
   let spoken = 0;
   return (
-    <Animated.View key={at} style={[{ alignItems: "center", paddingHorizontal: 22 }, fading]}>
+    <Animated.View key={at} style={[{ alignSelf: "stretch" }, fading]}>
+      <Pressable onPress={() => onPick?.(line)} accessibilityRole={onPick ? "button" : undefined} style={{ alignItems: "center", paddingHorizontal: 22 }}>
       {title.lines.map((text) => (
         <View key={text} style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", columnGap: title.size * 0.25 }}>
           {text.split(" ").map((w, i) => (
@@ -101,6 +122,7 @@ export default function GreetingLine({ name, readings = [] }: { name: string | n
       <Rising delay={line.title.split(" ").length * WORD_MS + 120}>
         <Text style={{ marginTop: 4, fontSize: sub.size, lineHeight: sub.size * 1.36, ...face(500), color: INK.soft, textAlign: "center" }}>{sub.lines.join("\n")}</Text>
       </Rising>
+      </Pressable>
     </Animated.View>
   );
 }
