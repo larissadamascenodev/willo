@@ -61,10 +61,12 @@ const LONGEST_MS = 40_000;
 /** A voice is this far above the quietest the room has been. */
 const ABOVE_FLOOR = 13;
 
-export function useVoiceEntry(options: { onQuestion?: (said: string) => void; history?: () => Record<string, string> } = {}) {
+export function useVoiceEntry(options: { onQuestion?: (said: string) => void; history?: () => Record<string, string>; /** While true, whatever is said goes to the conversation. */ onlyConversation?: () => boolean } = {}) {
   const onQuestion = useRef(options.onQuestion);
   onQuestion.current = options.onQuestion;
   const history = useRef(options.history);
+  const onlyConversation = useRef(options.onlyConversation);
+  onlyConversation.current = options.onlyConversation;
   history.current = options.history;
   /* Whether what is on the sheet was said or typed, for the sheet's own words. */
   const [source, setSource] = useState<"voice" | "text">("voice");
@@ -129,7 +131,7 @@ export function useVoiceEntry(options: { onQuestion?: (said: string) => void; hi
       setTranscript(heard?.trim() || null);
 
       /* Words with no money in them are a question for whoever is listening. */
-      if ((entries.length === 0 || isAsking(heard ?? "")) && heard?.trim() && heard.trim().length > 2 && onQuestion.current) {
+      if ((entries.length === 0 || isAsking(heard ?? "") || onlyConversation.current?.()) && heard?.trim() && heard.trim().length > 2 && onQuestion.current) {
         onQuestion.current(heard.trim());
         setState("idle");
         return;

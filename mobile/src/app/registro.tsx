@@ -32,6 +32,8 @@ import { voiced } from "~/lib/voiceTone";
 import { face } from "~/lib/chatFont";
 import { parseCommand, runCommand } from "~/lib/chatCommands";
 import { followUps, frequentAsks, mergeAsks, noteAsked } from "~/lib/shortcuts";
+import { continuePlan, startPlan, type GoalPlan, type PlanTurn } from "~/lib/goalPlanner";
+import { createGoal } from "@/services/goalService";
 import { splitReply, typingMs } from "~/lib/chatText";
 import ChatBubble from "~/components/willo/ChatBubble";
 import AgentMark from "~/components/willo/AgentMark";
@@ -167,7 +169,8 @@ export default function Registro() {
   /* What is said with no money in it is a question, whether it was typed or spoken. */
   const askRef = useRef<(said: string) => void>(() => {});
   const historyRef = useRef<Record<string, string>>({});
-  const entry = useVoiceEntry({ onQuestion: (said) => askRef.current(said), history: () => historyRef.current });
+  const planning = useRef(false);
+  const entry = useVoiceEntry({ onQuestion: (said) => askRef.current(said), history: () => historyRef.current, onlyConversation: () => planning.current });
   const { build, loading: snapshotLoading } = useAssistantSnapshot();
   /* Always the latest: a question can be waiting for the numbers while they arrive, and the
      build it started with would still see them empty, and say so as a fact. */
@@ -231,6 +234,14 @@ export default function Registro() {
   const waitingAsks = useRef<string[]>([]);
   const converseRef = useRef<(said: string) => void>(() => {});
   const [lastAsked, setLastAsked] = useState<string | null>(null);
+  /* A goal being planned step by step: while it lasts, what is said answers it. */
+  const [goalPlan, setGoalPlan] = useState<GoalPlan | null>(null);
+  const planRef = useRef<GoalPlan | null>(null);
+  const setPlan = useCallback((next: GoalPlan | null) => {
+    planRef.current = next;
+    planning.current = next !== null;
+    setGoalPlan(next);
+  }, []);
   /* His reply in short messages, each written out before the next begins; done when the last is. */
   const pushBot = useCallback(async (t: string, extra?: { agents?: string[]; instant?: boolean }) => {
     const chat = chatId.current;
@@ -473,6 +484,34 @@ export default function Registro() {
       if (user) noteAsked(user.id, said);
       try {
       turns.current.push({ role: "user", content: said });
+      /* A goal being planned, or the start of one: step by step, with no AI. */
+      const room = radar?.report.projection.avgNet ?? null;
+      const turn: PlanTurn | null = planRef.current ? continuePlan(planRef.current, said, room) : startPlan(said, room);
+      if (turn) {
+        const plan = planRef.current;
+        setPlan(turn.plan);
+        if (turn.create && plan && user) {
+          setThinking("Criando a caixinha");
+          try {
+            const goal = await createGoal({ name: plan.name, target_amount: plan.amount, monthly_contribution: plan.perMonth, deadline: plan.deadline }, user.id);
+            window.dispatchEvent(new CustomEvent("finance-data-changed"));
+            setThinking(null);
+            const reply = voiced(`Pronto! Criei a caixinha “${plan.name}”, com ${money(plan.perMonth)} por mês. Ela já está nas suas Caixinhas.`, "good");
+            turns.current.push({ role: "assistant", content: reply });
+            await pushBot(reply);
+            setItems((m) => [...m, { kind: "card", id: uid(), card: { type: "metas", items: [goal] } }]);
+          } catch {
+            setThinking(null);
+            await pushBot("Não consegui criar a caixinha agora. Tenta de novo?");
+          }
+          return;
+        }
+        turns.current.push({ role: "assistant", content: turn.reply });
+        await pushBot(turn.reply);
+        return;
+      }
+      /* Anything else ends a plan under way. */
+      if (planRef.current) setPlan(null);
       /* An order is carried out, with no AI: "cria um limite de 300 para farmácia". */
       const command = parseCommand(said, categories);
       if (command && user) {
@@ -530,7 +569,7 @@ export default function Registro() {
         if (next) converseRef.current(next);
       }
     },
-    [pushBot, showCards, answerLine, board, radar, profile, categories, user],
+    [pushBot, showCards, answerLine, board, radar, profile, categories, user, setPlan],
   );
   converseRef.current = (said) => void converse(said);
 
@@ -557,12 +596,13 @@ export default function Registro() {
   const newChat = useCallback(() => {
     chatId.current = uid();
     turns.current = [];
+    setPlan(null);
     setItems([]);
     setText("");
     setAtSphere(false);
     setView("chat");
     setHistoryOpen(false);
-  }, []);
+  }, [setPlan]);
 
   const openChat = useCallback((chat: SavedChat) => {
     chatId.current = chat.id;
@@ -700,6 +740,11 @@ export default function Registro() {
       if (!said || thinking || answering) return;
       Keyboard.dismiss();
       pushUser(said);
+      /* Mid-plan, "15 mil" answers the plan: it is not an expense. */
+      if (planRef.current) {
+        void converse(said);
+        return;
+      }
       /* An entry opens the same sheet a spoken one does; anything else is a question. */
       void entry.readText(said, () => void converse(said));
     },
@@ -1038,9 +1083,23 @@ export default function Registro() {
                   }}
                 />
               ))}
+              {goalPlan?.stage === "confirm" &&
+                !answering &&
+                ["Sim, criar a caixinha", "Agora não"].map((o, n) => (
+                  <Chip
+                    key={o}
+                    label={o}
+                    tone={n === 0 ? "next" : "shortcut"}
+                    onPress={() => {
+                      pushUser(o);
+                      void converse(n === 0 ? "sim" : "nao");
+                    }}
+                  />
+                ))}
               {!question &&
                 !text &&
                 !answering &&
+                !goalPlan &&
                 asks.map((q) => (
                   <Chip
                     key={q}
