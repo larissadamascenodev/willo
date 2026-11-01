@@ -18,21 +18,14 @@ const PAYMENT = /^(faturas?|pagamento de fatura|cart[aã]o de cr[eé]dito)$/i;
 const plain = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
-/** What he says while working, so the wait reads as work. */
+/** What he says while working: the subject when it is plainly about the money, else just that he is thinking. */
 export function workingOn(question: string): string {
   const q = plain(question);
-  if (/comprar|compra|parcelar|financiar/.test(q)) return "Simulando a compra mês a mês…";
-  if (/fatura|cartao|limite/.test(q)) return "Olhando suas faturas…";
-  if (/parcel/.test(q)) return "Somando suas parcelas…";
-  if (/gast|categoria|onde|padrao|atipic/.test(q)) return "Separando seus gastos por categoria…";
-  if (/assinatura/.test(q)) return "Procurando o que se repete todo mês…";
-  if (/plano|organizar|salario|renda|orcamento/.test(q)) return "Montando o plano com seus números…";
-  if (/meta|caixinha|guardar|economizar|reserva/.test(q)) return "Procurando o que pesa nos seus planos…";
-  return "Pensando…";
+  if (/\b(comprar|parcelar|financiar)\b/.test(q)) return "Fazendo as contas";
+  if (/\b(fatura|faturas|cartao|cartoes)\b/.test(q)) return "Olhando suas faturas";
+  if (/\bparcel/.test(q)) return "Somando suas parcelas";
+  return "Pensando";
 }
-
-/** The steps shown while the assistant works on something bigger. */
-export const STEPS = ["Lendo seus números", "Analisando", "Montando a resposta"];
 
 interface Snapshot {
   contas?: { saldo_previsto_fim_mes: number | null };

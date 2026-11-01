@@ -4,6 +4,7 @@ import { createTransaction, deleteTransaction, getAccounts, getCreditCards } fro
 import { allowedCategories, readEntry, todayISO } from "@/services/quickEntry";
 import { parseLocal } from "@/lib/quickEntry/parseLocal";
 import { paymentMention } from "~/lib/paymentMention";
+import { isAsking, isConversation } from "~/lib/saidKind";
 import { applyDefaults, answer as answerDraft, nextQuestion, statusFor } from "@/lib/quickEntry/resolve";
 import type { QuickDraft, QuickQuestion, QuickSetup } from "@/lib/quickEntry/types";
 import { useAuth } from "~/lib/auth";
@@ -128,7 +129,7 @@ export function useVoiceEntry(options: { onQuestion?: (said: string) => void; hi
       setTranscript(heard?.trim() || null);
 
       /* Words with no money in them are a question for whoever is listening. */
-      if (entries.length === 0 && heard?.trim() && heard.trim().length > 2 && onQuestion.current) {
+      if ((entries.length === 0 || isAsking(heard ?? "")) && heard?.trim() && heard.trim().length > 2 && onQuestion.current) {
         onQuestion.current(heard.trim());
         setState("idle");
         return;
@@ -182,6 +183,11 @@ export function useVoiceEntry(options: { onQuestion?: (said: string) => void; hi
   const readText = useCallback(
     async (said: string, otherwise: () => void) => {
       if (state !== "idle" && state !== "saved") return;
+      /* A question goes straight to the conversation, with no reading first. */
+      if (isConversation(said)) {
+        otherwise();
+        return;
+      }
       setMessage(null);
       setSource("text");
       setTranscript(said);

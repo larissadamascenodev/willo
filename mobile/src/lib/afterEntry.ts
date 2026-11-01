@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { money } from "~/lib/money";
+import { voiced, type Mood } from "~/lib/voiceTone";
 
 /**
  * What Willo says after writing an entry down, from the person's own numbers, with no AI
@@ -31,21 +32,21 @@ function howItRepeats(e: EntryToComment) {
   return null;
 }
 
-function aboutTheCategory(category: string, total: number, count: number, usual: number | null) {
+function aboutTheCategory(category: string, total: number, count: number, usual: number | null): { text: string; mood: Mood } {
   if (usual) {
     const over = Math.round((total / usual - 1) * 100);
-    if (over > 0) return `Cuidado com ${category}: já são ${money(total)} este mês, ${over}% acima da sua média de ${money(usual)}.`;
-    if (total >= usual * 0.8) return `Atenção: ${category} já está em ${money(total)} este mês, perto da sua média de ${money(usual)}.`;
-    return `${category} está em ${money(total)} este mês, abaixo da sua média de ${money(usual)}. Tudo sob controle.`;
+    if (over > 0) return { mood: "bad", text: `${category} já está em ${money(total)} este mês, ${over}% acima da sua média.` };
+    if (total >= usual * 0.8) return { mood: "plain", text: `${category} está em ${money(total)}, perto da sua média de ${money(usual)}.` };
+    return { mood: "good", text: `${category} está em ${money(total)}, abaixo da sua média de ${money(usual)}.` };
   }
-  if (count >= 3) return `Já é o ${count}º lançamento em ${category} este mês, somando ${money(total)}. Vale ficar de olho.`;
-  if (count === 2) return `É o segundo lançamento em ${category} este mês: ${money(total)} no total.`;
-  return `É o primeiro lançamento em ${category} este mês. Vou acompanhar para você.`;
+  if (count >= 3) return { mood: "plain", text: `É o ${count}º lançamento em ${category} este mês, ${money(total)} no total.` };
+  if (count === 2) return { mood: "plain", text: `É o segundo em ${category} este mês: ${money(total)} no total.` };
+  return { mood: "plain", text: `É o primeiro em ${category} este mês.` };
 }
 
 export async function commentAfter(entry: EntryToComment): Promise<string> {
   const repeats = howItRepeats(entry);
-  const opening = entry.type === "receita" ? "Boa, anotado!" : "Anotado!";
+  const opening = entry.type === "receita" ? "Recebido, anotado." : "Anotado.";
   try {
     const [y, m] = entry.day.split("-").map(Number);
     const from = new Date(y, m - 4, 1);
@@ -71,7 +72,8 @@ export async function commentAfter(entry: EntryToComment): Promise<string> {
     const usual = before.length ? before.reduce((a, b) => a + b, 0) / before.length : null;
 
     if (entry.type === "receita") return [opening, repeats, `${entry.category} soma ${money(now.total)} este mês.`].filter(Boolean).join(" ");
-    return [opening, repeats, aboutTheCategory(entry.category, now.total, now.count, usual)].filter(Boolean).join(" ");
+    const about = aboutTheCategory(entry.category, now.total, now.count, usual);
+    return voiced([opening, repeats, about.text].filter(Boolean).join(" "), about.mood);
   } catch {
     return [opening, repeats].filter(Boolean).join(" ");
   }

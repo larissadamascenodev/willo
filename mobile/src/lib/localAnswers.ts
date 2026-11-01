@@ -1,6 +1,7 @@
 import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import { installmentTotals } from "@/services/activeInstallments";
 import { money } from "~/lib/money";
+import type { Mood } from "~/lib/voiceTone";
 
 /**
  * Questions answered from the app's own numbers, with no AI in between.
@@ -22,6 +23,8 @@ export interface LocalAnswer {
   text: string;
   /** Which specialist the answer belongs to, for the mark beside it. */
   agent: "cronos" | "atena";
+  /** Good news or bad, for the voice it is said in. */
+  mood?: Mood;
 }
 
 export function localAnswer(question: string, snapshot: Snapshot, installments: ActiveInstallmentItem[] | null): LocalAnswer | null {
@@ -38,10 +41,12 @@ export function localAnswer(question: string, snapshot: Snapshot, installments: 
     if (left <= 0)
       return {
         agent: "cronos",
+        mood: "bad",
         text: `Com o que já está lançado, o mês fecha em ${money(left)}. Melhor segurar os gastos variáveis até o fim do mês.`,
       };
     return {
       agent: "cronos",
+      mood: "good",
       text: `Com o que já está lançado, sobram ${money(left)} até o fim do mês. São ${daysLeft} ${daysLeft === 1 ? "dia" : "dias"}, então dá uns ${money(left / daysLeft)} por dia sem apertar.`,
     };
   }

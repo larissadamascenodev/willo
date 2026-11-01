@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef, type ComponentType } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef, type ComponentType, type ReactNode } from "react";
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -15,10 +15,17 @@ import Glass from "~/components/Glass";
 import Notinha, { type NotinhaLine } from "~/components/registro/Notinha";
 import Confirmado from "~/components/registro/Confirmado";
 import ParticleOrb, { type OrbMode } from "~/components/registro/ParticleOrb";
-import { ArrowUp, Camera, Check, ChevronLeft, Mic, PenLine, SlidersHorizontal, Sparkles, X, Zap } from "~/components/icons";
+import { ArrowUp, Camera, ChevronLeft, Clock, Mic, PenLine, Plus, SlidersHorizontal, Sparkles, X } from "~/components/icons";
 import ReceiptCard, { type ReceiptLine } from "~/components/registro/ReceiptCard";
 import { commentAfter } from "~/lib/afterEntry";
 import WilloSettings from "~/components/willo/WilloSettings";
+import ChatHistory from "~/components/willo/ChatHistory";
+import Computador from "~/components/willo/Computador";
+import SegmentedTabs from "~/components/SegmentedTabs";
+import { useRaioX, type RaioXData } from "@/hooks/useRaioX";
+import { boardAnswer, buildBoard, radarForAssistant, type BoardLine } from "~/lib/radarBoard";
+import { saveChat, type ChatItem, type SavedChat } from "~/lib/willoChats";
+import { voiced } from "~/lib/voiceTone";
 import AgentMark from "~/components/willo/AgentMark";
 import { AGENTS } from "~/lib/agents";
 import { useWilloPrefs } from "~/lib/willoPrefs";
@@ -33,7 +40,7 @@ import { askWilloFull, converseAsking, tidyReply, type Turn } from "~/lib/assist
 import { useProfile } from "@/hooks/useProfile";
 import { localAnswer } from "~/lib/localAnswers";
 import AnswerCardView, { type AnswerCard, type Simulation } from "~/components/willo/AnswerCards";
-import { cardsFor, STEPS, workingOn } from "~/lib/answerCards";
+import { cardsFor, workingOn } from "~/lib/answerCards";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { parseLocal } from "@/lib/quickEntry/parseLocal";
 import { loadActiveInstallments } from "@/services/activeInstallments";
@@ -168,8 +175,18 @@ export default function Registro() {
   const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
   const [text, setText] = useState("");
   const [thinking, setThinking] = useState<string | null>(null);
-  /* Bigger questions show the steps he is going through. */
-  const [stepping, setStepping] = useState(false);
+  const [view, setView] = useState<"chat" | "computador">("chat");
+  const [atSphere, setAtSphere] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  /* The Radar, read once the screen has settled: what the Computador shows and what Willo already knows. */
+  const [radar, setRadar] = useState<RaioXData | null>(null);
+  const [radarOn, setRadarOn] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setRadarOn(true), 700);
+    return () => clearTimeout(t);
+  }, []);
+  /* Each opening is a new conversation; the earlier ones stay in the history. */
+  const chatId = useRef(uid());
   const { profile } = useProfile();
   /* Replies already typed out stay typed, whatever redraws the thread. */
   const typedRef = useRef<Set<string>>(new Set());
@@ -387,53 +404,119 @@ export default function Registro() {
 
   /* ---- reading what was said ---- */
 
+  const board = useMemo(() => (radar && !snapshotLoading ? buildBoard(radar, build() as never) : []), [radar, snapshotLoading, build]);
+
+  /** The picture that goes with an answer, once the words have been written out, not over them. */
+  const showCards = useCallback(
+    async (said: string, after: string, simulation: Simulation | null = null) => {
+      await new Promise((r) => setTimeout(r, Math.min(1400, 8 * Math.min(after.length, 120) + 200)));
+      const cards = await cardsFor(said, { snapshot: build() as never, categories: monthData.categories ?? [], installments: installmentsRef.current, simulation });
+      if (cards.length) setItems((m) => [...m, ...cards.map((card) => ({ kind: "card" as const, id: uid(), card }))]);
+    },
+    [build, monthData],
+  );
+
+  /** A line of the Computador, said and answered from its own numbers. */
+  const answerLine = useCallback(
+    (line: BoardLine) => {
+      const reply = voiced(line.answer, line.mood);
+      turns.current.push({ role: "assistant", content: reply });
+      pushBot(reply);
+      void showCards(line.ask, reply);
+    },
+    [pushBot, showCards],
+  );
+
   /** Puts the thread so far to the assistant and writes what it answers. */
   const converse = useCallback(
     async (said: string) => {
-      setThinking(workingOn(said).replace(/…$/, ""));
+      turns.current.push({ role: "user", content: said });
+      /* What the numbers alone can answer is answered at once, with no AI. */
+      const onBoard = boardAnswer(said, board);
+      if (onBoard) {
+        answerLine(onBoard);
+        return;
+      }
+      setThinking(workingOn(said));
       try {
-        /* The snapshot takes a moment the first time; wait for it rather than ask blind. */
-        for (let n = 0; n < 24 && !snapshotReady.current; n++) await new Promise((r) => setTimeout(r, 250));
-        turns.current.push({ role: "user", content: said });
-        const sent = turns.current.slice(-8).map((t, i, all) => (i === all.length - 1 ? { ...t, content: converseAsking(t.content) } : t));
-        /* What the numbers alone can answer is answered at once, with no AI. */
-        const local = localAnswer(said, build() as never, installmentsRef.current);
-        const snapshot = build() as never;
-        const show = async (simulation: Simulation | null = null, after = "") => {
-          /* The picture comes once the words have been written out, not over them. */
-          await new Promise((r) => setTimeout(r, Math.min(2600, 16 * Math.min(after.length, 120) + 250)));
-          const cards = await cardsFor(said, { snapshot, categories: monthData.categories ?? [], installments: installmentsRef.current, simulation });
-          if (cards.length) setItems((m) => [...m, ...cards.map((card) => ({ kind: "card" as const, id: uid(), card }))]);
-        };
+        /* The numbers take a moment the first time. Better a short wait than zeros taken for
+           the truth; past that, he goes without them and looks up what he needs. */
+        for (let n = 0; n < 12 && !snapshotReady.current; n++) await new Promise((r) => setTimeout(r, 250));
+        const ready = snapshotReady.current;
+        const local = ready ? localAnswer(said, build() as never, installmentsRef.current) : null;
         if (local) {
-          /* A moment of "working" even here, so the answer is seen arriving. */
-          await new Promise((r) => setTimeout(r, 250));
-          turns.current.push({ role: "assistant", content: local.text });
-          pushBot(local.text);
-          await show(null, local.text);
+          const reply = voiced(local.text, local.mood);
+          turns.current.push({ role: "assistant", content: reply });
+          pushBot(reply);
+          void showCards(said, reply);
           return;
         }
-        setStepping(true);
-        const { reply: raw, simulation } = await askWilloFull(sent, build(), profile?.display_name ?? null);
+        const sent = turns.current.slice(-8).map((t, i, all) => (i === all.length - 1 ? { ...t, content: converseAsking(t.content) } : t));
+        const snapshot = ready ? { ...(build() as object), ...(radar ? { radar: radarForAssistant(radar) } : {}) } : null;
+        const { reply: raw, simulation } = await askWilloFull(sent, snapshot, profile?.display_name ?? null);
         const reply = tidyReply(raw);
         turns.current.push({ role: "assistant", content: reply });
         pushBot(reply);
-        await show(simulation, reply);
+        /* A picture only beside an answer about her money: "receita de bolo" is not about income. */
+        if (simulation || /R\$/.test(reply)) void showCards(said, reply, simulation);
       } catch (err) {
         pushBot(err instanceof Error ? err.message : "Não consegui falar com o Willo agora. Tenta de novo?");
       } finally {
         setThinking(null);
-        setStepping(false);
       }
     },
-    [build, pushBot, monthData, profile],
+    [build, pushBot, showCards, answerLine, board, radar, profile],
   );
+
+  /* The conversation is kept as it goes, so leaving at any point loses nothing. */
+  useEffect(() => {
+    if (!user || !items.some((i) => (i.kind === "msg" && i.role === "user") || i.kind === "receipt")) return;
+    const kept: ChatItem[] = [];
+    for (const i of items) {
+      if (i.kind === "msg") kept.push({ kind: "msg", id: i.id, role: i.role, text: i.text });
+      else if (i.kind === "done" || i.kind === "card") kept.push(i);
+      else if (i.kind === "receipt") kept.push({ ...i, when: i.when.toISOString() });
+    }
+    saveChat(user.id, { id: chatId.current, items: kept });
+  }, [items, user]);
+
+  const newChat = useCallback(() => {
+    chatId.current = uid();
+    turns.current = [];
+    setItems([]);
+    setText("");
+    setAtSphere(false);
+    setView("chat");
+    setHistoryOpen(false);
+  }, []);
+
+  const openChat = useCallback((chat: SavedChat) => {
+    chatId.current = chat.id;
+    turns.current = chat.items.flatMap((i) => (i.kind === "msg" ? [{ role: i.role === "bot" ? ("assistant" as const) : ("user" as const), content: i.text }] : []));
+    for (const i of chat.items) typedRef.current.add(i.id);
+    setItems(chat.items.map((i) => (i.kind === "receipt" ? { ...i, when: new Date(i.when) } : i)));
+    setAtSphere(false);
+    setView("chat");
+    setHistoryOpen(false);
+  }, []);
 
   /* A spoken question lands in the thread like a typed one. */
   askRef.current = (said) => {
     pushUser(said);
     void converse(said);
   };
+
+  /* Tapped on the Computador: over to the conversation, already answered. */
+  const askFromBoard = useCallback(
+    (line: BoardLine) => {
+      setView("chat");
+      setAtSphere(false);
+      pushUser(line.ask);
+      turns.current.push({ role: "user", content: line.ask });
+      answerLine(line);
+    },
+    [pushUser, answerLine],
+  );
 
   const ingest = useCallback(
     async (said: string) => {
@@ -613,7 +696,6 @@ export default function Registro() {
   const orb = stageH > 0 ? Math.max(190, Math.min(width * 0.8, 320, stageH - CAPTION_H - 18 - 56)) : 250;
   /* The full stage is the welcome; once there is a conversation — or the keyboard is up —
      the sphere stays, smaller and higher, above it. */
-  const [atSphere, setAtSphere] = useState(false);
   useEffect(() => {
     setAtSphere(false);
   }, [items.length]);
@@ -622,79 +704,67 @@ export default function Registro() {
   return (
     <Room lit sky>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        {/* ── Willo, and the way out ── */}
+        {/* ── The way out, which Willo you are looking at, and the conversations ── */}
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
+            gap: 6,
             paddingTop: insets.top + 8,
-            paddingHorizontal: 20,
+            paddingHorizontal: 16,
             paddingBottom: 8,
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
-            {stage ? (
-              <View style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
-                <Zap size={18} color={GREEN} />
-              </View>
-            ) : (
-              <Pressable
-                onPress={() => {
+          {view === "chat" && !stage ? (
+            <HeaderButton
+              label="Voltar para a esfera"
+              onPress={() => {
+                Keyboard.dismiss();
+                setAtSphere(true);
+              }}
+            >
+              <ChevronLeft size={18} color="rgba(255,255,255,0.88)" strokeWidth={2.4} />
+            </HeaderButton>
+          ) : (
+            <HeaderButton label={hasEntries ? "Concluir" : "Fechar"} onPress={close}>
+              <X size={17} color="rgba(255,255,255,0.88)" strokeWidth={2.4} />
+            </HeaderButton>
+          )}
+          <View style={{ flex: 1, minWidth: 0, alignItems: "center" }}>
+            <View style={{ width: 196, maxWidth: "100%" }}>
+              <SegmentedTabs
+                glass
+                compact
+                height={34}
+                value={view}
+                onChange={(next) => {
                   Keyboard.dismiss();
-                  setAtSphere(true);
+                  setView(next);
                 }}
-                accessibilityLabel="Voltar para a esfera"
-                hitSlop={8}
-                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-              >
-                <Glass radius={18} interactive style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
-                  <ChevronLeft size={18} color="rgba(255,255,255,0.88)" strokeWidth={2.4} />
-                </Glass>
-              </Pressable>
-            )}
-            <View style={{ minWidth: 0 }}>
-              <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>Willo</Text>
-              <Text style={{ fontSize: 12, color: INK.softer }}>
-                {listening
-                  ? "Ouvindo…"
-                  : reading
-                    ? "Anotando…"
-                  : busy
-                    ? `${thinking}…`
-                    : allSaved
-                      ? "Tudo anotado"
-                      : hasEntries
-                        ? "Quase lá"
-                        : "Converse ou anote um gasto"}
-              </Text>
+                options={[
+                  { key: "chat", label: "Willo Chat" },
+                  { key: "computador", label: "Computador" },
+                ]}
+              />
             </View>
           </View>
-          <Pressable
-            onPress={() => setSettingsOpen(true)}
-            accessibilityLabel="Personalizar o Willo"
-            hitSlop={8}
-            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-          >
-            <Glass radius={18} interactive style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
-              <SlidersHorizontal size={16} color="rgba(255,255,255,0.88)" strokeWidth={2.2} />
-            </Glass>
-          </Pressable>
-          <Pressable
-            onPress={close}
-            accessibilityLabel={hasEntries ? "Concluir" : "Fechar"}
-            hitSlop={8}
-            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-          >
-            <Glass radius={18} interactive style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
-              <X size={17} color="rgba(255,255,255,0.88)" strokeWidth={2.4} />
-            </Glass>
-          </Pressable>
+          {started && view === "chat" ? (
+            <HeaderButton label="Nova conversa" onPress={newChat}>
+              <Plus size={18} color="rgba(255,255,255,0.88)" strokeWidth={2.3} />
+            </HeaderButton>
+          ) : null}
+          <HeaderButton label="Conversas anteriores" onPress={() => setHistoryOpen(true)}>
+            <Clock size={16} color="rgba(255,255,255,0.88)" strokeWidth={2.2} />
+          </HeaderButton>
+          <HeaderButton label="Personalizar o Willo" onPress={() => setSettingsOpen(true)}>
+            <SlidersHorizontal size={16} color="rgba(255,255,255,0.88)" strokeWidth={2.2} />
+          </HeaderButton>
         </View>
 
-        {/* ── The stage: the sphere, or — once something has been said — the conversation ── */}
-        {stage ? (
+        {/* ── The stage: the computer, the sphere, or — once something has been said — the conversation ── */}
+        {view === "computador" ? (
+          <Computador data={radar} board={board} bottom={insets.bottom} onAsk={askFromBoard} />
+        ) : stage ? (
           <View style={{ flex: 1 }}>
             <View style={{ flex: 1 }} onLayout={(e) => setStageH(e.nativeEvent.layout.height)}>
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 }}>
@@ -824,12 +894,9 @@ export default function Registro() {
             )}
 
             {busy && (
-              <Animated.View entering={FadeIn.duration(200)}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <ParticleOrb size={30} mode="thinking" />
-                  <Text style={{ fontSize: 13.5, color: INK.soft }}>{thinking}…</Text>
-                </View>
-                {stepping && <Steps />}
+              <Animated.View entering={FadeIn.duration(200)} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <ParticleOrb size={30} mode="thinking" />
+                <Text style={{ fontSize: 13.5, color: INK.soft }}>{thinking}…</Text>
               </Animated.View>
             )}
           </ScrollView>
@@ -837,6 +904,7 @@ export default function Registro() {
         )}
 
         {/* ── The composer ── */}
+        {view === "chat" && (
         <View style={{ paddingTop: 8, paddingBottom: insets.bottom + 8 }}>
           {!stage && !listening && (
             <ScrollView
@@ -971,6 +1039,7 @@ export default function Registro() {
             </Pressable>
           )}
         </View>
+        )}
       </KeyboardAvoidingView>
 
       {/* What was heard, for a look before it is written. */}
@@ -981,6 +1050,8 @@ export default function Registro() {
         }}
       />
       <WilloSettings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <ChatHistory open={historyOpen} userId={user?.id ?? null} currentId={chatId.current} onClose={() => setHistoryOpen(false)} onOpen={openChat} onNew={newChat} />
+      {radarOn && <RadarFeed onData={setRadar} />}
     </Room>
   );
 }
@@ -1199,35 +1270,22 @@ function SendButton({ disabled, onPress }: { disabled: boolean; onPress: () => v
   );
 }
 
-/** What he is going through on a bigger question: each step lights as he reaches it. */
-function Steps() {
-  const [at, setAt] = useState(0);
-  useEffect(() => {
-    const iv = setInterval(() => setAt((n) => Math.min(n + 1, STEPS.length - 1)), 1600);
-    return () => clearInterval(iv);
-  }, []);
+/** One round button of the header. */
+function HeaderButton({ label, onPress, children }: { label: string; onPress: () => void; children: ReactNode }) {
   return (
-    <View style={{ marginTop: 10, marginLeft: 40, gap: 8 }}>
-      {STEPS.map((step, i) => (
-        <View key={step} style={{ flexDirection: "row", alignItems: "center", gap: 8, opacity: i <= at ? 1 : 0.35 }}>
-          <View
-            style={{
-              width: 14,
-              height: 14,
-              borderRadius: 7,
-              alignItems: "center",
-              justifyContent: "center",
-              borderWidth: i === at ? 2 : 0,
-              borderColor: "#5AA9FF",
-              backgroundColor: i < at ? "#5AA9FF" : "transparent",
-            }}
-          >
-            {i < at && <Check size={9} color="#0B0B0B" strokeWidth={3.5} />}
-          </View>
-          <Text style={{ fontSize: 13, fontWeight: i === at ? "600" : "400", color: i === at ? "#fff" : INK.soft }}>{step}</Text>
-        </View>
-      ))}
-      <Text style={{ fontSize: 11, color: INK.faint }}>Nada muda sem a sua aprovação.</Text>
-    </View>
+    <Pressable onPress={onPress} accessibilityLabel={label} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+      <Glass radius={17} interactive style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
+        {children}
+      </Glass>
+    </Pressable>
   );
+}
+
+/** Reads the Radar and hands it up, drawing nothing: mounted a moment after the screen opens. */
+function RadarFeed({ onData }: { onData: (data: RaioXData) => void }) {
+  const data = useRaioX();
+  useEffect(() => {
+    if (!data.loading) onData(data);
+  }, [data, onData]);
+  return null;
 }
