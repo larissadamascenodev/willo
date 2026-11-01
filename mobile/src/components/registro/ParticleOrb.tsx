@@ -44,6 +44,8 @@ const DRAG = 0.0135;
 /** A touch that travels less than this is a tap. */
 const TAP_SLOP = 9;
 const TAP_MS = 420;
+/** How long a touch stays still to count as holding him. */
+const HOLD_MS = 320;
 
 /** Points at random on a unit sphere, a few a little inside it for depth. */
 function cloud(count: number, seed = 7): number[] {
@@ -72,6 +74,8 @@ export default function ParticleOrb({
   onPress,
   expanded = false,
   loudness,
+  onHold,
+  onHoldEnd,
 }: {
   size: number;
   mode?: OrbMode;
@@ -83,6 +87,10 @@ export default function ParticleOrb({
   expanded?: boolean;
   /** How loud the voice is right now, 0 to 1: he moves with it, and is still when it is quiet. */
   loudness?: number;
+  /** Touched and held still for a moment. */
+  onHold?: () => void;
+  /** Let go after being held. */
+  onHoldEnd?: () => void;
 }) {
   const reduce = useReducedMotion();
   const count = density ?? (size >= 180 ? 1500 : size >= 60 ? 650 : 260);
@@ -195,6 +203,12 @@ export default function ParticleOrb({
   const touch = useRef({ x: 0, y: 0, travelled: 0, at: 0 });
   const onPressRef = useRef(onPress);
   onPressRef.current = onPress;
+  const onHoldRef = useRef(onHold);
+  onHoldRef.current = onHold;
+  const onHoldEndRef = useRef(onHoldEnd);
+  onHoldEndRef.current = onHoldEnd;
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holding = useRef(false);
 
   const responder = useMemo(
     () =>
@@ -206,6 +220,14 @@ export default function ParticleOrb({
           held.set(1);
           spin.set(0);
           press.set(withTiming(1, { duration: 140 }));
+          holding.current = false;
+          if (onHoldRef.current) {
+            holdTimer.current = setTimeout(() => {
+              holding.current = true;
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
+              onHoldRef.current?.();
+            }, HOLD_MS);
+          }
         },
         onPanResponderMove: (_, g) => {
           const dx = g.dx - touch.current.x;
@@ -213,6 +235,8 @@ export default function ParticleOrb({
           touch.current.x = g.dx;
           touch.current.y = g.dy;
           touch.current.travelled = Math.max(touch.current.travelled, Math.hypot(g.dx, g.dy));
+          /* Moving turns him: it is not a hold. */
+          if (touch.current.travelled >= TAP_SLOP && holdTimer.current) clearTimeout(holdTimer.current);
           /* The sphere follows the finger: across turns it about the vertical axis,
              down and up tips it. */
           angle.set(angle.get() + dx * DRAG * (300 / Math.max(size, 120)));
@@ -223,6 +247,12 @@ export default function ParticleOrb({
         onPanResponderRelease: (_, g) => {
           held.set(0);
           press.set(withTiming(0, { duration: 220 }));
+          if (holdTimer.current) clearTimeout(holdTimer.current);
+          if (holding.current) {
+            holding.current = false;
+            onHoldEndRef.current?.();
+            return;
+          }
           const tapped = touch.current.travelled < TAP_SLOP && Date.now() - touch.current.at < TAP_MS;
           if (tapped) {
             void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
@@ -233,6 +263,11 @@ export default function ParticleOrb({
           }
         },
         onPanResponderTerminate: () => {
+          if (holdTimer.current) clearTimeout(holdTimer.current);
+          if (holding.current) {
+            holding.current = false;
+            onHoldEndRef.current?.();
+          }
           held.set(0);
           press.set(withTiming(0, { duration: 220 }));
         },

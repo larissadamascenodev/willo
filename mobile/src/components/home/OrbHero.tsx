@@ -35,8 +35,9 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
  * So it is three things at once: the assistant that has something to say, the quickest
  * way into Registro rápido, and someone to ask.
  *
- * Touch the sphere and it turns; tap it and it swells and listens, and stops by itself
- * when you do. If what you said was an expense or an income, a sheet comes up with what
+ * Drag the sphere and it turns; tap it and the conversation opens; tap it twice and
+ * Registro rápido opens. Touch and hold it and it swells and listens, until you let go or
+ * stop talking. If what you said was an expense or an income, a sheet comes up with what
  * he heard for you to confirm. If it was a question, the conversation opens with it asked,
  * and he answers there. If it was an instruction to open a screen, he opens it.
  *
@@ -74,6 +75,12 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
   });
 
   const listening = entry.state === "listening";
+  /* Let go before the microphone had started: it stops as soon as it has. */
+  const letGo = useRef(false);
+  useEffect(() => {
+    if (listening && letGo.current) void entry.toggle();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listening]);
   const reading = entry.state === "reading";
   const busy = entry.state !== "idle";
   /* A reading's sentence is what he says; its quip, if any, goes under it. */
@@ -105,10 +112,10 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
   }, [bob]);
   const float = useAnimatedStyle(() => ({ transform: [{ translateY: -5 + bob.get() * 10 }] }));
 
-  /* One tap listens; two open Registro rápido. While listening, a tap stops at once. */
+  /* One tap opens the conversation; two open Registro rápido. Holding him is what listens. */
   const tapOrDouble = useTapOrDouble(
     () => {
-      void entry.toggle();
+      router.push("/registro" as never);
     },
     () => router.push("/rapido" as never),
   );
@@ -123,6 +130,14 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
           expanded={listening}
           loudness={entry.loudness}
           onPress={tap}
+          onHold={() => {
+            letGo.current = false;
+            if (entry.state === "idle") void entry.toggle();
+          }}
+          onHoldEnd={() => {
+            letGo.current = true;
+            if (entry.state === "listening") void entry.toggle();
+          }}
         />
       </Animated.View>
 
@@ -160,7 +175,7 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
         ) : !reading ? (
           <>
             <Mic size={12} color={INK.softer} strokeWidth={2.2} />
-            <Text style={{ fontSize: 12.5, color: INK.softer }}>Toque nele para falar</Text>
+            <Text style={{ fontSize: 12.5, color: INK.softer }}>Segure para falar</Text>
           </>
         ) : null}
       </View>
