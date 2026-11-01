@@ -53,7 +53,6 @@ const NEXT: Greeting[] = [
   { title: "Quer saber quanto sobra?", sub: "É só perguntar." },
   { title: "Pode perguntar de tudo.", sub: "Não precisa ser sobre dinheiro." },
   { title: "Curioso com a fatura?", sub: "Eu te digo como ela está." },
-  { title: "Toque em mim para falar.", sub: "Ou escreva aqui embaixo." },
 ];
 
 export function firstName(display: string | null | undefined): string | null {

@@ -119,7 +119,7 @@ const shrinkIn = () => {
 };
 
 /** The room under the sphere for what it is saying. */
-const CAPTION_H = 76;
+const CAPTION_H = 100;
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -412,7 +412,7 @@ export default function Registro() {
   /** The picture that goes with an answer, once the words have been written out, not over them. */
   const showCards = useCallback(
     async (said: string, after: string, simulation: Simulation | null = null) => {
-      await new Promise((r) => setTimeout(r, Math.min(1400, 8 * Math.min(after.length, 120) + 200)));
+      await new Promise((r) => setTimeout(r, Math.min(2600, 16 * Math.min(after.length, 120) + 250)));
       const cards = await cardsFor(said, { snapshot: build() as never, categories: monthData.categories ?? [], installments: installmentsRef.current, simulation });
       if (cards.length) setItems((m) => [...m, ...cards.map((card) => ({ kind: "card" as const, id: uid(), card }))]);
     },
@@ -784,6 +784,10 @@ export default function Registro() {
                   ) : (
                     <>
                       <GreetingLine name={firstName(profile?.display_name)} notice={board.find((l) => l.level === "alerta" || l.level === "atencao")?.title} />
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 8 }}>
+                        <Mic size={12} color={INK.softer} strokeWidth={2.2} />
+                        <Text style={{ fontSize: 12.5, color: INK.softer }}>Toque nele para falar</Text>
+                      </View>
                       {entry.message ? (
                         <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 12, color: "#F9CE4E", textAlign: "center" }}>
                           {entry.message}
@@ -989,7 +993,7 @@ export default function Registro() {
               {/* Only once there is something to send: the microphone is the sphere. */}
               {typed ? (
                 <SendButton disabled={busy || reading} onPress={submitText} />
-              ) : (
+              ) : !stage ? (
                 <Pressable
                   onPress={() => {
                     Keyboard.dismiss();
@@ -1008,7 +1012,7 @@ export default function Registro() {
                 >
                   <Mic size={19} color={listening ? "#0B0B0B" : "#fff"} strokeWidth={2.2} />
                 </Pressable>
-              )}
+              ) : null}
             </Glass>
           </View>
 
