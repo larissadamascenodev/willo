@@ -30,6 +30,7 @@ import { boardAnswer, buildBoard, radarForAssistant, type BoardLine } from "~/li
 import { saveChat, type ChatItem, type SavedChat } from "~/lib/willoChats";
 import { voiced } from "~/lib/voiceTone";
 import { face } from "~/lib/chatFont";
+import { parseCommand, runCommand } from "~/lib/chatCommands";
 import { pauseAfter, splitReply, TYPING_STARTS_AFTER, typingMs } from "~/lib/chatText";
 import AgentMark from "~/components/willo/AgentMark";
 import { AGENTS } from "~/lib/agents";
@@ -441,6 +442,21 @@ export default function Registro() {
   const converse = useCallback(
     async (said: string) => {
       turns.current.push({ role: "user", content: said });
+      /* An order is carried out, with no AI: "cria um limite de 300 para farmácia". */
+      const command = parseCommand(said, categories);
+      if (command && user) {
+        setThinking("Fazendo");
+        try {
+          const reply = await runCommand(command, user.id);
+          turns.current.push({ role: "assistant", content: reply });
+          setThinking(null);
+          await pushBot(reply);
+        } catch {
+          setThinking(null);
+          await pushBot("Não consegui fazer isso agora. Tenta de novo?");
+        }
+        return;
+      }
       /* What the numbers alone can answer is answered at once, with no AI. */
       const onBoard = boardAnswer(said, board);
       if (onBoard) {
@@ -477,7 +493,7 @@ export default function Registro() {
         setThinking(null);
       }
     },
-    [build, pushBot, showCards, answerLine, board, radar, profile],
+    [build, pushBot, showCards, answerLine, board, radar, profile, categories, user],
   );
 
   /* The conversation is kept as it goes, so leaving at any point loses nothing. */

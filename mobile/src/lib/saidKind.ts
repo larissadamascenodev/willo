@@ -9,7 +9,7 @@
 const plain = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
 const ASKING =
-  /^(qual|quais|quanto|quantos|quantas|quando|onde|quem|como|cade|porque|por que|pq|o que|oq|sera|posso|devo|consigo|tenho|pode|da pra|da para|vale (a pena|mais|comprar)|me (da|de|diz|diga|fala|explica|ajuda|mostra|conta|passa|sugere|sugira|ensina)|conta (uma|um|pra|para|como|sobre)|fala|explica|resume|resuma|traduz|traduza|escreve|escreva|faz|faca|compara|compare|calcula|calcule|sugere|sugira|mostra|mostre|oi|ola|e ai|bom dia|boa tarde|boa noite|obrigad|valeu|tudo bem)\b/;
+  /^(qual|quais|quanto|quantos|quantas|quando|onde|quem|como|cade|porque|por que|pq|o que|oq|sera|posso|devo|consigo|tenho|pode|da pra|da para|vale (a pena|mais|comprar)|me (da|de|diz|diga|fala|explica|ajuda|mostra|conta|passa|sugere|sugira|ensina|lembra|lembre|avisa|avise)|conta (uma|um|pra|para|como|sobre)|fala|explica|resume|resuma|traduz|traduza|escreve|escreva|faz|faca|compara|compare|calcula|calcule|sugere|sugira|mostra|mostre|cria|crie|criar|define|defina|coloca|coloque|lembrete|limite|oi|ola|e ai|bom dia|boa tarde|boa noite|obrigad|valeu|tudo bem)\b/;
 
 const MONEY_WORD =
   /\b(dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|catorze|quatorze|quinze|dezesseis|dezessete|dezoito|dezenove|vinte|trinta|quarenta|cinquenta|sessenta|setenta|oitenta|noventa|cem|cento|duzentos|trezentos|quatrocentos|quinhentos|seiscentos|setecentos|oitocentos|novecentos|mil|reais|real|conto|contos|pila)\b/;

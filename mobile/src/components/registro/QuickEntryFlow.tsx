@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Keyboard, Platform, Pressable, Text, TextInput, View } from "react-native";
+import { Alert, Keyboard, Platform, Pressable, Text, TextInput, View } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
+import { resolveReceiptDate } from "@/lib/receiptDate";
+import { processScanPhoto } from "~/lib/scanUpload";
+import { MicrophoneDenied, useVoice } from "~/lib/voice";
 import { createTransaction, getAccounts, getCreditCards, getRecentTransactions } from "@/services/transactionService";
 import { allowedCategories, readEntry, todayISO, type ParsedEntry } from "@/services/quickEntry";
 import { parseLocal } from "@/lib/quickEntry/parseLocal";
@@ -12,7 +16,7 @@ import ParticleOrb from "~/components/registro/ParticleOrb";
 import type { ReceiptLine } from "~/components/registro/ReceiptCard";
 import EntryForm, { type EntryValues } from "~/components/registro/EntryForm";
 import { CategoryButton, Choice, EntryCard, GLASS, StepHeader, PartsBar, Primary, SavedView, dayLabel, hhmm, type Account, type Card, type Kind, type Method } from "~/components/registro/entryParts";
-import { Banknote, CalendarClock, ChevronLeft, CreditCard, Landmark } from "~/components/icons";
+import { Banknote, CalendarClock, Camera, ChevronLeft, CreditCard, Landmark, Mic } from "~/components/icons";
 import { money } from "~/lib/money";
 import { paymentMention } from "~/lib/paymentMention";
 import { preloadCash } from "~/lib/sounds";
@@ -299,6 +303,130 @@ export default function QuickEntryFlow({
   };
 
   /* Nothing on the phone could read it: the AI reader tries. */
+  /* ---- said aloud, or shown on a receipt: whatever comes of it fills the same card ---- */
+
+  const voice = useVoice();
+  const listening = voice.recording;
+  /* Read from a voice or a photo: with nothing missing it goes straight to the check. */
+  const goWhenWhole = useRef(false);
+
+  const hearIt = async () => {
+    setReading(true);
+    setError(null);
+    try {
+      const clip = await voice.stop();
+      if (!clip || clip.seconds < 1) {
+        setError("Não peguei nada. Toque no microfone e fale um pouquinho mais.");
+        return;
+      }
+      const { entries, transcript } = await readEntry({ audio: { data: clip.data, mimeType: clip.mimeType }, categories });
+      write(transcript?.trim() ?? "");
+      if (!entries[0]) {
+        setError(transcript?.trim() ? "Não achei um valor aí. Tente algo como “padaria 48”." : "Não consegui ouvir. Fale mais perto, num lugar mais quieto?");
+        return;
+      }
+      void Haptics.selectionAsync().catch(() => undefined);
+      goWhenWhole.current = true;
+      setAiRead(entries[0]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não consegui ouvir agora. Tente de novo.");
+    } finally {
+      setReading(false);
+    }
+  };
+
+  const toggleVoice = async () => {
+    if (reading) return;
+    if (listening) return void hearIt();
+    Keyboard.dismiss();
+    setError(null);
+    try {
+      await voice.start();
+      calm.current = { floor: 0, seen: false, spoke: false, quietSince: 0 };
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    } catch (err) {
+      setError(err instanceof MicrophoneDenied ? "O microfone está bloqueado. Libere o Willo em Ajustes › Willo › Microfone." : "Não consegui acessar o microfone agora.");
+    }
+  };
+
+  /* It stops by itself once something was said and then there is a short silence. */
+  const calm = useRef({ floor: 0, seen: false, spoke: false, quietSince: 0 });
+  useEffect(() => {
+    if (!listening || typeof voice.level !== "number") return;
+    const c = calm.current;
+    const now = Date.now();
+    c.floor = c.seen ? Math.min(c.floor + 0.05, voice.level) : voice.level;
+    c.seen = true;
+    if (voice.level > Math.max(-42, c.floor + 13)) {
+      c.spoke = true;
+      c.quietSince = 0;
+    } else if (c.spoke) {
+      if (c.quietSince === 0) c.quietSince = now;
+      else if (now - c.quietSince > 850) void hearIt();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listening, voice.level]);
+
+  const readPhoto = async (photo: { uri: string; width?: number; height?: number }) => {
+    setReading(true);
+    setError(null);
+    try {
+      const result = await processScanPhoto(photo);
+      const items = (result.items ?? []) as { description?: string; merchant?: string | null; amount?: number; category?: string; date?: string | null; type?: string }[];
+      const first = items[0];
+      const total = items.reduce((s, i) => s + Number(i.amount ?? 0), 0);
+      if (!first || total <= 0) {
+        setError(result.message || "Não consegui ler esse comprovante. Tente outra foto.");
+        return;
+      }
+      write("");
+      void Haptics.selectionAsync().catch(() => undefined);
+      goWhenWhole.current = true;
+      const known = categories.find((c) => c.toLowerCase() === first.category?.toLowerCase()) ?? null;
+      setAiRead({
+        name: items.length === 1 ? (first.description ?? first.merchant ?? "Comprovante") : (first.merchant ?? first.description ?? "Comprovante"),
+        type: first.type === "receita" ? "receita" : "despesa",
+        amount: total,
+        category: known,
+        date: resolveReceiptDate(first.date),
+        paymentMethod: null,
+        settled: null,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não consegui ler esse comprovante agora.");
+    } finally {
+      setReading(false);
+    }
+  };
+
+  const takePhoto = async (camera: boolean) => {
+    if (camera) {
+      const { granted } = await ImagePicker.requestCameraPermissionsAsync();
+      if (!granted) return setError("A câmera está bloqueada. Libere o Willo em Ajustes › Willo › Câmera.");
+    }
+    const options: ImagePicker.ImagePickerOptions = { mediaTypes: ["images"], quality: 0.9 };
+    const result = camera ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+    const asset = result.canceled ? null : result.assets[0];
+    if (asset) void readPhoto({ uri: asset.uri, width: asset.width, height: asset.height });
+  };
+
+  const choosePhoto = () => {
+    if (reading || listening) return;
+    Keyboard.dismiss();
+    Alert.alert("Foto do comprovante", undefined, [
+      { text: "Tirar foto", onPress: () => void takePhoto(true) },
+      { text: "Escolher da galeria", onPress: () => void takePhoto(false) },
+      { text: "Cancelar", style: "cancel" },
+    ]);
+  };
+
+  useEffect(() => {
+    if (!goWhenWhole.current || step !== "ask" || !hasEntry || !loaded) return;
+    goWhenWhole.current = false;
+    if (!question) toConfirm(now, category);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, hasEntry, loaded, question]);
+
   const readHard = async () => {
     const text = said.trim();
     if (!text || reading) return;
@@ -422,22 +550,36 @@ export default function QuickEntryFlow({
             ) : (
               <>
                 <Text style={{ fontSize: 26, fontWeight: "800", letterSpacing: -0.7, color: "#fff" }}>O que aconteceu?</Text>
-                <TextInput
-                  autoFocus
-                  value={said}
-                  onChangeText={write}
-                  onSubmitEditing={() => {
-                    if (!draft) return void readHard();
-                    pausedOn.current = said;
-                    Keyboard.dismiss();
-                    if (!question) toConfirm(now, category);
-                  }}
-                  returnKeyType={draft ? "done" : "next"}
-                  placeholder="Ex.: padaria 48"
-                  placeholderTextColor={INK.faint}
-                  style={{ marginTop: 16, height: 56, borderRadius: 20, paddingHorizontal: 18, fontSize: 19, fontWeight: "600", color: "#fff", backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: said.trim() ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)" }}
-                />
-                {!said.trim() && (
+                <View style={{ marginTop: 16, height: 56, flexDirection: "row", alignItems: "center", paddingHorizontal: 6, gap: 2, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: said.trim() || listening ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)" }}>
+                  <Pressable onPress={choosePhoto} accessibilityLabel="Foto do comprovante" hitSlop={4} style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.5 : 1 })}>
+                    <Camera size={20} color="rgba(255,255,255,0.78)" strokeWidth={2} />
+                  </Pressable>
+                  <TextInput
+                    autoFocus
+                    value={said}
+                    onChangeText={write}
+                    editable={!listening && !reading}
+                    onSubmitEditing={() => {
+                      if (!draft) return void readHard();
+                      pausedOn.current = said;
+                      Keyboard.dismiss();
+                      if (!question) toConfirm(now, category);
+                    }}
+                    returnKeyType={draft ? "done" : "next"}
+                    placeholder={listening ? "Estou ouvindo…" : reading ? "Lendo…" : "Ex.: padaria 48"}
+                    placeholderTextColor={INK.faint}
+                    style={{ flex: 1, minWidth: 0, height: "100%", paddingHorizontal: 4, fontSize: 19, fontWeight: "600", color: "#fff" }}
+                  />
+                  <Pressable
+                    onPress={() => void toggleVoice()}
+                    accessibilityLabel={listening ? "Parar e enviar" : "Falar"}
+                    hitSlop={4}
+                    style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: listening ? "#fff" : "transparent", opacity: pressed ? 0.5 : 1 })}
+                  >
+                    <Mic size={20} color={listening ? "#0B0B0B" : "rgba(255,255,255,0.78)"} strokeWidth={2.1} />
+                  </Pressable>
+                </View>
+                {!said.trim() && !draft && !listening && !reading && (
                   <View style={{ marginTop: 10, flexDirection: "row", gap: 8 }}>
                     {EXAMPLES.map((e) => (
                       <Pressable
