@@ -60,13 +60,12 @@ export const NEXT: Greeting[] = [
 ];
 
 /**
- * How a sentence sits under the sphere. Never one word alone on a second line: what nearly
- * fits is set a little smaller on one line, and what is really longer is split at the space
- * nearest the middle, so the two lines come out even.
+ * How a sentence sits under the sphere. What fits stays on one line. What does not splits
+ * at the space nearest the middle, at the same size, so the two lines come out even and
+ * no word is left alone. Only what will not fit even in two lines goes smaller.
  */
 export function layOut(text: string, perLine: number, size: number): { lines: string[]; size: number } {
   if (text.length <= perLine) return { lines: [text], size };
-  if (text.length <= perLine * 1.3) return { lines: [text], size: size * (perLine / text.length) };
   const words = text.split(" ");
   let best = 1;
   let gap = Infinity;
