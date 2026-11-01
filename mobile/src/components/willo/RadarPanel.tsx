@@ -10,12 +10,12 @@ import { INCOME, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 /**
- * Willo's computer: everything central about the money, on one screen, already worked out.
+ * The Radar: everything central about the money, on one screen, already worked out.
  *
- * It is the web's Radar — the same score, the same readings — with the figures that
- * answer the everyday questions beside them, filtered by what you are looking for. Each
- * line is also a question: tap it and the conversation has it, answered from these same
- * numbers with no AI in between.
+ * The same score and the same readings as the web's Radar, with the figures that answer
+ * the everyday questions beside them, filtered by what you are looking for. Each line is
+ * also a question: tap it and the conversation has it, answered from these same numbers
+ * with no AI in between.
  */
 
 const LEVEL_HEX: Record<BoardLevel, string> = {
@@ -77,7 +77,7 @@ function Dial({ score, level, blips }: { score: number | null; level: string; bl
   );
 }
 
-export default function Computador({
+export default function RadarPanel({
   data,
   board,
   bottom,

@@ -15,12 +15,13 @@ import Glass from "~/components/Glass";
 import Notinha, { type NotinhaLine } from "~/components/registro/Notinha";
 import Confirmado from "~/components/registro/Confirmado";
 import ParticleOrb, { type OrbMode } from "~/components/registro/ParticleOrb";
-import { ArrowUp, Camera, ChevronLeft, Clock, Mic, PenLine, Plus, SlidersHorizontal, Sparkles, X } from "~/components/icons";
+import { ArrowUp, Camera, ChevronLeft, Clock, Mic, PenLine, SlidersHorizontal, Sparkles, X } from "~/components/icons";
 import ReceiptCard, { type ReceiptLine } from "~/components/registro/ReceiptCard";
 import { commentAfter } from "~/lib/afterEntry";
 import WilloSettings from "~/components/willo/WilloSettings";
 import ChatHistory from "~/components/willo/ChatHistory";
-import Computador from "~/components/willo/Computador";
+import RadarPanel from "~/components/willo/RadarPanel";
+import ListeningDock from "~/components/willo/ListeningDock";
 import SegmentedTabs from "~/components/SegmentedTabs";
 import { useRaioX, type RaioXData } from "@/hooks/useRaioX";
 import { boardAnswer, buildBoard, radarForAssistant, type BoardLine } from "~/lib/radarBoard";
@@ -116,7 +117,7 @@ const shrinkIn = () => {
 };
 
 /** The room under the sphere for what it is saying. */
-const CAPTION_H = 84;
+const CAPTION_H = 54;
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -175,10 +176,10 @@ export default function Registro() {
   const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
   const [text, setText] = useState("");
   const [thinking, setThinking] = useState<string | null>(null);
-  const [view, setView] = useState<"chat" | "computador">("chat");
+  const [view, setView] = useState<"chat" | "radar">("chat");
   const [atSphere, setAtSphere] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  /* The Radar, read once the screen has settled: what the Computador shows and what Willo already knows. */
+  /* The Radar, read once the screen has settled: what the Radar tab shows and what Willo already knows. */
   const [radar, setRadar] = useState<RaioXData | null>(null);
   const [radarOn, setRadarOn] = useState(false);
   useEffect(() => {
@@ -416,7 +417,7 @@ export default function Registro() {
     [build, monthData],
   );
 
-  /** A line of the Computador, said and answered from its own numbers. */
+  /** A line of the Radar, said and answered from its own numbers. */
   const answerLine = useCallback(
     (line: BoardLine) => {
       const reply = voiced(line.answer, line.mood);
@@ -506,7 +507,7 @@ export default function Registro() {
     void converse(said);
   };
 
-  /* Tapped on the Computador: over to the conversation, already answered. */
+  /* Tapped on the Radar: over to the conversation, already answered. */
   const askFromBoard = useCallback(
     (line: BoardLine) => {
       setView("chat");
@@ -693,13 +694,13 @@ export default function Registro() {
      have their room, and the swell has its own — across as well as down, since
      swollen it is a sixth wider than it is drawn. Measured, not guessed — the sphere
      was laid out against a height it did not have, and everything overlapped. */
-  const orb = stageH > 0 ? Math.max(190, Math.min(width * 0.8, 320, stageH - CAPTION_H - 18 - 56)) : 250;
-  /* The full stage is the welcome; once there is a conversation — or the keyboard is up —
-     the sphere stays, smaller and higher, above it. */
+  const orb = stageH > 0 ? Math.max(120, Math.min(width * 0.8, 320, stageH - CAPTION_H - 12 - 32)) : 250;
+  /* The full stage is the welcome, and he stays on it while the first words are typed.
+     Once there is a conversation the thread takes over. */
   useEffect(() => {
     setAtSphere(false);
   }, [items.length]);
-  const stage = (!started || atSphere) && !keyboardUp;
+  const stage = !started || (atSphere && !keyboardUp);
 
   return (
     <Room lit sky>
@@ -731,7 +732,7 @@ export default function Registro() {
             </HeaderButton>
           )}
           <View style={{ flex: 1, minWidth: 0, alignItems: "center" }}>
-            <View style={{ width: 196, maxWidth: "100%" }}>
+            <View style={{ width: 148, maxWidth: "100%" }}>
               <SegmentedTabs
                 glass
                 compact
@@ -742,17 +743,12 @@ export default function Registro() {
                   setView(next);
                 }}
                 options={[
-                  { key: "chat", label: "Willo Chat" },
-                  { key: "computador", label: "Computador" },
+                  { key: "chat", label: "Chat" },
+                  { key: "radar", label: "Radar" },
                 ]}
               />
             </View>
           </View>
-          {started && view === "chat" ? (
-            <HeaderButton label="Nova conversa" onPress={newChat}>
-              <Plus size={18} color="rgba(255,255,255,0.88)" strokeWidth={2.3} />
-            </HeaderButton>
-          ) : null}
           <HeaderButton label="Conversas anteriores" onPress={() => setHistoryOpen(true)}>
             <Clock size={16} color="rgba(255,255,255,0.88)" strokeWidth={2.2} />
           </HeaderButton>
@@ -761,9 +757,9 @@ export default function Registro() {
           </HeaderButton>
         </View>
 
-        {/* ── The stage: the computer, the sphere, or — once something has been said — the conversation ── */}
-        {view === "computador" ? (
-          <Computador data={radar} board={board} bottom={insets.bottom} onAsk={askFromBoard} />
+        {/* ── The stage: the Radar, the sphere, or — once something has been said — the conversation ── */}
+        {view === "radar" ? (
+          <RadarPanel data={radar} board={board} bottom={insets.bottom} onAsk={askFromBoard} />
         ) : stage ? (
           <View style={{ flex: 1 }}>
             <View style={{ flex: 1 }} onLayout={(e) => setStageH(e.nativeEvent.layout.height)}>
@@ -771,29 +767,41 @@ export default function Registro() {
                 <ParticleOrb size={orb} mode={mode} expanded={listening} onPress={orbTap} />
 
                 {/* What the sphere is saying, in the same place whichever it is. */}
-                <View style={{ marginTop: 18, height: CAPTION_H, alignSelf: "stretch", alignItems: "center" }}>
+                <View style={{ marginTop: 12, height: CAPTION_H, alignSelf: "stretch", alignItems: "center" }}>
                   {listening ? (
                     <Animated.View entering={FadeIn.duration(240)} style={{ alignItems: "center" }}>
-                      <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Estou ouvindo…</Text>
-                      <Text style={{ marginTop: 3, fontSize: 13.5, color: INK.soft, textAlign: "center" }}>Pode falar. Eu paro quando você parar.</Text>
-                      <Pressable onPress={() => void entry.cancel()} hitSlop={10} style={({ pressed }) => ({ marginTop: 6, paddingVertical: 5, paddingHorizontal: 14, opacity: pressed ? 0.6 : 1 })}>
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.7)" }}>Cancelar</Text>
+                      <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Estou ouvindo…</Text>
+                      <Pressable onPress={() => void entry.cancel()} hitSlop={10} style={({ pressed }) => ({ marginTop: 4, paddingVertical: 4, paddingHorizontal: 14, opacity: pressed ? 0.6 : 1 })}>
+                        <Text style={{ fontSize: 13, fontWeight: "600", color: "rgba(255,255,255,0.7)" }}>Cancelar</Text>
                       </Pressable>
                     </Animated.View>
                   ) : reading ? (
-                    <Animated.View entering={FadeIn.duration(240)} style={{ alignItems: "center" }}>
-                      <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Anotando…</Text>
-                      <Text style={{ marginTop: 3, fontSize: 13.5, color: INK.soft }}>Só um instante.</Text>
+                    <Animated.View entering={FadeIn.duration(240)}>
+                      <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Entendendo…</Text>
                     </Animated.View>
                   ) : (
                     <Animated.View entering={FadeIn.duration(400)} style={{ alignItems: "center" }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
-                        <Mic size={16} color={GREEN} strokeWidth={2.3} />
-                        <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Toque para falar</Text>
-                      </View>
-                      <Text numberOfLines={2} style={{ marginTop: 3, fontSize: 13.5, lineHeight: 19, color: entry.message ? "#F9CE4E" : INK.soft, textAlign: "center" }}>
-                        {entry.message ?? "Diga o que gastou ou recebeu."}
-                      </Text>
+                      <Pressable
+                        onPress={() => void entry.toggle()}
+                        style={({ pressed }) => ({
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 6,
+                          height: 32,
+                          paddingHorizontal: 13,
+                          borderRadius: 16,
+                          backgroundColor: "rgba(255,255,255,0.08)",
+                          transform: [{ scale: pressed ? 0.96 : 1 }],
+                        })}
+                      >
+                        <Mic size={13} color="rgba(255,255,255,0.86)" strokeWidth={2.3} />
+                        <Text style={{ fontSize: 13, fontWeight: "600", color: "rgba(255,255,255,0.86)" }}>Toque para falar</Text>
+                      </Pressable>
+                      {entry.message ? (
+                        <Text numberOfLines={1} style={{ marginTop: 5, fontSize: 12, color: "#F9CE4E", textAlign: "center" }}>
+                          {entry.message}
+                        </Text>
+                      ) : null}
                     </Animated.View>
                   )}
                 </View>
@@ -886,13 +894,6 @@ export default function Registro() {
               ),
             )}
 
-            {(listening || reading) && (
-              <Animated.View entering={FadeIn.duration(200)} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <ParticleOrb size={34} mode={listening ? "listening" : "thinking"} onPress={() => void entry.toggle()} />
-                <Text style={{ fontSize: 13.5, color: listening ? "#fff" : INK.soft }}>{listening ? "Estou ouvindo… toque na esfera para parar" : "Anotando…"}</Text>
-              </Animated.View>
-            )}
-
             {busy && (
               <Animated.View entering={FadeIn.duration(200)} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <ParticleOrb size={30} mode="thinking" />
@@ -903,9 +904,14 @@ export default function Registro() {
           </View>
         )}
 
-        {/* ── The composer ── */}
-        {view === "chat" && (
+        {/* ── The composer, or Willo himself while he listens ── */}
+        {view === "chat" && !stage && (listening || reading) ? (
+          <ListeningDock reading={reading} bottom={insets.bottom} onStop={() => void entry.toggle()} onCancel={() => void entry.cancel()} />
+        ) : view === "chat" && (
         <View style={{ paddingTop: 8, paddingBottom: insets.bottom + 8 }}>
+          {!stage && entry.message ? (
+            <Text style={{ marginHorizontal: 24, marginBottom: 8, fontSize: 12.5, lineHeight: 17, color: "#F9CE4E", textAlign: "center" }}>{entry.message}</Text>
+          ) : null}
           {!stage && !listening && (
             <ScrollView
               horizontal
@@ -999,23 +1005,24 @@ export default function Registro() {
               {typed ? (
                 <SendButton disabled={busy || reading} onPress={submitText} />
               ) : (
-                !stage && (
-                  <Pressable
-                    onPress={() => void entry.toggle()}
-                    accessibilityLabel={listening ? "Parar" : "Falar"}
-                    style={({ pressed }) => ({
-                      width: 44,
-                      height: 44,
-                      borderRadius: 22,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: listening ? "#fff" : "rgba(255,255,255,0.10)",
-                      transform: [{ scale: pressed ? 0.94 : 1 }],
-                    })}
-                  >
-                    <Mic size={19} color={listening ? "#0B0B0B" : "#fff"} strokeWidth={2.2} />
-                  </Pressable>
-                )
+                <Pressable
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    void entry.toggle();
+                  }}
+                  accessibilityLabel={listening ? "Parar" : "Falar"}
+                  style={({ pressed }) => ({
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: listening ? "#fff" : "rgba(255,255,255,0.10)",
+                    transform: [{ scale: pressed ? 0.94 : 1 }],
+                  })}
+                >
+                  <Mic size={19} color={listening ? "#0B0B0B" : "#fff"} strokeWidth={2.2} />
+                </Pressable>
               )}
             </Glass>
           </View>

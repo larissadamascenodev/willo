@@ -3,7 +3,7 @@ import { money } from "~/lib/money";
 import type { Mood } from "~/lib/voiceTone";
 
 /**
- * What the Computador shows, each line with its question and its answer already worked
+ * What the Radar tab shows, each line with its question and its answer already worked
  * out from the same Radar the web reads: so tapping one, or asking the same thing, has
  * Willo reply at once with no AI in between.
  */

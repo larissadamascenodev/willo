@@ -12,7 +12,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import Svg, { Circle, Defs, LinearGradient, Path, RadialGradient, Rect, Stop } from "react-native-svg";
+import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, RadialGradient, Rect, Stop } from "react-native-svg";
 
 /**
  * Willo himself: a glass sphere with the face from the app's icon in it.
@@ -42,7 +42,7 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const SPEED: Record<OrbMode, number> = { idle: 0.32, listening: 0.95, thinking: 2.2 };
 const SPARKS = 34;
 /** The colours his band turns through: the sky of the screens he lives on, up to ice. */
-const BAND = ["#2FBFCB", "#5AA9FF", "#BFE3FF"];
+const BAND = ["#1FA9BC", "#4C97F0", "#B5DEFF"];
 const TILT = 0.38;
 /** How far a drag turns it: radians per point, at the size the orb is drawn. */
 const DRAG = 0.0135;
@@ -87,7 +87,7 @@ export default function ParticleOrb({
   expanded?: boolean;
 }) {
   const reduce = useReducedMotion();
-  const count = size < 60 ? 0 : (density ?? (size >= 180 ? 620 : 300));
+  const count = size < 60 ? 0 : (density ?? (size >= 180 ? 420 : 220));
   const points = useMemo(() => cloud(count), [count]);
 
   const angle = useSharedValue(0);
@@ -234,11 +234,11 @@ export default function ParticleOrb({
 
   const half = size / 2;
   const radius = size * 0.42;
-  const dot = Math.max(0.7, size / 250);
-  const bandW = size * 0.56;
-  const bandH = size * 0.3;
-  const eyeW = Math.max(1.5, size * 0.027);
-  const eyeH = size * 0.105;
+  const dot = Math.max(0.6, size / 330);
+  const bandW = size * 0.5;
+  const bandH = size * 0.26;
+  const eyeW = Math.max(1.4, size * 0.023);
+  const eyeH = size * 0.092;
   const colours = bandW * 1.2;
 
   /* One pass over the points per frame, written into three paths by depth. */
@@ -352,38 +352,71 @@ export default function ParticleOrb({
       accessibilityRole={onPress ? "button" : undefined}
     >
       <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }} pointerEvents="none">
-        {/* The sphere */}
+        {/* The sphere: dark glass, lit from above, with light gathered at its rim */}
         <Svg width={size} height={size} style={{ position: "absolute" }}>
           <Defs>
             <RadialGradient id="orb-glow" cx="50%" cy="50%" r="50%">
-              <Stop offset="0.72" stopColor="#7CC4FF" stopOpacity={0.14} />
-              <Stop offset="1" stopColor="#7CC4FF" stopOpacity={0} />
+              <Stop offset="0.74" stopColor="#4C97F0" stopOpacity={0.2} />
+              <Stop offset="1" stopColor="#4C97F0" stopOpacity={0} />
             </RadialGradient>
-            <RadialGradient id="orb-body" cx="50%" cy="46%" r="50%">
-              <Stop offset="0" stopColor="#05080B" stopOpacity={0.96} />
-              <Stop offset="0.72" stopColor="#060B10" stopOpacity={0.92} />
-              <Stop offset="1" stopColor="#123246" stopOpacity={0.78} />
+            <RadialGradient id="orb-body" cx="50%" cy="42%" r="58%">
+              <Stop offset="0" stopColor="#0A1016" />
+              <Stop offset="0.7" stopColor="#060A0E" />
+              <Stop offset="1" stopColor="#0E2533" />
             </RadialGradient>
-            <LinearGradient id="orb-rim" x1="20%" y1="0%" x2="80%" y2="100%">
-              <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.62} />
-              <Stop offset="0.5" stopColor="#7CC4FF" stopOpacity={0.2} />
-              <Stop offset="1" stopColor="#2FBFCB" stopOpacity={0.46} />
+            <RadialGradient id="orb-fresnel" cx="50%" cy="50%" r="50%">
+              <Stop offset="0.8" stopColor="#B5DEFF" stopOpacity={0} />
+              <Stop offset="1" stopColor="#B5DEFF" stopOpacity={0.2} />
+            </RadialGradient>
+            <LinearGradient id="orb-rim" x1="25%" y1="0%" x2="75%" y2="100%">
+              <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.55} />
+              <Stop offset="0.5" stopColor="#B5DEFF" stopOpacity={0.08} />
+              <Stop offset="1" stopColor="#1FA9BC" stopOpacity={0.4} />
             </LinearGradient>
+            <LinearGradient id="orb-shine" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.17} />
+              <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
+            </LinearGradient>
+            <RadialGradient id="orb-bounce" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor="#1FA9BC" stopOpacity={0.3} />
+              <Stop offset="1" stopColor="#1FA9BC" stopOpacity={0} />
+            </RadialGradient>
           </Defs>
           <Circle cx={half} cy={half} r={half} fill="url(#orb-glow)" />
-          <Circle cx={half} cy={half} r={radius} fill="url(#orb-body)" stroke="url(#orb-rim)" strokeWidth={Math.max(0.8, size * 0.006)} />
-          <AnimatedPath animatedProps={farProps} fill="#FFFFFF" fillOpacity={0.1} />
-          <AnimatedPath animatedProps={midProps} fill="#FFFFFF" fillOpacity={0.16} />
-          <AnimatedPath animatedProps={nearProps} fill="#FFFFFF" fillOpacity={0.5} />
-          <AnimatedPath animatedProps={sparkProps} fill="#BFE3FF" fillOpacity={0.85} />
+          <Circle cx={half} cy={half} r={radius} fill="url(#orb-body)" />
+          <Ellipse cx={half} cy={half + radius * 0.74} rx={radius * 0.6} ry={radius * 0.2} fill="url(#orb-bounce)" />
+          <AnimatedPath animatedProps={farProps} fill="#FFFFFF" fillOpacity={0.06} />
+          <AnimatedPath animatedProps={midProps} fill="#FFFFFF" fillOpacity={0.09} />
+          <AnimatedPath animatedProps={nearProps} fill="#FFFFFF" fillOpacity={0.36} />
+          <Circle cx={half} cy={half} r={radius} fill="url(#orb-fresnel)" />
+          <Ellipse cx={half} cy={half - radius * 0.64} rx={radius * 0.6} ry={radius * 0.27} fill="url(#orb-shine)" />
+          <Circle cx={half} cy={half} r={radius} fill="none" stroke="url(#orb-rim)" strokeWidth={Math.max(0.7, size * 0.0045)} />
+          <AnimatedPath animatedProps={sparkProps} fill="#B5DEFF" fillOpacity={0.85} />
         </Svg>
 
         {/* The face */}
         <Animated.View style={[{ width: bandW, height: bandH, alignItems: "center", justifyContent: "center" }, face]}>
-          {/* Soft edges, as a light has: two halos behind the band. */}
-          <View style={{ position: "absolute", top: -size * 0.03, bottom: -size * 0.03, left: -size * 0.03, right: -size * 0.03, borderRadius: bandH, backgroundColor: "#5AA9FF", opacity: 0.1 }} />
-          <View style={{ position: "absolute", top: -size * 0.014, bottom: -size * 0.014, left: -size * 0.014, right: -size * 0.014, borderRadius: bandH, backgroundColor: "#5AA9FF", opacity: 0.2 }} />
-          <View style={{ width: bandW, height: bandH, borderRadius: bandH * 0.46, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: BAND[1] }}>
+          {/* The light it throws on the glass: soft, as a light's edge is. */}
+          <Svg width={bandW * 1.6} height={bandH * 2.4} style={{ position: "absolute", left: -bandW * 0.3, top: -bandH * 0.7 }}>
+            <Defs>
+              <RadialGradient id="orb-throw" cx="50%" cy="50%" r="50%">
+                <Stop offset="0.45" stopColor="#4C97F0" stopOpacity={0.4} />
+                <Stop offset="1" stopColor="#4C97F0" stopOpacity={0} />
+              </RadialGradient>
+            </Defs>
+            <Ellipse cx={bandW * 0.8} cy={bandH * 1.2} rx={bandW * 0.8} ry={bandH * 1.2} fill="url(#orb-throw)" />
+          </Svg>
+          <View
+            style={{
+              width: bandW,
+              height: bandH,
+              borderRadius: bandH * 0.47,
+              overflow: "hidden",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: BAND[1],
+            }}
+          >
             <Animated.View style={[{ position: "absolute", width: colours, height: colours }, turning]}>
               <Svg width={colours} height={colours}>
                 <Defs>
@@ -396,21 +429,23 @@ export default function ParticleOrb({
                 <Rect width={colours} height={colours} fill="url(#orb-band)" />
               </Svg>
             </Animated.View>
-            <Animated.View style={[{ flexDirection: "row", gap: size * 0.135 }, eyes]}>
+            {/* Glass over the light: bright along the top, deepening towards the foot. */}
+            <Svg width={bandW} height={bandH} style={{ position: "absolute" }}>
+              <Defs>
+                <LinearGradient id="orb-sheen" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.36} />
+                  <Stop offset="0.42" stopColor="#FFFFFF" stopOpacity={0.03} />
+                  <Stop offset="1" stopColor="#04121F" stopOpacity={0.34} />
+                </LinearGradient>
+              </Defs>
+              <Rect width={bandW} height={bandH} fill="url(#orb-sheen)" />
+            </Svg>
+            <Animated.View style={[{ flexDirection: "row", gap: size * 0.125 }, eyes]}>
               {[0, 1].map((n) => (
-                <View
-                  key={n}
-                  style={{
-                    width: eyeW,
-                    height: eyeH,
-                    borderRadius: eyeW,
-                    backgroundColor: "#FFFFFF",
-                    shadowColor: "#FFFFFF",
-                    shadowOpacity: 0.9,
-                    shadowRadius: size * 0.02,
-                    shadowOffset: { width: 0, height: 0 },
-                  }}
-                />
+                <View key={n} style={{ width: eyeW, height: eyeH, alignItems: "center", justifyContent: "center" }}>
+                  <View style={{ position: "absolute", width: eyeW * 3.2, height: eyeH * 1.22, borderRadius: eyeW * 2, backgroundColor: "#FFFFFF", opacity: 0.18 }} />
+                  <View style={{ width: eyeW, height: eyeH, borderRadius: eyeW, backgroundColor: "#FFFFFF" }} />
+                </View>
               ))}
             </Animated.View>
           </View>
