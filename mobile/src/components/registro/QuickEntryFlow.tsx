@@ -80,7 +80,10 @@ export default function QuickEntryFlow({
   onSeeCard,
   onStep,
   onSaved,
+  onHearing,
 }: {
+  /** Listening or reading: for Willo to show above the sheet, and how to stop him. */
+  onHearing?: (hearing: { reading: boolean; stop: () => void } | null) => void;
   initial?: StartingEntry | null;
   /** What was said or written, shown over the card. */
   heard?: string | null;
@@ -426,6 +429,13 @@ export default function QuickEntryFlow({
     if (!question) toConfirm(now, category);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, hasEntry, loaded, question]);
+
+  const stopHearing = useRef(() => undefined as void);
+  stopHearing.current = () => void toggleVoice();
+  useEffect(() => {
+    onHearing?.(listening || reading ? { reading: !listening, stop: () => stopHearing.current() } : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listening, reading]);
 
   const readHard = async () => {
     const text = said.trim();

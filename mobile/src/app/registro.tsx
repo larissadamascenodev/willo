@@ -31,6 +31,7 @@ import { saveChat, type ChatItem, type SavedChat } from "~/lib/willoChats";
 import { voiced } from "~/lib/voiceTone";
 import { face } from "~/lib/chatFont";
 import { parseCommand, runCommand } from "~/lib/chatCommands";
+import { followUps, frequentAsks, mergeAsks, noteAsked } from "~/lib/shortcuts";
 import { splitReply, typingMs } from "~/lib/chatText";
 import ChatBubble from "~/components/willo/ChatBubble";
 import AgentMark from "~/components/willo/AgentMark";
@@ -223,6 +224,13 @@ export default function Registro() {
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
 
   const written = useRef(new Map<string, () => void>());
+  /* From a question arriving to the last of its answer being down. Shortcuts wait for it, and
+     anything said meanwhile is answered next, so answers never overlap. */
+  const [answering, setAnswering] = useState(false);
+  const answeringRef = useRef(false);
+  const waitingAsks = useRef<string[]>([]);
+  const converseRef = useRef<(said: string) => void>(() => {});
+  const [lastAsked, setLastAsked] = useState<string | null>(null);
   /* His reply in short messages, each written out before the next begins; done when the last is. */
   const pushBot = useCallback(async (t: string, extra?: { agents?: string[]; instant?: boolean }) => {
     const chat = chatId.current;
@@ -443,10 +451,11 @@ export default function Registro() {
 
   /** A line of the Radar, said and answered from its own numbers. */
   const answerLine = useCallback(
-    (line: BoardLine) => {
+    async (line: BoardLine) => {
       const reply = voiced(line.answer, line.mood);
       turns.current.push({ role: "assistant", content: reply });
-      void pushBot(reply).then(() => showCards(line.ask));
+      await pushBot(reply);
+      await showCards(line.ask);
     },
     [pushBot, showCards],
   );
@@ -454,6 +463,15 @@ export default function Registro() {
   /** Puts the thread so far to the assistant and writes what it answers. */
   const converse = useCallback(
     async (said: string) => {
+      if (answeringRef.current) {
+        waitingAsks.current.push(said);
+        return;
+      }
+      answeringRef.current = true;
+      setAnswering(true);
+      setLastAsked(said);
+      if (user) noteAsked(user.id, said);
+      try {
       turns.current.push({ role: "user", content: said });
       /* An order is carried out, with no AI: "cria um limite de 300 para farmácia". */
       const command = parseCommand(said, categories);
@@ -473,7 +491,7 @@ export default function Registro() {
       /* What the numbers alone can answer is answered at once, with no AI. */
       const onBoard = boardAnswer(said, board);
       if (onBoard) {
-        answerLine(onBoard);
+        await answerLine(onBoard);
         return;
       }
       setThinking(workingOn(said));
@@ -505,9 +523,24 @@ export default function Registro() {
       } finally {
         setThinking(null);
       }
+      } finally {
+        answeringRef.current = false;
+        setAnswering(false);
+        const next = waitingAsks.current.shift();
+        if (next) converseRef.current(next);
+      }
     },
     [pushBot, showCards, answerLine, board, radar, profile, categories, user],
   );
+  converseRef.current = (said) => void converse(said);
+
+  /* What to offer: what carries on from the last question, what this person asks most, the rest. */
+  const asks = useMemo(
+    () => mergeAsks(lastAsked ? followUps(lastAsked) : [], user ? frequentAsks(user.id) : [], QUESTIONS).filter((a) => a !== lastAsked),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lastAsked, answering, user],
+  );
+  const carryOn = useMemo(() => (lastAsked ? followUps(lastAsked) : []), [lastAsked]);
 
   /* The conversation is kept as it goes, so leaving at any point loses nothing. */
   useEffect(() => {
@@ -563,10 +596,13 @@ export default function Registro() {
       setView("chat");
       setAtSphere(false);
       pushUser(line.ask);
-      turns.current.push({ role: "user", content: line.ask });
-      answerLine(line);
+      if (answeringRef.current) {
+        waitingAsks.current.push(line.ask);
+        return;
+      }
+      void converseRef.current(line.ask);
     },
-    [pushUser, answerLine],
+    [pushUser],
   );
 
   const ingest = useCallback(
@@ -653,13 +689,13 @@ export default function Registro() {
 
   const send = useCallback(
     (said: string) => {
-      if (!said || thinking) return;
+      if (!said || thinking || answering) return;
       Keyboard.dismiss();
       pushUser(said);
       /* An entry opens the same sheet a spoken one does; anything else is a question. */
       void entry.readText(said, () => void converse(said));
     },
-    [thinking, entry, converse, pushUser],
+    [thinking, answering, entry, converse, pushUser],
   );
 
   /* Written from the sheet: once it closes, the receipt lands in the conversation and he
@@ -687,10 +723,10 @@ export default function Registro() {
 
   const submitText = useCallback(() => {
     const said = text.trim();
-    if (!said || thinking) return;
+    if (!said || thinking || answering) return;
     setText("");
     send(said);
-  }, [text, thinking, send]);
+  }, [text, thinking, answering, send]);
 
   /* ---- what each receipt shows ---- */
 
@@ -868,7 +904,7 @@ export default function Registro() {
                   keyboardShouldPersistTaps="handled"
                   contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, gap: 8 }}
                 >
-                  {QUESTIONS.map((q) => (
+                  {asks.map((q) => (
                     <Pressable
                       key={q}
                       onPress={() => {
@@ -988,11 +1024,12 @@ export default function Registro() {
               ))}
               {!question &&
                 !text &&
-                QUESTIONS.map((q) => (
+                !answering &&
+                asks.map((q) => (
                   <Chip
                     key={q}
                     label={q}
-                    tone="shortcut"
+                    tone={carryOn.includes(q) ? "next" : "shortcut"}
                     onPress={() => {
                       pushUser(q);
                       void converse(q);
@@ -1044,7 +1081,7 @@ export default function Registro() {
               />
               {/* Only once there is something to send: the microphone is the sphere. */}
               {typed ? (
-                <SendButton disabled={busy || reading} onPress={submitText} />
+                <SendButton disabled={busy || reading || answering} onPress={submitText} />
               ) : !stage ? (
                 <Pressable
                   onPress={() => {
@@ -1162,7 +1199,7 @@ function Chip({
   onPress,
 }: {
   label: string;
-  tone: "answer" | "category" | "shortcut";
+  tone: "answer" | "category" | "shortcut" | "next";
   category?: string;
   onPress: () => void;
 }) {
@@ -1180,13 +1217,13 @@ function Chip({
         height: 34,
         borderRadius: 999,
         borderWidth: tone === "answer" ? 0 : 1,
-        borderColor: "rgba(255,255,255,0.09)",
-        backgroundColor: tone === "answer" ? GREEN : "rgba(255,255,255,0.05)",
+        borderColor: tone === "next" ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.09)",
+        backgroundColor: tone === "answer" ? GREEN : tone === "next" ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)",
         transform: [{ scale: pressed ? 0.95 : 1 }],
       })}
     >
       {Icon && hex && <Icon size={13} color={chipInk(hex)} strokeWidth={2} />}
-      <Text style={{ fontSize: 13, fontWeight: tone === "answer" ? "700" : "500", color: tone === "answer" ? "#0B0B0B" : "rgba(255,255,255,0.86)" }}>
+      <Text style={{ fontSize: 13, fontWeight: tone === "answer" ? "700" : tone === "next" ? "600" : "500", color: tone === "answer" ? "#0B0B0B" : tone === "next" ? "#fff" : "rgba(255,255,255,0.86)" }}>
         {label}
       </Text>
     </Pressable>

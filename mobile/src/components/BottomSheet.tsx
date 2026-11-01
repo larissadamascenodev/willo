@@ -35,16 +35,20 @@ export default function BottomSheet({
   onClose,
   children,
   full = false,
+  above,
 }: {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
   /** Takes most of the screen instead of only what it needs. */
   full?: boolean;
+  /** Stands just above the sheet's top edge, covering none of it. */
+  above?: ReactNode;
 }) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const [lift, setLift] = useState(0);
+  const [tall, setTall] = useState(0);
   const [mounted, setMounted] = useState(open);
   const shown = useSharedValue(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -94,6 +98,7 @@ export default function BottomSheet({
       </Pressable>
 
       <Animated.View
+        onLayout={(e) => setTall(e.nativeEvent.layout.height)}
         style={[
           {
             position: "absolute",
@@ -128,6 +133,12 @@ export default function BottomSheet({
         />
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">{children}</ScrollView>
       </Animated.View>
+
+      {above ? (
+        <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: lift + tall + 8, alignItems: "center" }}>
+          {above}
+        </View>
+      ) : null}
 
       {/* Over the sheet: what lands while it is open is seen at once, not after it closes. */}
       <SparkleLayer />

@@ -110,6 +110,11 @@ export default function ParticleOrb({
   const working = useSharedValue(mode === "thinking" ? 1 : 0);
   const hearing = useSharedValue(mode === "listening" ? 1 : 0);
   const finger = useSharedValue({ x: 0, y: 0 });
+  /* Every so often he smiles a little more, for no reason. */
+  const beam = useSharedValue(0);
+  const beamUntil = useSharedValue(0);
+  const nextBeam = useSharedValue(6);
+  const talking = useSharedValue(0);
   const still = useSharedValue(reduce ? 1 : 0);
 
   useEffect(() => {
@@ -168,6 +173,12 @@ export default function ParticleOrb({
     const since = t - from;
     lid.set({ shut: from >= 0 && since < 0.17 ? Math.sin((since / 0.17) * Math.PI) : 0, from, next: nextLid });
 
+    if (t > nextBeam.get() && !calm) {
+      beamUntil.set(t + 1.8);
+      nextBeam.set(t + 8 + Math.random() * 9);
+    }
+    beam.set(beam.get() + ((t < beamUntil.get() ? 1 : 0) - beam.get()) * Math.min(1, dt * 5));
+    talking.set(talking.get() + (Math.max(working.get(), hearing.get()) - talking.get()) * Math.min(1, dt * 7));
     open.set(open.get() + ((hearing.get() ? 1 : 0) - open.get()) * Math.min(1, dt * 6));
 
     /* Sparks: all the time at work, a little when listening, every so often idle. */
@@ -331,6 +342,26 @@ export default function ParticleOrb({
     };
   });
 
+  /* The mouth: a curve in the eyes' own white that smiles at rest, deepens when he beams, and
+     opens and closes while he listens or answers. */
+  const mouthW = size * 0.26;
+  const mouthH = size * 0.13;
+  const mouthProps = useAnimatedProps(() => {
+    const t = clock.get();
+    const talk = talking.get();
+    const w = size * (0.058 + beam.get() * 0.014) * (1 - talk * 0.32);
+    const smile = size * (0.05 + beam.get() * 0.035 + 0.006 * Math.sin(t * 0.9)) * (1 - talk * 0.55);
+    const gape = talk * size * 0.05 * (0.55 + 0.45 * Math.sin(t * 7.5) * Math.sin(t * 3.1));
+    const c = mouthW / 2;
+    const y = size * 0.03;
+    return { d: `M${(c - w).toFixed(2)} ${y.toFixed(2)}Q${c.toFixed(2)} ${(y + smile).toFixed(2)} ${(c + w).toFixed(2)} ${y.toFixed(2)}Q${c.toFixed(2)} ${(y + smile + gape * 2).toFixed(2)} ${(c - w).toFixed(2)} ${y.toFixed(2)}Z` };
+  });
+  const mouthFollows = useAnimatedStyle(() => {
+    const l = look.get();
+    const f = finger.get();
+    return { transform: [{ translateX: (l.x + f.x) * size * 0.022 }, { translateY: (l.y + f.y) * size * 0.01 }] };
+  });
+
   const farProps = useAnimatedProps(() => ({ d: paths.get().far }));
   const midProps = useAnimatedProps(() => ({ d: paths.get().mid }));
   const nearProps = useAnimatedProps(() => ({ d: paths.get().near }));
@@ -363,7 +394,7 @@ export default function ParticleOrb({
           <AnimatedPath animatedProps={sparkProps} fill="#FFFFFF" fillOpacity={0.7} />
         </Svg>
 
-        {/* The eyes */}
+        {/* The eyes, and the mouth under them */}
         <Animated.View style={[{ alignItems: "center", justifyContent: "center" }, face]}>
           <Animated.View style={[{ flexDirection: "row", gap: size * 0.17 }, eyes]}>
             {[0, 1].map((n) => (
@@ -381,6 +412,11 @@ export default function ParticleOrb({
                 <View style={{ width: eyeW, height: eyeH, borderRadius: eyeW, backgroundColor: "#FFFFFF" }} />
               </View>
             ))}
+          </Animated.View>
+          <Animated.View style={[{ marginTop: size * 0.015, width: mouthW, height: mouthH }, mouthFollows]}>
+            <Svg width={mouthW} height={mouthH}>
+              <AnimatedPath animatedProps={mouthProps} fill="#FFFFFF" stroke="#FFFFFF" strokeWidth={Math.max(1, size * 0.018)} strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
           </Animated.View>
         </Animated.View>
       </View>
