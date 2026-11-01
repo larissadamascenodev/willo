@@ -22,6 +22,8 @@ import WilloSettings from "~/components/willo/WilloSettings";
 import ChatHistory from "~/components/willo/ChatHistory";
 import RadarPanel from "~/components/willo/RadarPanel";
 import ListeningDock from "~/components/willo/ListeningDock";
+import GreetingLine from "~/components/willo/GreetingLine";
+import { firstName } from "~/lib/greeting";
 import SegmentedTabs from "~/components/SegmentedTabs";
 import { useRaioX, type RaioXData } from "@/hooks/useRaioX";
 import { boardAnswer, buildBoard, radarForAssistant, type BoardLine } from "~/lib/radarBoard";
@@ -117,7 +119,7 @@ const shrinkIn = () => {
 };
 
 /** The room under the sphere for what it is saying. */
-const CAPTION_H = 54;
+const CAPTION_H = 76;
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -780,29 +782,14 @@ export default function Registro() {
                       <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Entendendo…</Text>
                     </Animated.View>
                   ) : (
-                    <Animated.View entering={FadeIn.duration(400)} style={{ alignItems: "center" }}>
-                      <Pressable
-                        onPress={() => void entry.toggle()}
-                        style={({ pressed }) => ({
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 6,
-                          height: 32,
-                          paddingHorizontal: 13,
-                          borderRadius: 16,
-                          backgroundColor: "rgba(255,255,255,0.08)",
-                          transform: [{ scale: pressed ? 0.96 : 1 }],
-                        })}
-                      >
-                        <Mic size={13} color="rgba(255,255,255,0.86)" strokeWidth={2.3} />
-                        <Text style={{ fontSize: 13, fontWeight: "600", color: "rgba(255,255,255,0.86)" }}>Toque para falar</Text>
-                      </Pressable>
+                    <>
+                      <GreetingLine name={firstName(profile?.display_name)} notice={board.find((l) => l.level === "alerta" || l.level === "atencao")?.title} />
                       {entry.message ? (
-                        <Text numberOfLines={1} style={{ marginTop: 5, fontSize: 12, color: "#F9CE4E", textAlign: "center" }}>
+                        <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 12, color: "#F9CE4E", textAlign: "center" }}>
                           {entry.message}
                         </Text>
                       ) : null}
-                    </Animated.View>
+                    </>
                   )}
                 </View>
 
@@ -904,15 +891,13 @@ export default function Registro() {
           </View>
         )}
 
-        {/* ── The composer, or Willo himself while he listens ── */}
-        {view === "chat" && !stage && (listening || reading) ? (
-          <ListeningDock reading={reading} bottom={insets.bottom} onStop={() => void entry.toggle()} onCancel={() => void entry.cancel()} />
-        ) : view === "chat" && (
+        {/* ── The composer ── */}
+        {view === "chat" && (
         <View style={{ paddingTop: 8, paddingBottom: insets.bottom + 8 }}>
           {!stage && entry.message ? (
             <Text style={{ marginHorizontal: 24, marginBottom: 8, fontSize: 12.5, lineHeight: 17, color: "#F9CE4E", textAlign: "center" }}>{entry.message}</Text>
           ) : null}
-          {!stage && !listening && (
+          {!stage && !listening && !reading && (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -975,8 +960,8 @@ export default function Registro() {
               }}
             >
               <Pressable
-                onPress={() => router.replace("/scanner" as never)}
-                accessibilityLabel="Foto do comprovante"
+                onPress={() => (listening ? void entry.cancel() : router.replace("/scanner" as never))}
+                accessibilityLabel={listening ? "Cancelar" : "Foto do comprovante"}
                 hitSlop={4}
                 style={({ pressed }) => ({
                   width: 44,
@@ -987,14 +972,14 @@ export default function Registro() {
                   backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "transparent",
                 })}
               >
-                <Camera size={20} color="rgba(255,255,255,0.78)" strokeWidth={2} />
+                {listening ? <X size={20} color="rgba(255,255,255,0.78)" strokeWidth={2} /> : <Camera size={20} color="rgba(255,255,255,0.78)" strokeWidth={2} />}
               </Pressable>
               <TextInput
                 ref={inputRef}
                 value={text}
                 onChangeText={setText}
                 onSubmitEditing={submitText}
-                placeholder={question ? "sua resposta…" : "converse ou anote um gasto"}
+                placeholder={listening ? "Ouvindo…" : reading ? "Entendendo…" : question ? "sua resposta…" : "converse ou anote um gasto"}
                 placeholderTextColor={INK.faint}
                 editable={!listening}
                 returnKeyType="send"
@@ -1047,6 +1032,8 @@ export default function Registro() {
           )}
         </View>
         )}
+        {/* Over the field while he listens, as the phone's own assistant comes up. */}
+        {view === "chat" && !stage && (listening || reading) && <ListeningDock reading={reading} bottom={insets.bottom} onStop={() => void entry.toggle()} />}
       </KeyboardAvoidingView>
 
       {/* What was heard, for a look before it is written. */}
