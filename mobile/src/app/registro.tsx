@@ -638,6 +638,17 @@ export default function Registro() {
     void converse(ask);
   }, [ask, categories, snapshotLoading, pushUser, converse]);
 
+  /* A question from the Radar: over to the conversation, with it asked. */
+  const askFromRadar = useCallback(
+    (asked: string) => {
+      setView("chat");
+      setAtSphere(false);
+      pushUser(asked);
+      void converseRef.current(asked);
+    },
+    [pushUser],
+  );
+
   /* Tapped on the Radar: over to the conversation, already answered. */
   const askFromBoard = useCallback(
     (line: BoardLine) => {
@@ -898,7 +909,7 @@ export default function Registro() {
 
         {/* ── The stage: the Radar, the sphere, or — once something has been said — the conversation ── */}
         {view === "radar" ? (
-          <RadarPanel data={radar} board={board} bottom={insets.bottom} onAsk={askFromBoard} />
+          <RadarPanel data={radar} snapshot={buildRef.current() as never} categories={categories} bottom={insets.bottom} onAsk={askFromRadar} />
         ) : stage ? (
           <View style={{ flex: 1 }}>
             <View style={{ flex: 1 }} onLayout={(e) => setStageH(e.nativeEvent.layout.height)}>

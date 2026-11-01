@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import ParticleOrb from "~/components/registro/ParticleOrb";
 import BottomSheet from "~/components/BottomSheet";
@@ -12,6 +12,7 @@ import QuickEntryFlow, { type Step } from "~/components/registro/QuickEntryFlow"
  */
 export default function Rapido() {
   const router = useRouter();
+  const { frase } = useLocalSearchParams<{ frase?: string }>();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("ask");
   const [hearing, setHearing] = useState<{ reading: boolean; loudness?: number; stop: () => void } | null>(null);
@@ -44,6 +45,7 @@ export default function Rapido() {
       }
     >
       <QuickEntryFlow
+        heard={frase ?? null}
         onClose={() => leave()}
         onSeeTransactions={() => leave(() => router.push("/(tabs)/transacoes" as never))}
         onSeeCard={(cardId) => leave(() => router.push(`/fatura/${cardId}` as never))}

@@ -177,6 +177,7 @@ export function useRaioX() {
         : null,
       limits,
       current,
+      txs,
     };
   }, [loading, history, today, current, limits, cards, invoices, installments, recurring, reserve, txs, goals, month, year]);
 }

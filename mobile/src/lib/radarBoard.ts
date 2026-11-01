@@ -251,6 +251,11 @@ export function radarForAssistant(data: RaioXData) {
     nivel: data.report.level.label,
     seguro_gastar: data.forecast.safeToSpend,
     fecha_em: data.forecast.endBalance,
-    avisos: data.report.insights.slice(0, 8).map((i) => clean(`${i.title}: ${i.message}`)),
+    avisos: [
+      ...data.report.insights.slice(0, 8).map((i) => clean(`${i.title}: ${i.message}`)),
+      `Renda comprometida com fixos e parcelas: ${Math.round(data.commitment.committedPct * 100)}%. Parcelas por mês: ${money(data.installments.monthly)}.`,
+      `Categorias do mês e o normal de cada uma: ${data.categories.slice(0, 6).map((c) => `${c.name} ${money(c.spent)}${c.average > 0 ? ` (normal ${money(c.average)})` : ""}`).join("; ")}.`,
+      ...data.anomalies.slice(0, 3).map((a) => clean(`Fora do normal: ${a.title}. ${a.what}`)),
+    ],
   };
 }
