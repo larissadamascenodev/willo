@@ -169,8 +169,8 @@ export function useVoiceEntry(options: { onQuestion?: (said: string) => void; hi
       );
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       setState("confirm");
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Não consegui ouvir agora. Tente de novo.");
+    } catch {
+      setMessage("Não consegui entender o áudio agora. Tente de novo ou escreva.");
       setState("idle");
     } finally {
       reading.current = false;

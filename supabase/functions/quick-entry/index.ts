@@ -19,6 +19,8 @@ const corsHeaders = {
  */
 
 const GEMINI_MODELS = ["gemini-3.5-flash-lite", "gemini-3.6-flash"];
+/* The lite model answers text in a second but hangs on audio until the clock runs out. */
+const GEMINI_AUDIO_MODELS = ["gemini-3.6-flash"];
 const GEMINI_TIMEOUT_MS = 12_000;
 
 const FALLBACK_CATEGORIES = [
@@ -35,12 +37,12 @@ interface Part {
   inlineData?: { mimeType: string; data: string };
 }
 
-async function callGemini(system: string, parts: Part[], schema: Record<string, unknown>) {
+async function callGemini(system: string, parts: Part[], schema: Record<string, unknown>, models = GEMINI_MODELS) {
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
 
   let lastError = "";
-  for (const model of GEMINI_MODELS) {
+  for (const model of models) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
     try {
@@ -246,7 +248,7 @@ serve(async (req) => {
         console.error("quick-entry claude:", err instanceof Error ? err.message : err);
       }
     }
-    result ??= await callGemini(system, parts, SCHEMA);
+    result ??= await callGemini(system, parts, SCHEMA, audio?.data ? GEMINI_AUDIO_MODELS : GEMINI_MODELS);
 
     // The model is told the category must come from the list; this is the check that it
     // did, because a category the app does not have would land as a dead filter.
