@@ -11,7 +11,7 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { GROUND } from "~/theme/tokens";
-import { loadIntroSounds } from "~/lib/introSounds";
+import { loadIntroSound } from "~/lib/introSounds";
 
 /**
  * What plays when the app opens, over the app while it gets ready underneath.
@@ -137,25 +137,21 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     const end = reduced ? QUICK_OUT[1] : LAUNCH_INTRO_MS;
     t.set(withTiming(end, { duration: end, easing: Easing.linear }));
-    const sounds = reduced ? null : loadIntroSounds();
-    const timers = sounds
-      ? [
-          setTimeout(sounds.fan, FAN[0]),
+    const sound = reduced ? null : loadIntroSound();
+    const timers = reduced
+      ? []
+      : [
+          ...(sound ? [setTimeout(sound.play, DECK[0])] : []),
           ...[0, 1, 2].map((i) =>
-            setTimeout(() => {
-              sounds.tuck(i);
-              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
-            }, landing(i) - 40),
+            setTimeout(() => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined), landing(i) - 40),
           ),
-          setTimeout(sounds.chord, SETTLE[0]),
-        ]
-      : [];
+        ];
     const done = setTimeout(onDone, end + 30);
     return () => {
       timers.forEach(clearTimeout);
       clearTimeout(done);
-      /* After the last sound has had its time. */
-      if (sounds) setTimeout(sounds.release, 3500);
+      /* After the swell has faded. */
+      if (sound) setTimeout(sound.release, 1500);
     };
     // The intro plays once, as it mounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps

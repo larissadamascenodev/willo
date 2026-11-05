@@ -1,65 +1,44 @@
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-audio";
 
 /**
- * The opening's sounds, soft wooden notes in C major made for it (see assets/sounds):
- * three quick rising notes as the fan opens, a muted note as each card goes into the
- * wallet — G, then C, then E, rising — and a warm strummed chord when the icon is
- * complete. Together they are a small phrase that resolves as the icon does.
+ * The opening's sound: one even, soft swell under the whole build (made for it, see
+ * assets/sounds/intro-swell.wav). No notes struck and nothing sharp — a warm low chord
+ * breathing in with the deck, a little air while the cards move, a faint glow as the
+ * icon completes, and a slow fade. It is timed to start with the deck.
  *
- * Unlike the confirmation chime, these respect the ringer switch: an app that makes
- * a noise just for being opened, with the phone on silent, is rude. They mix with
+ * Unlike the confirmation chime, it respects the ringer switch: an app that makes a
+ * noise just for being opened, with the phone on silent, is rude. It mixes with
  * whatever is already playing rather than stopping it.
- *
- * Players are made as the intro mounts, so each sound only has to start at its
- * moment, and let go when it ends.
  */
 
-/* eslint-disable @typescript-eslint/no-require-imports */
-const FAN = require("../../assets/sounds/intro-fan.wav") as number;
-const TUCKS = [
-  require("../../assets/sounds/intro-tuck-1.wav") as number,
-  require("../../assets/sounds/intro-tuck-2.wav") as number,
-  require("../../assets/sounds/intro-tuck-3.wav") as number,
-];
-const CHORD = require("../../assets/sounds/intro-chord.wav") as number;
-/* eslint-enable @typescript-eslint/no-require-imports */
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const SWELL = require("../../assets/sounds/intro-swell.wav") as number;
 
-export interface IntroSounds {
-  fan: () => void;
-  tuck: (i: number) => void;
-  chord: () => void;
+export interface IntroSound {
+  play: () => void;
   release: () => void;
 }
 
-const SILENT: IntroSounds = { fan: () => {}, tuck: () => {}, chord: () => {}, release: () => {} };
+const SILENT: IntroSound = { play: () => {}, release: () => {} };
 
-export function loadIntroSounds(): IntroSounds {
+export function loadIntroSound(): IntroSound {
   try {
     void setAudioModeAsync({ playsInSilentMode: false, allowsRecording: false, interruptionMode: "mixWithOthers" }).catch(() => undefined);
-    const fan = createAudioPlayer(FAN);
-    const tucks = TUCKS.map((s) => createAudioPlayer(s));
-    const chord = createAudioPlayer(CHORD);
-    const all: AudioPlayer[] = [fan, ...tucks, chord];
-    const play = (p: AudioPlayer | undefined, volume: number) => {
-      try {
-        if (!p) return;
-        p.volume = volume;
-        p.play();
-      } catch {
-        /* No sound this time. */
-      }
-    };
+    const player: AudioPlayer = createAudioPlayer(SWELL);
     return {
-      fan: () => play(fan, 0.7),
-      tuck: (i) => play(tucks[i], 0.8),
-      chord: () => play(chord, 0.8),
+      play: () => {
+        try {
+          player.volume = 0.7;
+          player.play();
+        } catch {
+          /* No sound this time. */
+        }
+      },
       release: () => {
-        for (const p of all) {
-          try {
-            p.remove();
-          } catch {
-            /* Already gone. */
-          }
+        try {
+          player.remove();
+        } catch {
+          /* Already gone. */
         }
       },
     };
