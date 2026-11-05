@@ -15,9 +15,9 @@ import Svg, { Defs, Ellipse, Path, RadialGradient, Stop } from "react-native-svg
 import type { OrbMode } from "~/components/registro/ParticleOrb";
 
 /**
- * Willo the robot: a figure of neutral glass cut into four layers, head, body and two arms, all
- * drawn on the same square so they line up by themselves. He has no colour of his own: what is
- * in the picture is light and a little smoke, so whatever the background is shows through him.
+ * Willo the robot: a dark glass figure cut into four layers, head, body and two arms, all drawn
+ * on the same square so they line up by themselves. His light is a cool grey, with no colour in
+ * its reflections, so he sits well on any background; the only blue is in his eyes.
  * The eyes and the mouth are not in the picture; they are drawn here, so they can move. Small,
  * he is only his head.
  *
@@ -361,13 +361,13 @@ export default function WilloBot({
             <Svg width={side} height={side}>
               <Defs>
                 <RadialGradient id="bot-aura" cx="50%" cy="50%" r="50%">
-                  <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.12} />
-                  <Stop offset="0.7" stopColor="#FFFFFF" stopOpacity={0.04} />
-                  <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
+                  <Stop offset="0" stopColor="#B9C8EE" stopOpacity={0.16} />
+                  <Stop offset="0.7" stopColor="#B9C8EE" stopOpacity={0.05} />
+                  <Stop offset="1" stopColor="#B9C8EE" stopOpacity={0} />
                 </RadialGradient>
                 <RadialGradient id="bot-floor" cx="50%" cy="50%" r="50%">
-                  <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.3} />
-                  <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
+                  <Stop offset="0" stopColor="#A9BBEA" stopOpacity={0.42} />
+                  <Stop offset="1" stopColor="#A9BBEA" stopOpacity={0} />
                 </RadialGradient>
               </Defs>
               <Ellipse cx={side * 0.47} cy={side * 0.46} rx={side * 0.5} ry={side * 0.5} fill="url(#bot-aura)" />
@@ -388,20 +388,20 @@ export default function WilloBot({
                   <Svg width={EYE_W * side * 2.6} height={EYE_H * side * 1.7} style={{ position: "absolute" }}>
                     <Defs>
                       <RadialGradient id="bot-eye" cx="50%" cy="50%" r="50%">
-                        <Stop offset="0.35" stopColor="#FFFFFF" stopOpacity={0.42} />
-                        <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
+                        <Stop offset="0.35" stopColor="#3E8BFF" stopOpacity={0.75} />
+                        <Stop offset="1" stopColor="#2A5BFF" stopOpacity={0} />
                       </RadialGradient>
                     </Defs>
                     <Ellipse cx={EYE_W * side * 1.3} cy={EYE_H * side * 0.85} rx={EYE_W * side * 1.3} ry={EYE_H * side * 0.85} fill="url(#bot-eye)" />
                   </Svg>
-                  <View style={{ width: EYE_W * side, height: EYE_H * side, borderRadius: EYE_W * side, backgroundColor: "#FFFFFF" }} />
+                  <View style={{ width: EYE_W * side, height: EYE_H * side, borderRadius: EYE_W * side, backgroundColor: "#E4F2FF" }} />
                 </View>
               </Animated.View>
             ))}
             <Animated.View style={[{ position: "absolute", left: MOUTH.x * side - box / 2, top: MOUTH.y * side - box / 2, width: box, height: box, transform: [{ rotate: "-11deg" }] }, mouth]}>
               <Svg width={box} height={box}>
-                <AnimatedPath animatedProps={mouthGlow} fill="#FFFFFF" fillOpacity={0.16} stroke="#FFFFFF" strokeOpacity={0.16} strokeWidth={side * 0.024} strokeLinejoin="round" />
-                <AnimatedPath animatedProps={mouthProps} fill="#FFFFFF" stroke="#FFFFFF" strokeWidth={side * 0.005} strokeLinejoin="round" />
+                <AnimatedPath animatedProps={mouthGlow} fill="#3E8BFF" fillOpacity={0.3} stroke="#3E8BFF" strokeOpacity={0.3} strokeWidth={side * 0.024} strokeLinejoin="round" />
+                <AnimatedPath animatedProps={mouthProps} fill="#E4F2FF" stroke="#E4F2FF" strokeWidth={side * 0.005} strokeLinejoin="round" />
               </Svg>
             </Animated.View>
           </Animated.View>
