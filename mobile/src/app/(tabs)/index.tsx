@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Pressable, RefreshControl, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -22,8 +22,9 @@ import ScrollEdge from "~/components/ScrollEdge";
 import HomeHeader from "~/components/home/HomeHeader";
 import ProfileSheet from "~/components/ProfileSheet";
 import Stories from "~/components/home/Stories";
-import OrbHero, { ORB_HERO_BODY, WilloGlow } from "~/components/home/OrbHero";
-import SaldoHero, { SALDO_HERO_BODY } from "~/components/home/SaldoHero";
+import OrbHero, { ORB_HERO_BODY, paramsForLine, WilloGlow } from "~/components/home/OrbHero";
+import type { Greeting } from "~/lib/greeting";
+import SaldoHero, { SALDO_HERO_BODY, SALDO_HERO_TOP } from "~/components/home/SaldoHero";
 import { useHomeHero } from "~/lib/homeHero";
 import WidgetBoard from "~/components/home/WidgetBoard";
 import EditBar from "~/components/home/EditBar";
@@ -95,6 +96,7 @@ export default function Home() {
   const [hero] = useHomeHero();
   const orbHero = hero === "orb";
   const saldoHero = hero === "saldo";
+  const lineOnShow = useRef<Greeting | null>(null);
   const travel = orbHero ? ORB_TRAVEL : PIN_TRAVEL;
 
   /* ── How far into the recession we are, and everything that reads off it ── */
@@ -237,7 +239,7 @@ export default function Home() {
             pinnedStyle,
           ]}
         >
-          {saldoHero ? <SaldoHero saldoPrevisto={data.saldoPrevisto} hidden={hidden} /> : <Stories slides={slides} />}
+          {saldoHero ? <SaldoHero saldoPrevisto={data.saldoPrevisto} hidden={hidden} slides={slides} onLine={(line) => (lineOnShow.current = line)} /> : <Stories slides={slides} />}
         </Animated.View>
       )}
 
@@ -272,15 +274,24 @@ export default function Home() {
       >
         {/* Holds the room the pinned block would have taken, so the first card
             starts where it would have — and travels up over it from there. */}
-        {/* The balance lies under the scroller, so its tap is taken here, in the room held
-            for it: a drag that starts on it still moves the page. */}
+        {/* The balance lies under the scroller, so its taps are taken here, in the room held
+            for it: a drag that starts on it still moves the page. The figures open the
+            accounts, and what he is saying opens the conversation about it. */}
         {saldoHero && !editing ? (
-          <Pressable
-            onPress={() => router.push("/gestao")}
-            accessibilityRole="button"
-            accessibilityLabel="Abrir contas"
-            style={{ height: pinnedHeight }}
-          />
+          <View style={{ height: pinnedHeight }}>
+            <Pressable
+              onPress={() => router.push("/gestao")}
+              accessibilityRole="button"
+              accessibilityLabel="Abrir contas"
+              style={{ height: pinnedTop + SALDO_HERO_TOP }}
+            />
+            <Pressable
+              onPress={() => lineOnShow.current && router.push(paramsForLine(lineOnShow.current))}
+              accessibilityRole="button"
+              accessibilityLabel="Conversar com o Willo sobre isso"
+              style={{ flex: 1 }}
+            />
+          </View>
         ) : (
           <View style={{ height: editing ? insets.top + 86 : pinnedHeight }} pointerEvents="none" />
         )}

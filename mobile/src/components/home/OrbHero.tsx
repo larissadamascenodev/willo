@@ -18,6 +18,7 @@ import ParticleOrb, { type OrbMode } from "~/components/registro/ParticleOrb";
 import VoiceEntrySheet from "~/components/registro/VoiceEntrySheet";
 import { Mic } from "~/components/icons";
 import GreetingLine from "~/components/willo/GreetingLine";
+import type { Greeting } from "~/lib/greeting";
 import { useProfile } from "@/hooks/useProfile";
 import { routeFor } from "~/lib/assistantAsk";
 import { useVoiceEntry } from "~/lib/voiceEntry";
@@ -56,6 +57,17 @@ const FOOT = 28;
 /** What this takes of the screen, for the home to leave room for. */
 export const ORB_HERO_BODY = 4 + ORB + 6 + CAPTION + 4 + FOOT + 8;
 
+/** A reading's sentence is what he says; its quip, if any, goes under it. */
+export const readingsFrom = (slides: InsightSlide[]): Greeting[] =>
+  slides.map((s) => {
+    const title = s.body.map((p) => p.text).join("");
+    return { title, sub: s.quip ?? "", ask: `Me explica melhor: ${title}` };
+  });
+
+/** What touching one of his lines does: the conversation opens, on that subject. */
+export const paramsForLine = (line: Greeting) =>
+  ({ pathname: "/registro", params: line.ask ? { ask: line.ask } : { say: line.say ?? line.title } }) as never;
+
 export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -83,15 +95,7 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
   }, [listening]);
   const reading = entry.state === "reading";
   const busy = entry.state !== "idle";
-  /* A reading's sentence is what he says; its quip, if any, goes under it. */
-  const readings = useMemo(
-    () =>
-      slides.map((s) => {
-        const title = s.body.map((p) => p.text).join("");
-        return { title, sub: s.quip ?? "", ask: `Me explica melhor: ${title}` };
-      }),
-    [slides],
-  );
+  const readings = useMemo(() => readingsFrom(slides), [slides]);
   const mode: OrbMode = listening ? "listening" : reading ? "thinking" : "idle";
   /* As large as the width allows with a margin each side, so it is never cut. */
   const orb = Math.min(ORB, width - 72);
@@ -161,7 +165,7 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
           <GreetingLine
             name={firstName(profile?.display_name)}
             readings={readings}
-            onPick={(line) => router.push({ pathname: "/registro", params: line.ask ? { ask: line.ask } : { say: line.say ?? line.title } } as never)}
+            onPick={(line) => router.push(paramsForLine(line))}
           />
         )}
       </View>

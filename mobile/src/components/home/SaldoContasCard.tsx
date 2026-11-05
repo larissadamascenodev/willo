@@ -91,7 +91,7 @@ export function AccountsBar({ rows }: { rows: AccountRow[] }) {
 
 /** However many accounts there are, they take the room of one line: the marks sit one
     over the next. `ring` is what separates them, the colour of whatever is behind. */
-export function AccountMarks({ rows, ring = "#101113", overlap = 12 }: { rows: AccountRow[]; ring?: string; overlap?: number }) {
+export function AccountMarks({ rows, ring = "#101113", overlap = 12, size = BUBBLE }: { rows: AccountRow[]; ring?: string; overlap?: number; size?: number }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center" }}>
       {rows.slice(0, MAX_BUBBLES).map((a, i) => (
@@ -99,17 +99,17 @@ export function AccountMarks({ rows, ring = "#101113", overlap = 12 }: { rows: A
           key={a.id}
           style={{
             marginLeft: i === 0 ? 0 : -overlap,
-            width: BUBBLE + 4,
-            height: BUBBLE + 4,
-            borderRadius: (BUBBLE + 4) / 2,
+            width: size + 4,
+            height: size + 4,
+            borderRadius: (size + 4) / 2,
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: ring,
             zIndex: MAX_BUBBLES - i,
           }}
         >
-          <View style={{ width: BUBBLE, height: BUBBLE, borderRadius: BUBBLE / 2, overflow: "hidden" }}>
-            <BankMark name={a.name} hex={a.hex} size={BUBBLE} />
+          <View style={{ width: size, height: size, borderRadius: size / 2, overflow: "hidden" }}>
+            <BankMark name={a.name} hex={a.hex} size={size} />
           </View>
         </View>
       ))}
@@ -117,16 +117,16 @@ export function AccountMarks({ rows, ring = "#101113", overlap = 12 }: { rows: A
         <View
           style={{
             marginLeft: -overlap,
-            width: BUBBLE + 4,
-            height: BUBBLE + 4,
-            borderRadius: (BUBBLE + 4) / 2,
+            width: size + 4,
+            height: size + 4,
+            borderRadius: (size + 4) / 2,
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: ring,
           }}
         >
-          <View style={{ width: BUBBLE, height: BUBBLE, borderRadius: BUBBLE / 2, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" }}>
-            <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>+{rows.length - MAX_BUBBLES}</Text>
+          <View style={{ width: size, height: size, borderRadius: size / 2, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" }}>
+            <Text style={{ fontSize: size < 32 ? 10 : 12, fontWeight: "700", color: "#fff" }}>+{rows.length - MAX_BUBBLES}</Text>
           </View>
         </View>
       )}

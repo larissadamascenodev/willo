@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Pressable, Text, View, useWindowDimensions } from "react-native";
 import Animated, { Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import { greetings, layOut, longestUnsaid, markSaid, type Greeting } from "~/lib/greeting";
@@ -41,12 +41,17 @@ export default function GreetingLine({
   name,
   readings = [],
   onPick,
+  onLine,
+  titleSize = TITLE,
 }: {
   name: string | null;
   /** What he has noticed in the numbers, mixed in. */
   readings?: Greeting[];
   /** The line on show was touched. */
   onPick?: (line: Greeting) => void;
+  /** The line on show changed, for a screen that takes the touch itself. */
+  onLine?: (line: Greeting) => void;
+  titleSize?: number;
 }) {
   /* Chosen once, when the name is known, so the hello does not change under the reader's
      eyes as things load. The name gets a moment to arrive. */
@@ -102,11 +107,19 @@ export default function GreetingLine({
     if (shownTitle) markSaid(shownTitle);
   }, [shownTitle]);
 
-  if (lines.length === 0) return null;
-  const line = lines[at % lines.length];
+  const current = lines.length ? lines[at % lines.length] : null;
+  const reportLine = useRef(onLine);
+  reportLine.current = onLine;
+  useEffect(() => {
+    if (current) reportLine.current?.(current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownTitle]);
+
+  if (!current) return null;
+  const line = current;
   /* Bold at this size runs about half its size a letter; the sub line, a little less. */
   const room = width - 44;
-  const title = layOut(line.title, Math.floor(room / (TITLE * 0.58)), TITLE);
+  const title = layOut(line.title, Math.floor(room / (titleSize * 0.58)), titleSize);
   const sub = layOut(line.sub, Math.floor(room / (SUB * 0.54)), SUB);
   let spoken = 0;
   return (
