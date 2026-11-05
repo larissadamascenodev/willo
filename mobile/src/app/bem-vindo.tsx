@@ -20,7 +20,7 @@ export default function BemVindo() {
   const insets = useSafeAreaInsets();
 
   return (
-    <Room lit sky>
+    <Room lit sky={false}>
       <View style={{ flex: 1, paddingTop: insets.top + 18, paddingBottom: insets.bottom + 20, paddingHorizontal: 24 }}>
         <Animated.Text
           entering={FadeIn.delay(100).duration(600)}
