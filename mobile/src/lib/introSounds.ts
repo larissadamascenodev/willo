@@ -1,10 +1,9 @@
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-audio";
 
 /**
- * The opening's sound: one even, soft swell under the whole build (made for it, see
- * assets/sounds/intro-swell.wav). No notes struck and nothing sharp — a warm low chord
- * breathing in with the deck, a little air while the cards move, a faint glow as the
- * icon completes, and a slow fade. It is timed to start with the deck.
+ * The opening's sound, made for it (see assets/sounds/intro-blink.wav): a soft tone
+ * that rises gently for a second and resolves on a warm chord just as Willo blinks.
+ * Nothing else in the opening makes a sound; this is the one moment it marks.
  *
  * Unlike the confirmation chime, it respects the ringer switch: an app that makes a
  * noise just for being opened, with the phone on silent, is rude. It mixes with
@@ -12,7 +11,9 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-aud
  */
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const SWELL = require("../../assets/sounds/intro-swell.wav") as number;
+const BLINK_SOUND = require("../../assets/sounds/intro-blink.wav") as number;
+/** How far into the sound its chord arrives. */
+export const INTRO_SOUND_LEAD_MS = 1200;
 
 export interface IntroSound {
   play: () => void;
@@ -24,7 +25,7 @@ const SILENT: IntroSound = { play: () => {}, release: () => {} };
 export function loadIntroSound(): IntroSound {
   try {
     void setAudioModeAsync({ playsInSilentMode: false, allowsRecording: false, interruptionMode: "mixWithOthers" }).catch(() => undefined);
-    const player: AudioPlayer = createAudioPlayer(SWELL);
+    const player: AudioPlayer = createAudioPlayer(BLINK_SOUND);
     return {
       play: () => {
         try {
