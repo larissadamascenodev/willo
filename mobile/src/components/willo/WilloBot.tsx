@@ -15,9 +15,10 @@ import Svg, { Defs, Ellipse, Path, RadialGradient, Stop } from "react-native-svg
 import type { OrbMode } from "~/components/registro/ParticleOrb";
 
 /**
- * Willo the robot: a dark figure cut into six layers, head, body, two arms and two legs, all
- * drawn on the same square so they line up by themselves. His light is a cool grey, with no colour
- * in its reflections, so he sits well on any background; the only blue is in his eyes.
+ * Willo the robot: a figure of the same glass as the app's cards, cut into six layers, head, body,
+ * two arms and two legs, all drawn on the same square so they line up by themselves. He has no
+ * colour of his own, only white light and a little smoke, so whatever the background is shows
+ * through him. At rest his arms hang at his sides: any gesture is one he makes, then undoes.
  * The eyes and the mouth are not in the picture; they are drawn here, so they can move. Small,
  * he is only his head.
  *
@@ -43,8 +44,7 @@ const EYE_W = 0.062;
 const EYE_H = 0.124;
 const EYE_LEAN = "-2deg";
 const NECK = { x: 0.5405, y: 0.4964 };
-/* The arm he holds out, and the one that hangs. */
-const SHOULDER = { x: 0.4392, y: 0.5986 };
+const SHOULDER = { x: 0.4662, y: 0.5716 };
 const OTHER_SHOULDER = { x: 0.7365, y: 0.5716 };
 const HIP_L = { x: 0.4324, y: 0.7743 };
 const HIP_R = { x: 0.6486, y: 0.8284 };
@@ -303,14 +303,16 @@ export default function WilloBot({
     const t = clock.get();
     const calm = still.get() === 1 ? 0 : 1;
     const w = wave.get().on;
-    /* His hand is to the left of the shoulder, so going up is turning to the right. */
-    return { transform: [{ rotate: `${calm * (Math.sin(t * 1.15 + 0.6) * 2 + w * (Math.sin(t * 9) * 9 + 9) + hop.get() * 14 + reach.get() * 18 + joy.get() * 5)}deg` }] };
+    /* This hand is to the left of the shoulder, so going up is turning to the right. */
+    const waving = act.get().sign > 0 ? w : 0;
+    return { transform: [{ rotate: `${calm * (Math.sin(t * 1.15 + 0.6) * 2.6 + waving * (Math.sin(t * 9) * 13 + 92) + hop.get() * 30 + reach.get() * 62 + joy.get() * (10 + Math.sin(t * 11) * 4))}deg` }] };
   });
 
   const otherMove = useAnimatedStyle(() => {
     const t = clock.get();
     const calm = still.get() === 1 ? 0 : 1;
-    return { transform: [{ rotate: `${calm * (Math.sin(t * 1.15 + 2.2) * 2.4 - hop.get() * 16 - reach.get() * 24 + joy.get() * Math.sin(t * 11) * 4)}deg` }] };
+    const waving = act.get().sign < 0 ? wave.get().on : 0;
+    return { transform: [{ rotate: `${-calm * (Math.sin(t * 1.15 + 2.2) * 2.6 + waving * (Math.sin(t * 9) * 13 + 92) + hop.get() * 30 + reach.get() * 62 + joy.get() * (10 + Math.sin(t * 11) * 4))}deg` }] };
   });
 
   /* The legs hang and swing a little, out of step, and kick as he leaves the ground. */
@@ -379,13 +381,13 @@ export default function WilloBot({
             <Svg width={side} height={side}>
               <Defs>
                 <RadialGradient id="bot-aura" cx="50%" cy="50%" r="50%">
-                  <Stop offset="0" stopColor="#B9C8EE" stopOpacity={0.24} />
-                  <Stop offset="0.7" stopColor="#B9C8EE" stopOpacity={0.08} />
-                  <Stop offset="1" stopColor="#B9C8EE" stopOpacity={0} />
+                  <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.13} />
+                  <Stop offset="0.7" stopColor="#FFFFFF" stopOpacity={0.04} />
+                  <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
                 </RadialGradient>
                 <RadialGradient id="bot-floor" cx="50%" cy="50%" r="50%">
-                  <Stop offset="0" stopColor="#A9BBEA" stopOpacity={0.42} />
-                  <Stop offset="1" stopColor="#A9BBEA" stopOpacity={0} />
+                  <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.26} />
+                  <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
                 </RadialGradient>
               </Defs>
               <Ellipse cx={side * 0.52} cy={side * 0.46} rx={side * 0.5} ry={side * 0.5} fill="url(#bot-aura)" />
@@ -408,20 +410,20 @@ export default function WilloBot({
                   <Svg width={EYE_W * side * 2.6} height={EYE_H * side * 1.7} style={{ position: "absolute" }}>
                     <Defs>
                       <RadialGradient id="bot-eye" cx="50%" cy="50%" r="50%">
-                        <Stop offset="0.35" stopColor="#3E8BFF" stopOpacity={0.75} />
-                        <Stop offset="1" stopColor="#2A5BFF" stopOpacity={0} />
+                        <Stop offset="0.35" stopColor="#9CCBF2" stopOpacity={0.62} />
+                        <Stop offset="1" stopColor="#9CCBF2" stopOpacity={0} />
                       </RadialGradient>
                     </Defs>
                     <Ellipse cx={EYE_W * side * 1.3} cy={EYE_H * side * 0.85} rx={EYE_W * side * 1.3} ry={EYE_H * side * 0.85} fill="url(#bot-eye)" />
                   </Svg>
-                  <View style={{ width: EYE_W * side, height: EYE_H * side, borderRadius: EYE_W * side, backgroundColor: "#E4F2FF" }} />
+                  <View style={{ width: EYE_W * side, height: EYE_H * side, borderRadius: EYE_W * side, backgroundColor: "#F2F8FF" }} />
                 </View>
               </Animated.View>
             ))}
             <Animated.View style={[{ position: "absolute", left: MOUTH.x * side - box / 2, top: MOUTH.y * side - box / 2, width: box, height: box, transform: [{ rotate: "-2deg" }] }, mouth]}>
               <Svg width={box} height={box}>
-                <AnimatedPath animatedProps={mouthGlow} fill="#3E8BFF" fillOpacity={0.3} stroke="#3E8BFF" strokeOpacity={0.3} strokeWidth={side * 0.034} strokeLinejoin="round" />
-                <AnimatedPath animatedProps={mouthProps} fill="#E4F2FF" stroke="#E4F2FF" strokeWidth={side * 0.014} strokeLinejoin="round" />
+                <AnimatedPath animatedProps={mouthGlow} fill="#9CCBF2" fillOpacity={0.26} stroke="#9CCBF2" strokeOpacity={0.26} strokeWidth={side * 0.034} strokeLinejoin="round" />
+                <AnimatedPath animatedProps={mouthProps} fill="#F2F8FF" stroke="#F2F8FF" strokeWidth={side * 0.014} strokeLinejoin="round" />
               </Svg>
             </Animated.View>
           </Animated.View>

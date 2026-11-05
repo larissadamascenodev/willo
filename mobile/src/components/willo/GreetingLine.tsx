@@ -42,7 +42,6 @@ export default function GreetingLine({
   readings = [],
   onPick,
   onLine,
-  titleSize = TITLE,
 }: {
   name: string | null;
   /** What he has noticed in the numbers, mixed in. */
@@ -51,7 +50,6 @@ export default function GreetingLine({
   onPick?: (line: Greeting) => void;
   /** The line on show changed, for a screen that takes the touch itself. */
   onLine?: (line: Greeting) => void;
-  titleSize?: number;
 }) {
   /* Chosen once, when the name is known, so the hello does not change under the reader's
      eyes as things load. The name gets a moment to arrive. */
@@ -119,7 +117,7 @@ export default function GreetingLine({
   const line = current;
   /* Bold at this size runs about half its size a letter; the sub line, a little less. */
   const room = width - 44;
-  const title = layOut(line.title, Math.floor(room / (titleSize * 0.58)), titleSize);
+  const title = layOut(line.title, Math.floor(room / (TITLE * 0.58)), TITLE);
   const sub = layOut(line.sub, Math.floor(room / (SUB * 0.54)), SUB);
   let spoken = 0;
   return (

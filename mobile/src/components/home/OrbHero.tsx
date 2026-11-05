@@ -56,6 +56,8 @@ const CAPTION = 106;
 const FOOT = 28;
 /** What this takes of the screen, for the home to leave room for. */
 export const ORB_HERO_BODY = 4 + ORB + 6 + CAPTION + 4 + FOOT + 8;
+/** The same with no robot: only what he says, in the middle of the screen. */
+export const LINES_HERO_BODY = 14 + CAPTION + 4 + FOOT + 14;
 
 /** A reading's sentence is what he says; its quip, if any, goes under it. */
 export const readingsFrom = (slides: InsightSlide[]): Greeting[] =>
@@ -68,7 +70,7 @@ export const readingsFrom = (slides: InsightSlide[]): Greeting[] =>
 export const paramsForLine = (line: Greeting) =>
   ({ pathname: "/registro", params: line.ask ? { ask: line.ask } : { say: line.say ?? line.title } }) as never;
 
-export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
+export default function OrbHero({ slides, lines = false }: { slides: InsightSlide[]; /** His lines alone, with no robot: touching them does what touching him does. */ lines?: boolean }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { profile } = useProfile();
@@ -124,32 +126,55 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
     () => router.push("/rapido" as never),
   );
   const tap = () => (entry.state === "idle" ? tapOrDouble() : void entry.toggle());
+  const hold = () => {
+    letGo.current = false;
+    if (entry.state === "idle") void entry.toggle();
+  };
+  const holdEnd = () => {
+    letGo.current = true;
+    if (entry.state === "listening") void entry.toggle();
+  };
+
+  /* With no robot one tap has nothing else to open than what is being said. */
+  const lineOnShow = useRef<Greeting | null>(null);
+  const tapLines = useTapOrDouble(
+    () => (lineOnShow.current ? router.push(paramsForLine(lineOnShow.current)) : router.push("/registro" as never)),
+    () => router.push("/rapido" as never),
+  );
+  const held = useRef(false);
 
   return (
-    <View style={{ alignItems: "center", paddingTop: 4 }}>
-      <Animated.View style={float}>
-        <ParticleOrb
-          size={orb}
-          mode={mode}
-          expanded={listening}
-          loudness={entry.loudness}
-          onPress={tap}
-          onHold={() => {
-            letGo.current = false;
-            if (entry.state === "idle") void entry.toggle();
-          }}
-          onHoldEnd={() => {
-            letGo.current = true;
-            if (entry.state === "listening") void entry.toggle();
-          }}
-        />
-      </Animated.View>
+    <View style={{ alignItems: "center", paddingTop: lines ? 14 : 4 }}>
+      {!lines && (
+        <Animated.View style={float}>
+          <ParticleOrb size={orb} mode={mode} expanded={listening} loudness={entry.loudness} onPress={tap} onHold={hold} onHoldEnd={holdEnd} />
+        </Animated.View>
+      )}
 
-      {/* What he has to say, or, while listening, that he is. */}
-      <View style={{ height: CAPTION, marginTop: 6, alignSelf: "stretch", alignItems: "center", justifyContent: "flex-start", overflow: "hidden" }}>
+      {/* What he has to say, or, while listening, that he is. With no robot, this is what is touched. */}
+      <Pressable
+        disabled={!lines}
+        onPress={() => {
+          if (held.current) return;
+          if (entry.state === "idle") tapLines();
+          else void entry.toggle();
+        }}
+        onLongPress={() => {
+          held.current = true;
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
+          hold();
+        }}
+        onPressOut={() => {
+          if (!held.current) return;
+          held.current = false;
+          holdEnd();
+        }}
+        delayLongPress={320}
+        style={{ height: CAPTION, marginTop: lines ? 0 : 6, alignSelf: "stretch", alignItems: "center", justifyContent: lines ? "center" : "flex-start", overflow: "hidden" }}
+      >
         {listening ? (
           /* Swollen, the sphere reaches further down: the words keep clear of it. */
-          <Animated.View entering={FadeIn.duration(220)} style={{ alignItems: "center", marginTop: orb * 0.09 }}>
+          <Animated.View entering={FadeIn.duration(220)} style={{ alignItems: "center", marginTop: lines ? 0 : orb * 0.09 }}>
             <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Estou ouvindo…</Text>
             <Text style={{ marginTop: 3, fontSize: 13.5, color: INK.soft, textAlign: "center" }}>Pode falar. Eu paro quando você parar.</Text>
           </Animated.View>
@@ -162,13 +187,16 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
             <Text numberOfLines={3} style={{ fontSize: 14.5, lineHeight: 20, color: "#F9CE4E", textAlign: "center" }}>{entry.message}</Text>
           </Animated.View>
         ) : (
-          <GreetingLine
-            name={firstName(profile?.display_name)}
-            readings={readings}
-            onPick={(line) => router.push(paramsForLine(line))}
-          />
+          <View pointerEvents={lines ? "none" : "auto"} style={{ alignSelf: "stretch" }}>
+            <GreetingLine
+              name={firstName(profile?.display_name)}
+              readings={readings}
+              onPick={(line) => router.push(paramsForLine(line))}
+              onLine={(line) => (lineOnShow.current = line)}
+            />
+          </View>
         )}
-      </View>
+      </Pressable>
 
       {/* The foot: how to talk to him, or the way out of listening. */}
       <View style={{ marginTop: 4, height: FOOT, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 }}>
@@ -179,7 +207,7 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
         ) : !reading ? (
           <>
             <Mic size={12} color={INK.softer} strokeWidth={2.2} />
-            <Text style={{ fontSize: 12.5, color: INK.softer }}>Segure para falar</Text>
+            <Text style={{ fontSize: 12.5, color: INK.softer }}>{lines ? "Segure para falar · Dois toques para um gasto rápido" : "Segure para falar"}</Text>
           </>
         ) : null}
       </View>

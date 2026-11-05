@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * Which of the three the top of the home is: the robot, the slides, or nothing but
- * the balance, written on the background itself.
+ * Which of the two the top of the home is: the robot saying his lines, or the same
+ * lines centred with no robot.
  *
  * They exist so they can be tried against each other, and the choice is kept on the
  * phone. It is read from the same synchronous store the shared code uses, which is
@@ -10,15 +10,14 @@ import { useSyncExternalStore } from "react";
  * rather than on one and then changing to the other.
  */
 
-export type HomeHero = "orb" | "stories" | "saldo";
+export type HomeHero = "orb" | "stories";
 
 const KEY = "home-hero";
 const listeners = new Set<() => void>();
 
 const read = (): HomeHero => {
   try {
-    const saved = localStorage.getItem(KEY);
-    return saved === "stories" || saved === "saldo" ? saved : "orb";
+    return localStorage.getItem(KEY) === "stories" ? "stories" : "orb";
   } catch {
     return "orb";
   }

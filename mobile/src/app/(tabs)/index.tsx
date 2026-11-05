@@ -1,16 +1,13 @@
-import { useCallback, useMemo, useRef, useState } from "react";
-import { Pressable, RefreshControl, View, useWindowDimensions } from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import { RefreshControl, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 import Animated, {
   runOnJS,
-  useAnimatedProps,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
 } from "react-native-reanimated";
-import { BlurView } from "expo-blur";
 import { useGreeting } from "@/lib/greeting";
 import { buildInsights } from "@/lib/insights";
 import { useFinanceData } from "@/hooks/useFinanceData";
@@ -21,10 +18,7 @@ import Room from "~/components/Room";
 import ScrollEdge from "~/components/ScrollEdge";
 import HomeHeader from "~/components/home/HomeHeader";
 import ProfileSheet from "~/components/ProfileSheet";
-import Stories from "~/components/home/Stories";
-import OrbHero, { ORB_HERO_BODY, paramsForLine, WilloGlow } from "~/components/home/OrbHero";
-import type { Greeting } from "~/lib/greeting";
-import SaldoHero, { SALDO_HERO_BODY, SALDO_HERO_TOP } from "~/components/home/SaldoHero";
+import OrbHero, { LINES_HERO_BODY, ORB_HERO_BODY, WilloGlow } from "~/components/home/OrbHero";
 import { useHomeHero } from "~/lib/homeHero";
 import WidgetBoard from "~/components/home/WidgetBoard";
 import EditBar from "~/components/home/EditBar";
@@ -35,31 +29,21 @@ import { useAuth } from "~/lib/auth";
 import { useNavChrome } from "~/lib/navChrome";
 import { INK } from "~/theme/tokens";
 
-const AnimatedBlur = Animated.createAnimatedComponent(BlurView);
-
-/** How far the page travels before the pinned block has fully receded. */
-const PIN_TRAVEL = 190;
-/** The sphere is taller, so it takes longer to go. */
+/** How far the page travels before the block on top has gone. */
+const LINES_TRAVEL = 190;
+/** The robot is taller, so he takes longer to go. */
 const ORB_TRAVEL = 270;
-/** What the readings take, plus the room between them and the first card: the
-    progress bar, its margin, the slide's own height, and a gap. Measured rather
-    than guessed — the slack was showing as a band of empty screen. */
-const PINNED_BODY = 2.5 + 18 + 200 + 24;
 
 /**
  * The home.
  *
- * The top of the screen does not scroll. It stays where it is and recedes —
- * blurring, dimming and sinking slightly — while the cards travel up over it. That
- * is the whole arrangement: a fixed row that says who is signed in, a pinned block
- * holding what the app noticed, and a scroller that starts below both and passes
- * over them.
+ * The top of the screen does not scroll. It stays where it is and fades while the cards
+ * travel up over it: a fixed row that says who is signed in, the block on top, and a scroller
+ * that starts below both and passes over them.
  *
- * What is pinned is one of three, to be tried against each other: the stories; the
- * robot — Willo floating, saying the same readings one at a time, and the quickest
- * way into Registro rápido; or the balance alone, written on the background with no
- * card around it, the card it replaces leaving the board so the others move up into
- * its place. Which is chosen from the avatar's sheet.
+ * What is on top is one of two, chosen from the avatar's sheet: Willo floating and saying what
+ * he has noticed, one line at a time, or the same lines centred with no robot, which answer to
+ * the touch the way he does.
  *
  * The greeting is not a heading here: it is the first of the readings. The name
  * only appears in the row at the top once the block has receded far enough that
@@ -67,7 +51,6 @@ const PINNED_BODY = 2.5 + 18 + 200 + 24;
  */
 export default function Home() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const { height: screenH } = useWindowDimensions();
   const { user } = useAuth();
   const { report, moved } = useNavChrome();
@@ -95,9 +78,7 @@ export default function Home() {
 
   const [hero] = useHomeHero();
   const orbHero = hero === "orb";
-  const saldoHero = hero === "saldo";
-  const lineOnShow = useRef<Greeting | null>(null);
-  const travel = orbHero ? ORB_TRAVEL : PIN_TRAVEL;
+  const travel = orbHero ? ORB_TRAVEL : LINES_TRAVEL;
 
   /* ── How far into the recession we are, and everything that reads off it ── */
   const scrollY = useSharedValue(0);
@@ -112,11 +93,6 @@ export default function Home() {
     },
   });
 
-  const pinnedStyle = useAnimatedStyle(() => ({
-    opacity: 1 - progress.value * 0.78,
-    transform: [{ scale: 1 - progress.value * 0.035 }],
-  }));
-
   /* The sphere sits above the page, so the cards cannot pass over it the way they do
      the stories; it is gone before they reach it instead. */
   const orbStyle = useAnimatedStyle(() => ({
@@ -125,11 +101,6 @@ export default function Home() {
   }));
 
   const glowStyle = useAnimatedStyle(() => ({ opacity: 1 - progress.value * 0.6 }));
-
-  /* React Native has no filter: blur, so the blur is a layer over the block whose
-     strength grows instead. */
-  const blurProps = useAnimatedProps(() => ({ intensity: progress.value * 36 }));
-  const blurStyle = useAnimatedStyle(() => ({ opacity: progress.value > 0.01 ? 1 : 0 }));
 
   /* The one reading this screen has to work out for itself: which invoice is next. */
   const invoice = useMemo(() => {
@@ -197,11 +168,7 @@ export default function Home() {
     [data, month, assinaturas, totalAssinaturas, ended, keepEnded, cancelEnded],
   );
 
-  /* With the balance on the background, its card would only say it twice. */
-  const skipWidget = useCallback(
-    (id: string) => (saldoHero && id === "saldo") || widgetIsEmpty(id, widgetContext),
-    [widgetContext, saldoHero],
-  );
+  const skipWidget = useCallback((id: string) => widgetIsEmpty(id, widgetContext), [widgetContext]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -215,44 +182,16 @@ export default function Home() {
   /* Where the readings sit, and therefore where the first card starts. */
   /* Under the header, so neither the sphere nor the readings touch its icons. */
   const pinnedTop = insets.top + 72;
-  const pinnedHeight = pinnedTop + (orbHero ? ORB_HERO_BODY : saldoHero ? SALDO_HERO_BODY : PINNED_BODY);
+  const pinnedHeight = pinnedTop + (orbHero ? ORB_HERO_BODY : LINES_HERO_BODY);
 
   return (
     <Room lit sky>
-      {/* Pinned. It does not scroll; it recedes. Once it has gone far enough it
-          stops taking taps, since by then you cannot read what you would tap. */}
-      {/* Editing is about the board, so the readings stand down for it — leaving
-          them pinned behind an opaque bar only means drawing them to be covered. */}
-      {/* Willo's light, behind everything, so the same ground holds the robot and the
-          balance and the cards rise through it. */}
-      {!editing && (orbHero || saldoHero) && (
+      {/* Willo's light, behind everything, so the cards rise through it. Editing is about the
+          board, so the top stands down for it. */}
+      {!editing && (
         <Animated.View pointerEvents="none" style={[{ position: "absolute", top: 0, left: 0, right: 0 }, glowStyle]}>
           <WilloGlow height={pinnedHeight + 220} />
         </Animated.View>
-      )}
-
-      {!editing && !orbHero && (
-        <Animated.View
-          pointerEvents="box-none"
-          style={[
-            { position: "absolute", left: 0, right: 0, top: pinnedTop, paddingHorizontal: 16 },
-            pinnedStyle,
-          ]}
-        >
-          {saldoHero ? <SaldoHero saldoPrevisto={data.saldoPrevisto} hidden={hidden} slides={slides} onLine={(line) => (lineOnShow.current = line)} /> : <Stories slides={slides} />}
-        </Animated.View>
-      )}
-
-      {!editing && !orbHero && (
-      <AnimatedBlur
-        tint="dark"
-        animatedProps={blurProps}
-        pointerEvents="none"
-        style={[
-          { position: "absolute", left: 0, right: 0, top: 0, height: pinnedHeight },
-          blurStyle,
-        ]}
-      />
       )}
 
       <Animated.ScrollView
@@ -274,27 +213,8 @@ export default function Home() {
       >
         {/* Holds the room the pinned block would have taken, so the first card
             starts where it would have — and travels up over it from there. */}
-        {/* The balance lies under the scroller, so its taps are taken here, in the room held
-            for it: a drag that starts on it still moves the page. The figures open the
-            accounts, and what he is saying opens the conversation about it. */}
-        {saldoHero && !editing ? (
-          <View style={{ height: pinnedHeight }}>
-            <Pressable
-              onPress={() => router.push("/gestao")}
-              accessibilityRole="button"
-              accessibilityLabel="Abrir contas"
-              style={{ height: pinnedTop + SALDO_HERO_TOP }}
-            />
-            <Pressable
-              onPress={() => lineOnShow.current && router.push(paramsForLine(lineOnShow.current))}
-              accessibilityRole="button"
-              accessibilityLabel="Conversar com o Willo sobre isso"
-              style={{ flex: 1 }}
-            />
-          </View>
-        ) : (
-          <View style={{ height: editing ? insets.top + 86 : pinnedHeight }} pointerEvents="none" />
-        )}
+        {/* Holds the room of the block on top, so the first card starts below it. */}
+        <View style={{ height: editing ? insets.top + 86 : pinnedHeight }} pointerEvents="none" />
 
         <WidgetBoard
           userId={user?.id}
@@ -307,12 +227,12 @@ export default function Home() {
 
       {/* The sphere is above the page, not under it: the scroller would take the tap.
           Whatever it does not cover still reaches the page. */}
-      {!editing && orbHero && (
+      {!editing && (
         <Animated.View
           pointerEvents={collapsed ? "none" : "box-none"}
           style={[{ position: "absolute", left: 0, right: 0, top: pinnedTop - 8, paddingHorizontal: 16 }, orbStyle]}
         >
-          <OrbHero slides={slides} />
+          <OrbHero slides={slides} lines={!orbHero} />
         </Animated.View>
       )}
 

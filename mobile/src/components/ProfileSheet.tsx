@@ -98,7 +98,6 @@ export default function ProfileSheet({
             options={[
               { key: "orb" as const, label: "Robô" },
               { key: "stories" as const, label: "Slides" },
-              { key: "saldo" as const, label: "Saldo" },
             ]}
           />
         </View>
