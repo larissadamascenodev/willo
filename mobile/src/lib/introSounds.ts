@@ -28,7 +28,7 @@ export function loadIntroSound(): IntroSound {
     return {
       play: () => {
         try {
-          player.volume = 0.7;
+          player.volume = 0.5;
           player.play();
         } catch {
           /* No sound this time. */
