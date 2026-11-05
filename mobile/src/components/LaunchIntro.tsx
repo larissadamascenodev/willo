@@ -11,7 +11,7 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { GROUND } from "~/theme/tokens";
-import { INTRO_SOUND_LEAD_MS, loadIntroSound } from "~/lib/introSounds";
+import { loadIntroSound } from "~/lib/introSounds";
 
 /**
  * What plays when the app opens, over the app while it gets ready underneath.
@@ -141,8 +141,8 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
     const timers = reduced
       ? []
       : [
-          /* Timed so its chord arrives as Willo blinks. */
-          ...(sound ? [setTimeout(sound.play, BLINK[0] - INTRO_SOUND_LEAD_MS)] : []),
+          /* The receipt's plim, softly, as Willo blinks. */
+          ...(sound ? [setTimeout(sound.play, BLINK[0])] : []),
           ...[0, 1, 2].map((i) =>
             setTimeout(() => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined), landing(i) - 40),
           ),
@@ -151,7 +151,7 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
     return () => {
       timers.forEach(clearTimeout);
       clearTimeout(done);
-      /* After the chord has faded. */
+      /* After the sound has faded. */
       if (sound) setTimeout(sound.release, 1500);
     };
     // The intro plays once, as it mounts.
