@@ -314,6 +314,8 @@ export function QuickDemo({ visible }: { visible: boolean }) {
 /* 3. A receipt read from a photo                                       */
 /* ------------------------------------------------------------------ */
 
+const RECEIPT_H = 132;
+
 export function ReceiptDemo({ visible }: { visible: boolean }) {
   const [shot, setShot] = useState(0);
   const [read, setRead] = useState(false);
@@ -339,7 +341,7 @@ export function ReceiptDemo({ visible }: { visible: boolean }) {
   useFirstSight(visible, snap, 700);
 
   const flashStyle = useAnimatedStyle(() => ({ opacity: flash.get() }));
-  const scanStyle = useAnimatedStyle(() => ({ opacity: scan.get() > 0 && scan.get() < 1 ? 1 : 0, top: `${scan.get() * 100}%` }));
+  const scanStyle = useAnimatedStyle(() => ({ opacity: scan.get() > 0 && scan.get() < 1 ? 1 : 0, transform: [{ translateY: scan.get() * RECEIPT_H }] }));
   const items: [string, string][] = [
     ["ARROZ 5KG", "24,90"],
     ["CAFE 500G", "18,40"],
@@ -351,7 +353,7 @@ export function ReceiptDemo({ visible }: { visible: boolean }) {
   return (
     <Stage hint="Aperte o botão para fotografar">
       <View style={{ flexDirection: "row", gap: 16, alignItems: "center" }}>
-        <View style={{ width: 132, borderRadius: 10, backgroundColor: "rgba(236,238,242,0.94)", padding: 10, overflow: "hidden" }}>
+        <View style={{ width: 132, height: RECEIPT_H, borderRadius: 10, backgroundColor: "rgba(236,238,242,0.94)", padding: 10, overflow: "hidden" }}>
           <Text style={{ fontSize: 8.5, fontWeight: "800", color: "#2A2C31", textAlign: "center" }}>SUPERMERCADO BOA COMPRA</Text>
           <View style={{ height: 1, marginVertical: 6, borderTopWidth: 1, borderStyle: "dashed", borderColor: "#B9BDC5" }} />
           {items.map(([n, v]) => (
@@ -364,7 +366,7 @@ export function ReceiptDemo({ visible }: { visible: boolean }) {
             <Text style={{ fontSize: 9, fontWeight: "800", color: "#1E2025" }}>TOTAL</Text>
             <Text style={{ fontSize: 9, fontWeight: "800", color: "#1E2025" }}>127,90</Text>
           </View>
-          <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, right: 0, height: 14, marginTop: -7 }, scanStyle]}>
+          <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, right: 0, top: -7, height: 14 }, scanStyle]}>
             <Fade colors={["rgba(111,168,232,0)", "rgba(111,168,232,0.85)", "rgba(111,168,232,0)"]} style={{ flex: 1 }} />
           </Animated.View>
           <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "#fff" }, flashStyle]} />
@@ -527,10 +529,18 @@ export function ForecastDemo({ visible }: { visible: boolean }) {
   const lo = 500;
   const hi = 4400;
   const n = base.length + ahead.length - 1;
-  const x = (k: number) => 4 + (k / n) * (W - 8);
-  const y = (v: number) => 6 + (1 - (v - lo) / (hi - lo)) * (H - 12);
+  /* Called inside the animations below, so they run on the animation thread too. */
+  const x = (k: number) => {
+    "worklet";
+    return 4 + (k / n) * (W - 8);
+  };
+  const y = (v: number) => {
+    "worklet";
+    return 6 + (1 - (v - lo) / (hi - lo)) * (H - 12);
+  };
   const past = base.map((v, k) => `${k === 0 ? "M" : "L"} ${x(k).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
   const today = base.length - 1;
+  const aheadStart = ahead.map((v, k) => `${k === 0 ? "M" : "L"} ${x(today + k).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
   const D = 1200;
   const pastProps = useAnimatedProps(() => ({ strokeDashoffset: D * (1 - draw.get()) }));
   const aheadProps = useAnimatedProps(() => {
@@ -552,9 +562,9 @@ export function ForecastDemo({ visible }: { visible: boolean }) {
       <View style={{ marginTop: 10, alignItems: "center" }}>
         <Svg width={W} height={H}>
           <AnimatedPath d={past} stroke="#FFFFFF" strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" fill="none" strokeDasharray={`${D} ${D}`} animatedProps={pastProps} />
-          <AnimatedPath stroke={COLD} strokeWidth={2.2} strokeDasharray="5 6" strokeLinecap="round" fill="none" animatedProps={aheadProps} />
+          <AnimatedPath d={aheadStart} stroke={COLD} strokeWidth={2.2} strokeDasharray="5 6" strokeLinecap="round" fill="none" animatedProps={aheadProps} />
           <Circle cx={x(today)} cy={y(base[today])} r={5} fill="#fff" />
-          <AnimatedCircle cx={x(n)} r={5} fill={COLD} animatedProps={dotProps} />
+          <AnimatedCircle cx={x(n)} cy={y(1240)} r={5} fill={COLD} animatedProps={dotProps} />
         </Svg>
       </View>
       <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
