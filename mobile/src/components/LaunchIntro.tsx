@@ -9,6 +9,7 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 import * as Haptics from "expo-haptics";
+import { LinearGradient as ExpoLinearGradient } from "expo-linear-gradient";
 import { GROUND } from "~/theme/tokens";
 
 /**
@@ -17,8 +18,9 @@ import { GROUND } from "~/theme/tokens";
  * The name comes first, alone. It folds away into three cards, the three of the
  * icon, which float in a soft wave as if waiting to be put away. Then the wallet comes
  * up, the cards travel over it in an arc and settle in one after another, Willo peeks out over the
- * edge and blinks, the name is printed on the wallet — the icon, assembled — and the
- * whole of it fades into the app.
+ * edge, the name is printed on the wallet, and the drawing gives way to the icon
+ * itself, with its relief and shine. A light passes over it, Willo blinks, and after
+ * a moment with it the whole of it fades into the app.
  *
  * Everything is driven by one clock, so each step is a window of it and the order
  * can be read straight off the table below. Positions come from the icon, measured
@@ -36,25 +38,34 @@ const WALLET = [2300, 2750] as const;
 const DROP = [2780, 460, 110] as const; // start, length, gap between cards
 const PEEK = [3220, 3580] as const;
 const BRAND = [3320, 3680] as const;
-const BLINK = [3840, 3980] as const;
-const OUT = [4080, 4420] as const;
+const REAL = [3560, 3960] as const; // the drawn icon gives way to the icon itself
+const SHEEN = [3900, 4700] as const;
+const BLINK = [4500, 4660] as const;
+const OUT = [6200, 6560] as const; // a moment with the icon after the blink
 export const LAUNCH_INTRO_MS = OUT[1];
 
 const QUICK_OUT = [700, 1000] as const;
 
 /* The icon, in units of a 925-wide tile. */
-const U = 925;
+const U = 934;
 const CARD = { w: 660, h: 520, r: 72 };
 const CARDS = [
-  { x: 447, y: 380, rot: -4.5, from: "#F2542D", to: "#FFB21F" },
-  { x: 460, y: 467, rot: -4.5, from: "#14C98A", to: "#62F2C8" },
-  { x: 460, y: 550, rot: -3, from: "#3A1FD9", to: "#A35BFF" },
+  { x: 454, y: 382, rot: -4.5, from: "#F2542D", to: "#FFB21F" },
+  { x: 467, y: 469, rot: -4.5, from: "#14C98A", to: "#62F2C8" },
+  { x: 467, y: 552, rot: -3, from: "#3A1FD9", to: "#A35BFF" },
 ] as const;
-const POCKET = { x: 65, y: 425, w: 795, h: 430 };
-const HEAD = { x: 255, y: 315, w: 415, h: 300, r: 112 };
-const EYES = [380, 545];
-const EYE = { y: 415, w: 42, h: 90 };
-const WORD = { x: 245, y: 615, w: 480 };
+const POCKET = { x: 72, y: 427, w: 795, h: 430 };
+const HEAD = { x: 262, y: 322, w: 415, h: 300, r: 112 };
+const EYES = [388, 556];
+const EYE = { y: 454, w: 46, h: 100 };
+const WORD = { x: 258, y: 606, w: 471 };
+/* The icon itself, cut from the artwork: the tile without its eyes, and the eyes
+   with their glow on their own so that they can blink. */
+const ICON = require("../../assets/images/intro/icon.png");
+const ICON_EYES = require("../../assets/images/intro/eyes.png");
+const ICON_EYES_BOX = { x: 345, y: 383, w: 254, h: 142 };
+/* The moment the build is complete, for reduced motion to show. */
+const BUILT = REAL[1] + 100;
 const LOGO = require("../../assets/images/willo-logo-white.png");
 const LOGO_RATIO = 222 / 725;
 
@@ -122,7 +133,7 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
   /* With reduced motion the clock is read as if it were already past the build. */
   const at = (v: number) => {
     "worklet";
-    return reduced ? 4000 : v;
+    return reduced ? BUILT : v;
   };
 
   const shell = useAnimatedStyle(() => {
@@ -155,6 +166,16 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
   const eyes = useAnimatedStyle(() => {
     const b = span(at(t.get()), BLINK[0], BLINK[1]);
     return { transform: [{ scaleY: 1 - 0.9 * Math.sin(Math.PI * b) }] };
+  });
+  const real = useAnimatedStyle(() => {
+    const v = smooth(span(at(t.get()), REAL[0], REAL[1]));
+    return { opacity: v };
+  });
+  /* A light passing once across the finished icon, corner to corner. */
+  const sheen = useAnimatedStyle(() => {
+    const v = span(at(t.get()), SHEEN[0], SHEEN[1]);
+    const e = inOutCubic(v);
+    return { opacity: Math.sin(Math.PI * v), transform: [{ translateX: mix(-1.1, 1.1, e) * T }, { rotate: "18deg" }] };
   });
   const brand = useAnimatedStyle(() => {
     const v = span(at(t.get()), BRAND[0], BRAND[1]);
@@ -198,7 +219,7 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
             </Defs>
             <Rect x={2} y={2} width={HEAD.w * k - 4} height={HEAD.h * k - 4} rx={HEAD.r * k} fill="url(#head)" stroke="rgba(150,175,230,0.38)" strokeWidth={Math.max(1.5, 7 * k)} />
           </Svg>
-          <Animated.View style={[StyleSheet.absoluteFill, eyes]}>
+          <View style={StyleSheet.absoluteFill}>
             {EYES.map((x) => (
               <View
                 key={x}
@@ -217,7 +238,7 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
                 }}
               />
             ))}
-          </Animated.View>
+          </View>
         </Animated.View>
 
         {/* The wallet's front, which the cards drop behind. */}
@@ -235,6 +256,29 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
           <Animated.View style={[{ position: "absolute", left: (WORD.x - POCKET.x) * k, top: (WORD.y - POCKET.y) * k }, brand]}>
             <Image source={LOGO} tintColor="#F4F5F7" style={{ width: WORD.w * k, height: WORD.w * k * LOGO_RATIO }} resizeMode="contain" />
           </Animated.View>
+        </Animated.View>
+
+        {/* The icon itself, as drawn: the build gives way to it once it is complete. */}
+        <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, top: 0, width: T, height: T }, real]}>
+          <Image source={ICON} style={{ width: T, height: T }} />
+          <Animated.View
+            style={[
+              { position: "absolute", left: ICON_EYES_BOX.x * k, top: ICON_EYES_BOX.y * k, width: ICON_EYES_BOX.w * k, height: ICON_EYES_BOX.h * k },
+              eyes,
+            ]}
+          >
+            <Image source={ICON_EYES} style={{ width: ICON_EYES_BOX.w * k, height: ICON_EYES_BOX.h * k }} />
+          </Animated.View>
+          <View style={{ position: "absolute", left: 0, top: 0, width: T, height: T, borderRadius: T * 0.215, overflow: "hidden" }}>
+            <Animated.View style={[{ position: "absolute", top: -T * 0.3, left: T * 0.3, width: T * 0.32, height: T * 1.6 }, sheen]}>
+              <ExpoLinearGradient
+                colors={["rgba(255,255,255,0)", "rgba(255,255,255,0.16)", "rgba(255,255,255,0)"]}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={{ flex: 1 }}
+              />
+            </Animated.View>
+          </View>
         </Animated.View>
       </Animated.View>
     </Animated.View>
@@ -282,7 +326,7 @@ function IntroCard({
   const h = CARD.h * k;
 
   const style = useAnimatedStyle(() => {
-    const now = reduced ? 4000 : t.get();
+    const now = reduced ? BUILT : t.get();
 
     /* Out of the name: from its middle, small, opening into a row. */
     const eStart = EMERGE[0] + i * EMERGE[2];
