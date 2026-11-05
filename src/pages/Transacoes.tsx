@@ -15,6 +15,7 @@ import { getCustomCategories, type CustomCategory } from "@/services/categorySer
 import { getCategoryIcon, getCategoryColor } from "@/lib/categoryUtils";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { excludeRecurringForMonth, excludeRecurringFromMonthOnward } from "@/services/recurringService";
+import { setOccurrenceStatus } from "@/services/recurringService";
 import { loadMonthTransactions } from "@/services/monthTransactions";
 import { dayOfMonth } from "@/lib/dateOnly";
 import { chargeStartsAfterMonth } from "@/lib/installments";
@@ -665,10 +666,11 @@ const Transacoes = () => {
           }
         }}
         onToggleStatus={async (id, next) => {
+          const shown = detailTx;
           setShowDetailModal(false);
           setDetailTx(null);
           try {
-            await updateTransactionStatus(id, next);
+            await (shown ? setOccurrenceStatus(shown as never, next) : updateTransactionStatus(id, next));
             toast.success(next === "pago" ? "Marcado como pago" : "Marcado como pendente");
             fetchData();
           } catch {

@@ -40,8 +40,8 @@ describe("assinatura de uma recorrência", () => {
     );
   });
 
-  it("mesmo dia mas conta diferente são duas coisas", () => {
-    expect(recurringSignature(salario("2026-10-06"))).not.toBe(
+  it("mudar a conta de uma linha não cria um segundo salário", () => {
+    expect(recurringSignature(salario("2026-10-06"))).toBe(
       recurringSignature(salario("2026-10-06", { account_id: "acc-2" })),
     );
   });

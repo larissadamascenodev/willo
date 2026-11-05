@@ -289,13 +289,18 @@ async function fetchInvoiceTotalsForMonth(month: number, year: number): Promise<
   const early = new Map<string, number>();
   for (const p of (paidBefore ?? []) as any[]) early.set(p.invoice_id, (early.get(p.invoice_id) ?? 0) + Number(p.amount));
 
+  /* Paid in part this month: that part has already left the account, so it counts as paid.
+     Counted as still owed, it came out of the forecast a second time. */
+  const paidNow = new Map<string, number>();
+  for (const p of (paidThisMonth ?? []) as any[]) paidNow.set(p.invoice_id, (paidNow.get(p.invoice_id) ?? 0) + Number(p.amount));
+
   let invoiceExpense = 0;
   let invoicePaidExpense = 0;
   for (const inv of (data ?? []) as any[]) {
     const total = Number(inv.total_amount) - (early.get(inv.id) ?? 0);
     if (total <= 0) continue;
     invoiceExpense += total;
-    if (inv.is_paid) invoicePaidExpense += total;
+    invoicePaidExpense += inv.is_paid ? total : Math.min(paidNow.get(inv.id) ?? 0, total);
   }
 
   const advances: InvoiceAdvance[] = ((paidThisMonth ?? []) as any[])

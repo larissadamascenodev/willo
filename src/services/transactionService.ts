@@ -120,10 +120,33 @@ export async function createTransaction(input: CreateTransactionInput, userId: s
   return data;
 }
 
+/**
+ * Marks an entry as happened, or as still to happen.
+ *
+ * The balance is worked out by the database from the entries linked to each account, so an
+ * entry with no account moves nothing, however it is marked: it gets one here. And money that
+ * moves today moves today: an entry of a later month marked as happened comes to today, or it
+ * would count in the balance now and again when that month is reached. A fixed entry keeps its
+ * date, because its date is what the whole series hangs from.
+ */
 export async function updateTransactionStatus(id: string, status: "pago" | "pendente") {
+  const patch: Record<string, unknown> = { status };
+  if (status === "pago") {
+    const { data: row } = await supabase
+      .from("transactions")
+      .select("date, account_id, payment_method, recurrence_type")
+      .eq("id", id)
+      .maybeSingle();
+    if (row && row.payment_method !== "cartao") {
+      if (!row.account_id) patch.account_id = await resolveTransactionAccountId({ payment_method: "conta" } as CreateTransactionInput);
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      if (row.recurrence_type !== "fixa" && row.date > today) patch.date = today;
+    }
+  }
   const { data, error } = await supabase
     .from("transactions")
-    .update({ status })
+    .update(patch as never)
     .eq("id", id)
     .select()
     .single();
@@ -372,7 +395,27 @@ export async function removeInitialBalance(id: string) {
   notifyFinanceDataChanged();
 }
 
+/**
+ * Deleting an account must not cut its history loose. The links to it are cleared by the
+ * database, and an entry with no account counts in no balance: every balance would quietly fall
+ * to zero while the entries stayed on screen. So what it holds passes to another account first,
+ * and with no other account to take it, it is not deleted.
+ */
 export async function deleteAccount(id: string) {
+  const accounts = (await getAccounts()) as any[];
+  const heir = accounts.find((a) => a.id !== id && a.type !== "investment" && a.is_active !== false && a.is_default)
+    ?? accounts.find((a) => a.id !== id && a.type !== "investment" && a.is_active !== false);
+  if (!heir) throw new Error("Crie outra conta antes de excluir esta: os lançamentos dela precisam de um lugar para ficar.");
+
+  const moves = await Promise.all([
+    supabase.from("transactions").update({ account_id: heir.id }).eq("account_id", id),
+    supabase.from("transactions").update({ to_account_id: heir.id } as never).eq("to_account_id", id),
+    (supabase.from("invoice_payments" as any) as any).update({ account_id: heir.id }).eq("account_id", id),
+    (supabase.from("goal_transactions" as any) as any).update({ account_id: heir.id }).eq("account_id", id),
+  ]);
+  const failed = moves.find((m) => m.error);
+  if (failed?.error) throw failed.error;
+
   const { error } = await supabase
     .from("accounts")
     .delete()

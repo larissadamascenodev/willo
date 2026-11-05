@@ -228,8 +228,8 @@ export default function ContaDetalhe() {
       setConfirming(false);
       showToast(account?.name ? `Conta “${account.name}” excluída` : "Conta excluída");
       router.replace("/gestao");
-    } catch {
-      setError("Não foi possível excluir a conta.");
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : "Não foi possível excluir a conta.");
       setConfirming(false);
     } finally {
       setSaving(false);
@@ -476,8 +476,7 @@ export default function ContaDetalhe() {
         onConfirm={remove}
         onClose={() => setConfirming(false)}
       >
-        {balance !== 0 ? `O saldo de ${money(balance)} deixa de contar no seu total. ` : ""}
-        As transações já lançadas nela não serão excluídas.
+        As transações lançadas nela passam para a sua outra conta, e o saldo delas vai junto.
       </ConfirmGlass>
     </Room>
   );

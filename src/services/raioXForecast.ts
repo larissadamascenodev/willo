@@ -59,11 +59,16 @@ export interface Forecast {
   tightWindow: { from: number; to: number } | null;
 }
 
-/** Average everyday (non-fixed, non-installment) spending per day. */
+/**
+ * Average everyday (non-fixed, non-installment) spending per day, out of the account.
+ *
+ * What goes on a card does not leave the account now: it arrives with the invoice, which is
+ * already among what is scheduled. Counting the purchases as well took the same money out twice.
+ */
 function dailyVariable(txs: RawTx[], today: Date, lookbackDays = 60) {
   const since = new Date(today);
   since.setDate(since.getDate() - lookbackDays);
-  const spend = txs.filter((t) => isSpend(t) && t.recurrence_type !== "fixa" && !(t.installments && t.installments > 1) && parseDate(t.date) >= since && parseDate(t.date) <= today);
+  const spend = txs.filter((t) => isSpend(t) && t.payment_method !== "cartao" && t.status === "pago" && t.recurrence_type !== "fixa" && !(t.installments && t.installments > 1) && parseDate(t.date) >= since && parseDate(t.date) <= today);
   const days = Math.max(Math.round((today.getTime() - since.getTime()) / 86400000), 1);
   const total = spend.reduce((s, t) => s + t.amount, 0);
   const perDay = total / days;
@@ -85,10 +90,14 @@ export function buildForecast(current: DashboardData, txs: RawTx[], today: Date)
   // Scheduled items still to come (pending transactions, bills, invoices)
   const pending = current.events.filter((e): e is FinanceEvent & { rawDate: string } => !!e.rawDate && e.status !== "pago" && e.status !== "recebido");
   const scheduled = new Map<string, { name: string; amount: number; type: "receita" | "despesa" }[]>();
+  /* Its day has gone and it has not happened: it is still to come, from today on. Left on its
+     own day, the forecast skipped it while the month's forecast counted it. */
+  const todayKey = dayKey(today);
   for (const e of pending) {
-    const list = scheduled.get(e.rawDate) ?? [];
+    const key = e.rawDate < todayKey ? todayKey : e.rawDate;
+    const list = scheduled.get(key) ?? [];
     list.push({ name: e.name, amount: e.amount, type: e.type === "receita" ? "receita" : "despesa" });
-    scheduled.set(e.rawDate, list);
+    scheduled.set(key, list);
   }
 
   const spentByDay = new Map<string, number>();

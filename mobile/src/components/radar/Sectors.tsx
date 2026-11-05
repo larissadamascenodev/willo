@@ -58,7 +58,12 @@ export function Consumo({ data, onAsk }: { data: RaioXData; onAsk: Ask }) {
   const [open, setOpen] = useState<string | null>(null);
   const [all, setAll] = useState(false);
   /* Paying an invoice is not spending: its purchases are already counted, each in its own category. */
-  const spend = useMemo(() => data.txs.filter((t) => isSpend(t) && !/^(faturas?|pagamento de fatura)$/i.test(t.category.trim())), [data.txs]);
+  /* What has happened: a bill still waiting, or a date still ahead, has not left yet. */
+  const spend = useMemo(() => {
+    const d = data.today;
+    const todayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return data.txs.filter((t) => isSpend(t) && !/^(faturas?|pagamento de fatura)$/i.test(t.category.trim()) && t.date <= todayKey && (t.payment_method === "cartao" || t.status === "pago"));
+  }, [data.txs, data.today]);
   const today = data.today;
   const thisMonth = shift(today, 0);
   const threeMonths = [shift(today, -2), shift(today, -1), thisMonth];
@@ -105,7 +110,7 @@ export function Consumo({ data, onAsk }: { data: RaioXData; onAsk: Ask }) {
       {rows.length > 0 && (
         <Card title="Para onde foi">
           <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
-            <Donut slices={slices} size={124} centre={short(total)} caption="saíram" />
+            <Donut slices={slices} size={124} centre={short(total)} caption="já gastos" />
             <View style={{ flex: 1, minWidth: 0, gap: 8 }}>
               {slices.map((s) => (
                 <Key key={s.label} hex={s.hex} label={s.label} value={`${Math.round((s.value / total) * 100)}%`} />
@@ -303,7 +308,7 @@ export function Compromissos({ data, snapshot }: { data: RaioXData; snapshot: Ra
     { label: "Contas fixas", value: c.fixed, hex: SHADES[0] },
     { label: "Parcelas", value: c.installments, hex: SHADES[1] },
     { label: "Cartão no mês", value: c.card, hex: SHADES[2] },
-    { label: "Dia a dia", value: c.variable, hex: SHADES[3] },
+    { label: "Outras contas", value: c.variable, hex: SHADES[3] },
     ...(free > 0 ? [{ label: "Livre", value: free, hex: "rgba(255,255,255,0.1)" }] : []),
   ].filter((p) => p.value > 0);
 

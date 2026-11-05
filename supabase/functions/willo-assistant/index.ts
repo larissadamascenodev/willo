@@ -164,8 +164,9 @@ async function monthContext(supabase: any): Promise<string> {
       .from("transactions")
       .select("name,amount,category,date,payment_method")
       .eq("type", "despesa")
+      .or("payment_method.eq.cartao,status.eq.pago")
       .gte("date", cur.start)
-      .lte("date", cur.end)
+      .lte("date", cur.end < isoToday() ? cur.end : isoToday())
       .order("amount", { ascending: false })
       .limit(8),
     supabase.from("transactions").select("name,amount").eq("type", "despesa").eq("recurrence_type", "fixa").is("parent_transaction_id", null).limit(40),
@@ -320,16 +321,26 @@ const monthRange = (ym: string) => {
   return { start: `${ym}-01`, end: `${ym}-${String(end).padStart(2, "0")}` };
 };
 
+/** Spent means it happened: a card purchase by its day, anything else once it is marked paid. */
+const happened = (t: { status?: string; payment_method?: string; date?: string }, today: string) =>
+  String(t.date ?? "") <= today && (t.payment_method === "cartao" || t.status === "pago");
+const isoToday = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
 async function spendByCategory(supabase: any, start: string, end: string) {
   const { data, error } = await supabase
     .from("transactions")
-    .select("category,amount")
+    .select("category,amount,status,payment_method,date")
     .eq("type", "despesa")
     .gte("date", start)
     .lte("date", end);
   if (error) throw error;
+  const today = isoToday();
   const by = new Map<string, number>();
   for (const r of data ?? []) {
+    if (!happened(r, today)) continue;
     if (INVOICE_PAYMENT.test(String(r.category ?? "").trim())) continue;
     by.set(r.category, (by.get(r.category) ?? 0) + Number(r.amount));
   }
@@ -405,11 +416,15 @@ async function runTool(supabase: any, name: string, input: any, snapshot: any): 
       if (input?.busca) q = q.ilike("name", `%${input.busca}%`);
       const { data, error } = await q;
       if (error) throw error;
+      const limite = Math.min(Number(input?.limite) || 40, 200);
       return {
         quantidade: data?.length ?? 0,
         soma: round((data ?? []).reduce((s: number, t: any) => s + Number(t.amount), 0)),
+        /* The sum is of this list. Cut short, it is not the total of the period. */
+        lista_cortada: (data?.length ?? 0) >= limite,
         lancamentos: (data ?? []).map((t: any) => ({
           nome: t.name, valor: Number(t.amount), tipo: t.type, categoria: t.category, data: t.date,
+          situacao: t.status === "pago" ? "aconteceu" : "pendente",
           forma: t.payment_method, parcela: t.installments ? `${t.installment_current}/${t.installments}` : null,
         })),
       };
@@ -418,11 +433,13 @@ async function runTool(supabase: any, name: string, input: any, snapshot: any): 
     case "resumo_por_categoria": {
       const tipo = input?.tipo ?? "despesa";
       const { data, error } = await supabase
-        .from("transactions").select("category,amount").eq("type", tipo)
+        .from("transactions").select("category,amount,status,payment_method,date").eq("type", tipo)
         .gte("date", input.data_inicio).lte("date", input.data_fim);
       if (error) throw error;
+      const hoje = isoToday();
       const by = new Map<string, { soma: number; itens: number }>();
       for (const r of data ?? []) {
+        if (!happened(r, hoje)) continue;
         if (tipo === "despesa" && INVOICE_PAYMENT.test(String(r.category ?? "").trim())) continue;
         const p = by.get(r.category) ?? { soma: 0, itens: 0 };
         by.set(r.category, { soma: p.soma + Number(r.amount), itens: p.itens + 1 });
@@ -465,7 +482,10 @@ async function runTool(supabase: any, name: string, input: any, snapshot: any): 
         .from("transactions").select("name,amount,category,payment_method,date")
         .eq("type", "despesa").eq("recurrence_type", "fixa").is("parent_transaction_id", null).limit(100);
       if (error) throw error;
-      const lista = (data ?? []).map((t: any) => ({ nome: t.name, mensal: Number(t.amount), anual: round(Number(t.amount) * 12), categoria: t.category, forma: t.payment_method }));
+      /* A series can have several rows, one per month it was redefined: it is one commitment. */
+      const unicos = new Map<string, any>();
+      for (const t of data ?? []) unicos.set(`${t.name}|${t.amount}|${String(t.date).slice(8, 10)}`, t);
+      const lista = [...unicos.values()].map((t: any) => ({ nome: t.name, mensal: Number(t.amount), anual: round(Number(t.amount) * 12), categoria: t.category, forma: t.payment_method }));
       const mensal = lista.reduce((s: number, x: any) => s + x.mensal, 0);
       return { quantidade: lista.length, total_mensal: round(mensal), total_anual: round(mensal * 12), assinaturas: lista.sort((a: any, b: any) => b.mensal - a.mensal) };
     }
@@ -543,11 +563,13 @@ async function runTool(supabase: any, name: string, input: any, snapshot: any): 
       const end = new Date(today.getFullYear(), today.getMonth(), 0);
       const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
       const { data, error } = await supabase
-        .from("transactions").select("type,amount,recurrence_type,payment_method")
+        .from("transactions").select("type,amount,recurrence_type,payment_method,status,date")
         .gte("date", start).lte("date", endStr);
       if (error) throw error;
+      const hojePerfil = isoToday();
       let renda = 0, fixas = 0, parcelas = 0, variaveis = 0;
       for (const t of data ?? []) {
+        if (!happened(t, hojePerfil)) continue;
         const v = Number(t.amount);
         if (t.type === "receita") renda += v;
         else if (t.type === "despesa") {

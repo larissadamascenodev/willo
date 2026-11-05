@@ -4,8 +4,8 @@ import { ActivityIndicator, Platform, Pressable, Text, View, type TextStyle } fr
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { categoryHex } from "@/lib/categoryData";
-import { deleteTransaction, updateTransaction, updateTransactionStatus } from "@/services/transactionService";
-import { excludeRecurringForMonth, excludeRecurringFromMonthOnward } from "@/services/recurringService";
+import { deleteTransaction, updateTransaction } from "@/services/transactionService";
+import { excludeRecurringForMonth, excludeRecurringFromMonthOnward, setOccurrenceStatus } from "@/services/recurringService";
 import type { TransactionRow as Row } from "@/services/monthTransactions";
 import type { CustomCategory } from "@/services/categoryService";
 import { BlurView } from "expo-blur";
@@ -39,9 +39,8 @@ import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
  *
  * Editing and deleting live behind the three dots beside the cross, because they
  * are things done to the entry rather than what the person came for. What they
- * came for is marking it paid — and that button is only there while it is still
- * pending: once something has happened it is not undone from here. To put it back
- * to pending, edit it; the form has that switch.
+ * came for is marking it paid, or, once it has happened, putting it back to pending:
+ * either way the balance moves with it, by the same amount.
  *
  * Editing opens the same form it was made with, and deleting asks first, in place:
  * a fixed entry is asked whether to leave this month only or from here on, and a
@@ -165,7 +164,8 @@ export default function TransactionSheet({
     }
   };
 
-  const markPaid = () => run(() => updateTransactionStatus(tx.id, "pago"), "Marcada como paga");
+  const markPaid = () => run(() => setOccurrenceStatus(tx as never, "pago"), isReceita ? "Marcada como recebida" : "Marcada como paga");
+  const markPending = () => run(() => setOccurrenceStatus(tx as never, "pendente"), "Voltou para pendente");
 
   const removeThisMonth = () => run(() => removeTransaction(tx, "month", { month, year, userId }), `“${tx.name}” excluído`);
   const removeAll = () => run(() => removeTransaction(tx, "all", { month, year, userId }), `“${tx.name}” excluído`);
@@ -313,8 +313,20 @@ export default function TransactionSheet({
 
         {/* ── What can be done ── */}
         {!confirming ? (
-          /* Only while it is still to happen. Once it has, there is nothing to offer. */
-          !isPaid && (
+          /* A purchase on a card is settled by its invoice, not here. */
+          isPaid ? (
+            !isCard && (
+              <Animated.View entering={FadeIn.duration(180)} style={{ marginTop: 22 }}>
+                <Pressable
+                  onPress={() => void markPending()}
+                  disabled={busy}
+                  style={({ pressed }) => ({ height: 50, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)", opacity: busy ? 0.5 : pressed ? 0.85 : 1 })}
+                >
+                  {busy ? <ActivityIndicator color="#fff" /> : <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>Voltar para pendente</Text>}
+                </Pressable>
+              </Animated.View>
+            )
+          ) : (
             <Animated.View entering={FadeIn.duration(180)} style={{ marginTop: 22 }}>
               <Pressable
                 onPress={() => void markPaid()}

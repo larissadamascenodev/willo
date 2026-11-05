@@ -5,8 +5,8 @@ import {
   Repeat, Layers, FileText, AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { updateTransactionStatus, updateTransaction, deleteTransaction } from "@/services/transactionService";
-import { excludeRecurringForMonth, excludeRecurringFromMonthOnward } from "@/services/recurringService";
+import { updateTransaction, deleteTransaction } from "@/services/transactionService";
+import { excludeRecurringForMonth, excludeRecurringFromMonthOnward, setOccurrenceStatus } from "@/services/recurringService";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { getCategoryHexColor } from "@/lib/categoryUtils";
 import { getDefaultCategoryIcon } from "@/lib/categoryIcons";
@@ -106,7 +106,7 @@ const TransactionDetailModal = ({
 
   const togglePaid = () =>
     run(
-      () => updateTransactionStatus(tx.id, isPaid ? "pendente" : "pago").then(() => undefined),
+      () => setOccurrenceStatus(tx as never, isPaid ? "pendente" : "pago").then(() => undefined),
       isPaid ? "Marcada como pendente" : isReceita ? "Marcada como recebida" : "Marcada como paga",
     );
 

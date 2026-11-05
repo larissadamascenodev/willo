@@ -83,7 +83,9 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
           repeat: t.recurrence_type === "parcelado" || t.recurrence_type === "fixa" ? t.recurrence_type : "unica",
           parts: parcel ? t.installments : null,
           date: t.recurrence_type === "fixa" ? inMonth(t.date, month, year) : t.date,
-          status: t.status,
+          /* A fixed entry opened in another month: that month has not happened because the
+             month it came from has. */
+          status: t.recurrence_type === "fixa" && t.date.slice(0, 7) !== `${year}-${String(month + 1).padStart(2, "0")}` ? "pendente" : t.status,
           note: (t.observation ?? "").replace(PLAN_NOTE, ""),
         });
       })

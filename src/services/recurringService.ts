@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { clearFinanceQueryCache } from "@/services/transactionService";
+import { clearFinanceQueryCache, createTransaction, getTransactionById, updateTransactionStatus } from "@/services/transactionService";
 import { dayOfMonth, parseDateOnly } from "@/lib/dateOnly";
 
 function notifyRecurringChanged() {
@@ -56,6 +56,45 @@ export function getRecurringSourceId(transaction: {
 }
 
 /**
+ * Marks one entry of a list as happened or not, whichever kind it is.
+ *
+ * In a month other than its own, a fixed entry is not a row: what is on screen stands for the
+ * row its series started from, under that row's id. Marking the row would mark another month,
+ * and this month would still be waiting. So that month leaves the series and gets an entry of
+ * its own, the way it does when it is edited. Undoing is then an ordinary change to that entry.
+ */
+export async function setOccurrenceStatus(
+  tx: { id: string; date: string; _isRecurringMaterialized?: boolean },
+  status: "pago" | "pendente",
+) {
+  if (!tx._isRecurringMaterialized) return updateTransactionStatus(tx.id, status);
+  /* A month still in the series is already waiting. */
+  if (status === "pendente") return null;
+
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) throw new Error("Entre na sua conta de novo.");
+  const row = (await getTransactionById(tx.id)) as any;
+  const [year, month] = tx.date.split("-").map(Number);
+  await excludeRecurringForMonth(tx.id, month - 1, year, auth.user.id);
+  return createTransaction(
+    {
+      name: row.name,
+      type: row.type,
+      amount: Number(row.amount),
+      category: row.category,
+      date: tx.date,
+      status: "pago",
+      account_id: row.payment_method === "cartao" ? null : row.account_id,
+      payment_method: row.payment_method,
+      recurrence_type: "unica",
+      observation: row.observation,
+      credit_card_id: row.payment_method === "cartao" ? row.credit_card_id : null,
+    },
+    auth.user.id,
+  );
+}
+
+/**
  * What makes two "fixa" rows the same standing commitment.
  *
  * The same commitment gets written down more than once: redefining it later leaves the old
@@ -66,6 +105,10 @@ export function getRecurringSourceId(transaction: {
  * into one and the newer entry silently replaced the older one everywhere. They are two
  * commitments. The full date is deliberately NOT used: the same commitment redefined in a
  * later month still falls on the same day, and must still collapse.
+ *
+ * Where it lands is not part of it either, and that was a real bug too. Pointing one row of a
+ * series at another account made it look like a commitment of its own, so a month read both and
+ * a salary paid twice a month showed three times.
  */
 export function recurringSignature(t: {
   name: string;
@@ -83,8 +126,6 @@ export function recurringSignature(t: {
     t.category,
     Number(t.amount).toFixed(2),
     t.payment_method ?? "",
-    t.account_id ?? "",
-    t.credit_card_id ?? "",
     dayOfMonth(t.date),
   ].join("::");
 }

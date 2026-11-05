@@ -116,13 +116,13 @@ export async function loadMonthTransactions(
     return true;
   });
 
-  const now = new Date();
-  const isFutureMonth =
-    year > now.getFullYear() || (year === now.getFullYear() && month > now.getMonth());
+  /* Waiting, in any month, exactly as the totals count it: its status belongs to the row it
+     came from, which is another month. Showing that one said "received" of money the balance
+     rightly had not counted. */
   const materializedRecurring = recurringTxs.map((t: any) => ({
     ...t,
     date: `${year}-${pad(month + 1)}-${pad(dayOfMonth(t.date))}`,
-    status: isFutureMonth ? "pendente" : t.status,
+    status: "pendente",
     _isRecurringMaterialized: true,
   })) as TransactionRow[];
 
