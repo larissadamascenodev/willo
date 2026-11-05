@@ -15,8 +15,8 @@ import { GROUND } from "~/theme/tokens";
  * What plays when the app opens, over the app while it gets ready underneath.
  *
  * The name comes first, alone. It folds away into three cards, the three of the
- * icon, which hop in a wave as if waiting to be put away. Then the wallet comes up,
- * the cards gather over it and drop in one after another, Willo peeks out over the
+ * icon, which float in a soft wave as if waiting to be put away. Then the wallet comes
+ * up, the cards travel over it in an arc and settle in one after another, Willo peeks out over the
  * edge and blinks, the name is printed on the wallet — the icon, assembled — and the
  * whole of it fades into the app.
  *
@@ -28,16 +28,16 @@ import { GROUND } from "~/theme/tokens";
  */
 
 const WORD_IN = [0, 450] as const;
-const WORD_OUT = [850, 1100] as const;
-const CARDS_IN = [950, 300] as const; // start, length; each card 70 ms after the last
-const HOP = [1250, 450] as const; // start, length of one wave; two waves
-const GATHER = [2150, 2550] as const;
-const WALLET = [2250, 2650] as const;
-const DROP = [2600, 340, 90] as const; // start, length, gap between cards
-const PEEK = [2950, 3320] as const;
-const BRAND = [3050, 3400] as const;
-const BLINK = [3560, 3700] as const;
-const OUT = [3820, 4150] as const;
+const WORD_OUT = [800, 1060] as const;
+const EMERGE = [990, 520, 60] as const; // start, length, gap between cards: out of the name into a row
+const FLOAT = [1300, 2300, 640] as const; // start, end, period of the wave
+const GATHER = [2150, 560, 80] as const; // start, length, gap: in an arc to over the wallet
+const WALLET = [2300, 2750] as const;
+const DROP = [2780, 460, 110] as const; // start, length, gap between cards
+const PEEK = [3220, 3580] as const;
+const BRAND = [3320, 3680] as const;
+const BLINK = [3840, 3980] as const;
+const OUT = [4080, 4420] as const;
 export const LAUNCH_INTRO_MS = OUT[1];
 
 const QUICK_OUT = [700, 1000] as const;
@@ -62,6 +62,8 @@ const LOGO_RATIO = 222 / 725;
 const ROW_SCALE = 0.3;
 const ROW_GAP = 240;
 const LIFT = 390;
+const FLOAT_RISE = 70;
+const ARC = 80;
 
 function clamp01(v: number) {
   "worklet";
@@ -88,6 +90,10 @@ function backOut(v: number, s = 1.6) {
   const c = s + 1;
   return 1 + c * (v - 1) ** 3 + s * (v - 1) ** 2;
 }
+function smooth(v: number) {
+  "worklet";
+  return v * v * (3 - 2 * v);
+}
 function mix(a: number, b: number, v: number) {
   "worklet";
   return a + (b - a) * v;
@@ -103,7 +109,7 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     const end = reduced ? QUICK_OUT[1] : LAUNCH_INTRO_MS;
     t.set(withTiming(end, { duration: end, easing: Easing.linear }));
-    const landed = reduced ? undefined : setTimeout(() => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined), DROP[0] + DROP[1] * 0.7 + DROP[2] * 2);
+    const landed = reduced ? undefined : setTimeout(() => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined), DROP[0] + DROP[1] * 0.55 + DROP[2] * 2);
     const done = setTimeout(onDone, end + 30);
     return () => {
       if (landed) clearTimeout(landed);
@@ -116,7 +122,7 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
   /* With reduced motion the clock is read as if it were already past the build. */
   const at = (v: number) => {
     "worklet";
-    return reduced ? 3500 : v;
+    return reduced ? 4000 : v;
   };
 
   const shell = useAnimatedStyle(() => {
@@ -276,49 +282,66 @@ function IntroCard({
   const h = CARD.h * k;
 
   const style = useAnimatedStyle(() => {
-    const now = reduced ? 3500 : t.get();
+    const now = reduced ? 4000 : t.get();
 
-    /* In the row. */
-    const pop = span(now, CARDS_IN[0] + i * 70, CARDS_IN[0] + i * 70 + CARDS_IN[1]);
-    const rowX = U / 2 + (i - 1) * ROW_GAP;
+    /* Out of the name: from its middle, small, opening into a row. */
+    const eStart = EMERGE[0] + i * EMERGE[2];
+    const e = span(now, eStart, eStart + EMERGE[1]);
+    const out = backOut(e, 0.9);
+    const rowX = mix(U / 2, U / 2 + (i - 1) * ROW_GAP, out);
     const rowY = U / 2;
 
-    /* The hop: two waves passing along the row; a little squash on landing. */
-    let jump = 0;
-    let squash = 0;
-    const p = (now - HOP[0]) / HOP[1] - i * 0.22;
-    if (p >= 0 && p < 2) {
-      const f = p - Math.floor(p);
-      if (f < 0.62) jump = Math.sin((Math.PI * f) / 0.62);
-      else if (f < 0.82) squash = Math.sin((Math.PI * (f - 0.62)) / 0.2);
-    }
-    const hopY = -jump * 150;
-    const hopRot = jump * (i % 2 === 0 ? -9 : 9);
+    /* Floating in the row: one soft wave passing along it, rising and settling
+       without a jolt at either end. */
+    const env = smooth(span(now, FLOAT[0], FLOAT[0] + 320)) * (1 - smooth(span(now, FLOAT[1] - 380, FLOAT[1])));
+    const phase = ((now - FLOAT[0]) / FLOAT[2]) * Math.PI * 2 - i * 0.95;
+    const floatY = -Math.max(0, Math.sin(phase)) * FLOAT_RISE * env;
+    const floatRot = Math.cos(phase) * 5 * env * (i === 1 ? -1 : 1);
 
-    /* Gathered over the wallet, at full size, then dropped in. */
-    const g = inOutCubic(span(now, GATHER[0], GATHER[1]));
+    /* Over the wallet in an arc, the back card first, growing to full size. */
+    const gStart = GATHER[0] + i * GATHER[2];
+    const g = inOutCubic(span(now, gStart, gStart + GATHER[1]));
+    const arc = -Math.sin(Math.PI * g) * ARC;
+
+    /* Into the wallet, settling without a bounce. */
     const dStart = DROP[0] + i * DROP[2];
-    const d = backOut(span(now, dStart, dStart + DROP[1]), 1.1);
+    const d = backOut(span(now, dStart, dStart + DROP[1]), 0.6);
 
     const x = mix(rowX, c.x, g);
-    const y = mix(rowY + hopY, c.y - LIFT, g) + LIFT * d;
-    const rot = mix(hopRot, c.rot, g);
-    const s = mix(ROW_SCALE * backOut(pop, 2), 1, g);
+    const y = mix(rowY + floatY, c.y - LIFT, g) + arc + LIFT * d;
+    const rot = mix(floatRot, c.rot, g) + (1 - d) * g * (i - 1) * 2.5;
+    const s = mix(mix(0.12, ROW_SCALE, out), 1, g);
+    const pop = e;
 
     return {
-      opacity: pop > 0 ? 1 : 0,
+      opacity: outCubic(clamp01(pop * 2.2)),
       transform: [
         { translateX: (x - c.x) * k },
         { translateY: (y - c.y) * k },
         { rotate: `${rot}deg` },
-        { scaleX: s * (1 + squash * 0.12 * (1 - g)) },
-        { scaleY: s * (1 - squash * 0.12 * (1 - g)) },
+        { scale: s },
       ],
     };
   });
 
   return (
-    <Animated.View style={[{ position: "absolute", left: c.x * k - w / 2, top: c.y * k - h / 2, width: w, height: h }, style]}>
+    <Animated.View
+      style={[
+        {
+          position: "absolute",
+          left: c.x * k - w / 2,
+          top: c.y * k - h / 2,
+          width: w,
+          height: h,
+          borderRadius: CARD.r * k,
+          shadowColor: "#000",
+          shadowOpacity: 0.4,
+          shadowRadius: 14 * k * 2,
+          shadowOffset: { width: 0, height: 10 * k * 2 },
+        },
+        style,
+      ]}
+    >
       <Svg width={w} height={h}>
         <Defs>
           <LinearGradient id={`card${i}`} x1="0" y1="1" x2="1" y2="0">
