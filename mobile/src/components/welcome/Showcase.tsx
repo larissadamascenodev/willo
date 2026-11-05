@@ -9,6 +9,7 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withRepeat,
+  withSequence,
   withTiming,
   type SharedValue,
 } from "react-native-reanimated";
@@ -157,22 +158,44 @@ export default function Showcase() {
   }, [orbit, reduce]);
 
   const next = useCallback(() => setIndex((i) => (i + 1) % N), []);
-  const run = useCallback(() => {
-    const left = Math.max(0, 1 - scene.get()) * SCENE_MS;
-    scene.set(
-      withTiming(1, { duration: left, easing: Easing.linear }, (done) => {
-        if (done) runOnJS(next)();
-      }),
-    );
-  }, [scene, next]);
+
+  /* How far the scene had got is kept here, on this side, rather than read back from
+     the clock: on the phone the clock runs on the other thread, and reading it just
+     after it was reset still gives the old value — a scene that had ended — so every
+     scene ended at once and the next began, over and over. */
+  const shown = useRef(0);
+  const startedAt = useRef(0);
+  const from = useRef(0);
+  const finish = useCallback((which: number) => {
+    if (which === shown.current) next();
+  }, [next]);
+  const start = useCallback(
+    (fraction: number) => {
+      const which = shown.current;
+      from.current = fraction;
+      startedAt.current = Date.now();
+      const left = Math.max(300, (1 - fraction) * SCENE_MS);
+      const go = withTiming(1, { duration: left, easing: Easing.linear }, (done) => {
+        if (done) runOnJS(finish)(which);
+      });
+      scene.set(fraction === 0 ? withSequence(withTiming(0, { duration: 0 }), go) : go);
+    },
+    [scene, finish],
+  );
+  const pause = useCallback(() => {
+    from.current = Math.min(0.97, from.current + (Date.now() - startedAt.current) / SCENE_MS);
+    cancelAnimation(scene);
+  }, [scene]);
 
   useEffect(() => {
     if (!ready) return;
+    shown.current = index;
     active.set(index);
     cancelAnimation(scene);
-    scene.set(0);
-    if (!held.current) run();
-  }, [index, ready, scene, active, run]);
+    from.current = 0;
+    if (held.current) scene.set(0);
+    else start(0);
+  }, [index, ready, scene, active, start]);
 
   const onLayout = (e: LayoutChangeEvent) => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
 
@@ -199,11 +222,11 @@ export default function Showcase() {
         onAccessibilityAction={(e) => setIndex((i) => (i + (e.nativeEvent.actionName === "increment" ? 1 : N - 1)) % N)}
         onPressIn={() => {
           held.current = true;
-          cancelAnimation(scene);
+          if (ready) pause();
         }}
         onPressOut={() => {
           held.current = false;
-          if (ready) run();
+          if (ready) start(from.current);
         }}
         delayLongPress={260}
         onLongPress={() => undefined}

@@ -1,10 +1,13 @@
-import { Pressable, Text, View } from "react-native";
+import { Image, Pressable, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Room from "~/components/Room";
 import Showcase from "~/components/welcome/Showcase";
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const LOGO = require("../../assets/images/willo-logo-white.png") as number;
 
 /**
  * The first thing anyone sees without an account.
@@ -22,12 +25,17 @@ export default function BemVindo() {
   return (
     <Room lit sky={false}>
       <View style={{ flex: 1, paddingTop: insets.top + 18, paddingBottom: insets.bottom + 20, paddingHorizontal: 24 }}>
-        <Animated.Text
-          entering={FadeIn.delay(100).duration(600)}
-          style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.6, color: "#fff", textAlign: "center" }}
-        >
-          willo
-        </Animated.Text>
+        {/* The brand's own wordmark, in white, dot and all. */}
+        <Animated.View entering={FadeIn.delay(100).duration(600)} style={{ alignItems: "center" }}>
+          <Image
+            source={LOGO}
+            tintColor="#F7F5F2"
+            resizeMode="contain"
+            accessibilityRole="image"
+            accessibilityLabel="Willo"
+            style={{ width: 84, height: 84 * (222 / 725) }}
+          />
+        </Animated.View>
 
         <Animated.View entering={FadeIn.delay(150).duration(700)} style={{ flex: 1, marginTop: 22 }}>
           <Showcase />
