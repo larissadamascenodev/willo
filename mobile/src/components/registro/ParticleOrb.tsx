@@ -12,6 +12,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import WilloBot from "~/components/willo/WilloBot";
 import Svg, { Circle, Defs, Ellipse, Path, RadialGradient, Stop } from "react-native-svg";
 
 /**
@@ -67,7 +68,7 @@ function cloud(count: number, seed = 7): number[] {
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
-export default function ParticleOrb({
+function Sphere({
   size,
   mode = "idle",
   density,
@@ -432,4 +433,13 @@ export default function ParticleOrb({
       </View>
     </Animated.View>
   );
+}
+
+type OrbProps = Parameters<typeof Sphere>[0];
+
+/* Trying Willo as a robot. The sphere stays here, one word away: set this to false. */
+const AS_ROBOT = true;
+
+export default function ParticleOrb(props: OrbProps) {
+  return AS_ROBOT ? <WilloBot {...props} /> : <Sphere {...props} />;
 }
