@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from "~/lib/auth";
 import { useApplyOnboarding } from "~/lib/onboarding";
 import { MonthProvider } from "@/contexts/MonthContext";
 import ToastHost from "~/components/ToastHost";
+import LaunchIntro from "~/components/LaunchIntro";
 import { GREEN, GROUND } from "~/theme/tokens";
 
 /* Before any shared module is imported for real, the handful of browser things it
@@ -29,7 +30,30 @@ installShims();
  * not until the stored session has been read, or a signed-in person would see the
  * welcome flash by on every launch.
  */
+/* Once per launch: coming back to the app from the background does not replay it. */
+let introPlayed = false;
+
 export default function RootLayout() {
+  const [intro, setIntro] = useState(!introPlayed);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: GROUND }}>
+      <Shell />
+      {intro && (
+        <LaunchIntro
+          onDone={() => {
+            introPlayed = true;
+            setIntro(false);
+          }}
+        />
+      )}
+    </View>
+  );
+}
+
+/* The app gets itself ready under the intro, so by the time it fades the first
+   screen is already there. */
+function Shell() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
