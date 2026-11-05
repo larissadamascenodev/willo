@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Pressable, Text, View, type ViewStyle } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import Animated, {
   interpolateColor,
   ReduceMotion,
@@ -9,10 +9,10 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import Glass from "~/components/Glass";
 import ParticleOrb from "~/components/registro/ParticleOrb";
 import { ArrowLeftRight, House } from "~/components/icons";
 
@@ -24,19 +24,14 @@ import { ArrowLeftRight, House } from "~/components/icons";
  * at its left, and an invitation. The sphere is the same one that turns on the home
  * and listens in Willo's own screen, only small.
  *
- * It is white and translucent and nothing else. The place you are is shown by the
+ * Each piece is the system's liquid glass where the phone has it (see Glass), a blur
+ * where it does not. It is white and translucent and nothing else. The place you are is shown by the
  * button itself — it lights, its glyph firms up and pops, and a point comes up under
  * it — not by a colour.
  *
  * Willo's screen sits over the tabs rather than among them, because it has a bar of
  * its own to type into and two bars at the foot would be one too many.
  */
-
-const GLASS: ViewStyle = {
-  backgroundColor: "rgba(34,34,36,0.82)",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.09)",
-};
 
 const SIZE = 52;
 const GAP = 9;
@@ -79,8 +74,7 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
           accessibilityLabel="Converse com o Willo"
           style={({ pressed }) => ({ flex: 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}
         >
-          <View style={[GLASS, { height: SIZE, borderRadius: SIZE / 2, overflow: "hidden", flexDirection: "row", alignItems: "center", paddingLeft: 7, paddingRight: 12, gap: 9 }]}>
-            <BlurView intensity={26} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <Glass radius={SIZE / 2} interactive style={{ height: SIZE, flexDirection: "row", alignItems: "center", paddingLeft: 7, paddingRight: 12, gap: 9 }}>
             <View
               style={{
                 width: 38,
@@ -97,7 +91,7 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ flex: 1, minWidth: 0, fontSize: 14, color: "rgba(255,255,255,0.66)" }}>
               Converse com o Willo
             </Text>
-          </View>
+          </Glass>
         </Pressable>
 
         <NavCircle label="Transações" icon={ArrowLeftRight} on={active === "transacoes"} onPress={() => open("transacoes")} />
@@ -132,9 +126,10 @@ function NavCircle({
     if (on) pop.set(withSequence(withTiming(0.82, { duration: 90 }), withSpring(1, { duration: 520, dampingRatio: 0.45, reduceMotion: ReduceMotion.System })));
   }, [on, lit, pop]);
 
+  /* The glass stays the glass; being here lays a white light over it. */
   const shell = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(lit.get(), [0, 1], ["rgba(34,34,36,0.82)", "rgba(255,255,255,0.20)"]),
-    borderColor: interpolateColor(lit.get(), [0, 1], ["rgba(255,255,255,0.09)", "rgba(255,255,255,0.34)"]),
+    backgroundColor: interpolateColor(lit.get(), [0, 1], ["rgba(255,255,255,0)", "rgba(255,255,255,0.16)"]),
+    borderColor: interpolateColor(lit.get(), [0, 1], ["rgba(255,255,255,0)", "rgba(255,255,255,0.30)"]),
   }));
   const glyph = useAnimatedStyle(() => ({ transform: [{ scale: pop.get() * (1 + lit.get() * 0.08) }] }));
   const soft = useAnimatedStyle(() => ({ opacity: 1 - lit.get() }));
@@ -149,8 +144,11 @@ function NavCircle({
       accessibilityState={{ selected: on }}
       style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.94 : 1 }] })}
     >
-      <Animated.View style={[{ width: SIZE, height: SIZE, borderRadius: SIZE / 2, borderWidth: 1, overflow: "hidden", alignItems: "center", justifyContent: "center" }, shell]}>
-        <BlurView intensity={26} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+      <Glass radius={SIZE / 2} interactive style={{ width: SIZE, height: SIZE, alignItems: "center", justifyContent: "center" }}>
+        <Animated.View
+          pointerEvents="none"
+          style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: SIZE / 2, borderWidth: 1 }, shell]}
+        />
         <Animated.View style={glyph}>
           <Animated.View style={soft}>
             <Icon size={24} color="rgba(255,255,255,0.58)" strokeWidth={2} />
@@ -160,7 +158,7 @@ function NavCircle({
           </Animated.View>
         </Animated.View>
         <Animated.View style={[{ position: "absolute", bottom: 7, width: 4, height: 4, borderRadius: 2, backgroundColor: "#fff" }, point]} />
-      </Animated.View>
+      </Glass>
     </Pressable>
   );
 }
