@@ -1,22 +1,24 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * Which of the two the top of the home is: the sphere, or the stories.
+ * Which of the three the top of the home is: the robot, the slides, or nothing but
+ * the balance, written on the background itself.
  *
- * Both exist so they can be tried against each other, and the choice is kept on the
+ * They exist so they can be tried against each other, and the choice is kept on the
  * phone. It is read from the same synchronous store the shared code uses, which is
  * filled before anything draws — so the screen opens on the one that was chosen,
  * rather than on one and then changing to the other.
  */
 
-export type HomeHero = "orb" | "stories";
+export type HomeHero = "orb" | "stories" | "saldo";
 
 const KEY = "home-hero";
 const listeners = new Set<() => void>();
 
 const read = (): HomeHero => {
   try {
-    return localStorage.getItem(KEY) === "stories" ? "stories" : "orb";
+    const saved = localStorage.getItem(KEY);
+    return saved === "stories" || saved === "saldo" ? saved : "orb";
   } catch {
     return "orb";
   }

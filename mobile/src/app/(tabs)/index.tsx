@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
-import { RefreshControl, View, useWindowDimensions } from "react-native";
+import { Pressable, RefreshControl, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import Animated, {
   runOnJS,
   useAnimatedProps,
@@ -22,6 +23,7 @@ import HomeHeader from "~/components/home/HomeHeader";
 import ProfileSheet from "~/components/ProfileSheet";
 import Stories from "~/components/home/Stories";
 import OrbHero, { ORB_HERO_BODY, WilloGlow } from "~/components/home/OrbHero";
+import SaldoHero, { SALDO_HERO_BODY } from "~/components/home/SaldoHero";
 import { useHomeHero } from "~/lib/homeHero";
 import WidgetBoard from "~/components/home/WidgetBoard";
 import EditBar from "~/components/home/EditBar";
@@ -52,9 +54,11 @@ const PINNED_BODY = 2.5 + 18 + 200 + 24;
  * holding what the app noticed, and a scroller that starts below both and passes
  * over them.
  *
- * What is pinned is one of two, to be tried against each other: the stories, or
- * the sphere — Willo floating, saying the same readings one at a time, and the
- * quickest way into Registro rápido. Which is chosen from the avatar's sheet.
+ * What is pinned is one of three, to be tried against each other: the stories; the
+ * robot — Willo floating, saying the same readings one at a time, and the quickest
+ * way into Registro rápido; or the balance alone, written on the background with no
+ * card around it, the card it replaces leaving the board so the others move up into
+ * its place. Which is chosen from the avatar's sheet.
  *
  * The greeting is not a heading here: it is the first of the readings. The name
  * only appears in the row at the top once the block has receded far enough that
@@ -62,6 +66,7 @@ const PINNED_BODY = 2.5 + 18 + 200 + 24;
  */
 export default function Home() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { height: screenH } = useWindowDimensions();
   const { user } = useAuth();
   const { report, moved } = useNavChrome();
@@ -89,6 +94,7 @@ export default function Home() {
 
   const [hero] = useHomeHero();
   const orbHero = hero === "orb";
+  const saldoHero = hero === "saldo";
   const travel = orbHero ? ORB_TRAVEL : PIN_TRAVEL;
 
   /* ── How far into the recession we are, and everything that reads off it ── */
@@ -189,7 +195,11 @@ export default function Home() {
     [data, month, assinaturas, totalAssinaturas, ended, keepEnded, cancelEnded],
   );
 
-  const skipWidget = useCallback((id: string) => widgetIsEmpty(id, widgetContext), [widgetContext]);
+  /* With the balance on the background, its card would only say it twice. */
+  const skipWidget = useCallback(
+    (id: string) => (saldoHero && id === "saldo") || widgetIsEmpty(id, widgetContext),
+    [widgetContext, saldoHero],
+  );
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -203,7 +213,7 @@ export default function Home() {
   /* Where the readings sit, and therefore where the first card starts. */
   /* Under the header, so neither the sphere nor the readings touch its icons. */
   const pinnedTop = insets.top + 72;
-  const pinnedHeight = pinnedTop + (orbHero ? ORB_HERO_BODY : PINNED_BODY);
+  const pinnedHeight = pinnedTop + (orbHero ? ORB_HERO_BODY : saldoHero ? SALDO_HERO_BODY : PINNED_BODY);
 
   return (
     <Room lit sky>
@@ -211,6 +221,14 @@ export default function Home() {
           stops taking taps, since by then you cannot read what you would tap. */}
       {/* Editing is about the board, so the readings stand down for it — leaving
           them pinned behind an opaque bar only means drawing them to be covered. */}
+      {/* Willo's light, behind everything, so the same ground holds the robot and the
+          balance and the cards rise through it. */}
+      {!editing && (orbHero || saldoHero) && (
+        <Animated.View pointerEvents="none" style={[{ position: "absolute", top: 0, left: 0, right: 0 }, glowStyle]}>
+          <WilloGlow height={pinnedHeight + 220} />
+        </Animated.View>
+      )}
+
       {!editing && !orbHero && (
         <Animated.View
           pointerEvents="box-none"
@@ -219,7 +237,7 @@ export default function Home() {
             pinnedStyle,
           ]}
         >
-          <Stories slides={slides} />
+          {saldoHero ? <SaldoHero saldoPrevisto={data.saldoPrevisto} hidden={hidden} /> : <Stories slides={slides} />}
         </Animated.View>
       )}
 
@@ -233,13 +251,6 @@ export default function Home() {
           blurStyle,
         ]}
       />
-      )}
-
-      {/* Willo's light, behind the page so the cards rise through it. */}
-      {!editing && orbHero && (
-        <Animated.View pointerEvents="none" style={[{ position: "absolute", top: 0, left: 0, right: 0 }, glowStyle]}>
-          <WilloGlow height={pinnedHeight + 220} />
-        </Animated.View>
       )}
 
       <Animated.ScrollView
@@ -261,7 +272,18 @@ export default function Home() {
       >
         {/* Holds the room the pinned block would have taken, so the first card
             starts where it would have — and travels up over it from there. */}
-        <View style={{ height: editing ? insets.top + 86 : pinnedHeight }} pointerEvents="none" />
+        {/* The balance lies under the scroller, so its tap is taken here, in the room held
+            for it: a drag that starts on it still moves the page. */}
+        {saldoHero && !editing ? (
+          <Pressable
+            onPress={() => router.push("/gestao")}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir contas"
+            style={{ height: pinnedHeight }}
+          />
+        ) : (
+          <View style={{ height: editing ? insets.top + 86 : pinnedHeight }} pointerEvents="none" />
+        )}
 
         <WidgetBoard
           userId={user?.id}

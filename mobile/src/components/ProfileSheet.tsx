@@ -96,8 +96,9 @@ export default function ProfileSheet({
             value={hero}
             onChange={setHero}
             options={[
-              { key: "orb" as const, label: "Orbe" },
-              { key: "stories" as const, label: "Stories" },
+              { key: "orb" as const, label: "Robô" },
+              { key: "stories" as const, label: "Slides" },
+              { key: "saldo" as const, label: "Saldo" },
             ]}
           />
         </View>

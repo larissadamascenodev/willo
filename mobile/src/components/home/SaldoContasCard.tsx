@@ -34,8 +34,10 @@ interface Account {
 const MAX_BUBBLES = 5;
 const BUBBLE = 36;
 
-export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: number }) {
-  const router = useRouter();
+export type AccountRow = Account & { balance: number; hex: string };
+
+/** The accounts, largest first, kept up to date with anything financial that changes. */
+export function useAccountRows() {
   const [accounts, setAccounts] = useState<Account[] | null>(null);
 
   useEffect(() => {
@@ -57,8 +59,8 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
     };
   }, []);
 
-  const rows = useMemo(() => {
-    if (!accounts) return [];
+  return useMemo<AccountRow[] | null>(() => {
+    if (!accounts) return null;
     return [...accounts]
       .map((a) => ({
         ...a,
@@ -67,12 +69,79 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
       }))
       .sort((a, b) => b.balance - a.balance);
   }, [accounts]);
+}
 
-  if (!accounts) return <Surface style={{ height: 196 }}><View /></Surface>;
-  if (accounts.length === 0) return null;
+/** One bar split by account: the share each one holds, in its own brand colour. */
+export function AccountsBar({ rows }: { rows: AccountRow[] }) {
+  const positive = rows.reduce((s, a) => s + Math.max(a.balance, 0), 0);
+  return (
+    <View style={{ flexDirection: "row", gap: 3, height: 7 }}>
+      {positive > 0 ? (
+        rows
+          .filter((a) => a.balance > 0)
+          .map((a, i) => (
+            <FlexBar key={a.id} share={a.balance / positive} color={a.hex} delay={0.04 * i} />
+          ))
+      ) : (
+        <View style={{ flex: 1, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)" }} />
+      )}
+    </View>
+  );
+}
+
+/** However many accounts there are, they take the room of one line: the marks sit one
+    over the next. `ring` is what separates them, the colour of whatever is behind. */
+export function AccountMarks({ rows, ring = "#101113", overlap = 12 }: { rows: AccountRow[]; ring?: string; overlap?: number }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center" }}>
+      {rows.slice(0, MAX_BUBBLES).map((a, i) => (
+        <View
+          key={a.id}
+          style={{
+            marginLeft: i === 0 ? 0 : -overlap,
+            width: BUBBLE + 4,
+            height: BUBBLE + 4,
+            borderRadius: (BUBBLE + 4) / 2,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: ring,
+            zIndex: MAX_BUBBLES - i,
+          }}
+        >
+          <View style={{ width: BUBBLE, height: BUBBLE, borderRadius: BUBBLE / 2, overflow: "hidden" }}>
+            <BankMark name={a.name} hex={a.hex} size={BUBBLE} />
+          </View>
+        </View>
+      ))}
+      {rows.length > MAX_BUBBLES && (
+        <View
+          style={{
+            marginLeft: -overlap,
+            width: BUBBLE + 4,
+            height: BUBBLE + 4,
+            borderRadius: (BUBBLE + 4) / 2,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: ring,
+          }}
+        >
+          <View style={{ width: BUBBLE, height: BUBBLE, borderRadius: BUBBLE / 2, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" }}>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>+{rows.length - MAX_BUBBLES}</Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
+export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: number }) {
+  const router = useRouter();
+  const rows = useAccountRows();
+
+  if (!rows) return <Surface style={{ height: 196 }}><View /></Surface>;
+  if (rows.length === 0) return null;
 
   const total = rows.reduce((s, a) => s + a.balance, 0);
-  const positive = rows.reduce((s, a) => s + Math.max(a.balance, 0), 0);
 
   return (
     <Surface onPress={() => router.push("/gestao")} style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 }}>
@@ -96,60 +165,13 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
         </Text>
       )}
 
-      {/* One bar split by account: the share each one holds, in its own brand colour. */}
-      <View style={{ flexDirection: "row", gap: 3, height: 7, marginTop: 14 }}>
-        {positive > 0 ? (
-          rows
-            .filter((a) => a.balance > 0)
-            .map((a, i) => (
-              <FlexBar key={a.id} share={a.balance / positive} color={a.hex} delay={0.04 * i} />
-            ))
-        ) : (
-          <View style={{ flex: 1, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)" }} />
-        )}
+      <View style={{ marginTop: 14 }}>
+        <AccountsBar rows={rows} />
       </View>
 
-      {/* However many accounts there are, they take the room of one line: the marks sit
-          one over the next, and the count says how many that is. */}
+      {/* The marks, and the count that says how many that is. */}
       <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          {rows.slice(0, MAX_BUBBLES).map((a, i) => (
-            <View
-              key={a.id}
-              style={{
-                marginLeft: i === 0 ? 0 : -12,
-                width: BUBBLE + 4,
-                height: BUBBLE + 4,
-                borderRadius: (BUBBLE + 4) / 2,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "#101113",
-                zIndex: MAX_BUBBLES - i,
-              }}
-            >
-              <View style={{ width: BUBBLE, height: BUBBLE, borderRadius: BUBBLE / 2, overflow: "hidden" }}>
-                <BankMark name={a.name} hex={a.hex} size={BUBBLE} />
-              </View>
-            </View>
-          ))}
-          {rows.length > MAX_BUBBLES && (
-            <View
-              style={{
-                marginLeft: -12,
-                width: BUBBLE + 4,
-                height: BUBBLE + 4,
-                borderRadius: (BUBBLE + 4) / 2,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "#101113",
-              }}
-            >
-              <View style={{ width: BUBBLE, height: BUBBLE, borderRadius: BUBBLE / 2, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" }}>
-                <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>+{rows.length - MAX_BUBBLES}</Text>
-              </View>
-            </View>
-          )}
-        </View>
+        <AccountMarks rows={rows} />
         <Text style={T.rowNote}>
           {rows.length} {rows.length === 1 ? "conta" : "contas"}
         </Text>
