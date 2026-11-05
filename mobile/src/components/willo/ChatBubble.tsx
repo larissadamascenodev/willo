@@ -66,7 +66,7 @@ export default function ChatBubble({
         <View style={{ width: 28, height: 28 }}>
           {avatar && (
             <Animated.View entering={FadeIn.duration(300)}>
-              <ParticleOrb size={28} mode={typing ? "thinking" : "idle"} />
+              <ParticleOrb size={28} mode={typing ? "speaking" : "idle"} />
             </Animated.View>
           )}
         </View>

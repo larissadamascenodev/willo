@@ -34,7 +34,7 @@ import Svg, { Circle, Defs, Ellipse, Path, RadialGradient, Stop } from "react-na
  * is what a tap leads to: he swells and settles a little larger.
  */
 
-export type OrbMode = "idle" | "listening" | "thinking";
+export type OrbMode = "idle" | "listening" | "thinking" | "speaking";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 

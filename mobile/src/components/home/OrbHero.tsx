@@ -88,6 +88,7 @@ export default function OrbHero({ slides, lines = false }: { slides: InsightSlid
     },
   });
 
+  const lineOnShow = useRef<Greeting | null>(null);
   const listening = entry.state === "listening";
   /* Let go before the microphone had started: it stops as soon as it has. */
   const letGo = useRef(false);
@@ -98,7 +99,22 @@ export default function OrbHero({ slides, lines = false }: { slides: InsightSlid
   const reading = entry.state === "reading";
   const busy = entry.state !== "idle";
   const readings = useMemo(() => readingsFrom(slides), [slides]);
-  const mode: OrbMode = listening ? "listening" : reading ? "thinking" : "idle";
+  /* While a new line is arriving, he is the one saying it. */
+  const [saying, setSaying] = useState(false);
+  const stopSaying = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (stopSaying.current) clearTimeout(stopSaying.current);
+    },
+    [],
+  );
+  const onLine = (line: Greeting) => {
+    lineOnShow.current = line;
+    setSaying(true);
+    if (stopSaying.current) clearTimeout(stopSaying.current);
+    stopSaying.current = setTimeout(() => setSaying(false), 500 + line.title.split(" ").length * 170);
+  };
+  const mode: OrbMode = listening ? "listening" : reading ? "thinking" : saying ? "speaking" : "idle";
   /* As large as the width allows with a margin each side, so it is never cut. */
   const orb = Math.min(ORB, width - 72);
 
@@ -136,7 +152,6 @@ export default function OrbHero({ slides, lines = false }: { slides: InsightSlid
   };
 
   /* With no robot one tap has nothing else to open than what is being said. */
-  const lineOnShow = useRef<Greeting | null>(null);
   const tapLines = useTapOrDouble(
     () => (lineOnShow.current ? router.push(paramsForLine(lineOnShow.current)) : router.push("/registro" as never)),
     () => router.push("/rapido" as never),
@@ -192,7 +207,7 @@ export default function OrbHero({ slides, lines = false }: { slides: InsightSlid
               name={firstName(profile?.display_name)}
               readings={readings}
               onPick={(line) => router.push(paramsForLine(line))}
-              onLine={(line) => (lineOnShow.current = line)}
+              onLine={onLine}
             />
           </View>
         )}
