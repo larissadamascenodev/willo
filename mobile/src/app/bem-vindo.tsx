@@ -1,25 +1,23 @@
-import { Pressable, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Room from "~/components/Room";
-import ParticleOrb from "~/components/registro/ParticleOrb";
-import { INK } from "~/theme/tokens";
+import Showcase from "~/components/welcome/Showcase";
 
 /**
  * The first thing anyone sees without an account.
  *
- * Willo himself, as the sphere that turns, and one way forward: start. Someone who
- * already has an account — on the web or on another phone — has a line under the
- * button, not a button of its own. The pitch is one sentence in two lines, because
- * what it promises is shown by the first minute of using it, not by a paragraph.
+ * A taste of the app before asking for anything: short scenes of what it does —
+ * speaking an expense, two taps, a receipt read from a photo, the Radar, the month's
+ * forecast, a question answered — each under a line that says what it is (see
+ * Showcase). Then one way forward: start. Someone who already has an account — on the
+ * web or on another phone — has a line under the button, not a button of its own.
  */
 export default function BemVindo() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
-  const orb = Math.min(width * 0.86, height * 0.4, 340);
 
   return (
     <Room lit sky>
@@ -31,30 +29,11 @@ export default function BemVindo() {
           willo
         </Animated.Text>
 
-        <Animated.View
-          entering={FadeIn.delay(150).duration(900)}
-          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
-        >
-          <ParticleOrb size={orb} mode="idle" />
+        <Animated.View entering={FadeIn.delay(150).duration(700)} style={{ flex: 1, marginTop: 22 }}>
+          <Showcase />
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(350).duration(520)} style={{ alignItems: "center" }}>
-          <Text style={{ fontSize: 32, fontWeight: "800", letterSpacing: -1.1, lineHeight: 36, color: "#fff", textAlign: "center" }}>
-            Seu dinheiro,{"\n"}claro e sob controle.
-          </Text>
-          {/* Two lines, broken where the sentence breathes. It is told to shrink a little
-              rather than wrap to a third on a narrower phone. */}
-          <Text
-            numberOfLines={2}
-            adjustsFontSizeToFit
-            minimumFontScale={0.86}
-            style={{ marginTop: 12, alignSelf: "stretch", fontSize: 15.5, lineHeight: 22, color: INK.soft, textAlign: "center" }}
-          >
-            Fale o que gastou e o Willo anota,{"\n"}organiza e mostra para onde vai cada real.
-          </Text>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(520).duration(520)} style={{ marginTop: 30 }}>
+        <Animated.View entering={FadeInDown.delay(520).duration(520)} style={{ marginTop: 26 }}>
           <Pressable
             onPress={() => {
               void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);

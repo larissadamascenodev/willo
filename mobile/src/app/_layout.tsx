@@ -11,6 +11,7 @@ import { useApplyOnboarding } from "~/lib/onboarding";
 import { MonthProvider } from "@/contexts/MonthContext";
 import ToastHost from "~/components/ToastHost";
 import LaunchIntro from "~/components/LaunchIntro";
+import { markIntroDone } from "~/lib/launchIntro";
 import { GREEN, GROUND } from "~/theme/tokens";
 
 /* Before any shared module is imported for real, the handful of browser things it
@@ -43,6 +44,7 @@ export default function RootLayout() {
         <LaunchIntro
           onDone={() => {
             introPlayed = true;
+            markIntroDone();
             setIntro(false);
           }}
         />
