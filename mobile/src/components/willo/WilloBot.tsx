@@ -45,7 +45,11 @@ const TAP_SLOP = 9;
 const TAP_MS = 420;
 const HOLD_MS = 320;
 
-const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
+/* Used by the eyes' animation too, which runs on the UI thread: without this, the app dies. */
+const clamp = (v: number, lo: number, hi: number) => {
+  "worklet";
+  return Math.min(Math.max(v, lo), hi);
+};
 
 export default function WilloBot({
   size,
