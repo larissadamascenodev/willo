@@ -17,16 +17,20 @@ import { GROUND } from "~/theme/tokens";
  *
  * The name comes first, alone. It gives way to a small deck of the icon's three cards,
  * which opens into a fan like a hand being shown, and the cards turn over one after
- * another. The fan closes, the wallet comes up, the cards rise over it at full size
- * and dive in one at a time — each lifting a touch before it goes, the wallet giving
- * a little as it takes each one. Willo peeks out over the edge, the name is printed
- * on the wallet, a light passes over it, Willo blinks, and after a moment the whole
- * of it fades into the app.
+ * another. The wallet comes up under the fan and the cards are dealt into it one at a
+ * time, back card first, each in an arc, growing to its size on the way, the wallet
+ * giving a little as it takes each one. Willo peeks out over the edge, the name is
+ * printed on the wallet, a light passes over it, Willo blinks, and after a moment the
+ * whole of it fades into the app.
  *
- * Every piece is cut from the icon itself — the tile, each card, Willo's head, his
- * eyes, the wallet's front and the name — so the last frame is the icon exactly,
- * with no drawing that gives way to a picture. Positions are in the artwork's own
- * pixels (934 wide) and scaled to the screen.
+ * Every piece is cut from the icon itself — the tile, each card, Willo's head and
+ * eyes, the wallet's front and the name — and once everything is in place the icon
+ * itself settles over them, so the last frame is the artwork exactly. The pieces
+ * already match it, so the handover does not show. Positions are in the artwork's
+ * own pixels (934 wide) and scaled to the screen.
+ *
+ * Turning over is done flat, by narrowing the card and widening it again, rather
+ * than in 3D: turned cards in 3D cross in depth and pass through each other.
  *
  * Everything runs on one clock, so each step is a window of it and the order can be
  * read straight off the table below. With reduced motion it is the finished icon, a
@@ -35,21 +39,21 @@ import { GROUND } from "~/theme/tokens";
 
 const WORD_IN = [0, 450] as const;
 const WORD_OUT = [800, 1060] as const;
-const DECK = [950, 1380] as const; // the deck comes out of the name
-const FAN = [1380, 1880] as const; // and opens
-const FLIP = [1820, 460, 130] as const; // start, length, gap: each card turns over
-const CLOSE = [2520, 560, 70] as const; // start, length, gap: the fan closes and rises over the wallet
-const WALLET = [2580, 3040] as const;
-const DIVE = [3060, 430, 170] as const; // start, length, gap: into the wallet
-const PEEK = [3720, 4120] as const;
-const TEXT = [3860, 4260] as const;
-const SHEEN = [4260, 5060] as const;
-const BLINK = [4680, 4840] as const;
-const OUT = [6200, 6560] as const; // a moment with the icon after the blink
+const DECK = [960, 1400] as const; // the deck comes out of the name
+const FAN = [1360, 1860] as const; // and opens
+const FLIP = [1820, 520, 150] as const; // start, length, gap: each card turns over
+const WALLET = [2380, 2860] as const;
+const DEAL = [2700, 620, 200] as const; // start, length, gap: each card into the wallet
+const PEEK = [3860, 4240] as const;
+const TEXT = [4000, 4380] as const;
+const SETTLE = [4380, 4700] as const; // the icon itself over the pieces
+const SHEEN = [4700, 5500] as const;
+const BLINK = [5100, 5260] as const;
+const OUT = [6700, 7060] as const; // a moment with the icon after the blink
 export const LAUNCH_INTRO_MS = OUT[1];
 const QUICK_OUT = [700, 1000] as const;
 /* The moment the build is complete, for reduced motion to show. */
-const BUILT = TEXT[1] + 50;
+const BUILT = SETTLE[1] + 50;
 
 /* The icon, in its own pixels. */
 const U = 934;
@@ -61,19 +65,22 @@ const CARDS = [
 ] as const;
 const CARD_R = 118;
 const TILE = require("../../assets/images/intro/tile.png");
+const ICON = require("../../assets/images/intro/icon-full.png");
 const FRONT = { src: require("../../assets/images/intro/front.png"), x: 0, y: 409, w: 934, h: 551 };
 const HEAD = { src: require("../../assets/images/intro/head.png"), x: 255, y: 321, w: 428, h: 223 };
 const EYES = { src: require("../../assets/images/intro/eyes.png"), x: 347, y: 385, w: 250, h: 137 };
+const VISOR = { src: require("../../assets/images/intro/visor.png"), x: 339, y: 377, w: 266, h: 153 };
 const TEXT_IMG = { src: require("../../assets/images/intro/text.png"), x: 249, y: 596, w: 490, h: 166 };
 const LOGO = require("../../assets/images/willo-logo-white.png");
 const LOGO_RATIO = 222 / 725;
 
-/* The deck while it is shown: small, mid-tile, and the fan's pivot below it. */
+/* The deck while it is shown: small, over where the wallet will be, and the fan's
+   pivot below it. */
 const DECK_SCALE = 0.4;
-const FAN_ANGLE = 21;
+const DECK_Y = 255;
+const FAN_ANGLE = 20;
 const FAN_RADIUS = 760; // distance from a card's centre to the pivot, at full size
-const LIFT = 380;
-const ANTICIPATE = 34;
+const ARC = 150;
 
 function clamp01(v: number) {
   "worklet";
@@ -95,6 +102,10 @@ function inOutCubic(v: number) {
   "worklet";
   return v < 0.5 ? 4 * v * v * v : 1 - (-2 * v + 2) ** 3 / 2;
 }
+function inOutSine(v: number) {
+  "worklet";
+  return -(Math.cos(Math.PI * v) - 1) / 2;
+}
 function backOut(v: number, s = 1.6) {
   "worklet";
   const c = s + 1;
@@ -111,7 +122,7 @@ function mix(a: number, b: number, v: number) {
 /* When card i lands in the wallet. */
 function landing(i: number) {
   "worklet";
-  return DIVE[0] + i * DIVE[2] + DIVE[1];
+  return DEAL[0] + i * DEAL[2] + DEAL[1];
 }
 
 export default function LaunchIntro({ onDone }: { onDone: () => void }) {
@@ -126,7 +137,7 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
     t.set(withTiming(end, { duration: end, easing: Easing.linear }));
     const taps = reduced
       ? []
-      : [0, 1, 2].map((i) => setTimeout(() => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined), landing(i)));
+      : [0, 1, 2].map((i) => setTimeout(() => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined), landing(i) - 40));
     const done = setTimeout(onDone, end + 30);
     return () => {
       taps.forEach(clearTimeout);
@@ -158,16 +169,12 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
     const v = span(now, WALLET[0], WALLET[1]);
     let give = 0;
     for (let i = 0; i < 3; i++) {
-      const p = (now - landing(i)) / 260;
-      if (p > 0 && p < 1) give += Math.sin(Math.PI * p) * (1 - p * 0.4);
+      const p = (now - landing(i) + 40) / 300;
+      if (p > 0 && p < 1) give += Math.sin(Math.PI * p) * (1 - p * 0.5);
     }
     return {
       opacity: outCubic(clamp01(v * 1.6)),
-      transform: [
-        { translateY: (1 - backOut(v, 1.1)) * 0.12 * T + give * 10 * k },
-        { scale: mix(0.92, 1, backOut(v, 1.1)) },
-        { scaleY: 1 - give * 0.018 },
-      ],
+      transform: [{ translateY: (1 - backOut(v, 1.1)) * 0.12 * T + give * 9 * k }, { scale: mix(0.92, 1, backOut(v, 1.1)) }],
     };
   });
 
@@ -175,13 +182,21 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
     const v = span(reduced ? BUILT : t.get(), PEEK[0], PEEK[1]);
     return { opacity: v > 0 ? 1 : 0, transform: [{ translateY: (1 - backOut(v, 1.5)) * 230 * k }] };
   });
-  const eyes = useAnimatedStyle(() => {
-    const b = span(reduced ? BUILT : t.get(), BLINK[0], BLINK[1]);
-    return { transform: [{ scaleY: 1 - 0.92 * Math.sin(Math.PI * b) }] };
-  });
   const text = useAnimatedStyle(() => {
     const v = span(reduced ? BUILT : t.get(), TEXT[0], TEXT[1]);
     return { opacity: outCubic(v), transform: [{ scale: mix(0.88, 1, backOut(v, 1.3)) }] };
+  });
+  const icon = useAnimatedStyle(() => ({ opacity: smooth(span(reduced ? BUILT : t.get(), SETTLE[0], SETTLE[1])) }));
+  /* The blink, over the icon: the visor without eyes comes over them, and the eyes
+     close and open on top of it. Outside the blink neither shows, and the icon's own
+     eyes are what you see. */
+  const visor = useAnimatedStyle(() => {
+    const b = span(reduced ? BUILT : t.get(), BLINK[0] - 30, BLINK[1] + 30);
+    return { opacity: b > 0 && b < 1 ? 1 : 0 };
+  });
+  const lids = useAnimatedStyle(() => {
+    const b = span(reduced ? BUILT : t.get(), BLINK[0], BLINK[1]);
+    return { opacity: b > 0 && b < 1 ? 1 : 0, transform: [{ scaleY: 1 - 0.92 * Math.sin(Math.PI * b) }] };
   });
   const sheen = useAnimatedStyle(() => {
     const v = span(reduced ? BUILT : t.get(), SHEEN[0], SHEEN[1]);
@@ -190,6 +205,7 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
 
   const H = UH * k;
   const at = (b: { x: number; y: number; w: number; h: number }) => ({ position: "absolute" as const, left: b.x * k, top: b.y * k, width: b.w * k, height: b.h * k });
+  const full = { position: "absolute" as const, left: 0, top: 0, width: T, height: H };
 
   return (
     <Animated.View pointerEvents="auto" style={[StyleSheet.absoluteFill, { backgroundColor: GROUND, alignItems: "center", justifyContent: "center", zIndex: 100 }]}>
@@ -200,7 +216,7 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
         </Animated.View>
 
         {/* The tile, behind everything. It moves with the wallet's front. */}
-        <Animated.View style={[{ position: "absolute", left: 0, top: 0, width: T, height: H }, base]}>
+        <Animated.View style={[full, base]}>
           <Image source={TILE} style={{ width: T, height: H }} />
         </Animated.View>
 
@@ -210,19 +226,28 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
 
         <Animated.View style={[at(HEAD), head]}>
           <Image source={HEAD.src} style={{ width: HEAD.w * k, height: HEAD.h * k }} />
-          <Animated.View style={[{ position: "absolute", left: (EYES.x - HEAD.x) * k, top: (EYES.y - HEAD.y) * k, width: EYES.w * k, height: EYES.h * k }, eyes]}>
-            <Image source={EYES.src} style={{ width: EYES.w * k, height: EYES.h * k }} />
-          </Animated.View>
+          <Image source={EYES.src} style={{ position: "absolute", left: (EYES.x - HEAD.x) * k, top: (EYES.y - HEAD.y) * k, width: EYES.w * k, height: EYES.h * k }} />
         </Animated.View>
 
-        {/* The wallet's front, which the cards dive behind, and the name on it. */}
-        <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, top: 0, width: T, height: H }, base]}>
+        {/* The wallet's front, which the cards go behind, and the name on it. */}
+        <Animated.View pointerEvents="none" style={[full, base]}>
           <Image source={FRONT.src} style={at(FRONT)} />
           <Animated.View style={[at(TEXT_IMG), text]}>
             <Image source={TEXT_IMG.src} style={{ width: TEXT_IMG.w * k, height: TEXT_IMG.h * k }} />
           </Animated.View>
-          {/* A light passing once across the finished icon. */}
-          <View style={{ position: "absolute", left: 0, top: 0, width: T, height: H, borderRadius: T * 0.25, overflow: "hidden" }}>
+        </Animated.View>
+
+        {/* The icon itself, settling over the pieces once they are in place. */}
+        <Animated.View pointerEvents="none" style={[full, icon]}>
+          <Image source={ICON} style={{ width: T, height: H }} />
+          <Animated.View style={[at(VISOR), visor]}>
+            <Image source={VISOR.src} style={{ width: VISOR.w * k, height: VISOR.h * k }} />
+          </Animated.View>
+          <Animated.View style={[at(EYES), lids]}>
+            <Image source={EYES.src} style={{ width: EYES.w * k, height: EYES.h * k }} />
+          </Animated.View>
+          {/* A light passing once across it. */}
+          <View style={{ ...full, borderRadius: T * 0.25, overflow: "hidden" }}>
             <Animated.View style={[{ position: "absolute", top: -T * 0.3, left: T * 0.34, width: T * 0.3, height: T * 1.7 }, sheen]}>
               <LinearGradient
                 colors={["rgba(255,255,255,0)", "rgba(255,255,255,0.13)", "rgba(255,255,255,0)"]}
@@ -258,48 +283,43 @@ function IntroCard({
     const now = reduced ? BUILT : t.get();
 
     /* The deck: out of the middle of the name, small and square to the screen. */
-    const d = span(now, DECK[0] + i * 40, DECK[1] + i * 40);
-    const deckIn = backOut(d, 1.2);
+    const d = span(now, DECK[0], DECK[1]);
+    const deckIn = backOut(d, 1.25);
     const deckX = U / 2;
-    const deckY = U / 2 + (1 - deckIn) * 60 + (i - 1) * 10;
+    const deckY = DECK_Y + (1 - outCubic(d)) * 50 + (i - 1) * 8;
 
     /* The fan: each card turns about a pivot below the deck. */
-    const f = backOut(span(now, FAN[0], FAN[1]), 1.15);
-    const fs = CLOSE[0] + i * CLOSE[2];
-    const close = inOutCubic(span(now, fs, fs + CLOSE[1]));
-    const theta = (i - 1) * FAN_ANGLE * f * (1 - close);
+    const f = backOut(span(now, FAN[0], FAN[1]), 1.1);
+    const theta = (i - 1) * FAN_ANGLE * f;
     const rad = (theta * Math.PI) / 180;
     const r = FAN_RADIUS * DECK_SCALE;
-    const fanX = Math.sin(rad) * r;
-    const fanY = (1 - Math.cos(rad)) * r;
+    const fanX = deckX + Math.sin(rad) * r;
+    const fanY = deckY + (1 - Math.cos(rad)) * r;
 
-    /* Turning over, one after another. */
-    const fl = inOutCubic(span(now, FLIP[0] + i * FLIP[2], FLIP[0] + i * FLIP[2] + FLIP[1]));
-    const flip = fl * 360;
-    const flipLift = Math.sin(Math.PI * fl) * 26;
+    /* Turning over, flat: narrowing to its edge and widening again, twice over. */
+    const fs = FLIP[0] + i * FLIP[2];
+    const fl = inOutSine(span(now, fs, fs + FLIP[1]));
+    const turn = Math.cos(fl * Math.PI * 2);
+    const turnLift = Math.sin(Math.PI * fl) * 30;
 
-    /* Over the wallet at full size, then into it: a small lift, then the dive. */
-    const aboveX = c.x;
-    const aboveY = c.y - LIFT - (2 - i) * 18;
-    const ds = DIVE[0] + i * DIVE[2];
-    const dv = span(now, ds, ds + DIVE[1]);
-    const lift = dv < 0.32 ? outCubic(dv / 0.32) : 1 - inCubic((dv - 0.32) / 0.68);
-    const dive = dv < 0.32 ? 0 : inCubic((dv - 0.32) / 0.68);
-
-    const x = mix(deckX + fanX, aboveX, close);
-    const y = mix(deckY + fanY - flipLift, aboveY, close) + (LIFT + (2 - i) * 18) * dive - ANTICIPATE * lift * (1 - dive);
-    const rot = mix(theta, c.rot, close) + (dv > 0 && dv < 1 ? Math.sin(Math.PI * dv) * (i - 1) * 2 : 0);
-    const s = mix(DECK_SCALE * deckIn, 1, close);
+    /* Dealt into the wallet: an arc up and over, down into place, growing on the
+       way; it slows as it goes in. */
+    const ds = DEAL[0] + i * DEAL[2];
+    const e = inOutCubic(span(now, ds, ds + DEAL[1]));
+    const x = mix(fanX, c.x, e);
+    const y = mix(fanY - turnLift, c.y, e) - Math.sin(Math.PI * e) * ARC;
+    const rot = mix(theta, c.rot, e) + Math.sin(Math.PI * e) * (i - 1) * -6;
+    const s = mix(DECK_SCALE * deckIn, 1, e);
+    const sx = mix(turn, 1, e);
 
     return {
-      opacity: smooth(clamp01(d * 2.5)),
+      opacity: d > 0 ? 1 : 0,
       transform: [
         { translateX: (x - c.x) * k },
         { translateY: (y - c.y) * k },
-        { perspective: 900 },
         { rotate: `${rot}deg` },
-        { rotateY: `${flip}deg` },
-        { scale: s },
+        { scaleX: s * (Math.abs(sx) < 0.04 ? 0.04 * Math.sign(sx || 1) : sx) },
+        { scaleY: s },
       ],
     };
   });
@@ -315,9 +335,9 @@ function IntroCard({
           height: h,
           borderRadius: CARD_R * k,
           shadowColor: "#000",
-          shadowOpacity: 0.55,
-          shadowRadius: 9 * k * 3,
-          shadowOffset: { width: 0, height: -2 * k * 3 },
+          shadowOpacity: 0.5,
+          shadowRadius: 22 * k,
+          shadowOffset: { width: 0, height: -4 * k },
         },
         style,
       ]}
