@@ -191,7 +191,8 @@ export default function Registro() {
   const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
   const [text, setText] = useState("");
   const [thinking, setThinking] = useState<string | null>(null);
-  const [view, setView] = useState<"chat" | "radar">("chat");
+  const { view: openOn } = useLocalSearchParams<{ view?: string }>();
+  const [view, setView] = useState<"chat" | "radar">(openOn === "radar" ? "radar" : "chat");
   const [atSphere, setAtSphere] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   /* The Radar, read once the screen has settled: what the Radar tab shows and what Willo already knows. */

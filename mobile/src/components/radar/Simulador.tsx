@@ -3,7 +3,7 @@ import { Pressable, Text, TextInput, View, useWindowDimensions } from "react-nat
 import { useRouter } from "expo-router";
 import Svg, { Line, Path, Text as SvgText } from "react-native-svg";
 import type { RaioXData } from "@/hooks/useRaioX";
-import { Action, Finding, Heading, ICE, Limitation, NUMS, RISK, Row, SKY, clean } from "~/components/radar/parts";
+import { Action, Card, CARD_INSET, Finding, ICE, Limitation, NUMS, RISK, Row, SKY, clean } from "~/components/radar/parts";
 import type { RadarSnapshot } from "~/components/radar/Sectors";
 import { useAuth } from "~/lib/auth";
 import { face } from "~/lib/chatFont";
@@ -67,7 +67,7 @@ function Pick({ label, on, onPress }: { label: string; on: boolean; onPress: () 
 /** Each way of paying over the months, on the same axes; the grey dashes are doing nothing. */
 function Overlay({ results, chosen, base }: { results: SimResult[]; chosen: string; base: SimContext["months"] }) {
   const { width } = useWindowDimensions();
-  const w = width - 40;
+  const w = width - (CARD_INSET + 16) * 2;
   const h = 150;
   if (base.length < 2) return null;
   const values = [...base.map((m) => m.sobra), ...results.flatMap((r) => r.schedule.map((s) => s.sobraAfter)), 0];
@@ -77,7 +77,7 @@ function Overlay({ results, chosen, base }: { results: SimResult[]; chosen: stri
   const y = (v: number) => 8 + ((top - v) / Math.max(top - low, 1)) * (h - 30);
   const line = (vals: number[]) => vals.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join("");
   return (
-    <View style={{ marginTop: 10, marginHorizontal: 20 }}>
+    <View>
       <Svg width={w} height={h}>
         <Line x1={0} y1={y(0)} x2={w} y2={y(0)} stroke={RISK} strokeOpacity={0.5} strokeDasharray="2 4" />
         <Path d={line(base.map((m) => m.sobra))} stroke="rgba(255,255,255,0.3)" strokeWidth={1.5} strokeDasharray="4 4" fill="none" />
@@ -177,7 +177,8 @@ export function Simulador({ data, snapshot, categories, onAsk }: { data: RaioXDa
     <View>
       <Finding note="Nada aqui entra nas suas contas. É só para ver o que aconteceria.">{result ? result.reading : "O que você está pensando em comprar?"}</Finding>
 
-      <View style={{ marginTop: 16, paddingHorizontal: 20, gap: 14 }}>
+      <Card title="A compra">
+      <View style={{ gap: 14 }}>
         <Field label="O que é" value={name} onChange={setName} placeholder="Notebook" />
         <View style={{ flexDirection: "row", gap: 18 }}>
           <Field label="Valor total" value={totalText} onChange={setTotalText} placeholder="4.800" numeric />
@@ -194,10 +195,11 @@ export function Simulador({ data, snapshot, categories, onAsk }: { data: RaioXDa
           </View>
         )}
       </View>
+      </Card>
 
       {results.length > 0 && result && (
         <>
-          <Heading>Jeitos de pagar</Heading>
+          <Card title="Jeitos de pagar" note="Toque em um para ver como fica.">
           {results.map((r, i) => {
             const on = r.path.id === result.path.id;
             return (
@@ -213,15 +215,15 @@ export function Simulador({ data, snapshot, categories, onAsk }: { data: RaioXDa
                     setBuying(false);
                   }}
                 >
-                  {on && <View style={{ position: "absolute", left: -12, top: 15, width: 3, height: 34, borderRadius: 2, backgroundColor: LINE_HEX[i % 4] }} />}
+                  {on && <View style={{ position: "absolute", left: -10, top: i === 0 ? 0 : 11, width: 3, height: 34, borderRadius: 2, backgroundColor: LINE_HEX[i % 4] }} />}
                 </Row>
                 {on && (
-                  <Pressable onPress={() => setEditing(editing === r.path.id ? null : r.path.id)} hitSlop={6} style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+                  <Pressable onPress={() => setEditing(editing === r.path.id ? null : r.path.id)} hitSlop={6} style={{ paddingBottom: 8 }}>
                     <Text style={{ fontSize: 13.5, ...face(600), color: ICE }}>{editing === r.path.id ? "Pronto" : "Ajustar este jeito"}</Text>
                   </Pressable>
                 )}
                 {editing === r.path.id && (
-                  <View style={{ paddingHorizontal: 20, paddingBottom: 12, gap: 12 }}>
+                  <View style={{ paddingBottom: 12, gap: 12 }}>
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                       <Pick label="Conta" on={r.path.kind === "conta"} onPress={() => edit(r.path.id, { kind: "conta", cardName: null })} />
                       {(snapshot.cartoes ?? []).map((c) => (
@@ -249,16 +251,18 @@ export function Simulador({ data, snapshot, categories, onAsk }: { data: RaioXDa
             );
           })}
           {used.length < 4 && (
-            <Pressable onPress={add} style={{ paddingHorizontal: 20, paddingTop: 8 }}>
+            <Pressable onPress={add} style={{ paddingTop: 8 }}>
               <Text style={{ fontSize: 14, ...face(700), color: ICE }}>Comparar outro jeito</Text>
             </Pressable>
           )}
+          </Card>
 
-          <Heading>Lado a lado</Heading>
+          <Card title="Lado a lado">
           <Overlay results={results} chosen={result.path.id} base={ctx.months} />
           {summary ? <Limitation>{summary}</Limitation> : null}
+          </Card>
 
-          <Heading>{`Pagando assim: ${result.label}`}</Heading>
+          <Card title={`Pagando assim: ${result.label}`}>
           <Row first title="Hoje na conta" note={`Fica em ${money(result.balanceAfter)}`} value={result.today > 0 ? `−${money(result.today)}` : "Nada sai hoje"} risk={result.balanceAfter < 0} />
           {result.limitAfter != null && <Row title={`Limite do ${result.path.cardName ?? "cartão"}`} note={`${money(total - result.path.entry)} ficam presos no limite`} value={`${money(result.limitAfter)} livres`} risk={result.overLimit} />}
           {result.firstInvoice && <Row title="Primeira cobrança" note="Conforme o dia de fechamento do cartão" value={`fatura de ${MONTH_NAMES[result.firstInvoice.month - 1]}`} />}
@@ -272,8 +276,9 @@ export function Simulador({ data, snapshot, categories, onAsk }: { data: RaioXDa
           {result.goalsAtRisk && <Limitation>Nos meses de parcela, o que sobra não cobre mais o que você guarda nas suas metas.</Limitation>}
           {result.categoryOver != null && <Limitation>{`Passa ${money(result.categoryOver)} do limite de ${category}.`}</Limitation>}
           {result.path.ratePct <= 0 && result.path.parts > 1 && <Limitation>Sem juros porque nenhum foi informado. Se a loja cobrar, coloque em “Ajustar este jeito”.</Limitation>}
+          </Card>
 
-          <View style={{ marginTop: 18, paddingHorizontal: 20, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <View style={{ marginTop: 16, paddingHorizontal: CARD_INSET, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             <Action label="Perguntar ao Willo" onPress={askWillo} />
             <Action label="Salvar simulação" onPress={keep} />
             <Action label="Vou comprar" onPress={() => setBuying(true)} />
@@ -282,7 +287,7 @@ export function Simulador({ data, snapshot, categories, onAsk }: { data: RaioXDa
           {notice ? <Limitation>{notice}</Limitation> : null}
 
           {buying && (
-            <View style={{ marginTop: 16, marginHorizontal: 20, padding: 16, borderRadius: 18, borderWidth: 1, borderColor: "rgba(191,227,255,0.3)" }}>
+            <View style={{ marginTop: 16, marginHorizontal: CARD_INSET, padding: 16, borderRadius: 18, borderWidth: 1, borderColor: "rgba(191,227,255,0.3)" }}>
               <Text style={{ fontSize: 16, lineHeight: 22, ...face(700), color: "#fff" }}>Com os números de agora:</Text>
               <Text style={{ marginTop: 6, fontSize: 14.5, lineHeight: 20, ...face(500), color: INK.soft }}>{clean(result.reading)}</Text>
               {result.path.entry > 0 || result.path.ratePct > 0 ? (
@@ -297,7 +302,8 @@ export function Simulador({ data, snapshot, categories, onAsk }: { data: RaioXDa
         </>
       )}
 
-      {saved.length > 0 && <Heading>Simulações salvas</Heading>}
+      {saved.length > 0 && (
+      <Card title="Simulações salvas">
       {saved.map((s, i) => (
         <Row key={s.id} first={i === 0} title={s.name} note={`${s.paths.length} ${s.paths.length === 1 ? "jeito" : "jeitos"} de pagar`} value={money(s.total)} onPress={() => reopen(s)}>
           <Pressable
@@ -313,6 +319,8 @@ export function Simulador({ data, snapshot, categories, onAsk }: { data: RaioXDa
           </Pressable>
         </Row>
       ))}
+      </Card>
+      )}
     </View>
   );
 }

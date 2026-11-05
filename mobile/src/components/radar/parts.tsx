@@ -1,8 +1,9 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, type ReactNode } from "react";
 import { Pressable, Text, View, useWindowDimensions } from "react-native";
 import Animated, { Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import Svg, { Circle, Defs, Line, Path, RadialGradient, Stop } from "react-native-svg";
 import ParticleOrb from "~/components/registro/ParticleOrb";
+import { SURFACE_FILL } from "~/components/Surface";
 import { face } from "~/lib/chatFont";
 import { INK } from "~/theme/tokens";
 
@@ -136,34 +137,55 @@ export function Scope({ selected, onSelect, blips }: { selected: SectorKey; onSe
   );
 }
 
-/** What the sector found, said as a sentence. The sentence comes first, the figures after. */
+/** The shades a chart uses in order: white through blue to grey, never a colour of its own. */
+export const SHADES = ["#FFFFFF", "#BFE3FF", "#7CC4FF", "#5A8FC4", "#8FA6BA", "#55606B"];
+/** How far a card stands from the screen's edge. */
+export const CARD_INSET = 16;
+
+/* Rows know whether they are in a card: the card already holds the margin. */
+const InCard = createContext(false);
+
+/** What the sector found, in one sentence. The sentence comes first, the figures after. */
 export function Finding({ children, note, risk }: { children: string; note?: string | null; risk?: boolean }) {
   return (
-    <View style={{ paddingHorizontal: 20, paddingTop: 18 }}>
-      <Text style={{ fontSize: 24, lineHeight: 30, letterSpacing: -0.6, ...face(700), color: risk ? RISK : "#fff" }}>{clean(children)}</Text>
-      {note ? <Text style={{ marginTop: 6, fontSize: 14.5, lineHeight: 20, ...face(500), color: INK.soft }}>{clean(note)}</Text> : null}
+    <View style={{ paddingHorizontal: CARD_INSET + 4, paddingTop: 18, paddingBottom: 4 }}>
+      <Text style={{ fontSize: 22, lineHeight: 28, letterSpacing: -0.5, ...face(700), color: risk ? RISK : "#fff" }}>{clean(children)}</Text>
+      {note ? <Text style={{ marginTop: 6, fontSize: 14, lineHeight: 19, ...face(500), color: INK.soft }}>{clean(note)}</Text> : null}
     </View>
   );
 }
 
-export function Heading({ children }: { children: string }) {
-  return <Text style={{ marginTop: 28, marginBottom: 10, paddingHorizontal: 20, fontSize: 15, letterSpacing: -0.2, ...face(700), color: "#fff" }}>{children}</Text>;
+/** One subject, in one piece of the app's glass. */
+export function Card({ title, note, right, children }: { title: string; note?: string | null; right?: string; children: ReactNode }) {
+  return (
+    <View style={{ marginTop: 12, marginHorizontal: CARD_INSET, padding: 16, borderRadius: 22, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", backgroundColor: SURFACE_FILL }}>
+      <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+        <Text style={{ flexShrink: 1, fontSize: 15.5, letterSpacing: -0.2, ...face(700), color: "#fff" }}>{title}</Text>
+        {right ? <Text numberOfLines={1} style={{ fontSize: 14, ...face(700), ...NUMS, color: INK.soft }}>{right}</Text> : null}
+      </View>
+      {note ? <Text style={{ marginTop: 3, fontSize: 13, lineHeight: 18, ...face(500), color: INK.softer }}>{clean(note)}</Text> : null}
+      <View style={{ marginTop: 14 }}>
+        <InCard.Provider value>{children}</InCard.Provider>
+      </View>
+    </View>
+  );
 }
 
-/** A plain row on the page: name, what it means under it, and its figure. */
+/** A plain row: name, what it means under it, and its figure. */
 export function Row({ title, note, value, risk, first, onPress, children }: { title: string; note?: string | null; value?: string | null; risk?: boolean; first?: boolean; onPress?: () => void; children?: ReactNode }) {
+  const inCard = useContext(InCard);
   const body = (
-    <View style={{ paddingVertical: 12, borderTopWidth: first ? 0 : 1, borderTopColor: FAINT }}>
+    <View style={{ paddingVertical: 11, borderTopWidth: first ? 0 : 1, borderTopColor: FAINT, paddingTop: first && inCard ? 0 : 11 }}>
       <View style={{ flexDirection: "row", alignItems: "baseline", gap: 12 }}>
-        <Text style={{ flex: 1, minWidth: 0, fontSize: 15, lineHeight: 20, ...face(600), color: "#fff" }}>{clean(title)}</Text>
-        {value ? <Text style={{ fontSize: 15, ...face(700), ...NUMS, color: risk ? RISK : "#fff" }}>{value}</Text> : null}
+        <Text style={{ flex: 1, minWidth: 0, fontSize: 14.5, lineHeight: 20, ...face(600), color: "#fff" }}>{clean(title)}</Text>
+        {value ? <Text style={{ fontSize: 14.5, ...face(700), ...NUMS, color: risk ? RISK : "#fff" }}>{value}</Text> : null}
       </View>
-      {note ? <Text style={{ marginTop: 3, fontSize: 13.5, lineHeight: 19, ...face(500), color: INK.soft }}>{clean(note)}</Text> : null}
+      {note ? <Text style={{ marginTop: 2, fontSize: 13, lineHeight: 18, ...face(500), color: INK.soft }}>{clean(note)}</Text> : null}
       {children}
     </View>
   );
   return (
-    <View style={{ paddingHorizontal: 20 }}>
+    <View style={{ paddingHorizontal: inCard ? 0 : 20 }}>
       {onPress ? (
         <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.65 : 1 })}>
           {body}
@@ -175,16 +197,97 @@ export function Row({ title, note, value, risk, first, onPress, children }: { ti
   );
 }
 
-/** A choice of a few, as lit words on a line. */
+/** Figures side by side. */
+export function Tiles({ children }: { children: ReactNode }) {
+  return <View style={{ marginTop: 12, flexDirection: "row", gap: 8 }}>{children}</View>;
+}
+
+export function Tile({ label, value, note, risk, dot }: { label: string; value: string; note?: string; risk?: boolean; dot?: string }) {
+  return (
+    <View style={{ flex: 1, minWidth: 0, paddingHorizontal: 13, paddingVertical: 12, borderRadius: 16, borderCurve: "continuous", backgroundColor: SURFACE_FILL, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        {dot ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dot }} /> : null}
+        <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 12.5, ...face(500), color: INK.soft }}>{label}</Text>
+      </View>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{ marginTop: 5, fontSize: 17, letterSpacing: -0.3, ...face(700), ...NUMS, color: risk ? RISK : "#fff" }}>{value}</Text>
+      {note ? <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, ...face(500), color: INK.softer }}>{note}</Text> : null}
+    </View>
+  );
+}
+
+/** A bar of how much; the tick is what is usual. */
+export function Meter({ share, tick, risk }: { share: number; tick?: number; risk?: boolean }) {
+  return (
+    <View style={{ marginTop: 8, height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.07)" }}>
+      <View style={{ width: `${Math.min(Math.max(share, 0), 1) * 100}%`, height: 6, borderRadius: 3, backgroundColor: risk ? RISK : SKY }} />
+      {tick !== undefined && <View style={{ position: "absolute", left: `${Math.min(tick, 1) * 100}%`, top: -3, width: 2, height: 12, borderRadius: 1, backgroundColor: "#fff" }} />}
+    </View>
+  );
+}
+
+/** A coloured dot, what it stands for and, on the right, how much. */
+export function Key({ hex, label, value }: { hex: string; label: string; value?: string }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+      <View style={{ width: 9, height: 9, borderRadius: 3, backgroundColor: hex }} />
+      <Text numberOfLines={1} style={{ flexShrink: 1, flexGrow: value ? 1 : 0, fontSize: 13, ...face(500), color: "rgba(255,255,255,0.84)" }}>{label}</Text>
+      {value ? <Text style={{ fontSize: 13, ...face(700), ...NUMS, color: "#fff" }}>{value}</Text> : null}
+    </View>
+  );
+}
+
+/** A ring in parts, with what they add up to in the middle. */
+export function Donut({ slices, size, centre, caption, risk }: { slices: { label: string; value: number; hex: string }[]; size: number; centre: string; caption: string; risk?: boolean }) {
+  const stroke = 13;
+  const r = (size - stroke) / 2;
+  const around = 2 * Math.PI * r;
+  const total = slices.reduce((s, x) => s + x.value, 0) || 1;
+  const gap = slices.length > 1 ? 3 : 0;
+  let start = 0;
+  return (
+    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+      <Svg width={size} height={size} style={{ position: "absolute", transform: [{ rotate: "-90deg" }] }}>
+        {slices.map((s) => {
+          const length = (s.value / total) * around;
+          const offset = -start;
+          start += length;
+          return <Circle key={s.label} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={s.hex} strokeWidth={stroke} strokeDasharray={`${Math.max(length - gap, 1)} ${around}`} strokeDashoffset={offset} />;
+        })}
+      </Svg>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{ maxWidth: size - stroke * 2 - 8, fontSize: 18, letterSpacing: -0.4, ...face(800), ...NUMS, color: risk ? RISK : "#fff" }}>{centre}</Text>
+      <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 11, ...face(500), color: INK.softer }}>{caption}</Text>
+    </View>
+  );
+}
+
+/** Columns side by side, the one that matters lit, with an optional figure under it and a tick. */
+export function Bars({ items, height = 92 }: { items: { key: string; label: string; value: number; top?: string; on?: boolean; risk?: boolean; tick?: number }[]; height?: number }) {
+  const peak = Math.max(...items.map((i) => Math.max(i.value, i.tick ?? 0)), 1);
+  const room = height;
+  return (
+    <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
+      {items.map((i) => (
+        <View key={i.key} style={{ flex: 1, minWidth: 0, alignItems: "center" }}>
+          <View style={{ width: "100%", height: Math.max(3, (i.value / peak) * room), borderRadius: 5, backgroundColor: i.risk ? RISK : i.on ? SKY : "rgba(255,255,255,0.16)" }}>
+            {i.tick !== undefined && <View style={{ position: "absolute", left: -2, right: -2, bottom: (i.tick / peak) * room - 1, height: 2, backgroundColor: "#fff" }} />}
+          </View>
+          <Text numberOfLines={1} style={{ marginTop: 6, fontSize: 12, ...face(i.on ? 700 : 500), color: i.on ? "#fff" : INK.softer }}>{i.label}</Text>
+          {i.top ? <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 1, fontSize: 11, ...face(600), ...NUMS, color: i.risk ? RISK : INK.soft }}>{i.top}</Text> : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** A choice of a few, in one pill. */
 export function Tabs<T extends string>({ value, options, onChange }: { value: T; options: { key: T; label: string }[]; onChange: (key: T) => void }) {
   return (
-    <View style={{ flexDirection: "row", gap: 18, paddingHorizontal: 20, paddingTop: 14 }}>
+    <View style={{ marginTop: 14, marginHorizontal: CARD_INSET, padding: 3, flexDirection: "row", borderRadius: 19, backgroundColor: SURFACE_FILL, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
       {options.map((o) => {
         const on = o.key === value;
         return (
-          <Pressable key={o.key} onPress={() => onChange(o.key)} hitSlop={8}>
-            <Text style={{ fontSize: 14, ...face(on ? 700 : 500), color: on ? "#fff" : INK.softer }}>{o.label}</Text>
-            <View style={{ marginTop: 5, height: 2, borderRadius: 1, backgroundColor: on ? ICE : "transparent" }} />
+          <Pressable key={o.key} onPress={() => onChange(o.key)} style={{ flex: 1, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: on ? "rgba(255,255,255,0.14)" : "transparent" }}>
+            <Text numberOfLines={1} style={{ fontSize: 13.5, ...face(on ? 700 : 500), color: on ? "#fff" : INK.soft }}>{o.label}</Text>
           </Pressable>
         );
       })}
@@ -214,5 +317,6 @@ export function Action({ label, onPress, strong, disabled }: { label: string; on
 }
 
 export function Limitation({ children }: { children: string }) {
-  return <Text style={{ marginTop: 12, paddingHorizontal: 20, fontSize: 13, lineHeight: 18, ...face(500), color: INK.softer }}>{children}</Text>;
+  const inCard = useContext(InCard);
+  return <Text style={{ marginTop: 12, paddingHorizontal: inCard ? 0 : CARD_INSET + 4, fontSize: 12.5, lineHeight: 17, ...face(500), color: INK.softer }}>{children}</Text>;
 }

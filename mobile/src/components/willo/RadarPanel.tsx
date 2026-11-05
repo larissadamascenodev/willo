@@ -56,8 +56,8 @@ export default function RadarPanel({
           {sector === "futuro" && <Futuro data={data} snapshot={snapshot} />}
           {sector === "saude" && <Saude data={data} onAsk={onAsk} />}
           {sector === "simular" && <Simulador data={data} snapshot={snapshot} categories={categories} onAsk={onAsk} />}
-          {sector !== "simular" && <QuickAsks onAsk={onAsk} />}
-          <Text style={{ marginTop: 24, paddingHorizontal: 20, fontSize: 12.5, lineHeight: 17, ...face(500), color: INK.faint }}>
+          {sector !== "simular" && <QuickAsks sector={sector} data={data} snapshot={snapshot} onAsk={onAsk} />}
+          <Text style={{ marginTop: 22, paddingHorizontal: 20, fontSize: 12.5, lineHeight: 17, ...face(500), color: INK.faint }}>
             {`Dos seus registros no Willo, até hoje, ${data.today.getDate()} de ${MONTH_NAMES[data.today.getMonth()]}.`}
           </Text>
         </View>
