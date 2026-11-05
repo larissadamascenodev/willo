@@ -11,6 +11,7 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { GROUND } from "~/theme/tokens";
+import { loadIntroSounds } from "~/lib/introSounds";
 
 /**
  * What plays when the app opens, over the app while it gets ready underneath.
@@ -128,20 +129,33 @@ function landing(i: number) {
 export default function LaunchIntro({ onDone }: { onDone: () => void }) {
   const { width } = useWindowDimensions();
   const reduced = useReducedMotion();
-  const T = Math.min(width * 0.64, 270);
+  /* About two fifths of the screen's width: an icon on a dark page, not a poster. */
+  const T = Math.min(width * 0.44, 190);
   const k = T / U;
   const t = useSharedValue(0);
 
   useEffect(() => {
     const end = reduced ? QUICK_OUT[1] : LAUNCH_INTRO_MS;
     t.set(withTiming(end, { duration: end, easing: Easing.linear }));
-    const taps = reduced
-      ? []
-      : [0, 1, 2].map((i) => setTimeout(() => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined), landing(i) - 40));
+    const sounds = reduced ? null : loadIntroSounds();
+    const timers = sounds
+      ? [
+          setTimeout(sounds.swish, FAN[0]),
+          ...[0, 1, 2].map((i) =>
+            setTimeout(() => {
+              sounds.tuck(i);
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+            }, landing(i) - 40),
+          ),
+          setTimeout(sounds.sparkle, SETTLE[0]),
+        ]
+      : [];
     const done = setTimeout(onDone, end + 30);
     return () => {
-      taps.forEach(clearTimeout);
+      timers.forEach(clearTimeout);
       clearTimeout(done);
+      /* After the last sound has had its time. */
+      if (sounds) setTimeout(sounds.release, 2000);
     };
     // The intro plays once, as it mounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
