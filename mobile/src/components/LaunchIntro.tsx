@@ -140,14 +140,14 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
     const sounds = reduced ? null : loadIntroSounds();
     const timers = sounds
       ? [
-          setTimeout(sounds.swish, FAN[0]),
+          setTimeout(sounds.fan, FAN[0]),
           ...[0, 1, 2].map((i) =>
             setTimeout(() => {
               sounds.tuck(i);
               void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
             }, landing(i) - 40),
           ),
-          setTimeout(sounds.sparkle, SETTLE[0]),
+          setTimeout(sounds.chord, SETTLE[0]),
         ]
       : [];
     const done = setTimeout(onDone, end + 30);
@@ -155,7 +155,7 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
       timers.forEach(clearTimeout);
       clearTimeout(done);
       /* After the last sound has had its time. */
-      if (sounds) setTimeout(sounds.release, 2000);
+      if (sounds) setTimeout(sounds.release, 3500);
     };
     // The intro plays once, as it mounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
