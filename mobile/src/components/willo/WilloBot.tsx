@@ -45,8 +45,10 @@ const EYE_H = 0.119;
 const MOUTH = { x: 0.5025, y: 0.3684 };
 const MOUTH_BOX = 0.24;
 const NECK = { x: 0.5, y: 0.51 };
-const SHOULDER_LEFT = { x: 0.348, y: 0.58 };
-const SHOULDER_RIGHT = { x: 0.652, y: 0.58 };
+/* Inside the torso: the arms go behind it, so they come out from behind at any angle and the
+   torso keeps its shape. */
+const SHOULDER_LEFT = { x: 0.3608, y: 0.6051 };
+const SHOULDER_RIGHT = { x: 0.6392, y: 0.6051 };
 const HIP_LEFT = { x: 0.3987, y: 0.833 };
 const HIP_RIGHT = { x: 0.6013, y: 0.833 };
 /* The head alone: its middle, and how much of the side it takes. */
@@ -336,7 +338,7 @@ export default function WilloBot({
     const on = act.get().sign === mine ? 1 : 0;
     return (
       Math.sin(t * 1.15 + phase) * 2.2 +
-      on * wave.get() * (112 + Math.sin(t * 9) * 12) +
+      on * wave.get() * (92 + Math.sin(t * 9) * 9) +
       on * hand.get() * (46 + Math.sin(t * 3.4) * 7) +
       hop.get() * 26 +
       wow.get() * 16 +
@@ -440,6 +442,8 @@ export default function WilloBot({
 
           {whole && <Animated.Image source={LEG_LEFT} style={[layer, pivot(HIP_LEFT), legLeft]} fadeDuration={0} />}
           {whole && <Animated.Image source={LEG_RIGHT} style={[layer, pivot(HIP_RIGHT), legRight]} fadeDuration={0} />}
+          {whole && <Animated.Image source={ARM_LEFT} style={[layer, pivot(SHOULDER_LEFT), armLeft]} fadeDuration={0} />}
+          {whole && <Animated.Image source={ARM_RIGHT} style={[layer, pivot(SHOULDER_RIGHT), armRight]} fadeDuration={0} />}
           {whole && <Image source={BODY} style={layer} fadeDuration={0} />}
 
           <Animated.View style={[layer, pivot(NECK), headMove]}>
@@ -478,9 +482,6 @@ export default function WilloBot({
             </Animated.View>
           </Animated.View>
 
-          {/* Above the head: a raised hand passes in front of the ear. */}
-          {whole && <Animated.Image source={ARM_LEFT} style={[layer, pivot(SHOULDER_LEFT), armLeft]} fadeDuration={0} />}
-          {whole && <Animated.Image source={ARM_RIGHT} style={[layer, pivot(SHOULDER_RIGHT), armRight]} fadeDuration={0} />}
         </View>
       </View>
     </Animated.View>
