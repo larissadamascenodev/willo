@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { File, Paths } from "expo-file-system";
 import { onHydrated } from "~/lib/shims";
+import { BACKDROP_KEYS, type BackdropKey } from "~/lib/backdrops";
 
 /**
  * What the screens that wear a sky are wearing.
@@ -10,6 +11,8 @@ import { onHydrated } from "~/lib/shims";
  * - "1": the same hour drawn live, with its fire and its water.
  * - "plain": no sky, only the room's soft lights on the dark ground.
  * - "custom": a photo the person chose, kept on the phone.
+ * - and the drawn ones in lib/backdrops: Aurora, Oceano, Ametista, Brasa, Grafite,
+ *   Meia-noite.
  *
  * The choice stays on the phone until it is changed. It is read from the same
  * synchronous store as the home's top, and read again the moment that store is filled
@@ -19,7 +22,7 @@ import { onHydrated } from "~/lib/shims";
  * in can move between installs, so the full address is rebuilt each time.
  */
 
-export type SkyModel = "1" | "2" | "plain" | "custom";
+export type SkyModel = "1" | "2" | "plain" | "custom" | BackdropKey;
 
 const KEY = "sky-model";
 const PHOTO_KEY = "sky-photo";
@@ -28,7 +31,7 @@ const listeners = new Set<() => void>();
 const readModel = (): SkyModel => {
   try {
     const v = localStorage.getItem(KEY);
-    return v === "1" || v === "plain" || v === "custom" ? v : "2";
+    return v === "1" || v === "plain" || v === "custom" || BACKDROP_KEYS.includes(v as BackdropKey) ? (v as SkyModel) : "2";
   } catch {
     return "2";
   }

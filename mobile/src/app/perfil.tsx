@@ -16,6 +16,7 @@ import { useAuth } from "~/lib/auth";
 import { useHomeHero, type HomeHero } from "~/lib/homeHero";
 import { setSkyPhoto, useSkyModel, useSkyPhoto, type SkyModel } from "~/lib/skyModel";
 import { PhotoError, pickAvatar, pickBackground } from "~/lib/profilePhotos";
+import { BACKDROPS, BACKDROP_KEYS } from "~/lib/backdrops";
 import { showToast } from "~/lib/toast";
 import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
@@ -44,6 +45,7 @@ const HEROES: { key: HomeHero; label: string; line: string; Icon: typeof Bot }[]
 const BACKGROUNDS: { key: SkyModel; label: string }[] = [
   { key: "2", label: "Céu" },
   { key: "1", label: "Céu vivo" },
+  ...BACKDROP_KEYS.map((key) => ({ key, label: BACKDROPS[key].label })),
   { key: "plain", label: "Escuro" },
   { key: "custom", label: "Sua foto" },
 ];
@@ -142,7 +144,8 @@ export default function Perfil() {
   };
 
   /* Each preview is the whole screen, drawn at full size and shrunk into its tile. */
-  const tileW = (screenW - PAD * 2 - 10 * 3) / 4;
+  /* Four and a bit show at once, so the row says it goes on. */
+  const tileW = Math.round((screenW - PAD * 2 - 10 * 3) / 4.3);
   const tileH = Math.round(tileW * 1.72);
   const shrink = tileW / screenW;
 
@@ -274,7 +277,12 @@ export default function Perfil() {
 
         {/* What is behind every screen. */}
         <Eyebrow>Fundo</Eyebrow>
-        <View style={{ flexDirection: "row", gap: 10 }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginHorizontal: -PAD }}
+          contentContainerStyle={{ paddingHorizontal: PAD, gap: 10 }}
+        >
           {BACKGROUNDS.map(({ key, label }) => {
             const on = sky === key;
             const empty = key === "custom" && !photo;
@@ -318,7 +326,7 @@ export default function Perfil() {
               </Pressable>
             );
           })}
-        </View>
+        </ScrollView>
 
         {/* The papers, and help. */}
         <Eyebrow>Sobre</Eyebrow>

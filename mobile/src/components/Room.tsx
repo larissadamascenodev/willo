@@ -1,10 +1,11 @@
 import { type ReactNode } from "react";
 import { View, type ViewStyle } from "react-native";
-import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
+import Svg, { Circle, Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import { Image } from "expo-image";
 import Sky from "~/components/Sky";
 import { useSkyModel, useSkyPhoto, type SkyModel } from "~/lib/skyModel";
 import { GROUND, GROUND_LIT } from "~/theme/tokens";
+import { BACKDROPS, STARS, type BackdropKey } from "~/lib/backdrops";
 
 /**
  * The second sky: the hour as a picture.
@@ -72,6 +73,38 @@ export default function Room({
   const sky = wantsSky && model !== "plain";
   const own = sky && model === "custom" && !!photo;
   const picture = sky && (model === "2" || own);
+  const drawn = sky ? (BACKDROPS[model as BackdropKey] ?? null) : null;
+
+  /* Several rooms can be on one page (the profile's previews), and on the web their
+     gradients share one document, so each name carries the background it belongs to. */
+  const id = (name: string) => `${name}-${sky ? model : "room"}`;
+
+  if (drawn) {
+    return (
+      <View style={[{ flex: 1, backgroundColor: drawn.ground }, style]}>
+        <Svg width="100%" height="100%" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+          <Defs>
+            {drawn.lights.map((l, i) => (
+              <RadialGradient key={i} id={id(`glow${i}`)} cx={String(l.cx)} cy={String(l.cy)} rx={String(l.rx)} ry={String(l.ry)}>
+                <Stop offset="0" stopColor={`rgb(${l.rgb})`} stopOpacity={l.a} />
+                <Stop offset={String(l.fade ?? 1)} stopColor={`rgb(${l.rgb})`} stopOpacity={0} />
+              </RadialGradient>
+            ))}
+            <RadialGradient id={id("edge")} cx="0.5" cy="0.44" rx="0.7" ry="0.5">
+              <Stop offset="0.42" stopColor="#000" stopOpacity={0} />
+              <Stop offset="1" stopColor="#000" stopOpacity={0.55} />
+            </RadialGradient>
+          </Defs>
+          {drawn.lights.map((_, i) => (
+            <Rect key={i} x="0" y="0" width="100%" height="100%" fill={`url(#${id(`glow${i}`)})`} />
+          ))}
+          {drawn.stars && STARS.map((st, i) => <Circle key={i} cx={`${st.x * 100}%`} cy={`${st.y * 100}%`} r={st.r} fill="#fff" fillOpacity={st.o} />)}
+          <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id("edge")})`} />
+        </Svg>
+        {children}
+      </View>
+    );
+  }
 
   return (
     <View style={[{ flex: 1, backgroundColor: lit ? GROUND_LIT : GROUND }, style]}>
@@ -109,7 +142,7 @@ export default function Room({
             LIGHTS.map((l, i) => (
               <RadialGradient
                 key={i}
-                id={`light${i}`}
+                id={id(`light${i}`)}
                 cx={String(l.cx)}
                 cy={String(l.cy)}
                 rx={String(l.rx)}
@@ -123,7 +156,7 @@ export default function Room({
 
           {/* The sky closes its corners harder and from further in than the room does. */}
           <RadialGradient
-            id="vignette"
+            id={id("vignette")}
             cx="0.5"
             cy={sky ? "0.46" : "0.44"}
             rx={sky ? "0.68" : "0.66"}
@@ -137,9 +170,9 @@ export default function Room({
 
         {!sky &&
           LIGHTS.map((_, i) => (
-            <Rect key={i} x="0" y="0" width="100%" height="100%" fill={`url(#light${i})`} />
+            <Rect key={i} x="0" y="0" width="100%" height="100%" fill={`url(#${id(`light${i}`)})`} />
           ))}
-        <Rect x="0" y="0" width="100%" height="100%" fill="url(#vignette)" />
+        <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id("vignette")})`} />
       </Svg>
       )}
 
