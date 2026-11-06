@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { removeInitialBalance } from "@/services/transactionService";
@@ -78,6 +78,24 @@ export default function Transacoes() {
   const [removing, setRemoving] = useState(false);
   const [holdError, setHoldError] = useState<string | null>(null);
   const [detail, setDetail] = useState<Row | null>(null);
+
+  /* Arriving to open one transaction (from a notification's Ver conta): its month is
+     put on screen, and once that month has loaded its sheet opens — where it can be
+     marked as paid. The request is then dropped, so coming back does not reopen it. */
+  const params = useLocalSearchParams<{ abrir?: string; mes?: string; ano?: string }>();
+  useEffect(() => {
+    if (!params.abrir) return;
+    const m = Number(params.mes);
+    const y = Number(params.ano);
+    if (Number.isFinite(m) && Number.isFinite(y) && (m !== month || y !== year)) setMonth(m, y);
+  }, [params.abrir, params.mes, params.ano, month, year, setMonth]);
+  useEffect(() => {
+    if (!params.abrir || loading) return;
+    const tx = transactions.find((t) => t.id === params.abrir);
+    if (!tx) return;
+    setDetail(tx);
+    router.setParams({ abrir: undefined, mes: undefined, ano: undefined } as never);
+  }, [params.abrir, transactions, loading, router]);
 
   /* The check it was made with, filled in — for a recurring one, in the month on screen. */
   const edit = (tx: Row) => router.push({ pathname: "/manual", params: { editar: tx.id, mes: String(month), ano: String(year) } } as never);

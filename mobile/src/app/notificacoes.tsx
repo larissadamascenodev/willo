@@ -10,7 +10,7 @@ import { deleteNotification, fetchNotifications, generateNotifications, markAsRe
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import RoundButton from "~/components/RoundButton";
-import BottomSheet from "~/components/BottomSheet";
+import CenterModal from "~/components/CenterModal";
 import Surface from "~/components/Surface";
 import { Bell, CalendarClock, ChevronDown, ChevronUp, CreditCard, SlidersHorizontal, Target, Trash2, Wallet } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
@@ -28,10 +28,10 @@ import { type as T } from "~/theme/type";
  * page opens, with the same rules as the web.
  *
  * Kept short: filters across the top say how many of each there are, and each kind is
- * one stack, the newest on top and the rest tucked behind it, opened with a tap. A
- * notice is swiped aside to delete it, and tapped to open it: a sheet with what it is
- * about (how much, when, where it stands) and the way to it — Ver conta, Ver fatura,
- * Ver meta.
+ * one card of compact rows, three at most until "Ver mais". A row is swiped to the
+ * left to delete it, and tapped to open it: a small card in the middle of the screen
+ * with what it is about (how much, when, where it stands) and the way to it. Ver conta
+ * opens the bill on Transações with its own sheet up, where it can be marked as paid.
  */
 
 type Kind = "vencimento" | "fatura" | "meta" | "saldo";
@@ -43,6 +43,8 @@ const KINDS: Record<Kind, { label: string; hex: string; Icon: typeof Bell; actio
   saldo: { label: "Saldo", hex: "#F87171", Icon: Wallet, action: "Ver conta" },
 };
 const ORDER: Kind[] = ["vencimento", "fatura", "meta", "saldo"];
+/* Rows a kind shows before Ver mais. */
+const PREVIEW = 3;
 const kindOf = (c: string): Kind => (c in KINDS ? (c as Kind) : "vencimento");
 
 function when(iso: string) {
@@ -216,57 +218,49 @@ export default function Notificacoes() {
         ) : (
           <View style={{ marginTop: 18, gap: 18 }}>
             {visible.map((g) => {
-              const expanded = filter === g.kind || open.has(g.kind) || g.list.length === 1;
+              const all = filter === g.kind || open.has(g.kind);
+              const rows = all ? g.list : g.list.slice(0, PREVIEW);
+              const hidden = g.list.length - rows.length;
+              const canFold = open.has(g.kind) && filter === "all" && g.list.length > PREVIEW;
               return (
                 <Animated.View key={g.kind} layout={LinearTransition.duration(240)}>
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8, paddingHorizontal: 4 }}>
-                    <Text style={T.eyebrow}>{KINDS[g.kind].label}</Text>
-                    {g.list.length > 1 && filter === "all" && (
+                  <Text style={[T.eyebrow, { marginBottom: 8, paddingHorizontal: 4 }]}>{KINDS[g.kind].label}</Text>
+                  <Surface>
+                    {rows.map((n, i) => (
+                      <Animated.View key={n.id} entering={FadeIn.duration(200)} exiting={FadeOut.duration(160)} layout={LinearTransition.duration(220)}>
+                        {i > 0 && <View style={{ height: 1, marginLeft: 64, backgroundColor: th("rgba(255,255,255,0.06)", "bg") }} />}
+                        <SwipeToDelete onDelete={() => remove(n)}>
+                          <Notice n={n} onPress={() => void show(n)} />
+                        </SwipeToDelete>
+                      </Animated.View>
+                    ))}
+                    {(hidden > 0 || canFold) && (
                       <Pressable
-                        hitSlop={10}
                         onPress={() => {
                           void Haptics.selectionAsync().catch(() => undefined);
-                          setOpen((s) => {
-                            const next = new Set(s);
+                          setOpen((prev) => {
+                            const next = new Set(prev);
                             if (next.has(g.kind)) next.delete(g.kind);
                             else next.add(g.kind);
                             return next;
                           });
                         }}
-                        style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, opacity: pressed ? 0.5 : 1 })}
+                        style={({ pressed }) => ({
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 4,
+                          height: 44,
+                          borderTopWidth: 1,
+                          borderTopColor: th("rgba(255,255,255,0.06)", "line"),
+                          opacity: pressed ? 0.6 : 1,
+                        })}
                       >
-                        <Text style={{ fontSize: 13, color: th(INK.soft) }}>{open.has(g.kind) ? "Mostrar menos" : `Ver ${g.list.length}`}</Text>
-                        {open.has(g.kind) ? <ChevronUp size={14} color={th(INK.soft)} /> : <ChevronDown size={14} color={th(INK.soft)} />}
+                        <Text style={{ fontSize: 13.5, fontWeight: "500", color: th(INK.soft) }}>{hidden > 0 ? `Ver mais ${hidden}` : "Mostrar menos"}</Text>
+                        {hidden > 0 ? <ChevronDown size={14} color={th(INK.soft)} /> : <ChevronUp size={14} color={th(INK.soft)} />}
                       </Pressable>
                     )}
-                  </View>
-
-                  {expanded ? (
-                    <View style={{ gap: 8 }}>
-                      {g.list.map((n) => (
-                        <Animated.View key={n.id} entering={FadeIn.duration(200)} exiting={FadeOut.duration(160)} layout={LinearTransition.duration(220)}>
-                          <SwipeToDelete onDelete={() => remove(n)}>
-                            <Notice n={n} onPress={() => void show(n)} />
-                          </SwipeToDelete>
-                        </Animated.View>
-                      ))}
-                    </View>
-                  ) : (
-                    /* The stack: the newest on top, the others peeking out under it. */
-                    <Pressable
-                      onPress={() => {
-                        void Haptics.selectionAsync().catch(() => undefined);
-                        setOpen((s) => new Set(s).add(g.kind));
-                      }}
-                      style={{ paddingBottom: Math.min(g.list.length - 1, 2) * 7 }}
-                    >
-                      {g.list.length > 2 && <Layer depth={2} />}
-                      <Layer depth={1} />
-                      <View pointerEvents="none">
-                        <Notice n={g.list[0]} more={g.list.length - 1} />
-                      </View>
-                    </Pressable>
-                  )}
+                  </Surface>
                 </Animated.View>
               );
             })}
@@ -278,70 +272,51 @@ export default function Notificacoes() {
         )}
       </ScrollView>
 
-      {/* A notice, opened. */}
-      <BottomSheet open={!!shown} onClose={() => setShown(null)}>
+      {/* A notice, opened: small, in the middle of the screen. */}
+      <CenterModal open={!!shown} onClose={() => setShown(null)} title={shown?.title ?? ""} subtitle={shown ? `${KINDS[kindOf(shown.category)].label} · ${when(shown.created_at)}` : undefined}>
         {shown && (
-          <View style={{ paddingHorizontal: 20, paddingBottom: 10 }}>
-            {(() => {
-              const k = KINDS[kindOf(shown.category)];
-              return (
-                <>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                    <View style={{ width: 40, height: 40, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: th(`${k.hex}26`, "bg") }}>
-                      <k.Icon size={19} color={th(k.hex)} strokeWidth={2} />
-                    </View>
-                    <Text style={[T.eyebrow, { flex: 1 }]}>{k.label}</Text>
-                    <Text style={{ fontSize: 12.5, color: th(INK.softer) }}>{when(shown.created_at)}</Text>
+          <View>
+            {detail === null ? (
+              <ActivityIndicator color={th(INK.soft)} style={{ marginVertical: 18 }} />
+            ) : detail.lines.length > 0 ? (
+              <View style={{ borderRadius: 16, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
+                {detail.lines.map((l, i) => (
+                  <View key={l.label} style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, paddingHorizontal: 14, paddingVertical: 11, borderTopWidth: i ? 1 : 0, borderTopColor: th("rgba(255,255,255,0.06)", "line") }}>
+                    <Text style={{ fontSize: 13.5, color: th(INK.soft) }}>{l.label}</Text>
+                    <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 14, fontWeight: "600", color: th("#fff"), textAlign: "right" }}>
+                      {l.value}
+                    </Text>
                   </View>
-                  <Text style={{ marginTop: 16, fontSize: 22, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>{shown.title}</Text>
-                  <Text style={{ marginTop: 6, fontSize: 15, lineHeight: 21, color: th(INK.soft) }}>{shown.message}</Text>
+                ))}
+              </View>
+            ) : (
+              <Text style={{ fontSize: 14.5, lineHeight: 20, color: th(INK.soft) }}>{shown.message}</Text>
+            )}
 
-                  <View style={{ marginTop: 18, minHeight: 60 }}>
-                    {detail === null ? (
-                      <ActivityIndicator color={th(INK.soft)} style={{ marginTop: 14 }} />
-                    ) : (
-                      detail.lines.length > 0 && (
-                        <Surface>
-                          {detail.lines.map((l, i) => (
-                            <View key={l.label} style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: i ? 1 : 0, borderTopColor: th("rgba(255,255,255,0.06)", "line") }}>
-                              <Text style={{ fontSize: 14, color: th(INK.soft) }}>{l.label}</Text>
-                              <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 14.5, fontWeight: "600", color: th("#fff"), textAlign: "right" }}>
-                                {l.value}
-                              </Text>
-                            </View>
-                          ))}
-                        </Surface>
-                      )
-                    )}
-                  </View>
-
-                  <View style={{ marginTop: 20, gap: 8 }}>
-                    {detail?.go && (
-                      <Pressable
-                        onPress={go}
-                        accessibilityRole="button"
-                        style={({ pressed }) => ({ height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.85 : 1 })}
-                      >
-                        <Text style={{ fontSize: 16, fontWeight: "700", color: th("#0B0B0B") }}>{k.action}</Text>
-                      </Pressable>
-                    )}
-                    <Pressable
-                      onPress={() => {
-                        const n = shown;
-                        setShown(null);
-                        remove(n);
-                      }}
-                      style={({ pressed }) => ({ height: 46, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
-                    >
-                      <Text style={{ fontSize: 15, fontWeight: "500", color: th(RED) }}>Apagar aviso</Text>
-                    </Pressable>
-                  </View>
-                </>
-              );
-            })()}
+            <View style={{ marginTop: 16, gap: 4 }}>
+              {detail?.go && (
+                <Pressable
+                  onPress={go}
+                  accessibilityRole="button"
+                  style={({ pressed }) => ({ height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.85 : 1 })}
+                >
+                  <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#0B0B0B") }}>{KINDS[kindOf(shown.category)].action}</Text>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={() => {
+                  const n = shown;
+                  setShown(null);
+                  remove(n);
+                }}
+                style={({ pressed }) => ({ height: 42, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
+              >
+                <Text style={{ fontSize: 14.5, fontWeight: "500", color: th(RED) }}>Apagar aviso</Text>
+              </Pressable>
+            </View>
           </View>
         )}
-      </BottomSheet>
+      </CenterModal>
     </Room>
   );
 }
@@ -362,7 +337,7 @@ async function describe(n: AppNotification): Promise<Detail> {
           { label: "Vencimento", value: longDate(t.date) },
           { label: "Situação", value: t.status === "pago" ? "Paga" : "Pendente" },
         ],
-        go: `/manual?editar=${t.id}&mes=${d.getMonth()}&ano=${d.getFullYear()}`,
+        go: `/transacoes?abrir=${t.id}&mes=${d.getMonth()}&ano=${d.getFullYear()}`,
       };
     }
     if (n.category === "fatura" && id) {
@@ -409,60 +384,31 @@ async function describe(n: AppNotification): Promise<Detail> {
   return { lines: [], go: null };
 }
 
-/** One notice, as a row. */
-function Notice({ n, more = 0, onPress }: { n: AppNotification; more?: number; onPress?: () => void }) {
+/** One notice, as a compact row. */
+function Notice({ n, onPress }: { n: AppNotification; onPress: () => void }) {
   const k = KINDS[kindOf(n.category)];
   return (
-    <Pressable onPress={onPress} disabled={!onPress} accessibilityRole="button">
+    <Pressable onPress={onPress} accessibilityRole="button">
       {({ pressed }) => (
-        <Surface>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, backgroundColor: pressed ? th("rgba(255,255,255,0.04)", "bg") : "transparent" }}>
-            <View style={{ width: 40, height: 40, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: th(`${k.hex}26`, "bg") }}>
-              <k.Icon size={18} color={th(k.hex)} strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15, fontWeight: n.is_read ? "500" : "700", color: th("#fff") }}>
-                  {n.title}
-                </Text>
-                {!n.is_read && <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: th("#8FC7FF") }} />}
-              </View>
-              <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: th(INK.soft) }}>
-                {n.message}
-              </Text>
-            </View>
-            <View style={{ alignItems: "flex-end", gap: 4 }}>
-              <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>{when(n.created_at)}</Text>
-              {more > 0 && (
-                <View style={{ paddingHorizontal: 7, height: 20, borderRadius: 10, justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.1)", "bg") }}>
-                  <Text style={{ fontSize: 11.5, fontWeight: "700", color: th("#fff") }}>+{more}</Text>
-                </View>
-              )}
-            </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: pressed ? th("rgba(255,255,255,0.04)", "bg") : "transparent" }}>
+          <View style={{ width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: th(`${k.hex}26`, "bg") }}>
+            <k.Icon size={17} color={th(k.hex)} strokeWidth={2} />
           </View>
-        </Surface>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+              <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 14.5, fontWeight: n.is_read ? "500" : "700", color: th("#fff") }}>
+                {n.title}
+              </Text>
+              {!n.is_read && <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: th("#8FC7FF") }} />}
+            </View>
+            <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12.5, color: th(INK.soft) }}>
+              {n.message}
+            </Text>
+          </View>
+          <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>{when(n.created_at)}</Text>
+        </View>
       )}
     </Pressable>
-  );
-}
-
-/** A card peeking out from under the top one of a stack. */
-function Layer({ depth }: { depth: 1 | 2 }) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: "absolute",
-        left: depth * 10,
-        right: depth * 10,
-        bottom: 0,
-        top: depth * 7,
-        borderRadius: 22,
-        borderWidth: 1,
-        borderColor: th("rgba(255,255,255,0.08)", "line"),
-        backgroundColor: th(depth === 1 ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.03)", "bg"),
-      }}
-    />
   );
 }
 
