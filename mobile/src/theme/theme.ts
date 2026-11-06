@@ -268,7 +268,9 @@ export function thIn<T>(mode: ThemeMode, color: T, role: Role = "fg"): T {
     if (isGreen(c)) next = { ...GREEN_RGB, a: c.a };
     if (mode === "light") next = toLight(next, role);
     result = next === c ? color : out(next);
-    if (mode === "light") made.add(result);
+    /* Only what was actually turned is marked as made: a colour left as it was (a
+       white gradient stop, say) must still be turned where it is used as ink or fill. */
+    if (mode === "light" && result !== color) made.add(result);
   }
   cache.set(key, result);
   return result as T;
