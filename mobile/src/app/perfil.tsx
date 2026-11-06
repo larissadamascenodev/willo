@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { useProfile } from "@/hooks/useProfile";
@@ -14,7 +15,7 @@ import LegalSheet from "~/components/auth/LegalSheet";
 import { Bot, Camera, Check, ChevronRight, Crown, FileText, GalleryHorizontal, ImagePlus, LifeBuoy, LogOut, Pencil, Shield } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
 import { useHomeHero, type HomeHero } from "~/lib/homeHero";
-import { setSkyPhoto, useLightSkyModel, useSkyModel, useSkyPhoto, useSkyPhotoBlur, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
+import { setSkyPhoto, useLightSkyModel, useSkyModel, useSkyPhoto, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
 import { PhotoError, pickAvatar, pickBackground } from "~/lib/profilePhotos";
 import { BACKDROPS, BACKDROP_KEYS, LIGHT_BACKDROPS, LIGHT_BACKDROP_KEYS } from "~/lib/backdrops";
 import { showToast } from "~/lib/toast";
@@ -23,7 +24,6 @@ import { type as T } from "~/theme/type";
 
 import { LIGHT_GROUND, isLight, switchTheme, th, useThemePref, type ThemeMode } from "~/theme/theme";
 import { GROUND } from "~/theme/tokens";
-import { Toggle } from "~/components/registro/entryParts";
 /**
  * The profile.
  *
@@ -60,13 +60,13 @@ const BACKGROUNDS: { key: SkyModel; label: string }[] = [
 
 export default function Perfil() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { width: screenW, height: screenH } = useWindowDimensions();
   const { user, signOut } = useAuth();
   const { profile, refetch, updateDisplayName } = useProfile();
   const [hero, setHero] = useHomeHero();
   const [sky, setSky] = useSkyModel();
   const [lightSky, setLightSky] = useLightSkyModel();
-  const [photoBlur, setPhotoBlur] = useSkyPhotoBlur();
   const [theme] = useThemePref();
   const light = isLight();
   const photo = useSkyPhoto();
@@ -128,10 +128,8 @@ export default function Perfil() {
     if (key === "custom" && (!photo || worn === "custom")) {
       try {
         const file = await pickBackground(screenW / screenH);
-        if (file) {
-          setSkyPhoto(file, !light);
-          if (light) setLightSky("custom");
-        }
+        /* Not worn yet: it opens on the preview to set its veil first. */
+        if (file) router.push({ pathname: "/fundo-foto", params: { file } } as never);
       } catch (e) {
         showToast(e instanceof PhotoError ? e.message : "Não foi possível usar essa foto.");
       }
@@ -373,23 +371,19 @@ export default function Perfil() {
           })}
         </ScrollView>
 
-        {/* Only a photo of one's own can be softened; the ready backgrounds already are. */}
+        {/* A photo of one's own is set on its preview: its veil, light or dark, and blur. */}
         {(light ? lightSky : sky) === "custom" && !!photo && (
           <Surface style={{ marginTop: 14 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 12 }}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ fontSize: 15.5, fontWeight: "500", color: th("#fff") }}>Desfocar a foto</Text>
-                <Text style={{ marginTop: 2, fontSize: 13, color: th(INK.soft) }}>Os cartões ficam mais fáceis de ler por cima</Text>
-              </View>
-              <Toggle
-                label="Desfocar a foto"
-                value={photoBlur}
-                onChange={(next) => {
-                  tick();
-                  setPhotoBlur(next);
-                }}
-              />
-            </View>
+            <Row
+              label="Ajustar a foto"
+              value="Véu claro ou escuro, intensidade e desfoque"
+              icon={<ImagePlus size={17} color={th("#fff")} strokeWidth={1.9} />}
+              onPress={() => {
+                tick();
+                router.push("/fundo-foto" as never);
+              }}
+              chevron
+            />
           </Surface>
         )}
 

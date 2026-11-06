@@ -154,35 +154,74 @@ export function useLightSkyModel() {
   return [model, setLightSkyModel] as const;
 }
 
-/* ── Blurring the person's own photo ───────────────────────────────────────────
-   A photo can be busy under the cards; the person can soften it. Only a photo of
-   their own offers this — the backgrounds that come with the app are already soft. */
+/* ── How the person's own photo is worn ───────────────────────────────────────
+   A photo can be busy or bright under the cards, so it is worn under a veil: light
+   or dark, as strong as the person sets it, and blurred if they like — set on a
+   preview, the way a chat app sets its wallpaper. Each theme keeps its own: a light
+   veil suits the dark theme's white ink badly, and the other way round. */
 
-const BLUR_KEY = "sky-photo-blur";
-const readBlur = () => {
+export interface PhotoLook {
+  tone: "light" | "dark";
+  /** How strong the veil is, 0 to 0.85. */
+  amount: number;
+  blur: boolean;
+}
+
+const LOOK_KEY = (mode: "dark" | "light") => `sky-photo-look-${mode}`;
+const DEFAULT_LOOK: Record<"dark" | "light", PhotoLook> = {
+  dark: { tone: "dark", amount: 0.5, blur: false },
+  light: { tone: "light", amount: 0.5, blur: false },
+};
+
+const readLook = (mode: "dark" | "light"): PhotoLook => {
   try {
-    return localStorage.getItem(BLUR_KEY) === "1";
+    const raw = localStorage.getItem(LOOK_KEY(mode));
+    if (raw) {
+      const v = JSON.parse(raw) as Partial<PhotoLook>;
+      return {
+        tone: v.tone === "light" || v.tone === "dark" ? v.tone : DEFAULT_LOOK[mode].tone,
+        amount: typeof v.amount === "number" ? Math.min(0.85, Math.max(0, v.amount)) : DEFAULT_LOOK[mode].amount,
+        blur: !!v.blur,
+      };
+    }
+    /* The earlier on/off blur, carried over. */
+    return { ...DEFAULT_LOOK[mode], blur: localStorage.getItem("sky-photo-blur") === "1" };
   } catch {
-    return false;
+    return DEFAULT_LOOK[mode];
   }
 };
-let blurred = readBlur();
+const looks = { dark: readLook("dark"), light: readLook("light") };
 onHydrated(() => {
-  blurred = readBlur();
+  looks.dark = readLook("dark");
+  looks.light = readLook("light");
   listeners.forEach((l) => l());
 });
 
-export function setSkyPhotoBlur(next: boolean) {
-  blurred = next;
+export function setPhotoLook(mode: "dark" | "light", next: PhotoLook) {
+  looks[mode] = next;
   try {
-    localStorage.setItem(BLUR_KEY, next ? "1" : "0");
+    localStorage.setItem(LOOK_KEY(mode), JSON.stringify(next));
   } catch {
     /* Kept for this session only. */
   }
   listeners.forEach((l) => l());
 }
 
-export function useSkyPhotoBlur() {
-  const value = useSyncExternalStore(subscribe, () => blurred, () => blurred);
-  return [value, setSkyPhotoBlur] as const;
+export function usePhotoLook(mode: "dark" | "light") {
+  return useSyncExternalStore(subscribe, () => looks[mode], () => looks[mode]);
+}
+
+/** The address of a photo in the documents folder, by its file name. */
+export function photoUri(fileName: string) {
+  return new File(Paths.document, fileName).uri;
+}
+
+/** Throws away a photo that was picked and then not used. */
+export function discardPhoto(fileName: string) {
+  try {
+    const f = new File(Paths.document, fileName);
+    if (f.exists) f.delete();
+  } catch {
+    /* Left behind; harmless. */
+  }
 }

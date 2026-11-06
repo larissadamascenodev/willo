@@ -3,7 +3,7 @@ import { View, type ViewStyle } from "react-native";
 import Svg, { Circle, Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import { Image } from "expo-image";
 import Sky from "~/components/Sky";
-import { useLightSkyModel, useSkyModel, useSkyPhoto, useSkyPhotoBlur, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
+import { usePhotoLook, useLightSkyModel, useSkyModel, useSkyPhoto, type LightSkyModel, type PhotoLook, type SkyModel } from "~/lib/skyModel";
 import { GROUND, GROUND_LIT } from "~/theme/tokens";
 import { BACKDROPS, LIGHT_BACKDROPS, STARS, type BackdropKey, type LightBackdropKey } from "~/lib/backdrops";
 
@@ -54,12 +54,18 @@ export default function Room({
   lit = true,
   sky: wantsSky = true,
   preview,
+  previewPhoto,
+  previewLook,
   children,
   style,
 }: {
   lit?: boolean;
   /** Shows this background instead of the chosen one: the profile's previews. */
   preview?: SkyModel | LightSkyModel;
+  /** With preview "custom": a photo and a veil to show instead of the stored ones —
+      the photo editor's live preview. */
+  previewPhoto?: string;
+  previewLook?: PhotoLook;
   /** The home, the wallet and the accounts screen get the hour instead of the lights. */
   sky?: boolean;
   children?: ReactNode;
@@ -70,10 +76,14 @@ export default function Room({
   const [chosen] = useSkyModel();
   const [chosenLight] = useLightSkyModel();
   const model = (preview as SkyModel | undefined) ?? chosen;
-  const photo = useSkyPhoto();
-  const [blurPhoto] = useSkyPhotoBlur();
-  /* A soft photo: the cards over it stay the thing that is read. */
-  const photoBlur = blurPhoto ? 28 : 0;
+  const storedPhoto = useSkyPhoto();
+  const photo = previewPhoto ?? storedPhoto;
+  const storedLook = usePhotoLook(isLight() ? "light" : "dark");
+  const look = previewLook ?? storedLook;
+  /* The veil over the person's photo, light or dark and as strong as they set it,
+     and the photo soft if they asked: the cards over it stay the thing that is read. */
+  const photoBlur = look.blur ? 28 : 0;
+  const veil = look.tone === "dark" ? `rgba(6,7,9,${look.amount})` : `rgba(245,245,247,${look.amount})`;
   /* "plain" is the room without its sky: the soft lights on the dark ground. */
   const sky = wantsSky && model !== "plain";
   const own = sky && model === "custom" && !!photo;
@@ -96,7 +106,7 @@ export default function Room({
         {ownLight ? (
           <>
             <Image source={{ uri: photo! }} contentFit="cover" transition={200} blurRadius={photoBlur} pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-            <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(245,245,247,0.55)" }} />
+            <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: veil }} />
           </>
         ) : (
           <Svg width="100%" height="100%" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
@@ -159,7 +169,7 @@ export default function Room({
       {own && (
         <>
           <Image source={{ uri: photo! }} contentFit="cover" transition={200} blurRadius={photoBlur} pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(6,7,9,0.5)", "bg") }} />
+          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: veil }} />
           <Svg width="100%" height="100%" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
             <Defs>
               <RadialGradient id="ownVignette" cx="0.5" cy="0.42" rx="0.75" ry="0.55">
