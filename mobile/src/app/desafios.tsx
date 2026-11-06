@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Room from "~/components/Room";
@@ -10,7 +10,8 @@ import SegmentedTabs from "~/components/SegmentedTabs";
 import Surface from "~/components/Surface";
 import CenterModal from "~/components/CenterModal";
 import WilloBot from "~/components/willo/WilloBot";
-import { CHALLENGE_ICON, DifficultyTag, MedalBadge, Ring } from "~/components/desafios/parts";
+import { CHALLENGE_ICON, DifficultyTag, MedalBadge } from "~/components/desafios/parts";
+import ChallengeTile, { OfferCard } from "~/components/desafios/ChallengeTile";
 import { Check, ChevronRight, Plus, Trophy } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
@@ -54,6 +55,7 @@ type Tab = "desafios" | "conquistas";
 export default function Desafios() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("desafios");
   const [data, setData] = useState<ChallengeData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -150,21 +152,15 @@ export default function Desafios() {
           <ActivityIndicator color={th(INK.soft)} style={{ marginTop: 60 }} />
         ) : tab === "desafios" ? (
           <Animated.View entering={FadeIn.duration(220)}>
-            {/* Running. */}
+            {/* Running: a shelf of tall cards, each opening its own page. */}
             {data.running.length > 0 && (
               <>
                 <Eyebrow>Em andamento</Eyebrow>
-                <View style={{ gap: 10 }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
                   {data.running.map((r) => (
-                    <RunningCard
-                      key={r.id}
-                      r={r}
-                      onTick={() => user && void act(() => tickToday(user.id, r.id), "Dia marcado")}
-                      onRestart={() => void act(() => restartChallenge(r.id), "Recomeçou hoje")}
-                      onLeave={() => void act(() => abandonChallenge(r.id), "Desafio encerrado")}
-                    />
+                    <ChallengeTile key={r.id} r={r} onPress={() => router.push(`/desafio/${r.id}` as never)} />
                   ))}
-                </View>
+                </ScrollView>
               </>
             )}
 
@@ -172,27 +168,16 @@ export default function Desafios() {
             {data.suggested.length > 0 && (
               <>
                 <Eyebrow>Sugeridos para você</Eyebrow>
-                <View style={{ gap: 10 }}>
-                  {data.suggested.map((s) => (
-                    <Surface key={s.template.key} onPress={() => setPicked(s.template)}>
-                      <View style={{ padding: 16 }}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                          <Glyph t={s.template} />
-                          <View style={{ flex: 1, minWidth: 0 }}>
-                            <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "700", color: th("#fff") }}>
-                              {s.template.name}
-                            </Text>
-                            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: th(INK.soft) }}>
-                              {s.reason}
-                            </Text>
-                          </View>
-                        </View>
-                        <View style={{ marginTop: 14, flexDirection: "row", gap: 10 }}>
-                          <Figure label="Você economiza" value={money(s.saves)} tone={GREEN} />
-                          <Figure label="Seu mês fecharia com" value={money(data.leftover + s.saves)} />
-                        </View>
-                      </View>
-                    </Surface>
+                <View style={{ gap: 12 }}>
+                  {data.suggested.map((sg) => (
+                    <OfferCard
+                      key={sg.template.key}
+                      template={sg.template}
+                      cover={data.covers[sg.template.key]}
+                      line={sg.reason}
+                      saves={`Economiza ${money(sg.saves)} · mês fecha com ${money(data.leftover + sg.saves)}`}
+                      onPress={() => setPicked(sg.template)}
+                    />
                   ))}
                 </View>
               </>
@@ -217,35 +202,18 @@ export default function Desafios() {
             {others.length > 0 && (
               <>
                 <Eyebrow>Mais desafios</Eyebrow>
-                <Surface>
-                  {others.map((t, i) => (
-                    <Pressable
+                <View style={{ gap: 12 }}>
+                  {others.map((t) => (
+                    <OfferCard
                       key={t.key}
+                      template={t}
+                      cover={data.covers[t.key]}
+                      line={`${t.days} dias · ${t.kind === "manual" ? "check-in diário" : "o Willo confere sozinho"}`}
+                      saves={savingsOf(t) > 0 ? `Economiza cerca de ${money(savingsOf(t))}` : undefined}
                       onPress={() => setPicked(t)}
-                      style={({ pressed }) => ({
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 12,
-                        paddingHorizontal: 14,
-                        paddingVertical: 12,
-                        borderTopWidth: i ? 1 : 0,
-                        borderTopColor: th("rgba(255,255,255,0.06)", "line"),
-                        backgroundColor: pressed ? th("rgba(255,255,255,0.04)", "bg") : "transparent",
-                      })}
-                    >
-                      <Glyph t={t} small />
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "500", color: th("#fff") }}>
-                          {t.name}
-                        </Text>
-                        <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12.5, color: th(INK.soft) }}>
-                          {t.kind === "manual" ? "Você marca cada dia" : "O Willo confere sozinho"} · {t.days} dias
-                        </Text>
-                      </View>
-                      <ChevronRight size={16} color={th(INK.faint)} />
-                    </Pressable>
+                    />
                   ))}
-                </Surface>
+                </View>
               </>
             )}
 
@@ -377,66 +345,6 @@ function PrimaryButton({ label, onPress, busy = false, disabled = false }: { lab
       style={({ pressed }) => ({ marginTop: 18, height: 50, borderRadius: 25, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: disabled ? 0.4 : pressed || busy ? 0.8 : 1 })}
     >
       {busy ? <ActivityIndicator color={th("#0B0B0B")} /> : <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#0B0B0B") }}>{label}</Text>}
-    </Pressable>
-  );
-}
-
-function RunningCard({ r, onTick, onRestart, onLeave }: { r: Running; onTick: () => void; onRestart: () => void; onLeave: () => void }) {
-  const Icon = CHALLENGE_ICON[r.template.icon];
-  const broken = r.state === "broken";
-  return (
-    <Surface>
-      <View style={{ padding: 16 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-          <View style={{ width: 56, height: 56, alignItems: "center", justifyContent: "center" }}>
-            <View style={{ position: "absolute" }}>
-              <Ring size={56} value={r.done / r.template.days} color={th(broken ? RED : "#fff")} track={th("rgba(255,255,255,0.1)")} />
-            </View>
-            <Icon size={20} color={th(broken ? RED : "#fff")} strokeWidth={1.9} />
-          </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "700", color: th("#fff") }}>
-              {r.template.name}
-            </Text>
-            <Text numberOfLines={2} style={{ marginTop: 2, fontSize: 13, lineHeight: 18, color: th(broken ? RED : INK.soft) }}>
-              {r.note}
-            </Text>
-          </View>
-          <Text style={{ fontSize: 13, fontWeight: "600", color: th(INK.soft), fontVariant: ["tabular-nums"] }}>
-            {r.done}/{r.template.days}
-          </Text>
-        </View>
-
-        <View style={{ marginTop: 14, flexDirection: "row", alignItems: "center", gap: 10 }}>
-          {broken ? (
-            <SmallButton label="Recomeçar" strong onPress={onRestart} />
-          ) : r.template.kind === "manual" && !r.tickedToday ? (
-            <SmallButton label="Cumpri hoje" strong onPress={onTick} />
-          ) : r.template.kind === "manual" ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Check size={14} color={th(GREEN)} strokeWidth={2.6} />
-              <Text style={{ fontSize: 13, color: th(INK.soft) }}>Hoje já marcado</Text>
-            </View>
-          ) : (
-            <Text style={{ fontSize: 13, color: th(INK.softer) }}>O Willo confere pelos seus registros</Text>
-          )}
-          <View style={{ flex: 1 }} />
-          <Pressable onPress={onLeave} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
-            <Text style={{ fontSize: 13, color: th(INK.softer) }}>Encerrar</Text>
-          </Pressable>
-        </View>
-      </View>
-    </Surface>
-  );
-}
-
-function SmallButton({ label, onPress, strong = false }: { label: string; onPress: () => void; strong?: boolean }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => ({ height: 34, paddingHorizontal: 14, borderRadius: 17, justifyContent: "center", backgroundColor: strong ? th("#fff", "bg") : th("rgba(255,255,255,0.08)", "bg"), opacity: pressed ? 0.8 : 1 })}
-    >
-      <Text style={{ fontSize: 13.5, fontWeight: "700", color: strong ? th("#0B0B0B") : th("#fff") }}>{label}</Text>
     </Pressable>
   );
 }

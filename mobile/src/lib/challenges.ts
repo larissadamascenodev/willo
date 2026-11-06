@@ -89,6 +89,11 @@ export interface Tx {
 export interface Running {
   id: string;
   template: Template;
+  /** The picture on its card, when one has been made for it. */
+  cover: string | null;
+  /** Days in a row with a check-in, up to today (or yesterday, if today is still open). */
+  streak: number;
+  best: number;
   startedAt: string;
   status: "active" | "completed" | "abandoned";
   completedAt: string | null;
@@ -102,7 +107,7 @@ export interface Running {
   tickedToday: boolean;
 }
 
-function templateFor(row: { name: string; icon: string | null; duration_days: number; description: string | null }): Template {
+export function templateFor(row: { name: string; icon: string | null; duration_days: number; description: string | null }): Template {
   if (row.icon?.startsWith("tpl:")) {
     const t = TEMPLATES.find((x) => x.key === row.icon!.slice(4));
     if (t) return t;
@@ -125,6 +130,24 @@ const matches = (t: Tx, m: NonNullable<Template["match"]>) => {
   if (m.unless?.some((w) => text.includes(w))) return false;
   return (t.category != null && m.categories.includes(t.category)) || m.words.some((w) => text.includes(w));
 };
+
+/** Days in a row checked in, ending today or yesterday, and the longest run. */
+export function streakOf(checkins: string[], now = new Date()): { streak: number; best: number } {
+  const days = [...new Set(checkins)].sort();
+  let best = 0;
+  let run = 0;
+  let prev: Date | null = null;
+  for (const d of days) {
+    const cur = startOf(d);
+    run = prev && daysBetween(prev, cur) === 1 ? run + 1 : 1;
+    best = Math.max(best, run);
+    prev = cur;
+  }
+  const today = isoDay(now);
+  const yesterday = isoDay(addDays(startOf(today), -1));
+  const last = days[days.length - 1];
+  return { streak: last === today || last === yesterday ? run : 0, best };
+}
 
 /** Where a challenge stands today, from the entries and the ticks. */
 export function evaluate(template: Template, startedAt: string, checkins: string[], txs: Tx[], now = new Date()): Pick<Running, "done" | "state" | "note" | "tickedToday"> {
@@ -152,11 +175,11 @@ export function evaluate(template: Template, startedAt: string, checkins: string
       .filter((t) => matches(t, template.match!) && t.date >= isoDay(start) && t.date <= isoDay(lastDay))
       .sort((a, b) => (a.date < b.date ? -1 : 1))[0];
     if (first) {
-      return { done: Math.max(0, daysBetween(start, startOf(first.date))), state: "broken", note: `${first.name} em ${shortDate(first.date)} quebrou a sequência`, tickedToday: false };
+      return { done: Math.max(0, daysBetween(start, startOf(first.date))), state: "broken", note: `${first.name} em ${shortDate(first.date)} quebrou o desafio`, tickedToday: checkins.includes(todayIso) };
     }
     const done = Math.min(elapsed, template.days);
     const finished = over || (elapsed >= template.days && today.getTime() >= end.getTime() && now.getHours() >= 23);
-    return { done: over ? template.days : done, state: over ? "finished" : finished ? "finished" : "going", note: over ? "Desafio cumprido" : `Dia ${done} de ${template.days}, tudo limpo até aqui`, tickedToday: false };
+    return { done: over ? template.days : done, state: over ? "finished" : finished ? "finished" : "going", note: over ? "Desafio cumprido" : `Dia ${done} de ${template.days}, tudo limpo até aqui`, tickedToday: checkins.includes(todayIso) };
   }
 
   if (template.kind === "record") {
@@ -167,19 +190,19 @@ export function evaluate(template: Template, startedAt: string, checkins: string
       if (day.getTime() > lastDay.getTime()) break;
       const iso = isoDay(day);
       if (written.has(iso)) streak++;
-      else if (iso !== todayIso) return { done: streak, state: "broken", note: `Nada anotado em ${shortDate(iso)}`, tickedToday: false };
+      else if (iso !== todayIso) return { done: streak, state: "broken", note: `Nada anotado em ${shortDate(iso)}`, tickedToday: checkins.includes(todayIso) };
     }
     const finished = streak >= template.days;
-    return { done: streak, state: finished ? "finished" : "going", note: finished ? "Desafio cumprido" : written.has(todayIso) ? `${streak} de ${template.days} dias, hoje já anotado` : `${streak} de ${template.days} dias. Falta anotar hoje`, tickedToday: written.has(todayIso) };
+    return { done: streak, state: finished ? "finished" : "going", note: finished ? "Desafio cumprido" : written.has(todayIso) ? `${streak} de ${template.days} dias, hoje já anotado` : `${streak} de ${template.days} dias. Falta anotar hoje`, tickedToday: checkins.includes(todayIso) };
   }
 
   if (template.kind === "bills") {
     const late = txs
       .filter((t) => t.type === "despesa" && t.status !== "pago" && t.payment_method !== "cartao" && !t.credit_card_id && t.date >= isoDay(start) && t.date < todayIso && t.date <= isoDay(end))
       .sort((a, b) => (a.date < b.date ? -1 : 1))[0];
-    if (late) return { done: Math.max(0, daysBetween(start, startOf(late.date))), state: "broken", note: `${late.name} venceu em ${shortDate(late.date)} sem pagar`, tickedToday: false };
+    if (late) return { done: Math.max(0, daysBetween(start, startOf(late.date))), state: "broken", note: `${late.name} venceu em ${shortDate(late.date)} sem pagar`, tickedToday: checkins.includes(todayIso) };
     const done = Math.min(elapsed, template.days);
-    return { done: over ? template.days : done, state: over ? "finished" : "going", note: over ? "Desafio cumprido" : `Dia ${done} de ${template.days}, nada atrasado`, tickedToday: false };
+    return { done: over ? template.days : done, state: over ? "finished" : "going", note: over ? "Desafio cumprido" : `Dia ${done} de ${template.days}, nada atrasado`, tickedToday: checkins.includes(todayIso) };
   }
 
   return { done: 0, state: "going", note: "", tickedToday: false };
@@ -366,6 +389,8 @@ export interface ChallengeData {
   medals: Achievement[];
   /** Templates not already running. */
   available: Template[];
+  /** Pictures already made, by template key. */
+  covers: Record<string, string>;
   /** Aimed at where the money is going, biggest saving first. */
   suggested: Suggestion[];
   /** How the month is set to close, before any challenge. */
@@ -378,13 +403,13 @@ export interface ChallengeData {
 export async function loadChallenges(userId: string): Promise<ChallengeData> {
   const [ucRes, chRes, txRes, invRes, goalRes] = await Promise.all([
     supabase.from("user_challenges").select("id, challenge_id, status, started_at, completed_at, progress").eq("user_id", userId).order("started_at", { ascending: false }),
-    supabase.from("challenges").select("id, name, icon, duration_days, description"),
+    supabase.from("challenges").select("id, name, icon, duration_days, description, cover_image"),
     supabase.from("transactions").select("id, name, category, type, status, payment_method, credit_card_id, created_at, date, amount, recurrence_type").eq("user_id", userId).order("date", { ascending: false }).limit(5000),
     supabase.from("invoices").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("is_paid", true),
     supabase.from("goals").select("current_amount, target_amount").eq("user_id", userId),
   ]);
   const ucs = (ucRes.data ?? []) as { id: string; challenge_id: string; status: string; started_at: string; completed_at: string | null; progress: number }[];
-  const rows = new Map(((chRes.data ?? []) as { id: string; name: string; icon: string | null; duration_days: number; description: string | null }[]).map((r) => [r.id, r]));
+  const rows = new Map(((chRes.data ?? []) as { id: string; name: string; icon: string | null; duration_days: number; description: string | null; cover_image: string | null }[]).map((r) => [r.id, r]));
   const txs = (txRes.data ?? []) as Tx[];
 
   const ids = ucs.map((u) => u.id);
@@ -404,7 +429,7 @@ export async function loadChallenges(userId: string): Promise<ChallengeData> {
     if (status === "active" && view.state === "finished") {
       void supabase.from("user_challenges").update({ status: "completed", completed_at: new Date().toISOString(), progress: 100 } as never).eq("id", u.id);
     }
-    all.push({ id: u.id, template, startedAt: u.started_at, status: view.state === "finished" ? "completed" : status, completedAt: u.completed_at, checkins, ...view });
+    all.push({ id: u.id, template, cover: row.cover_image ?? null, ...streakOf(checkins), startedAt: u.started_at, status: view.state === "finished" ? "completed" : status, completedAt: u.completed_at, checkins, ...view });
   }
 
   const running = all.filter((r) => r.status === "active");
@@ -426,6 +451,9 @@ export async function loadChallenges(userId: string): Promise<ChallengeData> {
     available: TEMPLATES.filter((t) => !busy.has(t.key)),
     suggested: suggestFor(txs, TEMPLATES.filter((t) => !busy.has(t.key)), new Date(), new Set(running.flatMap((r) => r.template.match?.categories ?? []))),
     leftover: monthLeftover(txs),
+    covers: Object.fromEntries(
+      [...rows.values()].filter((r) => r.cover_image).map((r) => [templateFor(r).key, r.cover_image as string]),
+    ),
     spending: spendingByCategory(txs),
     txs,
   };
@@ -481,4 +509,66 @@ export async function restartChallenge(runningId: string) {
 /** Leaves it. */
 export async function abandonChallenge(runningId: string) {
   await supabase.from("user_challenges").update({ status: "abandoned" } as never).eq("id", runningId);
+}
+
+/** One running challenge, for its own page. */
+export async function loadOne(userId: string, id: string): Promise<{ running: Running; txs: Tx[] } | null> {
+  const data = await loadChallenges(userId);
+  const r = [...data.running, ...data.finished].find((x) => x.id === id);
+  return r ? { running: r, txs: data.txs } : null;
+}
+
+/** Every day of a challenge, for its calendar. */
+export function calendarOf(r: Running, txs: Tx[], now = new Date()) {
+  const start = startOf(r.startedAt);
+  const today = isoDay(now);
+  const checked = new Set(r.checkins);
+  const brokenOn = r.state === "broken" ? isoDay(addDays(start, r.done)) : null;
+  return Array.from({ length: r.template.days }, (_, i) => {
+    const d = addDays(start, i);
+    const iso = isoDay(d);
+    const state: "checked" | "clean" | "broken" | "today" | "future" | "missed" =
+      checked.has(iso) ? "checked" : iso === brokenOn ? "broken" : iso === today ? "today" : iso > today ? "future" : r.template.kind === "manual" ? "missed" : r.state === "broken" && brokenOn && iso > brokenOn ? "future" : "clean";
+    return { iso, day: d.getDate(), weekday: d.getDay(), state };
+  });
+}
+
+/** What it has kept in the pocket so far, by the share of days done. */
+export function savedSoFar(r: Running, txs: Tx[]) {
+  const e = estimateSavings(r.template, txs);
+  const total = e?.saves ?? r.template.saves ?? 0;
+  return Math.round((total * r.done) / r.template.days);
+}
+
+export interface PendingCheckin {
+  id: string;
+  template: Template;
+  cover: string | null;
+  streak: number;
+}
+
+/**
+ * The running challenges not checked in today, for the home's shortcut. Light on
+ * purpose: only the challenges and their check-ins, not the person's entries.
+ */
+export async function pendingCheckins(userId: string): Promise<PendingCheckin[]> {
+  const { data: ucs } = await supabase.from("user_challenges").select("id, challenge_id").eq("user_id", userId).eq("status", "active");
+  const list = (ucs ?? []) as { id: string; challenge_id: string }[];
+  if (!list.length) return [];
+  const [{ data: rows }, { data: ck }] = await Promise.all([
+    supabase.from("challenges").select("id, name, icon, duration_days, description, cover_image").in("id", list.map((u) => u.challenge_id)),
+    supabase.from("challenge_checkins").select("user_challenge_id, checkin_date").in("user_challenge_id", list.map((u) => u.id)),
+  ]);
+  const byId = new Map(((rows ?? []) as { id: string; name: string; icon: string | null; duration_days: number; description: string | null; cover_image: string | null }[]).map((r) => [r.id, r]));
+  const ticks = new Map<string, string[]>();
+  for (const c of (ck ?? []) as { user_challenge_id: string; checkin_date: string }[]) ticks.set(c.user_challenge_id, [...(ticks.get(c.user_challenge_id) ?? []), c.checkin_date.slice(0, 10)]);
+  const today = isoDay(new Date());
+  return list
+    .filter((u) => !(ticks.get(u.id) ?? []).includes(today))
+    .map((u) => {
+      const row = byId.get(u.challenge_id);
+      if (!row) return null;
+      return { id: u.id, template: templateFor(row), cover: row.cover_image, streak: streakOf(ticks.get(u.id) ?? []).streak };
+    })
+    .filter((x): x is PendingCheckin => x !== null);
 }
