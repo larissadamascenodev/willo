@@ -5,8 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { cancelAnimation, Easing, FadeIn, useAnimatedStyle, useSharedValue, withSequence, withTiming, type SharedValue } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Room from "~/components/Room";
-import { AskDemo, ChimeContext, DURATIONS, ForecastDemo, NotifyDemo, QuickDemo, RadarDemo, ReceiptDemo, VoiceDemo } from "~/components/welcome/Demos";
-import { useSoftChime } from "~/lib/welcomeSounds";
+import { AskDemo, DURATIONS, ForecastDemo, NotifyDemo, QuickDemo, RadarDemo, ReceiptDemo, VoiceDemo } from "~/components/welcome/Demos";
 import { INK } from "~/theme/tokens";
 import { isIntroDone, onIntroDone } from "~/lib/launchIntro";
 
@@ -69,7 +68,6 @@ export default function BemVindo() {
   const [area, setArea] = useState(DEMO_H);
   const [pageH, setPageH] = useState(0);
   const [leaving, setLeaving] = useState(false);
-  const chime = useSoftChime();
   useEffect(() => onIntroDone(() => setReady(true)), []);
   /* Only while this screen is the one showing: once someone goes on to sign in or to
      start, it stays mounted underneath, and its slides, timers and sounds must stop. */
@@ -125,7 +123,6 @@ export default function BemVindo() {
   const scale = area < SHRINK_BELOW ? area / DEMO_H : 1;
 
   return (
-    <ChimeContext.Provider value={chime}>
     <Room lit sky={false}>
       <View style={{ flex: 1, paddingTop: insets.top + 14 }}>
         <Animated.View entering={FadeIn.delay(100).duration(600)} style={{ alignItems: "center" }}>
@@ -188,7 +185,6 @@ export default function BemVindo() {
         </View>
       </View>
     </Room>
-    </ChimeContext.Provider>
   );
 }
 

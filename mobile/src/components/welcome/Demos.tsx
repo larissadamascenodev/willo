@@ -26,8 +26,8 @@ import { INK } from "~/theme/tokens";
  * Each is a short script that plays once from the start while its slide is showing
  * (`active`) and lasts exactly `DURATIONS[name]`; the slide moves on only after it has
  * finished and held for a moment, so nothing is cut off halfway. Whatever is written
- * down arrives softly — a rise, a brief light across it — with the app's own "plim",
- * quietly (see welcomeSounds), passed in through `ChimeContext`.
+ * down arrives softly — a rise, a brief light across it — and silently: the welcome
+ * makes no sound. `ChimeContext` is a hook for one, and plays nothing unless given.
  *
  * Entries show their name, amount and what they are as small tags, never cut. The
  * figures are an example and nothing is saved: there is no account yet. Anything that
