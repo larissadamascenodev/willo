@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ComponentRef, type ReactNode } from "react";
 import { Image, Pressable, ScrollView, Text, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { cancelAnimation, Easing, FadeIn, useAnimatedStyle, useSharedValue, withSequence, withTiming, type SharedValue } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
@@ -71,13 +71,26 @@ export default function BemVindo() {
   const [leaving, setLeaving] = useState(false);
   const chime = useSoftChime();
   useEffect(() => onIntroDone(() => setReady(true)), []);
+  /* Only while this screen is the one showing: once someone goes on to sign in or to
+     start, it stays mounted underneath, and its slides, timers and sounds must stop. */
+  const [focused, setFocused] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, []),
+  );
+  const live = ready && focused;
 
   /* The bar under the current number fills over the slide's time. It is started from
      here with its full length, never read back: on the phone the animation runs on
      another thread. */
   const progress = useSharedValue(0);
   useEffect(() => {
-    if (!ready) return;
+    if (!live) {
+      cancelAnimation(progress);
+      return;
+    }
     if (held) {
       cancelAnimation(progress);
       return;
@@ -97,7 +110,7 @@ export default function BemVindo() {
       clearTimeout(out);
       clearTimeout(id);
     };
-  }, [index, held, ready, width, progress]);
+  }, [index, held, live, width, progress]);
 
   const settle = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -140,8 +153,8 @@ export default function BemVindo() {
               >
                 {Math.abs(i - index) <= 1 && (
                   <View style={{ width: width - 48, alignItems: "center", ...(scale < 1 ? { transform: [{ scale }] } : null) }}>
-                    <Appear on={ready && i === index} leaving={leaving && i === index}>
-                      <s.Demo active={ready && i === index} />
+                    <Appear on={live && i === index} leaving={leaving && i === index}>
+                      <s.Demo active={live && i === index} />
                     </Appear>
                   </View>
                 )}

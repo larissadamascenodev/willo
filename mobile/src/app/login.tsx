@@ -140,7 +140,7 @@ export default function Login() {
   const transition = LinearTransition.duration(340);
 
   return (
-    <Room lit sky>
+    <Room lit sky={false}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 16 }}>
           <Pressable onPress={back} accessibilityLabel="Voltar" hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, alignSelf: "flex-start" })}>
@@ -171,11 +171,11 @@ export default function Login() {
             entering={FadeInDown.delay(160).duration(420)}
             style={{ marginTop: form ? 24 : 38, flexDirection: form ? "row" : "column", gap: form ? 10 : 12 }}
           >
-            <Provider compact={form} label="Entrar com Apple" onPress={() => soon("a Apple")}>
-              <AppleMark size={form ? 17 : 21} thin={form} />
+            <Provider compact={form} label="Entrar com Apple" short="Apple" onPress={() => soon("a Apple")}>
+              <AppleMark size={form ? 16 : 20} />
             </Provider>
-            <Provider compact={form} label="Entrar com Google" onPress={() => soon("o Google")}>
-              <GoogleMark size={form ? 17 : 20} thin={form} />
+            <Provider compact={form} label="Entrar com Google" short="Google" onPress={() => soon("o Google")}>
+              <GoogleMark size={form ? 16 : 19} />
             </Provider>
           </Animated.View>
 
@@ -298,18 +298,21 @@ export default function Login() {
 /**
  * One of the two outside ways in.
  *
- * Open, it is a long button with its solid glyph and its words; folded, it is half
- * of a row, slimmer, and only the glyph, as a line. The same component in both, so moving between them is
+ * Open, it is a long button with its glyph and its words; folded, it is half of a
+ * row, slimmer, with the glyph and the name alone. Quiet glass either way: no rim
+ * brighter than the ground's own light. The same component in both, so moving between them is
  * the layout animating rather than one thing being swapped for another.
  */
 function Provider({
   compact,
   label,
+  short,
   onPress,
   children,
 }: {
   compact: boolean;
   label: string;
+  short: string;
   onPress: () => void;
   children: React.ReactNode;
 }) {
@@ -320,25 +323,21 @@ function Provider({
         accessibilityRole="button"
         accessibilityLabel={label}
         style={({ pressed }) => ({
-          height: compact ? 44 : 62,
-          borderRadius: compact ? 22 : 31,
+          height: compact ? 50 : 58,
+          borderRadius: compact ? 25 : 29,
           borderCurve: "continuous",
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "center",
-          gap: 12,
+          gap: compact ? 8 : 12,
           borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.11)",
-          backgroundColor: "rgba(255,255,255,0.07)",
+          borderColor: "rgba(255,255,255,0.06)",
+          backgroundColor: pressed ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.06)",
           transform: [{ scale: pressed ? 0.985 : 1 }],
         })}
       >
         {children}
-        {!compact && (
-          <Animated.Text entering={FadeIn.delay(160).duration(200)} exiting={FadeOut.duration(100)} style={{ fontSize: 16.5, fontWeight: "600", color: "#fff" }}>
-            {label}
-          </Animated.Text>
-        )}
+        <Text style={{ fontSize: compact ? 15 : 16.5, fontWeight: "600", color: "#fff" }}>{compact ? short : label}</Text>
       </Pressable>
     </Animated.View>
   );
