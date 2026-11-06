@@ -43,8 +43,8 @@ export const ChimeContext = createContext<() => void>(() => undefined);
 
 /* Each ends a moment after its script's last event; the slide then holds briefly. */
 export const DURATIONS = {
-  notify: 2 * 4400 + 2700 + 700,
-  voice: 2 * 3900 + 300 + 20 * 60 + 500 + 700,
+  notify: 2 * 3600 + 1650 + 1200,
+  voice: 1 * 3900 + 300 + 20 * 60 + 500 + 900,
   quick: 7600 + 1900 + 850 + 9 * 120 + 300 + 1100 + 900,
   receipt: 3700 + 900,
   radar: 5 * 2900 + 2400,
@@ -237,15 +237,15 @@ export function NotifyDemo({ active }: { active: boolean }) {
     active,
     (at) => {
       PURCHASES.forEach((_, k) => {
-        const t0 = k * 4400;
+        const t0 = k * 3600;
         at(t0 + 200, () => {
           setNow(k);
           fly.set(0);
           drop.set(withSequence(withTiming(0, { duration: 0 }), withSpring(1, { damping: 16, stiffness: 120 })));
           void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
         });
-        at(t0 + 2000, () => fly.set(withTiming(1, { duration: 850, easing: Easing.inOut(Easing.cubic) })));
-        at(t0 + 2700, () => {
+        at(t0 + 1100, () => fly.set(withTiming(1, { duration: 700, easing: Easing.inOut(Easing.cubic) })));
+        at(t0 + 1650, () => {
           setCaught((c) => [k, ...c].slice(0, 2));
           chime();
           success();
@@ -310,7 +310,6 @@ export function NotifyDemo({ active }: { active: boolean }) {
 
 const SAYINGS = [
   { said: "almoço 32 no débito", title: "Almoço", amount: "R$ 32,00", tags: ["Alimentação", "Débito", "hoje"] },
-  { said: "uber 18 ontem", title: "Uber", amount: "R$ 18,00", tags: ["Transporte", "ontem"] },
   { said: "recebi 300 de freela", title: "Freela", amount: "R$ 300,00", tags: ["Entrada", "hoje"], income: true },
 ];
 
@@ -411,59 +410,92 @@ const PH_H = 344;
 const FRAME = 4;
 
 /**
- * An iPhone of the current shape: a titanium band, side buttons, the Dynamic Island,
- * and on the back the full-width camera plateau. No maker's logo.
+ * An iPhone Pro, drawn to look like the real thing rather than a toy: the true
+ * proportions and corner radius, a thin titanium band with its highlights, side
+ * buttons, a black border round the screen with the Dynamic Island; on the back, a
+ * matte glass with a soft sheen and the square camera block in its corner — three
+ * lenses in metal rings over dark glass with a coloured reflection, the flash and
+ * the sensor. No maker's logo.
  */
 function Phone({ face, children }: { face: "front" | "back"; children?: ReactNode }) {
-  const R = 42;
-  const button = { position: "absolute" as const, width: 3, borderRadius: 2, backgroundColor: "#6E7279" };
-  const near = face === "front" ? { left: -2 } : { right: -2 };
-  const far = face === "front" ? { right: -2 } : { left: -2 };
+  const R = 30;
+  const BAND = 2.5;
+  const side = { position: "absolute" as const, width: 2.5, borderRadius: 1.5 };
+  const near = face === "front" ? { left: -1.5 } : { right: -1.5 };
+  const far = face === "front" ? { right: -1.5 } : { left: -1.5 };
   return (
-    <View style={{ width: PH_W, height: PH_H }}>
-      <View style={[button, near, { top: 72, height: 18 }]} />
-      <View style={[button, near, { top: 104, height: 34 }]} />
-      <View style={[button, near, { top: 146, height: 34 }]} />
-      <View style={[button, far, { top: 116, height: 56 }]} />
-      <Fade colors={["#8A8E95", "#3A3D42", "#6C7076", "#2E3034"]} locations={[0, 0.35, 0.7, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: R, padding: FRAME }}>
-        <View style={{ flex: 1, borderRadius: R - FRAME, overflow: "hidden", backgroundColor: face === "front" ? "#07080A" : "#2A2D33" }}>
-          {face === "front" ? (
-            <>
+    <View style={{ width: PH_W, height: PH_H, shadowColor: "#000", shadowOpacity: 0.6, shadowRadius: 22, shadowOffset: { width: 0, height: 14 } }}>
+      {/* Side buttons: action and volume on one side, power on the other. */}
+      <Fade colors={["#8E9298", "#55595F"]} style={[side, near, { top: 66, height: 16 }]} />
+      <Fade colors={["#8E9298", "#55595F"]} style={[side, near, { top: 94, height: 30 }]} />
+      <Fade colors={["#8E9298", "#55595F"]} style={[side, near, { top: 130, height: 30 }]} />
+      <Fade colors={["#8E9298", "#55595F"]} style={[side, far, { top: 104, height: 50 }]} />
+
+      {/* The titanium band. */}
+      <Fade colors={["#B4B8BE", "#5E6268", "#8C9096", "#4A4D52", "#9A9EA4"]} locations={[0, 0.25, 0.5, 0.78, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: R, padding: BAND }}>
+        {face === "front" ? (
+          /* The black border round the screen, then the screen. */
+          <View style={{ flex: 1, borderRadius: R - BAND, backgroundColor: "#000", padding: 4.5 }}>
+            <View style={{ flex: 1, borderRadius: R - BAND - 4.5, overflow: "hidden", backgroundColor: "#07080A" }}>
               {children}
-              <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height: 32, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 18 }}>
-                <Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>9:41</Text>
-                <View style={{ flexDirection: "row", gap: 2.5, alignItems: "flex-end" }}>
-                  {[4, 6, 8, 10].map((h) => (
-                    <View key={h} style={{ width: 2.5, height: h, borderRadius: 1, backgroundColor: "#fff" }} />
+              <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height: 30, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16 }}>
+                <Text style={{ fontSize: 9.5, fontWeight: "700", color: "#fff" }}>9:41</Text>
+                <View style={{ flexDirection: "row", gap: 2, alignItems: "flex-end" }}>
+                  {[3.5, 5, 6.5, 8].map((h) => (
+                    <View key={h} style={{ width: 2.2, height: h, borderRadius: 1, backgroundColor: "#fff" }} />
                   ))}
-                  <View style={{ marginLeft: 3, width: 16, height: 8, borderRadius: 2.5, borderWidth: 1, borderColor: "rgba(255,255,255,0.7)", padding: 1 }}>
-                    <View style={{ flex: 1, width: "80%", borderRadius: 1, backgroundColor: "#fff" }} />
+                  <View style={{ marginLeft: 3, width: 15, height: 7.5, borderRadius: 2.5, borderWidth: 1, borderColor: "rgba(255,255,255,0.65)", padding: 1 }}>
+                    <View style={{ flex: 1, width: "78%", borderRadius: 1, backgroundColor: "#fff" }} />
                   </View>
                 </View>
               </View>
-              <View pointerEvents="none" style={{ position: "absolute", top: 9, alignSelf: "center", width: 54, height: 16, borderRadius: 8, backgroundColor: "#000" }} />
-            </>
-          ) : (
-            <>
-              <Fade colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0)", "rgba(0,0,0,0.22)"]} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
-              <Fade colors={["#3A3E45", "#24272C"]} style={{ position: "absolute", left: 6, right: 6, top: 6, height: 70, borderRadius: R - FRAME - 6 }}>
-                {[
-                  [11, 6],
-                  [43, 6],
-                  [27, 36],
-                ].map(([x, y]) => (
-                  <View key={`${x}-${y}`} style={{ position: "absolute", left: x, top: y, width: 28, height: 28, borderRadius: 14, backgroundColor: "#15171B", alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: "#4A4E56" }}>
-                    <View style={{ width: 17, height: 17, borderRadius: 9, backgroundColor: "#07080A", alignItems: "center", justifyContent: "center" }}>
-                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#1E2A44" }} />
-                      <View style={{ position: "absolute", top: 3, left: 4, width: 4, height: 4, borderRadius: 2, backgroundColor: "rgba(160,190,255,0.5)" }} />
-                    </View>
-                  </View>
-                ))}
-                <View style={{ position: "absolute", right: 20, top: 13, width: 11, height: 11, borderRadius: 6, backgroundColor: "#E8E3D3" }} />
-                <View style={{ position: "absolute", right: 22, top: 40, width: 8, height: 8, borderRadius: 4, backgroundColor: "#111316" }} />
-              </Fade>
-            </>
-          )}
+              <View pointerEvents="none" style={{ position: "absolute", top: 7, alignSelf: "center", width: 46, height: 14, borderRadius: 7, backgroundColor: "#000" }} />
+              {/* The glass over it all. */}
+              <Fade pointerEvents="none" colors={["rgba(255,255,255,0.07)", "rgba(255,255,255,0)", "rgba(255,255,255,0)"]} locations={[0, 0.45, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
+            </View>
+          </View>
+        ) : (
+          /* The matte back glass. */
+          <Fade colors={["#3A3C40", "#2A2C30", "#232528"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: R - BAND, overflow: "hidden" }}>
+            <Fade colors={["rgba(255,255,255,0)", "rgba(255,255,255,0.06)", "rgba(255,255,255,0)"]} locations={[0.25, 0.45, 0.65]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
+            <CameraBlock />
+          </Fade>
+        )}
+      </Fade>
+    </View>
+  );
+}
+
+/** The square camera block: raised, with a lit edge, three lenses, flash and sensor. */
+function CameraBlock() {
+  const S = 74;
+  return (
+    <View style={{ position: "absolute", left: 9, top: 9, width: S, height: S, borderRadius: 19, shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } }}>
+      <Fade colors={["#46494F", "#2C2E33"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: 19, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)" }}>
+        <Lens x={4} y={4} />
+        <Lens x={4} y={39} />
+        <Lens x={38} y={21.5} />
+        {/* Flash, and the depth sensor. */}
+        <View style={{ position: "absolute", left: 46, top: 5, width: 11, height: 11, borderRadius: 6, backgroundColor: "#D9D3C2", borderWidth: 1.5, borderColor: "#5A5D63" }} />
+        <View style={{ position: "absolute", left: 48, top: 56, width: 10, height: 10, borderRadius: 5, backgroundColor: "#0B0C0E", borderWidth: 1.5, borderColor: "#4A4D53" }} />
+        <View style={{ position: "absolute", left: 62, top: 40, width: 3, height: 3, borderRadius: 2, backgroundColor: "#111" }} />
+      </Fade>
+    </View>
+  );
+}
+
+/** One lens: a metal ring, dark glass, a coloured reflection and a point of light. */
+function Lens({ x, y }: { x: number; y: number }) {
+  const D = 31;
+  return (
+    <View style={{ position: "absolute", left: x, top: y, width: D, height: D, borderRadius: D / 2, shadowColor: "#000", shadowOpacity: 0.6, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } }}>
+      <Fade colors={["#8A8E94", "#3B3E43", "#6D7176"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: D / 2, padding: 3 }}>
+        <View style={{ flex: 1, borderRadius: D / 2, backgroundColor: "#050608", padding: 3 }}>
+          <Fade colors={["#1B2133", "#090B12", "#1E1830"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: D / 2, alignItems: "center", justifyContent: "center" }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#0A0D18", borderWidth: 1, borderColor: "rgba(110,130,200,0.35)" }} />
+            <View style={{ position: "absolute", left: 5, top: 4, width: 5, height: 5, borderRadius: 3, backgroundColor: "rgba(170,190,255,0.55)" }} />
+            <View style={{ position: "absolute", right: 5, bottom: 5, width: 3, height: 3, borderRadius: 2, backgroundColor: "rgba(200,140,255,0.4)" }} />
+          </Fade>
         </View>
       </Fade>
     </View>
@@ -486,7 +518,7 @@ function AppHome() {
 }
 
 /* Where each knock lands, inside the phone. */
-const KNOCK_BACK = { x: PH_W / 2, y: PH_H * 0.56 };
+const KNOCK_BACK = { x: PH_W / 2, y: PH_H * 0.55 };
 const KNOCK_SCREEN = { x: PH_W / 2, y: FRAME + 56 + 14 + 22 + 18 + 48 };
 
 const ROUNDS = [
@@ -594,7 +626,7 @@ export function QuickDemo({ active }: { active: boolean }) {
               style={[{ position: "absolute", left: spot.x - 34, top: spot.y - 34, width: 68, height: 68, borderRadius: 34, borderWidth: 2, borderColor: ICE, backgroundColor: "rgba(220,235,255,0.16)" }, ripple]}
             />
           </Animated.View>
-          <Animated.View pointerEvents="none" style={[{ position: "absolute", left: PH_W + 10, top: spot.y - 30 }, tocs]}>
+          <Animated.View pointerEvents="none" style={[{ position: "absolute", left: PH_W + 10, top: spot.y - 30, width: 90 }, tocs]}>
             <Text style={{ fontSize: 15, fontWeight: "800", color: ICE }}>toc toc</Text>
           </Animated.View>
         </Animated.View>
