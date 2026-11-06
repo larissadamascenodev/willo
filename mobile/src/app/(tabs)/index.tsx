@@ -90,13 +90,14 @@ export default function Home() {
   const [hero] = useHomeHero();
 
   /* On a photo of one's own, the words outside the cards follow its veil — black on a
-     light one, white on a dark one — with a halo as strong as the veil is faint. */
+     light one, white on a dark one. */
   const [skyModel] = useSkyModel();
   const [lightSkyModel] = useLightSkyModel();
   const skyPhoto = useSkyPhoto();
   const photoLook = usePhotoLook(isLight() ? "light" : "dark");
   const onPhoto = !!skyPhoto && (isLight() ? lightSkyModel : skyModel) === "custom";
-  const groundLook = useMemo(() => (onPhoto ? { tone: photoLook.tone, amount: photoLook.amount } : null), [onPhoto, photoLook.tone, photoLook.amount]);
+  /* The words on the photo follow its veil: always dark in the dark theme, either in the light. */
+  const groundMode = onPhoto ? (isLight() ? photoLook.tone : "dark") : null;
   const orbHero = hero === "orb";
   const travel = orbHero ? ORB_TRAVEL : LINES_TRAVEL;
 
@@ -206,7 +207,7 @@ export default function Home() {
 
   return (
     <Room lit sky home>
-      <GroundInkProvider look={groundLook}>
+      <GroundInkProvider mode={groundMode}>
       {/* Willo's light, behind everything, so the cards rise through it. Editing is about the
           board, so the top stands down for it. */}
       {!editing && (

@@ -376,7 +376,7 @@ export default function Perfil() {
           <Surface style={{ marginTop: 14 }}>
             <Row
               label="Ajustar a foto"
-              value="Só na tela inicial · véu, intensidade e desfoque"
+              value={light ? "Só na tela inicial · véu claro ou escuro" : "Só na tela inicial · intensidade do véu"}
               icon={<ImagePlus size={17} color={th("#fff")} strokeWidth={1.9} />}
               onPress={() => {
                 tick();

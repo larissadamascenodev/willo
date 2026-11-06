@@ -2,8 +2,9 @@ import { type ReactNode } from "react";
 import { View, type ViewStyle } from "react-native";
 import Svg, { Circle, Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import Sky from "~/components/Sky";
-import { usePhotoLook, useLightSkyModel, useSkyModel, useSkyPhoto, type LightSkyModel, type PhotoLook, type SkyModel } from "~/lib/skyModel";
+import { VEIL_STEPS, nearestStep, usePhotoLook, useLightSkyModel, useSkyModel, useSkyPhoto, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
 import { GROUND, GROUND_LIT } from "~/theme/tokens";
 import { BACKDROPS, LIGHT_BACKDROPS, STARS, type BackdropKey, type LightBackdropKey } from "~/lib/backdrops";
 
@@ -55,7 +56,8 @@ export default function Room({
   sky: wantsSky = true,
   preview,
   previewPhoto,
-  previewLook,
+  previewTone,
+  previewAmount,
   home = false,
   children,
   style,
@@ -66,7 +68,10 @@ export default function Room({
   /** With preview "custom": a photo and a veil to show instead of the stored ones —
       the photo editor's live preview. */
   previewPhoto?: string;
-  previewLook?: PhotoLook;
+  /** The photo editor's choice of veil, in the light theme, before it is kept. */
+  previewTone?: "light" | "dark";
+  /** The photo editor's veil strength, in the dark theme, before it is kept. */
+  previewAmount?: number;
   /** The home. A photo of one's own is worn there only; every other screen wears the
       theme's own ground instead, so a busy photo never sits under forms and lists. */
   home?: boolean;
@@ -79,16 +84,25 @@ export default function Room({
   const strength = lit ? 1 : 0.45;
   const [chosen] = useSkyModel();
   const [chosenLight] = useLightSkyModel();
-  /* Off the home, a photo gives way to the theme's own ground. */
-  const model = (preview as SkyModel | undefined) ?? (chosen === "custom" && !home ? "2" : chosen);
+  /* Off the home, a photo gives way to the theme's own ground: Céu vivo in the dark. */
+  const model = (preview as SkyModel | undefined) ?? (chosen === "custom" && !home ? "1" : chosen);
   const storedPhoto = useSkyPhoto();
   const photo = previewPhoto ?? storedPhoto;
-  const storedLook = usePhotoLook(isLight() ? "light" : "dark");
-  const look = previewLook ?? storedLook;
-  /* The veil over the person's photo, light or dark and as strong as they set it,
-     and the photo soft if they asked: the cards over it stay the thing that is read. */
-  const photoBlur = look.blur ? 28 : 0;
-  const veil = look.tone === "dark" ? `rgba(6,7,9,${look.amount})` : `rgba(245,245,247,${look.amount})`;
+  /* A photo of one's own is worn one way, chosen to suit any photo: blurred, under a
+     veil of the theme's own ground (dark under white ink, light under black), a
+     little heavier at the top where Willo's words sit. So the words and the cards
+     over it read the same on a bright beach or a dark night. */
+  const light = isLight();
+  const lightVeilTone = usePhotoLook("light").tone;
+  const darkStoredAmount = VEIL_STEPS[nearestStep(usePhotoLook("dark").amount)].amount;
+  const darkVeil = !light || (previewTone ?? lightVeilTone) === "dark";
+  const photoBlur = 24;
+  /* In the dark theme the veil's strength is one of three set steps the person picks
+     (Suave, Média, Forte); in the light theme it is fixed. */
+  const darkAmount = light ? 0.5 : (previewAmount ?? darkStoredAmount);
+  const veil = darkVeil ? `rgba(6,7,9,${darkAmount})` : "rgba(245,245,247,0.6)";
+  const veilTop = darkVeil ? ([`rgba(6,7,9,${Math.min(0.9, darkAmount * 0.9).toFixed(2)})`, "rgba(6,7,9,0)"] as const) : (["rgba(245,245,247,0.55)", "rgba(245,245,247,0)"] as const);
+
   /* "plain" is the room without its sky: the soft lights on the dark ground. */
   const sky = wantsSky && model !== "plain";
   const own = sky && model === "custom" && !!photo;
@@ -112,6 +126,7 @@ export default function Room({
           <>
             <Image source={{ uri: photo! }} contentFit="cover" transition={200} blurRadius={photoBlur} pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
             <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: veil }} />
+            <LinearGradient pointerEvents="none" colors={veilTop} style={{ position: "absolute", top: 0, left: 0, right: 0, height: "45%" }} />
           </>
         ) : (
           <Svg width="100%" height="100%" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
@@ -175,6 +190,7 @@ export default function Room({
         <>
           <Image source={{ uri: photo! }} contentFit="cover" transition={200} blurRadius={photoBlur} pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
           <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: veil }} />
+            <LinearGradient pointerEvents="none" colors={veilTop} style={{ position: "absolute", top: 0, left: 0, right: 0, height: "45%" }} />
           <Svg width="100%" height="100%" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
             <Defs>
               <RadialGradient id="ownVignette" cx="0.5" cy="0.42" rx="0.75" ry="0.55">

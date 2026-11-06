@@ -1,54 +1,40 @@
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BlurView } from "expo-blur";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import Room from "~/components/Room";
 import RoundButton from "~/components/RoundButton";
-import SegmentedTabs from "~/components/SegmentedTabs";
-import PlainSlider from "~/components/PlainSlider";
 import Surface from "~/components/Surface";
-import { Toggle } from "~/components/registro/entryParts";
 import { X } from "~/components/icons";
-import {
-  discardPhoto,
-  photoUri,
-  setLightSkyModel,
-  setPhotoLook,
-  setSkyModel,
-  setSkyPhoto,
-  usePhotoLook,
-  useSkyPhoto,
-  type PhotoLook,
-} from "~/lib/skyModel";
+import { VEIL_STEPS, nearestStep, discardPhoto, photoUri, setLightSkyModel, setPhotoLook, setSkyModel, setSkyPhoto, usePhotoLook, useSkyPhoto } from "~/lib/skyModel";
+import SegmentedTabs from "~/components/SegmentedTabs";
 import { isLight, th, thIn } from "~/theme/theme";
 import { INK } from "~/theme/tokens";
 
 /**
- * Setting a photo as the background, the way a chat app sets its wallpaper.
+ * A photo, seen as the home will wear it, before it is kept.
  *
- * The photo fills the screen with a sample of the home over it — a line of text and
- * a card — so the person sees what they will read on it. Under that: a veil, light or
- * dark, dragged to the strength they want, and the photo blurred or not. Nothing is
- * kept until "Usar como fundo"; backing out of a newly picked photo throws it away.
- *
- * Each theme keeps its own veil, so this edits the one for the theme on screen.
+ * The photo is always worn the same way — blurred, under a veil, heavier at the top —
+ * so it reads well whatever the photo is. In the dark theme the veil is dark and the
+ * person picks how strong, in three set steps; in the light one they pick a light or
+ * a dark veil, at a set strength. This shows it with
+ * a line of the home and a card over it, and keeps it on "Usar como fundo".
+ * Backing out of a newly picked photo throws it away.
  */
-
-const MAX_VEIL = 0.85;
-
 export default function FundoFoto() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { file } = useLocalSearchParams<{ file?: string }>();
-  const mode = isLight() ? "light" : "dark";
-  const stored = usePhotoLook(mode);
   const current = useSkyPhoto();
   const uri = file ? photoUri(file) : current;
-
-  const [look, setLook] = useState<PhotoLook>(stored);
   const [saving, setSaving] = useState(false);
+  const light = isLight();
+  const storedLook = usePhotoLook("light");
+  const darkLook = usePhotoLook("dark");
+  const [step, setStep] = useState<(typeof VEIL_STEPS)[number]["key"]>(VEIL_STEPS[nearestStep(darkLook.amount)].key);
+  const amount = VEIL_STEPS.find((v) => v.key === step)!.amount;
+  const [tone, setTone] = useState<"light" | "dark">(light ? storedLook.tone : "dark");
 
   const close = () => {
     if (router.canGoBack()) router.back();
@@ -64,117 +50,94 @@ export default function FundoFoto() {
     if (saving) return;
     setSaving(true);
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-    setPhotoLook(mode, look);
     if (file) setSkyPhoto(file, false);
-    if (mode === "light") setLightSkyModel("custom");
+    if (light) setPhotoLook("light", { ...storedLook, tone });
+    else setPhotoLook("dark", { ...darkLook, tone: "dark", amount });
+    if (light) setLightSkyModel("custom");
     else setSkyModel("custom");
     close();
   };
+
+  /* On the photo, the ink follows the veil; inside the card, the theme's. */
+  const ink = thIn(tone, "#fff");
+  const soft = thIn(tone, INK.soft);
+  const cardInk = th("#fff");
+  const cardSoft = th(INK.soft);
 
   if (!uri) {
     return (
       <Room>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
-          <Text style={{ textAlign: "center", fontSize: 15, color: th(INK.soft) }}>Nenhuma foto escolhida.</Text>
+          <Text style={{ textAlign: "center", fontSize: 15, color: soft }}>Nenhuma foto escolhida.</Text>
         </View>
       </Room>
     );
   }
 
-  /* The controls and the card keep the theme's ink; the line on the ground follows
-     the veil, with the halo it will have on the home. */
-  const ink = th("#fff");
-  const soft = th(INK.soft);
-  const groundInk = thIn(look.tone, "#fff");
-  const groundSoft = thIn(look.tone, INK.soft);
-  const faint = 1 - Math.min(1, look.amount / MAX_VEIL);
-  const halo = {
-    textShadowColor: look.tone === "dark" ? `rgba(0,0,0,${(0.3 + 0.55 * faint).toFixed(2)})` : `rgba(255,255,255,${(0.3 + 0.55 * faint).toFixed(2)})`,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 4 + 8 * faint,
-  };
-
   return (
-    <Room preview="custom" previewPhoto={uri} previewLook={look}>
+    <Room preview="custom" previewPhoto={uri} previewTone={tone} previewAmount={light ? undefined : amount}>
       <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 16, flexDirection: "row", alignItems: "center" }}>
         <RoundButton label="Cancelar" onPress={cancel}>
           <X size={18} color={ink} strokeWidth={2.2} />
         </RoundButton>
-        <Text style={{ flex: 1, textAlign: "center", marginRight: 40, fontSize: 16, fontWeight: "600", color: ink }}>Ajustar o fundo</Text>
+        <Text style={{ flex: 1, textAlign: "center", marginRight: 40, fontSize: 16, fontWeight: "600", color: ink }}>Seu fundo</Text>
       </View>
 
       {/* What will sit on it: a line from the top of the home and a card. */}
       <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: 16, gap: 18 }}>
         <View style={{ alignItems: "center" }}>
-          <Text style={[halo, { fontSize: 24, fontWeight: "700", letterSpacing: -0.5, color: groundInk }]}>Oi. Tô aqui.</Text>
-          <Text style={[halo, { marginTop: 4, fontSize: 15, color: groundSoft }]}>O que vamos resolver agora?</Text>
+          <Text style={{ fontSize: 24, fontWeight: "700", letterSpacing: -0.5, color: ink }}>Oi. Tô aqui.</Text>
+          <Text style={{ marginTop: 4, fontSize: 15, color: soft }}>O que vamos resolver agora?</Text>
         </View>
         <Surface>
           <View style={{ padding: 18 }}>
-            <Text style={{ fontSize: 14, color: soft }}>Saldo em contas</Text>
-            <Text style={{ marginTop: 4, fontSize: 30, fontWeight: "800", letterSpacing: -0.9, color: ink }}>R$ 4.280,00</Text>
-            <Text style={{ marginTop: 6, fontSize: 13.5, color: soft }}>
-              Previsto no fim do mês: <Text style={{ fontWeight: "700", color: ink }}>R$ 1.120,00</Text>
+            <Text style={{ fontSize: 14, color: cardSoft }}>Saldo em contas</Text>
+            <Text style={{ marginTop: 4, fontSize: 30, fontWeight: "800", letterSpacing: -0.9, color: cardInk }}>R$ 4.280,00</Text>
+            <Text style={{ marginTop: 6, fontSize: 13.5, color: cardSoft }}>
+              Previsto no fim do mês: <Text style={{ fontWeight: "700", color: cardInk }}>R$ 1.120,00</Text>
             </Text>
           </View>
         </Surface>
       </View>
 
-      {/* The controls, on a pane of their own so they read on any photo. */}
-      <View style={{ marginHorizontal: 12, marginBottom: insets.bottom + 12, borderRadius: 28, borderCurve: "continuous", overflow: "hidden" }}>
-        <BlurView intensity={70} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: isLight() ? "rgba(250,250,251,0.72)" : "rgba(16,18,22,0.6)" }} />
-        <View style={{ padding: 18, gap: 16 }}>
-          <View>
-            <Text style={{ fontSize: 13, fontWeight: "600", color: soft, marginBottom: 8 }}>Véu sobre a foto</Text>
+      <View style={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 16, gap: 10 }}>
+        {!light && (
+          <View style={{ marginBottom: 6 }}>
+            <Text style={{ textAlign: "center", fontSize: 13, fontWeight: "600", color: soft, marginBottom: 8 }}>Intensidade do véu</Text>
+            <SegmentedTabs glass height={38} value={step} onChange={setStep} options={VEIL_STEPS.map((v) => ({ key: v.key, label: v.label }))} />
+          </View>
+        )}
+        {light && (
+          <View style={{ marginBottom: 6 }}>
+            <Text style={{ textAlign: "center", fontSize: 13, fontWeight: "600", color: soft, marginBottom: 8 }}>Véu sobre a foto</Text>
             <SegmentedTabs
-              compact
-              height={36}
-              value={look.tone}
-              onChange={(tone) => setLook((l) => ({ ...l, tone }))}
+              glass
+              height={38}
+              value={tone}
+              onChange={setTone}
               options={[
                 { key: "light" as const, label: "Claro" },
                 { key: "dark" as const, label: "Escuro" },
               ]}
             />
           </View>
-
-          <View>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 2 }}>
-              <Text style={{ fontSize: 13, fontWeight: "600", color: soft }}>Intensidade</Text>
-              <Text style={{ fontSize: 13, color: soft, fontVariant: ["tabular-nums"] }}>{Math.round((look.amount / MAX_VEIL) * 100)}%</Text>
-            </View>
-            <PlainSlider
-              label="Intensidade do véu"
-              value={look.amount / MAX_VEIL}
-              onChange={(v) => setLook((l) => ({ ...l, amount: Math.round(v * MAX_VEIL * 100) / 100 }))}
-              fill={th("#fff")}
-              track={th("rgba(255,255,255,0.18)", "bg")}
-              knob="#FFFFFF"
-            />
-          </View>
-
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <Text style={{ flex: 1, fontSize: 15, fontWeight: "500", color: ink }}>Desfocar a foto</Text>
-            <Toggle label="Desfocar a foto" value={look.blur} onChange={(blur) => setLook((l) => ({ ...l, blur }))} />
-          </View>
-
-          <Pressable
-            onPress={use}
-            disabled={saving}
-            accessibilityRole="button"
-            style={({ pressed }) => ({
-              height: 52,
-              borderRadius: 26,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: th("#fff", "bg"),
-              opacity: pressed || saving ? 0.85 : 1,
-            })}
-          >
-            <Text style={{ fontSize: 16, fontWeight: "700", color: th("#0B0B0B") }}>Usar como fundo</Text>
-          </Pressable>
-        </View>
+        )}
+        <Text style={{ textAlign: "center", fontSize: 13, lineHeight: 18, color: soft }}>Aparece só na tela inicial, suavizada para a leitura.</Text>
+        <Pressable
+          onPress={use}
+          disabled={saving}
+          accessibilityRole="button"
+          style={({ pressed }) => ({
+            height: 54,
+            borderRadius: 27,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: thIn(tone, "#fff", "bg"),
+            opacity: pressed || saving ? 0.85 : 1,
+          })}
+        >
+          <Text style={{ fontSize: 16, fontWeight: "700", color: thIn(tone, "#0B0B0B") }}>Usar como fundo</Text>
+        </Pressable>
       </View>
     </Room>
   );

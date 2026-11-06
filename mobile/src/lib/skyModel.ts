@@ -155,10 +155,25 @@ export function useLightSkyModel() {
 }
 
 /* ── How the person's own photo is worn ───────────────────────────────────────
-   A photo can be busy or bright under the cards, so it is worn under a veil: light
-   or dark, as strong as the person sets it, and blurred if they like — set on a
-   preview, the way a chat app sets its wallpaper. Each theme keeps its own: a light
-   veil suits the dark theme's white ink badly, and the other way round. */
+   Always blurred, under a veil of a set strength (see Room). Only the light theme
+   asks one thing: whether that veil is light or dark. The amount and blur kept here
+   are what earlier versions stored; Room no longer reads them. */
+
+/** The dark theme's three strengths of veil over a photo. */
+export const VEIL_STEPS = [
+  { key: "suave", label: "Suave", amount: 0.36 },
+  { key: "media", label: "Média", amount: 0.5 },
+  { key: "forte", label: "Forte", amount: 0.66 },
+] as const;
+
+/** The step nearest a stored strength. */
+export function nearestStep(amount: number) {
+  let best = 1;
+  VEIL_STEPS.forEach((s, i) => {
+    if (Math.abs(s.amount - amount) < Math.abs(VEIL_STEPS[best].amount - amount)) best = i;
+  });
+  return best;
+}
 
 export interface PhotoLook {
   tone: "light" | "dark";

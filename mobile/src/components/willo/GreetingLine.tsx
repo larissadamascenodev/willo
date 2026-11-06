@@ -5,7 +5,7 @@ import { greetings, layOut, longestUnsaid, markSaid, type Greeting } from "~/lib
 import { face } from "~/lib/chatFont";
 import { INK } from "~/theme/tokens";
 
-import { useGroundHalo, useGroundTh } from "~/theme/groundInk";
+import { useGroundTh } from "~/theme/groundInk";
 /**
  * What he says under the sphere: a word at a time as it arrives, then the next thing
  * after a while. The first line is the hello, chosen once for each time the screen opens.
@@ -18,7 +18,6 @@ const SUB = 14;
 
 function Word({ text, delay, size }: { text: string; delay: number; size: number }) {
   const th = useGroundTh();
-  const halo = useGroundHalo();
   const shown = useSharedValue(0);
   useEffect(() => {
     shown.set(withDelay(delay, withTiming(1, { duration: 380, easing: Easing.out(Easing.cubic), reduceMotion: ReduceMotion.System })));
@@ -26,7 +25,7 @@ function Word({ text, delay, size }: { text: string; delay: number; size: number
   const style = useAnimatedStyle(() => ({ opacity: shown.get(), transform: [{ translateY: (1 - shown.get()) * 7 }] }));
   return (
     <Animated.View style={style}>
-      <Text style={[halo, { fontSize: size, ...face(700), letterSpacing: -0.4, color: th("#fff") }]}>{text}</Text>
+      <Text style={{ fontSize: size, ...face(700), letterSpacing: -0.4, color: th("#fff") }}>{text}</Text>
     </Animated.View>
   );
 }
@@ -55,7 +54,6 @@ export default function GreetingLine({
   onLine?: (line: Greeting) => void;
 }) {
   const th = useGroundTh();
-  const halo = useGroundHalo();
   /* Chosen once, when the name is known, so the hello does not change under the reader's
      eyes as things load. The name gets a moment to arrive. */
   const [chosen, setChosen] = useState<Greeting[] | null>(null);
@@ -136,7 +134,7 @@ export default function GreetingLine({
         </View>
       ))}
       <Rising delay={line.title.split(" ").length * WORD_MS + 120}>
-        <Text style={[halo, { marginTop: 4, fontSize: sub.size, lineHeight: sub.size * 1.36, ...face(500), color: th(INK.soft), textAlign: "center" }]}>{sub.lines.join("\n")}</Text>
+        <Text style={{ marginTop: 4, fontSize: sub.size, lineHeight: sub.size * 1.36, ...face(500), color: th(INK.soft), textAlign: "center" }}>{sub.lines.join("\n")}</Text>
       </Rising>
       </Pressable>
     </Animated.View>

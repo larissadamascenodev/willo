@@ -4,7 +4,7 @@ import Animated, { Easing, withTiming, type EntryExitAnimationFunction } from "r
 import { Bell, User } from "~/components/icons";
 import { GREEN } from "~/theme/tokens";
 
-import { useGroundHalo, useGroundTh } from "~/theme/groundInk";
+import { useGroundTh } from "~/theme/groundInk";
 /**
  * The row that stays put while everything else scrolls under it.
  *
@@ -28,7 +28,6 @@ export default function HomeHeader({
   onProfile?: () => void;
 }) {
   const th = useGroundTh();
-  const halo = useGroundHalo();
   const insets = useSafeAreaInsets();
   const firstName = name?.trim().split(" ")[0] ?? "";
 
@@ -95,7 +94,7 @@ export default function HomeHeader({
         {avatarUrl ? (
           <Image source={{ uri: avatarUrl }} style={{ width: "100%", height: "100%" }} />
         ) : initial ? (
-          <Text style={[halo, { fontSize: 15, fontWeight: "700", color: th("#fff") }]}>{initial}</Text>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff") }}>{initial}</Text>
         ) : (
           <User size={18} color={th("rgba(255,255,255,0.8)")} />
         )}
@@ -106,7 +105,7 @@ export default function HomeHeader({
           entering={enter}
           exiting={leave}
           numberOfLines={1}
-          style={[halo, { flex: 1, fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }]}
+          style={{ flex: 1, fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}
         >
           {firstName}
         </Animated.Text>
