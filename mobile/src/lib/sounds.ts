@@ -1,7 +1,7 @@
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-audio";
 
 /**
- * The little "plim" when something lands: a glassy tick and two rising notes.
+ * The sound when an expense lands: two small coins, bright and quick.
  *
  * Loaded ahead (`preloadCash`, when the sheet that will need it opens) and the speaker
  * session set then too, so at the moment it is asked for it only has to start: nothing
@@ -12,8 +12,9 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-aud
  * confirmation the person is waiting for.
  */
 
+/* Two small coins landing: money written down. The opening keeps its own chime. */
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const CHIME = require("../../assets/sounds/chime.wav") as number;
+const CHIME = require("../../assets/sounds/coin.wav") as number;
 
 let player: AudioPlayer | null = null;
 

@@ -42,7 +42,7 @@ interface Slide {
 const SLIDES: Slide[] = [
   { tag: "WILLO COPILOT", title: "Você compra.\nEle já anotou.", line: "O Willo lê o aviso de compra do banco\ne registra sozinho. Você só confere.", Demo: NotifyDemo, ms: DURATIONS.notify },
   { tag: "VOZ", title: "Fale.\nO Willo anota.", line: "Diga do seu jeito: ele entende o valor,\na categoria, a conta e o dia.", Demo: VoiceDemo, ms: DURATIONS.voice },
-  { tag: "REGISTRO RÁPIDO", title: "Dois toques,\num gasto salvo.", line: "Dois toques atrás do celular ou no Willo\ne o registro rápido já abre.", Demo: QuickDemo, ms: DURATIONS.quick },
+  { tag: "REGISTRO RÁPIDO", title: "Dois toques,\num gasto salvo.", line: "Dois toques atrás do celular ou na tela\ndo app e o registro rápido já abre.", Demo: QuickDemo, ms: DURATIONS.quick },
   { tag: "COMPROVANTE", title: "Fotografe.\nEle lê por você.", line: "Local, valor, pagamento e data saem\nda foto direto para o registro.", Demo: ReceiptDemo, ms: DURATIONS.receipt },
   { tag: "RADAR FINANCEIRO", title: "Cada área do seu\ndinheiro, explicada.", line: "Consumo, hábitos, compromissos, futuro\ne saúde, cada um numa frase.", Demo: RadarDemo, ms: DURATIONS.radar },
   { tag: "PREVISÃO", title: "O fim do mês,\nantes do fim.", line: "Veja quanto sobra no dia 30 e simule\num gasto antes de fazer.", Demo: ForecastDemo, ms: DURATIONS.forecast },
@@ -53,8 +53,10 @@ const N = SLIDES.length;
 const HOLD_MS = 1600;
 /* How long before moving on the slide begins to settle out. */
 const OUT_MS = 450;
-/* The demonstrations are laid out for this much height and shrink where there is less. */
-const DEMO_H = 440;
+/* The demonstrations are laid out for this much height. They are shrunk only on a
+   phone too short for them: shrunk text is resampled and is never quite as sharp. */
+const DEMO_H = 420;
+const SHRINK_BELOW = 390;
 
 export default function BemVindo() {
   const router = useRouter();
@@ -86,7 +88,9 @@ export default function BemVindo() {
     const out = setTimeout(() => setLeaving(true), total - OUT_MS);
     const id = setTimeout(() => {
       const next = (index + 1) % N;
-      pager.current?.scrollTo({ x: next * width, animated: true });
+      /* After the last, straight back to the first rather than sliding past them all. */
+      pager.current?.scrollTo({ x: next * width, animated: next !== 0 });
+      setHeld(false);
       setIndex(next);
     }, total);
     return () => {
@@ -105,7 +109,7 @@ export default function BemVindo() {
     [width, index],
   );
 
-  const scale = Math.min(1, area / DEMO_H);
+  const scale = area < SHRINK_BELOW ? area / DEMO_H : 1;
 
   return (
     <ChimeContext.Provider value={chime}>
@@ -122,6 +126,9 @@ export default function BemVindo() {
           showsHorizontalScrollIndicator={false}
           onScrollBeginDrag={() => setHeld(true)}
           onMomentumScrollEnd={settle}
+          /* A drag let go without a flick may never report a momentum end: settle here too,
+             or the slides would stay held. */
+          onScrollEndDrag={settle}
           onLayout={(e) => setPageH(e.nativeEvent.layout.height)}
           style={{ flex: 1 }}
         >
@@ -132,7 +139,7 @@ export default function BemVindo() {
                 style={{ flex: 1, alignItems: "center", justifyContent: "center", overflow: "visible" }}
               >
                 {Math.abs(i - index) <= 1 && (
-                  <View style={{ width: width - 48, transform: [{ scale }], alignItems: "center" }}>
+                  <View style={{ width: width - 48, alignItems: "center", ...(scale < 1 ? { transform: [{ scale }] } : null) }}>
                     <Appear on={ready && i === index} leaving={leaving && i === index}>
                       <s.Demo active={ready && i === index} />
                     </Appear>
@@ -185,7 +192,9 @@ function Appear({ on, leaving, children }: { on: boolean; leaving: boolean; chil
     }
     p.set(leaving ? withTiming(0.4, { duration: OUT_MS, easing: Easing.in(Easing.cubic) }) : withTiming(1, { duration: 750, easing: Easing.bezier(0.16, 1, 0.3, 1) }));
   }, [on, leaving, p]);
-  const style = useAnimatedStyle(() => ({ opacity: Math.max(0.15, p.get()), transform: [{ translateY: (1 - p.get()) * 22 }, { scale: 0.96 + 0.04 * p.get() }] }));
+  /* No scaling: on the phone, text that is scaling is drawn as a picture and looks
+     blurred until it stops. */
+  const style = useAnimatedStyle(() => ({ opacity: Math.max(0.15, p.get()), transform: [{ translateY: (1 - p.get()) * 22 }] }));
   return <Animated.View style={[{ width: "100%", alignItems: "center" }, style]}>{children}</Animated.View>;
 }
 

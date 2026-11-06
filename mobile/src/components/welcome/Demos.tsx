@@ -41,14 +41,15 @@ const PANEL = "rgba(22,24,30,0.92)";
 
 export const ChimeContext = createContext<() => void>(() => undefined);
 
+/* Each ends a moment after its script's last event; the slide then holds briefly. */
 export const DURATIONS = {
-  notify: 3 * 4400 + 400,
-  voice: 4 * 3900 + 300,
-  quick: 2 * 6600,
-  receipt: 7000,
+  notify: 2 * 4400 + 2700 + 700,
+  voice: 2 * 3900 + 300 + 20 * 60 + 500 + 700,
+  quick: 7400 + 1900 + 850 + 9 * 120 + 450 + 380 + 900,
+  receipt: 3700 + 900,
   radar: 6 * 2900,
-  forecast: 10400,
-  ask: 3 * 6600,
+  forecast: 8200 + 1200,
+  ask: 2 * 6600 + 200 + 1300 + 48 * 26 + 300 + 900,
 } as const;
 
 export function money(v: number) {
@@ -128,14 +129,16 @@ function useEased(to: number, length = 700, start = 0) {
   return v;
 }
 
-/** Arrives softly: up a little, from a touch smaller, fading in. */
+/** Arrives softly: up a little, fading in. */
 function Rise({ on = true, children, delay = 0, from = 14 }: { on?: boolean; children: ReactNode; delay?: number; from?: number }) {
   const p = useSharedValue(0);
   const reduce = useReducedMotion();
   useEffect(() => {
     p.set(on ? (reduce ? 1 : withDelay(delay, withTiming(1, { duration: 620, easing: Easing.bezier(0.16, 1, 0.3, 1) }))) : withTiming(0, { duration: 260 }));
   }, [on, p, delay, reduce]);
-  const style = useAnimatedStyle(() => ({ opacity: p.get(), transform: [{ translateY: (1 - p.get()) * from }, { scale: 0.97 + 0.03 * p.get() }] }));
+  /* Moves and fades, never scales: on the phone, text that is scaling is drawn as a
+     picture and looks blurred until it stops. */
+  const style = useAnimatedStyle(() => ({ opacity: p.get(), transform: [{ translateY: (1 - p.get()) * from }] }));
   return <Animated.View style={style}>{children}</Animated.View>;
 }
 
@@ -307,7 +310,6 @@ export function NotifyDemo({ active }: { active: boolean }) {
 const SAYINGS = [
   { said: "almoço 32 no débito", title: "Almoço", amount: "R$ 32,00", tags: ["Alimentação", "Débito", "hoje"] },
   { said: "uber 18 ontem", title: "Uber", amount: "R$ 18,00", tags: ["Transporte", "ontem"] },
-  { said: "ifood 45 no crédito", title: "iFood", amount: "R$ 45,00", tags: ["Delivery", "Crédito", "hoje"] },
   { said: "recebi 300 de freela", title: "Freela", amount: "R$ 300,00", tags: ["Entrada", "hoje"], income: true },
 ];
 
@@ -400,11 +402,11 @@ function WaveBar({ i, t, on }: { i: number; t: { get: () => number }; on: boolea
 }
 
 /* ================================================================== */
-/* Two taps, on a real phone                                           */
+/* Two taps: the gesture on a phone, then Registro rápido full size    */
 /* ================================================================== */
 
-const PH_W = 184;
-const PH_H = 380;
+const PH_W = 168;
+const PH_H = 344;
 const FRAME = 4;
 
 /**
@@ -412,24 +414,24 @@ const FRAME = 4;
  * and on the back the full-width camera plateau. No maker's logo.
  */
 function Phone({ face, children }: { face: "front" | "back"; children?: ReactNode }) {
-  const R = 44;
+  const R = 42;
   const button = { position: "absolute" as const, width: 3, borderRadius: 2, backgroundColor: "#6E7279" };
+  const near = face === "front" ? { left: -2 } : { right: -2 };
+  const far = face === "front" ? { right: -2 } : { left: -2 };
   return (
     <View style={{ width: PH_W, height: PH_H }}>
-      {/* Buttons: action and volume on the left, power on the right (mirrored on the back). */}
-      <View style={[button, face === "front" ? { left: -2 } : { right: -2 }, { top: 78, height: 20 }]} />
-      <View style={[button, face === "front" ? { left: -2 } : { right: -2 }, { top: 112, height: 38 }]} />
-      <View style={[button, face === "front" ? { left: -2 } : { right: -2 }, { top: 158, height: 38 }]} />
-      <View style={[button, face === "front" ? { right: -2 } : { left: -2 }, { top: 124, height: 60 }]} />
+      <View style={[button, near, { top: 72, height: 18 }]} />
+      <View style={[button, near, { top: 104, height: 34 }]} />
+      <View style={[button, near, { top: 146, height: 34 }]} />
+      <View style={[button, far, { top: 116, height: 56 }]} />
       <Fade colors={["#8A8E95", "#3A3D42", "#6C7076", "#2E3034"]} locations={[0, 0.35, 0.7, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: R, padding: FRAME }}>
-        <View style={{ flex: 1, borderRadius: R - FRAME, overflow: "hidden", backgroundColor: face === "front" ? "#050608" : "#2A2D33" }}>
+        <View style={{ flex: 1, borderRadius: R - FRAME, overflow: "hidden", backgroundColor: face === "front" ? "#07080A" : "#2A2D33" }}>
           {face === "front" ? (
             <>
               {children}
-              {/* Status bar and the Dynamic Island. */}
-              <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height: 34, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 }}>
+              <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height: 32, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 18 }}>
                 <Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>9:41</Text>
-                <View style={{ flexDirection: "row", gap: 3, alignItems: "flex-end" }}>
+                <View style={{ flexDirection: "row", gap: 2.5, alignItems: "flex-end" }}>
                   {[4, 6, 8, 10].map((h) => (
                     <View key={h} style={{ width: 2.5, height: h, borderRadius: 1, backgroundColor: "#fff" }} />
                   ))}
@@ -438,27 +440,26 @@ function Phone({ face, children }: { face: "front" | "back"; children?: ReactNod
                   </View>
                 </View>
               </View>
-              <View pointerEvents="none" style={{ position: "absolute", top: 9, alignSelf: "center", width: 58, height: 17, borderRadius: 9, backgroundColor: "#000" }} />
+              <View pointerEvents="none" style={{ position: "absolute", top: 9, alignSelf: "center", width: 54, height: 16, borderRadius: 8, backgroundColor: "#000" }} />
             </>
           ) : (
             <>
-              <Fade colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0)", "rgba(0,0,0,0.2)"]} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
-              {/* The camera plateau across the top, with three lenses, flash and sensor. */}
-              <Fade colors={["#3A3E45", "#24272C"]} style={{ position: "absolute", left: 6, right: 6, top: 6, height: 74, borderRadius: R - FRAME - 6 }}>
+              <Fade colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0)", "rgba(0,0,0,0.22)"]} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
+              <Fade colors={["#3A3E45", "#24272C"]} style={{ position: "absolute", left: 6, right: 6, top: 6, height: 70, borderRadius: R - FRAME - 6 }}>
                 {[
-                  [12, 6],
-                  [46, 6],
-                  [29, 38],
+                  [11, 6],
+                  [43, 6],
+                  [27, 36],
                 ].map(([x, y]) => (
-                  <View key={`${x}-${y}`} style={{ position: "absolute", left: x, top: y, width: 30, height: 30, borderRadius: 15, backgroundColor: "#15171B", alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: "#4A4E56" }}>
-                    <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: "#07080A", alignItems: "center", justifyContent: "center" }}>
-                      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "#1E2A44" }} />
+                  <View key={`${x}-${y}`} style={{ position: "absolute", left: x, top: y, width: 28, height: 28, borderRadius: 14, backgroundColor: "#15171B", alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: "#4A4E56" }}>
+                    <View style={{ width: 17, height: 17, borderRadius: 9, backgroundColor: "#07080A", alignItems: "center", justifyContent: "center" }}>
+                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#1E2A44" }} />
                       <View style={{ position: "absolute", top: 3, left: 4, width: 4, height: 4, borderRadius: 2, backgroundColor: "rgba(160,190,255,0.5)" }} />
                     </View>
                   </View>
                 ))}
-                <View style={{ position: "absolute", right: 22, top: 14, width: 12, height: 12, borderRadius: 6, backgroundColor: "#E8E3D3" }} />
-                <View style={{ position: "absolute", right: 24, top: 42, width: 9, height: 9, borderRadius: 5, backgroundColor: "#111316" }} />
+                <View style={{ position: "absolute", right: 20, top: 13, width: 11, height: 11, borderRadius: 6, backgroundColor: "#E8E3D3" }} />
+                <View style={{ position: "absolute", right: 22, top: 40, width: 8, height: 8, borderRadius: 4, backgroundColor: "#111316" }} />
               </Fade>
             </>
           )}
@@ -468,10 +469,30 @@ function Phone({ face, children }: { face: "front" | "back"; children?: ReactNod
   );
 }
 
+/** The app as the phone shows it: the balance and Willo. */
+function AppHome() {
+  return (
+    <View style={{ alignItems: "center", marginTop: 56 }}>
+      <Text style={{ fontSize: 10, color: INK.softer }}>Saldo em contas</Text>
+      <Text style={{ fontSize: 18, fontWeight: "800", color: "#fff", marginTop: 2 }}>R$ 2.430,00</Text>
+      <View style={{ width: 96, height: 96, marginTop: 18 }}>
+        <WilloBot size={96} mode="idle" />
+      </View>
+      <View style={{ marginTop: 22, width: 120, height: 9, borderRadius: 5, backgroundColor: "rgba(255,255,255,0.1)" }} />
+      <View style={{ marginTop: 7, width: 84, height: 9, borderRadius: 5, backgroundColor: "rgba(255,255,255,0.06)" }} />
+    </View>
+  );
+}
+
+/* Where each knock lands, inside the phone. */
+const KNOCK_BACK = { x: PH_W / 2, y: PH_H * 0.56 };
+const KNOCK_SCREEN = { x: PH_W / 2, y: FRAME + 56 + 14 + 22 + 18 + 48 };
+
 const ROUNDS = [
-  { where: "back" as const, typed: "uber 18,40", title: "Uber", amount: "R$ 18,40", tags: ["Transporte", "hoje"] },
-  { where: "willo" as const, typed: "café 9,50", title: "Café", amount: "R$ 9,50", tags: ["Alimentação", "hoje"] },
+  { where: "back" as const, label: "Dois toques atrás do celular", typed: "uber 18,40", title: "Uber", amount: "R$ 18,40", tags: ["Transporte", "hoje"] },
+  { where: "screen" as const, label: "Dois toques na tela do app", typed: "café 9,50", title: "Café", amount: "R$ 9,50", tags: ["Alimentação", "hoje"] },
 ];
+const ROUND_MS = 7400;
 
 export function QuickDemo({ active }: { active: boolean }) {
   const chime = useContext(ChimeContext);
@@ -483,15 +504,14 @@ export function QuickDemo({ active }: { active: boolean }) {
   const [done, setDone] = useState(false);
   const turn = useSharedValue(1);
   const knock = useSharedValue(0);
-  const sheet = useSharedValue(0);
-  const keys = useSharedValue(0);
-  const typed = useTyping(ROUNDS[r].typed, typing ? run : 0, 110);
+  const zoom = useSharedValue(0); // 0: the phone, 1: Registro rápido
+  const typed = useTyping(ROUNDS[r].typed, typing ? run : 0, 120);
 
   useScript(
     active,
     (at) => {
       ROUNDS.forEach((round, i) => {
-        const t0 = i * 6600;
+        const t0 = i * ROUND_MS;
         const back = round.where === "back";
         at(t0, () => {
           setR(i);
@@ -499,38 +519,32 @@ export function QuickDemo({ active }: { active: boolean }) {
           setDone(false);
           setTyping(false);
           setPressed(false);
-          sheet.set(0);
-          keys.set(0);
           turn.set(1);
+          zoom.set(withTiming(0, { duration: 500, easing: Easing.bezier(0.16, 1, 0.3, 1) }));
         });
-        at(t0 + 400, () =>
-          knock.set(withSequence(withTiming(1, { duration: 120 }), withTiming(0, { duration: 200 }), withTiming(1, { duration: 120 }), withTiming(0, { duration: 320 }))),
+        at(t0 + 700, () =>
+          knock.set(withSequence(withTiming(1, { duration: 130 }), withTiming(0, { duration: 220 }), withTiming(1, { duration: 130 }), withTiming(0, { duration: 380 }))),
         );
-        at(t0 + 430, knockFeel);
-        at(t0 + 750, knockFeel);
+        at(t0 + 730, knockFeel);
+        at(t0 + 1080, knockFeel);
         if (back) {
-          at(t0 + 1250, () => turn.set(withTiming(0, { duration: 260, easing: Easing.in(Easing.quad) })));
-          at(t0 + 1520, () => {
+          at(t0 + 1700, () => turn.set(withTiming(0, { duration: 280, easing: Easing.in(Easing.quad) })));
+          at(t0 + 1990, () => {
             setFace("front");
-            turn.set(withTiming(1, { duration: 320, easing: Easing.out(Easing.quad) }));
+            turn.set(withTiming(1, { duration: 340, easing: Easing.out(Easing.quad) }));
           });
         }
-        const s = t0 + (back ? 1950 : 1250);
-        at(s, () => {
-          sheet.set(withTiming(1, { duration: 520, easing: Easing.bezier(0.16, 1, 0.3, 1) }));
-          keys.set(withDelay(250, withTiming(1, { duration: 420, easing: Easing.out(Easing.cubic) })));
-        });
-        at(s + 800, () => {
+        const open = t0 + (back ? 2700 : 1900);
+        at(open, () => zoom.set(withTiming(1, { duration: 650, easing: Easing.bezier(0.16, 1, 0.3, 1) })));
+        at(open + 850, () => {
           setRun((v) => v + 1);
           setTyping(true);
         });
-        const typedEnd = s + 800 + round.typed.length * 110 + 350;
-        at(typedEnd, () => setPressed(true));
-        at(typedEnd + 220, () => {
-          setPressed(false);
-          keys.set(withTiming(0, { duration: 320 }));
-        });
-        at(typedEnd + 450, () => {
+        const end = open + 850 + round.typed.length * 120 + 450;
+        at(end, () => setPressed(true));
+        at(end + 200, () => setPressed(false));
+        at(end + 380, () => {
+          setTyping(false);
           setDone(true);
           chime();
           success();
@@ -540,107 +554,79 @@ export function QuickDemo({ active }: { active: boolean }) {
     () => {
       setDone(false);
       setTyping(false);
-      sheet.set(0);
-      keys.set(0);
+      zoom.set(0);
+      turn.set(1);
     },
   );
 
   const round = ROUNDS[r];
-  const flip = useAnimatedStyle(() => ({ transform: [{ perspective: 800 }, { scaleX: 0.03 + 0.97 * turn.get() }] }));
-  const ripple = useAnimatedStyle(() => ({ opacity: knock.get() * 0.85, transform: [{ scale: 0.5 + knock.get() * 0.7 }] }));
-  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: (1 - sheet.get()) * PH_H }] }));
-  const keysStyle = useAnimatedStyle(() => ({ transform: [{ translateY: (1 - keys.get()) * 140 }], opacity: keys.get() }));
-  const inner = PH_H - FRAME * 2;
+  const spot = face === "back" ? KNOCK_BACK : KNOCK_SCREEN;
+  const flip = useAnimatedStyle(() => ({ transform: [{ scaleX: 0.03 + 0.97 * turn.get() }] }));
+  const phoneOut = useAnimatedStyle(() => ({ opacity: 1 - zoom.get(), transform: [{ translateY: -zoom.get() * 30 }] }));
+  const sheetIn = useAnimatedStyle(() => ({ opacity: zoom.get(), transform: [{ translateY: (1 - zoom.get()) * 60 }] }));
+  const ripple = useAnimatedStyle(() => ({ opacity: knock.get() * 0.9, transform: [{ scale: 0.5 + knock.get() * 0.7 }] }));
+  const tocs = useAnimatedStyle(() => ({ opacity: knock.get() }));
 
   return (
-    <View style={{ alignItems: "center" }}>
-      <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
-        {(
-          [
-            ["Atrás do celular", round.where === "back"],
-            ["No Willo", round.where === "willo"],
-          ] as const
-        ).map(([label, on]) => (
-          <View key={label} style={{ paddingHorizontal: 13, height: 32, borderRadius: 16, justifyContent: "center", backgroundColor: on ? "#fff" : "rgba(255,255,255,0.07)" }}>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: on ? "#0B0D12" : INK.soft }}>{label}</Text>
+    <View style={{ width: "100%", alignItems: "center" }}>
+      <View style={{ height: 34, justifyContent: "center", marginBottom: 12 }}>
+        <Rise key={r} from={6}>
+          <View style={{ paddingHorizontal: 14, height: 32, borderRadius: 16, justifyContent: "center", backgroundColor: "#fff" }}>
+            <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#0B0D12" }}>{round.label}</Text>
           </View>
-        ))}
+        </Rise>
       </View>
 
-      <Animated.View style={flip}>
-        <Phone face={face}>
-          {/* The app: Willo on its home, and Registro rápido rising over it. */}
-          <View style={{ alignItems: "center", marginTop: 52 }}>
-            <Text style={{ fontSize: 9.5, color: INK.softer }}>Saldo em contas</Text>
-            <Text style={{ fontSize: 17, fontWeight: "800", color: "#fff", marginTop: 1 }}>R$ 2.430,00</Text>
-            <View style={{ width: 78, height: 78, marginTop: 10 }}>
-              <WilloBot size={78} mode={done ? "speaking" : "idle"} />
-            </View>
-          </View>
-          <Animated.View style={[{ position: "absolute", left: 0, right: 0, bottom: 0, height: inner * 0.66, borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: "#16181D", padding: 12 }, sheetStyle]}>
-            <View style={{ alignSelf: "center", width: 34, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.2)" }} />
-            <Text style={{ marginTop: 10, fontSize: 12, fontWeight: "700", color: "#fff" }}>Registro rápido</Text>
-            {!done ? (
-              <View style={{ marginTop: 8, height: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.08)", flexDirection: "row", alignItems: "center", paddingLeft: 12, paddingRight: 4 }}>
-                <Text style={{ flex: 1, fontSize: 12.5, color: typed ? "#fff" : INK.faint }}>
+      <View style={{ width: "100%", height: PH_H, alignItems: "center", justifyContent: "center" }}>
+        {/* The gesture, on the phone. */}
+        <Animated.View style={[{ position: "absolute", top: 0 }, phoneOut]}>
+          <Animated.View style={flip}>
+            <Phone face={face}>{face === "front" ? <AppHome /> : null}</Phone>
+            <Animated.View
+              pointerEvents="none"
+              style={[{ position: "absolute", left: spot.x - 34, top: spot.y - 34, width: 68, height: 68, borderRadius: 34, borderWidth: 2, borderColor: ICE, backgroundColor: "rgba(220,235,255,0.16)" }, ripple]}
+            />
+          </Animated.View>
+          <Animated.View pointerEvents="none" style={[{ position: "absolute", left: PH_W + 10, top: spot.y - 30 }, tocs]}>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: ICE }}>toc toc</Text>
+          </Animated.View>
+        </Animated.View>
+
+        {/* Registro rápido, opened by it, full size. */}
+        <Animated.View style={[{ position: "absolute", left: 0, right: 0, top: 30 }, sheetIn]}>
+          <Glass>
+            <View style={{ padding: 18, gap: 14 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <Text style={{ fontSize: 17, fontWeight: "800", color: "#fff" }}>Registro rápido</Text>
+                <Label>ABERTO EM 1 TOQUE DUPLO</Label>
+              </View>
+              <View style={{ height: 58, borderRadius: 29, backgroundColor: "rgba(255,255,255,0.08)", flexDirection: "row", alignItems: "center", paddingLeft: 20, paddingRight: 6 }}>
+                <Text style={{ flex: 1, fontSize: 20, fontWeight: "600", color: typed ? "#fff" : INK.faint }}>
                   {typed || "o que você gastou?"}
                   {typing && <Caret />}
                 </Text>
-                <View style={{ height: 26, paddingHorizontal: 10, borderRadius: 13, justifyContent: "center", backgroundColor: "#fff", transform: [{ scale: pressed ? 0.88 : 1 }] }}>
-                  <Text style={{ fontSize: 10.5, fontWeight: "800", color: "#0B0D12" }}>Anotar</Text>
+                <View style={{ height: 46, paddingHorizontal: 18, borderRadius: 23, justifyContent: "center", backgroundColor: "#fff", opacity: pressed ? 0.6 : 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: "800", color: "#0B0D12" }}>Anotar</Text>
                 </View>
               </View>
-            ) : (
-              <View style={{ marginTop: 10, gap: 8 }}>
-                <Rise from={8}>
-                  <View style={{ padding: 10, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.06)" }}>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                      <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>{round.title}</Text>
-                      <Text style={{ fontSize: 13, fontWeight: "800", color: "#fff" }}>{round.amount}</Text>
-                    </View>
-                    <View style={{ flexDirection: "row", gap: 4, marginTop: 6 }}>
-                      {round.tags.map((t, i) => (
-                        <View key={t} style={{ paddingHorizontal: 6, height: 17, borderRadius: 9, justifyContent: "center", backgroundColor: i === 0 ? "rgba(111,168,232,0.22)" : "rgba(255,255,255,0.08)" }}>
-                          <Text style={{ fontSize: 9, fontWeight: "600", color: i === 0 ? ICE : INK.soft }}>{t}</Text>
-                        </View>
-                      ))}
-                    </View>
+              <View style={{ minHeight: 96 }}>
+                {done ? (
+                  <View style={{ gap: 12 }}>
+                    <Rise>
+                      <Entry title={round.title} amount={round.amount} tags={round.tags} fresh />
+                    </Rise>
+                    <Rise delay={200}>
+                      <Saved text="Anotado em 2 segundos" />
+                    </Rise>
                   </View>
-                </Rise>
-                <Rise delay={180} from={6}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                    <Check size={12} color={ICE} strokeWidth={3} />
-                    <Text style={{ fontSize: 11, fontWeight: "600", color: "#fff" }}>Anotado</Text>
-                  </View>
-                </Rise>
+                ) : (
+                  <Text style={{ fontSize: 14, color: INK.softer }}>Escreva ou fale do seu jeito: o Willo entende o valor e a categoria.</Text>
+                )}
               </View>
-            )}
-            {/* A keyboard, while it is being typed. */}
-            <Animated.View style={[{ position: "absolute", left: 6, right: 6, bottom: 8, gap: 5 }, keysStyle]}>
-              {[10, 9, 7].map((count, row) => (
-                <View key={row} style={{ flexDirection: "row", justifyContent: "center", gap: 3.5 }}>
-                  {Array.from({ length: count }, (_, k) => (
-                    <View key={k} style={{ width: 13.5, height: 20, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.14)" }} />
-                  ))}
-                </View>
-              ))}
-              <View style={{ flexDirection: "row", justifyContent: "center", gap: 4 }}>
-                <View style={{ width: 30, height: 20, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.09)" }} />
-                <View style={{ width: 90, height: 20, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.14)" }} />
-                <View style={{ width: 30, height: 20, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.09)" }} />
-              </View>
-            </Animated.View>
-          </Animated.View>
-        </Phone>
-        {/* Where the finger knocks: the middle of the back, or Willo. */}
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            { position: "absolute", left: PH_W / 2 - 32, top: face === "back" ? PH_H / 2 - 32 : FRAME + 52 + 26 + 10 + 39 - 32, width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: ICE, backgroundColor: "rgba(220,235,255,0.16)" },
-            ripple,
-          ]}
-        />
-      </Animated.View>
+            </View>
+          </Glass>
+        </Animated.View>
+      </View>
     </View>
   );
 }
@@ -1004,7 +990,6 @@ const ASKS: { short: string; q: string; a: string; card: { label: string; value:
 ];
 
 export function AskDemo({ active }: { active: boolean }) {
-  const chime = useContext(ChimeContext);
   const later = useLater();
   const [pick, setPick] = useState(0);
   const [round, setRound] = useState(0);
@@ -1025,10 +1010,7 @@ export function AskDemo({ active }: { active: boolean }) {
       setThinking(false);
       setRun((r) => r + 1);
     });
-    at(t0 + 1300 + ASKS[i].a.length * 26 + 300, () => {
-      setCard(true);
-      chime();
-    });
+    at(t0 + 1300 + ASKS[i].a.length * 26 + 300, () => setCard(true));
   };
 
   useScript(

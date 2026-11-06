@@ -2,16 +2,17 @@ import { useEffect, useRef } from "react";
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-audio";
 
 /**
- * The welcome's one sound: the app's own "plim", played softly when a demonstration
- * writes something down. It respects the ringer switch — the welcome is a page being
+ * The welcome's one sound: the app's own coin sound for an expense written down,
+ * played softly when a demonstration writes something down. It respects the ringer switch — the welcome is a page being
  * looked at, not a confirmation someone is waiting for — and mixes with whatever is
  * playing. The player is made when the page opens and let go when it closes.
  */
 
+/* Two small coins landing: money written down. The opening keeps its own chime. */
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const CHIME = require("../../assets/sounds/chime.wav") as number;
+const CHIME = require("../../assets/sounds/coin.wav") as number;
 
-export function useSoftChime(volume = 0.28) {
+export function useSoftChime(volume = 0.4) {
   const player = useRef<AudioPlayer | null>(null);
   useEffect(() => {
     try {
