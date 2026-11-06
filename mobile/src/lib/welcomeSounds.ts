@@ -12,7 +12,7 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-aud
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const CHIME = require("../../assets/sounds/coin.wav") as number;
 
-export function useSoftChime(volume = 0.4) {
+export function useSoftChime(volume = 0.6) {
   const player = useRef<AudioPlayer | null>(null);
   useEffect(() => {
     try {
