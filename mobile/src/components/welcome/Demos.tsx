@@ -43,9 +43,9 @@ export const ChimeContext = createContext<() => void>(() => undefined);
 
 /* Each ends a moment after its script's last event; the slide then holds briefly. */
 export const DURATIONS = {
-  notify: 2 * 3600 + 1650 + 1200,
+  notify: 1 * 3600 + 1650 + 1200,
   voice: 1 * 3900 + 300 + 20 * 60 + 500 + 900,
-  quick: 7600 + 1900 + 850 + 9 * 120 + 300 + 1100 + 900,
+  quick: 2700 + 850 + 10 * 120 + 300 + 1100 + 1000,
   receipt: 3700 + 900,
   radar: 5 * 2900 + 2400,
   forecast: 8200 + 1200,
@@ -222,7 +222,6 @@ function Label({ children }: { children: string }) {
 
 const PURCHASES = [
   { merchant: "UBER *TRIP", title: "Uber", tags: ["Transporte", "Débito", "agora"], how: "débito", amount: 18.4 },
-  { merchant: "IFOOD *RESTAURANTE", title: "iFood", tags: ["Delivery", "Crédito", "agora"], how: "crédito", amount: 42.9 },
   { merchant: "SUPERMERCADO BOA COMPRA", title: "Supermercado Boa Compra", tags: ["Mercado", "Débito", "agora"], how: "débito", amount: 127.9 },
 ];
 
@@ -523,7 +522,6 @@ const KNOCK_SCREEN = { x: PH_W / 2, y: FRAME + 56 + 14 + 22 + 18 + 48 };
 
 const ROUNDS = [
   { where: "back" as const, label: "Dois toques atrás do celular", typed: "uber 18,40", title: "Uber", amount: "R$ 18,40", tags: ["Transporte", "hoje"] },
-  { where: "screen" as const, label: "Dois toques na tela do app", typed: "café 9,50", title: "Café", amount: "R$ 9,50", tags: ["Alimentação", "hoje"] },
 ];
 const ROUND_MS = 7600;
 

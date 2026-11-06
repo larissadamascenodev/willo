@@ -41,7 +41,7 @@ interface Slide {
 const SLIDES: Slide[] = [
   { tag: "WILLO COPILOT", title: "Você compra, ele anota.", line: "O Willo lê o aviso de compra do banco\ne registra sozinho. Você só confere.", Demo: NotifyDemo, ms: DURATIONS.notify },
   { tag: "VOZ", title: "Fale. O Willo anota.", line: "Diga do seu jeito: ele entende o valor,\na categoria, a conta e o dia.", Demo: VoiceDemo, ms: DURATIONS.voice },
-  { tag: "REGISTRO RÁPIDO", title: "Dois toques e pronto.", line: "Dois toques atrás do celular ou na tela\ndo app e o registro rápido já abre.", Demo: QuickDemo, ms: DURATIONS.quick },
+  { tag: "REGISTRO RÁPIDO", title: "Dois toques e pronto.", line: "Dois toques atrás do celular e\no registro rápido já abre.", Demo: QuickDemo, ms: DURATIONS.quick },
   { tag: "COMPROVANTE", title: "Fotografe. Ele lê.", line: "Local, valor, pagamento e data saem\nda foto direto para o registro.", Demo: ReceiptDemo, ms: DURATIONS.receipt },
   { tag: "RADAR FINANCEIRO", title: "Seu dinheiro, explicado.", line: "Consumo, hábitos, compromissos, futuro\ne saúde, cada um numa frase.", Demo: RadarDemo, ms: DURATIONS.radar },
   { tag: "PREVISÃO", title: "O mês, antes do fim.", line: "Veja quanto sobra no dia 30 e simule\num gasto antes de fazer.", Demo: ForecastDemo, ms: DURATIONS.forecast },
