@@ -4,7 +4,7 @@ import { BlurView } from "expo-blur";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
-import { th } from "~/theme/theme";
+import { useGroundTh } from "~/theme/groundInk";
 /**
  * The band the page passes under.
  *
@@ -30,6 +30,9 @@ const LAYERS: { to: number; intensity: number }[] = [
 ];
 
 export default function ScrollEdge({ on }: { on: boolean }) {
+  /* Over a photo the band takes the veil's colour, not the theme's: a dark veil in the
+     light theme gets a dark band, so no white smear opens over it. */
+  const th = useGroundTh();
   const insets = useSafeAreaInsets();
   const shown = useSharedValue(0);
   const height = insets.top + 104;
