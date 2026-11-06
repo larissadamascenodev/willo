@@ -13,11 +13,11 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import * as WebBrowser from "expo-web-browser";
 import { supabase } from "~/supabase/client";
 import Room from "~/components/Room";
 import Glass from "~/components/Glass";
 import Field, { PasswordField } from "~/components/auth/Field";
+import LegalSheet from "~/components/auth/LegalSheet";
 import { AppleMark, GoogleMark } from "~/components/auth/BrandIcons";
 import { AlertTriangle, ChevronLeft, CircleCheck, Info, Mail } from "~/components/icons";
 import { GREEN, INK, RED } from "~/theme/tokens";
@@ -46,11 +46,11 @@ import { GREEN, INK, RED } from "~/theme/tokens";
  */
 
 const RESET_REDIRECT = "https://willo-app.vercel.app/reset-password";
-const SITE = "https://willo-app.vercel.app";
 
 type Note = { tone: "bad" | "good" | "info"; text: string; field?: "email" | "password" };
 
 export default function Login() {
+  const [legal, setLegal] = useState<"terms" | "privacy" | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   /* Coming back from "confirm your e-mail", the address is already known — and the
@@ -280,17 +280,19 @@ export default function Login() {
           {/* ── What going on means ── */}
           <Text style={{ paddingHorizontal: 8, fontSize: 13, lineHeight: 20, color: INK.faint, textAlign: "center" }}>
             Ao continuar, você concorda com os{" "}
-            <Text onPress={() => void WebBrowser.openBrowserAsync(`${SITE}/termos-de-uso`)} style={{ fontWeight: "700", color: INK.soft, textDecorationLine: "underline" }}>
+            <Text onPress={() => setLegal("terms")} style={{ fontWeight: "700", color: INK.soft, textDecorationLine: "underline" }}>
               Termos de Uso
             </Text>{" "}
             e{" "}
-            <Text onPress={() => void WebBrowser.openBrowserAsync(`${SITE}/politica-privacidade`)} style={{ fontWeight: "700", color: INK.soft, textDecorationLine: "underline" }}>
+            <Text onPress={() => setLegal("privacy")} style={{ fontWeight: "700", color: INK.soft, textDecorationLine: "underline" }}>
               Política de Privacidade
             </Text>
             .
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
+      {/* The documents, read here, with the always-current version a tap away. */}
+      <LegalSheet which={legal} onClose={() => setLegal(null)} />
     </Room>
   );
 }

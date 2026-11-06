@@ -75,3 +75,4 @@ export { default as TrendingUp } from "lucide-react-native/icons/trending-up";
 export { default as Minus } from "lucide-react-native/icons/minus";
 export { default as ArrowDownLeft } from "lucide-react-native/icons/arrow-down-left";
 export { default as ArrowUpRight } from "lucide-react-native/icons/arrow-up-right";
+export { default as ExternalLink } from "lucide-react-native/icons/external-link";
