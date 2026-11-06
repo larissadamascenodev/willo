@@ -50,7 +50,7 @@ const SLIDES: Slide[] = [
 ];
 const N = SLIDES.length;
 /* After a demonstration ends, how long the slide stays before the next one comes. */
-const HOLD_MS = 1600;
+const HOLD_MS = 1100;
 /* How long before moving on the slide begins to settle out. */
 const OUT_MS = 450;
 /* The demonstrations are laid out for this much height. They are shrunk only on a

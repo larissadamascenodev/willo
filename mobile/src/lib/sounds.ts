@@ -42,7 +42,7 @@ export function playCash() {
   try {
     preloadCash();
     const p = player!;
-    p.volume = 0.85;
+    p.volume = 0.6;
     if (p.currentTime > 0.02) void p.seekTo(0).then(() => p.play());
     else p.play();
   } catch {

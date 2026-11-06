@@ -17,7 +17,7 @@ import { LinearGradient as Fade } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import WilloBot from "~/components/willo/WilloBot";
 import { Scope, type SectorKey, SECTORS } from "~/components/radar/parts";
-import { Bell, Check, Mic, Receipt, Sparkles } from "~/components/icons";
+import { Bell, Camera, Check, Mic, Receipt, Sparkles } from "~/components/icons";
 import { INK } from "~/theme/tokens";
 
 /**
@@ -45,9 +45,9 @@ export const ChimeContext = createContext<() => void>(() => undefined);
 export const DURATIONS = {
   notify: 2 * 4400 + 2700 + 700,
   voice: 2 * 3900 + 300 + 20 * 60 + 500 + 700,
-  quick: 7400 + 1900 + 850 + 9 * 120 + 450 + 380 + 900,
+  quick: 7600 + 1900 + 850 + 9 * 120 + 300 + 1100 + 900,
   receipt: 3700 + 900,
-  radar: 6 * 2900,
+  radar: 5 * 2900 + 2400,
   forecast: 8200 + 1200,
   ask: 2 * 6600 + 200 + 1300 + 48 * 26 + 300 + 900,
 } as const;
@@ -246,7 +246,7 @@ export function NotifyDemo({ active }: { active: boolean }) {
         });
         at(t0 + 2000, () => fly.set(withTiming(1, { duration: 850, easing: Easing.inOut(Easing.cubic) })));
         at(t0 + 2700, () => {
-          setCaught((c) => [k, ...c].slice(0, 3));
+          setCaught((c) => [k, ...c].slice(0, 2));
           chime();
           success();
         });
@@ -290,7 +290,8 @@ export function NotifyDemo({ active }: { active: boolean }) {
       </View>
 
       <Glass>
-        <View style={{ padding: 16, gap: 14, minHeight: 236 }}>
+        {/* A fixed height: what arrives never pushes the slide's title down. */}
+        <View style={{ padding: 16, gap: 14, height: 204 }}>
           <Label>ANOTADO PELO COPILOT</Label>
           {caught.map((k, i) => (
             <Rise key={`${k}-${caught.length}`}>
@@ -333,7 +334,7 @@ export function VoiceDemo({ active }: { active: boolean }) {
         });
         at(t0 + s.said.length * 60 + 500, () => {
           setHearing(false);
-          setList((l) => [i, ...l].slice(0, 3));
+          setList((l) => [i, ...l].slice(0, 2));
           chime();
           success();
         });
@@ -347,18 +348,18 @@ export function VoiceDemo({ active }: { active: boolean }) {
 
   return (
     <View style={{ width: "100%", alignItems: "center" }}>
-      <View style={{ minHeight: 64, justifyContent: "center", alignSelf: "stretch" }}>
+      <View style={{ height: 56, justifyContent: "center", alignSelf: "stretch" }}>
         <Text style={{ fontSize: 24, fontWeight: "700", letterSpacing: -0.5, color: hearing ? "#fff" : "rgba(255,255,255,0.32)", textAlign: "center" }}>“{hearing ? said : SAYINGS[k].said}”</Text>
       </View>
-      <View style={{ width: 96, height: 96, alignItems: "center", justifyContent: "center", marginTop: 2 }}>
+      <View style={{ width: 84, height: 84, alignItems: "center", justifyContent: "center", marginTop: 2 }}>
         {hearing && <Pulse />}
-        <View style={{ width: 70, height: 70, borderRadius: 35, alignItems: "center", justifyContent: "center", backgroundColor: hearing ? "#fff" : "rgba(255,255,255,0.1)" }}>
+        <View style={{ width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center", backgroundColor: hearing ? "#fff" : "rgba(255,255,255,0.1)" }}>
           <Mic size={28} color={hearing ? "#0B0D12" : "#fff"} strokeWidth={2.2} />
         </View>
       </View>
       <Wave on={hearing} />
       <Glass style={{ alignSelf: "stretch", marginTop: 16 }}>
-        <View style={{ padding: 16, gap: 14, minHeight: 200 }}>
+        <View style={{ padding: 16, gap: 14, height: 176 }}>
           {list.map((i, row) => (
             <Rise key={`${i}-${list.length}`}>
               <Entry title={SAYINGS[i].title} amount={SAYINGS[i].amount} tags={SAYINGS[i].tags} income={SAYINGS[i].income} fresh={row === 0} dim={row > 0} />
@@ -376,7 +377,7 @@ function Pulse() {
     p.set(withRepeat(withTiming(1, { duration: 1200, easing: Easing.out(Easing.cubic) }), -1, false));
   }, [p]);
   const style = useAnimatedStyle(() => ({ opacity: 0.45 * (1 - p.get()), transform: [{ scale: 1 + p.get() * 0.5 }] }));
-  return <Animated.View style={[{ position: "absolute", width: 70, height: 70, borderRadius: 35, backgroundColor: "#fff" }, style]} />;
+  return <Animated.View style={[{ position: "absolute", width: 64, height: 64, borderRadius: 32, backgroundColor: "#fff" }, style]} />;
 }
 
 function Wave({ on }: { on: boolean }) {
@@ -492,7 +493,7 @@ const ROUNDS = [
   { where: "back" as const, label: "Dois toques atrás do celular", typed: "uber 18,40", title: "Uber", amount: "R$ 18,40", tags: ["Transporte", "hoje"] },
   { where: "screen" as const, label: "Dois toques na tela do app", typed: "café 9,50", title: "Café", amount: "R$ 9,50", tags: ["Alimentação", "hoje"] },
 ];
-const ROUND_MS = 7400;
+const ROUND_MS = 7600;
 
 export function QuickDemo({ active }: { active: boolean }) {
   const chime = useContext(ChimeContext);
@@ -502,6 +503,7 @@ export function QuickDemo({ active }: { active: boolean }) {
   const [typing, setTyping] = useState(false);
   const [pressed, setPressed] = useState(false);
   const [done, setDone] = useState(false);
+  const [filled, setFilled] = useState(false);
   const turn = useSharedValue(1);
   const knock = useSharedValue(0);
   const zoom = useSharedValue(0); // 0: the phone, 1: Registro rápido
@@ -517,6 +519,7 @@ export function QuickDemo({ active }: { active: boolean }) {
           setR(i);
           setFace(back ? "back" : "front");
           setDone(false);
+          setFilled(false);
           setTyping(false);
           setPressed(false);
           turn.set(1);
@@ -540,11 +543,14 @@ export function QuickDemo({ active }: { active: boolean }) {
           setRun((v) => v + 1);
           setTyping(true);
         });
-        const end = open + 850 + round.typed.length * 120 + 450;
-        at(end, () => setPressed(true));
-        at(end + 200, () => setPressed(false));
-        at(end + 380, () => {
+        const end = open + 850 + round.typed.length * 120 + 300;
+        at(end, () => {
           setTyping(false);
+          setFilled(true);
+        });
+        at(end + 800, () => setPressed(true));
+        at(end + 1000, () => setPressed(false));
+        at(end + 1100, () => {
           setDone(true);
           chime();
           success();
@@ -553,6 +559,7 @@ export function QuickDemo({ active }: { active: boolean }) {
     },
     () => {
       setDone(false);
+      setFilled(false);
       setTyping(false);
       zoom.set(0);
       turn.set(1);
@@ -592,35 +599,58 @@ export function QuickDemo({ active }: { active: boolean }) {
           </Animated.View>
         </Animated.View>
 
-        {/* Registro rápido, opened by it, full size. */}
-        <Animated.View style={[{ position: "absolute", left: 0, right: 0, top: 30 }, sheetIn]}>
+        {/* Registro rápido, opened by it, as the app shows it. */}
+        <Animated.View style={[{ position: "absolute", left: 0, right: 0, top: 8 }, sheetIn]}>
           <Glass>
-            <View style={{ padding: 18, gap: 14 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <Text style={{ fontSize: 17, fontWeight: "800", color: "#fff" }}>Registro rápido</Text>
-                <Label>ABERTO EM 1 TOQUE DUPLO</Label>
+            <View style={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 18 }}>
+              <View style={{ alignSelf: "center", width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.22)", marginBottom: 14 }} />
+              <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 1.1, color: INK.softer }}>REGISTRO RÁPIDO · ETAPA {done ? 2 : 1} DE 2</Text>
+              <View style={{ flexDirection: "row", gap: 4, marginTop: 8 }}>
+                <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: "#fff" }} />
+                <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: done ? "#fff" : "rgba(255,255,255,0.18)" }} />
               </View>
-              <View style={{ height: 58, borderRadius: 29, backgroundColor: "rgba(255,255,255,0.08)", flexDirection: "row", alignItems: "center", paddingLeft: 20, paddingRight: 6 }}>
-                <Text style={{ flex: 1, fontSize: 20, fontWeight: "600", color: typed ? "#fff" : INK.faint }}>
-                  {typed || "o que você gastou?"}
+              <Text style={{ marginTop: 16, fontSize: 24, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>O que aconteceu?</Text>
+              <View
+                style={{
+                  marginTop: 12,
+                  height: 56,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingHorizontal: 6,
+                  gap: 2,
+                  borderRadius: 20,
+                  backgroundColor: "rgba(255,255,255,0.06)",
+                  borderWidth: 1,
+                  borderColor: typed ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)",
+                }}
+              >
+                <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+                  <Camera size={20} color="rgba(255,255,255,0.78)" strokeWidth={2} />
+                </View>
+                <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, paddingHorizontal: 4, fontSize: 19, fontWeight: "600", color: typed ? "#fff" : INK.faint }}>
+                  {typed || "Ex.: padaria 48"}
                   {typing && <Caret />}
                 </Text>
-                <View style={{ height: 46, paddingHorizontal: 18, borderRadius: 23, justifyContent: "center", backgroundColor: "#fff", opacity: pressed ? 0.6 : 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: "800", color: "#0B0D12" }}>Anotar</Text>
+                <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
+                  <Mic size={20} color="rgba(255,255,255,0.78)" strokeWidth={2.1} />
                 </View>
               </View>
-              <View style={{ minHeight: 96 }}>
-                {done ? (
-                  <View style={{ gap: 12 }}>
-                    <Rise>
-                      <Entry title={round.title} amount={round.amount} tags={round.tags} fresh />
-                    </Rise>
-                    <Rise delay={200}>
-                      <Saved text="Anotado em 2 segundos" />
-                    </Rise>
+              {/* The entry it became, filled in as soon as it is read. */}
+              <View style={{ height: 84, marginTop: 12, justifyContent: "center" }}>
+                <Rise on={filled}>
+                  <View style={{ padding: 12, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.05)" }}>
+                    <Entry title={round.title} amount={round.amount} tags={round.tags} fresh={done} />
                   </View>
+                </Rise>
+              </View>
+              <View style={{ marginTop: 12, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, backgroundColor: done ? "rgba(111,168,232,0.22)" : "#fff", opacity: pressed ? 0.6 : filled || done ? 1 : 0.35 }}>
+                {done ? (
+                  <>
+                    <Check size={16} color={ICE} strokeWidth={3} />
+                    <Text style={{ fontSize: 16, fontWeight: "700", color: "#fff" }}>Anotado</Text>
+                  </>
                 ) : (
-                  <Text style={{ fontSize: 14, color: INK.softer }}>Escreva ou fale do seu jeito: o Willo entende o valor e a categoria.</Text>
+                  <Text style={{ fontSize: 16, fontWeight: "700", color: "#0B0D12" }}>Continuar</Text>
                 )}
               </View>
             </View>
@@ -688,13 +718,18 @@ export function ReceiptDemo({ active }: { active: boolean }) {
   );
 
   const scanStyle = useAnimatedStyle(() => ({ opacity: scan.get() > 0 && scan.get() < 1 ? 1 : 0, transform: [{ translateY: scan.get() * RECEIPT_H }] }));
+  const dim = useSharedValue(1);
+  useEffect(() => {
+    dim.set(withTiming(read ? 0.4 : 1, { duration: 600 }));
+  }, [read, dim]);
+  const paper = useAnimatedStyle(() => ({ opacity: dim.get() }));
   const flashStyle = useAnimatedStyle(() => ({ opacity: flash.get() * 0.85 }));
   const mono = { fontFamily: "Menlo", color: "#2B2E35" };
   const mark = { position: "absolute" as const, left: 8, right: 8, borderRadius: 4, borderWidth: 1.5, borderColor: COLD, backgroundColor: "rgba(111,168,232,0.14)" };
 
   return (
-    <View style={{ alignItems: "center", width: "100%" }}>
-      <View style={{ width: RECEIPT_W + 28, height: RECEIPT_H + 30, alignItems: "center", justifyContent: "center" }}>
+    <View style={{ alignItems: "center", width: "100%", height: RECEIPT_H + 50 }}>
+      <Animated.View style={[{ width: RECEIPT_W + 28, height: RECEIPT_H + 30, alignItems: "center", justifyContent: "center" }, paper]}>
         <View style={{ width: RECEIPT_W, height: RECEIPT_H, transform: [{ rotate: "-1.5deg" }] }}>
           <View style={{ height: RECEIPT_H - 7, backgroundColor: "#F3F1EC", paddingHorizontal: 14, paddingTop: 14, overflow: "hidden" }}>
             <Text style={{ ...mono, fontSize: 9.5, fontWeight: "700", textAlign: "center" }}>SUPERMERCADO BOA COMPRA LTDA</Text>
@@ -737,9 +772,9 @@ export function ReceiptDemo({ active }: { active: boolean }) {
           <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "#fff" }, flashStyle]} />
         </View>
         <Viewfinder />
-      </View>
+      </Animated.View>
 
-      <View style={{ alignSelf: "stretch", marginTop: -44 }}>
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
         <Rise on={read} from={24}>
           <Glass>
             <View style={{ padding: 16, gap: 12 }}>
