@@ -18,7 +18,7 @@ import { th } from "~/theme/theme";
 
 const SIZE = 46;
 
-function MiniDial() {
+export function MiniDial() {
   const c = SIZE / 2;
   const r = c - 1.5;
   const core = r * 0.34;
@@ -41,7 +41,7 @@ function MiniDial() {
 }
 
 /** Mounted a moment later: the Radar's reading is not what the home should wait for. */
-function Reading() {
+export function Reading() {
   const data = useRaioX();
   if (data.loading) return <Text numberOfLines={1} style={[T.note, { marginTop: 2, fontSize: 13 }]}>Consumo, hábitos, futuro e simulações</Text>;
   const watching = data.report.pillars.filter((p) => p.tone === "atencao" || p.tone === "critico").length;

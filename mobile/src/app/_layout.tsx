@@ -158,6 +158,7 @@ function Door() {
         <Stack.Screen name="fundo-foto" options={{ animation: "slide_from_bottom" }} />
         <Stack.Screen name="notificacoes" />
         <Stack.Screen name="notificacoes-ajustes" />
+        <Stack.Screen name="desafios" />
         {/* Comes up from the foot of the screen, but as a screen rather than a card:
             the modal presentation insets its own content, which on a form that is
             already full width shows up as a left edge cut off. */}

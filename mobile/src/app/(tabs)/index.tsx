@@ -21,7 +21,7 @@ import HomeHeader from "~/components/home/HomeHeader";
 import OrbHero, { LINES_HERO_BODY, ORB_HERO_BODY, WilloGlow } from "~/components/home/OrbHero";
 import { useHomeHero } from "~/lib/homeHero";
 import WidgetBoard from "~/components/home/WidgetBoard";
-import RadarShortcut from "~/components/home/RadarShortcut";
+import ShortcutPair from "~/components/home/ShortcutPair";
 import EditBar from "~/components/home/EditBar";
 import { renderHomeWidget, widgetIsEmpty } from "~/components/home/HomeWidgets";
 import { useRecorrentes } from "@/hooks/useRecorrentes";
@@ -247,7 +247,6 @@ export default function Home() {
         {/* Holds the room of the block on top, so the first card starts below it. */}
         <View style={{ height: editing ? insets.top + 86 : pinnedHeight }} pointerEvents="none" />
 
-        {!editing && <RadarShortcut />}
 
         <WidgetBoard
           userId={user?.id}
@@ -255,6 +254,7 @@ export default function Home() {
           onEditingChange={setEditing}
           render={(id, size) => renderHomeWidget(id, size, widgetContext)}
           skip={skipWidget}
+          pinned={editing ? undefined : { after: "fluxo", node: <ShortcutPair /> }}
         />
       </Animated.ScrollView>
 

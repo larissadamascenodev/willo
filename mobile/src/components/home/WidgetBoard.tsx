@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type ComponentRef } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type ComponentRef } from "react";
 import { Pressable, Text, View } from "react-native";
 import Animated, {
   FadeIn,
@@ -58,13 +58,16 @@ interface Props {
      and inside a scroller nothing stays put. */
   editing: boolean;
   onEditingChange: (editing: boolean) => void;
+  /** A row of its own that follows one card wherever it is (the Radar and the
+      challenges follow Receitas e despesas); at the top if that card is off. */
+  pinned?: { after: string; node: ReactNode };
 }
 
 /* On the phone the goals are caixinhas; the shared list still says Metas for the web. */
 const phoneLabel = (id: string, label: string) => (id === "metas" ? "Caixinhas" : label);
 const phoneDescription = (id: string, description: string) => (id === "metas" ? "Quanto está guardado em cada caixinha" : description);
 
-export default function WidgetBoard({ userId, render, skip, gap = 16, editing, onEditingChange }: Props) {
+export default function WidgetBoard({ userId, render, skip, gap = 16, editing, onEditingChange, pinned }: Props) {
   const [slots, setSlots] = useState<WidgetSlot[]>(() => loadPhoneLayout(userId));
   const [held, setHeld] = useState<WidgetMenuTarget | null>(null);
   const [adding, setAdding] = useState(false);
@@ -200,9 +203,10 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
   return (
     <>
       <View style={{ gap }}>
+        {pinned && !rows.some((row) => row.some((s) => s.id === pinned.after)) && pinned.node}
         {rows.map((row, ri) => (
+          <Fragment key={row.map((s) => s.id).join("+") + ri}>
           <Animated.View
-            key={row.map((s) => s.id).join("+") + ri}
             layout={SEAT_CHANGE}
             style={row.length === 2 ? { flexDirection: "row", gap } : undefined}
           >
@@ -239,6 +243,8 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
               );
             })}
           </Animated.View>
+          {pinned && row.some((s) => s.id === pinned.after) && pinned.node}
+          </Fragment>
         ))}
 
         <Pressable

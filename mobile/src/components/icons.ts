@@ -82,3 +82,17 @@ export { default as GalleryHorizontal } from "lucide-react-native/icons/gallery-
 export { default as ImagePlus } from "lucide-react-native/icons/image-plus";
 export { default as LifeBuoy } from "lucide-react-native/icons/life-buoy";
 export { default as Shield } from "lucide-react-native/icons/shield";
+export { default as Bike } from "lucide-react-native/icons/bike";
+export { default as ShoppingBag } from "lucide-react-native/icons/shopping-bag";
+export { default as Car } from "lucide-react-native/icons/car";
+export { default as CalendarCheck } from "lucide-react-native/icons/calendar-check";
+export { default as ShoppingCart } from "lucide-react-native/icons/shopping-cart";
+export { default as Coffee } from "lucide-react-native/icons/coffee";
+export { default as Utensils } from "lucide-react-native/icons/utensils";
+export { default as Tv } from "lucide-react-native/icons/tv";
+export { default as Bus } from "lucide-react-native/icons/bus";
+export { default as Flag } from "lucide-react-native/icons/flag";
+export { default as Flame } from "lucide-react-native/icons/flame";
+export { default as Sun } from "lucide-react-native/icons/sun";
+export { default as Trophy } from "lucide-react-native/icons/trophy";
+export { default as Medal } from "lucide-react-native/icons/medal";
