@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { cancelAnimation, Easing, FadeIn, useAnimatedStyle, useSharedValue, withSequence, withTiming, type SharedValue } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Room from "~/components/Room";
-import { AskDemo, ForecastDemo, NotifyDemo, QuickDemo, RadarDemo, ReceiptDemo, VoiceDemo } from "~/components/welcome/Demos";
+import { AskDemo, ChimeContext, DURATIONS, ForecastDemo, NotifyDemo, QuickDemo, RadarDemo, ReceiptDemo, VoiceDemo } from "~/components/welcome/Demos";
+import { useSoftChime } from "~/lib/welcomeSounds";
 import { INK } from "~/theme/tokens";
 import { isIntroDone, onIntroDone } from "~/lib/launchIntro";
 
@@ -17,14 +18,15 @@ const LOGO = require("../../assets/images/willo-logo-white.png") as number;
  *
  * Slides, one for each thing the app does, that pass on their own and can be swiped.
  * Each fills the screen with that thing happening — a bank's purchase notification
- * written down by itself (Willo Atento), sentences spoken and noted, two taps on the
+ * written down by itself (Willo Copilot), sentences spoken and noted, two taps on the
  * back of the phone or on Willo, a receipt scanned, the Radar's own dial going round
  * its areas, the month ahead with a spend tried against it, questions answered (see
  * Demos) — under its number, its name, a title and a line.
  *
  * A slide's demonstration plays only while it is showing, and only the slides next
- * to it are drawn. Touching or swiping holds the timer; letting go starts the slide
- * over. The way in stays at the foot the whole time. Nothing starts under the
+ * to it are drawn. A slide lasts as long as its demonstration plus a short hold,
+ * so nothing is cut off; it settles out before the next comes in. Swiping holds the
+ * timer. The way in stays at the foot the whole time. Nothing starts under the
  * opening animation.
  */
 
@@ -33,19 +35,24 @@ interface Slide {
   title: string;
   line: string;
   Demo: (p: { active: boolean }) => ReactNode;
+  /** How long its demonstration runs; the slide holds a moment after it. */
+  ms: number;
 }
 
 const SLIDES: Slide[] = [
-  { tag: "WILLO ATENTO", title: "Você compra.\nEle já anotou.", line: "O Willo lê o aviso de compra do banco\ne registra sozinho. Você só confere.", Demo: NotifyDemo },
-  { tag: "VOZ", title: "Fale.\nO Willo anota.", line: "Diga do seu jeito: ele entende o valor,\na categoria, a conta e o dia.", Demo: VoiceDemo },
-  { tag: "REGISTRO RÁPIDO", title: "Dois toques,\num gasto salvo.", line: "Dois toques atrás do celular ou no Willo\ne o registro rápido já abre.", Demo: QuickDemo },
-  { tag: "COMPROVANTE", title: "Fotografe.\nEle lê por você.", line: "Local, valor, pagamento e data saem\nda foto direto para o registro.", Demo: ReceiptDemo },
-  { tag: "RADAR FINANCEIRO", title: "Cada área do seu\ndinheiro, explicada.", line: "Consumo, hábitos, compromissos, futuro\ne saúde, cada um numa frase.", Demo: RadarDemo },
-  { tag: "PREVISÃO", title: "O fim do mês,\nantes do fim.", line: "Veja quanto sobra no dia 30 e simule\num gasto antes de fazer.", Demo: ForecastDemo },
-  { tag: "CONVERSA", title: "Pergunte.\nEle calcula.", line: "Respostas com os seus números,\nnão com conselhos genéricos.", Demo: AskDemo },
+  { tag: "WILLO COPILOT", title: "Você compra.\nEle já anotou.", line: "O Willo lê o aviso de compra do banco\ne registra sozinho. Você só confere.", Demo: NotifyDemo, ms: DURATIONS.notify },
+  { tag: "VOZ", title: "Fale.\nO Willo anota.", line: "Diga do seu jeito: ele entende o valor,\na categoria, a conta e o dia.", Demo: VoiceDemo, ms: DURATIONS.voice },
+  { tag: "REGISTRO RÁPIDO", title: "Dois toques,\num gasto salvo.", line: "Dois toques atrás do celular ou no Willo\ne o registro rápido já abre.", Demo: QuickDemo, ms: DURATIONS.quick },
+  { tag: "COMPROVANTE", title: "Fotografe.\nEle lê por você.", line: "Local, valor, pagamento e data saem\nda foto direto para o registro.", Demo: ReceiptDemo, ms: DURATIONS.receipt },
+  { tag: "RADAR FINANCEIRO", title: "Cada área do seu\ndinheiro, explicada.", line: "Consumo, hábitos, compromissos, futuro\ne saúde, cada um numa frase.", Demo: RadarDemo, ms: DURATIONS.radar },
+  { tag: "PREVISÃO", title: "O fim do mês,\nantes do fim.", line: "Veja quanto sobra no dia 30 e simule\num gasto antes de fazer.", Demo: ForecastDemo, ms: DURATIONS.forecast },
+  { tag: "CONVERSA", title: "Pergunte.\nEle calcula.", line: "Respostas com os seus números,\nnão com conselhos genéricos.", Demo: AskDemo, ms: DURATIONS.ask },
 ];
 const N = SLIDES.length;
-const SLIDE_MS = 8500;
+/* After a demonstration ends, how long the slide stays before the next one comes. */
+const HOLD_MS = 1600;
+/* How long before moving on the slide begins to settle out. */
+const OUT_MS = 450;
 /* The demonstrations are laid out for this much height and shrink where there is less. */
 const DEMO_H = 440;
 
@@ -59,6 +66,8 @@ export default function BemVindo() {
   const [ready, setReady] = useState(isIntroDone());
   const [area, setArea] = useState(DEMO_H);
   const [pageH, setPageH] = useState(0);
+  const [leaving, setLeaving] = useState(false);
+  const chime = useSoftChime();
   useEffect(() => onIntroDone(() => setReady(true)), []);
 
   /* The bar under the current number fills over the slide's time. It is started from
@@ -71,13 +80,19 @@ export default function BemVindo() {
       cancelAnimation(progress);
       return;
     }
-    progress.set(withSequence(withTiming(0, { duration: 0 }), withTiming(1, { duration: SLIDE_MS, easing: Easing.linear })));
+    const total = SLIDES[index].ms + HOLD_MS;
+    setLeaving(false);
+    progress.set(withSequence(withTiming(0, { duration: 0 }), withTiming(1, { duration: total, easing: Easing.linear })));
+    const out = setTimeout(() => setLeaving(true), total - OUT_MS);
     const id = setTimeout(() => {
       const next = (index + 1) % N;
       pager.current?.scrollTo({ x: next * width, animated: true });
       setIndex(next);
-    }, SLIDE_MS);
-    return () => clearTimeout(id);
+    }, total);
+    return () => {
+      clearTimeout(out);
+      clearTimeout(id);
+    };
   }, [index, held, ready, width, progress]);
 
   const settle = useCallback(
@@ -93,6 +108,7 @@ export default function BemVindo() {
   const scale = Math.min(1, area / DEMO_H);
 
   return (
+    <ChimeContext.Provider value={chime}>
     <Room lit sky={false}>
       <View style={{ flex: 1, paddingTop: insets.top + 14 }}>
         <Animated.View entering={FadeIn.delay(100).duration(600)} style={{ alignItems: "center" }}>
@@ -106,8 +122,6 @@ export default function BemVindo() {
           showsHorizontalScrollIndicator={false}
           onScrollBeginDrag={() => setHeld(true)}
           onMomentumScrollEnd={settle}
-          onTouchStart={() => setHeld(true)}
-          onTouchEnd={() => setHeld(false)}
           onLayout={(e) => setPageH(e.nativeEvent.layout.height)}
           style={{ flex: 1 }}
         >
@@ -119,7 +133,9 @@ export default function BemVindo() {
               >
                 {Math.abs(i - index) <= 1 && (
                   <View style={{ width: width - 48, transform: [{ scale }], alignItems: "center" }}>
-                    <s.Demo active={ready && i === index} />
+                    <Appear on={ready && i === index} leaving={leaving && i === index}>
+                      <s.Demo active={ready && i === index} />
+                    </Appear>
                   </View>
                 )}
               </View>
@@ -152,7 +168,25 @@ export default function BemVindo() {
         </View>
       </View>
     </Room>
+    </ChimeContext.Provider>
   );
+}
+
+/**
+ * A slide's content arriving and leaving: it comes up into place as the slide begins
+ * and settles back a little just before the next one, so a change is never a cut.
+ */
+function Appear({ on, leaving, children }: { on: boolean; leaving: boolean; children: ReactNode }) {
+  const p = useSharedValue(0);
+  useEffect(() => {
+    if (!on) {
+      p.set(0);
+      return;
+    }
+    p.set(leaving ? withTiming(0.4, { duration: OUT_MS, easing: Easing.in(Easing.cubic) }) : withTiming(1, { duration: 750, easing: Easing.bezier(0.16, 1, 0.3, 1) }));
+  }, [on, leaving, p]);
+  const style = useAnimatedStyle(() => ({ opacity: Math.max(0.15, p.get()), transform: [{ translateY: (1 - p.get()) * 22 }, { scale: 0.96 + 0.04 * p.get() }] }));
+  return <Animated.View style={[{ width: "100%", alignItems: "center" }, style]}>{children}</Animated.View>;
 }
 
 /** The slide's number, the bars of all of them with this one filling, its name, title and line. */

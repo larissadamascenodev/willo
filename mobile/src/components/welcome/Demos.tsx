@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import Animated, {
   Easing,
@@ -9,6 +9,7 @@ import Animated, {
   withDelay,
   withRepeat,
   withSequence,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Polygon, Rect, Stop } from "react-native-svg";
@@ -20,20 +21,35 @@ import { Bell, Check, Mic, Receipt, Sparkles } from "~/components/icons";
 import { INK } from "~/theme/tokens";
 
 /**
- * The welcome's demonstrations, one per slide. Each plays on its own, over and over,
- * while its slide is the one showing (`active`), and can be worked by hand too.
+ * The welcome's demonstrations, one per slide.
  *
- * Every one uses the app's own vocabulary — the dark glass, white, the cold blue —
- * and the Radar uses the Radar's own dial. The figures are an example and nothing is
- * saved: there is no account yet.
+ * Each is a short script that plays once from the start while its slide is showing
+ * (`active`) and lasts exactly `DURATIONS[name]`; the slide moves on only after it has
+ * finished and held for a moment, so nothing is cut off halfway. Whatever is written
+ * down arrives softly — a rise, a brief light across it — with the app's own "plim",
+ * quietly (see welcomeSounds), passed in through `ChimeContext`.
  *
- * Anything that runs inside an animation is either plain arithmetic or marked as a
- * worklet: on the phone a plain function called there closes the app.
+ * Entries show their name, amount and what they are as small tags, never cut. The
+ * figures are an example and nothing is saved: there is no account yet. Anything that
+ * runs inside an animation is plain arithmetic or a worklet: on the phone a plain
+ * function called there closes the app.
  */
 
 export const COLD = "#6FA8E8";
 export const ICE = "#DCEBFF";
 const PANEL = "rgba(22,24,30,0.92)";
+
+export const ChimeContext = createContext<() => void>(() => undefined);
+
+export const DURATIONS = {
+  notify: 3 * 4400 + 400,
+  voice: 4 * 3900 + 300,
+  quick: 2 * 6600,
+  receipt: 7000,
+  radar: 6 * 2900,
+  forecast: 10400,
+  ask: 3 * 6600,
+} as const;
 
 export function money(v: number) {
   const neg = v < 0;
@@ -51,21 +67,6 @@ function knockFeel() {
   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
 }
 
-/** A counter that ticks every `period` ms while `active`, from 0 each time it starts. */
-function useCycle(active: boolean, period: number) {
-  const [n, setN] = useState(-1);
-  useEffect(() => {
-    if (!active) {
-      setN(-1);
-      return;
-    }
-    setN(0);
-    const id = setInterval(() => setN((k) => k + 1), period);
-    return () => clearInterval(id);
-  }, [active, period]);
-  return n;
-}
-
 /** Timeouts that are all cleared together, and on unmount. */
 function useLater() {
   const ids = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -81,7 +82,18 @@ function useLater() {
   };
 }
 
-function useTyping(text: string, run: number, every = 40) {
+/** Runs `script` each time `active` becomes true; clears it when it stops. */
+function useScript(active: boolean, script: (at: (ms: number, run: () => void) => void) => void, reset: () => void) {
+  const later = useLater();
+  useEffect(() => {
+    later.clear();
+    reset();
+    if (active) script(later.at);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
+}
+
+function useTyping(text: string, run: number, every = 55) {
   const [n, setN] = useState(0);
   useEffect(() => {
     setN(0);
@@ -97,12 +109,11 @@ function useTyping(text: string, run: number, every = 40) {
   return text.slice(0, n);
 }
 
-/** A number that eases from wherever it is to `to` whenever `to` changes or `run` ticks. */
-function useEased(to: number, run: number, length = 700, start = 0) {
+/** A number that eases from wherever it is to `to`. */
+function useEased(to: number, length = 700, start = 0) {
   const [v, setV] = useState(start);
   const now = useRef(start);
   useEffect(() => {
-    if (run <= 0) return;
     const from = now.current;
     const t0 = Date.now();
     const id = setInterval(() => {
@@ -113,44 +124,74 @@ function useEased(to: number, run: number, length = 700, start = 0) {
       if (k >= 1) clearInterval(id);
     }, 30);
     return () => clearInterval(id);
-  }, [to, run, length]);
+  }, [to, length]);
   return v;
 }
 
-/** Appears with a short rise each time `on` turns true. */
-function Rise({ on, children, delay = 0, from = 12 }: { on: boolean; children: ReactNode; delay?: number; from?: number }) {
+/** Arrives softly: up a little, from a touch smaller, fading in. */
+function Rise({ on = true, children, delay = 0, from = 14 }: { on?: boolean; children: ReactNode; delay?: number; from?: number }) {
   const p = useSharedValue(0);
   const reduce = useReducedMotion();
   useEffect(() => {
-    p.set(on ? (reduce ? 1 : withDelay(delay, withTiming(1, { duration: 440, easing: Easing.out(Easing.cubic) }))) : withTiming(0, { duration: 160 }));
+    p.set(on ? (reduce ? 1 : withDelay(delay, withTiming(1, { duration: 620, easing: Easing.bezier(0.16, 1, 0.3, 1) }))) : withTiming(0, { duration: 260 }));
   }, [on, p, delay, reduce]);
-  const style = useAnimatedStyle(() => ({ opacity: p.get(), transform: [{ translateY: (1 - p.get()) * from }] }));
+  const style = useAnimatedStyle(() => ({ opacity: p.get(), transform: [{ translateY: (1 - p.get()) * from }, { scale: 0.97 + 0.03 * p.get() }] }));
   return <Animated.View style={style}>{children}</Animated.View>;
 }
 
-/** An entry as the app shows it. */
-function Entry({ title, detail, amount, dim }: { title: string; detail: string; amount: string; dim?: boolean }) {
+function Chip({ children, strong }: { children: string; strong?: boolean }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, opacity: dim ? 0.5 : 1 }}>
-      <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" }}>
-        <Receipt size={18} color="#fff" strokeWidth={2} />
+    <View style={{ paddingHorizontal: 8, height: 22, borderRadius: 11, justifyContent: "center", backgroundColor: strong ? "rgba(111,168,232,0.2)" : "rgba(255,255,255,0.08)" }}>
+      <Text style={{ fontSize: 11.5, fontWeight: "600", color: strong ? ICE : INK.soft }}>{children}</Text>
+    </View>
+  );
+}
+
+/**
+ * An entry as the app shows it: what, how much, and its tags. The name may take two
+ * lines rather than be cut; a fresh one has a light pass across it as it arrives.
+ */
+function Entry({ title, amount, tags, fresh, dim, income }: { title: string; amount: string; tags: string[]; fresh?: boolean; dim?: boolean; income?: boolean }) {
+  const sweep = useSharedValue(0);
+  useEffect(() => {
+    if (fresh) sweep.set(withDelay(220, withTiming(1, { duration: 900, easing: Easing.inOut(Easing.cubic) })));
+  }, [fresh, sweep]);
+  const light = useAnimatedStyle(() => ({ opacity: sweep.get() > 0 && sweep.get() < 1 ? 1 : 0, transform: [{ translateX: -120 + sweep.get() * 520 }, { rotate: "18deg" }] }));
+  return (
+    <View style={{ borderRadius: 18, overflow: "hidden", opacity: dim ? 0.5 : 1 }}>
+      <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 4 }}>
+        <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" }}>
+          <Receipt size={18} color="#fff" strokeWidth={2} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+            <Text numberOfLines={2} style={{ flex: 1, fontSize: 16, lineHeight: 20, fontWeight: "700", color: "#fff" }}>
+              {title}
+            </Text>
+            <Text style={{ fontSize: 16.5, lineHeight: 20, fontWeight: "800", color: "#fff", fontVariant: ["tabular-nums"] }}>
+              {income ? "+" : ""}
+              {amount}
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 5, marginTop: 6 }}>
+            {tags.map((t, i) => (
+              <Chip key={t} strong={i === 0}>
+                {t}
+              </Chip>
+            ))}
+          </View>
+        </View>
       </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "700", color: "#fff" }}>
-          {title}
-        </Text>
-        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: INK.softer }}>
-          {detail}
-        </Text>
-      </View>
-      <Text style={{ fontSize: 16.5, fontWeight: "800", color: "#fff", fontVariant: ["tabular-nums"] }}>{amount}</Text>
+      <Animated.View pointerEvents="none" style={[{ position: "absolute", top: -30, bottom: -30, width: 60 }, light]}>
+        <Fade colors={["rgba(255,255,255,0)", "rgba(255,255,255,0.14)", "rgba(255,255,255,0)"]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ flex: 1 }} />
+      </Animated.View>
     </View>
   );
 }
 
 function Saved({ text }: { text: string }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
       <View style={{ width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(111,168,232,0.25)" }}>
         <Check size={12} color={ICE} strokeWidth={3} />
       </View>
@@ -168,55 +209,62 @@ function Glass({ children, style }: { children: ReactNode; style?: object }) {
   );
 }
 
+function Label({ children }: { children: string }) {
+  return <Text style={{ fontFamily: "Menlo", fontSize: 11, letterSpacing: 1.2, color: "rgba(200,220,245,0.7)" }}>{children}</Text>;
+}
+
 /* ================================================================== */
-/* Willo Atento: purchases read from the bank's notifications          */
+/* Willo Copilot: purchases read from the bank's notifications         */
 /* ================================================================== */
 
 const PURCHASES = [
-  { merchant: "UBER *TRIP", title: "Uber", category: "Transporte", how: "Débito", amount: 18.4 },
-  { merchant: "IFOOD *RESTAURANTE", title: "iFood", category: "Delivery", how: "Crédito", amount: 42.9 },
-  { merchant: "SUPERMERCADO BOA COMPRA", title: "Supermercado Boa Compra", category: "Mercado", how: "Débito", amount: 127.9 },
+  { merchant: "UBER *TRIP", title: "Uber", tags: ["Transporte", "Débito", "agora"], how: "débito", amount: 18.4 },
+  { merchant: "IFOOD *RESTAURANTE", title: "iFood", tags: ["Delivery", "Crédito", "agora"], how: "crédito", amount: 42.9 },
+  { merchant: "SUPERMERCADO BOA COMPRA", title: "Supermercado Boa Compra", tags: ["Mercado", "Débito", "agora"], how: "débito", amount: 127.9 },
 ];
 
 export function NotifyDemo({ active }: { active: boolean }) {
-  const n = useCycle(active, 3600);
-  const later = useLater();
+  const chime = useContext(ChimeContext);
+  const [now, setNow] = useState(0);
   const [caught, setCaught] = useState<number[]>([]);
-  const [now, setNow] = useState(-1);
   const drop = useSharedValue(0);
   const fly = useSharedValue(0);
 
-  useEffect(() => {
-    later.clear();
-    if (n < 0) {
+  useScript(
+    active,
+    (at) => {
+      PURCHASES.forEach((_, k) => {
+        const t0 = k * 4400;
+        at(t0 + 200, () => {
+          setNow(k);
+          fly.set(0);
+          drop.set(withSequence(withTiming(0, { duration: 0 }), withSpring(1, { damping: 16, stiffness: 120 })));
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+        });
+        at(t0 + 2000, () => fly.set(withTiming(1, { duration: 850, easing: Easing.inOut(Easing.cubic) })));
+        at(t0 + 2700, () => {
+          setCaught((c) => [k, ...c].slice(0, 3));
+          chime();
+          success();
+        });
+      });
+    },
+    () => {
       setCaught([]);
-      setNow(-1);
       drop.set(0);
-      return;
-    }
-    const k = n % PURCHASES.length;
-    setNow(k);
-    fly.set(0);
-    drop.set(withSequence(withTiming(0, { duration: 0 }), withTiming(1, { duration: 520, easing: Easing.out(Easing.back(1.2)) })));
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
-    later.at(1300, () => fly.set(withTiming(1, { duration: 650, easing: Easing.inOut(Easing.cubic) })));
-    later.at(1850, () => {
-      setCaught((c) => [k, ...c.filter((x) => x !== k)].slice(0, 3));
-      success();
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [n]);
+      fly.set(0);
+    },
+  );
 
-  const p = PURCHASES[Math.max(0, now)];
+  const p = PURCHASES[now];
   const banner = useAnimatedStyle(() => ({
-    opacity: drop.get() * (1 - fly.get() * 0.7),
-    transform: [{ translateY: (1 - drop.get()) * -40 + fly.get() * 22 }, { scale: 1 - fly.get() * 0.08 }],
+    opacity: drop.get() * (1 - fly.get() * 0.8),
+    transform: [{ translateY: (1 - drop.get()) * -50 + fly.get() * 26 }, { scale: 1 - fly.get() * 0.1 }],
   }));
   const beam = useAnimatedStyle(() => ({ opacity: Math.sin(Math.PI * fly.get()), transform: [{ scaleY: 0.2 + fly.get() * 0.8 }] }));
 
   return (
     <View style={{ width: "100%" }}>
-      {/* The notification, as the phone shows it. */}
       <Animated.View style={banner}>
         <View style={{ flexDirection: "row", gap: 10, padding: 13, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.11)" }}>
           <View style={{ width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.16)" }}>
@@ -228,22 +276,22 @@ export function NotifyDemo({ active }: { active: boolean }) {
               <Text style={{ fontSize: 12, color: INK.softer }}>agora</Text>
             </View>
             <Text numberOfLines={2} style={{ marginTop: 2, fontSize: 14, lineHeight: 19, color: INK.soft }}>
-              Compra no {p.how.toLowerCase()} aprovada: {money(p.amount)} em {p.merchant}
+              Compra no {p.how} aprovada: {money(p.amount)} em {p.merchant}
             </Text>
           </View>
         </View>
       </Animated.View>
 
-      <View style={{ height: 40, alignItems: "center", justifyContent: "center" }}>
-        <Animated.View style={[{ width: 2, height: 40, borderRadius: 1, backgroundColor: ICE }, beam]} />
+      <View style={{ height: 44, alignItems: "center", justifyContent: "center" }}>
+        <Animated.View style={[{ width: 2, height: 44, borderRadius: 1, backgroundColor: ICE }, beam]} />
       </View>
 
       <Glass>
-        <View style={{ padding: 16, gap: 14, minHeight: 196 }}>
-          <Text style={{ fontFamily: "Menlo", fontSize: 11, letterSpacing: 1.2, color: "rgba(200,220,245,0.7)" }}>ANOTADO SOZINHO</Text>
+        <View style={{ padding: 16, gap: 14, minHeight: 236 }}>
+          <Label>ANOTADO PELO COPILOT</Label>
           {caught.map((k, i) => (
-            <Rise key={`${k}-${caught.length}-${i}`} on>
-              <Entry title={PURCHASES[k].title} detail={`${PURCHASES[k].category} · ${PURCHASES[k].how} · agora`} amount={money(PURCHASES[k].amount)} dim={i > 0} />
+            <Rise key={`${k}-${caught.length}`}>
+              <Entry title={PURCHASES[k].title} amount={money(PURCHASES[k].amount)} tags={PURCHASES[k].tags} fresh={i === 0} dim={i > 0} />
             </Rise>
           ))}
         </View>
@@ -253,74 +301,65 @@ export function NotifyDemo({ active }: { active: boolean }) {
 }
 
 /* ================================================================== */
-/* Voice: hold to speak, and a few different sentences                 */
+/* Voice                                                               */
 /* ================================================================== */
 
 const SAYINGS = [
-  { said: "almoço 32 no débito", title: "Almoço", detail: "Alimentação · Débito · hoje", amount: "R$ 32,00" },
-  { said: "uber 18 ontem", title: "Uber", detail: "Transporte · ontem", amount: "R$ 18,00" },
-  { said: "ifood 45 no crédito", title: "iFood", detail: "Delivery · Crédito · hoje", amount: "R$ 45,00" },
-  { said: "mercado 127 no pix", title: "Mercado", detail: "Supermercado · Pix · hoje", amount: "R$ 127,00" },
-  { said: "recebi 300 de freela", title: "Freela", detail: "Entrada · hoje", amount: "+R$ 300,00" },
+  { said: "almoço 32 no débito", title: "Almoço", amount: "R$ 32,00", tags: ["Alimentação", "Débito", "hoje"] },
+  { said: "uber 18 ontem", title: "Uber", amount: "R$ 18,00", tags: ["Transporte", "ontem"] },
+  { said: "ifood 45 no crédito", title: "iFood", amount: "R$ 45,00", tags: ["Delivery", "Crédito", "hoje"] },
+  { said: "recebi 300 de freela", title: "Freela", amount: "R$ 300,00", tags: ["Entrada", "hoje"], income: true },
 ];
 
 export function VoiceDemo({ active }: { active: boolean }) {
-  const auto = useCycle(active, 3400);
-  const later = useLater();
-  const [step, setStep] = useState(0);
+  const chime = useContext(ChimeContext);
+  const [k, setK] = useState(0);
+  const [run, setRun] = useState(0);
   const [hearing, setHearing] = useState(false);
   const [list, setList] = useState<number[]>([]);
-  const k = step % SAYINGS.length;
-  const said = useTyping(SAYINGS[k].said, hearing ? step + 1 : 0, 50);
+  const said = useTyping(SAYINGS[k].said, hearing ? run : 0, 60);
 
-  const say = (i: number) => {
-    later.clear();
-    setStep(i);
-    setHearing(true);
-    later.at(SAYINGS[i % SAYINGS.length].said.length * 50 + 350, () => {
-      setHearing(false);
-      setList((l) => [i % SAYINGS.length, ...l].slice(0, 3));
-      success();
-    });
-  };
-  useEffect(() => {
-    if (auto < 0) {
-      later.clear();
+  useScript(
+    active,
+    (at) => {
+      SAYINGS.forEach((s, i) => {
+        const t0 = i * 3900 + 300;
+        at(t0, () => {
+          setK(i);
+          setRun((r) => r + 1);
+          setHearing(true);
+        });
+        at(t0 + s.said.length * 60 + 500, () => {
+          setHearing(false);
+          setList((l) => [i, ...l].slice(0, 3));
+          chime();
+          success();
+        });
+      });
+    },
+    () => {
       setList([]);
       setHearing(false);
-      return;
-    }
-    say(auto);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auto]);
+    },
+  );
 
   return (
     <View style={{ width: "100%", alignItems: "center" }}>
       <View style={{ minHeight: 64, justifyContent: "center", alignSelf: "stretch" }}>
-        <Text style={{ fontSize: 24, fontWeight: "700", letterSpacing: -0.5, color: hearing ? "#fff" : "rgba(255,255,255,0.35)", textAlign: "center" }}>
-          “{hearing ? said : SAYINGS[k].said}”
-        </Text>
+        <Text style={{ fontSize: 24, fontWeight: "700", letterSpacing: -0.5, color: hearing ? "#fff" : "rgba(255,255,255,0.32)", textAlign: "center" }}>“{hearing ? said : SAYINGS[k].said}”</Text>
       </View>
-      <Pressable
-        onPressIn={() => {
-          tap();
-          say(step + 1);
-        }}
-        accessibilityRole="button"
-        accessibilityLabel="Segure para falar"
-        style={{ width: 96, height: 96, alignItems: "center", justifyContent: "center", marginTop: 4 }}
-      >
+      <View style={{ width: 96, height: 96, alignItems: "center", justifyContent: "center", marginTop: 2 }}>
         {hearing && <Pulse />}
         <View style={{ width: 70, height: 70, borderRadius: 35, alignItems: "center", justifyContent: "center", backgroundColor: hearing ? "#fff" : "rgba(255,255,255,0.1)" }}>
           <Mic size={28} color={hearing ? "#0B0D12" : "#fff"} strokeWidth={2.2} />
         </View>
-      </Pressable>
+      </View>
       <Wave on={hearing} />
       <Glass style={{ alignSelf: "stretch", marginTop: 16 }}>
-        <View style={{ padding: 16, gap: 14, minHeight: 160 }}>
+        <View style={{ padding: 16, gap: 14, minHeight: 200 }}>
           {list.map((i, row) => (
-            <Rise key={`${i}-${list.length}-${row}`} on>
-              <Entry title={SAYINGS[i].title} detail={SAYINGS[i].detail} amount={SAYINGS[i].amount} dim={row > 0} />
+            <Rise key={`${i}-${list.length}`}>
+              <Entry title={SAYINGS[i].title} amount={SAYINGS[i].amount} tags={SAYINGS[i].tags} income={SAYINGS[i].income} fresh={row === 0} dim={row > 0} />
             </Rise>
           ))}
         </View>
@@ -332,19 +371,19 @@ export function VoiceDemo({ active }: { active: boolean }) {
 function Pulse() {
   const p = useSharedValue(0);
   useEffect(() => {
-    p.set(withRepeat(withTiming(1, { duration: 1100, easing: Easing.out(Easing.cubic) }), -1, false));
+    p.set(withRepeat(withTiming(1, { duration: 1200, easing: Easing.out(Easing.cubic) }), -1, false));
   }, [p]);
-  const style = useAnimatedStyle(() => ({ opacity: 0.5 * (1 - p.get()), transform: [{ scale: 1 + p.get() * 0.45 }] }));
+  const style = useAnimatedStyle(() => ({ opacity: 0.45 * (1 - p.get()), transform: [{ scale: 1 + p.get() * 0.5 }] }));
   return <Animated.View style={[{ position: "absolute", width: 70, height: 70, borderRadius: 35, backgroundColor: "#fff" }, style]} />;
 }
 
 function Wave({ on }: { on: boolean }) {
   const t = useSharedValue(0);
   useEffect(() => {
-    t.set(withRepeat(withTiming(1, { duration: 1200, easing: Easing.linear }), -1, false));
+    t.set(withRepeat(withTiming(1, { duration: 1400, easing: Easing.linear }), -1, false));
   }, [t]);
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 3, height: 28, marginTop: 6, opacity: on ? 1 : 0.25 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 3, height: 28, marginTop: 6, opacity: on ? 1 : 0.22 }}>
       {Array.from({ length: 25 }, (_, i) => (
         <WaveBar key={i} i={i} t={t} on={on} />
       ))}
@@ -361,65 +400,165 @@ function WaveBar({ i, t, on }: { i: number; t: { get: () => number }; on: boolea
 }
 
 /* ================================================================== */
-/* Two taps: on the back of the phone, or on Willo                     */
+/* Two taps, on a real phone                                           */
 /* ================================================================== */
 
-const PHONE_W = 172;
-const PHONE_H = 340;
+const PH_W = 184;
+const PH_H = 380;
+const FRAME = 4;
+
+/**
+ * An iPhone of the current shape: a titanium band, side buttons, the Dynamic Island,
+ * and on the back the full-width camera plateau. No maker's logo.
+ */
+function Phone({ face, children }: { face: "front" | "back"; children?: ReactNode }) {
+  const R = 44;
+  const button = { position: "absolute" as const, width: 3, borderRadius: 2, backgroundColor: "#6E7279" };
+  return (
+    <View style={{ width: PH_W, height: PH_H }}>
+      {/* Buttons: action and volume on the left, power on the right (mirrored on the back). */}
+      <View style={[button, face === "front" ? { left: -2 } : { right: -2 }, { top: 78, height: 20 }]} />
+      <View style={[button, face === "front" ? { left: -2 } : { right: -2 }, { top: 112, height: 38 }]} />
+      <View style={[button, face === "front" ? { left: -2 } : { right: -2 }, { top: 158, height: 38 }]} />
+      <View style={[button, face === "front" ? { right: -2 } : { left: -2 }, { top: 124, height: 60 }]} />
+      <Fade colors={["#8A8E95", "#3A3D42", "#6C7076", "#2E3034"]} locations={[0, 0.35, 0.7, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, borderRadius: R, padding: FRAME }}>
+        <View style={{ flex: 1, borderRadius: R - FRAME, overflow: "hidden", backgroundColor: face === "front" ? "#050608" : "#2A2D33" }}>
+          {face === "front" ? (
+            <>
+              {children}
+              {/* Status bar and the Dynamic Island. */}
+              <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, height: 34, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 }}>
+                <Text style={{ fontSize: 10, fontWeight: "700", color: "#fff" }}>9:41</Text>
+                <View style={{ flexDirection: "row", gap: 3, alignItems: "flex-end" }}>
+                  {[4, 6, 8, 10].map((h) => (
+                    <View key={h} style={{ width: 2.5, height: h, borderRadius: 1, backgroundColor: "#fff" }} />
+                  ))}
+                  <View style={{ marginLeft: 3, width: 16, height: 8, borderRadius: 2.5, borderWidth: 1, borderColor: "rgba(255,255,255,0.7)", padding: 1 }}>
+                    <View style={{ flex: 1, width: "80%", borderRadius: 1, backgroundColor: "#fff" }} />
+                  </View>
+                </View>
+              </View>
+              <View pointerEvents="none" style={{ position: "absolute", top: 9, alignSelf: "center", width: 58, height: 17, borderRadius: 9, backgroundColor: "#000" }} />
+            </>
+          ) : (
+            <>
+              <Fade colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0)", "rgba(0,0,0,0.2)"]} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
+              {/* The camera plateau across the top, with three lenses, flash and sensor. */}
+              <Fade colors={["#3A3E45", "#24272C"]} style={{ position: "absolute", left: 6, right: 6, top: 6, height: 74, borderRadius: R - FRAME - 6 }}>
+                {[
+                  [12, 6],
+                  [46, 6],
+                  [29, 38],
+                ].map(([x, y]) => (
+                  <View key={`${x}-${y}`} style={{ position: "absolute", left: x, top: y, width: 30, height: 30, borderRadius: 15, backgroundColor: "#15171B", alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: "#4A4E56" }}>
+                    <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: "#07080A", alignItems: "center", justifyContent: "center" }}>
+                      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "#1E2A44" }} />
+                      <View style={{ position: "absolute", top: 3, left: 4, width: 4, height: 4, borderRadius: 2, backgroundColor: "rgba(160,190,255,0.5)" }} />
+                    </View>
+                  </View>
+                ))}
+                <View style={{ position: "absolute", right: 22, top: 14, width: 12, height: 12, borderRadius: 6, backgroundColor: "#E8E3D3" }} />
+                <View style={{ position: "absolute", right: 24, top: 42, width: 9, height: 9, borderRadius: 5, backgroundColor: "#111316" }} />
+              </Fade>
+            </>
+          )}
+        </View>
+      </Fade>
+    </View>
+  );
+}
+
+const ROUNDS = [
+  { where: "back" as const, typed: "uber 18,40", title: "Uber", amount: "R$ 18,40", tags: ["Transporte", "hoje"] },
+  { where: "willo" as const, typed: "café 9,50", title: "Café", amount: "R$ 9,50", tags: ["Alimentação", "hoje"] },
+];
 
 export function QuickDemo({ active }: { active: boolean }) {
-  const n = useCycle(active, 4200);
-  const later = useLater();
-  const back = n >= 0 && n % 2 === 0;
-  const [face, setFace] = useState<"back" | "front">("front");
-  const [open, setOpen] = useState(0);
-  const [saved, setSaved] = useState(false);
+  const chime = useContext(ChimeContext);
+  const [r, setR] = useState(0);
+  const [face, setFace] = useState<"front" | "back">("back");
+  const [run, setRun] = useState(0);
+  const [typing, setTyping] = useState(false);
+  const [pressed, setPressed] = useState(false);
+  const [done, setDone] = useState(false);
   const turn = useSharedValue(1);
   const knock = useSharedValue(0);
   const sheet = useSharedValue(0);
-  const amount = useEased(18.4, open, 800);
+  const keys = useSharedValue(0);
+  const typed = useTyping(ROUNDS[r].typed, typing ? run : 0, 110);
 
-  useEffect(() => {
-    later.clear();
-    setSaved(false);
-    sheet.set(withTiming(0, { duration: 200 }));
-    if (n < 0) return;
-    const knocks = withSequence(withTiming(0, { duration: 300 }), withTiming(1, { duration: 120 }), withTiming(0, { duration: 160 }), withTiming(1, { duration: 120 }), withTiming(0, { duration: 260 }));
-    setFace(back ? "back" : "front");
-    turn.set(1);
-    knock.set(knocks);
-    later.at(420, knockFeel);
-    later.at(700, knockFeel);
-    if (back) {
-      /* Turn the phone round to its screen. */
-      later.at(1000, () => turn.set(withTiming(0, { duration: 220, easing: Easing.in(Easing.quad) })));
-      later.at(1230, () => {
-        setFace("front");
-        turn.set(withTiming(1, { duration: 260, easing: Easing.out(Easing.quad) }));
+  useScript(
+    active,
+    (at) => {
+      ROUNDS.forEach((round, i) => {
+        const t0 = i * 6600;
+        const back = round.where === "back";
+        at(t0, () => {
+          setR(i);
+          setFace(back ? "back" : "front");
+          setDone(false);
+          setTyping(false);
+          setPressed(false);
+          sheet.set(0);
+          keys.set(0);
+          turn.set(1);
+        });
+        at(t0 + 400, () =>
+          knock.set(withSequence(withTiming(1, { duration: 120 }), withTiming(0, { duration: 200 }), withTiming(1, { duration: 120 }), withTiming(0, { duration: 320 }))),
+        );
+        at(t0 + 430, knockFeel);
+        at(t0 + 750, knockFeel);
+        if (back) {
+          at(t0 + 1250, () => turn.set(withTiming(0, { duration: 260, easing: Easing.in(Easing.quad) })));
+          at(t0 + 1520, () => {
+            setFace("front");
+            turn.set(withTiming(1, { duration: 320, easing: Easing.out(Easing.quad) }));
+          });
+        }
+        const s = t0 + (back ? 1950 : 1250);
+        at(s, () => {
+          sheet.set(withTiming(1, { duration: 520, easing: Easing.bezier(0.16, 1, 0.3, 1) }));
+          keys.set(withDelay(250, withTiming(1, { duration: 420, easing: Easing.out(Easing.cubic) })));
+        });
+        at(s + 800, () => {
+          setRun((v) => v + 1);
+          setTyping(true);
+        });
+        const typedEnd = s + 800 + round.typed.length * 110 + 350;
+        at(typedEnd, () => setPressed(true));
+        at(typedEnd + 220, () => {
+          setPressed(false);
+          keys.set(withTiming(0, { duration: 320 }));
+        });
+        at(typedEnd + 450, () => {
+          setDone(true);
+          chime();
+          success();
+        });
       });
-    }
-    later.at(back ? 1550 : 1000, () => {
-      setOpen((o) => o + 1);
-      sheet.set(withTiming(1, { duration: 420, easing: Easing.out(Easing.cubic) }));
-    });
-    later.at(back ? 2700 : 2200, () => {
-      setSaved(true);
-      success();
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [n]);
+    },
+    () => {
+      setDone(false);
+      setTyping(false);
+      sheet.set(0);
+      keys.set(0);
+    },
+  );
 
-  const phone = useAnimatedStyle(() => ({ transform: [{ scaleX: 0.04 + 0.96 * turn.get() }] }));
-  const ripple = useAnimatedStyle(() => ({ opacity: knock.get() * 0.9, transform: [{ scale: 0.6 + knock.get() * 0.6 }] }));
-  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: (1 - sheet.get()) * (PHONE_H * 0.62) }] }));
+  const round = ROUNDS[r];
+  const flip = useAnimatedStyle(() => ({ transform: [{ perspective: 800 }, { scaleX: 0.03 + 0.97 * turn.get() }] }));
+  const ripple = useAnimatedStyle(() => ({ opacity: knock.get() * 0.85, transform: [{ scale: 0.5 + knock.get() * 0.7 }] }));
+  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: (1 - sheet.get()) * PH_H }] }));
+  const keysStyle = useAnimatedStyle(() => ({ transform: [{ translateY: (1 - keys.get()) * 140 }], opacity: keys.get() }));
+  const inner = PH_H - FRAME * 2;
 
   return (
     <View style={{ alignItems: "center" }}>
       <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
         {(
           [
-            ["Atrás do celular", back],
-            ["No Willo", !back && n >= 0],
+            ["Atrás do celular", round.where === "back"],
+            ["No Willo", round.where === "willo"],
           ] as const
         ).map(([label, on]) => (
           <View key={label} style={{ paddingHorizontal: 13, height: 32, borderRadius: 16, justifyContent: "center", backgroundColor: on ? "#fff" : "rgba(255,255,255,0.07)" }}>
@@ -428,64 +567,91 @@ export function QuickDemo({ active }: { active: boolean }) {
         ))}
       </View>
 
-      <Animated.View style={[{ width: PHONE_W, height: PHONE_H }, phone]}>
-        <View style={{ flex: 1, borderRadius: 34, borderWidth: 2, borderColor: "rgba(255,255,255,0.22)", backgroundColor: face === "back" ? "#1A1C21" : "#0B0C0F", overflow: "hidden" }}>
-          {face === "back" ? (
-            <>
-              {/* The camera block on a matte back. */}
-              <View style={{ position: "absolute", left: 14, top: 14, width: 62, height: 62, borderRadius: 18, backgroundColor: "#24272D" }}>
-                {[
-                  [10, 10],
-                  [34, 10],
-                  [10, 34],
-                ].map(([x, y]) => (
-                  <View key={`${x}${y}`} style={{ position: "absolute", left: x, top: y, width: 18, height: 18, borderRadius: 9, backgroundColor: "#0A0B0D", borderWidth: 2, borderColor: "#353941" }} />
-                ))}
-              </View>
-              <Fade colors={["rgba(255,255,255,0.06)", "rgba(255,255,255,0)"]} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
-            </>
-          ) : (
-            <>
-              {/* The app, with Willo, and Registro rápido rising over it. */}
-              <View style={{ alignItems: "center", marginTop: 46 }}>
-                <View style={{ width: 70, height: 70 }}>
-                  <WilloBot size={70} mode={saved ? "speaking" : "idle"} />
+      <Animated.View style={flip}>
+        <Phone face={face}>
+          {/* The app: Willo on its home, and Registro rápido rising over it. */}
+          <View style={{ alignItems: "center", marginTop: 52 }}>
+            <Text style={{ fontSize: 9.5, color: INK.softer }}>Saldo em contas</Text>
+            <Text style={{ fontSize: 17, fontWeight: "800", color: "#fff", marginTop: 1 }}>R$ 2.430,00</Text>
+            <View style={{ width: 78, height: 78, marginTop: 10 }}>
+              <WilloBot size={78} mode={done ? "speaking" : "idle"} />
+            </View>
+          </View>
+          <Animated.View style={[{ position: "absolute", left: 0, right: 0, bottom: 0, height: inner * 0.66, borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: "#16181D", padding: 12 }, sheetStyle]}>
+            <View style={{ alignSelf: "center", width: 34, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.2)" }} />
+            <Text style={{ marginTop: 10, fontSize: 12, fontWeight: "700", color: "#fff" }}>Registro rápido</Text>
+            {!done ? (
+              <View style={{ marginTop: 8, height: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.08)", flexDirection: "row", alignItems: "center", paddingLeft: 12, paddingRight: 4 }}>
+                <Text style={{ flex: 1, fontSize: 12.5, color: typed ? "#fff" : INK.faint }}>
+                  {typed || "o que você gastou?"}
+                  {typing && <Caret />}
+                </Text>
+                <View style={{ height: 26, paddingHorizontal: 10, borderRadius: 13, justifyContent: "center", backgroundColor: "#fff", transform: [{ scale: pressed ? 0.88 : 1 }] }}>
+                  <Text style={{ fontSize: 10.5, fontWeight: "800", color: "#0B0D12" }}>Anotar</Text>
                 </View>
-                <View style={{ marginTop: 10, width: 96, height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.12)" }} />
-                <View style={{ marginTop: 6, width: 64, height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.07)" }} />
               </View>
-              <Animated.View style={[{ position: "absolute", left: 0, right: 0, bottom: 0, height: PHONE_H * 0.6, borderTopLeftRadius: 22, borderTopRightRadius: 22, backgroundColor: "#1B1E25", padding: 14 }, sheetStyle]}>
-                <View style={{ alignSelf: "center", width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.2)" }} />
-                <Text style={{ marginTop: 12, fontSize: 11, fontWeight: "600", color: INK.softer }}>Registro rápido</Text>
-                <Text style={{ marginTop: 4, fontSize: 26, fontWeight: "800", letterSpacing: -0.8, color: "#fff", fontVariant: ["tabular-nums"] }}>{money(amount)}</Text>
-                <View style={{ flexDirection: "row", gap: 5, marginTop: 8 }}>
-                  {["Transporte", "Mercado"].map((c, i) => (
-                    <View key={c} style={{ paddingHorizontal: 8, height: 22, borderRadius: 11, justifyContent: "center", backgroundColor: i === 0 ? "#fff" : "rgba(255,255,255,0.08)" }}>
-                      <Text style={{ fontSize: 10, fontWeight: "700", color: i === 0 ? "#0B0D12" : INK.soft }}>{c}</Text>
+            ) : (
+              <View style={{ marginTop: 10, gap: 8 }}>
+                <Rise from={8}>
+                  <View style={{ padding: 10, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.06)" }}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>{round.title}</Text>
+                      <Text style={{ fontSize: 13, fontWeight: "800", color: "#fff" }}>{round.amount}</Text>
                     </View>
-                  ))}
-                </View>
-                <Rise on={saved} from={6}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 14 }}>
-                    <Check size={13} color={ICE} strokeWidth={3} />
-                    <Text style={{ fontSize: 12, color: "#fff", fontWeight: "600" }}>Salvo</Text>
+                    <View style={{ flexDirection: "row", gap: 4, marginTop: 6 }}>
+                      {round.tags.map((t, i) => (
+                        <View key={t} style={{ paddingHorizontal: 6, height: 17, borderRadius: 9, justifyContent: "center", backgroundColor: i === 0 ? "rgba(111,168,232,0.22)" : "rgba(255,255,255,0.08)" }}>
+                          <Text style={{ fontSize: 9, fontWeight: "600", color: i === 0 ? ICE : INK.soft }}>{t}</Text>
+                        </View>
+                      ))}
+                    </View>
                   </View>
                 </Rise>
-              </Animated.View>
-            </>
-          )}
-          {/* Where the finger knocks: the middle of the back, or on Willo. */}
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              { position: "absolute", left: PHONE_W / 2 - 30, top: face === "back" ? PHONE_H / 2 - 30 : 51, width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: ICE, backgroundColor: "rgba(220,235,255,0.15)" },
-              ripple,
-            ]}
-          />
-        </View>
+                <Rise delay={180} from={6}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                    <Check size={12} color={ICE} strokeWidth={3} />
+                    <Text style={{ fontSize: 11, fontWeight: "600", color: "#fff" }}>Anotado</Text>
+                  </View>
+                </Rise>
+              </View>
+            )}
+            {/* A keyboard, while it is being typed. */}
+            <Animated.View style={[{ position: "absolute", left: 6, right: 6, bottom: 8, gap: 5 }, keysStyle]}>
+              {[10, 9, 7].map((count, row) => (
+                <View key={row} style={{ flexDirection: "row", justifyContent: "center", gap: 3.5 }}>
+                  {Array.from({ length: count }, (_, k) => (
+                    <View key={k} style={{ width: 13.5, height: 20, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.14)" }} />
+                  ))}
+                </View>
+              ))}
+              <View style={{ flexDirection: "row", justifyContent: "center", gap: 4 }}>
+                <View style={{ width: 30, height: 20, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.09)" }} />
+                <View style={{ width: 90, height: 20, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.14)" }} />
+                <View style={{ width: 30, height: 20, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.09)" }} />
+              </View>
+            </Animated.View>
+          </Animated.View>
+        </Phone>
+        {/* Where the finger knocks: the middle of the back, or Willo. */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            { position: "absolute", left: PH_W / 2 - 32, top: face === "back" ? PH_H / 2 - 32 : FRAME + 52 + 26 + 10 + 39 - 32, width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: ICE, backgroundColor: "rgba(220,235,255,0.16)" },
+            ripple,
+          ]}
+        />
       </Animated.View>
     </View>
   );
+}
+
+function Caret() {
+  const p = useSharedValue(1);
+  useEffect(() => {
+    p.set(withRepeat(withSequence(withTiming(0, { duration: 380 }), withTiming(1, { duration: 380 })), -1));
+  }, [p]);
+  const style = useAnimatedStyle(() => ({ opacity: p.get() }));
+  return <Animated.Text style={[{ color: ICE }, style]}>|</Animated.Text>;
 }
 
 /* ================================================================== */
@@ -505,28 +671,35 @@ const ITEMS: [string, string, string][] = [
 ];
 
 export function ReceiptDemo({ active }: { active: boolean }) {
-  const n = useCycle(active, 5600);
-  const later = useLater();
+  const chime = useContext(ChimeContext);
   const scan = useSharedValue(0);
   const flash = useSharedValue(0);
-  const [marks, setMarks] = useState(false);
+  const [marks, setMarks] = useState(0);
   const [read, setRead] = useState(false);
 
-  useEffect(() => {
-    later.clear();
-    setMarks(false);
-    setRead(false);
-    if (n < 0) return;
-    flash.set(withSequence(withTiming(0, { duration: 250 }), withTiming(1, { duration: 60 }), withTiming(0, { duration: 420 })));
-    later.at(260, () => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => undefined));
-    scan.set(withSequence(withTiming(0, { duration: 0 }), withDelay(500, withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.quad) }))));
-    later.at(2050, () => setMarks(true));
-    later.at(2700, () => {
-      setRead(true);
-      success();
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [n]);
+  useScript(
+    active,
+    (at) => {
+      at(350, () => {
+        flash.set(withSequence(withTiming(1, { duration: 70 }), withTiming(0, { duration: 520 })));
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => undefined);
+      });
+      at(700, () => scan.set(withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.quad) })));
+      at(2600, () => setMarks(1));
+      at(2850, () => setMarks(2));
+      at(3100, () => setMarks(3));
+      at(3700, () => {
+        setRead(true);
+        chime();
+        success();
+      });
+    },
+    () => {
+      scan.set(0);
+      setMarks(0);
+      setRead(false);
+    },
+  );
 
   const scanStyle = useAnimatedStyle(() => ({ opacity: scan.get() > 0 && scan.get() < 1 ? 1 : 0, transform: [{ translateY: scan.get() * RECEIPT_H }] }));
   const flashStyle = useAnimatedStyle(() => ({ opacity: flash.get() * 0.85 }));
@@ -534,9 +707,8 @@ export function ReceiptDemo({ active }: { active: boolean }) {
   const mark = { position: "absolute" as const, left: 8, right: 8, borderRadius: 4, borderWidth: 1.5, borderColor: COLD, backgroundColor: "rgba(111,168,232,0.14)" };
 
   return (
-    <View style={{ alignItems: "center" }}>
+    <View style={{ alignItems: "center", width: "100%" }}>
       <View style={{ width: RECEIPT_W + 28, height: RECEIPT_H + 30, alignItems: "center", justifyContent: "center" }}>
-        {/* The paper: thermal white, a little warm, with a torn zigzag foot. */}
         <View style={{ width: RECEIPT_W, height: RECEIPT_H, transform: [{ rotate: "-1.5deg" }] }}>
           <View style={{ height: RECEIPT_H - 7, backgroundColor: "#F3F1EC", paddingHorizontal: 14, paddingTop: 14, overflow: "hidden" }}>
             <Text style={{ ...mono, fontSize: 9.5, fontWeight: "700", textAlign: "center" }}>SUPERMERCADO BOA COMPRA LTDA</Text>
@@ -570,15 +742,9 @@ export function ReceiptDemo({ active }: { active: boolean }) {
           <Svg width={RECEIPT_W} height={8}>
             <Polygon points={`${Array.from({ length: 25 }, (_, i) => `${((i * RECEIPT_W) / 24).toFixed(1)},${i % 2 ? 8 : 0}`).join(" ")} ${RECEIPT_W},0 0,0`} fill="#F3F1EC" />
           </Svg>
-
-          {/* What the reader found: the store, the total, the payment and date. */}
-          {marks && (
-            <>
-              <View pointerEvents="none" style={[mark, { top: 10, height: 15 }]} />
-              <View pointerEvents="none" style={[mark, { top: 214, height: 17 }]} />
-              <View pointerEvents="none" style={[mark, { top: 232, height: 24 }]} />
-            </>
-          )}
+          {marks >= 1 && <View pointerEvents="none" style={[mark, { top: 10, height: 15 }]} />}
+          {marks >= 2 && <View pointerEvents="none" style={[mark, { top: 214, height: 17 }]} />}
+          {marks >= 3 && <View pointerEvents="none" style={[mark, { top: 232, height: 24 }]} />}
           <Animated.View pointerEvents="none" style={[{ position: "absolute", left: -6, right: -6, top: -10, height: 20 }, scanStyle]}>
             <Fade colors={["rgba(111,168,232,0)", "rgba(111,168,232,0.9)", "rgba(111,168,232,0)"]} style={{ flex: 1 }} />
           </Animated.View>
@@ -587,11 +753,11 @@ export function ReceiptDemo({ active }: { active: boolean }) {
         <Viewfinder />
       </View>
 
-      <View style={{ alignSelf: "stretch", marginTop: -40 }}>
-        <Rise on={read} from={20}>
+      <View style={{ alignSelf: "stretch", marginTop: -44 }}>
+        <Rise on={read} from={24}>
           <Glass>
-            <View style={{ padding: 16 }}>
-              <Entry title="Supermercado Boa Compra" detail="Mercado · Débito · 7 itens" amount="R$ 127,90" />
+            <View style={{ padding: 16, gap: 12 }}>
+              <Entry title="Supermercado Boa Compra" amount="R$ 127,90" tags={["Mercado", "Débito", "7 itens", "hoje"]} fresh={read} />
               <Saved text="Lido da foto, é só conferir" />
             </View>
           </Glass>
@@ -614,40 +780,55 @@ function Viewfinder() {
 }
 
 /* ================================================================== */
-/* The Radar: its own dial, going round the areas                       */
+/* The Radar: its own dial, through every area in turn                  */
 /* ================================================================== */
 
+/* Each finding broken by hand into two even lines. */
 const FINDINGS: Record<SectorKey, { line: string; note: string; risk?: boolean }> = {
-  consumo: { line: "Você gastou 18% menos que no mês passado.", note: "Mercado é o maior gasto: R$ 812." },
-  habitos: { line: "Delivery virou rotina: 11 pedidos.", note: "40% acima do seu normal.", risk: true },
-  compromissos: { line: "R$ 1.890 já comprometidos até o dia 30.", note: "Fatura, aluguel e 3 assinaturas." },
-  futuro: { line: "Você fecha o mês com R$ 1.240.", note: "No ritmo dos últimos 14 dias." },
-  saude: { line: "Saúde financeira 78: boa.", note: "Sobra 12% da renda todo mês." },
-  simular: { line: "Um celular de R$ 2.400 em 10x cabe.", note: "Mas a sua sobra cai para R$ 420." },
+  consumo: { line: "Você gastou 18% menos\ndo que no mês passado.", note: "Mercado é o maior gasto: R$ 812." },
+  habitos: { line: "Delivery virou rotina:\n11 pedidos neste mês.", note: "40% acima do seu normal.", risk: true },
+  compromissos: { line: "R$ 1.890 já estão\ncomprometidos até o dia 30.", note: "Fatura, aluguel e 3 assinaturas." },
+  futuro: { line: "No ritmo de agora, você\nfecha o mês com R$ 1.240.", note: "Pelos gastos dos últimos 14 dias." },
+  saude: { line: "Sua saúde financeira\nestá em 78: boa.", note: "Sobra 12% da renda todo mês." },
+  simular: { line: "Um celular de R$ 2.400\nem 10x cabe no mês.", note: "Mas a sobra cai para R$ 420." },
 };
 
 export function RadarDemo({ active }: { active: boolean }) {
-  const auto = useCycle(active, 2600);
+  const [k, setK] = useState(0);
   const [picked, setPicked] = useState<SectorKey | null>(null);
-  const key: SectorKey = picked ?? SECTORS[Math.max(0, auto) % SECTORS.length].key;
+
+  useScript(
+    active,
+    (at) => {
+      SECTORS.forEach((_, i) => {
+        at(i * 2900, () => {
+          setPicked(null);
+          setK(i);
+        });
+      });
+    },
+    () => {
+      setK(0);
+      setPicked(null);
+    },
+  );
+
+  const key: SectorKey = picked ?? SECTORS[k].key;
   const f = FINDINGS[key];
-  useEffect(() => {
-    if (!active) setPicked(null);
-  }, [active]);
   return (
     <View style={{ alignItems: "center", width: "100%" }}>
       <Scope
         size={250}
         selected={key}
-        onSelect={(k) => {
+        onSelect={(s) => {
           tap();
-          setPicked(k);
+          setPicked(s);
         }}
         blips={{ habitos: { risk: 1, note: 0 }, compromissos: { risk: 0, note: 2 }, consumo: { risk: 0, note: 1 }, futuro: { risk: 0, note: 1 } }}
       />
-      <View style={{ alignSelf: "stretch", minHeight: 80, marginTop: 16 }}>
-        <Rise key={key} on>
-          <Text style={{ fontSize: 20, lineHeight: 26, fontWeight: "700", letterSpacing: -0.4, color: f.risk ? "#FF8A7A" : "#fff", textAlign: "center" }}>{f.line}</Text>
+      <View style={{ alignSelf: "stretch", minHeight: 92, marginTop: 16 }}>
+        <Rise key={key}>
+          <Text style={{ fontSize: 19, lineHeight: 25, fontWeight: "700", letterSpacing: -0.4, color: f.risk ? "#FF8A7A" : "#fff", textAlign: "center" }}>{f.line}</Text>
           <Text style={{ marginTop: 6, fontSize: 14, color: INK.soft, textAlign: "center" }}>{f.note}</Text>
         </Rise>
       </View>
@@ -664,12 +845,27 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const EXTRA = [0, 200, 500];
 
 export function ForecastDemo({ active }: { active: boolean }) {
-  const auto = useCycle(active, 2400);
-  const [picked, setPicked] = useState<number | null>(null);
-  const extra = picked ?? EXTRA[Math.max(0, auto) % EXTRA.length];
+  const [extra, setExtra] = useState(0);
+  const draw = useSharedValue(0);
+  const drop = useSharedValue(0);
+
+  useScript(
+    active,
+    (at) => {
+      at(200, () => draw.set(withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.cubic) })));
+      at(3000, () => setExtra(200));
+      at(5600, () => setExtra(500));
+      at(8200, () => setExtra(0));
+    },
+    () => {
+      draw.set(0);
+      setExtra(0);
+    },
+  );
   useEffect(() => {
-    if (!active) setPicked(null);
-  }, [active]);
+    drop.set(withTiming(extra, { duration: 900, easing: Easing.bezier(0.16, 1, 0.3, 1) }));
+  }, [extra, drop]);
+  const total = useEased(1240 - extra, 900, 1240);
 
   const W = 320;
   const H = 150;
@@ -695,18 +891,9 @@ export function ForecastDemo({ active }: { active: boolean }) {
     { at: today + 6, label: "Fatura", amount: 1240 },
   ];
 
-  const drop = useSharedValue(0);
-  const draw = useSharedValue(0);
-  useEffect(() => {
-    draw.set(active ? withDelay(150, withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.cubic) })) : 0);
-  }, [active, draw]);
-  useEffect(() => {
-    drop.set(withTiming(extra, { duration: 650, easing: Easing.out(Easing.cubic) }));
-  }, [extra, drop]);
-  const total = useEased(1240 - extra, 1, 650, 1240);
-
   const D = 900;
   const pastProps = useAnimatedProps(() => ({ strokeDashoffset: D * (1 - draw.get()) }));
+  const areaStyle = useAnimatedStyle(() => ({ opacity: draw.get() }));
   const aheadProps = useAnimatedProps(() => {
     const d = ahead
       .map((v, k) => {
@@ -721,25 +908,38 @@ export function ForecastDemo({ active }: { active: boolean }) {
   return (
     <View style={{ width: "100%" }}>
       <Text style={{ fontSize: 13, color: INK.softer }}>Sobra prevista no dia 30</Text>
-      <Text style={{ marginTop: 2, fontSize: 40, fontWeight: "800", letterSpacing: -1.4, color: "#fff", fontVariant: ["tabular-nums"] }}>{money(total)}</Text>
+      <View style={{ flexDirection: "row", alignItems: "baseline", gap: 10 }}>
+        <Text style={{ marginTop: 2, fontSize: 40, fontWeight: "800", letterSpacing: -1.4, color: "#fff", fontVariant: ["tabular-nums"] }}>{money(total)}</Text>
+        {extra > 0 && (
+          <Rise key={extra} from={6}>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: INK.soft }}>− R$ {extra}</Text>
+          </Rise>
+        )}
+      </View>
       <View style={{ marginTop: 12, alignItems: "center" }}>
-        <Svg width={W} height={H}>
-          <Defs>
-            <LinearGradient id="fcArea" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.16} />
-              <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
-            </LinearGradient>
-          </Defs>
-          <Path d={area} fill="url(#fcArea)" />
-          <Line x1={x(today)} y1={4} x2={x(today)} y2={H} stroke="rgba(255,255,255,0.18)" strokeDasharray="2 4" />
-          <AnimatedPath d={pastD} stroke="#FFFFFF" strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" fill="none" strokeDasharray={`${D} ${D}`} animatedProps={pastProps} />
-          <AnimatedPath d={aheadStart} stroke={COLD} strokeWidth={2.2} strokeDasharray="5 6" strokeLinecap="round" fill="none" animatedProps={aheadProps} />
-          {bills.map((b) => (
-            <Rect key={b.label} x={x(b.at) - 4} y={H - 14} width={8} height={8} rx={2} fill={ICE} opacity={0.85} />
-          ))}
-          <Circle cx={x(today)} cy={y(past[today])} r={5} fill="#fff" />
-          <AnimatedCircle cx={x(n)} cy={y(1240)} r={5.5} fill={COLD} animatedProps={endProps} />
-        </Svg>
+        <View style={{ width: W, height: H }}>
+          <Animated.View style={[{ position: "absolute", left: 0, top: 0 }, areaStyle]}>
+            <Svg width={W} height={H}>
+              <Defs>
+                <LinearGradient id="fcArea" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.16} />
+                  <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
+                </LinearGradient>
+              </Defs>
+              <Path d={area} fill="url(#fcArea)" />
+            </Svg>
+          </Animated.View>
+          <Svg width={W} height={H} style={{ position: "absolute" }}>
+            <Line x1={x(today)} y1={4} x2={x(today)} y2={H} stroke="rgba(255,255,255,0.18)" strokeDasharray="2 4" />
+            <AnimatedPath d={pastD} stroke="#FFFFFF" strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" fill="none" strokeDasharray={`${D} ${D}`} animatedProps={pastProps} />
+            <AnimatedPath d={aheadStart} stroke={COLD} strokeWidth={2.2} strokeDasharray="5 6" strokeLinecap="round" fill="none" animatedProps={aheadProps} />
+            {bills.map((b) => (
+              <Rect key={b.label} x={x(b.at) - 4} y={H - 14} width={8} height={8} rx={2} fill={ICE} opacity={0.85} />
+            ))}
+            <Circle cx={x(today)} cy={y(past[today])} r={5} fill="#fff" />
+            <AnimatedCircle cx={x(n)} cy={y(1240)} r={5.5} fill={COLD} animatedProps={endProps} />
+          </Svg>
+        </View>
         <View style={{ flexDirection: "row", justifyContent: "space-between", width: W, marginTop: 4 }}>
           <Text style={{ fontSize: 11.5, color: INK.faint }}>dia 1</Text>
           <Text style={{ fontSize: 11.5, color: INK.soft, fontWeight: "600" }}>hoje</Text>
@@ -752,7 +952,7 @@ export function ForecastDemo({ active }: { active: boolean }) {
             <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: ICE }} />
             <Text numberOfLines={1} style={{ flex: 1, fontSize: 14, color: "#fff" }}>
               {b.label}
-              <Text style={{ color: INK.softer }}> · vence em {b.at - today} dias, aviso na véspera</Text>
+              <Text style={{ color: INK.softer }}> · vence em {b.at - today} dias</Text>
             </Text>
             <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff", fontVariant: ["tabular-nums"] }}>{money(b.amount)}</Text>
           </View>
@@ -764,7 +964,7 @@ export function ForecastDemo({ active }: { active: boolean }) {
             key={e}
             onPress={() => {
               tap();
-              setPicked(e);
+              setExtra(e);
             }}
             accessibilityRole="button"
             accessibilityLabel={e ? `Gastar mais ${e} reais` : "Sem gasto extra"}
@@ -779,7 +979,7 @@ export function ForecastDemo({ active }: { active: boolean }) {
 }
 
 /* ================================================================== */
-/* Ask                                                                 */
+/* Ask: Willo answers three questions in turn                          */
 /* ================================================================== */
 
 const ASKS: { short: string; q: string; a: string; card: { label: string; value: string; note: string } }[] = [
@@ -804,67 +1004,81 @@ const ASKS: { short: string; q: string; a: string; card: { label: string; value:
 ];
 
 export function AskDemo({ active }: { active: boolean }) {
-  const auto = useCycle(active, 5200);
+  const chime = useContext(ChimeContext);
   const later = useLater();
   const [pick, setPick] = useState(0);
-  const [thinking, setThinking] = useState(true);
+  const [round, setRound] = useState(0);
+  const [thinking, setThinking] = useState(false);
   const [run, setRun] = useState(0);
   const [card, setCard] = useState(false);
-  const answer = useTyping(ASKS[pick].a, thinking ? 0 : run, 22);
+  const answer = useTyping(ASKS[pick].a, thinking ? 0 : run, 26);
 
-  const ask = (i: number) => {
-    later.clear();
-    setPick(i);
-    setThinking(true);
-    setCard(false);
-    later.at(900, () => {
+  const ask = (i: number, at: (ms: number, f: () => void) => void, t0: number) => {
+    at(t0, () => {
+      setPick(i);
+      setRound((r) => r + 1);
+      setThinking(true);
+      setCard(false);
+      setRun(0);
+    });
+    at(t0 + 1300, () => {
       setThinking(false);
       setRun((r) => r + 1);
     });
-    later.at(900 + ASKS[i].a.length * 22 + 200, () => setCard(true));
+    at(t0 + 1300 + ASKS[i].a.length * 26 + 300, () => {
+      setCard(true);
+      chime();
+    });
   };
-  useEffect(() => {
-    if (auto < 0) {
-      later.clear();
-      return;
-    }
-    ask(auto % ASKS.length);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auto]);
+
+  useScript(
+    active,
+    (at) => {
+      ASKS.forEach((_, i) => ask(i, at, i * 6600 + 200));
+    },
+    () => {
+      setCard(false);
+      setThinking(false);
+    },
+  );
 
   const a = ASKS[pick];
   return (
     <View style={{ width: "100%" }}>
-      <View style={{ minHeight: 256, gap: 10 }}>
-        <View style={{ alignSelf: "flex-end", maxWidth: "86%", backgroundColor: "rgba(255,255,255,0.94)", borderRadius: 20, borderBottomRightRadius: 6, paddingHorizontal: 15, paddingVertical: 10 }}>
-          <Text style={{ fontSize: 16, fontWeight: "600", color: "#0B0D12" }}>{a.q}</Text>
-        </View>
-        <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
-          <View style={{ width: 42, height: 42 }}>
-            <WilloBot size={42} mode={thinking ? "thinking" : "speaking"} />
-          </View>
-          <View style={{ flex: 1, alignItems: "flex-start" }}>
-            <View style={{ maxWidth: "100%", backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 20, borderBottomLeftRadius: 6, paddingHorizontal: 15, paddingVertical: 10 }}>
-              {thinking ? (
-                <Dots />
-              ) : (
-                <View>
-                  <Text style={{ fontSize: 16, lineHeight: 22, color: "transparent" }}>{a.a}</Text>
-                  <Text style={{ position: "absolute", left: 0, top: 0, right: 0, fontSize: 16, lineHeight: 22, color: "#fff" }}>{answer}</Text>
+      <View style={{ minHeight: 270 }}>
+        <Rise key={round}>
+          <View style={{ gap: 10 }}>
+            <View style={{ alignSelf: "flex-end", maxWidth: "86%", backgroundColor: "rgba(255,255,255,0.94)", borderRadius: 20, borderBottomRightRadius: 6, paddingHorizontal: 15, paddingVertical: 10 }}>
+              <Text style={{ fontSize: 16, fontWeight: "600", color: "#0B0D12" }}>{a.q}</Text>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
+              <View style={{ width: 42, height: 42 }}>
+                <WilloBot size={42} mode={thinking ? "thinking" : "speaking"} />
+              </View>
+              <View style={{ flex: 1, alignItems: "flex-start" }}>
+                <View style={{ maxWidth: "100%", backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 20, borderBottomLeftRadius: 6, paddingHorizontal: 15, paddingVertical: 10 }}>
+                  {thinking ? (
+                    <Dots />
+                  ) : (
+                    <View>
+                      <Text style={{ fontSize: 16, lineHeight: 22, color: "transparent" }}>{a.a}</Text>
+                      <Text style={{ position: "absolute", left: 0, top: 0, right: 0, fontSize: 16, lineHeight: 22, color: "#fff" }}>{answer}</Text>
+                    </View>
+                  )}
                 </View>
-              )}
+              </View>
+            </View>
+            <View style={{ marginLeft: 50 }}>
+              <Rise on={card}>
+                <View style={{ borderRadius: 18, padding: 14, backgroundColor: "rgba(111,168,232,0.12)" }}>
+                  <Text style={{ fontSize: 12, color: INK.softer }}>{a.card.label}</Text>
+                  <Text style={{ marginTop: 2, fontSize: 24, fontWeight: "800", letterSpacing: -0.6, color: "#fff", fontVariant: ["tabular-nums"] }}>{a.card.value}</Text>
+                  <Text style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>{a.card.note}</Text>
+                </View>
+              </Rise>
             </View>
           </View>
-        </View>
-        <View style={{ marginLeft: 50 }}>
-          <Rise on={card}>
-            <View style={{ borderRadius: 18, padding: 14, backgroundColor: "rgba(111,168,232,0.12)" }}>
-              <Text style={{ fontSize: 12, color: INK.softer }}>{a.card.label}</Text>
-              <Text style={{ marginTop: 2, fontSize: 24, fontWeight: "800", letterSpacing: -0.6, color: "#fff", fontVariant: ["tabular-nums"] }}>{a.card.value}</Text>
-              <Text style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>{a.card.note}</Text>
-            </View>
-          </Rise>
-        </View>
+        </Rise>
       </View>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
         {ASKS.map((q, i) => (
@@ -872,7 +1086,8 @@ export function AskDemo({ active }: { active: boolean }) {
             key={q.q}
             onPress={() => {
               tap();
-              ask(i);
+              later.clear();
+              ask(i, later.at, 0);
             }}
             accessibilityRole="button"
             accessibilityLabel={q.q}
