@@ -20,7 +20,6 @@ import { money } from "~/lib/money";
 import { playCash, preloadCash } from "~/lib/sounds";
 import { GREEN } from "~/theme/tokens";
 
-import { th } from "~/theme/theme";
 /**
  * The receipt, as it comes out of the app — and as it is shared.
  *
@@ -57,7 +56,7 @@ const PAPER_FOOT = "#F2F3F5";
 const INK = "#121317";
 const DIM = "rgba(18,19,23,0.52)";
 const RULE = "rgba(18,19,23,0.16)";
-const IN = "#1E9E57";
+const IN = "#2F9A3B"; // the one green (#67CD67), deepened to read on paper
 const RAYS = 12;
 const SEAL = 64;
 const R = 26;
@@ -78,7 +77,7 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 function Dashed() {
   return (
     <Svg width="100%" height={2} style={{ marginVertical: 2 }}>
-      <Line x1="0" y1="1" x2="100%" y2="1" stroke={th(RULE)} strokeWidth={1} strokeDasharray="3.5 3.5" />
+      <Line x1="0" y1="1" x2="100%" y2="1" stroke={RULE} strokeWidth={1} strokeDasharray="3.5 3.5" />
     </Svg>
   );
 }
@@ -92,7 +91,7 @@ function TornEdge() {
   d += " Z";
   return (
     <Svg width="100%" height={10} viewBox="0 0 100 3" preserveAspectRatio="none" style={{ marginTop: -1 }}>
-      <Path d={d} fill={th(PAPER_FOOT)} />
+      <Path d={d} fill={PAPER_FOOT} />
     </Svg>
   );
 }
@@ -107,7 +106,7 @@ function Ray({ angle, delay }: { angle: number; delay: number }) {
     opacity: t.get() < 0.15 ? t.get() / 0.15 : 1 - (t.get() - 0.15) / 0.85,
     transform: [{ rotate: `${angle}deg` }, { translateX: 36 + t.get() * 16 }, { scaleX: 0.5 + t.get() * 0.7 }],
   }));
-  return <Animated.View pointerEvents="none" style={[{ position: "absolute", width: 8, height: 2.5, borderRadius: 2, backgroundColor: th(GREEN, "bg") }, style]} />;
+  return <Animated.View pointerEvents="none" style={[{ position: "absolute", width: 8, height: 2.5, borderRadius: 2, backgroundColor: GREEN }, style]} />;
 }
 
 /** The seal: drawn, not stamped — and it is what chimes. */
@@ -146,8 +145,8 @@ function Seal({ sound, onLanded }: { sound: boolean; onLanded?: () => void }) {
       ))}
       <Animated.View style={body}>
         <Svg width={SEAL} height={SEAL} viewBox={`0 0 ${SEAL} ${SEAL}`}>
-          <Circle cx={SEAL / 2} cy={SEAL / 2} r={R + 4} fill={th("#121317")} />
-          <Circle cx={SEAL / 2} cy={SEAL / 2} r={R} fill={th("rgba(200,243,109,0.14)")} />
+          <Circle cx={SEAL / 2} cy={SEAL / 2} r={R + 4} fill={"#121317"} />
+          <Circle cx={SEAL / 2} cy={SEAL / 2} r={R} fill={"rgba(200,243,109,0.14)"} />
           <AnimatedCircle
             cx={SEAL / 2}
             cy={SEAL / 2}
@@ -181,8 +180,8 @@ function Seal({ sound, onLanded }: { sound: boolean; onLanded?: () => void }) {
 function Fact({ label, value, delay }: { label: string; value: string; delay: number }) {
   return (
     <Animated.View entering={FadeIn.delay(delay).duration(320)} style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, paddingVertical: 4.5 }}>
-      <Text style={{ fontSize: 12.5, color: th(DIM) }}>{label}</Text>
-      <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 13, fontWeight: "600", color: th(INK), textAlign: "right" }}>
+      <Text style={{ fontSize: 12.5, color: DIM }}>{label}</Text>
+      <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 13, fontWeight: "600", color: INK, textAlign: "right" }}>
         {value}
       </Text>
     </Animated.View>
@@ -234,29 +233,29 @@ export default function ReceiptCard({
         </View>
 
         <View style={{ borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: "hidden" }}>
-          <LinearGradient colors={th([PAPER, PAPER_FOOT], "grad")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <LinearGradient colors={[PAPER, PAPER_FOOT]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
           <View style={{ paddingHorizontal: 22, paddingTop: SEAL / 2 + 8, paddingBottom: 14 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
-              <Text style={{ fontSize: 10.5, fontWeight: "700", letterSpacing: 3.5, color: th(DIM) }}>COMPROVANTE</Text>
-              <Text style={{ fontSize: 11, color: th(DIM) }}>{code}</Text>
+              <Text style={{ fontSize: 10.5, fontWeight: "700", letterSpacing: 3.5, color: DIM }}>COMPROVANTE</Text>
+              <Text style={{ fontSize: 11, color: DIM }}>{code}</Text>
             </View>
 
             {single ? (
               <>
                 {/* The figure, large, and what it was. */}
                 <Animated.View entering={FadeIn.delay(820).duration(380)} style={{ marginTop: 12, alignItems: "center" }}>
-                  <Text style={{ fontSize: 12, color: th(DIM) }}>{single.scheduled ? (single.type === "receita" ? "Você vai receber" : "Você vai pagar") : single.type === "receita" ? "Você recebeu" : single.installments ? "Você parcelou" : "Você pagou"}</Text>
-                  <Text style={[nums, { marginTop: 2, fontSize: 36, fontWeight: "800", letterSpacing: -1.3, color: th(single.type === "receita" ? IN : INK) }]}>
+                  <Text style={{ fontSize: 12, color: DIM }}>{single.scheduled ? (single.type === "receita" ? "Você vai receber" : "Você vai pagar") : single.type === "receita" ? "Você recebeu" : single.installments ? "Você parcelou" : "Você pagou"}</Text>
+                  <Text style={[nums, { marginTop: 2, fontSize: 36, fontWeight: "800", letterSpacing: -1.3, color: single.type === "receita" ? IN : INK }]}>
                     {single.type === "receita" ? "+" : "−"}
                     {money(single.amount)}
                   </Text>
                   <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 8 }}>
                     {Icon && (
-                      <View style={{ width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: th(`${hex}22`, "bg") }}>
-                        <Icon size={13} color={th(hex)} strokeWidth={2.4} />
+                      <View style={{ width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: `${hex}22` }}>
+                        <Icon size={13} color={hex} strokeWidth={2.4} />
                       </View>
                     )}
-                    <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: "700", color: th(INK) }}>{single.name}</Text>
+                    <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: "700", color: INK }}>{single.name}</Text>
                   </View>
                 </Animated.View>
                 <View style={{ marginTop: 14 }}>
@@ -279,20 +278,20 @@ export default function ReceiptCard({
                 {lines.map((l, i) => (
                   <Animated.View key={l.id} entering={FadeIn.delay(820 + i * 140).duration(320)} style={{ paddingTop: 14 }}>
                     <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-                      <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: "600", color: th(INK) }}>{l.name}</Text>
-                      <Text style={[nums, { fontSize: 16, fontWeight: "700", color: th(l.type === "receita" ? IN : INK) }]}>
+                      <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: "600", color: INK }}>{l.name}</Text>
+                      <Text style={[nums, { fontSize: 16, fontWeight: "700", color: l.type === "receita" ? IN : INK }]}>
                         {l.type === "receita" ? "+" : "−"}
                         {money(l.amount)}
                       </Text>
                     </View>
-                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 12.5, color: th(DIM) }}>{l.method ? `${l.category} · ${l.method}` : l.category}</Text>
+                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 12.5, color: DIM }}>{l.method ? `${l.category} · ${l.method}` : l.category}</Text>
                   </Animated.View>
                 ))}
                 <Animated.View entering={FadeIn.delay(820 + lines.length * 140).duration(320)} style={{ marginTop: 16 }}>
                   <Dashed />
                   <View style={{ marginTop: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
-                    <Text style={{ fontSize: 12.5, fontWeight: "500", color: th(DIM) }}>Total · {date}</Text>
-                    <Text style={[nums, { fontSize: 20, fontWeight: "800", color: th(total >= 0 ? IN : INK) }]}>
+                    <Text style={{ fontSize: 12.5, fontWeight: "500", color: DIM }}>Total · {date}</Text>
+                    <Text style={[nums, { fontSize: 20, fontWeight: "800", color: total >= 0 ? IN : INK }]}>
                       {total >= 0 ? "+" : "−"}
                       {money(Math.abs(total))}
                     </Text>
@@ -304,7 +303,7 @@ export default function ReceiptCard({
             {/* Willo's mark in the corner. */}
             <Animated.View entering={FadeIn.delay(1360).duration(360)} style={{ marginTop: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <Image source={LOGO} contentFit="contain" style={{ height: 20, width: 20 * LOGO_RATIO }} accessibilityLabel="Willo" />
-              <Text style={{ fontSize: 11, color: th(DIM) }}>Registrado pelo Willo</Text>
+              <Text style={{ fontSize: 11, color: DIM }}>Registrado pelo Willo</Text>
             </Animated.View>
           </View>
         </View>

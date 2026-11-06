@@ -14,9 +14,9 @@ import LegalSheet from "~/components/auth/LegalSheet";
 import { Bot, Camera, Check, ChevronRight, Crown, FileText, GalleryHorizontal, ImagePlus, LifeBuoy, LogOut, Pencil, Shield } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
 import { useHomeHero, type HomeHero } from "~/lib/homeHero";
-import { setSkyPhoto, useSkyModel, useSkyPhoto, type SkyModel } from "~/lib/skyModel";
+import { setSkyPhoto, useLightSkyModel, useSkyModel, useSkyPhoto, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
 import { PhotoError, pickAvatar, pickBackground } from "~/lib/profilePhotos";
-import { BACKDROPS, BACKDROP_KEYS } from "~/lib/backdrops";
+import { BACKDROPS, BACKDROP_KEYS, LIGHT_BACKDROPS, LIGHT_BACKDROP_KEYS } from "~/lib/backdrops";
 import { showToast } from "~/lib/toast";
 import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
@@ -44,6 +44,11 @@ const HEROES: { key: HomeHero; label: string; line: string; Icon: typeof Bot }[]
   { key: "stories", label: "Slides", line: "Leituras em sequência", Icon: GalleryHorizontal },
 ];
 
+const LIGHT_BACKGROUNDS: { key: LightSkyModel; label: string }[] = [
+  ...LIGHT_BACKDROP_KEYS.map((key) => ({ key, label: LIGHT_BACKDROPS[key].label })),
+  { key: "custom", label: "Sua foto" },
+];
+
 const BACKGROUNDS: { key: SkyModel; label: string }[] = [
   { key: "2", label: "Céu" },
   { key: "1", label: "Céu vivo" },
@@ -59,6 +64,7 @@ export default function Perfil() {
   const { profile, refetch, updateDisplayName } = useProfile();
   const [hero, setHero] = useHomeHero();
   const [sky, setSky] = useSkyModel();
+  const [lightSky, setLightSky] = useLightSkyModel();
   const [theme] = useThemePref();
   const light = isLight();
   const photo = useSkyPhoto();
@@ -112,19 +118,25 @@ export default function Perfil() {
     }
   };
 
-  const chooseBackground = async (key: SkyModel) => {
+  /* Each theme keeps its own background; the one being changed is the theme on screen. */
+  const chooseBackground = async (key: string) => {
     tick();
+    const worn = light ? lightSky : sky;
     /* "Sua foto" asks for a photo the first time, and again when it is already worn. */
-    if (key === "custom" && (!photo || sky === "custom")) {
+    if (key === "custom" && (!photo || worn === "custom")) {
       try {
         const file = await pickBackground(screenW / screenH);
-        if (file) setSkyPhoto(file);
+        if (file) {
+          setSkyPhoto(file, !light);
+          if (light) setLightSky("custom");
+        }
       } catch (e) {
         showToast(e instanceof PhotoError ? e.message : "Não foi possível usar essa foto.");
       }
       return;
     }
-    setSky(key);
+    if (light) setLightSky(key as LightSkyModel);
+    else setSky(key as SkyModel);
   };
 
   const leave = async () => {
@@ -306,21 +318,16 @@ export default function Perfil() {
           })}
         </View>
 
-        {/* What is behind every screen. In the light the ground is always the pale one. */}
+        {/* What is behind every screen: the dark theme's or the light one's, each kept apart. */}
         <Eyebrow>Fundo</Eyebrow>
-        {light ? (
-          <Text style={{ paddingHorizontal: 4, fontSize: 13.5, lineHeight: 19, color: th(INK.soft) }}>
-            No tema claro o fundo é sempre claro. Os céus, as cores e a sua foto voltam no tema escuro.
-          </Text>
-        ) : (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={{ marginHorizontal: -PAD }}
           contentContainerStyle={{ paddingHorizontal: PAD, gap: 10 }}
         >
-          {BACKGROUNDS.map(({ key, label }) => {
-            const on = sky === key;
+          {(light ? LIGHT_BACKGROUNDS : BACKGROUNDS).map(({ key, label }) => {
+            const on = (light ? lightSky : sky) === key;
             const empty = key === "custom" && !photo;
             return (
               <Pressable key={key} onPress={() => void chooseBackground(key)} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={label} style={{ width: tileW, alignItems: "center" }}>
@@ -363,7 +370,6 @@ export default function Perfil() {
             );
           })}
         </ScrollView>
-        )}
 
         {/* The papers, and help. */}
         <Eyebrow>Sobre</Eyebrow>

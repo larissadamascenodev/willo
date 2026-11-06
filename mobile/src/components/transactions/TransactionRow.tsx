@@ -11,6 +11,7 @@ import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 import { th } from "~/theme/theme";
+import { outlinedInk } from "~/components/StatusTag";
 /**
  * One movement, written on the page.
  *
@@ -118,7 +119,7 @@ export default function TransactionRow({
           {isReceita ? "+" : "−"}
           {money(tx.amount)}
         </Text>
-        <Text style={{ marginTop: 2, fontSize: 11.5, color: th(isPending ? AMBER : INK.softer) }}>
+        <Text style={[{ marginTop: 2, fontSize: 11.5 }, isPending ? { fontWeight: "600", ...outlinedInk(AMBER) } : { color: th(INK.softer) }]}>
           {isPending
             ? isReceita
               ? "A receber"

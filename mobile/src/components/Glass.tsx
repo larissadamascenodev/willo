@@ -3,7 +3,18 @@ import { AccessibilityInfo, View, type StyleProp, type ViewStyle } from "react-n
 import { BlurView } from "expo-blur";
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
 
-import { th } from "~/theme/theme";
+import { isLight, th } from "~/theme/theme";
+
+/* The native glass on the light ground: a fine white rim and a soft shadow give it an
+   edge, which the dark ground gives it for free. */
+const LIGHT_EDGE: ViewStyle = {
+  borderWidth: 0.75,
+  borderColor: "rgba(255,255,255,0.9)",
+  shadowColor: "#000",
+  shadowOpacity: 0.08,
+  shadowRadius: 14,
+  shadowOffset: { width: 0, height: 4 },
+};
 /**
  * A control's surface, in the system's liquid glass where the phone has it.
  *
@@ -33,7 +44,10 @@ export default function Glass({
   children,
   style,
   radius = 999,
-  interactive = false,
+  /* Kept so callers can say it, but the native glass is never made interactive: an
+     interactive glass inside a Pressable takes the first touch for its own shimmer,
+     and the button under it then needed a second tap to answer. */
+  interactive: _interactive = false,
 }: {
   children?: ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -63,13 +77,16 @@ export default function Glass({
   }, []);
 
   const shape: ViewStyle = { borderRadius: radius, borderCurve: "continuous" };
+  const light = isLight();
 
   if (reduceTransparency) {
     return (
       <View
         style={[
           shape,
-          { backgroundColor: th("#1C1D20", "bg"), borderWidth: 1, borderColor: th("rgba(255,255,255,0.10)", "line") },
+          light
+            ? { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(17,19,24,0.08)" }
+            : { backgroundColor: "#1C1D20", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" },
           style,
         ]}
       >
@@ -80,7 +97,7 @@ export default function Glass({
 
   if (NATIVE_GLASS) {
     return (
-      <GlassView glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={interactive} style={[shape, style]}>
+      <GlassView glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={false} style={[shape, light && LIGHT_EDGE, style]}>
         {children}
       </GlassView>
     );
@@ -89,14 +106,16 @@ export default function Glass({
   return (
     <BlurView
       tint={th("dark", "tint")}
-      intensity={40}
+      intensity={light ? 55 : 40}
       style={[
         shape,
         {
           overflow: "hidden",
           borderWidth: 1,
-          borderColor: th("rgba(255,255,255,0.12)", "line"),
-          backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
+          /* In the light, glass is white: a bright rim and a milky fill, so it reads
+             against the pale ground and catches the colour behind it. */
+          borderColor: light ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.12)",
+          backgroundColor: light ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.05)",
         },
         style,
       ]}

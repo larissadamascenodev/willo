@@ -3,9 +3,9 @@ import { View, type ViewStyle } from "react-native";
 import Svg, { Circle, Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import { Image } from "expo-image";
 import Sky from "~/components/Sky";
-import { useSkyModel, useSkyPhoto, type SkyModel } from "~/lib/skyModel";
+import { useLightSkyModel, useSkyModel, useSkyPhoto, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
 import { GROUND, GROUND_LIT } from "~/theme/tokens";
-import { BACKDROPS, STARS, type BackdropKey } from "~/lib/backdrops";
+import { BACKDROPS, LIGHT_BACKDROPS, STARS, type BackdropKey, type LightBackdropKey } from "~/lib/backdrops";
 
 import { LIGHT_GROUND, isLight, th } from "~/theme/theme";
 /**
@@ -59,7 +59,7 @@ export default function Room({
 }: {
   lit?: boolean;
   /** Shows this background instead of the chosen one: the profile's previews. */
-  preview?: SkyModel;
+  preview?: SkyModel | LightSkyModel;
   /** The home, the wallet and the accounts screen get the hour instead of the lights. */
   sky?: boolean;
   children?: ReactNode;
@@ -68,7 +68,8 @@ export default function Room({
   /* Turned down is not a different picture, only a quieter one. */
   const strength = lit ? 1 : 0.45;
   const [chosen] = useSkyModel();
-  const model = preview ?? chosen;
+  const [chosenLight] = useLightSkyModel();
+  const model = (preview as SkyModel | undefined) ?? chosen;
   const photo = useSkyPhoto();
   /* "plain" is the room without its sky: the soft lights on the dark ground. */
   const sky = wantsSky && model !== "plain";
@@ -80,30 +81,40 @@ export default function Room({
      gradients share one document, so each name carries the background it belongs to. */
   const id = (name: string) => `${name}-${sky ? model : "room"}`;
 
-  /* In the light there is no sky: a pale ground with a soft cool light from above,
-     closing a touch at the edges so the page still reads as a room. */
+  /* In the light, its own backgrounds: a light ground with soft colour pooled near
+     the top for the glass to pick up, or the person's photo under a pale veil. */
   if (isLight()) {
+    const lightModel = (preview as LightSkyModel | undefined) ?? chosenLight;
+    const ownLight = lightModel === "custom" && !!photo;
+    const pale = LIGHT_BACKDROPS[lightModel as LightBackdropKey] ?? LIGHT_BACKDROPS["aurora-clara"];
+    const lid = (name: string) => `${name}-light-${lightModel}`;
     return (
-      <View style={[{ flex: 1, backgroundColor: LIGHT_GROUND }, style]}>
-        <Svg width="100%" height="100%" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-          <Defs>
-            <RadialGradient id="light-top" cx="0.5" cy="0" rx="0.9" ry="0.45">
-              <Stop offset="0" stopColor="#FFFFFF" stopOpacity={1} />
-              <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
-            </RadialGradient>
-            <RadialGradient id="light-cool" cx="0.85" cy="0.08" rx="0.7" ry="0.32">
-              <Stop offset="0" stopColor="rgb(170,190,235)" stopOpacity={0.22} />
-              <Stop offset="1" stopColor="rgb(170,190,235)" stopOpacity={0} />
-            </RadialGradient>
-            <RadialGradient id="light-edge" cx="0.5" cy="0.45" rx="0.75" ry="0.6">
-              <Stop offset="0.55" stopColor="rgb(30,34,44)" stopOpacity={0} />
-              <Stop offset="1" stopColor="rgb(30,34,44)" stopOpacity={0.06} />
-            </RadialGradient>
-          </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#light-top)" />
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#light-cool)" />
-          <Rect x="0" y="0" width="100%" height="100%" fill="url(#light-edge)" />
-        </Svg>
+      <View style={[{ flex: 1, backgroundColor: ownLight ? LIGHT_GROUND : pale.ground }, style]}>
+        {ownLight ? (
+          <>
+            <Image source={{ uri: photo! }} contentFit="cover" transition={200} pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+            <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(245,245,247,0.55)" }} />
+          </>
+        ) : (
+          <Svg width="100%" height="100%" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+            <Defs>
+              {pale.lights.map((l, i) => (
+                <RadialGradient key={i} id={lid(`glow${i}`)} cx={String(l.cx)} cy={String(l.cy)} rx={String(l.rx)} ry={String(l.ry)}>
+                  <Stop offset="0" stopColor={`rgb(${l.rgb})`} stopOpacity={l.a} />
+                  <Stop offset={String(l.fade ?? 1)} stopColor={`rgb(${l.rgb})`} stopOpacity={0} />
+                </RadialGradient>
+              ))}
+              <RadialGradient id={lid("edge")} cx="0.5" cy="0.45" rx="0.75" ry="0.6">
+                <Stop offset="0.55" stopColor="rgb(30,34,44)" stopOpacity={0} />
+                <Stop offset="1" stopColor="rgb(30,34,44)" stopOpacity={0.05} />
+              </RadialGradient>
+            </Defs>
+            {pale.lights.map((_, i) => (
+              <Rect key={i} x="0" y="0" width="100%" height="100%" fill={`url(#${lid(`glow${i}`)})`} />
+            ))}
+            <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${lid("edge")})`} />
+          </Svg>
+        )}
         {children}
       </View>
     );

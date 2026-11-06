@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { File, Paths } from "expo-file-system";
 import { onHydrated } from "~/lib/shims";
-import { BACKDROP_KEYS, type BackdropKey } from "~/lib/backdrops";
+import { BACKDROP_KEYS, LIGHT_BACKDROP_KEYS, type BackdropKey, type LightBackdropKey } from "~/lib/backdrops";
 
 /**
  * What the screens that wear a sky are wearing.
@@ -75,7 +75,7 @@ export function setSkyModel(next: SkyModel) {
 }
 
 /** Keeps a new photo (already saved in the documents folder) and wears it. */
-export function setSkyPhoto(fileName: string) {
+export function setSkyPhoto(fileName: string, wear = true) {
   const previous = (() => {
     try {
       return localStorage.getItem(PHOTO_KEY);
@@ -98,7 +98,8 @@ export function setSkyPhoto(fileName: string) {
       /* Left behind; harmless. */
     }
   }
-  setSkyModel("custom");
+  if (wear) setSkyModel("custom");
+  else listeners.forEach((l) => l());
 }
 
 const subscribe = (l: () => void) => {
@@ -116,4 +117,39 @@ export function useSkyModel() {
 /** The custom photo's address on this phone, if there is one. */
 export function useSkyPhoto() {
   return useSyncExternalStore(subscribe, () => photo, () => photo);
+}
+
+/* ── The light theme's background, kept apart so each theme keeps its own ───── */
+
+export type LightSkyModel = LightBackdropKey | "custom";
+const LIGHT_KEY = "sky-model-light";
+const readLight = (): LightSkyModel => {
+  try {
+    const v = localStorage.getItem(LIGHT_KEY);
+    return v === "custom" || LIGHT_BACKDROP_KEYS.includes(v as LightBackdropKey) ? (v as LightSkyModel) : "aurora-clara";
+  } catch {
+    return "aurora-clara";
+  }
+};
+let currentLight: LightSkyModel = readLight();
+onHydrated(() => {
+  currentLight = readLight();
+  if (currentLight === "custom" && !photo) currentLight = "aurora-clara";
+  listeners.forEach((l) => l());
+});
+
+export function setLightSkyModel(next: LightSkyModel) {
+  if (next === "custom" && !photo) return;
+  currentLight = next;
+  try {
+    localStorage.setItem(LIGHT_KEY, next);
+  } catch {
+    /* Kept for this session only. */
+  }
+  listeners.forEach((l) => l());
+}
+
+export function useLightSkyModel() {
+  const model = useSyncExternalStore(subscribe, () => currentLight, () => currentLight);
+  return [model, setLightSkyModel] as const;
 }

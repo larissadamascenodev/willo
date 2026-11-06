@@ -74,21 +74,31 @@ export default function BalancoPanel({
 
   if (loading) return <Skeleton />;
 
-  const now = new Date();
-  const isCurrent = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
-  const isPast =
-    selectedYear < now.getFullYear() ||
-    (selectedYear === now.getFullYear() && selectedMonth < now.getMonth());
-  const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-  const daysLeft = isCurrent ? daysInMonth - now.getDate() : 0;
-  const month = lower(MONTH_NAMES[selectedMonth]);
+  /* The top follows the month picked on the bars: the month on screen while the
+     first bar is picked, and a month ahead as it is forecast — what is due to come
+     in and go out, all of it still to pay. */
+  const picked = pickedMonth > 0 && futureReady ? rows[Math.min(pickedMonth, rows.length - 1)] : null;
+  const shownMonth = picked ? picked.month : selectedMonth;
+  const shownYear = picked ? picked.year : selectedYear;
+  const top = picked
+    ? { receitas: picked.income, despesas: picked.expense, despesasPagas: 0, despesasPendentes: picked.expense }
+    : { receitas: data.receitas, despesas: data.despesas, despesasPagas: data.despesasPagas, despesasPendentes: data.despesasPendentes };
 
-  const sobra = data.receitas - data.despesas;
+  const now = new Date();
+  const isCurrent = shownMonth === now.getMonth() && shownYear === now.getFullYear();
+  const isPast =
+    shownYear < now.getFullYear() ||
+    (shownYear === now.getFullYear() && shownMonth < now.getMonth());
+  const daysInMonth = new Date(shownYear, shownMonth + 1, 0).getDate();
+  const daysLeft = isCurrent ? daysInMonth - now.getDate() : 0;
+  const month = lower(MONTH_NAMES[shownMonth]);
+
+  const sobra = top.receitas - top.despesas;
   const short = sobra < 0;
 
   /* The bar is the month's money: what comes in, or what goes out when that is
      more. Spent, still due and free are slices of it. */
-  const base = Math.max(data.receitas, data.despesas, 1);
+  const base = Math.max(top.receitas, top.despesas, 1);
   const free = Math.max(sobra, 0);
 
   const headline = isPast
@@ -116,22 +126,26 @@ export default function BalancoPanel({
         <Text style={{ fontSize: 46, fontWeight: "800", letterSpacing: -1.8 }}>{money(Math.abs(sobra)).replace(/^R\$\s?/, "")}</Text>
       </Text>
       <Text style={{ marginTop: 4, fontSize: 13.5, color: th(INK.soft) }}>
-        {data.receitas > 0
-          ? `${Math.round((data.despesas / data.receitas) * 100)}% do que entrou já está comprometido`
-          : "Nada entrou ainda neste mês"}
+        {top.receitas > 0
+          ? picked
+            ? `${Math.round((top.despesas / top.receitas) * 100)}% do que deve entrar já está comprometido`
+            : `${Math.round((top.despesas / top.receitas) * 100)}% do que entrou já está comprometido`
+          : picked
+            ? "Nada previsto para entrar neste mês"
+            : "Nada entrou ainda neste mês"}
       </Text>
 
       {/* ══ The month, as one thin bar: gone, still due, free ══ */}
       <View style={{ marginTop: 22, height: 6, flexDirection: "row", gap: 2, borderRadius: 999, overflow: "hidden", backgroundColor: th(TRACK, "bg") }}>
-        <Bar share={data.despesasPagas / base} color={SPENT} delay={0.15} />
-        <Bar share={data.despesasPendentes / base} color={DUE} delay={0.4} />
+        <Bar share={top.despesasPagas / base} color={SPENT} delay={0.15} />
+        <Bar share={top.despesasPendentes / base} color={DUE} delay={0.4} />
         <Bar share={free / base} color={FREE} delay={0.65} />
       </View>
 
       <View style={{ marginTop: 14, flexDirection: "row" }}>
-        <Legend swatch={SPENT} label="Gasto" value={money(data.despesasPagas)} />
+        <Legend swatch={SPENT} label="Gasto" value={money(top.despesasPagas)} />
         <View style={{ width: 1, marginHorizontal: 12, backgroundColor: th(RULE, "bg") }} />
-        <Legend swatch={DUE} label="A pagar" value={money(data.despesasPendentes)} />
+        <Legend swatch={DUE} label="A pagar" value={money(top.despesasPendentes)} />
         <View style={{ width: 1, marginHorizontal: 12, backgroundColor: th(RULE, "bg") }} />
         {short ? (
           <Legend swatch={RED} label="Falta" value={money(Math.abs(sobra))} tone={RED} />
@@ -143,8 +157,8 @@ export default function BalancoPanel({
       {/* ══ What came in and what went out, as the home draws them: two bars on one
           scale, straight on the ground. Each opens into what was fixed and what varied. ══ */}
       <View style={{ marginTop: 30, gap: 4 }}>
-        <Flow label="Receitas" amount={data.receitas} scale={Math.max(data.receitas, data.despesas, 1)} inflow onPress={onOpenSide ? () => onOpenSide("receitas") : undefined} />
-        <Flow label="Despesas" amount={data.despesas} scale={Math.max(data.receitas, data.despesas, 1)} onPress={onOpenSide ? () => onOpenSide("despesas") : undefined} />
+        <Flow label="Receitas" amount={top.receitas} scale={base} inflow onPress={onOpenSide && !picked ? () => onOpenSide("receitas") : undefined} />
+        <Flow label="Despesas" amount={top.despesas} scale={base} onPress={onOpenSide && !picked ? () => onOpenSide("despesas") : undefined} />
       </View>
 
       {/* ══ Month by month: what each one leaves over, as bars; the picked one written out

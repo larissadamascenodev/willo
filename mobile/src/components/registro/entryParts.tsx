@@ -13,7 +13,8 @@ import { saveReceipt, shareReceipt } from "~/lib/receiptShare";
 import { showToast } from "~/lib/toast";
 import { AMBER, INCOME, INK } from "~/theme/tokens";
 
-import { live, th } from "~/theme/theme";
+import { isLight, live, th } from "~/theme/theme";
+import { outlinedInk } from "~/components/StatusTag";
 /**
  * The pieces the entry flows share — Registro rápido, the guided manual entry and the
  * editor: the card of what an entry became, the large answers, the fields of the check,
@@ -125,8 +126,8 @@ export function EntryCard({
 
 export function Pill({ label, warn }: { label: string; warn?: boolean }) {
   return (
-    <View style={{ height: 26, paddingHorizontal: 10, borderRadius: 13, justifyContent: "center", backgroundColor: th(warn ? "rgba(249,206,78,0.12)" : "rgba(255,255,255,0.07)", "bg") }}>
-      <Text style={{ fontSize: 12.5, fontWeight: "500", color: th(warn ? AMBER : "rgba(255,255,255,0.8)") }}>{label}</Text>
+    <View style={{ height: 26, paddingHorizontal: 10, borderRadius: 13, justifyContent: "center", backgroundColor: warn ? (isLight() ? "rgba(249,206,78,0.3)" : "rgba(249,206,78,0.12)") : th("rgba(255,255,255,0.07)", "bg") }}>
+      <Text style={[{ fontSize: 12.5, fontWeight: warn ? "600" : "500" }, warn ? outlinedInk(AMBER) : { color: th("rgba(255,255,255,0.8)") }]}>{label}</Text>
     </View>
   );
 }
@@ -202,7 +203,7 @@ export function Toggle({ value, onChange, label }: { value: boolean; onChange: (
       }}
     >
       <Animated.View style={[{ width: TRACK_W, height: TRACK_H, borderRadius: TRACK_H / 2, padding: INSET, justifyContent: "center" }, track]}>
-        <Animated.View style={[{ width: KNOB_W, height: KNOB_H, borderRadius: KNOB_H / 2, backgroundColor: th("#fff", "bg"), shadowColor: th("#000", "line"), shadowOpacity: 0.22, shadowRadius: 3, shadowOffset: { width: 0, height: 2 } }, knob]} />
+        <Animated.View style={[{ width: KNOB_W, height: KNOB_H, borderRadius: KNOB_H / 2, backgroundColor: "#FFFFFF", shadowColor: "#000", shadowOpacity: 0.22, shadowRadius: 3, shadowOffset: { width: 0, height: 2 } }, knob]} />
       </Animated.View>
     </Pressable>
   );

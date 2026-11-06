@@ -3,6 +3,8 @@ import { Pressable, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { shade, withAlpha } from "@/lib/tone";
 import BankMark from "~/components/BankMark";
+import StatusTag, { TAG_TONES } from "~/components/StatusTag";
+import { Check, Clock, Lock } from "~/components/icons";
 import Bar from "~/components/Bar";
 import { money } from "~/lib/money";
 import { GREEN, INK } from "~/theme/tokens";
@@ -67,7 +69,6 @@ export default function CardFaceTile({
   const usedPct = card.limit > 0 ? Math.min((card.used / card.limit) * 100, 100) : 0;
   const available = Math.max(card.limit - card.used, 0);
   const freeTone = shade(hex, 0.58);
-  const pill = statusPill(hex, status.isClosed);
 
   return (
     <Animated.View ref={box} entering={FadeInDown.delay(index * 70).duration(450)}>
@@ -107,34 +108,9 @@ export default function CardFaceTile({
 
           {/* Where the invoice stands, as a mark rather than a sentence. */}
           {owed <= 0 ? (
-            <Text
-              style={{
-                borderRadius: 999,
-                overflow: "hidden",
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-                fontSize: 10.5,
-                fontWeight: "700",
-                backgroundColor: th("rgba(200,243,109,0.12)", "bg"),
-                color: th(GREEN),
-              }}
-            >
-              Em dia
-            </Text>
+            <StatusTag small label="Em dia" tone={TAG_TONES.paid} Icon={Check} />
           ) : (
-            <Text
-              style={{
-                borderRadius: 999,
-                overflow: "hidden",
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-                fontSize: 10.5,
-                fontWeight: "700",
-                ...pill,
-              }}
-            >
-              {status.isClosed ? "Fechada" : "Aberta"}
-            </Text>
+            <StatusTag small label={status.isClosed ? "Fechada" : "Aberta"} tone={status.isClosed ? TAG_TONES.closed : TAG_TONES.open} Icon={status.isClosed ? Lock : Clock} />
           )}
         </View>
 

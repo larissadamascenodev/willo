@@ -249,7 +249,7 @@ export default function Cartoes() {
               <View style={{ marginTop: 16, flexDirection: "row", gap: 16 }}>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(USED_LIMIT_HEX, "bg") }} />
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(USED_LIMIT_HEX) }} />
                     <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Usado</Text>
                   </View>
                   <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 16, fontWeight: "700", color: th("rgba(255,255,255,0.72)") }}>
@@ -258,7 +258,7 @@ export default function Cartoes() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(FREE_LIMIT_HEX, "bg") }} />
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(FREE_LIMIT_HEX) }} />
                     <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Disponível</Text>
                   </View>
                   <Text

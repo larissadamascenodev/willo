@@ -44,7 +44,7 @@ export default function Bar({
 
   return (
     <Animated.View
-      style={[{ height: "100%", borderRadius: 999, backgroundColor: th(color, "bg"), minWidth }, style, animated]}
+      style={[{ height: "100%", borderRadius: 999, backgroundColor: th(color), minWidth }, style, animated]}
     />
   );
 }
@@ -77,7 +77,7 @@ export function FlexBar({
 
   return (
     <Animated.View
-      style={[{ flexBasis: 0, minWidth, borderRadius: 999, backgroundColor: th(color, "bg") }, animated]}
+      style={[{ flexBasis: 0, minWidth, borderRadius: 999, backgroundColor: th(color) }, animated]}
     />
   );
 }

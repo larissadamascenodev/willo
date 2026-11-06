@@ -126,9 +126,12 @@ function parse(input: string): RGBA | null {
     if (Number.isNaN(n)) return null;
     return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255, a: h.length === 8 ? parseInt(h.slice(6), 16) / 255 : 1 };
   }
-  const m = s.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/);
+  /* Both ways of writing it: rgba(1, 2, 3, 0.5) and the newer rgb(1 2 3 / 0.5),
+     which the card colours use. */
+  const m = s.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)\s*(?:[,/]\s*([\d.]+)(%?)\s*)?\)$/);
   if (!m) return null;
-  return { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : +m[4] };
+  const alpha = m[4] === undefined ? 1 : m[5] ? +m[4] / 100 : +m[4];
+  return { r: +m[1], g: +m[2], b: +m[3], a: alpha };
 }
 
 /* Always four decimals of alpha: no colour written by hand looks like this, so what

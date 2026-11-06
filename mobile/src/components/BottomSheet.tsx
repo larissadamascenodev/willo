@@ -14,7 +14,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-import { th } from "~/theme/theme";
+import { isLight, th } from "~/theme/theme";
 /**
  * A panel that comes up from the foot of the screen.
  *
@@ -85,7 +85,11 @@ export default function BottomSheet({
     };
   }, [open, insets.bottom]);
 
-  const blurProps = useAnimatedProps(() => ({ intensity: Math.max(0, Math.min(1, shown.get())) * 18 }));
+  /* In the light, a dark shape behind (the robot) shows through a thin veil, so the
+     page behind is blurred harder and the sheet itself is more opaque. Worked out
+     here, not in the animation. */
+  const backBlur = isLight() ? 44 : 18;
+  const blurProps = useAnimatedProps(() => ({ intensity: Math.max(0, Math.min(1, shown.get())) * backBlur }));
   const dim = useAnimatedStyle(() => ({ opacity: Math.max(0, Math.min(1, shown.get())) }));
   const rise = useAnimatedStyle(() => ({
     transform: [{ translateY: (1 - Math.min(1, shown.get())) * (height * 0.7) }],
@@ -118,8 +122,8 @@ export default function BottomSheet({
           rise,
         ]}
       >
-        <BlurView intensity={60} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.38)", "bg") }} />
+        <BlurView intensity={isLight() ? 90 : 60} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: isLight() ? "rgba(246,247,249,0.78)" : "rgba(18,20,26,0.38)" }} />
 
         {/* The grab handle, which says which way this came from. */}
         <View

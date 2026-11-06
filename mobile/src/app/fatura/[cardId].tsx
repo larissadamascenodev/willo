@@ -32,6 +32,7 @@ import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 import { th } from "~/theme/theme";
+import StatusTag, { TAG_TONES } from "~/components/StatusTag";
 /**
  * The card's own panel.
  *
@@ -217,13 +218,13 @@ export default function Fatura() {
   const status = useMemo(() => {
     if (!current) return null;
     /* Paid ahead while still collecting purchases, it is still open — only a closed one is "paga". */
-    if (current.is_paid && outstanding <= 0 && closed) return { label: "Paga", tone: GREEN, Icon: Check };
-    if (cycle?.overdue) return { label: "Vencida", tone: RED, Icon: AlertTriangle };
-    if (closed) return { label: "Fechada", tone: "#F5C26B", Icon: Lock };
+    if (current.is_paid && outstanding <= 0 && closed) return { label: "Paga", tone: TAG_TONES.paid, Icon: Check };
+    if (cycle?.overdue) return { label: "Vencida", tone: TAG_TONES.overdue, Icon: AlertTriangle };
+    if (closed) return { label: "Fechada", tone: TAG_TONES.closed, Icon: Lock };
     /* Only the invoice collecting today's purchases is open; the ones after it are still to come. */
     if (card && year * 12 + (month - 1) > invoicePeriodIndex(new Date().toISOString().slice(0, 10), card.closing_day))
-      return { label: "Futura", tone: "rgba(255,255,255,0.7)", Icon: CalendarClock };
-    return { label: "Aberta", tone: "#8FC7FF", Icon: Clock };
+      return { label: "Futura", tone: "#B4B8C2", Icon: CalendarClock };
+    return { label: "Aberta", tone: TAG_TONES.open, Icon: Clock };
   }, [current, closed, outstanding, cycle, card, month, year]);
   const paidOff = status?.label === "Paga";
 
@@ -325,25 +326,7 @@ export default function Fatura() {
                 <Text style={{ fontSize: 13, color: th("rgba(255,255,255,0.62)") }}>
                   Fatura de {MONTH_NAMES[month - 1]}
                 </Text>
-                {status && (
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 6,
-                      height: 28,
-                      paddingLeft: 4,
-                      paddingRight: 11,
-                      borderRadius: 14,
-                      backgroundColor: th(`${status.tone}1F`, "bg"),
-                    }}
-                  >
-                    <View style={{ width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: th(status.tone, "bg") }}>
-                      <status.Icon size={11} color={th("#0B0B0B")} strokeWidth={3} />
-                    </View>
-                    <Text style={{ fontSize: 12.5, fontWeight: "700", color: th(status.tone) }}>{status.label}</Text>
-                  </View>
-                )}
+                {status && <StatusTag label={status.label} tone={status.tone} Icon={status.Icon} />}
               </View>
               <CountUp
                 value={headline}

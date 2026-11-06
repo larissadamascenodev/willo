@@ -2,7 +2,7 @@ import { type ReactNode } from "react";
 import { Pressable, View, type ViewStyle } from "react-native";
 import { INK } from "~/theme/tokens";
 
-import { th } from "~/theme/theme";
+import { isLight, th } from "~/theme/theme";
 /**
  * A card, one step up from the ground.
  *
@@ -32,8 +32,10 @@ export default function Surface({
   const skin: ViewStyle = {
     borderRadius: radius,
     borderWidth: 1,
-    borderColor: th("rgba(255,255,255,0.10)", "line"),
-    backgroundColor: th(SURFACE_FILL, "bg"),
+    /* In the light a card is frosted white over the coloured ground, so the colour
+       still shows through as the page scrolls; in the dark it is white at a whisper. */
+    borderColor: isLight() ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.10)",
+    backgroundColor: isLight() ? "rgba(255,255,255,0.62)" : SURFACE_FILL,
     overflow: "hidden",
   };
 

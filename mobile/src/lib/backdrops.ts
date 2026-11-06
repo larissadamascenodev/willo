@@ -89,3 +89,76 @@ export const STARS = (() => {
     return { x: next(), y, r: 0.5 + next() * 0.9, o: (0.25 + next() * 0.6) * (1 - y * 1.3) };
   });
 })();
+
+/**
+ * The light theme's backgrounds. The pale ground alone gives the glass nothing to
+ * bend, so these carry soft colour near the top — pastel washes over a light ground —
+ * for the bars and buttons to pick up as the page scrolls under them, fading to near
+ * white where the cards and figures are.
+ */
+export type LightBackdropKey = "nevoa" | "aurora-clara" | "ceu-claro" | "lavanda" | "pessego" | "areia" | "perola";
+
+export const LIGHT_BACKDROPS: Record<LightBackdropKey, Backdrop> = {
+  nevoa: {
+    label: "Névoa",
+    ground: "#F5F5F7",
+    lights: [
+      { cx: 0.5, cy: -0.05, rx: 1.0, ry: 0.5, rgb: "255,255,255", a: 1 },
+      { cx: 0.85, cy: 0.08, rx: 0.7, ry: 0.32, rgb: "170,190,235", a: 0.22 },
+    ],
+  },
+  "aurora-clara": {
+    label: "Aurora",
+    ground: "#F1F2F8",
+    lights: [
+      { cx: 0.15, cy: -0.02, rx: 1.0, ry: 0.5, rgb: "140,160,255", a: 0.55 },
+      { cx: 0.9, cy: 0.05, rx: 0.9, ry: 0.45, rgb: "196,160,255", a: 0.5 },
+      { cx: 0.5, cy: 0.3, rx: 0.9, ry: 0.3, rgb: "130,210,240", a: 0.25 },
+    ],
+  },
+  "ceu-claro": {
+    label: "Céu",
+    ground: "#EEF3FA",
+    lights: [
+      { cx: 0.5, cy: -0.08, rx: 1.2, ry: 0.6, rgb: "110,170,250", a: 0.6 },
+      { cx: 0.1, cy: 0.25, rx: 0.7, ry: 0.35, rgb: "160,215,250", a: 0.35 },
+      { cx: 0.9, cy: 0.35, rx: 0.6, ry: 0.3, rgb: "255,255,255", a: 0.6 },
+    ],
+  },
+  lavanda: {
+    label: "Lavanda",
+    ground: "#F3F0F8",
+    lights: [
+      { cx: 0.5, cy: -0.05, rx: 1.1, ry: 0.55, rgb: "170,140,240", a: 0.55 },
+      { cx: 0.05, cy: 0.2, rx: 0.7, ry: 0.35, rgb: "240,170,225", a: 0.4 },
+      { cx: 0.95, cy: 0.22, rx: 0.6, ry: 0.35, rgb: "150,150,245", a: 0.35 },
+    ],
+  },
+  pessego: {
+    label: "Pêssego",
+    ground: "#FBF3EE",
+    lights: [
+      { cx: 0.5, cy: -0.05, rx: 1.1, ry: 0.52, rgb: "255,160,120", a: 0.5 },
+      { cx: 0.1, cy: 0.12, rx: 0.7, ry: 0.32, rgb: "255,205,150", a: 0.45 },
+      { cx: 0.9, cy: 0.2, rx: 0.6, ry: 0.32, rgb: "250,150,170", a: 0.35 },
+    ],
+  },
+  areia: {
+    label: "Areia",
+    ground: "#F6F2EA",
+    lights: [
+      { cx: 0.5, cy: -0.05, rx: 1.2, ry: 0.55, rgb: "230,196,140", a: 0.5 },
+      { cx: 0.85, cy: 0.18, rx: 0.6, ry: 0.3, rgb: "245,220,180", a: 0.45 },
+    ],
+  },
+  perola: {
+    label: "Pérola",
+    ground: "#EEEFF2",
+    lights: [
+      { cx: 0.5, cy: -0.05, rx: 1.2, ry: 0.6, rgb: "176,186,206", a: 0.55 },
+      { cx: 0.2, cy: 0.3, rx: 0.6, ry: 0.3, rgb: "255,255,255", a: 0.7 },
+    ],
+  },
+};
+
+export const LIGHT_BACKDROP_KEYS = Object.keys(LIGHT_BACKDROPS) as LightBackdropKey[];

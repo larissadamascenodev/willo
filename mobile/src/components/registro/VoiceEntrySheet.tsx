@@ -20,7 +20,8 @@ import { money } from "~/lib/money";
 import type { VoiceEntry } from "~/lib/voiceEntry";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 
-import { live, th } from "~/theme/theme";
+import { isLight, live, th } from "~/theme/theme";
+import { outlinedInk } from "~/components/StatusTag";
 /**
  * What was heard, for a look before it is written — and the receipt once it is.
  *
@@ -499,10 +500,10 @@ function Pill({ label, warn }: { label: string; warn?: boolean }) {
         paddingHorizontal: 12,
         borderRadius: 15,
         justifyContent: "center",
-        backgroundColor: th(warn ? "rgba(249,206,78,0.12)" : "rgba(255,255,255,0.07)", "bg"),
+        backgroundColor: warn ? (isLight() ? "rgba(249,206,78,0.3)" : "rgba(249,206,78,0.12)") : th("rgba(255,255,255,0.07)", "bg"),
       }}
     >
-      <Text style={{ fontSize: 13, fontWeight: "500", color: th(warn ? AMBER : "rgba(255,255,255,0.8)") }}>{label}</Text>
+      <Text style={[{ fontSize: 13, fontWeight: warn ? "600" : "500" }, warn ? outlinedInk(AMBER) : { color: th("rgba(255,255,255,0.8)") }]}>{label}</Text>
     </View>
   );
 }
