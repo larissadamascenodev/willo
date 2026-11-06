@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -18,8 +18,9 @@ import Animated, {
 import Svg, { Circle, Defs, Line, Path, RadialGradient, Rect, Stop } from "react-native-svg";
 import * as Haptics from "expo-haptics";
 import { useRaioX } from "@/hooks/useRaioX";
-import type { Tone } from "@/services/raioXService";
 import Surface from "~/components/Surface";
+import ParticleOrb from "~/components/registro/ParticleOrb";
+import { ICE, RISK, SECTORS, SKY, type SectorKey } from "~/components/radar/parts";
 import { ChallengeCover } from "~/components/desafios/ChallengeTile";
 import { Check, ChevronRight, Flame, Trophy } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
@@ -43,14 +44,6 @@ import { INK } from "~/theme/tokens";
  */
 
 const FIRE = "#FF9F45";
-const DIAL = 66;
-const TONE: Record<Tone, { hex: string; alpha: number }> = {
-  otimo: { hex: "#BFE3FF", alpha: 0.85 },
-  ok: { hex: "#7CC4FF", alpha: 0.5 },
-  atencao: { hex: "#F5C26B", alpha: 0.8 },
-  critico: { hex: "#FF8A7A", alpha: 0.9 },
-};
-
 export default function ShortcutPair({ gap = 16 }: { gap?: number }) {
   const router = useRouter();
   const { user } = useAuth();
@@ -64,12 +57,16 @@ export default function ShortcutPair({ gap = 16 }: { gap?: number }) {
   );
 
   const pending = (running ?? []).filter((r) => !r.tickedToday);
+  const [rowW, setRowW] = useState(0);
+  /* The picture area of each tile: the Radar's dial, and the challenges' stack. */
+  const art = rowW > 0 ? Math.min((rowW - gap) / 2 - 28, 170) : 0;
 
   return (
     <View style={{ gap }}>
-      <View style={{ flexDirection: "row", gap }}>
-        <RadarTile onPress={() => router.push({ pathname: "/registro", params: { view: "radar" } } as never)} />
-        <ChallengesTile running={running} onPress={() => router.push("/desafios" as never)} />
+      {/* One size for both, measured once, so the pair is even. */}
+      <View onLayout={(e) => setRowW(e.nativeEvent.layout.width)} style={{ flexDirection: "row", gap }}>
+        <RadarTile art={art} onPress={() => router.push({ pathname: "/registro", params: { view: "radar" } } as never)} />
+        <ChallengesTile art={art} running={running} onPress={() => router.push("/desafios" as never)} />
       </View>
       {pending.length > 0 && (
         <CheckinShelf
@@ -84,67 +81,100 @@ export default function ShortcutPair({ gap = 16 }: { gap?: number }) {
 
 /* ── The Radar ─────────────────────────────────────────────────────────────── */
 
-function wedge(c: number, inner: number, outer: number, from: number, to: number) {
-  const p = (r: number, deg: number) => {
+/* The Radar's own cycle, small: the same six sectors, rim ticks and light as the Radar
+   screen, Willo's orb at the centre, a dot for each thing a sector found. The light
+   sweeps round without stopping; the line under the dial goes from sector to sector,
+   slowly enough to read. */
+
+const STEP = 60;
+const SWEEP_MS = 3000;
+const SECTOR_LABEL: Record<SectorKey, string> = { consumo: "Consumo", habitos: "Hábitos", compromissos: "Compromissos", futuro: "Futuro", saude: "Saúde", simular: "Simular" };
+
+function sectorWedge(c: number, r: number, inner: number) {
+  const point = (rad: number, deg: number) => {
     const a = ((deg - 90) * Math.PI) / 180;
-    return `${(c + r * Math.cos(a)).toFixed(2)} ${(c + r * Math.sin(a)).toFixed(2)}`;
+    return `${(c + rad * Math.cos(a)).toFixed(2)} ${(c + rad * Math.sin(a)).toFixed(2)}`;
   };
-  return `M${p(inner, from)}L${p(outer, from)}A${outer} ${outer} 0 0 1 ${p(outer, to)}L${p(inner, to)}A${inner} ${inner} 0 0 0 ${p(inner, from)}Z`;
+  return `M${point(inner, -STEP / 2)}L${point(r, -STEP / 2)}A${r} ${r} 0 0 1 ${point(r, STEP / 2)}L${point(inner, STEP / 2)}A${inner} ${inner} 0 0 0 ${point(inner, -STEP / 2)}Z`;
 }
 
-function RadarDial({ tones }: { tones: (Tone | null)[] }) {
+type Blips = Partial<Record<SectorKey, { risk: number; note: number }>>;
+
+function MiniScope({ size, blips }: { size: number; blips: Blips }) {
   const reduce = useReducedMotion();
-  const spin = useSharedValue(0);
+  const c = size / 2;
+  const r = c - 2;
+  const core = r * 0.34;
+  /* The light sweeps round without stopping, as a radar does. */
+  const angle = useSharedValue(0);
   useEffect(() => {
     if (reduce) return;
-    spin.set(withRepeat(withTiming(360, { duration: 7000, easing: Easing.linear }), -1, false));
-    return () => cancelAnimation(spin);
-  }, [reduce, spin]);
-  const sweep = useAnimatedStyle(() => ({ transform: [{ rotate: `${spin.get()}deg` }] }));
+    angle.set(withRepeat(withTiming(360, { duration: SWEEP_MS, easing: Easing.linear }), -1, false));
+    return () => cancelAnimation(angle);
+  }, [angle, reduce]);
+  const light = useAnimatedStyle(() => ({ transform: [{ rotate: `${angle.get()}deg` }] }));
 
-  const c = DIAL / 2;
-  const outer = c - 2;
-  const inner = outer * 0.3;
   /* Worked out here, outside the animation. */
-  const ring = th("rgba(255,255,255,0.14)");
-  const spoke = th("rgba(255,255,255,0.08)");
-  const idle = th("rgba(255,255,255,0.05)", "bg");
-  const lit = tones.map((t) => (t ? { fill: th(TONE[t].hex), alpha: TONE[t].alpha } : { fill: idle, alpha: 1 }));
-  const beam = th("#BFE3FF");
+  const rim = th("rgba(255,255,255,0.12)");
+  const tick = th("rgba(255,255,255,0.24)");
+  const sky = th(SKY, "grad");
+  const ice = th(ICE);
+  const risk = th(RISK, "bg");
+  const note = th(ICE, "bg");
 
   return (
-    <View style={{ width: DIAL, height: DIAL }}>
-      <Svg width={DIAL} height={DIAL}>
-        <Circle cx={c} cy={c} r={outer} stroke={ring} strokeWidth={1} fill="none" />
-        <Circle cx={c} cy={c} r={outer * 0.64} stroke={spoke} strokeWidth={1} fill="none" />
-        {lit.map((l, i) => (
-          <Path key={i} d={wedge(c, inner + 1.5, outer - 1.5, i * 60 + 3, i * 60 + 57)} fill={l.fill} fillOpacity={l.alpha * 0.55} />
+    <View style={{ width: size, height: size }}>
+      <Svg width={size} height={size} style={{ position: "absolute" }}>
+        {[1, 0.66].map((k) => (
+          <Circle key={k} cx={c} cy={c} r={r * k} stroke={rim} strokeWidth={1} fill="none" />
         ))}
-        {[0, 60, 120, 180, 240, 300].map((deg) => {
-          const a = ((deg - 90) * Math.PI) / 180;
-          return <Line key={deg} x1={c + inner * Math.cos(a)} y1={c + inner * Math.sin(a)} x2={c + outer * Math.cos(a)} y2={c + outer * Math.sin(a)} stroke={spoke} strokeWidth={1} />;
+        {SECTORS.map((_, i) => {
+          const a = ((i * STEP - STEP / 2 - 90) * Math.PI) / 180;
+          return <Line key={i} x1={c + core * Math.cos(a)} y1={c + core * Math.sin(a)} x2={c + r * Math.cos(a)} y2={c + r * Math.sin(a)} stroke={rim} strokeWidth={1} />;
         })}
-        <Circle cx={c} cy={c} r={inner * 0.55} fill={beam} />
+        {Array.from({ length: 72 }).map((_, i) => {
+          const a = (i * 5 * Math.PI) / 180;
+          const long = i % 6 === 0;
+          return <Line key={i} x1={c + (r - (long ? 6 : 2.5)) * Math.cos(a)} y1={c + (r - (long ? 6 : 2.5)) * Math.sin(a)} x2={c + r * Math.cos(a)} y2={c + r * Math.sin(a)} stroke={tick} strokeWidth={0.7} />;
+        })}
       </Svg>
-      {/* The sweep: a soft beam turning slowly over the dial. */}
-      <Animated.View pointerEvents="none" style={[{ position: "absolute", top: 0, left: 0, width: DIAL, height: DIAL }, sweep]}>
-        <Svg width={DIAL} height={DIAL}>
+
+      <Animated.View pointerEvents="none" style={[{ position: "absolute", width: size, height: size }, light]}>
+        <Svg width={size} height={size}>
           <Defs>
-            <RadialGradient id="radar-beam" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor={beam} stopOpacity={0.5} />
-              <Stop offset="1" stopColor={beam} stopOpacity={0} />
+            <RadialGradient id="mini-scope-light" cx="50%" cy="50%" r="50%">
+              <Stop offset="0.3" stopColor={sky} stopOpacity={0.06} />
+              <Stop offset="1" stopColor={sky} stopOpacity={0.4} />
             </RadialGradient>
           </Defs>
-          <Path d={wedge(c, 0.1, outer, -28, 0)} fill="url(#radar-beam)" />
-          <Line x1={c} y1={c} x2={c} y2={c - outer} stroke={beam} strokeOpacity={0.7} strokeWidth={1} />
+          <Path d={sectorWedge(c, r, core)} fill="url(#mini-scope-light)" stroke={ice} strokeOpacity={0.55} strokeWidth={1} />
         </Svg>
       </Animated.View>
+
+      {/* What each sector found, as dots where its name would be. */}
+      {SECTORS.map((sct, i) => {
+        const b = blips[sct.key];
+        const dots = [...Array(Math.min(b?.risk ?? 0, 3)).fill(risk), ...Array(Math.min(b?.note ?? 0, 3 - Math.min(b?.risk ?? 0, 3))).fill(note)] as string[];
+        if (!dots.length) return null;
+        const a = ((i * STEP - 90) * Math.PI) / 180;
+        return (
+          <View key={sct.key} pointerEvents="none" style={{ position: "absolute", left: c + r * 0.67 * Math.cos(a) - 14, top: c + r * 0.67 * Math.sin(a) - 3, width: 28, flexDirection: "row", justifyContent: "center", gap: 3 }}>
+            {dots.map((hex, n) => (
+              <View key={n} style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: hex }} />
+            ))}
+          </View>
+        );
+      })}
+
+      <View pointerEvents="none" style={{ position: "absolute", left: c - core, top: c - core, width: core * 2, height: core * 2, alignItems: "center", justifyContent: "center" }}>
+        <ParticleOrb size={core * 2} />
+      </View>
     </View>
   );
 }
 
 /** The Radar's own reading, mounted a moment after the home: it is not what the home waits for. */
-function RadarTile({ onPress }: { onPress: () => void }) {
+function RadarTile({ art, onPress }: { art: number; onPress: () => void }) {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setReady(true), 700);
@@ -153,51 +183,83 @@ function RadarTile({ onPress }: { onPress: () => void }) {
   return (
     <Surface onPress={onPress} style={{ flex: 1 }}>
       <Glow hex="#7CC4FF" />
-      {ready ? <RadarReading /> : <RadarBody tones={[null, null, null, null, null, null]} score={null} level="" line="Lendo o seu mês" />}
+      <View style={{ flex: 1, padding: 14, gap: 12, position: "relative" }}>
+        {ready && art > 0 ? <RadarReading size={art} /> : <View style={{ height: Math.max(art, 120) + 50 }} />}
+      </View>
     </Surface>
   );
 }
 
-function RadarReading() {
+function RadarReading({ size }: { size: number }) {
   const data = useRaioX();
-  if (data.loading) return <RadarBody tones={[null, null, null, null, null, null]} score={null} level="" line="Lendo o seu mês" />;
-  const { pillars, score, level } = data.report;
-  const watching = pillars.filter((p) => p.tone === "atencao" || p.tone === "critico").length;
-  const odd = data.anomalies.length;
-  const line = watching > 0 ? `${watching} ${watching === 1 ? "ponto" : "pontos"} de atenção` : odd > 0 ? `${odd} ${odd === 1 ? "coisa" : "coisas"} fora do normal` : "Tudo em ordem";
-  return <RadarBody tones={pillars.slice(0, 6).map((p) => p.tone)} score={score} level={level.label} line={line} />;
-}
+  const [index, setIndex] = useState(0);
+  const reduce = useReducedMotion();
 
-function RadarBody({ tones, score, level, line }: { tones: (Tone | null)[]; score: number | null; level: string; line: string }) {
+  /* Round the sectors, one every few seconds. */
+  useEffect(() => {
+    if (reduce) return;
+    const t = setInterval(() => setIndex((i) => (i + 1) % SECTORS.length), 2800);
+    return () => clearInterval(t);
+  }, [reduce]);
+
+  const ready = !data.loading;
+  const blips: Blips = ready
+    ? {
+        consumo: { risk: data.categories.filter((x) => x.tone === "critico").length, note: data.categories.filter((x) => x.tone === "atencao").length },
+        habitos: { risk: 0, note: data.anomalies.length + data.duplicates.length },
+        compromissos: { risk: data.commitment.committedPct >= 0.6 ? 1 : 0, note: data.commitment.committedPct >= 0.4 ? 1 : 0 },
+        futuro: { risk: data.forecast.endBalance < 0 ? 1 : 0, note: 0 },
+        saude: { risk: data.report.pillars.filter((p) => p.tone === "critico").length, note: data.report.pillars.filter((p) => p.tone === "atencao").length },
+      }
+    : {};
+
+  const key = SECTORS[index].key;
+  const said = (() => {
+    if (!ready) return "Lendo o seu mês";
+    switch (key) {
+      case "consumo": {
+        const up = data.categories.filter((x) => x.tone === "critico" || x.tone === "atencao").length;
+        return up ? `${up} ${up === 1 ? "categoria subindo" : "categorias subindo"}` : "Gastos no ritmo de sempre";
+      }
+      case "habitos": {
+        const odd = data.anomalies.length + data.duplicates.length;
+        return odd ? `${odd} ${odd === 1 ? "coisa fora do normal" : "coisas fora do normal"}` : "Nada fora do normal";
+      }
+      case "compromissos":
+        return `${Math.round(data.commitment.committedPct * 100)}% da renda já comprometida`;
+      case "futuro":
+        return data.forecast.endBalance < 0 ? "O mês pode fechar no vermelho" : "O mês fecha no azul";
+      case "saude":
+        return `Nota ${data.report.score} · ${data.report.level.label}`;
+      default:
+        return "Teste uma compra antes de fazer";
+    }
+  })();
+  const alert = ready && ((blips[key]?.risk ?? 0) > 0);
+
   return (
-    <View style={{ minHeight: 150, padding: 14, justifyContent: "space-between", position: "relative" }}>
-      <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
-        <RadarDial tones={tones} />
-        {score !== null && (
-          <Animated.View entering={FadeIn.duration(300)} style={{ alignItems: "flex-end" }}>
-            <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.8, color: th("#fff"), fontVariant: ["tabular-nums"] }}>{score}</Text>
-            <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 0.4, color: th(INK.softer) }}>{level.toUpperCase()}</Text>
-          </Animated.View>
-        )}
+    <>
+      <View style={{ alignItems: "center" }}>
+        <MiniScope size={size} blips={blips} />
       </View>
       <View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
           <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15, fontWeight: "700", letterSpacing: -0.2, color: th("#fff") }}>
-            Radar financeiro
+            Radar · {SECTOR_LABEL[key]}
           </Text>
           <ChevronRight size={14} color={th(INK.faint)} />
         </View>
-        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>
-          {line}
-        </Text>
+        <Animated.Text key={`${key}-${said}`} entering={FadeIn.duration(320)} numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: alert ? th(RISK) : th(INK.soft) }}>
+          {said}
+        </Animated.Text>
       </View>
-    </View>
+    </>
   );
 }
 
 /* ── Desafios ──────────────────────────────────────────────────────────────── */
 
-function ChallengesTile({ running, onPress }: { running: PendingCheckin[] | null; onPress: () => void }) {
+function ChallengesTile({ art, running, onPress }: { art: number; running: PendingCheckin[] | null; onPress: () => void }) {
   const list = running ?? [];
   const best = list.reduce((m, r) => Math.max(m, r.streak), 0);
   const waiting = list.filter((r) => !r.tickedToday).length;
@@ -211,33 +273,58 @@ function ChallengesTile({ running, onPress }: { running: PendingCheckin[] | null
           ? `${best} ${best === 1 ? "dia seguido" : "dias seguidos"}`
           : "Check-in de hoje feito";
 
+  const fan = list.slice(0, 3);
+  const cardW = Math.round(art * 0.56);
+  const cardH = Math.round(art * 0.78);
+  const tilt = fan.length === 1 ? [0] : fan.length === 2 ? [-7, 7] : [-11, 0, 11];
+  const shift = fan.length === 1 ? [0] : fan.length === 2 ? [-0.2, 0.2] : [-0.3, 0, 0.3];
+
   return (
     <Surface onPress={onPress} style={{ flex: 1 }}>
       <Glow hex={FIRE} />
-      <View style={{ minHeight: 150, padding: 14, justifyContent: "space-between", position: "relative" }}>
-        <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
-          {list.length > 0 ? (
-            /* The running challenges' pictures, overlapping. */
-            <View style={{ flexDirection: "row", height: 40 }}>
-              {list.slice(0, 3).map((r, i) => (
-                <View key={r.id} style={{ width: 40, height: 40, borderRadius: 20, overflow: "hidden", marginLeft: i ? -12 : 0, borderWidth: 2, borderColor: th("#15171B", "bg"), zIndex: 3 - i }}>
-                  <ChallengeCover template={r.template} cover={r.cover} width={40} height={40} />
+      <View style={{ flex: 1, padding: 14, gap: 12, position: "relative" }}>
+        <View style={{ height: Math.max(art, 120), alignItems: "center", justifyContent: "center" }}>
+          {art > 0 && fan.length > 0 ? (
+            <>
+              {/* The running challenges' pictures, fanned like a hand of cards. */}
+              {fan.map((r, i) => (
+                <View
+                  key={r.id}
+                  style={{
+                    position: "absolute",
+                    width: cardW,
+                    height: cardH,
+                    borderRadius: 16,
+                    overflow: "hidden",
+                    borderWidth: 1.5,
+                    borderColor: "rgba(255,255,255,0.22)",
+                    transform: [{ translateX: shift[i] * art }, { rotate: `${tilt[i]}deg` }, { translateY: Math.abs(tilt[i]) * 0.6 }],
+                    zIndex: i === Math.floor(fan.length / 2) ? 3 : 1,
+                    shadowColor: "#000",
+                    shadowOpacity: 0.35,
+                    shadowRadius: 10,
+                    shadowOffset: { width: 0, height: 6 },
+                  }}
+                >
+                  <ChallengeCover template={r.template} cover={r.cover} width={cardW} height={cardH} />
                 </View>
               ))}
+              {best > 0 && (
+                <Animated.View
+                  entering={FadeIn.duration(300)}
+                  style={{ position: "absolute", bottom: 0, zIndex: 5, height: 30, paddingHorizontal: 12, borderRadius: 15, flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(10,11,13,0.82)", borderWidth: 1, borderColor: "rgba(255,159,69,0.45)" }}
+                >
+                  <Flame size={14} color={FIRE} strokeWidth={2.4} />
+                  <Text style={{ fontSize: 14, fontWeight: "800", color: "#fff", fontVariant: ["tabular-nums"] }}>{best}</Text>
+                </Animated.View>
+              )}
+            </>
+          ) : art > 0 ? (
+            /* Nothing running yet: a medal waiting to be earned. */
+            <View style={{ width: art * 0.62, height: art * 0.62, borderRadius: art * 0.31, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: th("rgba(233,196,98,0.45)", "line"), backgroundColor: th("rgba(233,196,98,0.1)", "bg") }}>
+              <Trophy size={art * 0.24} color={th("#E9C462")} strokeWidth={1.6} />
             </View>
-          ) : (
-            <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(233,196,98,0.14)", "bg") }}>
-              <Trophy size={21} color={th("#E9C462")} strokeWidth={1.9} />
-            </View>
-          )}
-          {best > 0 && (
-            <Animated.View entering={FadeIn.duration(300)} style={{ alignItems: "flex-end" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                <Flame size={17} color={FIRE} strokeWidth={2.4} />
-                <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.8, color: th("#fff"), fontVariant: ["tabular-nums"] }}>{best}</Text>
-              </View>
-            </Animated.View>
-          )}
+          ) : null}
         </View>
         <View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>

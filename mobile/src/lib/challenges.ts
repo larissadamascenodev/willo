@@ -84,6 +84,9 @@ export interface Tx {
   date: string;
   amount: number;
   recurrence_type?: string | null;
+  observation?: string | null;
+  installments?: number | null;
+  installment_current?: number | null;
 }
 
 export interface Running {
@@ -308,74 +311,163 @@ export function suggestFor(txs: Tx[], available: Template[], now = new Date(), t
 
 const money0 = (v: number) => `R$ ${Math.round(v).toLocaleString("pt-BR")}`;
 
-/* ── Achievements ───────────────────────────────────────────────────────────── */
+/* ── Achievements ───────────────────────────────────────────────────────────
 
-export type Tier = 0 | 1 | 2 | 3; // none, bronze, silver, gold
-export const TIER_NAME = ["Bloqueada", "Bronze", "Prata", "Ouro"] as const;
+   Medals in five levels — bronze, silver, gold, platinum, diamond — each level
+   showing only once the one before is earned, grouped by what they reward. Two are
+   secret until the person has earned enough of the others, so there is always a next
+   thing to reach. All of it worked out from the person's own data. */
+
+export type Tier = 0 | 1 | 2 | 3 | 4 | 5;
+export const TIER_NAME = ["Bloqueada", "Bronze", "Prata", "Ouro", "Platina", "Diamante"] as const;
+
+export type MedalIcon =
+  | "pen" | "flame" | "check" | "card" | "piggy" | "flag" | "sun" | "calendar" | "vault"
+  | "sunrise" | "note" | "layers" | "wallet" | "tag" | "trending" | "income" | "fire" | "bike" | "bag" | "eye" | "crown" | "gem";
+
+export type MedalGroup = "Registro" | "Contas e cartões" | "Guardar" | "Mês saudável" | "Desafios" | "Uso do Willo" | "Secretas";
 
 export interface Achievement {
   key: string;
   name: string;
   what: string;
-  icon: "pen" | "flame" | "check" | "card" | "piggy" | "flag" | "sun" | "calendar" | "vault";
-  steps: [number, number, number];
+  group: MedalGroup;
+  icon: MedalIcon;
+  /** The amount each level asks for, lowest first (three to five levels). */
+  steps: number[];
   unit: [string, string];
   value: number;
   tier: Tier;
-  /** The next step's target, or null at gold. */
+  /** The next level's target, or null when all are earned. */
   next: number | null;
+  /** A secret one, not shown until it is revealed. */
+  secret?: boolean;
+  revealed?: boolean;
+  /** How it is revealed, while it is secret. */
+  hint?: string;
 }
 
-function tierOf(value: number, steps: [number, number, number]): Tier {
-  return value >= steps[2] ? 3 : value >= steps[1] ? 2 : value >= steps[0] ? 1 : 0;
+export interface AchInput {
+  txs: Tx[];
+  paidInvoices: number;
+  goals: { current_amount: number; target_amount: number }[];
+  finished: Running[];
+  checkins: string[][];
+  accounts: number;
+  cards: number;
+  customCategories: number;
+  loginDays: number;
 }
 
-export function achievements(input: { txs: Tx[]; paidInvoices: number; goalsReached: number; challengesDone: number; saved?: number }): Achievement[] {
-  const { txs } = input;
-  const days = [...new Set(txs.map((t) => isoDay(new Date(t.created_at))))].sort();
+const tierOf = (value: number, steps: number[]): Tier => steps.reduce<Tier>((t, step, i) => (value >= step ? ((i + 1) as Tier) : t), 0);
+
+function bestRun(days: string[]) {
+  const sorted = [...new Set(days)].sort();
   let best = 0;
   let run = 0;
   let prev: Date | null = null;
-  for (const d of days) {
+  for (const d of sorted) {
     const cur = startOf(d);
     run = prev && daysBetween(prev, cur) === 1 ? run + 1 : 1;
     best = Math.max(best, run);
     prev = cur;
   }
-  /* A bill is a fixed expense, or one written down before its due day and paid since. */
-  const billsPaid = txs.filter(
-    (t) => t.type === "despesa" && t.status === "pago" && t.payment_method !== "cartao" && !t.credit_card_id && (t.recurrence_type === "fixa" || isoDay(new Date(t.created_at)) < t.date),
-  ).length;
+  return best;
+}
 
-  /* Months already over that closed with more in than out. */
-  const byMonth = new Map<string, number>();
+export function achievements(input: AchInput): Achievement[] {
+  const { txs } = input;
   const thisMonth = isoDay(new Date()).slice(0, 7);
+  const today = isoDay(new Date());
+
+  /* Writing. */
+  const writtenDays = txs.map((t) => isoDay(new Date(t.created_at)));
+  const early = txs.filter((t) => new Date(t.created_at).getHours() < 8).length;
+  const noted = txs.filter((t) => (t.observation ?? "").trim().length > 0).length;
+
+  /* Bills and cards. */
+  const isBill = (t: Tx) => t.type === "despesa" && t.payment_method !== "cartao" && !t.credit_card_id && (t.recurrence_type === "fixa" || isoDay(new Date(t.created_at)) < t.date);
+  const billsPaid = txs.filter((t) => isBill(t) && t.status === "pago").length;
+  const lateMonths = new Set(txs.filter((t) => isBill(t) && t.status !== "pago" && t.date < today).map((t) => t.date.slice(0, 7)));
+  const billMonths = new Set(txs.filter((t) => isBill(t) && t.date.slice(0, 7) < thisMonth).map((t) => t.date.slice(0, 7)));
+  const onTimeMonths = [...billMonths].filter((m) => !lateMonths.has(m)).length;
+  const fixed = new Set(txs.filter((t) => t.recurrence_type === "fixa").map((t) => t.name.trim().toLowerCase())).size;
+  const paidOff = txs.filter((t) => (t.installments ?? 0) > 1 && t.installment_current === t.installments && t.status === "pago").length;
+
+  /* The months. */
+  const inOut = new Map<string, { in: number; out: number }>();
   for (const t of txs) {
     const m = t.date.slice(0, 7);
     if (m >= thisMonth) continue;
     const v = Number(t.amount) || 0;
-    if (t.type === "receita") byMonth.set(m, (byMonth.get(m) ?? 0) + v);
-    else if (t.type === "despesa") byMonth.set(m, (byMonth.get(m) ?? 0) - v);
+    const row = inOut.get(m) ?? { in: 0, out: 0 };
+    if (t.type === "receita") row.in += v;
+    else if (t.type === "despesa") row.out += v;
+    inOut.set(m, row);
   }
-  const blueMonths = [...byMonth.values()].filter((v) => v > 0).length;
+  const months = [...inOut.entries()].sort(([a], [b]) => (a < b ? -1 : 1));
+  const blueMonths = months.filter(([, v]) => v.in > v.out && v.in > 0).length;
+  const leaner = months.filter(([, v], i) => i > 0 && v.out > 0 && v.out < months[i - 1][1].out).length;
+  const earned = months.filter(([, v]) => v.in > 0).length;
 
-  const fixed = new Set(txs.filter((t) => t.recurrence_type === "fixa").map((t) => t.name.trim().toLowerCase())).size;
+  /* Saving. */
+  const goalsMade = input.goals.length;
+  const goalsReached = input.goals.filter((g) => Number(g.target_amount) > 0 && Number(g.current_amount) >= Number(g.target_amount)).length;
+  const saved = Math.round(input.goals.reduce((sum, g) => sum + (Number(g.current_amount) || 0), 0));
 
-  const make = (a: Omit<Achievement, "tier" | "next">): Achievement => {
+  /* Challenges. */
+  const done = input.finished.length;
+  const flame = Math.max(0, ...input.checkins.map(bestRun));
+  const doneOf = (match: (t: Template) => boolean) => input.finished.filter((r) => match(r.template)).length;
+  const kitchen = doneOf((t) => t.icon === "delivery");
+  const emptyCart = doneOf((t) => t.icon === "online" || t.icon === "bag");
+
+  const list: Omit<Achievement, "tier" | "next">[] = [
+    { key: "writer", group: "Registro", name: "Anotador", what: "Lançamentos registrados no Willo", icon: "pen", steps: [10, 50, 150, 500, 1500], unit: ["registro", "registros"], value: txs.length },
+    { key: "streak", group: "Registro", name: "Constância", what: "Maior sequência de dias seguidos anotando", icon: "flame", steps: [3, 7, 30, 90, 180], unit: ["dia seguido", "dias seguidos"], value: bestRun(writtenDays) },
+    { key: "early", group: "Registro", name: "Madrugador", what: "Lançamentos anotados antes das 8h", icon: "sunrise", steps: [1, 10, 40, 100], unit: ["registro cedo", "registros cedo"], value: early },
+    { key: "detail", group: "Registro", name: "Detalhista", what: "Lançamentos com uma observação escrita", icon: "note", steps: [5, 25, 100, 300], unit: ["observação", "observações"], value: noted },
+
+    { key: "bills", group: "Contas e cartões", name: "Contas em dia", what: "Contas e boletos pagos", icon: "check", steps: [5, 20, 60, 150, 300], unit: ["conta paga", "contas pagas"], value: billsPaid },
+    { key: "ontime", group: "Contas e cartões", name: "Sem atraso", what: "Meses sem nenhuma conta vencida sem pagar", icon: "calendar", steps: [1, 3, 6, 12, 24], unit: ["mês sem atraso", "meses sem atraso"], value: onTimeMonths },
+    { key: "invoices", group: "Contas e cartões", name: "Fatura zerada", what: "Faturas de cartão pagas", icon: "card", steps: [1, 3, 6, 12, 24], unit: ["fatura paga", "faturas pagas"], value: input.paidInvoices },
+    { key: "paidoff", group: "Contas e cartões", name: "Parcela quitada", what: "Compras parceladas pagas até a última parcela", icon: "layers", steps: [1, 5, 15, 40], unit: ["compra quitada", "compras quitadas"], value: paidOff },
+    { key: "planned", group: "Contas e cartões", name: "Planejado", what: "Contas fixas cadastradas, para o mês nunca pegar de surpresa", icon: "calendar", steps: [1, 3, 8, 15], unit: ["conta fixa", "contas fixas"], value: fixed },
+
+    { key: "firstbox", group: "Guardar", name: "Primeira caixinha", what: "Caixinhas criadas para guardar dinheiro", icon: "piggy", steps: [1, 3, 5, 10], unit: ["caixinha", "caixinhas"], value: goalsMade },
+    { key: "goals", group: "Guardar", name: "Poupador", what: "Caixinhas que chegaram ao valor", icon: "flag", steps: [1, 3, 5, 10], unit: ["meta concluída", "metas concluídas"], value: goalsReached },
+    { key: "vault", group: "Guardar", name: "Guardião", what: "Reais guardados nas caixinhas", icon: "vault", steps: [100, 500, 2000, 5000, 20000], unit: ["real guardado", "reais guardados"], value: saved },
+
+    { key: "blue", group: "Mês saudável", name: "Mês no azul", what: "Meses que fecharam com mais entrada que saída", icon: "sun", steps: [1, 3, 6, 12, 24], unit: ["mês no azul", "meses no azul"], value: blueMonths },
+    { key: "leaner", group: "Mês saudável", name: "Economista", what: "Meses em que você gastou menos que no mês anterior", icon: "trending", steps: [1, 3, 6, 12], unit: ["mês mais enxuto", "meses mais enxutos"], value: leaner },
+    { key: "income", group: "Mês saudável", name: "Renda em ordem", what: "Meses com o que entrou registrado", icon: "income", steps: [1, 3, 6, 12, 24], unit: ["mês registrado", "meses registrados"], value: earned },
+
+    { key: "challenges", group: "Desafios", name: "Desafiante", what: "Desafios cumpridos até o fim", icon: "flag", steps: [1, 3, 5, 10, 20], unit: ["desafio cumprido", "desafios cumpridos"], value: done },
+    { key: "flame", group: "Desafios", name: "Chama acesa", what: "Maior sequência de check-ins seguidos num desafio", icon: "fire", steps: [3, 7, 15, 30, 60], unit: ["dia seguido", "dias seguidos"], value: flame },
+    { key: "kitchen", group: "Desafios", name: "Cozinha de casa", what: "Desafios sem delivery cumpridos", icon: "bike", steps: [1, 3, 5], unit: ["desafio", "desafios"], value: kitchen },
+    { key: "cart", group: "Desafios", name: "Carrinho vazio", what: "Desafios sem compras cumpridos", icon: "bag", steps: [1, 3, 5], unit: ["desafio", "desafios"], value: emptyCart },
+
+    { key: "presence", group: "Uso do Willo", name: "Presença", what: "Dias em que você abriu o Willo", icon: "eye", steps: [7, 30, 90, 180, 365], unit: ["dia", "dias"], value: input.loginDays },
+    { key: "wallet", group: "Uso do Willo", name: "Carteira montada", what: "Contas e cartões cadastrados", icon: "wallet", steps: [1, 3, 6], unit: ["conta ou cartão", "contas e cartões"], value: input.accounts + input.cards },
+    { key: "organizer", group: "Uso do Willo", name: "Organizador", what: "Categorias criadas do seu jeito", icon: "tag", steps: [1, 3, 8], unit: ["categoria", "categorias"], value: input.customCategories },
+  ];
+
+  const open: Achievement[] = list.map((a) => {
     const tier = tierOf(a.value, a.steps);
-    return { ...a, tier, next: tier === 3 ? null : a.steps[tier] };
-  };
+    return { ...a, tier, next: tier >= a.steps.length ? null : a.steps[tier] };
+  });
 
+  /* The secret two: revealed by the others. */
+  const levels = open.reduce((n, a) => n + a.tier, 0);
+  const maxed = open.filter((a) => a.tier === a.steps.length).length;
+  const secret = (a: Omit<Achievement, "tier" | "next" | "group" | "secret" | "revealed">, revealed: boolean): Achievement => {
+    const tier = tierOf(a.value, a.steps);
+    return { ...a, group: "Secretas", secret: true, revealed, tier: revealed ? tier : 0, next: tier >= a.steps.length ? null : a.steps[tier] };
+  };
   return [
-    make({ key: "writer", name: "Anotador", what: "Lançamentos registrados no Willo", icon: "pen", steps: [10, 100, 500], unit: ["registro", "registros"], value: txs.length }),
-    make({ key: "streak", name: "Constância", what: "Maior sequência de dias seguidos anotando", icon: "flame", steps: [7, 30, 90], unit: ["dia seguido", "dias seguidos"], value: best }),
-    make({ key: "bills", name: "Contas em dia", what: "Contas e boletos marcados como pagos", icon: "check", steps: [10, 50, 200], unit: ["conta paga", "contas pagas"], value: billsPaid }),
-    make({ key: "invoices", name: "Fatura zerada", what: "Faturas de cartão pagas", icon: "card", steps: [1, 6, 12], unit: ["fatura paga", "faturas pagas"], value: input.paidInvoices }),
-    make({ key: "goals", name: "Poupador", what: "Metas que chegaram ao valor", icon: "piggy", steps: [1, 3, 10], unit: ["meta concluída", "metas concluídas"], value: input.goalsReached }),
-    make({ key: "challenges", name: "Desafiante", what: "Desafios cumpridos até o fim", icon: "flag", steps: [1, 5, 15], unit: ["desafio cumprido", "desafios cumpridos"], value: input.challengesDone }),
-    make({ key: "blue", name: "Mês no azul", what: "Meses que fecharam com mais entrada que saída", icon: "sun", steps: [1, 3, 12], unit: ["mês no azul", "meses no azul"], value: blueMonths }),
-    make({ key: "planned", name: "Planejado", what: "Contas fixas cadastradas, para o mês nunca pegar de surpresa", icon: "calendar", steps: [3, 10, 20], unit: ["conta fixa", "contas fixas"], value: fixed }),
-    make({ key: "vault", name: "Guardião", what: "Reais guardados nas caixinhas", icon: "vault", steps: [500, 5000, 20000], unit: ["real guardado", "reais guardados"], value: Math.round(input.saved ?? 0) }),
+    ...open,
+    secret({ key: "collector", name: "Colecionador", what: "Níveis de medalha conquistados, somando todas", icon: "crown", steps: [10, 25, 50, 80, 110], unit: ["nível", "níveis"], value: levels, hint: "Conquiste 5 níveis de medalha para revelar" }, levels >= 5),
+    secret({ key: "legend", name: "Lenda", what: "Medalhas levadas até o último nível", icon: "gem", steps: [1, 3, 6, 10, 22], unit: ["medalha completa", "medalhas completas"], value: maxed, hint: "Leve uma medalha ao Ouro para revelar" }, open.some((a) => a.tier >= 3)),
   ];
 }
 
@@ -401,12 +493,16 @@ export interface ChallengeData {
 }
 
 export async function loadChallenges(userId: string): Promise<ChallengeData> {
-  const [ucRes, chRes, txRes, invRes, goalRes] = await Promise.all([
+  const [ucRes, chRes, txRes, invRes, goalRes, accRes, cardRes, catRes, loginRes] = await Promise.all([
     supabase.from("user_challenges").select("id, challenge_id, status, started_at, completed_at, progress").eq("user_id", userId).order("started_at", { ascending: false }),
     supabase.from("challenges").select("id, name, icon, duration_days, description, cover_image"),
-    supabase.from("transactions").select("id, name, category, type, status, payment_method, credit_card_id, created_at, date, amount, recurrence_type").eq("user_id", userId).order("date", { ascending: false }).limit(5000),
+    supabase.from("transactions").select("id, name, category, type, status, payment_method, credit_card_id, created_at, date, amount, recurrence_type, observation, installments, installment_current").eq("user_id", userId).order("date", { ascending: false }).limit(5000),
     supabase.from("invoices").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("is_paid", true),
     supabase.from("goals").select("current_amount, target_amount").eq("user_id", userId),
+    supabase.from("accounts").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("credit_cards").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("custom_categories").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("login_days").select("id", { count: "exact", head: true }).eq("user_id", userId),
   ]);
   const ucs = (ucRes.data ?? []) as { id: string; challenge_id: string; status: string; started_at: string; completed_at: string | null; progress: number }[];
   const rows = new Map(((chRes.data ?? []) as { id: string; name: string; icon: string | null; duration_days: number; description: string | null; cover_image: string | null }[]).map((r) => [r.id, r]));
@@ -444,9 +540,13 @@ export async function loadChallenges(userId: string): Promise<ChallengeData> {
     medals: achievements({
       txs,
       paidInvoices: invRes.count ?? 0,
-      goalsReached: goals.filter((g) => Number(g.target_amount) > 0 && Number(g.current_amount) >= Number(g.target_amount)).length,
-      challengesDone: finished.length,
-      saved: goals.reduce((sum, g) => sum + (Number(g.current_amount) || 0), 0),
+      goals,
+      finished,
+      checkins: all.map((r) => r.checkins),
+      accounts: accRes.count ?? 0,
+      cards: cardRes.count ?? 0,
+      customCategories: catRes.count ?? 0,
+      loginDays: loginRes.count ?? 0,
     }),
     available: TEMPLATES.filter((t) => !busy.has(t.key)),
     suggested: suggestFor(txs, TEMPLATES.filter((t) => !busy.has(t.key)), new Date(), new Set(running.flatMap((r) => r.template.match?.categories ?? []))),

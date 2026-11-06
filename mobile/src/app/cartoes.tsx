@@ -11,7 +11,10 @@ import BackButton from "~/components/BackButton";
 import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
-import CardFaceTile, { FREE_LIMIT_HEX, USED_LIMIT_HEX } from "~/components/wallet/CardFaceTile";
+import CardFaceTile, { FREE_LIMIT_HEX } from "~/components/wallet/CardFaceTile";
+
+/* What is used of the limit, in a strong yellow: it reads on both grounds and against the green. */
+const LIMIT_USED = "#FFC21A";
 import CardFormSheet, { type CardDraft } from "~/components/wallet/CardFormSheet";
 import { createCreditCard, updateCreditCard } from "@/services/transactionService";
 import { CreditCard, Pencil, Plus, Trash2 } from "~/components/icons";
@@ -231,8 +234,8 @@ export default function Cartoes() {
                     <Bar
                       key={r.card.id}
                       share={share}
-                      /* Each card's share in the card's own colour, so the bar reads as the wallet. */
-                      color={r.hex}
+                      /* The used limit in a strong yellow beside the green that is still free. */
+                      color={LIMIT_USED}
                       minWidth={6}
                       delay={0.1 + i * 0.06}
                     />
@@ -250,7 +253,7 @@ export default function Cartoes() {
               <View style={{ marginTop: 16, flexDirection: "row", gap: 16 }}>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(rows[0]?.hex ?? USED_LIMIT_HEX) }} />
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(LIMIT_USED) }} />
                     <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Usado</Text>
                   </View>
                   <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 16, fontWeight: "700", color: th("rgba(255,255,255,0.72)") }}>

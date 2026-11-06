@@ -4,7 +4,8 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { CHALLENGE_ICON } from "~/components/desafios/parts";
-import { Check, Flame } from "~/components/icons";
+import { Check, Flame, Sparkles } from "~/components/icons";
+import Svg, { Circle as SvgCircle } from "react-native-svg";
 import type { IconKey, Running, Template } from "~/lib/challenges";
 import { coverUrl, ensureCover } from "~/lib/challengeCovers";
 import { GREEN, RED } from "~/theme/tokens";
@@ -80,74 +81,159 @@ export function ChallengeCover({ template, cover, width, height }: { template: T
   );
 }
 
-export const TILE_W = 172;
-export const TILE_H = 236;
+export const TILE_W = 184;
+export const TILE_H = 248;
 
-/** A running challenge on the shelf. */
+/** A small glass panel over a picture. */
+function GlassPanel({ children, style }: { children: React.ReactNode; style?: object }) {
+  return (
+    <View style={[{ borderRadius: 18, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)" }, style]}>
+      <BlurView intensity={36} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(14,15,18,0.38)" }} />
+      {children}
+    </View>
+  );
+}
+
+/** A thin ring that fills with the days done. */
+function MiniRing({ size, value, color }: { size: number; value: number; color: string }) {
+  const r = (size - 3) / 2;
+  const c = 2 * Math.PI * r;
+  const v = Math.max(0, Math.min(1, value));
+  return (
+    <Svg width={size} height={size} style={{ transform: [{ rotate: "-90deg" }] }}>
+      <SvgCircle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,255,255,0.18)" strokeWidth={3} fill="none" />
+      {v > 0 && <SvgCircle cx={size / 2} cy={size / 2} r={r} stroke={color} strokeWidth={3} fill="none" strokeLinecap="round" strokeDasharray={`${c * v} ${c}`} />}
+    </Svg>
+  );
+}
+
+const KIND_LABEL = { abstain: "O Willo confere", record: "O Willo confere", bills: "O Willo confere", manual: "Check-in diário" } as const;
+const DIFF_DOTS = { facil: 1, medio: 2, dificil: 3 } as const;
+
+/** A running challenge on the shelf: its picture, and a glass panel with where it stands. */
 export default function ChallengeTile({ r, width = TILE_W, height = TILE_H, onPress }: { r: Running; width?: number; height?: number; onPress: () => void }) {
   const broken = r.state === "broken";
-  const share = Math.max(0, Math.min(1, r.done / r.template.days));
+  const share = r.done / r.template.days;
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={r.template.name} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.97 : 1 }] })}>
-      <View style={{ width, height, borderRadius: 28, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#0D0E10" }}>
+      <View style={{ width, height, borderRadius: 30, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#0D0E10" }}>
         <ChallengeCover template={r.template} cover={r.cover} width={width} height={height} />
-        <LinearGradient colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.55)", "rgba(8,9,10,0.92)"]} locations={[0.25, 0.58, 1]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <LinearGradient colors={["rgba(8,9,10,0.25)", "rgba(8,9,10,0)", "rgba(8,9,10,0.55)"]} locations={[0, 0.35, 1]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
 
-        {/* The days in a row, as a small glass tag. */}
-        <View style={{ position: "absolute", top: 12, left: 12, height: 28, paddingHorizontal: 10, borderRadius: 14, overflow: "hidden", flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" }}>
-          <BlurView intensity={40} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.3)" }} />
-          <Flame size={13} color={r.streak > 0 ? "#FF9F45" : "rgba(255,255,255,0.6)"} strokeWidth={2.4} />
-          <Text style={{ fontSize: 12.5, fontWeight: "700", color: "#fff" }}>{r.streak}</Text>
+        <View style={{ position: "absolute", top: 12, left: 12, right: 12, flexDirection: "row", justifyContent: "space-between" }}>
+          <GlassPanel style={{ borderRadius: 14 }}>
+            <View style={{ height: 28, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <Flame size={13} color={r.streak > 0 ? "#FF9F45" : "rgba(255,255,255,0.6)"} strokeWidth={2.4} />
+              <Text style={{ fontSize: 12.5, fontWeight: "800", color: "#fff" }}>{r.streak}</Text>
+            </View>
+          </GlassPanel>
+          {r.tickedToday && (
+            <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: GREEN }}>
+              <Check size={15} color="#0B0B0B" strokeWidth={3} />
+            </View>
+          )}
         </View>
 
-        {/* Today's check-in, or not yet. */}
-        {r.tickedToday && (
-          <View style={{ position: "absolute", top: 12, right: 12, width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: GREEN }}>
-            <Check size={15} color="#0B0B0B" strokeWidth={3} />
+        <GlassPanel style={{ position: "absolute", left: 8, right: 8, bottom: 8 }}>
+          <View style={{ padding: 12, flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text numberOfLines={2} style={{ fontSize: 14.5, fontWeight: "800", lineHeight: 18, letterSpacing: -0.2, color: "#fff" }}>
+                {r.template.name}
+              </Text>
+              <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 11.5, fontWeight: "600", color: broken ? "#FF9C9C" : "rgba(255,255,255,0.7)" }}>
+                {broken ? "Quebrou · recomece" : `Dia ${r.done} de ${r.template.days}`}
+              </Text>
+            </View>
+            <View style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
+              <MiniRing size={34} value={share} color={broken ? RED : "#FFFFFF"} />
+              <Text style={{ position: "absolute", fontSize: 9.5, fontWeight: "800", color: "#fff" }}>{Math.round(share * 100)}%</Text>
+            </View>
           </View>
-        )}
-
-        <View style={{ position: "absolute", left: 14, right: 14, bottom: 14 }}>
-          <Text numberOfLines={2} style={{ fontSize: 15, fontWeight: "700", lineHeight: 19, color: "#fff" }}>
-            {r.template.name}
-          </Text>
-          <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 12.5, color: broken ? "#FF9C9C" : "rgba(255,255,255,0.7)" }}>
-            {broken ? "Quebrado. Recomece quando quiser" : `Dia ${r.done} de ${r.template.days}`}
-          </Text>
-          <View style={{ marginTop: 9, height: 4, borderRadius: 2, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.18)" }}>
-            <View style={{ width: `${share * 100}%`, height: 4, borderRadius: 2, backgroundColor: broken ? RED : "#fff" }} />
-          </View>
-        </View>
-        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 28, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
+        </GlassPanel>
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 30, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
       </View>
     </Pressable>
   );
 }
 
-/** A challenge not started yet, as a wide card with its picture. */
-export function OfferCard({ template, cover, title, line, saves, onPress }: { template: Template; cover?: string | null; title?: string; line: string; saves?: string; onPress: () => void }) {
+/** A suggested challenge, large: its picture, why it is suggested, what it saves and how the month would close. */
+export function HeroOffer({ template, cover, reason, saves, month, onPress }: { template: Template; cover?: string | null; reason: string; saves: string; month: string; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.98 : 1 }] })}>
-      <View style={{ height: 150, borderRadius: 26, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#0D0E10" }}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={template.name} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+      <View style={{ height: 236, borderRadius: 30, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#0D0E10" }}>
         <ChallengeCover template={template} cover={cover} width="100%" height="100%" />
-        <LinearGradient colors={["rgba(8,9,10,0.15)", "rgba(8,9,10,0.88)"]} start={{ x: 1, y: 0 }} end={{ x: 0, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <View style={{ position: "absolute", left: 16, right: 16, bottom: 14 }}>
-          <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
-            {title ?? template.name}
+        <LinearGradient colors={["rgba(8,9,10,0.3)", "rgba(8,9,10,0)", "rgba(8,9,10,0.7)"]} locations={[0, 0.35, 1]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+
+        <GlassPanel style={{ position: "absolute", top: 14, left: 14, borderRadius: 14 }}>
+          <View style={{ height: 28, paddingHorizontal: 11, flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Sparkles size={13} color="#FFE29A" strokeWidth={2.2} />
+            <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>Para você</Text>
+          </View>
+        </GlassPanel>
+
+        <View style={{ position: "absolute", left: 18, right: 18, bottom: 84 }}>
+          <Text numberOfLines={1} style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>
+            {template.name}
           </Text>
-          <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 13, color: "rgba(255,255,255,0.72)" }}>
-            {line}
+          <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 13, color: "rgba(255,255,255,0.78)" }}>
+            {reason}
           </Text>
-          {saves && (
-            <View style={{ marginTop: 9, alignSelf: "flex-start", height: 26, paddingHorizontal: 10, borderRadius: 13, justifyContent: "center", backgroundColor: "rgba(103,205,103,0.22)" }}>
-              <Text style={{ fontSize: 12.5, fontWeight: "700", color: "#8FE08F" }}>{saves}</Text>
+        </View>
+
+        <GlassPanel style={{ position: "absolute", left: 10, right: 10, bottom: 10 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", padding: 12, gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: "rgba(255,255,255,0.62)" }}>Você economiza</Text>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={{ marginTop: 2, fontSize: 16, fontWeight: "800", color: "#8FE08F" }}>{saves}</Text>
             </View>
-          )}
+            <View style={{ width: 1, alignSelf: "stretch", backgroundColor: "rgba(255,255,255,0.14)" }} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: "600", color: "rgba(255,255,255,0.62)" }}>Seu mês fecha com</Text>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={{ marginTop: 2, fontSize: 16, fontWeight: "800", color: "#fff" }}>{month}</Text>
+            </View>
+            <View style={{ height: 36, paddingHorizontal: 14, borderRadius: 18, justifyContent: "center", backgroundColor: "#FFFFFF" }}>
+              <Text style={{ fontSize: 13, fontWeight: "800", color: "#0B0B0B" }}>Começar</Text>
+            </View>
+          </View>
+        </GlassPanel>
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 30, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
+      </View>
+    </Pressable>
+  );
+}
+
+/** One of all the challenges, as a portrait card for a two-column grid. */
+export function GridOffer({ template, cover, width, saves, onPress }: { template: Template; cover?: string | null; width: number; saves?: string; onPress: () => void }) {
+  const height = Math.round(width * 1.28);
+  const dots = DIFF_DOTS[template.difficulty];
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={template.name} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.97 : 1 }] })}>
+      <View style={{ width, height, borderRadius: 26, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#0D0E10" }}>
+        <ChallengeCover template={template} cover={cover} width={width} height={height} />
+        <LinearGradient colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.6)", "rgba(8,9,10,0.94)"]} locations={[0.3, 0.62, 1]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+
+        <GlassPanel style={{ position: "absolute", top: 10, left: 10, borderRadius: 12 }}>
+          <Text style={{ paddingHorizontal: 9, paddingVertical: 5, fontSize: 11.5, fontWeight: "800", color: "#fff" }}>{template.days} dias</Text>
+        </GlassPanel>
+
+        <View style={{ position: "absolute", left: 12, right: 12, bottom: 12 }}>
+          <Text numberOfLines={2} style={{ fontSize: 14.5, fontWeight: "800", lineHeight: 18, letterSpacing: -0.2, color: "#fff" }}>
+            {template.name}
+          </Text>
+          <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <View style={{ flexDirection: "row", gap: 2 }}>
+              {[1, 2, 3].map((n) => (
+                <View key={n} style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: n <= dots ? "#FFFFFF" : "rgba(255,255,255,0.25)" }} />
+              ))}
+            </View>
+            <Text numberOfLines={1} style={{ flex: 1, fontSize: 11, color: "rgba(255,255,255,0.66)" }}>
+              {saves ?? KIND_LABEL[template.kind]}
+            </Text>
+          </View>
         </View>
         <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 26, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
       </View>
     </Pressable>
   );
 }
-

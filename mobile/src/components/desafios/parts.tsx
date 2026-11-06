@@ -10,6 +10,16 @@ import {
   CreditCard,
   Flag,
   Flame,
+  Banknote,
+  Crown,
+  Eye,
+  Gem,
+  Layers,
+  NotebookPen,
+  Sunrise,
+  Tag,
+  TrendingDown,
+  Wallet,
   Landmark,
   PenLine,
   PiggyBank,
@@ -58,6 +68,19 @@ export const MEDAL_ICON: Record<Achievement["icon"], Glyph> = {
   sun: Sun,
   calendar: CalendarCheck,
   vault: Landmark,
+  sunrise: Sunrise,
+  note: NotebookPen,
+  layers: Layers,
+  wallet: Wallet,
+  tag: Tag,
+  trending: TrendingDown,
+  income: Banknote,
+  fire: Flame,
+  bike: Bike,
+  bag: ShoppingBag,
+  eye: Eye,
+  crown: Crown,
+  gem: Gem,
 };
 
 /* Light and shade of each metal; the rim runs from one to the other. */
@@ -65,8 +88,10 @@ const METAL: Record<Exclude<Tier, 0>, [string, string, string]> = {
   1: ["#F0C9A2", "#B07A4C", "#7C5232"],
   2: ["#FFFFFF", "#C3CBD6", "#7F8896"],
   3: ["#FBE7A8", "#D2A646", "#8E6A1E"],
+  4: ["#F6FBFF", "#BCD3E6", "#6E879E"],
+  5: ["#EAFDFF", "#8FE3F5", "#3A86B0"],
 };
-export const METAL_INK: Record<Exclude<Tier, 0>, string> = { 1: "#D29A68", 2: "#D5DCE6", 3: "#E9C462" };
+export const METAL_INK: Record<Exclude<Tier, 0>, string> = { 1: "#D29A68", 2: "#D5DCE6", 3: "#E9C462", 4: "#DDEBF6", 5: "#A6EEFF" };
 
 /** A ring that fills from the top, clockwise. */
 export function Ring({ size, value, color, track, width = 4 }: { size: number; value: number; color: string; track: string; width?: number }) {
@@ -92,7 +117,7 @@ export function MedalBadge({ a, size = 76 }: { a: Achievement; size?: number }) 
   return (
     <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
       {/* How close the next step is, as a thin arc outside the rim. */}
-      {a.tier < 3 && (
+      {a.next !== null && (
         <View style={{ position: "absolute" }}>
           <Ring size={size} value={toNext} color={th("rgba(255,255,255,0.55)")} track={th("rgba(255,255,255,0.08)")} width={2.5} />
         </View>
@@ -102,9 +127,9 @@ export function MedalBadge({ a, size = 76 }: { a: Achievement; size?: number }) 
           <Defs>
             {earned && (
               <LinearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-                <Stop offset="0" stopColor={METAL[a.tier as 1 | 2 | 3][0]} />
-                <Stop offset="0.55" stopColor={METAL[a.tier as 1 | 2 | 3][1]} />
-                <Stop offset="1" stopColor={METAL[a.tier as 1 | 2 | 3][2]} />
+                <Stop offset="0" stopColor={METAL[a.tier as Exclude<Tier, 0>][0]} />
+                <Stop offset="0.55" stopColor={METAL[a.tier as Exclude<Tier, 0>][1]} />
+                <Stop offset="1" stopColor={METAL[a.tier as Exclude<Tier, 0>][2]} />
               </LinearGradient>
             )}
           </Defs>
@@ -113,7 +138,7 @@ export function MedalBadge({ a, size = 76 }: { a: Achievement; size?: number }) 
         </Svg>
         {/* Above the discs: on the web a positioned layer is painted over plain ones. */}
         <View style={{ position: "relative", zIndex: 1 }}>
-          <Icon size={inner * 0.46} color={earned ? METAL_INK[a.tier as 1 | 2 | 3] : th(INK.faint)} strokeWidth={2} />
+          <Icon size={inner * 0.46} color={earned ? METAL_INK[a.tier as Exclude<Tier, 0>] : th(INK.faint)} strokeWidth={2} />
         </View>
       </View>
     </View>

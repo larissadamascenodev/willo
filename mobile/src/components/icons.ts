@@ -96,3 +96,8 @@ export { default as Flame } from "lucide-react-native/icons/flame";
 export { default as Sun } from "lucide-react-native/icons/sun";
 export { default as Trophy } from "lucide-react-native/icons/trophy";
 export { default as Medal } from "lucide-react-native/icons/medal";
+export { default as Sunrise } from "lucide-react-native/icons/sunrise";
+export { default as NotebookPen } from "lucide-react-native/icons/notebook-pen";
+export { default as Layers } from "lucide-react-native/icons/layers";
+export { default as TrendingDown } from "lucide-react-native/icons/trending-down";
+export { default as Gem } from "lucide-react-native/icons/gem";
