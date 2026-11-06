@@ -184,7 +184,10 @@ export function Toggle({ value, onChange, label }: { value: boolean; onChange: (
     at.set(withTiming(value ? 1 : 0, { duration: 260, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }));
   }, [value, at]);
 
-  const track = useAnimatedStyle(() => ({ backgroundColor: th(interpolateColor(at.get(), [0, 1], [SWITCH_OFF, INCOME]), "bg") }));
+  /* Worked out here, not in the animation: it runs where only worklets may be called. */
+  const off = th(SWITCH_OFF, "bg");
+  const on = th(INCOME, "bg");
+  const track = useAnimatedStyle(() => ({ backgroundColor: interpolateColor(at.get(), [0, 1], [off, on]) }));
   const knob = useAnimatedStyle(() => ({ transform: [{ translateX: at.get() * TRAVEL }] }));
 
   return (

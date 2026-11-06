@@ -128,9 +128,15 @@ function NavCircle({
   }, [on, lit, pop]);
 
   /* The glass stays the glass; being here lays a white light over it. */
+  /* The theme's colours are worked out here, on the JavaScript side: the animation
+     runs on the UI thread, where only "worklet" functions may be called. */
+  const fillOff = th("rgba(255,255,255,0)", "bg");
+  const fillOn = th("rgba(255,255,255,0.16)", "bg");
+  const edgeOff = th("rgba(255,255,255,0)", "line");
+  const edgeOn = th("rgba(255,255,255,0.30)", "line");
   const shell = useAnimatedStyle(() => ({
-    backgroundColor: th(interpolateColor(lit.get(), [0, 1], ["rgba(255,255,255,0)", "rgba(255,255,255,0.16)"]), "bg"),
-    borderColor: th(interpolateColor(lit.get(), [0, 1], ["rgba(255,255,255,0)", "rgba(255,255,255,0.30)"]), "line"),
+    backgroundColor: interpolateColor(lit.get(), [0, 1], [fillOff, fillOn]),
+    borderColor: interpolateColor(lit.get(), [0, 1], [edgeOff, edgeOn]),
   }));
   const glyph = useAnimatedStyle(() => ({ transform: [{ scale: pop.get() * (1 + lit.get() * 0.08) }] }));
   const soft = useAnimatedStyle(() => ({ opacity: 1 - lit.get() }));
