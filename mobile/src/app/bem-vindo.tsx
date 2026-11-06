@@ -210,7 +210,7 @@ function Appear({ on, leaving, children }: { on: boolean; leaving: boolean; chil
 /** The slide's number, the bars of all of them with this one filling, its name, title and line. */
 function Caption({ i, slide, current, progress }: { i: number; slide: Slide; current: number; progress: SharedValue<number> }) {
   return (
-    <View style={{ paddingTop: 14 }}>
+    <View style={{ paddingTop: 12, paddingBottom: 26 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <Text style={{ fontFamily: "Menlo", fontSize: 12, letterSpacing: 1, color: INK.softer }}>
           {String(i + 1).padStart(2, "0")} / {String(N).padStart(2, "0")}
