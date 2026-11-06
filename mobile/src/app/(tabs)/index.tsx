@@ -34,6 +34,7 @@ import { th } from "~/theme/theme";
 import { GroundInkProvider } from "~/theme/groundInk";
 import { useLightSkyModel, usePhotoLook, useSkyModel, useSkyPhoto } from "~/lib/skyModel";
 import { isLight } from "~/theme/theme";
+import { countUnread, generateNotifications } from "@/services/notificationService";
 /** How far the page travels before the block on top has gone. */
 const LINES_TRAVEL = 190;
 /** The robot is taller, so he takes longer to go. */
@@ -74,11 +75,19 @@ export default function Home() {
 
   const { data, refetch } = useFinanceData(month, year, { includeHistorical: false });
   const { profile, refetch: refetchProfile } = useProfile();
-  /* Coming back from the profile, the photo and the name may have changed. */
+  /* Coming back from the profile, the photo and the name may have changed; and the
+     bell's dot says whether there is something new, worked out as the web does. */
+  const [unread, setUnread] = useState(0);
   useFocusEffect(
     useCallback(() => {
       void refetchProfile();
-    }, [refetchProfile]),
+      if (!user) return;
+      void generateNotifications(user.id)
+        .catch(() => undefined)
+        .then(() => countUnread(user.id))
+        .then(setUnread)
+        .catch(() => undefined);
+    }, [refetchProfile, user]),
   );
   const { cards, invoices } = useCardsOverview();
   const { assinaturas, totalAssinaturas } = useRecorrentes();
@@ -267,6 +276,8 @@ export default function Home() {
         avatarUrl={profile?.avatar_url}
         collapsed={collapsed && !editing}
         onProfile={() => router.push("/perfil" as never)}
+        unread={unread}
+        onBell={() => router.push("/notificacoes" as never)}
       />
       <EditBar open={editing} onDone={() => setEditing(false)} />
       </GroundInkProvider>

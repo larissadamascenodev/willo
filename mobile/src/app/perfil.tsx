@@ -12,7 +12,7 @@ import BackButton from "~/components/BackButton";
 import ConfirmGlass from "~/components/ConfirmGlass";
 import Surface, { Hairline } from "~/components/Surface";
 import LegalSheet from "~/components/auth/LegalSheet";
-import { Bot, Camera, Check, ChevronRight, Crown, FileText, GalleryHorizontal, ImagePlus, LifeBuoy, LogOut, Pencil, Shield } from "~/components/icons";
+import { Bell, Bot, Camera, Check, ChevronRight, Crown, FileText, GalleryHorizontal, ImagePlus, LifeBuoy, LogOut, Pencil, Shield } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
 import { useHomeHero, type HomeHero } from "~/lib/homeHero";
 import { setSkyPhoto, useLightSkyModel, useSkyModel, useSkyPhoto, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
@@ -386,6 +386,21 @@ export default function Perfil() {
             />
           </Surface>
         )}
+
+        {/* What Willo tells the person, and where. */}
+        <Eyebrow>Notificações</Eyebrow>
+        <Surface>
+          <Row
+            icon={<Bell size={17} color={th("#fff")} strokeWidth={1.9} />}
+            label="Notificações"
+            value="Contas, faturas, metas e avisos no celular"
+            onPress={() => {
+              tick();
+              router.push("/notificacoes-ajustes" as never);
+            }}
+            chevron
+          />
+        </Surface>
 
         {/* The papers, and help. */}
         <Eyebrow>Sobre</Eyebrow>

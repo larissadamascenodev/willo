@@ -13,6 +13,7 @@ import { MonthProvider } from "@/contexts/MonthContext";
 import ToastHost from "~/components/ToastHost";
 import LaunchIntro from "~/components/LaunchIntro";
 import { markIntroDone } from "~/lib/launchIntro";
+import NotificationBridge from "~/lib/NotificationBridge";
 import { GREEN, GROUND } from "~/theme/tokens";
 import { LIGHT_GROUND, setActiveTheme, takeReturnRoute, th, useThemePref } from "~/theme/theme";
 
@@ -131,6 +132,7 @@ function Door() {
   return (
     <>
     <StatusBar style={mode === "light" ? "dark" : "light"} />
+    <NotificationBridge userId={signedIn ? (session?.user?.id ?? null) : null} />
     <Stack
       key={mode}
       screenOptions={{
@@ -154,6 +156,8 @@ function Door() {
         <Stack.Screen name="analytics/categoria/[nome]" />
         <Stack.Screen name="perfil" options={{ animation: quiet ? "none" : "default" }} />
         <Stack.Screen name="fundo-foto" options={{ animation: "slide_from_bottom" }} />
+        <Stack.Screen name="notificacoes" />
+        <Stack.Screen name="notificacoes-ajustes" />
         {/* Comes up from the foot of the screen, but as a screen rather than a card:
             the modal presentation insets its own content, which on a form that is
             already full width shows up as a left edge cut off. */}

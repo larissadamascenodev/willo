@@ -18,6 +18,7 @@ export default function HomeHeader({
   unread = 0,
   collapsed = false,
   onProfile,
+  onBell,
 }: {
   name?: string | null;
   avatarUrl?: string | null;
@@ -26,6 +27,8 @@ export default function HomeHeader({
   collapsed?: boolean;
   /** Opens who is signed in, and the way out. */
   onProfile?: () => void;
+  /** Opens the notifications. */
+  onBell?: () => void;
 }) {
   const th = useGroundTh();
   const insets = useSafeAreaInsets();
@@ -114,7 +117,9 @@ export default function HomeHeader({
       )}
 
       <Pressable
-        accessibilityLabel="Notificações"
+        onPress={onBell}
+        accessibilityRole="button"
+        accessibilityLabel={unread > 0 ? `Notificações, ${unread} novas` : "Notificações"}
         style={({ pressed }) => ({
           width: 44,
           height: 44,
