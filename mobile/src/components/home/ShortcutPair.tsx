@@ -65,7 +65,7 @@ export default function ShortcutPair({ gap = 16 }: { gap?: number }) {
     <View style={{ gap }}>
       {/* One size for both, measured once, so the pair is even. */}
       <View onLayout={(e) => setRowW(e.nativeEvent.layout.width)} style={{ flexDirection: "row", gap }}>
-        <RadarTile art={art} onPress={() => router.push({ pathname: "/registro", params: { view: "radar" } } as never)} />
+        <RadarTile art={art} onPress={() => router.push("/radar" as never)} />
         <ChallengesTile art={art} running={running} onPress={() => router.push("/desafios" as never)} />
       </View>
       {pending.length > 0 && (

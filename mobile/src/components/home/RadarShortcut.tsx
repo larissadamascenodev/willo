@@ -63,7 +63,7 @@ export default function RadarShortcut() {
   }, []);
   return (
     <View style={{ marginBottom: 16 }}>
-      <Surface onPress={() => router.push({ pathname: "/registro", params: { view: "radar" } } as never)} style={{ paddingHorizontal: 14, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 12 }}>
+      <Surface onPress={() => router.push("/radar" as never)} style={{ paddingHorizontal: 14, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 12 }}>
         <MiniDial />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "700", letterSpacing: -0.2, color: th("#fff") }}>

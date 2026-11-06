@@ -193,7 +193,11 @@ export default function Registro() {
   const [text, setText] = useState("");
   const [thinking, setThinking] = useState<string | null>(null);
   const { view: openOn } = useLocalSearchParams<{ view?: string }>();
-  const [view, setView] = useState<"chat" | "radar">(openOn === "radar" ? "radar" : "chat");
+  /* Only the conversation lives here now; an old link to the Radar tab goes to the Radar's page. */
+  const [view, setView] = useState<"chat" | "radar">("chat");
+  useEffect(() => {
+    if (openOn === "radar") router.replace("/radar" as never);
+  }, [openOn, router]);
   const [atSphere, setAtSphere] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   /* The Radar, read once the screen has settled: what the Radar tab shows and what Willo already knows. */
@@ -884,22 +888,7 @@ export default function Registro() {
             </HeaderButton>
           )}
           <View style={{ flex: 1, minWidth: 0, alignItems: "center" }}>
-            <View style={{ width: 148, maxWidth: "100%" }}>
-              <SegmentedTabs
-                glass
-                compact
-                height={34}
-                value={view}
-                onChange={(next) => {
-                  Keyboard.dismiss();
-                  setView(next);
-                }}
-                options={[
-                  { key: "chat", label: "Chat" },
-                  { key: "radar", label: "Radar" },
-                ]}
-              />
-            </View>
+            {/* The conversation stands alone: the Radar has a page of its own, reached from the home. */}
           </View>
           <HeaderButton label="Conversas anteriores" onPress={() => setHistoryOpen(true)}>
             <Clock size={16} color={th("rgba(255,255,255,0.88)")} strokeWidth={2.2} />

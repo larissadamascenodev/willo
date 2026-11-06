@@ -159,6 +159,7 @@ function Door() {
         <Stack.Screen name="notificacoes" />
         <Stack.Screen name="notificacoes-ajustes" />
         <Stack.Screen name="desafios" />
+        <Stack.Screen name="radar" />
         <Stack.Screen name="desafio/[id]" />
         {/* Comes up from the foot of the screen, but as a screen rather than a card:
             the modal presentation insets its own content, which on a form that is
