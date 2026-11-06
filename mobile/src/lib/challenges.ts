@@ -545,10 +545,11 @@ export interface PendingCheckin {
   template: Template;
   cover: string | null;
   streak: number;
+  tickedToday: boolean;
 }
 
 /**
- * The running challenges not checked in today, for the home's shortcut. Light on
+ * The running challenges, with whether today is checked in, for the home. Light on
  * purpose: only the challenges and their check-ins, not the person's entries.
  */
 export async function pendingCheckins(userId: string): Promise<PendingCheckin[]> {
@@ -564,11 +565,11 @@ export async function pendingCheckins(userId: string): Promise<PendingCheckin[]>
   for (const c of (ck ?? []) as { user_challenge_id: string; checkin_date: string }[]) ticks.set(c.user_challenge_id, [...(ticks.get(c.user_challenge_id) ?? []), c.checkin_date.slice(0, 10)]);
   const today = isoDay(new Date());
   return list
-    .filter((u) => !(ticks.get(u.id) ?? []).includes(today))
     .map((u) => {
       const row = byId.get(u.challenge_id);
       if (!row) return null;
-      return { id: u.id, template: templateFor(row), cover: row.cover_image, streak: streakOf(ticks.get(u.id) ?? []).streak };
+      const own = ticks.get(u.id) ?? [];
+      return { id: u.id, template: templateFor(row), cover: row.cover_image, streak: streakOf(own).streak, tickedToday: own.includes(today) };
     })
     .filter((x): x is PendingCheckin => x !== null);
 }

@@ -17,7 +17,7 @@ import { GREEN, RED } from "~/theme/tokens";
  * and the days in a row), and the name, the day and a thin bar at the bottom.
  *
  * The picture is the challenge's own photo once one has been made; until then, a
- * scene of its colour with its glyph large and quiet — delivery in a warm red, online
+ * scene of its colour with its glyph large and quiet in the corner — delivery in a warm red, online
  * shopping in violet, rides in blue — so a shelf of them never reads as one card.
  */
 
@@ -65,9 +65,6 @@ export function ChallengeCover({ template, cover, width, height }: { template: T
       <LinearGradient colors={[a, b]} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
       <View style={{ position: "absolute", top: "6%", right: "-14%", opacity: 0.22 }}>
         <Icon size={typeof width === "number" ? width * 0.9 : 220} color={ink} strokeWidth={1.2} />
-      </View>
-      <View style={{ position: "absolute", top: "10%", left: "10%", opacity: 0.9 }}>
-        <Icon size={typeof width === "number" ? Math.max(28, width * 0.2) : 44} color={ink} strokeWidth={1.7} />
       </View>
       {!failed && (
         <Image
