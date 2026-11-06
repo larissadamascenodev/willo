@@ -175,7 +175,10 @@ const isGreen = (c: RGBA) => {
 
 /** Darkens a colour, keeping its hue, until it reads on the light ground. */
 function legible(c: RGBA, target: number): RGBA {
-  const { h, s, l } = hsl(c);
+  const { h: hue, s, l } = hsl(c);
+  /* Yellow darkened as it is turns olive; it is turned a step towards orange instead,
+     so a pending amber stays amber on white. */
+  const h = hue >= 38 && hue <= 62 ? 34 : hue;
   let L = l;
   let next = c;
   while (contrast(next) < target && L > 0.12) {

@@ -14,7 +14,7 @@ import LegalSheet from "~/components/auth/LegalSheet";
 import { Bot, Camera, Check, ChevronRight, Crown, FileText, GalleryHorizontal, ImagePlus, LifeBuoy, LogOut, Pencil, Shield } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
 import { useHomeHero, type HomeHero } from "~/lib/homeHero";
-import { setSkyPhoto, useLightSkyModel, useSkyModel, useSkyPhoto, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
+import { setSkyPhoto, useLightSkyModel, useSkyModel, useSkyPhoto, useSkyPhotoBlur, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
 import { PhotoError, pickAvatar, pickBackground } from "~/lib/profilePhotos";
 import { BACKDROPS, BACKDROP_KEYS, LIGHT_BACKDROPS, LIGHT_BACKDROP_KEYS } from "~/lib/backdrops";
 import { showToast } from "~/lib/toast";
@@ -23,6 +23,7 @@ import { type as T } from "~/theme/type";
 
 import { LIGHT_GROUND, isLight, switchTheme, th, useThemePref, type ThemeMode } from "~/theme/theme";
 import { GROUND } from "~/theme/tokens";
+import { Toggle } from "~/components/registro/entryParts";
 /**
  * The profile.
  *
@@ -65,6 +66,7 @@ export default function Perfil() {
   const [hero, setHero] = useHomeHero();
   const [sky, setSky] = useSkyModel();
   const [lightSky, setLightSky] = useLightSkyModel();
+  const [photoBlur, setPhotoBlur] = useSkyPhotoBlur();
   const [theme] = useThemePref();
   const light = isLight();
   const photo = useSkyPhoto();
@@ -370,6 +372,26 @@ export default function Perfil() {
             );
           })}
         </ScrollView>
+
+        {/* Only a photo of one's own can be softened; the ready backgrounds already are. */}
+        {(light ? lightSky : sky) === "custom" && !!photo && (
+          <Surface style={{ marginTop: 14 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 12 }}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ fontSize: 15.5, fontWeight: "500", color: th("#fff") }}>Desfocar a foto</Text>
+                <Text style={{ marginTop: 2, fontSize: 13, color: th(INK.soft) }}>Os cartões ficam mais fáceis de ler por cima</Text>
+              </View>
+              <Toggle
+                label="Desfocar a foto"
+                value={photoBlur}
+                onChange={(next) => {
+                  tick();
+                  setPhotoBlur(next);
+                }}
+              />
+            </View>
+          </Surface>
+        )}
 
         {/* The papers, and help. */}
         <Eyebrow>Sobre</Eyebrow>

@@ -3,7 +3,7 @@ import { View, type ViewStyle } from "react-native";
 import Svg, { Circle, Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import { Image } from "expo-image";
 import Sky from "~/components/Sky";
-import { useLightSkyModel, useSkyModel, useSkyPhoto, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
+import { useLightSkyModel, useSkyModel, useSkyPhoto, useSkyPhotoBlur, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
 import { GROUND, GROUND_LIT } from "~/theme/tokens";
 import { BACKDROPS, LIGHT_BACKDROPS, STARS, type BackdropKey, type LightBackdropKey } from "~/lib/backdrops";
 
@@ -71,6 +71,9 @@ export default function Room({
   const [chosenLight] = useLightSkyModel();
   const model = (preview as SkyModel | undefined) ?? chosen;
   const photo = useSkyPhoto();
+  const [blurPhoto] = useSkyPhotoBlur();
+  /* A soft photo: the cards over it stay the thing that is read. */
+  const photoBlur = blurPhoto ? 28 : 0;
   /* "plain" is the room without its sky: the soft lights on the dark ground. */
   const sky = wantsSky && model !== "plain";
   const own = sky && model === "custom" && !!photo;
@@ -92,7 +95,7 @@ export default function Room({
       <View style={[{ flex: 1, backgroundColor: ownLight ? LIGHT_GROUND : pale.ground }, style]}>
         {ownLight ? (
           <>
-            <Image source={{ uri: photo! }} contentFit="cover" transition={200} pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+            <Image source={{ uri: photo! }} contentFit="cover" transition={200} blurRadius={photoBlur} pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
             <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(245,245,247,0.55)" }} />
           </>
         ) : (
@@ -155,7 +158,7 @@ export default function Room({
           the brightest thing on the screen, and closed at the edges like the hour. */}
       {own && (
         <>
-          <Image source={{ uri: photo! }} contentFit="cover" transition={200} pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <Image source={{ uri: photo! }} contentFit="cover" transition={200} blurRadius={photoBlur} pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
           <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(6,7,9,0.5)", "bg") }} />
           <Svg width="100%" height="100%" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
             <Defs>

@@ -1,6 +1,6 @@
 import { type ComponentType } from "react";
 import { Text, View, type TextStyle } from "react-native";
-import { isLight } from "~/theme/theme";
+import { isLight, th } from "~/theme/theme";
 
 /**
  * A short status in its colour: Aberta, Fechada, Paga, Vencida, Pendente, Falta a
@@ -8,18 +8,21 @@ import { isLight } from "~/theme/theme";
  *
  * The same tag wherever a status is shown, so an invoice reads the same on the
  * wallet and on its own page. On the dark ground the colour carries it. On the light
- * one the soft colours (the amber, the sky blue) wash out, so the letters keep their
- * colour and get a fine dark outline, and the tint behind them is a little stronger.
+ * one the soft colours (the amber, the sky blue) wash out, so the letters take a
+ * deeper tone of the same colour, and the tint behind them is a little stronger.
  */
+
+/* On the light ground the soft colours wash out, so each is swapped for a deeper
+   tone of itself: the amber of Fechada and Pendente, the blue of Aberta. */
+const DEEP: Record<string, string> = {
+  "#F5C26B": "#B86E00",
+  "#F9CE4E": "#B86E00",
+  "#8FC7FF": "#1F6FD6",
+};
 
 export function outlinedInk(tone: string): TextStyle {
   if (!isLight()) return { color: tone };
-  return {
-    color: tone,
-    textShadowColor: "rgba(0,0,0,0.9)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 1.4,
-  };
+  return { color: DEEP[tone.toUpperCase()] ?? th(tone) };
 }
 
 function tint(hex: string, alpha: number) {

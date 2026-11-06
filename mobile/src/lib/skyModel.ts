@@ -153,3 +153,36 @@ export function useLightSkyModel() {
   const model = useSyncExternalStore(subscribe, () => currentLight, () => currentLight);
   return [model, setLightSkyModel] as const;
 }
+
+/* ── Blurring the person's own photo ───────────────────────────────────────────
+   A photo can be busy under the cards; the person can soften it. Only a photo of
+   their own offers this — the backgrounds that come with the app are already soft. */
+
+const BLUR_KEY = "sky-photo-blur";
+const readBlur = () => {
+  try {
+    return localStorage.getItem(BLUR_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+let blurred = readBlur();
+onHydrated(() => {
+  blurred = readBlur();
+  listeners.forEach((l) => l());
+});
+
+export function setSkyPhotoBlur(next: boolean) {
+  blurred = next;
+  try {
+    localStorage.setItem(BLUR_KEY, next ? "1" : "0");
+  } catch {
+    /* Kept for this session only. */
+  }
+  listeners.forEach((l) => l());
+}
+
+export function useSkyPhotoBlur() {
+  const value = useSyncExternalStore(subscribe, () => blurred, () => blurred);
+  return [value, setSkyPhotoBlur] as const;
+}
