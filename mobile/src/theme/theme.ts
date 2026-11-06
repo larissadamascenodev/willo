@@ -71,8 +71,42 @@ const subscribe = (l: () => void) => {
 let returnRoute: string | null = null;
 
 /** Changes the theme from a screen, coming back to `route` once it is drawn again. */
-export function switchTheme(next: ThemeMode, route: string) {
+/* A picture of the screen as it was, laid over the screen while it is drawn again in
+   the other theme, then faded away: the change is a crossfade, not a blink. */
+let snapshot: string | null = null;
+const snapshotListeners = new Set<() => void>();
+const setSnapshot = (uri: string | null) => {
+  snapshot = uri;
+  snapshotListeners.forEach((l) => l());
+};
+export function useThemeSnapshot() {
+  return useSyncExternalStore(
+    (l) => {
+      snapshotListeners.add(l);
+      return () => {
+        snapshotListeners.delete(l);
+      };
+    },
+    () => snapshot,
+    () => snapshot,
+  );
+}
+export const clearThemeSnapshot = () => setSnapshot(null);
+
+const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+/** Changes the theme from a screen, coming back to `route` once it is drawn again. */
+export async function switchTheme(next: ThemeMode, route: string) {
   if (next === pref) return;
+  try {
+    const { captureScreen } = await import("react-native-view-shot");
+    setSnapshot(await captureScreen({ format: "jpg", quality: 0.92, result: "tmpfile" }));
+    /* Let the picture be on screen before anything under it changes. */
+    await nextFrame();
+    await nextFrame();
+  } catch {
+    setSnapshot(null);
+  }
   returnRoute = route;
   setThemePref(next);
 }

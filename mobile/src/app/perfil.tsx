@@ -265,7 +265,7 @@ export default function Perfil() {
                 key={key}
                 onPress={() => {
                   tick();
-                  switchTheme(key, "/perfil");
+                  void switchTheme(key, "/perfil");
                 }}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: on }}

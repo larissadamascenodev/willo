@@ -203,6 +203,135 @@ export function HeroOffer({ template, cover, reason, saves, month, onPress }: { 
   );
 }
 
+/** A running challenge, wide: its picture behind, the words on the left, the ring on the right, a mark per day below. */
+export function ActiveCard({ r, onPress }: { r: Running; onPress: () => void }) {
+  const broken = r.state === "broken";
+  const share = Math.max(0, Math.min(1, r.done / r.template.days));
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={r.template.name} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+      <View style={{ height: 168, borderRadius: 28, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#0D0E10" }}>
+        <ChallengeCover template={r.template} cover={r.cover} width="100%" height="100%" />
+        <LinearGradient colors={["rgba(8,9,10,0.92)", "rgba(8,9,10,0.7)", "rgba(8,9,10,0.25)"]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+
+        <View style={{ position: "absolute", top: 16, left: 16, right: 16, bottom: 16 }}>
+          <View style={{ flex: 1, flexDirection: "row", gap: 12 }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={{ flexDirection: "row", gap: 6 }}>
+                <View style={{ height: 24, paddingHorizontal: 9, borderRadius: 12, flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(255,159,69,0.18)" }}>
+                  <Flame size={12} color="#FF9F45" strokeWidth={2.4} />
+                  <Text style={{ fontSize: 12, fontWeight: "800", color: "#FFB877" }}>{r.streak}</Text>
+                </View>
+                <View style={{ height: 24, paddingHorizontal: 9, borderRadius: 12, flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: r.tickedToday ? "rgba(103,205,103,0.2)" : "rgba(255,255,255,0.12)" }}>
+                  {r.tickedToday && <Check size={11} color="#8FE08F" strokeWidth={3} />}
+                  <Text style={{ fontSize: 11.5, fontWeight: "700", color: r.tickedToday ? "#8FE08F" : "rgba(255,255,255,0.8)" }}>{r.tickedToday ? "Check-in feito" : "Falta o check-in"}</Text>
+                </View>
+              </View>
+              <Text numberOfLines={2} style={{ marginTop: 10, fontSize: 19, fontWeight: "800", lineHeight: 23, letterSpacing: -0.5, color: "#fff" }}>
+                {r.template.name}
+              </Text>
+              <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 13, fontWeight: "500", color: broken ? "#FF9C9C" : "rgba(255,255,255,0.72)" }}>
+                {broken ? "Quebrou · toque para recomeçar" : `Dia ${Math.min(r.done + (r.tickedToday ? 0 : 1), r.template.days)} de ${r.template.days}`}
+              </Text>
+            </View>
+            <View style={{ width: 64, height: 64, alignItems: "center", justifyContent: "center" }}>
+              <MiniRing size={64} value={share} color={broken ? RED : "#FFFFFF"} />
+              <Text style={{ position: "absolute", fontSize: 14, fontWeight: "800", color: "#fff" }}>{Math.round(share * 100)}%</Text>
+            </View>
+          </View>
+          {/* One mark per day of the challenge. */}
+          <View style={{ flexDirection: "row", gap: r.template.days > 15 ? 2 : 3 }}>
+            {Array.from({ length: r.template.days }).map((_, i) => (
+              <View key={i} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i < r.done ? (broken ? RED : "#FFFFFF") : "rgba(255,255,255,0.18)" }} />
+            ))}
+          </View>
+        </View>
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 28, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
+      </View>
+    </Pressable>
+  );
+}
+
+/**
+ * A suggested challenge as a media card: the picture on top with its tags, and under it
+ * a clean panel in the page's own colours — name, why, what it saves, how the month
+ * closes, and the button. Nothing laid over anything.
+ */
+export function SuggestionCard({
+  template,
+  cover,
+  reason,
+  saves,
+  month,
+  ink,
+  soft,
+  panel,
+  rule,
+  buttonBg,
+  buttonInk,
+  onPress,
+}: {
+  template: Template;
+  cover?: string | null;
+  reason: string;
+  saves: string;
+  month: string;
+  ink: string;
+  soft: string;
+  panel: string;
+  rule: string;
+  buttonBg: string;
+  buttonInk: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={template.name} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+      <View style={{ borderRadius: 28, borderCurve: "continuous", overflow: "hidden", backgroundColor: panel, borderWidth: 1, borderColor: rule }}>
+        <View style={{ height: 150 }}>
+          <ChallengeCover template={template} cover={cover} width="100%" height="100%" />
+          <LinearGradient colors={["rgba(8,9,10,0.35)", "rgba(8,9,10,0)", "rgba(8,9,10,0.35)"]} locations={[0, 0.5, 1]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <View style={{ position: "absolute", top: 12, left: 12, right: 12, flexDirection: "row", justifyContent: "space-between" }}>
+            <GlassPanel style={{ borderRadius: 14 }}>
+              <View style={{ height: 28, paddingHorizontal: 11, flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Sparkles size={13} color="#FFE29A" strokeWidth={2.2} />
+                <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>Para você</Text>
+              </View>
+            </GlassPanel>
+            <GlassPanel style={{ borderRadius: 14 }}>
+              <Text style={{ paddingHorizontal: 11, height: 28, lineHeight: 28, fontSize: 12, fontWeight: "700", color: "#fff" }}>{template.days} dias</Text>
+            </GlassPanel>
+          </View>
+        </View>
+        <View style={{ padding: 16 }}>
+          <Text numberOfLines={2} style={{ fontSize: 19, fontWeight: "800", letterSpacing: -0.5, lineHeight: 23, color: ink }}>
+            {template.name}
+          </Text>
+          <Text numberOfLines={2} style={{ marginTop: 4, fontSize: 13.5, lineHeight: 19, color: soft }}>
+            {reason}
+          </Text>
+          <View style={{ marginTop: 14, flexDirection: "row" }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 12, color: soft }}>Você economiza</Text>
+              <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 18, fontWeight: "800", letterSpacing: -0.4, color: "#4FB84F" }}>
+                {saves}
+              </Text>
+            </View>
+            <View style={{ width: 1, marginHorizontal: 14, backgroundColor: rule }} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 12, color: soft }}>Seu mês fecha com</Text>
+              <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 18, fontWeight: "800", letterSpacing: -0.4, color: ink }}>
+                {month}
+              </Text>
+            </View>
+          </View>
+          <View style={{ marginTop: 16, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: buttonBg }}>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: buttonInk }}>Começar desafio</Text>
+          </View>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
 /** One of all the challenges, as a portrait card for a two-column grid. */
 export function GridOffer({ template, cover, width, saves, onPress }: { template: Template; cover?: string | null; width: number; saves?: string; onPress: () => void }) {
   const height = Math.round(width * 1.28);

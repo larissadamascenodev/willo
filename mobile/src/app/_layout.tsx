@@ -15,7 +15,7 @@ import LaunchIntro from "~/components/LaunchIntro";
 import { markIntroDone } from "~/lib/launchIntro";
 import NotificationBridge from "~/lib/NotificationBridge";
 import { GREEN, GROUND } from "~/theme/tokens";
-import { LIGHT_GROUND, setActiveTheme, takeReturnRoute, th, useThemePref } from "~/theme/theme";
+import { LIGHT_GROUND, clearThemeSnapshot, setActiveTheme, takeReturnRoute, th, useThemePref, useThemeSnapshot } from "~/theme/theme";
 
 /* Before any shared module is imported for real, the handful of browser things it
    expects have to exist. */
@@ -102,20 +102,33 @@ function Door() {
   const mode = !loading && session ? pref : "dark";
   setActiveTheme(mode);
 
-  /* Changing the theme draws the screens again from scratch. A veil in the new
-     ground covers the swap, and the person is put back on the profile, where the
-     choice was made. */
+  /* Changing the theme draws the screens again from scratch. A picture of the screen
+     as it was lies over the swap and fades away once the new one is ready underneath,
+     so one theme dissolves into the other; the person is put back on the profile,
+     where the choice was made. Without a picture (it could not be taken), a quick
+     veil in the new ground does the covering. */
   const router = useRouter();
+  const snapshot = useThemeSnapshot();
+  const shot = useSharedValue(snapshot ? 1 : 0);
   const veil = useSharedValue(0);
   const first = useRef(true);
   const [quiet, setQuiet] = useState(false);
+  useLayoutEffect(() => {
+    if (snapshot) shot.set(1);
+  }, [snapshot, shot]);
   useLayoutEffect(() => {
     if (first.current) {
       first.current = false;
       return;
     }
-    veil.set(1);
-    veil.set(withDelay(260, withTiming(0, { duration: 460, easing: Easing.out(Easing.cubic) })));
+    if (snapshot) {
+      shot.set(1);
+      shot.set(withDelay(320, withTiming(0, { duration: 520, easing: Easing.inOut(Easing.cubic) })));
+      setTimeout(clearThemeSnapshot, 900);
+    } else {
+      veil.set(1);
+      veil.set(withDelay(200, withTiming(0, { duration: 420, easing: Easing.out(Easing.cubic) })));
+    }
     const back = takeReturnRoute();
     if (back) {
       setQuiet(true);
@@ -123,8 +136,10 @@ function Door() {
       const id = setTimeout(() => setQuiet(false), 700);
       return () => clearTimeout(id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, veil, router]);
   const veilStyle = useAnimatedStyle(() => ({ opacity: veil.get() }));
+  const shotStyle = useAnimatedStyle(() => ({ opacity: shot.get() }));
 
   if (loading) return <Splash />;
   const signedIn = !!session;
@@ -183,6 +198,14 @@ function Door() {
       pointerEvents="none"
       style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: mode === "light" ? LIGHT_GROUND : GROUND }, veilStyle]}
     />
+    {snapshot && (
+      <Animated.Image
+        pointerEvents="none"
+        source={{ uri: snapshot }}
+        resizeMode="cover"
+        style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }, shotStyle]}
+      />
+    )}
     </>
   );
 }

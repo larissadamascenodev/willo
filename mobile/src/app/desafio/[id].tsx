@@ -108,7 +108,7 @@ export default function DesafioPage() {
     );
   }
 
-  const hero = Math.round(width * 0.82);
+  const hero = Math.round(width * 0.9);
   const broken = r.state === "broken";
   const finished = r.state === "finished";
   const days = calendarOf(r, txs);
@@ -120,29 +120,26 @@ export default function DesafioPage() {
   return (
     <Room>
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 48 }} showsVerticalScrollIndicator={false}>
-        {/* The picture, the name, the day. */}
-        <View style={{ height: hero }}>
-          <ChallengeCover template={r.template} cover={r.cover} width={width} height={hero} />
-          <LinearGradient
-            colors={["rgba(8,9,10,0.35)", "rgba(8,9,10,0.1)", "rgba(8,9,10,0.75)", th("#08090A", "grad")]}
-            locations={[0, 0.3, 0.75, 1]}
-            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-          />
-          <View style={{ position: "absolute", top: insets.top + 8, left: 16 }}>
+        {/* The picture, the name, the day: a card of its own at the top, dark in both themes. */}
+        <View style={{ marginTop: insets.top + 6, marginHorizontal: 12, height: hero, borderRadius: 34, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#0D0E10" }}>
+          <ChallengeCover template={r.template} cover={r.cover} width={width - 24} height={hero} />
+          <LinearGradient colors={["rgba(8,9,10,0.4)", "rgba(8,9,10,0)", "rgba(8,9,10,0.88)"]} locations={[0, 0.35, 1]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <View style={{ position: "absolute", top: 12, left: 12 }}>
             <BackButton onImage />
           </View>
-          <View style={{ position: "absolute", left: 20, right: 20, bottom: 18 }}>
-            <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 1.4, color: "rgba(255,255,255,0.7)" }}>
+          <View style={{ position: "absolute", left: 20, right: 20, bottom: 20 }}>
+            <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 1.4, color: "rgba(255,255,255,0.72)" }}>
               {finished ? "DESAFIO CUMPRIDO" : broken ? "DESAFIO QUEBRADO" : `DIA ${Math.min(r.done + (r.tickedToday ? 0 : 1), r.template.days)} DE ${r.template.days}`}
             </Text>
-            <Text style={{ marginTop: 6, fontSize: 28, fontWeight: "800", letterSpacing: -0.8, color: "#fff" }}>{r.template.name}</Text>
-            <Text style={{ marginTop: 4, fontSize: 14, lineHeight: 19, color: "rgba(255,255,255,0.75)" }}>{r.template.line}</Text>
+            <Text style={{ marginTop: 6, fontSize: 28, fontWeight: "800", letterSpacing: -0.8, lineHeight: 32, color: "#fff" }}>{r.template.name}</Text>
+            <Text style={{ marginTop: 6, fontSize: 14, lineHeight: 19, color: "rgba(255,255,255,0.78)" }}>{r.template.line}</Text>
           </View>
+          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 34, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
         </View>
 
         <View style={{ paddingHorizontal: 16 }}>
           {/* The flame, and today's check-in. */}
-          <Surface style={{ marginTop: 6 }}>
+          <Surface style={{ marginTop: 16 }}>
             <View style={{ padding: 18, flexDirection: "row", alignItems: "center", gap: 16 }}>
               <View style={{ width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center", backgroundColor: r.streak > 0 ? "rgba(255,159,69,0.16)" : th("rgba(255,255,255,0.06)", "bg") }}>
                 <Flame size={30} color={r.streak > 0 ? FIRE : th(INK.faint)} strokeWidth={2} />

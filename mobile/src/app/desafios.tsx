@@ -11,7 +11,8 @@ import Surface from "~/components/Surface";
 import CenterModal from "~/components/CenterModal";
 import WilloBot from "~/components/willo/WilloBot";
 import { CHALLENGE_ICON, DifficultyTag, MedalBadge } from "~/components/desafios/parts";
-import ChallengeTile, { GridOffer, HeroOffer } from "~/components/desafios/ChallengeTile";
+import { ActiveCard, GridOffer, SuggestionCard } from "~/components/desafios/ChallengeTile";
+import ChallengePreview from "~/components/desafios/ChallengePreview";
 import { Check, ChevronRight, Lock, Plus, Trophy } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
@@ -161,15 +162,15 @@ export default function Desafios() {
           <ActivityIndicator color={th(INK.soft)} style={{ marginTop: 60 }} />
         ) : tab === "desafios" ? (
           <Animated.View entering={FadeIn.duration(220)}>
-            {/* Running: a shelf of tall cards, each opening its own page. */}
+            {/* Running: wide cards, one under another, each opening its own page. */}
             {data.running.length > 0 && (
               <>
                 <Eyebrow>Em andamento</Eyebrow>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
+                <View style={{ gap: 12 }}>
                   {data.running.map((r) => (
-                    <ChallengeTile key={r.id} r={r} onPress={() => router.push(`/desafio/${r.id}` as never)} />
+                    <ActiveCard key={r.id} r={r} onPress={() => router.push(`/desafio/${r.id}` as never)} />
                   ))}
-                </ScrollView>
+                </View>
               </>
             )}
 
@@ -177,15 +178,21 @@ export default function Desafios() {
             {data.suggested.length > 0 && (
               <>
                 <Eyebrow>Sugeridos para você</Eyebrow>
-                <View style={{ gap: 14 }}>
+                <View style={{ gap: 16 }}>
                   {data.suggested.map((sg) => (
-                    <HeroOffer
+                    <SuggestionCard
                       key={sg.template.key}
                       template={sg.template}
                       cover={data.covers[sg.template.key]}
                       reason={sg.reason}
                       saves={money(sg.saves)}
                       month={money(data.leftover + sg.saves)}
+                      ink={th("#fff")}
+                      soft={th(INK.soft)}
+                      panel={th("rgba(255,255,255,0.06)", "bg")}
+                      rule={th("rgba(255,255,255,0.1)", "line")}
+                      buttonBg={th("#fff", "bg")}
+                      buttonInk={th("#0B0B0B")}
                       onPress={() => setPicked(sg.template)}
                     />
                   ))}
@@ -306,23 +313,15 @@ export default function Desafios() {
       </ScrollView>
 
       {/* A challenge, before starting it. */}
-      <CenterModal open={!!picked} onClose={() => setPicked(null)} title={picked?.name ?? ""} subtitle={picked ? `${picked.days} dias · ${picked.kind === "manual" ? "você marca cada dia" : "o Willo confere sozinho"}` : undefined}>
-        {picked && data && (
-          <View>
-            <Text style={{ fontSize: 14.5, lineHeight: 20, color: th(INK.soft) }}>{picked.line}</Text>
-            {savingsOf(picked) > 0 && (
-              <View style={{ marginTop: 14, flexDirection: "row", gap: 10 }}>
-                <Figure label="Você economiza" value={money(savingsOf(picked))} tone={GREEN} />
-                <Figure label="Seu mês fecharia com" value={money(data.leftover + savingsOf(picked))} />
-              </View>
-            )}
-            <View style={{ marginTop: 12, flexDirection: "row" }}>
-              <DifficultyTag label={DIFFICULTY_LABEL[picked.difficulty]} />
-            </View>
-            <PrimaryButton label="Começar hoje" busy={busy} onPress={() => void start(picked)} />
-          </View>
-        )}
-      </CenterModal>
+      <ChallengePreview
+        template={picked}
+        cover={picked && data ? data.covers[picked.key] : null}
+        saves={picked ? savingsOf(picked) : 0}
+        month={data ? data.leftover : null}
+        busy={busy}
+        onStart={() => picked && void start(picked)}
+        onClose={() => setPicked(null)}
+      />
 
       {/* A medal, opened: the levels earned, the next one, and the rest kept back. */}
       <CenterModal
