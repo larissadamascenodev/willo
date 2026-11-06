@@ -13,8 +13,8 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 import Svg, { Defs, Ellipse, Path, RadialGradient, Stop } from "react-native-svg";
 import type { OrbMode } from "~/components/registro/ParticleOrb";
+import { isLight } from "~/theme/theme";
 
-import { th } from "~/theme/theme";
 /**
  * Willo the robot: graphite, dark metal and a mirrored black visor, lit along his edges in silver
  * and cold blue, with no colour of his own to fight whatever the background is. He is cut into six
@@ -35,6 +35,18 @@ const ARM_RIGHT = require("../../../assets/images/bot/arm_right.png");
 const LEG_LEFT = require("../../../assets/images/bot/leg_left.png");
 const LEG_RIGHT = require("../../../assets/images/bot/leg_right.png");
 const HEAD = require("../../../assets/images/bot/head.png");
+
+/* The same Willo in pearl white for the light theme: shell, arms and legs white, the
+   logo graphite, the visor still black so his face glows the same in both. */
+const LIGHT_LAYERS = {
+  BODY: require("../../../assets/images/bot/body_light.png"),
+  ARM_LEFT: require("../../../assets/images/bot/arm_left_light.png"),
+  ARM_RIGHT: require("../../../assets/images/bot/arm_right_light.png"),
+  LEG_LEFT: require("../../../assets/images/bot/leg_left_light.png"),
+  LEG_RIGHT: require("../../../assets/images/bot/leg_right_light.png"),
+  HEAD: require("../../../assets/images/bot/head_light.png"),
+};
+const DARK_LAYERS = { BODY, ARM_LEFT, ARM_RIGHT, LEG_LEFT, LEG_RIGHT, HEAD };
 
 /* Where things are on the square, as shares of its side. */
 const EYES = [
@@ -108,6 +120,7 @@ export default function WilloBot({
   onHoldEnd?: () => void;
 }) {
   const reduce = useReducedMotion();
+  const layers = isLight() ? LIGHT_LAYERS : DARK_LAYERS;
   const whole = size >= FULL_BODY_FROM;
   const side = whole ? size : size / HEAD_ONLY.span;
   const left = whole ? 0 : size / 2 - HEAD_ONLY.x * side;
@@ -427,13 +440,13 @@ export default function WilloBot({
             <Svg width={side} height={side}>
               <Defs>
                 <RadialGradient id="bot-aura" cx="50%" cy="50%" r="50%">
-                  <Stop offset="0" stopColor={th(COLD, "grad")} stopOpacity={0.2} />
-                  <Stop offset="0.7" stopColor={th(COLD, "grad")} stopOpacity={0.06} />
-                  <Stop offset="1" stopColor={th(COLD, "grad")} stopOpacity={0} />
+                  <Stop offset="0" stopColor={COLD} stopOpacity={0.2} />
+                  <Stop offset="0.7" stopColor={COLD} stopOpacity={0.06} />
+                  <Stop offset="1" stopColor={COLD} stopOpacity={0} />
                 </RadialGradient>
                 <RadialGradient id="bot-floor" cx="50%" cy="50%" r="50%">
-                  <Stop offset="0" stopColor={th(COLD, "grad")} stopOpacity={0.4} />
-                  <Stop offset="1" stopColor={th(COLD, "grad")} stopOpacity={0} />
+                  <Stop offset="0" stopColor={COLD} stopOpacity={0.4} />
+                  <Stop offset="1" stopColor={COLD} stopOpacity={0} />
                 </RadialGradient>
               </Defs>
               <Ellipse cx={side * 0.5} cy={side * 0.46} rx={side * 0.5} ry={side * 0.5} fill="url(#bot-aura)" />
@@ -441,14 +454,14 @@ export default function WilloBot({
             </Svg>
           </Animated.View>
 
-          {whole && <Animated.Image source={LEG_LEFT} style={[layer, pivot(HIP_LEFT), legLeft]} fadeDuration={0} />}
-          {whole && <Animated.Image source={LEG_RIGHT} style={[layer, pivot(HIP_RIGHT), legRight]} fadeDuration={0} />}
-          {whole && <Animated.Image source={ARM_LEFT} style={[layer, pivot(SHOULDER_LEFT), armLeft]} fadeDuration={0} />}
-          {whole && <Animated.Image source={ARM_RIGHT} style={[layer, pivot(SHOULDER_RIGHT), armRight]} fadeDuration={0} />}
-          {whole && <Image source={BODY} style={layer} fadeDuration={0} />}
+          {whole && <Animated.Image source={layers.LEG_LEFT} style={[layer, pivot(HIP_LEFT), legLeft]} fadeDuration={0} />}
+          {whole && <Animated.Image source={layers.LEG_RIGHT} style={[layer, pivot(HIP_RIGHT), legRight]} fadeDuration={0} />}
+          {whole && <Animated.Image source={layers.ARM_LEFT} style={[layer, pivot(SHOULDER_LEFT), armLeft]} fadeDuration={0} />}
+          {whole && <Animated.Image source={layers.ARM_RIGHT} style={[layer, pivot(SHOULDER_RIGHT), armRight]} fadeDuration={0} />}
+          {whole && <Image source={layers.BODY} style={layer} fadeDuration={0} />}
 
           <Animated.View style={[layer, pivot(NECK), headMove]}>
-            <Image source={HEAD} style={layer} fadeDuration={0} />
+            <Image source={layers.HEAD} style={layer} fadeDuration={0} />
             {EYES.map((e) => (
               <Animated.View key={e.x} style={[{ position: "absolute", left: e.x * side - w / 2, top: e.y * side - h / 2, width: w, height: h, alignItems: "center", justifyContent: "center" }, eyes]}>
                 <Animated.View style={[{ width: w, height: h, alignItems: "center", justifyContent: "center" }, pill]}>
@@ -456,13 +469,13 @@ export default function WilloBot({
                   <Svg width={w * 2.4} height={h * 1.6} style={{ position: "absolute" }}>
                     <Defs>
                       <RadialGradient id="bot-eye" cx="50%" cy="50%" r="50%">
-                        <Stop offset="0.35" stopColor={th(COLD, "grad")} stopOpacity={0.5} />
-                        <Stop offset="1" stopColor={th(COLD, "grad")} stopOpacity={0} />
+                        <Stop offset="0.35" stopColor={COLD} stopOpacity={0.5} />
+                        <Stop offset="1" stopColor={COLD} stopOpacity={0} />
                       </RadialGradient>
                     </Defs>
                     <Ellipse cx={w * 1.2} cy={h * 0.8} rx={w * 1.2} ry={h * 0.8} fill="url(#bot-eye)" />
                   </Svg>
-                  <View style={{ width: w, height: h, borderRadius: w, backgroundColor: th(WHITE, "bg") }} />
+                  <View style={{ width: w, height: h, borderRadius: w, backgroundColor: WHITE }} />
                 </Animated.View>
               </Animated.View>
             ))}
@@ -470,8 +483,8 @@ export default function WilloBot({
             {EYES.map((e) => (
               <Animated.View key={`arc-${e.x}`} style={[{ position: "absolute", left: e.x * side - w * 1.1, top: e.y * side - w * 0.7, width: w * 2.2, height: w * 1.4 }, arc]}>
                 <Svg width={w * 2.2} height={w * 1.4}>
-                  <Path d={`M${w * 0.3} ${w * 1.05}Q${w * 1.1} ${-w * 0.35} ${w * 1.9} ${w * 1.05}`} stroke={th(COLD)} strokeOpacity={0.3} strokeWidth={w * 0.72} strokeLinecap="round" fill="none" />
-                  <Path d={`M${w * 0.3} ${w * 1.05}Q${w * 1.1} ${-w * 0.35} ${w * 1.9} ${w * 1.05}`} stroke={th(WHITE)} strokeWidth={w * 0.42} strokeLinecap="round" fill="none" />
+                  <Path d={`M${w * 0.3} ${w * 1.05}Q${w * 1.1} ${-w * 0.35} ${w * 1.9} ${w * 1.05}`} stroke={COLD} strokeOpacity={0.3} strokeWidth={w * 0.72} strokeLinecap="round" fill="none" />
+                  <Path d={`M${w * 0.3} ${w * 1.05}Q${w * 1.1} ${-w * 0.35} ${w * 1.9} ${w * 1.05}`} stroke={WHITE} strokeWidth={w * 0.42} strokeLinecap="round" fill="none" />
                 </Svg>
               </Animated.View>
             ))}
