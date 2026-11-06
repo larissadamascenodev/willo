@@ -244,13 +244,19 @@ const GREEN_RGB = parse(WILLO_GREEN)!;
  * stop ("grad"), or a blur's tint ("tint").
  */
 export function th<T>(color: T, role: Role = "fg"): T {
-  if (Array.isArray(color)) return color.map((c) => th(c, role)) as T;
+  return thIn(active, color, role);
+}
+
+/** The same, for a given theme rather than the one on screen: text on a background
+    photo follows the photo's veil, not the app's theme. */
+export function thIn<T>(mode: ThemeMode, color: T, role: Role = "fg"): T {
+  if (Array.isArray(color)) return color.map((c) => thIn(mode, c, role)) as T;
   if (typeof color !== "string") return color;
   if (role === "tint") {
-    if (active !== "light") return color;
+    if (mode !== "light") return color;
     return (color === "dark" ? "light" : color.replace("Dark", "Light")) as T;
   }
-  const key = active + role + color;
+  const key = mode + role + color;
   const hit = cache.get(key);
   if (hit !== undefined) return hit as T;
   if (made.has(color)) return color;
@@ -260,9 +266,9 @@ export function th<T>(color: T, role: Role = "fg"): T {
   if (c) {
     let next = c;
     if (isGreen(c)) next = { ...GREEN_RGB, a: c.a };
-    if (active === "light") next = toLight(next, role);
+    if (mode === "light") next = toLight(next, role);
     result = next === c ? color : out(next);
-    if (active === "light") made.add(result);
+    if (mode === "light") made.add(result);
   }
   cache.set(key, result);
   return result as T;

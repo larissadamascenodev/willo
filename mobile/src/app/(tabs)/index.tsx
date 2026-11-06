@@ -31,6 +31,9 @@ import { useNavChrome } from "~/lib/navChrome";
 import { INK } from "~/theme/tokens";
 
 import { th } from "~/theme/theme";
+import { GroundInkProvider } from "~/theme/groundInk";
+import { useLightSkyModel, usePhotoLook, useSkyModel, useSkyPhoto } from "~/lib/skyModel";
+import { isLight } from "~/theme/theme";
 /** How far the page travels before the block on top has gone. */
 const LINES_TRAVEL = 190;
 /** The robot is taller, so he takes longer to go. */
@@ -85,6 +88,15 @@ export default function Home() {
   const firstName = name.trim().split(" ")[0] ?? "";
 
   const [hero] = useHomeHero();
+
+  /* On a photo of one's own, the words outside the cards follow its veil — black on a
+     light one, white on a dark one — with a halo as strong as the veil is faint. */
+  const [skyModel] = useSkyModel();
+  const [lightSkyModel] = useLightSkyModel();
+  const skyPhoto = useSkyPhoto();
+  const photoLook = usePhotoLook(isLight() ? "light" : "dark");
+  const onPhoto = !!skyPhoto && (isLight() ? lightSkyModel : skyModel) === "custom";
+  const groundLook = useMemo(() => (onPhoto ? { tone: photoLook.tone, amount: photoLook.amount } : null), [onPhoto, photoLook.tone, photoLook.amount]);
   const orbHero = hero === "orb";
   const travel = orbHero ? ORB_TRAVEL : LINES_TRAVEL;
 
@@ -194,6 +206,7 @@ export default function Home() {
 
   return (
     <Room lit sky home>
+      <GroundInkProvider look={groundLook}>
       {/* Willo's light, behind everything, so the cards rise through it. Editing is about the
           board, so the top stands down for it. */}
       {!editing && (
@@ -255,6 +268,7 @@ export default function Home() {
         onProfile={() => router.push("/perfil" as never)}
       />
       <EditBar open={editing} onDone={() => setEditing(false)} />
+      </GroundInkProvider>
     </Room>
   );
 }

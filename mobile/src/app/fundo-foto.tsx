@@ -22,7 +22,7 @@ import {
   useSkyPhoto,
   type PhotoLook,
 } from "~/lib/skyModel";
-import { isLight, th } from "~/theme/theme";
+import { isLight, th, thIn } from "~/theme/theme";
 import { INK } from "~/theme/tokens";
 
 /**
@@ -81,9 +81,18 @@ export default function FundoFoto() {
     );
   }
 
-  /* The sample's ink is the theme's, as on the home. */
+  /* The controls and the card keep the theme's ink; the line on the ground follows
+     the veil, with the halo it will have on the home. */
   const ink = th("#fff");
   const soft = th(INK.soft);
+  const groundInk = thIn(look.tone, "#fff");
+  const groundSoft = thIn(look.tone, INK.soft);
+  const faint = 1 - Math.min(1, look.amount / MAX_VEIL);
+  const halo = {
+    textShadowColor: look.tone === "dark" ? `rgba(0,0,0,${(0.3 + 0.55 * faint).toFixed(2)})` : `rgba(255,255,255,${(0.3 + 0.55 * faint).toFixed(2)})`,
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4 + 8 * faint,
+  };
 
   return (
     <Room preview="custom" previewPhoto={uri} previewLook={look}>
@@ -97,8 +106,8 @@ export default function FundoFoto() {
       {/* What will sit on it: a line from the top of the home and a card. */}
       <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: 16, gap: 18 }}>
         <View style={{ alignItems: "center" }}>
-          <Text style={{ fontSize: 24, fontWeight: "700", letterSpacing: -0.5, color: ink }}>Oi. Tô aqui.</Text>
-          <Text style={{ marginTop: 4, fontSize: 15, color: soft }}>O que vamos resolver agora?</Text>
+          <Text style={[halo, { fontSize: 24, fontWeight: "700", letterSpacing: -0.5, color: groundInk }]}>Oi. Tô aqui.</Text>
+          <Text style={[halo, { marginTop: 4, fontSize: 15, color: groundSoft }]}>O que vamos resolver agora?</Text>
         </View>
         <Surface>
           <View style={{ padding: 18 }}>
