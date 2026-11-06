@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
@@ -11,7 +12,7 @@ import Surface from "~/components/Surface";
 import CenterModal from "~/components/CenterModal";
 import WilloBot from "~/components/willo/WilloBot";
 import { CHALLENGE_ICON, DifficultyTag, MedalBadge } from "~/components/desafios/parts";
-import { ActiveCard, GridOffer, SuggestionCard } from "~/components/desafios/ChallengeTile";
+import { ActivePortrait, GridOffer, SuggestionCard } from "~/components/desafios/ChallengeTile";
 import ChallengePreview from "~/components/desafios/ChallengePreview";
 import { Check, ChevronRight, Lock, Plus, Trophy } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
@@ -57,6 +58,8 @@ export default function Desafios() {
   const insets = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
   const half = Math.floor((screenW - 32 - 12) / 2);
+  /* A little wider than half, so the next card shows at the edge and says the row goes on. */
+  const carouselW = Math.floor((screenW - 32) * 0.46);
   const { user } = useAuth();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("desafios");
@@ -162,17 +165,47 @@ export default function Desafios() {
           <ActivityIndicator color={th(INK.soft)} style={{ marginTop: 60 }} />
         ) : tab === "desafios" ? (
           <Animated.View entering={FadeIn.duration(220)}>
-            {/* Running: wide cards, one under another, each opening its own page. */}
+            {/* Running: a carousel of portrait cards, each opening its own page. */}
             {data.running.length > 0 && (
               <>
                 <Eyebrow>Em andamento</Eyebrow>
-                <View style={{ gap: 12 }}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  decelerationRate="fast"
+                  snapToInterval={carouselW + 12}
+                  style={{ marginHorizontal: -16 }}
+                  contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
+                >
                   {data.running.map((r) => (
-                    <ActiveCard key={r.id} r={r} onPress={() => router.push(`/desafio/${r.id}` as never)} />
+                    <ActivePortrait key={r.id} r={r} width={carouselW} onPress={() => router.push(`/desafio/${r.id}` as never)} />
                   ))}
-                </View>
+                </ScrollView>
               </>
             )}
+
+            {/* One's own, with Willo: set apart, right after what is running. */}
+            <View style={{ marginTop: 22 }}>
+              <Pressable onPress={() => setMaking(true)} accessibilityRole="button" accessibilityLabel="Criar um desafio com o Willo" style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+                <View style={{ borderRadius: 26, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#101320" }}>
+                  <LinearGradient colors={["#1B2140", "#121626", "#0E1018"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 16 }}>
+                    <View style={{ width: 64, height: 64, alignItems: "center", justifyContent: "center" }}>
+                      <WilloBot size={64} />
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 1.2, color: "rgba(191,227,255,0.8)" }}>CRIAR O MEU</Text>
+                      <Text style={{ marginTop: 3, fontSize: 17, fontWeight: "800", letterSpacing: -0.3, color: "#fff" }}>Monte um desafio com o Willo</Text>
+                      <Text style={{ marginTop: 3, fontSize: 13, lineHeight: 18, color: "rgba(255,255,255,0.68)" }}>Três perguntas e ele calcula quanto você economiza</Text>
+                    </View>
+                    <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" }}>
+                      <Plus size={18} color="#0B0B0B" strokeWidth={2.6} />
+                    </View>
+                  </View>
+                  <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 26, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(124,196,255,0.22)" }} />
+                </View>
+              </Pressable>
+            </View>
 
             {/* Aimed at where the money is going. */}
             {data.suggested.length > 0 && (
@@ -199,21 +232,6 @@ export default function Desafios() {
                 </View>
               </>
             )}
-
-            {/* One's own, with Willo. */}
-            <Eyebrow>Criar o meu</Eyebrow>
-            <Surface onPress={() => setMaking(true)}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14 }}>
-                <View style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
-                  <WilloBot size={44} />
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>Montar um desafio com o Willo</Text>
-                  <Text style={{ marginTop: 2, fontSize: 13, color: th(INK.soft) }}>Três perguntas e ele calcula quanto você economiza</Text>
-                </View>
-                <Plus size={18} color={th(INK.soft)} />
-              </View>
-            </Surface>
 
             {/* Every other challenge, two by two. */}
             {others.length > 0 && (

@@ -332,6 +332,49 @@ export function SuggestionCard({
   );
 }
 
+/** A running challenge as a portrait card, in the same shape as the list of all challenges, for a carousel. */
+export function ActivePortrait({ r, width, onPress }: { r: Running; width: number; onPress: () => void }) {
+  const height = Math.round(width * 1.32);
+  const broken = r.state === "broken";
+  const share = Math.max(0, Math.min(1, r.done / r.template.days));
+  const day = Math.min(r.done + (r.tickedToday ? 0 : 1), r.template.days);
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={r.template.name} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.97 : 1 }] })}>
+      <View style={{ width, height, borderRadius: 26, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#0D0E10" }}>
+        <ChallengeCover template={r.template} cover={r.cover} width={width} height={height} />
+        <LinearGradient colors={["rgba(8,9,10,0.2)", "rgba(8,9,10,0)", "rgba(8,9,10,0.62)", "rgba(8,9,10,0.95)"]} locations={[0, 0.3, 0.62, 1]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+
+        <View style={{ position: "absolute", top: 10, left: 10, right: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <GlassPanel style={{ borderRadius: 13 }}>
+            <View style={{ height: 26, paddingHorizontal: 9, flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Flame size={12} color={r.streak > 0 ? "#FF9F45" : "rgba(255,255,255,0.6)"} strokeWidth={2.4} />
+              <Text style={{ fontSize: 12, fontWeight: "800", color: "#fff" }}>{r.streak}</Text>
+            </View>
+          </GlassPanel>
+          {r.tickedToday && (
+            <View style={{ width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: GREEN }}>
+              <Check size={14} color="#0B0B0B" strokeWidth={3} />
+            </View>
+          )}
+        </View>
+
+        <View style={{ position: "absolute", left: 12, right: 12, bottom: 12 }}>
+          <Text numberOfLines={2} style={{ fontSize: 15, fontWeight: "800", lineHeight: 19, letterSpacing: -0.2, color: "#fff" }}>
+            {r.template.name}
+          </Text>
+          <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 11.5, fontWeight: "600", color: broken ? "#FF9C9C" : "rgba(255,255,255,0.7)" }}>
+            {broken ? "Quebrou · recomece" : r.tickedToday ? `Dia ${day} de ${r.template.days} · feito` : `Dia ${day} de ${r.template.days} · falta o check-in`}
+          </Text>
+          <View style={{ marginTop: 9, height: 4, borderRadius: 2, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.2)" }}>
+            <View style={{ width: `${Math.max(share, 0.03) * 100}%`, height: 4, borderRadius: 2, backgroundColor: broken ? RED : "#FFFFFF" }} />
+          </View>
+        </View>
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 26, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
+      </View>
+    </Pressable>
+  );
+}
+
 /** One of all the challenges, as a portrait card for a two-column grid. */
 export function GridOffer({ template, cover, width, saves, onPress }: { template: Template; cover?: string | null; width: number; saves?: string; onPress: () => void }) {
   const height = Math.round(width * 1.28);
