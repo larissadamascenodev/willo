@@ -56,6 +56,7 @@ export default function Room({
   preview,
   previewPhoto,
   previewLook,
+  home = false,
   children,
   style,
 }: {
@@ -66,6 +67,9 @@ export default function Room({
       the photo editor's live preview. */
   previewPhoto?: string;
   previewLook?: PhotoLook;
+  /** The home. A photo of one's own is worn there only; every other screen wears the
+      theme's own ground instead, so a busy photo never sits under forms and lists. */
+  home?: boolean;
   /** The home, the wallet and the accounts screen get the hour instead of the lights. */
   sky?: boolean;
   children?: ReactNode;
@@ -75,7 +79,8 @@ export default function Room({
   const strength = lit ? 1 : 0.45;
   const [chosen] = useSkyModel();
   const [chosenLight] = useLightSkyModel();
-  const model = (preview as SkyModel | undefined) ?? chosen;
+  /* Off the home, a photo gives way to the theme's own ground. */
+  const model = (preview as SkyModel | undefined) ?? (chosen === "custom" && !home ? "2" : chosen);
   const storedPhoto = useSkyPhoto();
   const photo = previewPhoto ?? storedPhoto;
   const storedLook = usePhotoLook(isLight() ? "light" : "dark");
@@ -97,7 +102,7 @@ export default function Room({
   /* In the light, its own backgrounds: a light ground with soft colour pooled near
      the top for the glass to pick up, or the person's photo under a pale veil. */
   if (isLight()) {
-    const lightModel = (preview as LightSkyModel | undefined) ?? chosenLight;
+    const lightModel = (preview as LightSkyModel | undefined) ?? (chosenLight === "custom" && !home ? "nevoa" : chosenLight);
     const ownLight = lightModel === "custom" && !!photo;
     const pale = LIGHT_BACKDROPS[lightModel as LightBackdropKey] ?? LIGHT_BACKDROPS["aurora-clara"];
     const lid = (name: string) => `${name}-light-${lightModel}`;

@@ -193,7 +193,7 @@ export default function Home() {
   const pinnedHeight = pinnedTop + (orbHero ? ORB_HERO_BODY : LINES_HERO_BODY);
 
   return (
-    <Room lit sky>
+    <Room lit sky home>
       {/* Willo's light, behind everything, so the cards rise through it. Editing is about the
           board, so the top stands down for it. */}
       {!editing && (
