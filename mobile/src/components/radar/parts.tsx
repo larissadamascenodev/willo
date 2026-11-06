@@ -42,9 +42,20 @@ function wedge(cx: number, cy: number, r: number, inner: number) {
  * swings the light round to it. The dots are what each sector has to tell: coral when
  * something needs attention, ice when it is only worth a look.
  */
-export function Scope({ selected, onSelect, blips }: { selected: SectorKey; onSelect: (key: SectorKey) => void; blips: Partial<Record<SectorKey, { risk: number; note: number }>> }) {
+export function Scope({
+  selected,
+  onSelect,
+  blips,
+  size: wanted,
+}: {
+  selected: SectorKey;
+  onSelect: (key: SectorKey) => void;
+  blips: Partial<Record<SectorKey, { risk: number; note: number }>>;
+  /** A smaller dial where the screen has less room for it (the welcome). */
+  size?: number;
+}) {
   const { width } = useWindowDimensions();
-  const size = Math.min(width - 28, 320);
+  const size = wanted ?? Math.min(width - 28, 320);
   const c = size / 2;
   const r = c - 3;
   const core = r * 0.31;
