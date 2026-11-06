@@ -30,6 +30,8 @@ const TABLES = [
   "custom_categories",
   "challenge_checkins",
   "user_challenges",
+  /* Challenges a person made their own; the shared ones have no owner and stay. */
+  "challenges",
   "health_scores",
   "notifications",
   "notification_settings",

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -5,6 +6,7 @@ import { BlurView } from "expo-blur";
 import { CHALLENGE_ICON } from "~/components/desafios/parts";
 import { Check, Flame } from "~/components/icons";
 import type { IconKey, Running, Template } from "~/lib/challenges";
+import { coverUrl, ensureCover } from "~/lib/challengeCovers";
 import { GREEN, RED } from "~/theme/tokens";
 
 /**
@@ -34,7 +36,28 @@ const TINT: Record<IconKey, [string, string, string]> = {
 };
 
 export function ChallengeCover({ template, cover, width, height }: { template: Template; cover?: string | null; width: number | string; height: number | string }) {
-  if (cover) return <Image source={{ uri: cover }} contentFit="cover" transition={200} style={{ width: width as number, height: height as number }} />;
+  /* The photo goes over the drawn scene: while it loads, or when there is none yet,
+     the scene shows. With none yet, it is asked for, and shown once made. */
+  const address = cover ?? coverUrl(template);
+  const [src, setSrc] = useState<string>(address);
+  const [failed, setFailed] = useState(false);
+  /* Keyed on the address, not the template object, which a made-up challenge rebuilds. */
+  useEffect(() => {
+    setSrc(address);
+    setFailed(false);
+  }, [address]);
+
+  const onMissing = () => {
+    setFailed(true);
+    if (cover) return;
+    void ensureCover(template).then((url) => {
+      if (url) {
+        setSrc(`${url}?v=${Date.now()}`);
+        setFailed(false);
+      }
+    });
+  };
+
   const [a, b, ink] = TINT[template.icon];
   const Icon = CHALLENGE_ICON[template.icon];
   return (
@@ -46,6 +69,16 @@ export function ChallengeCover({ template, cover, width, height }: { template: T
       <View style={{ position: "absolute", top: "10%", left: "10%", opacity: 0.9 }}>
         <Icon size={typeof width === "number" ? Math.max(28, width * 0.2) : 44} color={ink} strokeWidth={1.7} />
       </View>
+      {!failed && (
+        <Image
+          source={{ uri: src }}
+          contentFit="cover"
+          transition={300}
+          cachePolicy="disk"
+          onError={onMissing}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+        />
+      )}
     </View>
   );
 }
