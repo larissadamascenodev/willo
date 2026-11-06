@@ -39,13 +39,13 @@ interface Slide {
 }
 
 const SLIDES: Slide[] = [
-  { tag: "WILLO COPILOT", title: "Você compra.\nEle já anotou.", line: "O Willo lê o aviso de compra do banco\ne registra sozinho. Você só confere.", Demo: NotifyDemo, ms: DURATIONS.notify },
-  { tag: "VOZ", title: "Fale.\nO Willo anota.", line: "Diga do seu jeito: ele entende o valor,\na categoria, a conta e o dia.", Demo: VoiceDemo, ms: DURATIONS.voice },
-  { tag: "REGISTRO RÁPIDO", title: "Dois toques,\num gasto salvo.", line: "Dois toques atrás do celular ou na tela\ndo app e o registro rápido já abre.", Demo: QuickDemo, ms: DURATIONS.quick },
-  { tag: "COMPROVANTE", title: "Fotografe.\nEle lê por você.", line: "Local, valor, pagamento e data saem\nda foto direto para o registro.", Demo: ReceiptDemo, ms: DURATIONS.receipt },
-  { tag: "RADAR FINANCEIRO", title: "Cada área do seu\ndinheiro, explicada.", line: "Consumo, hábitos, compromissos, futuro\ne saúde, cada um numa frase.", Demo: RadarDemo, ms: DURATIONS.radar },
-  { tag: "PREVISÃO", title: "O fim do mês,\nantes do fim.", line: "Veja quanto sobra no dia 30 e simule\num gasto antes de fazer.", Demo: ForecastDemo, ms: DURATIONS.forecast },
-  { tag: "CONVERSA", title: "Pergunte.\nEle calcula.", line: "Respostas com os seus números,\nnão com conselhos genéricos.", Demo: AskDemo, ms: DURATIONS.ask },
+  { tag: "WILLO COPILOT", title: "Você compra, ele anota.", line: "O Willo lê o aviso de compra do banco\ne registra sozinho. Você só confere.", Demo: NotifyDemo, ms: DURATIONS.notify },
+  { tag: "VOZ", title: "Fale. O Willo anota.", line: "Diga do seu jeito: ele entende o valor,\na categoria, a conta e o dia.", Demo: VoiceDemo, ms: DURATIONS.voice },
+  { tag: "REGISTRO RÁPIDO", title: "Dois toques e pronto.", line: "Dois toques atrás do celular ou na tela\ndo app e o registro rápido já abre.", Demo: QuickDemo, ms: DURATIONS.quick },
+  { tag: "COMPROVANTE", title: "Fotografe. Ele lê.", line: "Local, valor, pagamento e data saem\nda foto direto para o registro.", Demo: ReceiptDemo, ms: DURATIONS.receipt },
+  { tag: "RADAR FINANCEIRO", title: "Seu dinheiro, explicado.", line: "Consumo, hábitos, compromissos, futuro\ne saúde, cada um numa frase.", Demo: RadarDemo, ms: DURATIONS.radar },
+  { tag: "PREVISÃO", title: "O mês, antes do fim.", line: "Veja quanto sobra no dia 30 e simule\num gasto antes de fazer.", Demo: ForecastDemo, ms: DURATIONS.forecast },
+  { tag: "CONVERSA", title: "Pergunte. Ele calcula.", line: "Respostas com os seus números,\nnão com conselhos genéricos.", Demo: AskDemo, ms: DURATIONS.ask },
 ];
 const N = SLIDES.length;
 /* After a demonstration ends, how long the slide stays before the next one comes. */
@@ -226,8 +226,12 @@ function Caption({ i, slide, current, progress }: { i: number; slide: Slide; cur
           {slide.tag}
         </Text>
       </View>
-      <Text style={{ marginTop: 10, fontSize: 30, fontWeight: "800", letterSpacing: -1, lineHeight: 34, color: "#fff" }}>{slide.title}</Text>
-      <Text style={{ marginTop: 10, fontSize: 15, lineHeight: 21, color: INK.soft }}>{slide.line}</Text>
+      {/* One line: a smaller title rather than two short lines; it shrinks a little
+          on a narrow phone instead of breaking. */}
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={{ marginTop: 8, fontSize: 26, fontWeight: "800", letterSpacing: -0.8, lineHeight: 31, color: "#fff" }}>
+        {slide.title}
+      </Text>
+      <Text style={{ marginTop: 6, fontSize: 15, lineHeight: 21, color: INK.soft }}>{slide.line}</Text>
     </View>
   );
 }
