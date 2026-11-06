@@ -9,6 +9,7 @@ import { money } from "~/lib/money";
 import { MONTH_NAMES } from "~/lib/purchaseSim";
 import { INK } from "~/theme/tokens";
 
+import { live, th } from "~/theme/theme";
 /**
  * The first five sectors of the Radar. Each opens with one sentence saying what the numbers
  * mean, then its findings in separate cards, one subject to a card: a chart or a few figures
@@ -36,7 +37,7 @@ const shift = (ref: Date, n: number) => {
 const abbreviated = (key: string) => MONTH_NAMES[Number(key.slice(5, 7)) - 1].slice(0, 3).replace(/^./, (x) => x.toUpperCase());
 const monthTitle = (mes: string) => mes.replace(/ de \d{4}$/, "").replace(/^./, (x) => x.toUpperCase());
 const monthShort = (mes: string) => mes.slice(0, 3).replace(/^./, (x) => x.toUpperCase());
-const noteStyle = { fontSize: 13.5, lineHeight: 19, ...face(500), color: INK.soft };
+const noteStyle = live({ fontSize: 13.5, lineHeight: 19, ...face(500), color: INK.soft });
 
 /* ---- Consumo ---- */
 
@@ -154,7 +155,7 @@ export function Consumo({ data, onAsk }: { data: RaioXData; onAsk: Ask }) {
                         .join(", ")}
                       .
                     </Text>
-                    {limit ? <Text style={{ marginTop: 4, fontSize: 13.5, ...face(600), color: r.total > limit ? RISK : "#fff" }}>{Math.round((r.total / limit) * 100)}% do limite de {money(limit)}</Text> : null}
+                    {limit ? <Text style={{ marginTop: 4, fontSize: 13.5, ...face(600), color: th(r.total > limit ? RISK : "#fff") }}>{Math.round((r.total / limit) * 100)}% do limite de {money(limit)}</Text> : null}
                     <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                       <Action label="Por que gastei isso?" onPress={() => onAsk(`Quanto gastei com ${r.name} nos últimos meses e por quê?`)} />
                       <Action label="Como gastar menos?" onPress={() => onAsk(`Como gastar menos com ${r.name}?`)} />
@@ -166,7 +167,7 @@ export function Consumo({ data, onAsk }: { data: RaioXData; onAsk: Ask }) {
           })}
           {rows.length > 5 && (
             <Pressable onPress={() => setAll(!all)} hitSlop={6} style={{ paddingTop: 10 }}>
-              <Text style={{ fontSize: 14, ...face(700), color: ICE }}>{all ? "Ver menos" : `Ver todas as ${rows.length}`}</Text>
+              <Text style={{ fontSize: 14, ...face(700), color: th(ICE) }}>{all ? "Ver menos" : `Ver todas as ${rows.length}`}</Text>
             </Pressable>
           )}
         </Card>
@@ -175,8 +176,8 @@ export function Consumo({ data, onAsk }: { data: RaioXData; onAsk: Ask }) {
       {total > 0 && (
         <Card title="O que você escolhe">
           <View style={{ height: 10, flexDirection: "row", gap: 2 }}>
-            <View style={{ flex: Math.max(planned, 1), borderRadius: 3, backgroundColor: "rgba(255,255,255,0.3)" }} />
-            <View style={{ flex: Math.max(total - planned, 1), borderRadius: 3, backgroundColor: SKY }} />
+            <View style={{ flex: Math.max(planned, 1), borderRadius: 3, backgroundColor: th("rgba(255,255,255,0.3)", "bg") }} />
+            <View style={{ flex: Math.max(total - planned, 1), borderRadius: 3, backgroundColor: th(SKY, "bg") }} />
           </View>
           <Tiles>
             <Tile dot="rgba(255,255,255,0.3)" label="Fixos e parcelas" value={money(planned)} />
@@ -242,7 +243,7 @@ export function Habitos({ data, onAsk }: { data: RaioXData; onAsk: Ask }) {
               {open === a.id && (
                 <View style={{ marginTop: 8 }}>
                   <Text style={noteStyle}>{clean(a.what)}</Text>
-                  {a.action ? <Text style={[noteStyle, { marginTop: 6, color: "#fff" }]}>{clean(a.action)}</Text> : null}
+                  {a.action ? <Text style={[noteStyle, { marginTop: 6, color: th("#fff") }]}>{clean(a.action)}</Text> : null}
                   <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                     <Action label="Por que isso?" onPress={() => onAsk(`Me explica por que isso está fora do meu normal: ${clean(a.title)}`)} />
                     <Action label="Como evitar?" onPress={() => onAsk(`Como evito isso nos próximos meses: ${clean(a.title)}?`)} />
@@ -328,7 +329,7 @@ export function Compromissos({ data, snapshot }: { data: RaioXData; snapshot: Ra
               ))}
             </View>
           </View>
-          {free < 0 && <Text style={{ marginTop: 12, fontSize: 14, ...face(600), color: RISK }}>Sai {money(-free)} a mais do que entra neste mês.</Text>}
+          {free < 0 && <Text style={{ marginTop: 12, fontSize: 14, ...face(600), color: th(RISK) }}>Sai {money(-free)} a mais do que entra neste mês.</Text>}
         </Card>
       )}
 
@@ -352,7 +353,7 @@ export function Compromissos({ data, snapshot }: { data: RaioXData; snapshot: Ra
             {data.installments.purchases.slice(0, 5).map((p, i) => (
               <Row key={`${p.name}${i}`} first={i === 0} title={p.name} value={money(p.amount)}>
                 <Meter share={(p.total - p.remaining) / Math.max(p.total, 1)} />
-                <Text style={{ marginTop: 5, fontSize: 12.5, ...face(500), ...NUMS, color: INK.softer }}>{`Faltam ${p.remaining} de ${p.total}`}</Text>
+                <Text style={{ marginTop: 5, fontSize: 12.5, ...face(500), ...NUMS, color: th(INK.softer) }}>{`Faltam ${p.remaining} de ${p.total}`}</Text>
               </Row>
             ))}
           </View>
@@ -383,15 +384,15 @@ function BalanceLine({ data }: { data: RaioXData }) {
   return (
     <View>
       <Svg width={w} height={h}>
-        <Line x1={0} y1={y(0)} x2={w} y2={y(0)} stroke="rgba(255,255,255,0.22)" strokeDasharray="2 4" />
+        <Line x1={0} y1={y(0)} x2={w} y2={y(0)} stroke={th("rgba(255,255,255,0.22)")} strokeDasharray="2 4" />
         {/* The range it could end in: wider, the less is known. */}
-        <Path d={`M${x(0)} ${y(days[0].balance)}L${x(end)} ${y(data.forecast.optimistic)}L${x(end)} ${y(data.forecast.conservative)}Z`} fill={SKY} fillOpacity={0.12} />
-        <Path d={line} stroke={lineHex} strokeWidth={2} strokeDasharray="5 4" fill="none" />
-        <Circle cx={x(0)} cy={y(days[0].balance)} r={4} fill="#fff" />
-        <SvgText x={2} y={h - 2} fill={INK.softer} fontSize={11} fontFamily={CHART_FONT}>
+        <Path d={`M${x(0)} ${y(days[0].balance)}L${x(end)} ${y(data.forecast.optimistic)}L${x(end)} ${y(data.forecast.conservative)}Z`} fill={th(SKY)} fillOpacity={0.12} />
+        <Path d={line} stroke={th(lineHex)} strokeWidth={2} strokeDasharray="5 4" fill="none" />
+        <Circle cx={x(0)} cy={y(days[0].balance)} r={4} fill={th("#fff")} />
+        <SvgText x={2} y={h - 2} fill={th(INK.softer)} fontSize={11} fontFamily={CHART_FONT}>
           {`hoje, dia ${days[0].day}`}
         </SvgText>
-        <SvgText x={w - 2} y={h - 2} fill={INK.softer} fontSize={11} fontFamily={CHART_FONT} textAnchor="end">
+        <SvgText x={w - 2} y={h - 2} fill={th(INK.softer)} fontSize={11} fontFamily={CHART_FONT} textAnchor="end">
           {`dia ${days[end].day}`}
         </SvgText>
       </Svg>
@@ -410,11 +411,11 @@ function MonthsBars({ months }: { months: { mes: string; sobra: number }[] }) {
     <View style={{ flexDirection: "row", gap: 8 }}>
       {months.map((m) => (
         <View key={m.mes} style={{ flex: 1, alignItems: "center" }}>
-          <View style={{ height: 56, justifyContent: "flex-end", width: "100%" }}>{m.sobra >= 0 && <View style={{ height: Math.max(3, (m.sobra / peak) * 52), borderRadius: 4, backgroundColor: SKY }} />}</View>
-          <View style={{ height: 1, alignSelf: "stretch", backgroundColor: "rgba(255,255,255,0.3)" }} />
-          <View style={{ height: 56, width: "100%" }}>{m.sobra < 0 && <View style={{ height: Math.max(3, (-m.sobra / peak) * 52), borderRadius: 4, backgroundColor: RISK }} />}</View>
-          <Text style={{ fontSize: 12, ...face(500), color: INK.softer }}>{monthShort(m.mes)}</Text>
-          <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 11.5, ...face(700), ...NUMS, color: m.sobra < 0 ? RISK : "#fff" }}>{short(m.sobra)}</Text>
+          <View style={{ height: 56, justifyContent: "flex-end", width: "100%" }}>{m.sobra >= 0 && <View style={{ height: Math.max(3, (m.sobra / peak) * 52), borderRadius: 4, backgroundColor: th(SKY, "bg") }} />}</View>
+          <View style={{ height: 1, alignSelf: "stretch", backgroundColor: th("rgba(255,255,255,0.3)", "bg") }} />
+          <View style={{ height: 56, width: "100%" }}>{m.sobra < 0 && <View style={{ height: Math.max(3, (-m.sobra / peak) * 52), borderRadius: 4, backgroundColor: th(RISK, "bg") }} />}</View>
+          <Text style={{ fontSize: 12, ...face(500), color: th(INK.softer) }}>{monthShort(m.mes)}</Text>
+          <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 11.5, ...face(700), ...NUMS, color: th(m.sobra < 0 ? RISK : "#fff") }}>{short(m.sobra)}</Text>
         </View>
       ))}
     </View>
@@ -503,21 +504,21 @@ function Spider({ data }: { data: RaioXData }) {
     <View style={{ alignItems: "center" }}>
       <Svg width={size} height={size}>
         {[1, 0.66, 0.33].map((k) => (
-          <Polygon key={k} points={pillars.map((_, i) => at(i, k)).map((q) => `${q.x},${q.y}`).join(" ")} fill="none" stroke="rgba(255,255,255,0.1)" />
+          <Polygon key={k} points={pillars.map((_, i) => at(i, k)).map((q) => `${q.x},${q.y}`).join(" ")} fill="none" stroke={th("rgba(255,255,255,0.1)")} />
         ))}
         {pillars.map((p, i) => {
           const q = at(i, 1);
-          return <Line key={p.key} x1={c} y1={c} x2={q.x} y2={q.y} stroke="rgba(255,255,255,0.1)" />;
+          return <Line key={p.key} x1={c} y1={c} x2={q.x} y2={q.y} stroke={th("rgba(255,255,255,0.1)")} />;
         })}
-        <Polygon points={shape} fill={SKY} fillOpacity={0.22} stroke={ICE} strokeWidth={1.5} />
+        <Polygon points={shape} fill={th(SKY)} fillOpacity={0.22} stroke={th(ICE)} strokeWidth={1.5} />
         {pillars.map((p, i) => {
           const q = at(i, Math.max(0.06, p.points / p.max));
-          return <Rect key={p.key} x={q.x - 2.5} y={q.y - 2.5} width={5} height={5} rx={2.5} fill={p.tone === "critico" ? RISK : "#fff"} />;
+          return <Rect key={p.key} x={q.x - 2.5} y={q.y - 2.5} width={5} height={5} rx={2.5} fill={th(p.tone === "critico" ? RISK : "#fff")} />;
         })}
         {pillars.map((p, i) => {
           const q = at(i, 1.14);
           return (
-            <SvgText key={p.key} x={q.x} y={q.y + 4} fill="rgba(255,255,255,0.72)" fontSize={11.5} fontFamily={CHART_FONT} textAnchor={Math.abs(q.x - c) < 8 ? "middle" : q.x > c ? "start" : "end"}>
+            <SvgText key={p.key} x={q.x} y={q.y + 4} fill={th("rgba(255,255,255,0.72)")} fontSize={11.5} fontFamily={CHART_FONT} textAnchor={Math.abs(q.x - c) < 8 ? "middle" : q.x > c ? "start" : "end"}>
               {AXIS[p.key]}
             </SvgText>
           );
@@ -629,11 +630,11 @@ function AskRow({ label, items, onAsk }: { label: string; items: string[]; onAsk
   if (items.length === 0) return null;
   return (
     <View style={{ marginTop: 12 }}>
-      <Text style={{ marginBottom: 8, paddingHorizontal: CARD_INSET + 4, fontSize: 13, ...face(600), color: INK.soft }}>{label}</Text>
+      <Text style={{ marginBottom: 8, paddingHorizontal: CARD_INSET + 4, fontSize: 13, ...face(600), color: th(INK.soft) }}>{label}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: CARD_INSET, gap: 8 }}>
         {items.map((q) => (
-          <Pressable key={q} onPress={() => onAsk(q)} style={({ pressed }) => ({ height: 38, justifyContent: "center", paddingHorizontal: 14, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.07)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", opacity: pressed ? 0.6 : 1 })}>
-            <Text style={{ fontSize: 13.5, ...face(600), color: "#fff" }}>{q}</Text>
+          <Pressable key={q} onPress={() => onAsk(q)} style={({ pressed }) => ({ height: 38, justifyContent: "center", paddingHorizontal: 14, borderRadius: 19, backgroundColor: th("rgba(255,255,255,0.07)", "bg"), borderWidth: 1, borderColor: th("rgba(255,255,255,0.1)", "line"), opacity: pressed ? 0.6 : 1 })}>
+            <Text style={{ fontSize: 13.5, ...face(600), color: th("#fff") }}>{q}</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -645,7 +646,7 @@ export function QuickAsks({ sector, data, snapshot, onAsk }: { sector: SectorKey
   const { understand, improve } = asksFor(sector, data, snapshot);
   return (
     <View style={{ marginTop: 26 }}>
-      <Text style={{ paddingHorizontal: CARD_INSET + 4, fontSize: 16, ...face(700), color: "#fff" }}>Perguntar ao Willo</Text>
+      <Text style={{ paddingHorizontal: CARD_INSET + 4, fontSize: 16, ...face(700), color: th("#fff") }}>Perguntar ao Willo</Text>
       <AskRow label="Entender" items={understand} onAsk={onAsk} />
       <AskRow label="Melhorar" items={improve} onAsk={onAsk} />
     </View>

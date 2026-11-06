@@ -13,6 +13,7 @@ import { showToast } from "~/lib/toast";
 import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Putting something on the card, the two ways the web offers: by hand, or by sending the
  * statement and letting Willo read it.
@@ -203,7 +204,7 @@ export default function AddToCardSheet({
               <Option icon={PenLine} hex="#A78BFA" title="Adicionar manualmente" note="Uma compra, digitada por você" onPress={manual} />
               <Option icon={FileText} hex="#7CC4FF" title="Enviar fatura" note="O Willo lê o PDF ou a foto e separa cada compra" onPress={upload} />
             </View>
-            {error && <Text style={{ marginTop: 14, fontSize: 13, color: RED }}>{error}</Text>}
+            {error && <Text style={{ marginTop: 14, fontSize: 13, color: th(RED) }}>{error}</Text>}
           </Animated.View>
         )}
 
@@ -219,9 +220,9 @@ export default function AddToCardSheet({
 
         {step === "reading" && (
           <Animated.View entering={FadeIn.duration(220)} style={{ alignItems: "center", paddingVertical: 36 }}>
-            <ActivityIndicator color="#fff" />
-            <Text style={{ marginTop: 16, fontSize: 16.5, fontWeight: "700", color: "#fff" }}>Lendo sua fatura…</Text>
-            <Text style={{ marginTop: 6, fontSize: 13.5, color: INK.soft, textAlign: "center" }}>
+            <ActivityIndicator color={th("#fff")} />
+            <Text style={{ marginTop: 16, fontSize: 16.5, fontWeight: "700", color: th("#fff") }}>Lendo sua fatura…</Text>
+            <Text style={{ marginTop: 6, fontSize: 13.5, color: th(INK.soft), textAlign: "center" }}>
               Separando cada compra, parcela e estorno. Pode levar alguns segundos.
             </Text>
           </Animated.View>
@@ -229,21 +230,21 @@ export default function AddToCardSheet({
 
         {step === "review" && (
           <Animated.View entering={FadeIn.duration(220)}>
-            <Text style={{ fontSize: 13.5, color: INK.soft }}>
+            <Text style={{ fontSize: 13.5, color: th(INK.soft) }}>
               {lines.length} {lines.length === 1 ? "lançamento encontrado" : "lançamentos encontrados"}
             </Text>
 
             <View style={{ marginTop: 16, flexDirection: "row", gap: 16 }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11.5, color: INK.softer }}>Selecionado</Text>
-                <Text style={{ marginTop: 2, fontSize: 20, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>{money(sum)}</Text>
+                <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Selecionado</Text>
+                <Text style={{ marginTop: 2, fontSize: 20, fontWeight: "800", letterSpacing: -0.6, color: th("#fff") }}>{money(sum)}</Text>
               </View>
               {declared != null && (
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11.5, color: INK.softer }}>Total da fatura</Text>
+                  <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Total da fatura</Text>
                   <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Text style={{ fontSize: 20, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>{money(declared)}</Text>
-                    {matches && <Check size={16} color={GREEN} strokeWidth={3} />}
+                    <Text style={{ fontSize: 20, fontWeight: "800", letterSpacing: -0.6, color: th("#fff") }}>{money(declared)}</Text>
+                    {matches && <Check size={16} color={th(GREEN)} strokeWidth={3} />}
                   </View>
                 </View>
               )}
@@ -260,7 +261,7 @@ export default function AddToCardSheet({
                     gap: 12,
                     paddingVertical: 11,
                     borderBottomWidth: i === lines.length - 1 ? 0 : 1,
-                    borderBottomColor: "rgba(255,255,255,0.06)",
+                    borderBottomColor: th("rgba(255,255,255,0.06)", "line"),
                     opacity: pressed ? 0.7 : line.selected ? 1 : 0.45,
                   })}
                 >
@@ -272,21 +273,21 @@ export default function AddToCardSheet({
                       alignItems: "center",
                       justifyContent: "center",
                       borderWidth: line.selected ? 0 : 1.5,
-                      borderColor: "rgba(255,255,255,0.3)",
-                      backgroundColor: line.selected ? "#fff" : "transparent",
+                      borderColor: th("rgba(255,255,255,0.3)", "line"),
+                      backgroundColor: th(line.selected ? "#fff" : "transparent", "bg"),
                     }}
                   >
-                    {line.selected && <Check size={13} color="#0B0B0B" strokeWidth={3} />}
+                    {line.selected && <Check size={13} color={th("#0B0B0B")} strokeWidth={3} />}
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{line.description}</Text>
-                    <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>
+                    <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>{line.description}</Text>
+                    <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>
                       {line.date ? new Date(`${line.date}T12:00:00`).toLocaleDateString("pt-BR", { day: "numeric", month: "short" }) : "—"}
                       {line.installment_total && line.installment_total > 1 ? ` · ${line.installment_current} de ${line.installment_total}` : ""}
                       {line.category ? ` · ${line.category}` : ""}
                     </Text>
                   </View>
-                  <Text style={{ fontSize: 15, fontWeight: "600", color: Number(line.amount) < 0 ? GREEN : "#fff" }}>
+                  <Text style={{ fontSize: 15, fontWeight: "600", color: th(Number(line.amount) < 0 ? GREEN : "#fff") }}>
                     {Number(line.amount) < 0 ? "+" : ""}
                     {money(Math.abs(Number(line.amount)))}
                   </Text>
@@ -294,7 +295,7 @@ export default function AddToCardSheet({
               ))}
             </View>
 
-            {error && <Text style={{ marginTop: 12, fontSize: 13, color: RED }}>{error}</Text>}
+            {error && <Text style={{ marginTop: 12, fontSize: 13, color: th(RED) }}>{error}</Text>}
 
             <Pressable
               onPress={() => void confirm()}
@@ -305,11 +306,11 @@ export default function AddToCardSheet({
                 borderRadius: 27,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "#fff",
+                backgroundColor: th("#fff", "bg"),
                 opacity: saving || chosen.length === 0 ? 0.45 : pressed ? 0.85 : 1,
               })}
             >
-              <Text style={{ fontSize: 16.5, fontWeight: "700", color: "#0B0B0B" }}>
+              <Text style={{ fontSize: 16.5, fontWeight: "700", color: th("#0B0B0B") }}>
                 {saving ? "Importando…" : `Importar ${chosen.length} ${chosen.length === 1 ? "lançamento" : "lançamentos"}`}
               </Text>
             </Pressable>
@@ -338,22 +339,22 @@ function Option({
       <View style={{ borderRadius: 22, borderCurve: "continuous", overflow: "hidden" }}>
         {/* The option's own colour, faint, washing in from the corner its glyph sits in. */}
         <LinearGradient
-          colors={[`${hex}2E`, `${hex}0A`, "rgba(255,255,255,0.03)"]}
+          colors={th([`${hex}2E`, `${hex}0A`, "rgba(255,255,255,0.03)"], "grad")}
           locations={[0, 0.55, 1]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
         />
-        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 22, borderCurve: "continuous", borderWidth: 1, borderColor: `${hex}33` }} />
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 22, borderCurve: "continuous", borderWidth: 1, borderColor: th(`${hex}33`, "line") }} />
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 18, paddingHorizontal: 16 }}>
-          <View style={{ width: 50, height: 50, borderRadius: 16, borderCurve: "continuous", alignItems: "center", justifyContent: "center", backgroundColor: `${hex}26` }}>
-            <Icon size={22} color={hex} strokeWidth={2} />
+          <View style={{ width: 50, height: 50, borderRadius: 16, borderCurve: "continuous", alignItems: "center", justifyContent: "center", backgroundColor: th(`${hex}26`, "bg") }}>
+            <Icon size={22} color={th(hex)} strokeWidth={2} />
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ fontSize: 16, fontWeight: "700", color: "#fff" }}>{title}</Text>
-            <Text style={{ marginTop: 3, fontSize: 12.5, lineHeight: 17, color: INK.soft }}>{note}</Text>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: th("#fff") }}>{title}</Text>
+            <Text style={{ marginTop: 3, fontSize: 12.5, lineHeight: 17, color: th(INK.soft) }}>{note}</Text>
           </View>
-          <ChevronRight size={18} color="rgba(255,255,255,0.45)" />
+          <ChevronRight size={18} color={th("rgba(255,255,255,0.45)")} />
         </View>
       </View>
     </Pressable>

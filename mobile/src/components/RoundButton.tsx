@@ -2,6 +2,7 @@ import { type ComponentRef, type ReactNode, type Ref } from "react";
 import { Pressable, View } from "react-native";
 import Glass from "~/components/Glass";
 
+import { th } from "~/theme/theme";
 /**
  * The round button every page's header uses: the way back, the three dots, the plus.
  *
@@ -42,7 +43,7 @@ export default function RoundButton({
         {onImage && (
           <View
             pointerEvents="none"
-            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 20, backgroundColor: "rgba(18,20,26,0.22)" }}
+            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 20, backgroundColor: th("rgba(18,20,26,0.22)", "bg") }}
           />
         )}
         <View style={{ opacity: disabled ? 0.4 : 1 }}>{children}</View>

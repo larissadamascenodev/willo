@@ -4,7 +4,7 @@
  *
  * TODO: troque pelos canais reais antes de publicar na App Store.
  */
-export const SUPPORT_EMAIL = "suporte@willo.app";
+export const SUPPORT_EMAIL = "usewillo@gmail.com";
 
 /** Only digits, with country and area code (e.g. 5511999999999). Empty hides the WhatsApp button. */
 export const SUPPORT_WHATSAPP = "";

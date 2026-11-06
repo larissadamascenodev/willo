@@ -16,6 +16,7 @@ import Glass from "~/components/Glass";
 import ParticleOrb from "~/components/registro/ParticleOrb";
 import { ArrowLeftRight, House } from "~/components/icons";
 
+import { th } from "~/theme/theme";
 /**
  * The row at the foot of the screen.
  *
@@ -82,13 +83,13 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
                 borderRadius: 19,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "rgba(255,255,255,0.10)",
+                backgroundColor: th("rgba(255,255,255,0.10)", "bg"),
                 overflow: "hidden",
               }}
             >
               <ParticleOrb size={33} density={140} />
             </View>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ flex: 1, minWidth: 0, fontSize: 14, color: "rgba(255,255,255,0.66)" }}>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ flex: 1, minWidth: 0, fontSize: 14, color: th("rgba(255,255,255,0.66)") }}>
               Converse com o Willo
             </Text>
           </Glass>
@@ -128,8 +129,8 @@ function NavCircle({
 
   /* The glass stays the glass; being here lays a white light over it. */
   const shell = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(lit.get(), [0, 1], ["rgba(255,255,255,0)", "rgba(255,255,255,0.16)"]),
-    borderColor: interpolateColor(lit.get(), [0, 1], ["rgba(255,255,255,0)", "rgba(255,255,255,0.30)"]),
+    backgroundColor: th(interpolateColor(lit.get(), [0, 1], ["rgba(255,255,255,0)", "rgba(255,255,255,0.16)"]), "bg"),
+    borderColor: th(interpolateColor(lit.get(), [0, 1], ["rgba(255,255,255,0)", "rgba(255,255,255,0.30)"]), "line"),
   }));
   const glyph = useAnimatedStyle(() => ({ transform: [{ scale: pop.get() * (1 + lit.get() * 0.08) }] }));
   const soft = useAnimatedStyle(() => ({ opacity: 1 - lit.get() }));
@@ -151,13 +152,13 @@ function NavCircle({
         />
         <Animated.View style={glyph}>
           <Animated.View style={soft}>
-            <Icon size={24} color="rgba(255,255,255,0.58)" strokeWidth={2} />
+            <Icon size={24} color={th("rgba(255,255,255,0.58)")} strokeWidth={2} />
           </Animated.View>
           <Animated.View style={[{ position: "absolute", top: 0, left: 0 }, full]}>
-            <Icon size={24} color="#fff" strokeWidth={2.5} />
+            <Icon size={24} color={th("#fff")} strokeWidth={2.5} />
           </Animated.View>
         </Animated.View>
-        <Animated.View style={[{ position: "absolute", bottom: 7, width: 4, height: 4, borderRadius: 2, backgroundColor: "#fff" }, point]} />
+        <Animated.View style={[{ position: "absolute", bottom: 7, width: 4, height: 4, borderRadius: 2, backgroundColor: th("#fff", "bg") }, point]} />
       </Glass>
     </Pressable>
   );

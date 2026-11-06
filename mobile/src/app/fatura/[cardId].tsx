@@ -31,6 +31,7 @@ import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * The card's own panel.
  *
@@ -285,15 +286,15 @@ export default function Fatura() {
                 borderRadius: 5,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: hex,
+                backgroundColor: th(hex, "bg"),
               }}
             >
-              <View style={{ width: 6, height: 4, borderRadius: 1, backgroundColor: "rgba(255,255,255,0.85)" }} />
+              <View style={{ width: 6, height: 4, borderRadius: 1, backgroundColor: th("rgba(255,255,255,0.85)", "bg") }} />
             </View>
-            <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: "#fff" }}>
+            <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>
               {card?.name ?? ""}
               {card?.last_four_digits ? (
-                <Text style={{ color: INK.softer }}> ••••{card.last_four_digits}</Text>
+                <Text style={{ color: th(INK.softer) }}> ••••{card.last_four_digits}</Text>
               ) : null}
             </Text>
           </View>
@@ -307,13 +308,13 @@ export default function Fatura() {
               );
             }}
           >
-            <MoreVertical size={18} color="rgba(255,255,255,0.9)" />
+            <MoreVertical size={18} color={th("rgba(255,255,255,0.9)")} />
           </RoundButton>
         </View>
 
         {loading && user ? (
           <View style={{ marginTop: 24, gap: 16 }}>
-            <View style={{ height: 120, borderRadius: 24, backgroundColor: "rgba(255,255,255,0.04)" }} />
+            <View style={{ height: 120, borderRadius: 24, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }} />
             <Surface style={{ height: 220 }}><View /></Surface>
           </View>
         ) : (
@@ -321,7 +322,7 @@ export default function Fatura() {
             {/* ── What it asks for ── */}
             <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 20, paddingHorizontal: 4 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.62)" }}>
+                <Text style={{ fontSize: 13, color: th("rgba(255,255,255,0.62)") }}>
                   Fatura de {MONTH_NAMES[month - 1]}
                 </Text>
                 {status && (
@@ -334,23 +335,23 @@ export default function Fatura() {
                       paddingLeft: 4,
                       paddingRight: 11,
                       borderRadius: 14,
-                      backgroundColor: `${status.tone}1F`,
+                      backgroundColor: th(`${status.tone}1F`, "bg"),
                     }}
                   >
-                    <View style={{ width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: status.tone }}>
-                      <status.Icon size={11} color="#0B0B0B" strokeWidth={3} />
+                    <View style={{ width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: th(status.tone, "bg") }}>
+                      <status.Icon size={11} color={th("#0B0B0B")} strokeWidth={3} />
                     </View>
-                    <Text style={{ fontSize: 12.5, fontWeight: "700", color: status.tone }}>{status.label}</Text>
+                    <Text style={{ fontSize: 12.5, fontWeight: "700", color: th(status.tone) }}>{status.label}</Text>
                   </View>
                 )}
               </View>
               <CountUp
                 value={headline}
                 numberOfLines={1}
-                style={{ marginTop: 4, fontSize: 42, fontWeight: "800", letterSpacing: -1.7, color: paidOff ? "rgba(255,255,255,0.55)" : "#fff", fontVariant: ["tabular-nums"] }}
+                style={{ marginTop: 4, fontSize: 42, fontWeight: "800", letterSpacing: -1.7, color: th(paidOff ? "rgba(255,255,255,0.55)" : "#fff"), fontVariant: ["tabular-nums"] }}
               />
               {cycle && (
-                <Text style={{ marginTop: 10, fontSize: 13, color: cycle.overdue ? RED : INK.soft }}>
+                <Text style={{ marginTop: 10, fontSize: 13, color: th(cycle.overdue ? RED : INK.soft) }}>
                   {cycle.line}
                 </Text>
               )}
@@ -360,7 +361,7 @@ export default function Fatura() {
             <Animated.View entering={FadeInDown.delay(60).duration(450)} style={{ marginTop: 28, paddingHorizontal: 4 }}>
               <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
                 <Text style={[T.eyebrow, { fontSize: 11.5 }]}>Limite</Text>
-                <Text style={{ fontSize: 12, fontWeight: "600", color: usedLimit > limitTotal ? RED : INK.softer }}>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: th(usedLimit > limitTotal ? RED : INK.softer) }}>
                   {usedPct.toFixed(0)}% usado
                 </Text>
               </View>
@@ -385,17 +386,17 @@ export default function Fatura() {
               <View style={{ marginTop: 16, flexDirection: "row", gap: 16 }}>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: hex }} />
-                    <Text style={{ fontSize: 11.5, color: INK.softer }}>Usado</Text>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(hex, "bg") }} />
+                    <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Usado</Text>
                   </View>
-                  <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 16, fontWeight: "700", color: "#fff" }}>
+                  <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 16, fontWeight: "700", color: th("#fff") }}>
                     {money(usedLimit)}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: freeTone }} />
-                    <Text style={{ fontSize: 11.5, color: INK.softer }}>Disponível</Text>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(freeTone, "bg") }} />
+                    <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Disponível</Text>
                   </View>
                   <Text
                     numberOfLines={1}
@@ -403,7 +404,7 @@ export default function Fatura() {
                       marginTop: 4,
                       fontSize: 16,
                       fontWeight: "700",
-                      color: available > 0 ? "#fff" : RED,
+                      color: th(available > 0 ? "#fff" : RED),
                     }}
                   >
                     {money(available)}
@@ -411,7 +412,7 @@ export default function Fatura() {
                 </View>
               </View>
 
-              <Text style={{ marginTop: 12, fontSize: 11.5, color: INK.faint }}>
+              <Text style={{ marginTop: 12, fontSize: 11.5, color: th(INK.faint) }}>
                 Limite total {money(limitTotal)}
               </Text>
             </Animated.View>
@@ -429,12 +430,12 @@ export default function Fatura() {
                     justifyContent: "center",
                     gap: 8,
                     borderRadius: 999,
-                    backgroundColor: "#fff",
+                    backgroundColor: th("#fff", "bg"),
                     transform: [{ scale: pressed ? 0.99 : 1 }],
                   })}
                 >
-                  <Wallet size={16} color="#0B0B0B" />
-                  <Text style={{ fontSize: 15, fontWeight: "700", color: "#0B0B0B" }}>
+                  <Wallet size={16} color={th("#0B0B0B")} />
+                  <Text style={{ fontSize: 15, fontWeight: "700", color: th("#0B0B0B") }}>
                     Pagar fatura · {money(outstanding)}
                   </Text>
                 </Pressable>
@@ -449,11 +450,11 @@ export default function Fatura() {
                     gap: 8,
                     borderRadius: 999,
                     borderWidth: 1,
-                    borderColor: INK.edge,
+                    borderColor: th(INK.edge, "line"),
                   }}
                 >
-                  <Check size={16} color={GREEN} strokeWidth={3} />
-                  <Text style={{ fontSize: 14.5, fontWeight: "600", color: INK.soft }}>
+                  <Check size={16} color={th(GREEN)} strokeWidth={3} />
+                  <Text style={{ fontSize: 14.5, fontWeight: "600", color: th(INK.soft) }}>
                     Nada a pagar nesta fatura
                   </Text>
                 </View>
@@ -468,12 +469,12 @@ export default function Fatura() {
                   justifyContent: "center",
                   borderRadius: 28,
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.14)",
-                  backgroundColor: "rgba(255,255,255,0.07)",
+                  borderColor: th("rgba(255,255,255,0.14)", "line"),
+                  backgroundColor: th("rgba(255,255,255,0.07)", "bg"),
                   transform: [{ scale: pressed ? 0.95 : 1 }],
                 })}
               >
-                <Plus size={20} color="#fff" strokeWidth={2.4} />
+                <Plus size={20} color={th("#fff")} strokeWidth={2.4} />
               </Pressable>
             </View>
 

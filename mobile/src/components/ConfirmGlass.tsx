@@ -5,6 +5,7 @@ import Animated, { Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withS
 import { Trash2 } from "~/components/icons";
 import { INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Are you sure, in glass.
  *
@@ -65,8 +66,8 @@ export default function ConfirmGlass({
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={busy ? undefined : onClose} statusBarTranslucent>
       <Pressable style={{ flex: 1 }} onPress={busy ? undefined : onClose}>
-        <BlurView intensity={16} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)" }, dim]} />
+        <BlurView intensity={16} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(0,0,0,0.5)", "bg") }, dim]} />
       </Pressable>
 
       <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
@@ -77,23 +78,23 @@ export default function ConfirmGlass({
               borderRadius: 30,
               borderCurve: "continuous",
               borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.16)",
+              borderColor: th("rgba(255,255,255,0.16)", "line"),
               overflow: "hidden",
             },
             card,
           ]}
         >
-          <BlurView intensity={70} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.5)" }} />
-          <View style={{ position: "absolute", top: 0, left: 30, right: 30, height: 1, backgroundColor: "rgba(255,255,255,0.24)" }} />
+          <BlurView intensity={70} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.5)", "bg") }} />
+          <View style={{ position: "absolute", top: 0, left: 30, right: 30, height: 1, backgroundColor: th("rgba(255,255,255,0.24)", "bg") }} />
 
           <View style={{ alignItems: "center", paddingHorizontal: 22, paddingTop: 26, paddingBottom: 18 }}>
-            <View style={{ width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(248,113,113,0.16)" }}>
-              {icon ?? <Trash2 size={22} color={RED} strokeWidth={2} />}
+            <View style={{ width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(248,113,113,0.16)", "bg") }}>
+              {icon ?? <Trash2 size={22} color={th(RED)} strokeWidth={2} />}
             </View>
-            <Text style={{ marginTop: 16, textAlign: "center", fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>{title}</Text>
+            <Text style={{ marginTop: 16, textAlign: "center", fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>{title}</Text>
             <View style={{ marginTop: 8 }}>
-              <Text style={{ textAlign: "center", fontSize: 14, lineHeight: 20, color: INK.soft }}>{children}</Text>
+              <Text style={{ textAlign: "center", fontSize: 14, lineHeight: 20, color: th(INK.soft) }}>{children}</Text>
             </View>
           </View>
 
@@ -107,11 +108,11 @@ export default function ConfirmGlass({
                 borderRadius: 24,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "rgba(255,255,255,0.09)",
+                backgroundColor: th("rgba(255,255,255,0.09)", "bg"),
                 opacity: pressed ? 0.7 : 1,
               })}
             >
-              <Text style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>Cancelar</Text>
+              <Text style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>Cancelar</Text>
             </Pressable>
             <Pressable
               onPress={onConfirm}
@@ -122,13 +123,13 @@ export default function ConfirmGlass({
                 borderRadius: 24,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "rgba(248,113,113,0.2)",
+                backgroundColor: th("rgba(248,113,113,0.2)", "bg"),
                 borderWidth: 1,
-                borderColor: "rgba(248,113,113,0.36)",
+                borderColor: th("rgba(248,113,113,0.36)", "line"),
                 opacity: busy ? 0.6 : pressed ? 0.75 : 1,
               })}
             >
-              <Text style={{ fontSize: 15.5, fontWeight: "700", color: RED }}>{busy ? busyLabel : confirmLabel}</Text>
+              <Text style={{ fontSize: 15.5, fontWeight: "700", color: th(RED) }}>{busy ? busyLabel : confirmLabel}</Text>
             </Pressable>
           </View>
         </Animated.View>

@@ -30,6 +30,7 @@ import { useAuth } from "~/lib/auth";
 import { useNavChrome } from "~/lib/navChrome";
 import { INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /** How far the page travels before the block on top has gone. */
 const LINES_TRAVEL = 190;
 /** The robot is taller, so he takes longer to go. */
@@ -213,7 +214,7 @@ export default function Home() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={refresh}
-            tintColor={INK.softer}
+            tintColor={th(INK.softer)}
             progressViewOffset={insets.top + 40}
           />
         }

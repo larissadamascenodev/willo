@@ -7,6 +7,7 @@ import { X } from "~/components/icons";
 import { KINDS, type Kind } from "~/components/accounts/AccountSheet";
 import { INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Changing an account: its name and what kind it is.
  *
@@ -84,7 +85,7 @@ export default function EditAccountSheet({
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={{ flex: 1 }} onPress={saving ? undefined : onClose}>
-        <BlurView intensity={18} tint="dark" style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }} />
+        <BlurView intensity={18} tint={th("dark", "tint")} style={{ flex: 1, backgroundColor: th("rgba(0,0,0,0.5)", "bg") }} />
       </Pressable>
 
       <View
@@ -99,12 +100,12 @@ export default function EditAccountSheet({
           overflow: "hidden",
         }}
       >
-        <BlurView intensity={70} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.5)" }} />
+        <BlurView intensity={70} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.5)", "bg") }} />
 
         <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: insets.bottom + 18 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text style={{ fontSize: 20, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Editar conta</Text>
+            <Text style={{ fontSize: 20, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>Editar conta</Text>
             <Pressable
               accessibilityLabel="Fechar"
               onPress={onClose}
@@ -115,15 +116,15 @@ export default function EditAccountSheet({
                 borderRadius: 16,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "rgba(255,255,255,0.09)",
+                backgroundColor: th("rgba(255,255,255,0.09)", "bg"),
                 opacity: pressed ? 0.6 : 1,
               })}
             >
-              <X size={16} color="rgba(255,255,255,0.8)" />
+              <X size={16} color={th("rgba(255,255,255,0.8)")} />
             </Pressable>
           </View>
 
-          <Text style={{ marginTop: 20, fontSize: 12.5, color: INK.soft }}>Nome</Text>
+          <Text style={{ marginTop: 20, fontSize: 12.5, color: th(INK.soft) }}>Nome</Text>
           <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 12 }}>
             <BankMark name={name.trim() || initialName} hex={hex} size={52} />
             <TextInput
@@ -133,7 +134,7 @@ export default function EditAccountSheet({
                 setProblem(null);
               }}
               placeholder="Nome da conta"
-              placeholderTextColor={INK.faint}
+              placeholderTextColor={th(INK.faint)}
               maxLength={40}
               style={{
                 flex: 1,
@@ -141,16 +142,16 @@ export default function EditAccountSheet({
                 height: 52,
                 borderRadius: 18,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.12)",
-                backgroundColor: "rgba(255,255,255,0.06)",
+                borderColor: th("rgba(255,255,255,0.12)", "line"),
+                backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
                 paddingHorizontal: 16,
                 fontSize: 16.5,
-                color: "#fff",
+                color: th("#fff"),
               }}
             />
           </View>
 
-          <Text style={{ marginTop: 20, fontSize: 12.5, color: INK.soft }}>Tipo</Text>
+          <Text style={{ marginTop: 20, fontSize: 12.5, color: th(INK.soft) }}>Tipo</Text>
           <View style={{ marginTop: 8, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             {KINDS.map((k) => {
               const on = kind === k.key;
@@ -167,21 +168,21 @@ export default function EditAccountSheet({
                     borderRadius: 20,
                     borderCurve: "continuous",
                     borderWidth: 1,
-                    borderColor: on ? "#fff" : "rgba(255,255,255,0.10)",
-                    backgroundColor: on ? "rgba(255,255,255,0.13)" : "rgba(255,255,255,0.05)",
+                    borderColor: th(on ? "#fff" : "rgba(255,255,255,0.10)", "line"),
+                    backgroundColor: th(on ? "rgba(255,255,255,0.13)" : "rgba(255,255,255,0.05)", "bg"),
                     paddingHorizontal: 14,
                     paddingVertical: 13,
                     transform: [{ scale: pressed ? 0.97 : 1 }],
                   })}
                 >
-                  <Icon size={18} color={on ? "#fff" : INK.soft} strokeWidth={2} />
-                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 14, fontWeight: "700", color: "#fff" }}>{k.label}</Text>
+                  <Icon size={18} color={th(on ? "#fff" : INK.soft)} strokeWidth={2} />
+                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 14, fontWeight: "700", color: th("#fff") }}>{k.label}</Text>
                 </Pressable>
               );
             })}
           </View>
 
-          {(problem || error) && <Text style={{ marginTop: 14, fontSize: 13, color: RED }}>{problem ?? error}</Text>}
+          {(problem || error) && <Text style={{ marginTop: 14, fontSize: 13, color: th(RED) }}>{problem ?? error}</Text>}
 
           <Pressable
             onPress={submit}
@@ -192,11 +193,11 @@ export default function EditAccountSheet({
               borderRadius: 27,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: "#fff",
+              backgroundColor: th("#fff", "bg"),
               opacity: saving || unchanged ? 0.45 : pressed ? 0.85 : 1,
             })}
           >
-            <Text style={{ fontSize: 16.5, fontWeight: "700", color: "#0B0B0B" }}>{saving ? "Salvando…" : "Salvar"}</Text>
+            <Text style={{ fontSize: 16.5, fontWeight: "700", color: th("#0B0B0B") }}>{saving ? "Salvando…" : "Salvar"}</Text>
           </Pressable>
         </View>
       </View>

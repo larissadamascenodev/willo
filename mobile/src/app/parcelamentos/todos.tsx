@@ -17,6 +17,7 @@ import { useAuth } from "~/lib/auth";
 import { INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * Every instalment of a month, the way a card's statement lists its lines.
  *
@@ -103,11 +104,11 @@ export default function TodosParcelamentos() {
         <Text style={[T.title, { marginTop: 8, paddingHorizontal: 4 }]}>Parcelamentos</Text>
 
         <View style={{ marginTop: 18, paddingHorizontal: 4 }}>
-          <Text style={{ fontSize: 13, color: INK.soft }}>
+          <Text style={{ fontSize: 13, color: th(INK.soft) }}>
             Parcelas de {MONTH_NAMES[month]} de {year}
           </Text>
-          <CountUp value={total} numberOfLines={1} style={{ marginTop: 4, fontSize: 38, fontWeight: "800", letterSpacing: -1.5, color: "#fff", fontVariant: ["tabular-nums"] }} />
-          <Text style={{ marginTop: 2, fontSize: 13, color: INK.softer }}>
+          <CountUp value={total} numberOfLines={1} style={{ marginTop: 4, fontSize: 38, fontWeight: "800", letterSpacing: -1.5, color: th("#fff"), fontVariant: ["tabular-nums"] }} />
+          <Text style={{ marginTop: 2, fontSize: 13, color: th(INK.softer) }}>
             {entries.length} {entries.length === 1 ? "parcela" : "parcelas"}
           </Text>
         </View>
@@ -138,24 +139,24 @@ export default function TodosParcelamentos() {
             height: 44,
             borderRadius: 999,
             paddingHorizontal: 16,
-            backgroundColor: "rgba(255,255,255,0.05)",
+            backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.06)",
+            borderColor: th("rgba(255,255,255,0.06)", "line"),
           }}
         >
-          <Search size={15} color={INK.softer} />
+          <Search size={15} color={th(INK.softer)} />
           <TextInput
             value={search}
             onChangeText={setSearch}
             placeholder="Buscar parcelamento..."
-            placeholderTextColor={INK.faint}
-            style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: "#fff" }}
+            placeholderTextColor={th(INK.faint)}
+            style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: th("#fff") }}
           />
         </View>
 
         <View style={{ marginTop: 10 }}>
           {shown.length === 0 ? (
-            <Text style={{ paddingVertical: 32, textAlign: "center", fontSize: 14, color: INK.softer }}>Nenhuma parcela neste mês.</Text>
+            <Text style={{ paddingVertical: 32, textAlign: "center", fontSize: 14, color: th(INK.softer) }}>Nenhuma parcela neste mês.</Text>
           ) : (
             shown.map((entry, i) => (
               <Animated.View key={entry.item.id} entering={FadeInDown.delay(Math.min(i, 10) * 25).duration(300)}>
@@ -185,10 +186,10 @@ function Split({ dot, label, value }: { dot: string; label: string; value: numbe
   return (
     <View style={{ flex: 1 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: dot }} />
-        <Text style={{ fontSize: 12, color: INK.softer }}>{label}</Text>
+        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: th(dot, "bg") }} />
+        <Text style={{ fontSize: 12, color: th(INK.softer) }}>{label}</Text>
       </View>
-      <CountUp value={value} numberOfLines={1} style={{ marginTop: 3, fontSize: 15.5, fontWeight: "700", letterSpacing: -0.3, color: "#fff", fontVariant: ["tabular-nums"] }} />
+      <CountUp value={value} numberOfLines={1} style={{ marginTop: 3, fontSize: 15.5, fontWeight: "700", letterSpacing: -0.3, color: th("#fff"), fontVariant: ["tabular-nums"] }} />
     </View>
   );
 }

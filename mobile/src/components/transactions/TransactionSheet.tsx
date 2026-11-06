@@ -31,6 +31,7 @@ import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * One movement, opened — the phone's copy of the web's detail sheet.
  *
@@ -193,12 +194,12 @@ export default function TransactionSheet({
               borderRadius: 18,
               borderCurve: "continuous",
               borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.12)",
+              borderColor: th("rgba(255,255,255,0.12)", "line"),
               overflow: "hidden",
             }}
           >
-            <BlurView intensity={70} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-            <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.5)" }} />
+            <BlurView intensity={70} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+            <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.5)", "bg") }} />
             <MenuItem
               icon={Pencil}
               label="Editar"
@@ -207,7 +208,7 @@ export default function TransactionSheet({
                 onEdit(tx);
               }}
             />
-            <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.07)" }} />
+            <View style={{ height: 1, backgroundColor: th("rgba(255,255,255,0.07)", "bg") }} />
             <MenuItem
               icon={Trash2}
               label="Excluir"
@@ -222,33 +223,33 @@ export default function TransactionSheet({
 
         {/* ── What it is ── */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View style={{ width: 48, height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-            <Icon size={21} color={chipInk(hex)} />
+          <View style={{ width: 48, height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+            <Icon size={21} color={th(chipInk(hex))} />
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text numberOfLines={1} style={{ fontSize: 18, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
+            <Text numberOfLines={1} style={{ fontSize: 18, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
               {tx.name}
             </Text>
             <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 6 }}>
-              {isCard ? <CreditCard size={13} color={INK.soft} /> : <Wallet size={13} color={INK.soft} />}
-              <Text numberOfLines={1} style={{ fontSize: 12.5, color: INK.soft }}>
+              {isCard ? <CreditCard size={13} color={th(INK.soft)} /> : <Wallet size={13} color={th(INK.soft)} />}
+              <Text numberOfLines={1} style={{ fontSize: 12.5, color: th(INK.soft) }}>
                 {accountName}
               </Text>
             </View>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <RoundButton label="Mais opções" onPress={() => setMenuOpen((v) => !v)}>
-              <MoreVertical size={18} color="rgba(255,255,255,0.9)" />
+              <MoreVertical size={18} color={th("rgba(255,255,255,0.9)")} />
             </RoundButton>
             <RoundButton label="Fechar" onPress={onClose}>
-              <X size={18} color="rgba(255,255,255,0.9)" />
+              <X size={18} color={th("rgba(255,255,255,0.9)")} />
             </RoundButton>
           </View>
         </View>
 
         {/* ── How much, and whether it has happened ── */}
         <View style={{ marginTop: 26, alignItems: "center" }}>
-          <Text style={[nums, { fontSize: 40, fontWeight: "800", letterSpacing: -1.4, color: isReceita ? GREEN : "#fff" }]}>
+          <Text style={[nums, { fontSize: 40, fontWeight: "800", letterSpacing: -1.4, color: th(isReceita ? GREEN : "#fff") }]}>
             {isReceita ? "+" : "−"}
             {money(tx.amount)}
           </Text>
@@ -261,11 +262,11 @@ export default function TransactionSheet({
               borderRadius: 999,
               paddingHorizontal: 12,
               paddingVertical: 6,
-              backgroundColor: isPaid ? "rgba(200,243,109,0.12)" : "rgba(249,206,78,0.12)",
+              backgroundColor: th(isPaid ? "rgba(200,243,109,0.12)" : "rgba(249,206,78,0.12)", "bg"),
             }}
           >
-            {isPaid ? <Check size={13} color={GREEN} strokeWidth={3} /> : <Clock size={13} color={AMBER} strokeWidth={2.6} />}
-            <Text style={{ fontSize: 12.5, fontWeight: "600", color: isPaid ? GREEN : AMBER }}>
+            {isPaid ? <Check size={13} color={th(GREEN)} strokeWidth={3} /> : <Clock size={13} color={th(AMBER)} strokeWidth={2.6} />}
+            <Text style={{ fontSize: 12.5, fontWeight: "600", color: th(isPaid ? GREEN : AMBER) }}>
               {isPaid ? (isReceita ? "Recebido" : "Pago") : isReceita ? "A receber" : "Pendente"}
             </Text>
           </View>
@@ -277,8 +278,8 @@ export default function TransactionSheet({
             marginTop: 24,
             borderRadius: 20,
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.07)",
-            backgroundColor: "rgba(255,255,255,0.035)",
+            borderColor: th("rgba(255,255,255,0.07)", "line"),
+            backgroundColor: th("rgba(255,255,255,0.035)", "bg"),
             paddingHorizontal: 14,
           }}
         >
@@ -309,7 +310,7 @@ export default function TransactionSheet({
           ) : null}
         </View>
 
-        {error && <Text style={{ marginTop: 12, fontSize: 13, color: RED }}>{error}</Text>}
+        {error && <Text style={{ marginTop: 12, fontSize: 13, color: th(RED) }}>{error}</Text>}
 
         {/* ── What can be done ── */}
         {!confirming ? (
@@ -320,9 +321,9 @@ export default function TransactionSheet({
                 <Pressable
                   onPress={() => void markPending()}
                   disabled={busy}
-                  style={({ pressed }) => ({ height: 50, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)", opacity: busy ? 0.5 : pressed ? 0.85 : 1 })}
+                  style={({ pressed }) => ({ height: 50, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg"), opacity: busy ? 0.5 : pressed ? 0.85 : 1 })}
                 >
-                  {busy ? <ActivityIndicator color="#fff" /> : <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>Voltar para pendente</Text>}
+                  {busy ? <ActivityIndicator color={th("#fff")} /> : <Text style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>Voltar para pendente</Text>}
                 </Pressable>
               </Animated.View>
             )
@@ -338,16 +339,16 @@ export default function TransactionSheet({
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 8,
-                  backgroundColor: "#fff",
+                  backgroundColor: th("#fff", "bg"),
                   opacity: busy ? 0.5 : pressed ? 0.85 : 1,
                 })}
               >
                 {busy ? (
-                  <ActivityIndicator color="#0B0B0B" />
+                  <ActivityIndicator color={th("#0B0B0B")} />
                 ) : (
                   <>
-                    <Check size={16} color="#0B0B0B" strokeWidth={3} />
-                    <Text style={{ fontSize: 15.5, fontWeight: "700", color: "#0B0B0B" }}>
+                    <Check size={16} color={th("#0B0B0B")} strokeWidth={3} />
+                    <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#0B0B0B") }}>
                       {isReceita ? "Marcar como recebida" : "Marcar como paga"}
                     </Text>
                   </>
@@ -364,14 +365,14 @@ export default function TransactionSheet({
                 gap: 10,
                 borderRadius: 18,
                 borderWidth: 1,
-                borderColor: "rgba(248,113,113,0.22)",
-                backgroundColor: "rgba(248,113,113,0.07)",
+                borderColor: th("rgba(248,113,113,0.22)", "line"),
+                backgroundColor: th("rgba(248,113,113,0.07)", "bg"),
                 paddingHorizontal: 14,
                 paddingVertical: 12,
               }}
             >
-              <AlertTriangle size={16} color={RED} />
-              <Text style={{ flex: 1, fontSize: 13, lineHeight: 18, color: "rgba(255,255,255,0.82)" }}>
+              <AlertTriangle size={16} color={th(RED)} />
+              <Text style={{ flex: 1, fontSize: 13, lineHeight: 18, color: th("rgba(255,255,255,0.82)") }}>
                 {isFixed
                   ? "Essa transação se repete todo mês. Quer tirar só deste mês ou dela em diante?"
                   : isParcelled
@@ -388,7 +389,7 @@ export default function TransactionSheet({
               loading={busy}
             />
             <Pressable onPress={() => setConfirming(false)} style={{ height: 44, alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.7)" }}>Cancelar</Text>
+              <Text style={{ fontSize: 14, color: th("rgba(255,255,255,0.7)") }}>Cancelar</Text>
             </Pressable>
           </Animated.View>
         )}
@@ -418,14 +419,14 @@ function Fact({
         gap: 10,
         paddingVertical: 13,
         borderTopWidth: first ? 0 : 1,
-        borderTopColor: "rgba(255,255,255,0.06)",
+        borderTopColor: th("rgba(255,255,255,0.06)", "line"),
       }}
     >
-      <Icon size={15} color={INK.softer} />
-      <Text style={{ fontSize: 14, color: INK.soft }}>{label}</Text>
+      <Icon size={15} color={th(INK.softer)} />
+      <Text style={{ fontSize: 14, color: th(INK.soft) }}>{label}</Text>
       <View style={{ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
-        {dot && <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: dot }} />}
-        <Text numberOfLines={1} style={[nums, { flexShrink: 1, fontSize: 14.5, color: "#fff" }]}>
+        {dot && <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: th(dot, "bg") }} />}
+        <Text numberOfLines={1} style={[nums, { flexShrink: 1, fontSize: 14.5, color: th("#fff") }]}>
           {children}
         </Text>
       </View>
@@ -454,11 +455,11 @@ function MenuItem({
         alignItems: "center",
         gap: 12,
         paddingHorizontal: 16,
-        backgroundColor: pressed ? "rgba(255,255,255,0.06)" : "transparent",
+        backgroundColor: th(pressed ? "rgba(255,255,255,0.06)" : "transparent", "bg"),
       })}
     >
-      <Icon size={17} color={danger ? RED : "#fff"} />
-      <Text style={{ fontSize: 15, fontWeight: "600", color: danger ? RED : "#fff" }}>{label}</Text>
+      <Icon size={17} color={th(danger ? RED : "#fff")} />
+      <Text style={{ fontSize: 15, fontWeight: "600", color: th(danger ? RED : "#fff") }}>{label}</Text>
     </Pressable>
   );
 }
@@ -486,15 +487,15 @@ function Wide({
         alignItems: "center",
         justifyContent: "center",
         borderWidth: danger ? 0 : 1,
-        borderColor: "rgba(255,255,255,0.08)",
-        backgroundColor: danger ? "#EF4444" : "rgba(255,255,255,0.04)",
+        borderColor: th("rgba(255,255,255,0.08)", "line"),
+        backgroundColor: th(danger ? "#EF4444" : "rgba(255,255,255,0.04)", "bg"),
         opacity: disabled ? 0.5 : pressed ? 0.8 : 1,
       })}
     >
       {loading ? (
-        <ActivityIndicator color="#fff" />
+        <ActivityIndicator color={th("#fff")} />
       ) : (
-        <Text style={{ fontSize: 14.5, fontWeight: danger ? "700" : "600", color: "#fff" }}>{label}</Text>
+        <Text style={{ fontSize: 14.5, fontWeight: danger ? "700" : "600", color: th("#fff") }}>{label}</Text>
       )}
     </Pressable>
   );

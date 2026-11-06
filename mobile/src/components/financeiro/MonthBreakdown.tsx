@@ -2,6 +2,7 @@ import { Platform, Text, View, type TextStyle } from "react-native";
 import { compact } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * The month as the two sums it actually is.
  *
@@ -65,10 +66,10 @@ export default function MonthBreakdown({
           paddingTop: 14,
         }}
       >
-        <Text style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: "600", color: "#fff" }}>{totalLabel}</Text>
+        <Text style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: "600", color: th("#fff") }}>{totalLabel}</Text>
         <Text
           numberOfLines={1}
-          style={[nums, { fontSize: 20, fontWeight: "700", letterSpacing: -0.4, color: total < 0 ? RED : "#fff" }]}
+          style={[nums, { fontSize: 20, fontWeight: "700", letterSpacing: -0.4, color: th(total < 0 ? RED : "#fff") }]}
         >
           {value(total)}
         </Text>
@@ -87,13 +88,13 @@ function Line({ label, amount, sign = "", tone }: { label: string; amount: numbe
         gap: 16,
         paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: "rgba(255,255,255,0.06)",
+        borderBottomColor: th("rgba(255,255,255,0.06)", "line"),
       }}
     >
-      <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 15, color: INK.soft }}>
+      <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 15, color: th(INK.soft) }}>
         {label}
       </Text>
-      <Text style={[nums, { fontSize: 16, fontWeight: "600", color: tone ?? "#fff" }]}>
+      <Text style={[nums, { fontSize: 16, fontWeight: "600", color: th(tone ?? "#fff") }]}>
         {sign}
         {compact(Math.abs(amount))}
       </Text>

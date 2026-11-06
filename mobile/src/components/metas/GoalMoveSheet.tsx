@@ -10,6 +10,7 @@ import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Putting money into a goal, or taking it back out.
  *
@@ -126,10 +127,10 @@ export default function GoalMoveSheet({
       <View style={{ paddingHorizontal: 20 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ fontSize: 18, fontWeight: "700", color: "#fff" }}>
+            <Text style={{ fontSize: 18, fontWeight: "700", color: th("#fff") }}>
               {isDeposit ? "Guardar dinheiro" : "Sacar da caixinha"}
             </Text>
-            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: INK.soft }}>
+            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: th(INK.soft) }}>
               {goalName}
             </Text>
           </View>
@@ -143,11 +144,11 @@ export default function GoalMoveSheet({
               borderRadius: 16,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: "rgba(255,255,255,0.06)",
+              backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
               opacity: pressed ? 0.6 : 1,
             })}
           >
-            <X size={16} color={INK.soft} />
+            <X size={16} color={th(INK.soft)} />
           </Pressable>
         </View>
 
@@ -169,23 +170,23 @@ export default function GoalMoveSheet({
               fontSize: 40,
               fontWeight: "800",
               letterSpacing: -1.4,
-              color: cents === 0 ? INK.faint : overBalance ? RED : isDeposit ? "#fff" : RED,
+              color: th(cents === 0 ? INK.faint : overBalance ? RED : isDeposit ? "#fff" : RED),
               padding: 0,
             }}
           />
         </View>
         {isDeposit && from && available !== null && (
-          <Text style={{ marginTop: 4, fontSize: 12.5, color: overBalance ? RED : INK.softer }}>
+          <Text style={{ marginTop: 4, fontSize: 12.5, color: th(overBalance ? RED : INK.softer) }}>
             {overBalance ? "Mais do que o saldo. " : ""}Disponível em {from.name}: {money(available)}
           </Text>
         )}
         {!isDeposit && maxAmount !== undefined && (
-          <Text style={{ marginTop: 4, fontSize: 12.5, color: INK.softer }}>
+          <Text style={{ marginTop: 4, fontSize: 12.5, color: th(INK.softer) }}>
             Disponível na caixinha: {money(maxAmount)}
           </Text>
         )}
 
-        <Text style={{ marginTop: 24, fontSize: 12.5, color: INK.soft }}>Quando</Text>
+        <Text style={{ marginTop: 24, fontSize: 12.5, color: th(INK.soft) }}>Quando</Text>
         <View style={{ marginTop: 8 }}>
           <SegmentedTabs
             value={when}
@@ -197,7 +198,7 @@ export default function GoalMoveSheet({
           />
         </View>
 
-        <Text style={{ marginTop: 20, fontSize: 12.5, color: INK.soft }}>
+        <Text style={{ marginTop: 20, fontSize: 12.5, color: th(INK.soft) }}>
           {isDeposit ? "De qual conta" : "Para qual conta"}
         </Text>
         <View style={{ marginTop: 10, gap: 8 }}>
@@ -214,40 +215,40 @@ export default function GoalMoveSheet({
                   gap: 12,
                   borderRadius: 18,
                   borderWidth: 1,
-                  borderColor: on ? "#fff" : "rgba(255,255,255,0.07)",
-                  backgroundColor: on ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.035)",
+                  borderColor: th(on ? "#fff" : "rgba(255,255,255,0.07)", "line"),
+                  backgroundColor: th(on ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.035)", "bg"),
                   paddingHorizontal: 14,
                   paddingVertical: 12,
                 }}
               >
                 <BankMark name={acc.name} hex={hex} size={32} />
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: "#fff" }}>
+                  <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>
                     {acc.name}
                   </Text>
-                  <Text style={{ marginTop: 1, fontSize: 12, color: INK.softer }}>
+                  <Text style={{ marginTop: 1, fontSize: 12, color: th(INK.softer) }}>
                     {money(Number(acc.current_balance) || 0)}
                   </Text>
                 </View>
-                {on && <Check size={16} color={GREEN} strokeWidth={3} />}
+                {on && <Check size={16} color={th(GREEN)} strokeWidth={3} />}
               </Pressable>
             );
           })}
-          <Text style={{ fontSize: 11.5, lineHeight: 16, color: INK.softer }}>
+          <Text style={{ fontSize: 11.5, lineHeight: 16, color: th(INK.softer) }}>
             {isDeposit
               ? "Sem conta marcada, o depósito entra como dinheiro vindo de fora do Willo."
               : "Sem conta marcada, o saque sai da caixinha sem entrar em nenhuma conta."}
           </Text>
         </View>
 
-        <Text style={{ marginTop: 20, fontSize: 12.5, color: INK.soft }}>
+        <Text style={{ marginTop: 20, fontSize: 12.5, color: th(INK.soft) }}>
           {isDeposit ? "De onde veio" : "Para onde foi"} (opcional)
         </Text>
         <TextInput
           value={note}
           onChangeText={setNote}
           placeholder={isDeposit ? "Ex: 13º salário" : "Ex: conserto do carro"}
-          placeholderTextColor={INK.faint}
+          placeholderTextColor={th(INK.faint)}
           maxLength={80}
           style={{
             marginTop: 8,
@@ -255,15 +256,15 @@ export default function GoalMoveSheet({
             minWidth: 0,
             borderRadius: 16,
             borderWidth: 1,
-            borderColor: INK.edge,
-            backgroundColor: "rgba(255,255,255,0.05)",
+            borderColor: th(INK.edge, "line"),
+            backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
             paddingHorizontal: 16,
             fontSize: 15,
-            color: "#fff",
+            color: th("#fff"),
           }}
         />
 
-        {error && <Text style={{ marginTop: 14, fontSize: 13, color: RED }}>{error}</Text>}
+        {error && <Text style={{ marginTop: 14, fontSize: 13, color: th(RED) }}>{error}</Text>}
 
         <Pressable
           onPress={submit}
@@ -274,13 +275,13 @@ export default function GoalMoveSheet({
             borderRadius: 26,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: isDeposit ? "#fff" : "rgba(248,113,113,0.16)",
+            backgroundColor: th(isDeposit ? "#fff" : "rgba(248,113,113,0.16)", "bg"),
             borderWidth: isDeposit ? 0 : 1,
-            borderColor: "rgba(248,113,113,0.30)",
+            borderColor: th("rgba(248,113,113,0.30)", "line"),
             opacity: saving || amount <= 0 || overBalance ? 0.55 : pressed ? 0.85 : 1,
           })}
         >
-          <Text style={{ fontSize: 16, fontWeight: "700", color: isDeposit ? "#0B0B0B" : RED }}>
+          <Text style={{ fontSize: 16, fontWeight: "700", color: th(isDeposit ? "#0B0B0B" : RED) }}>
             {saving ? "Salvando..." : isDeposit ? "Guardar" : "Sacar"}
           </Text>
         </Pressable>

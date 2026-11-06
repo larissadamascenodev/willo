@@ -2,6 +2,7 @@ import { Pressable, Text, View } from "react-native";
 import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
 import { GREEN, INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Which month the screen is reading.
  *
@@ -53,7 +54,7 @@ export default function MonthStrip({
                 borderRadius: 999,
                 paddingHorizontal: 11,
                 paddingVertical: 6,
-                backgroundColor: active ? "#fff" : "transparent",
+                backgroundColor: th(active ? "#fff" : "transparent", "bg"),
                 transform: [{ scale: pressed ? 0.92 : 1 }],
               })}
             >
@@ -61,7 +62,7 @@ export default function MonthStrip({
                 style={{
                   fontSize: 12.5,
                   fontWeight: "600",
-                  color: active ? "#0B0B0B" : isToday ? "rgba(255,255,255,0.82)" : INK.softer,
+                  color: th(active ? "#0B0B0B" : isToday ? "rgba(255,255,255,0.82)" : INK.softer),
                 }}
               >
                 {MONTHS[item.month]}
@@ -77,7 +78,7 @@ export default function MonthStrip({
                     width: 4,
                     height: 4,
                     borderRadius: 2,
-                    backgroundColor: GREEN,
+                    backgroundColor: th(GREEN, "bg"),
                   }}
                 />
               )}

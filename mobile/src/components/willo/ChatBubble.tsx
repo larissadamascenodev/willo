@@ -6,6 +6,7 @@ import ParticleOrb from "~/components/registro/ParticleOrb";
 import { face } from "~/lib/chatFont";
 import { pauseAfterWord, TYPING_STARTS_AFTER, wordEnds } from "~/lib/chatText";
 
+import { th } from "~/theme/theme";
 /**
  * One message, in the conversation and on the home alike.
  *
@@ -80,18 +81,18 @@ export default function ChatBubble({
           borderCurve: "continuous",
           overflow: "hidden",
           ...(mine
-            ? { borderBottomRightRadius: 7, backgroundColor: "#fff" }
+            ? { borderBottomRightRadius: 7, backgroundColor: th("#fff", "bg") }
             : {
                 borderBottomLeftRadius: 7,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.09)",
-                backgroundColor: "rgba(255,255,255,0.07)",
+                borderColor: th("rgba(255,255,255,0.09)", "line"),
+                backgroundColor: th("rgba(255,255,255,0.07)", "bg"),
               }),
         }}
       >
-        {!mine && <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />}
-        {!mine && named && <Text style={{ marginBottom: 3, fontSize: 14, letterSpacing: -0.1, ...face(800), color: "#fff" }}>Willo</Text>}
-        <Text style={{ fontSize: 16, lineHeight: 23, letterSpacing: -0.15, ...face(mine ? 600 : 500), color: mine ? "#0B0B0B" : "rgba(255,255,255,0.95)" }}>
+        {!mine && <BlurView intensity={30} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />}
+        {!mine && named && <Text style={{ marginBottom: 3, fontSize: 14, letterSpacing: -0.1, ...face(800), color: th("#fff") }}>Willo</Text>}
+        <Text style={{ fontSize: 16, lineHeight: 23, letterSpacing: -0.15, ...face(mine ? 600 : 500), color: th(mine ? "#0B0B0B" : "rgba(255,255,255,0.95)") }}>
           {mine ? text : <Rich text={text} shown={shown} />}
         </Text>
       </View>

@@ -15,6 +15,7 @@ import * as Haptics from "expo-haptics";
 import WilloBot from "~/components/willo/WilloBot";
 import Svg, { Circle, Defs, Ellipse, Path, RadialGradient, Stop } from "react-native-svg";
 
+import { th } from "~/theme/theme";
 /**
  * Willo himself: a still shell of fine particles with two large eyes in its clear middle.
  *
@@ -398,9 +399,9 @@ function Sphere({
         <Svg width={size} height={size} style={{ position: "absolute" }}>
           <Defs>
             <RadialGradient id="orb-glow" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.07} />
-              <Stop offset="0.55" stopColor="#FFFFFF" stopOpacity={0.03} />
-              <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
+              <Stop offset="0" stopColor={th("#FFFFFF", "grad")} stopOpacity={0.07} />
+              <Stop offset="0.55" stopColor={th("#FFFFFF", "grad")} stopOpacity={0.03} />
+              <Stop offset="1" stopColor={th("#FFFFFF", "grad")} stopOpacity={0} />
             </RadialGradient>
           </Defs>
           <Circle cx={half} cy={half} r={half} fill="url(#orb-glow)" />
@@ -419,13 +420,13 @@ function Sphere({
                 <Svg width={size * 0.16} height={size * 0.28} style={{ position: "absolute" }}>
                   <Defs>
                     <RadialGradient id="orb-eye" cx="50%" cy="50%" r="50%">
-                      <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.55} />
-                      <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
+                      <Stop offset="0" stopColor={th("#FFFFFF", "grad")} stopOpacity={0.55} />
+                      <Stop offset="1" stopColor={th("#FFFFFF", "grad")} stopOpacity={0} />
                     </RadialGradient>
                   </Defs>
                   <Ellipse cx={size * 0.08} cy={size * 0.14} rx={size * 0.08} ry={size * 0.14} fill="url(#orb-eye)" />
                 </Svg>
-                <View style={{ width: eyeW, height: eyeH, borderRadius: eyeW, backgroundColor: "#FFFFFF" }} />
+                <View style={{ width: eyeW, height: eyeH, borderRadius: eyeW, backgroundColor: th("#FFFFFF", "bg") }} />
               </View>
             ))}
           </Animated.View>

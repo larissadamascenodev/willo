@@ -1,5 +1,6 @@
 import { Platform, type TextStyle } from "react-native";
 import { INK } from "./tokens";
+import { th } from "./theme";
 
 /**
  * The handful of text shapes the app actually uses.
@@ -16,7 +17,7 @@ const nums: TextStyle = Platform.select({
   default: {},
 }) as TextStyle;
 
-export const type = {
+const base = {
   /** The answer a screen leads with. */
   figure: { fontSize: 30, fontWeight: "800", letterSpacing: -0.9, color: "#fff", ...nums },
   /** The same, when the screen is only about that one number. */
@@ -42,3 +43,17 @@ export const type = {
   /** A sentence explaining the figure above it. */
   note: { fontSize: 12.5, color: INK.soft, lineHeight: 17 },
 } satisfies Record<string, TextStyle>;
+
+/* Read when a screen draws, so each shape carries the ink of the theme on screen. */
+export const type = Object.fromEntries(
+  Object.keys(base).map((k) => [k, undefined]),
+) as unknown as typeof base;
+for (const k of Object.keys(base) as (keyof typeof base)[]) {
+  Object.defineProperty(type, k, {
+    enumerable: true,
+    get: () => {
+      const style = base[k] as TextStyle;
+      return style.color ? { ...style, color: th(style.color as string) } : style;
+    },
+  });
+}

@@ -11,6 +11,7 @@ import { money } from "~/lib/money";
 import { showToast } from "~/lib/toast";
 import { INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Paying the bill, the way the web does it.
  *
@@ -130,8 +131,8 @@ export default function PayInvoiceSheet({
   return (
     <BottomSheet open={open} onClose={onClose} full>
       <View style={{ paddingHorizontal: 20 }}>
-        <Text style={{ fontSize: 20, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Pagar fatura</Text>
-        <Text style={{ marginTop: 4, fontSize: 13.5, color: INK.soft }}>
+        <Text style={{ fontSize: 20, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>Pagar fatura</Text>
+        <Text style={{ marginTop: 4, fontSize: 13.5, color: th(INK.soft) }}>
           {closed ? "Fatura fechada" : "Fatura aberta"} · falta pagar {money(outstanding)}
         </Text>
 
@@ -151,13 +152,13 @@ export default function PayInvoiceSheet({
                     borderRadius: 18,
                     borderCurve: "continuous",
                     borderWidth: 1,
-                    borderColor: on ? "#fff" : "rgba(255,255,255,0.08)",
-                    backgroundColor: on ? "rgba(255,255,255,0.13)" : "rgba(255,255,255,0.05)",
+                    borderColor: th(on ? "#fff" : "rgba(255,255,255,0.08)", "line"),
+                    backgroundColor: th(on ? "rgba(255,255,255,0.13)" : "rgba(255,255,255,0.05)", "bg"),
                     opacity: pressed ? 0.75 : 1,
                   })}
                 >
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>{m.label}</Text>
-                  <Text style={{ marginTop: 2, fontSize: 11.5, color: INK.soft }}>{m.note}</Text>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: th("#fff") }}>{m.label}</Text>
+                  <Text style={{ marginTop: 2, fontSize: 11.5, color: th(INK.soft) }}>{m.note}</Text>
                 </Pressable>
               );
             })}
@@ -167,49 +168,49 @@ export default function PayInvoiceSheet({
         <Animated.View key={closed ? mode : "open"} entering={FadeIn.duration(200)} style={{ marginTop: 20 }}>
           {(!closed || mode === "minimo") && (
             <>
-              <Text style={{ fontSize: 12.5, color: INK.soft }}>{closed ? "Quanto vai pagar agora" : "Valor do pagamento"}</Text>
+              <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>{closed ? "Quanto vai pagar agora" : "Valor do pagamento"}</Text>
               <MoneyInput cents={amount} onChange={setAmount} big />
               {!closed && (
-                <Text style={{ marginTop: 8, fontSize: 12.5, lineHeight: 18, color: INK.softer }}>
+                <Text style={{ marginTop: 8, fontSize: 12.5, lineHeight: 18, color: th(INK.softer) }}>
                   O limite volta na hora e a fatura continua aberta para novas compras.
                   {amount < owed && amount > 0 ? ` Continuam devidos ${money((owed - amount) / 100)}.` : ""}
                 </Text>
               )}
               {closed && amount > 0 && amount < owed && (
-                <Text style={{ marginTop: 8, fontSize: 12.5, color: INK.softer }}>Continuam devidos {money((owed - amount) / 100)}.</Text>
+                <Text style={{ marginTop: 8, fontSize: 12.5, color: th(INK.softer) }}>Continuam devidos {money((owed - amount) / 100)}.</Text>
               )}
             </>
           )}
 
           {closed && mode === "total" && (
             <>
-              <Text style={{ fontSize: 12.5, color: INK.soft }}>Valor</Text>
-              <Text style={{ marginTop: 4, fontSize: 36, fontWeight: "800", letterSpacing: -1.3, color: "#fff" }}>{money(outstanding)}</Text>
+              <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>Valor</Text>
+              <Text style={{ marginTop: 4, fontSize: 36, fontWeight: "800", letterSpacing: -1.3, color: th("#fff") }}>{money(outstanding)}</Text>
             </>
           )}
 
           {closed && mode === "parcelado" && (
             <View style={{ gap: 14 }}>
               <View>
-                <Text style={{ fontSize: 12.5, color: INK.soft }}>Entrada (pago agora)</Text>
+                <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>Entrada (pago agora)</Text>
                 <MoneyInput cents={entry} onChange={setEntry} />
               </View>
               <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-end" }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12.5, color: INK.soft }}>Parcelas</Text>
+                  <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>Parcelas</Text>
                   <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 12 }}>
                     <Step icon="minus" onPress={() => setCount((c) => Math.max(2, c - 1))} />
-                    <Text style={{ minWidth: 34, textAlign: "center", fontSize: 24, fontWeight: "800", color: "#fff" }}>{count}x</Text>
+                    <Text style={{ minWidth: 34, textAlign: "center", fontSize: 24, fontWeight: "800", color: th("#fff") }}>{count}x</Text>
                     <Step icon="plus" onPress={() => setCount((c) => Math.min(24, c + 1))} />
                   </View>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12.5, color: INK.soft }}>Valor de cada parcela</Text>
+                  <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>Valor de cada parcela</Text>
                   <MoneyInput cents={each} onChange={setEach} />
                 </View>
               </View>
               {plan && (
-                <View style={{ borderRadius: 18, backgroundColor: "rgba(255,255,255,0.05)", padding: 14, gap: 8 }}>
+                <View style={{ borderRadius: 18, backgroundColor: th("rgba(255,255,255,0.05)", "bg"), padding: 14, gap: 8 }}>
                   <Row label="Total que vai pagar" value={money(plan.total / 100)} />
                   <Row label="Juros" value={money(plan.interest / 100)} tone={plan.interest > 0 ? RED : undefined} />
                 </View>
@@ -219,7 +220,7 @@ export default function PayInvoiceSheet({
         </Animated.View>
 
         {/* From where. */}
-        <Text style={{ marginTop: 22, fontSize: 12.5, color: INK.soft }}>Pagar com</Text>
+        <Text style={{ marginTop: 22, fontSize: 12.5, color: th(INK.soft) }}>Pagar com</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8, marginHorizontal: -20 }} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>
           {accounts.map((a) => {
             const on = a.id === accountId;
@@ -236,22 +237,22 @@ export default function PayInvoiceSheet({
                   paddingRight: 14,
                   borderRadius: 20,
                   borderWidth: 1,
-                  borderColor: on ? "#fff" : "rgba(255,255,255,0.08)",
-                  backgroundColor: on ? "rgba(255,255,255,0.13)" : "rgba(255,255,255,0.05)",
+                  borderColor: th(on ? "#fff" : "rgba(255,255,255,0.08)", "line"),
+                  backgroundColor: th(on ? "rgba(255,255,255,0.13)" : "rgba(255,255,255,0.05)", "bg"),
                   opacity: pressed ? 0.75 : 1,
                 })}
               >
                 <BankMark name={a.name} hex={colorFor(a.name, a.color)} size={32} />
                 <View>
-                  <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>{a.name}</Text>
-                  <Text style={{ fontSize: 12, color: INK.soft }}>{money(Number(a.current_balance))}</Text>
+                  <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: th("#fff") }}>{a.name}</Text>
+                  <Text style={{ fontSize: 12, color: th(INK.soft) }}>{money(Number(a.current_balance))}</Text>
                 </View>
               </Pressable>
             );
           })}
         </ScrollView>
-        {short && <Text style={{ marginTop: 10, fontSize: 12.5, color: RED }}>Essa conta não tem saldo para esse pagamento. Escolha outra conta ou um valor menor.</Text>}
-        {error && <Text style={{ marginTop: 10, fontSize: 13, color: RED }}>{error}</Text>}
+        {short && <Text style={{ marginTop: 10, fontSize: 12.5, color: th(RED) }}>Essa conta não tem saldo para esse pagamento. Escolha outra conta ou um valor menor.</Text>}
+        {error && <Text style={{ marginTop: 10, fontSize: 13, color: th(RED) }}>{error}</Text>}
 
         <Pressable
           onPress={() => void pay()}
@@ -262,11 +263,11 @@ export default function PayInvoiceSheet({
             borderRadius: 27,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "#fff",
+            backgroundColor: th("#fff", "bg"),
             opacity: !canPay ? 0.4 : pressed ? 0.85 : 1,
           })}
         >
-          <Text style={{ fontSize: 16.5, fontWeight: "700", color: "#0B0B0B" }}>
+          <Text style={{ fontSize: 16.5, fontWeight: "700", color: th("#0B0B0B") }}>
             {paying ? "Pagando…" : effective === "parcelado" ? `Parcelar em ${count}x` : `Pagar ${money(paysNow / 100)}`}
           </Text>
         </Pressable>
@@ -287,7 +288,7 @@ function MoneyInput({ cents, onChange, big = false }: { cents: number; onChange:
         fontSize: big ? 36 : 20,
         fontWeight: "800",
         letterSpacing: big ? -1.3 : -0.5,
-        color: cents === 0 ? INK.faint : "#fff",
+        color: th(cents === 0 ? INK.faint : "#fff"),
       }}
     />
   );
@@ -299,9 +300,9 @@ function Step({ icon, onPress }: { icon: "minus" | "plus"; onPress: () => void }
     <Pressable
       onPress={onPress}
       hitSlop={6}
-      style={({ pressed }) => ({ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.10)", opacity: pressed ? 0.6 : 1 })}
+      style={({ pressed }) => ({ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.10)", "bg"), opacity: pressed ? 0.6 : 1 })}
     >
-      <Icon size={16} color="#fff" strokeWidth={2.4} />
+      <Icon size={16} color={th("#fff")} strokeWidth={2.4} />
     </Pressable>
   );
 }
@@ -309,8 +310,8 @@ function Step({ icon, onPress }: { icon: "minus" | "plus"; onPress: () => void }
 function Row({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-      <Text style={{ fontSize: 14, color: INK.soft }}>{label}</Text>
-      <Text style={{ fontSize: 14.5, fontWeight: "700", color: tone ?? "#fff" }}>{value}</Text>
+      <Text style={{ fontSize: 14, color: th(INK.soft) }}>{label}</Text>
+      <Text style={{ fontSize: 14.5, fontWeight: "700", color: th(tone ?? "#fff") }}>{value}</Text>
     </View>
   );
 }

@@ -3,6 +3,7 @@ import { Modal, Pressable, Text, useWindowDimensions, View } from "react-native"
 import { BlurView } from "expo-blur";
 import { INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * A menu for the thing under your thumb.
  *
@@ -54,7 +55,7 @@ export default function AnchoredMenu({
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={{ flex: 1 }} onPress={onClose}>
-        <BlurView intensity={14} tint="dark" style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }} />
+        <BlurView intensity={14} tint={th("dark", "tint")} style={{ flex: 1, backgroundColor: th("rgba(0,0,0,0.5)", "bg") }} />
       </Pressable>
 
       {/* A sibling of the backdrop, not a child: glass inside a blur sees nothing to
@@ -69,14 +70,14 @@ export default function AnchoredMenu({
           borderRadius: 22,
           borderCurve: "continuous",
           borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.16)",
+          borderColor: th("rgba(255,255,255,0.16)", "line"),
           overflow: "hidden",
           opacity: height ? 1 : 0,
         }}
       >
-        <BlurView intensity={70} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.5)" }} />
-        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 22, right: 22, height: 1, backgroundColor: "rgba(255,255,255,0.22)" }} />
+        <BlurView intensity={70} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.5)", "bg") }} />
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 22, right: 22, height: 1, backgroundColor: th("rgba(255,255,255,0.22)", "bg") }} />
         {children}
       </View>
     </Modal>
@@ -89,17 +90,17 @@ export function MenuHeader({ title, subtitle }: { title: string; subtitle?: stri
     <View
       style={{
         borderBottomWidth: 1,
-        borderBottomColor: "rgba(255,255,255,0.08)",
+        borderBottomColor: th("rgba(255,255,255,0.08)", "line"),
         paddingHorizontal: 16,
         paddingTop: 12,
         paddingBottom: 10,
       }}
     >
-      <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>
+      <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "600", color: th("#fff") }}>
         {title}
       </Text>
       {subtitle ? (
-        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 11.5, color: INK.softer }}>
+        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 11.5, color: th(INK.softer) }}>
           {subtitle}
         </Text>
       ) : null}
@@ -131,12 +132,12 @@ export function MenuRow({
         paddingHorizontal: 16,
         paddingVertical: 13,
         borderBottomWidth: last ? 0 : 1,
-        borderBottomColor: "rgba(255,255,255,0.06)",
-        backgroundColor: pressed ? "rgba(255,255,255,0.07)" : "transparent",
+        borderBottomColor: th("rgba(255,255,255,0.06)", "line"),
+        backgroundColor: th(pressed ? "rgba(255,255,255,0.07)" : "transparent", "bg"),
       })}
     >
-      <Icon size={18} color={danger ? RED : "rgba(255,255,255,0.85)"} strokeWidth={2} />
-      <Text style={{ fontSize: 15, fontWeight: "500", color: danger ? RED : "#fff" }}>{label}</Text>
+      <Icon size={18} color={th(danger ? RED : "rgba(255,255,255,0.85)")} strokeWidth={2} />
+      <Text style={{ fontSize: 15, fontWeight: "500", color: th(danger ? RED : "#fff") }}>{label}</Text>
     </Pressable>
   );
 }

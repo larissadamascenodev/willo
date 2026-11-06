@@ -1,6 +1,7 @@
 import { View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
+import { th } from "~/theme/theme";
 /**
  * The handle in the corner a card is resized from.
  *
@@ -30,7 +31,7 @@ export default function ResizeGrip({ radius = CARD_RADIUS }: { radius?: number }
         {/* From east to south, turning the way the corner turns. */}
         <Path
           d={`M ${r} 0 A ${r} ${r} 0 0 1 0 ${r}`}
-          stroke="#D4D4D4"
+          stroke={th("#D4D4D4")}
           strokeWidth={BAND}
           strokeLinecap="round"
           fill="none"

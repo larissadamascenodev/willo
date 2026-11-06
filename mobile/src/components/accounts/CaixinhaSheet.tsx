@@ -37,6 +37,7 @@ import { AmountField, Group, Row, Segments, Stepper, brl } from "~/components/ac
 import { useAuth } from "~/lib/auth";
 import { INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Opening a caixinha with Willo beside you.
  *
@@ -345,7 +346,7 @@ export default function CaixinhaSheet({
           <Created
             accent="#C8F36D"
             mark={
-              <View style={{ width: 112, height: 112, borderRadius: 34, borderCurve: "continuous", overflow: "hidden", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.3)" }}>
+              <View style={{ width: 112, height: 112, borderRadius: 34, borderCurve: "continuous", overflow: "hidden", borderWidth: 1.5, borderColor: th("rgba(255,255,255,0.3)", "line") }}>
                 <CaixinhaCover goal={{ name: made.name, cover_image: made.photo }} width={112} height={112} />
               </View>
             }
@@ -361,18 +362,18 @@ export default function CaixinhaSheet({
                 {step > 0 && (
                   <Animated.View entering={FadeIn.duration(180)}>
                     <GlassDot label="Voltar" onPress={() => setStep(Math.max(step - 1, 0))}>
-                      <ChevronLeft size={19} color="#fff" strokeWidth={2.3} />
+                      <ChevronLeft size={19} color={th("#fff")} strokeWidth={2.3} />
                     </GlassDot>
                   </Animated.View>
                 )}
               </View>
               <View style={{ flex: 1, flexDirection: "row", gap: 4 }}>
                 {keys.map((k, i) => (
-                  <View key={k} style={{ flex: 1, height: 2.5, borderRadius: 2, backgroundColor: i <= step ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.14)" }} />
+                  <View key={k} style={{ flex: 1, height: 2.5, borderRadius: 2, backgroundColor: th(i <= step ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.14)", "bg") }} />
                 ))}
               </View>
               <GlassDot label="Fechar" onPress={onClose}>
-                <X size={17} color="rgba(255,255,255,0.86)" strokeWidth={2.3} />
+                <X size={17} color={th("rgba(255,255,255,0.86)")} strokeWidth={2.3} />
               </GlassDot>
             </View>
 
@@ -407,10 +408,10 @@ export default function CaixinhaSheet({
                         hint="Do seu jeito"
                         onPress={() => pick("custom")}
                       >
-                        <LinearGradient colors={["#242838", "#14161E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+                        <LinearGradient colors={th(["#242838", "#14161E"], "grad")} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
                         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 44, alignItems: "center", justifyContent: "center" }}>
-                          <View style={{ width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.22)", backgroundColor: "rgba(255,255,255,0.08)" }}>
-                            <Plus size={22} color="#fff" strokeWidth={2.2} />
+                          <View style={{ width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: th("rgba(255,255,255,0.22)", "line"), backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
+                            <Plus size={22} color={th("#fff")} strokeWidth={2.2} />
                           </View>
                         </View>
                       </PictureCard>
@@ -421,12 +422,12 @@ export default function CaixinhaSheet({
                 {/* ══ Name and amount ══ */}
                 {key === "about" && (
                   <Animated.View entering={FadeInDown.delay(180).duration(420)} style={{ marginTop: 24, gap: 14 }}>
-                    <View style={{ height: 150, borderRadius: 28, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" }}>
+                    <View style={{ height: 150, borderRadius: 28, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.12)", "line") }}>
                       <CaixinhaCover goal={{ name: name || "Nova caixinha", cover_image: null }} height={150} glyph={130} glyphTop={-4} />
-                      <LinearGradient colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.78)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 92 }} />
+                      <LinearGradient colors={th(["rgba(8,9,10,0)", "rgba(8,9,10,0.78)"], "grad")} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 92 }} />
                       <View style={{ position: "absolute", left: 18, right: 18, bottom: 14 }}>
-                        <Text numberOfLines={1} style={{ fontSize: 19, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>{name.trim() || "Nova caixinha"}</Text>
-                        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: "rgba(255,255,255,0.72)" }}>
+                        <Text numberOfLines={1} style={{ fontSize: 19, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>{name.trim() || "Nova caixinha"}</Text>
+                        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: th("rgba(255,255,255,0.72)") }}>
                           {hasValue ? (cents > 0 ? `Meta de ${brl(cents)}` : "Defina um valor") : "Sem valor definido"}
                         </Text>
                       </View>
@@ -434,7 +435,7 @@ export default function CaixinhaSheet({
 
                     <Group>
                       <Row>
-                        <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: INK.softer }}>Nome</Text>
+                        <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: th(INK.softer) }}>Nome</Text>
                         <TextInput
                           value={name}
                           onChangeText={(t) => {
@@ -442,14 +443,14 @@ export default function CaixinhaSheet({
                             setError(null);
                           }}
                           placeholder="Ex.: Viagem para o Japão"
-                          placeholderTextColor={INK.faint}
+                          placeholderTextColor={th(INK.faint)}
                           maxLength={60}
                           autoFocus={choiceId === "custom"}
-                          style={{ marginTop: 4, minWidth: 0, padding: 0, fontSize: 17, fontWeight: "600", color: "#fff" }}
+                          style={{ marginTop: 4, minWidth: 0, padding: 0, fontSize: 17, fontWeight: "600", color: th("#fff") }}
                         />
                       </Row>
                       <Row last={!hasValue}>
-                        <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: INK.softer }}>Valor</Text>
+                        <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: th(INK.softer) }}>Valor</Text>
                         <View style={{ marginTop: 10 }}>
                           <Segments
                             height={42}
@@ -465,13 +466,13 @@ export default function CaixinhaSheet({
                             }}
                           />
                         </View>
-                        <Text style={{ marginTop: 10, fontSize: 12.5, lineHeight: 17, color: INK.soft }}>
+                        <Text style={{ marginTop: 10, fontSize: 12.5, lineHeight: 17, color: th(INK.soft) }}>
                           {hasValue ? "Eu calculo quanto guardar por mês para você chegar lá." : "Você guarda conforme der, sem meta nem prazo."}
                         </Text>
                       </Row>
                       {hasValue && (
                         <Row last>
-                          <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: INK.softer }}>Quanto quer juntar</Text>
+                          <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: th(INK.softer) }}>Quanto quer juntar</Text>
                           <AmountField cents={cents} onChange={(c) => { setCents(c); setError(null); }} size={36} />
                           {kind === "reserva" && reserveChips(month).length > 0 && (
                             <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -511,7 +512,7 @@ export default function CaixinhaSheet({
                         <Row last>
                           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                             <Stepper icon={Minus} label="Menos um ano" disabled={years <= 1} onPress={() => { setYears(years - 1); setMonths((years - 1) * 12); }} />
-                            <Text style={{ fontSize: 26, fontWeight: "800", letterSpacing: -0.8, color: "#fff" }}>{yearsLabel(years)}</Text>
+                            <Text style={{ fontSize: 26, fontWeight: "800", letterSpacing: -0.8, color: th("#fff") }}>{yearsLabel(years)}</Text>
                             <Stepper icon={Plus} label="Mais um ano" disabled={years >= 30} onPress={() => { setYears(years + 1); setMonths((years + 1) * 12); }} />
                           </View>
                         </Row>
@@ -521,10 +522,10 @@ export default function CaixinhaSheet({
                     {withDate && cents > 0 ? (
                       <Group>
                         <Row last>
-                          <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: INK.softer }}>Para chegar em {due}</Text>
-                          <Text style={{ marginTop: 4, fontSize: 34, fontWeight: "800", letterSpacing: -1.2, color: "#fff" }}>
+                          <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: th(INK.softer) }}>Para chegar em {due}</Text>
+                          <Text style={{ marginTop: 4, fontSize: 34, fontWeight: "800", letterSpacing: -1.2, color: th("#fff") }}>
                             {money(perMonth)}
-                            <Text style={{ fontSize: 15, fontWeight: "500", letterSpacing: 0, color: INK.soft }}> por mês</Text>
+                            <Text style={{ fontSize: 15, fontWeight: "500", letterSpacing: 0, color: th(INK.soft) }}> por mês</Text>
                           </Text>
                         </Row>
                       </Group>
@@ -533,7 +534,7 @@ export default function CaixinhaSheet({
                     {months === null ? (
                       <Group>
                         <Row last>
-                          <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: INK.softer }}>Quanto por mês (opcional)</Text>
+                          <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: th(INK.softer) }}>Quanto por mês (opcional)</Text>
                           <TextInput
                             value={monthlyCents === 0 ? "" : brl(monthlyCents)}
                             onChangeText={(t) => {
@@ -542,8 +543,8 @@ export default function CaixinhaSheet({
                             }}
                             keyboardType="number-pad"
                             placeholder="Conforme der"
-                            placeholderTextColor={INK.faint}
-                            style={{ marginTop: 4, minWidth: 0, padding: 0, fontSize: 22, fontWeight: "700", color: "#fff" }}
+                            placeholderTextColor={th(INK.faint)}
+                            style={{ marginTop: 4, minWidth: 0, padding: 0, fontSize: 22, fontWeight: "700", color: th("#fff") }}
                           />
                         </Row>
                       </Group>
@@ -557,7 +558,7 @@ export default function CaixinhaSheet({
                       hitSlop={10}
                       style={{ alignSelf: "center", paddingVertical: 4 }}
                     >
-                      <Text style={{ fontSize: 13.5, fontWeight: "600", color: INK.soft }}>
+                      <Text style={{ fontSize: 13.5, fontWeight: "600", color: th(INK.soft) }}>
                         {months === null ? "Definir um prazo" : "Não tem prazo"}
                       </Text>
                     </Pressable>
@@ -569,7 +570,7 @@ export default function CaixinhaSheet({
                   <Animated.View entering={FadeInDown.delay(180).duration(420)} style={{ marginTop: 26, gap: 14 }}>
                     <Group>
                       <Row last>
-                        <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: INK.softer }}>Começar com</Text>
+                        <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: th(INK.softer) }}>Começar com</Text>
                         <AmountField
                           cents={startCents}
                           size={40}
@@ -583,10 +584,10 @@ export default function CaixinhaSheet({
 
                     {start > 0 &&
                       (accounts.length === 0 ? (
-                        <Text style={{ fontSize: 13, color: INK.softer }}>Crie uma conta primeiro para guardar a partir dela.</Text>
+                        <Text style={{ fontSize: 13, color: th(INK.softer) }}>Crie uma conta primeiro para guardar a partir dela.</Text>
                       ) : (
                         <View>
-                          <Text style={{ marginBottom: 8, marginLeft: 4, fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: INK.softer }}>Sai de qual conta</Text>
+                          <Text style={{ marginBottom: 8, marginLeft: 4, fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: th(INK.softer) }}>Sai de qual conta</Text>
                           <Group>
                             {accounts.map((acc, i) => {
                               const on = acc.id === accountId;
@@ -596,8 +597,8 @@ export default function CaixinhaSheet({
                                     <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                                       <BankMark name={acc.name} hex={colorFor(acc.name, acc.color, "#6B7280")} size={38} />
                                       <View style={{ flex: 1, minWidth: 0 }}>
-                                        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>{acc.name}</Text>
-                                        <Text style={{ marginTop: 1, fontSize: 12.5, color: INK.softer }}>{money(Number(acc.current_balance) || 0)}</Text>
+                                        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>{acc.name}</Text>
+                                        <Text style={{ marginTop: 1, fontSize: 12.5, color: th(INK.softer) }}>{money(Number(acc.current_balance) || 0)}</Text>
                                       </View>
                                       <View
                                         style={{
@@ -607,11 +608,11 @@ export default function CaixinhaSheet({
                                           alignItems: "center",
                                           justifyContent: "center",
                                           borderWidth: on ? 0 : 1.5,
-                                          borderColor: "rgba(255,255,255,0.28)",
-                                          backgroundColor: on ? "#fff" : "transparent",
+                                          borderColor: th("rgba(255,255,255,0.28)", "line"),
+                                          backgroundColor: th(on ? "#fff" : "transparent", "bg"),
                                         }}
                                       >
-                                        {on && <Check size={14} color="#0B0B0B" strokeWidth={3.2} />}
+                                        {on && <Check size={14} color={th("#0B0B0B")} strokeWidth={3.2} />}
                                       </View>
                                     </View>
                                   </Row>
@@ -627,10 +628,10 @@ export default function CaixinhaSheet({
                 {/* ══ The caixinha as it will be: its picture fading into a card with the plan on it ══ */}
                 {key === "review" && (
                   <Animated.View entering={FadeInDown.delay(180).duration(420)} style={{ marginTop: 24 }}>
-                    <View style={{ borderRadius: 30, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", backgroundColor: CARD }}>
+                    <View style={{ borderRadius: 30, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.12)", "line"), backgroundColor: th(CARD, "bg") }}>
                       <View style={{ height: 190 }}>
                         <CaixinhaCover goal={{ name: name.trim(), cover_image: photo }} height={190} glyph={150} glyphTop={8} />
-                        <LinearGradient colors={["rgba(23,25,31,0)", "rgba(23,25,31,0.7)", CARD]} locations={[0, 0.6, 1]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 110 }} />
+                        <LinearGradient colors={th(["rgba(23,25,31,0)", "rgba(23,25,31,0.7)", CARD], "grad")} locations={[0, 0.6, 1]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 110 }} />
 
                         {/* The picture can be changed now or any time later, so it is only a small thing in the corner. */}
                         <Pressable
@@ -639,62 +640,62 @@ export default function CaixinhaSheet({
                           accessibilityLabel="Trocar imagem"
                           style={({ pressed }) => ({ position: "absolute", top: 12, right: 12, opacity: pressed || photoBusy ? 0.6 : 1 })}
                         >
-                          <View style={{ height: 32, paddingHorizontal: 12, borderRadius: 16, overflow: "hidden", flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderColor: "rgba(255,255,255,0.28)" }}>
-                            <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 16 }} />
-                            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.12)" }} />
+                          <View style={{ height: 32, paddingHorizontal: 12, borderRadius: 16, overflow: "hidden", flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderColor: th("rgba(255,255,255,0.28)", "line") }}>
+                            <BlurView intensity={30} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 16 }} />
+                            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 16, backgroundColor: th("rgba(255,255,255,0.12)", "bg") }} />
                             <View style={{ zIndex: 1, flexDirection: "row", alignItems: "center", gap: 6 }}>
-                              <ImageIcon size={14} color="#fff" />
-                              <Text style={{ fontSize: 12.5, fontWeight: "700", color: "#fff" }}>{photoBusy ? "Carregando…" : "Trocar imagem"}</Text>
+                              <ImageIcon size={14} color={th("#fff")} />
+                              <Text style={{ fontSize: 12.5, fontWeight: "700", color: th("#fff") }}>{photoBusy ? "Carregando…" : "Trocar imagem"}</Text>
                             </View>
                           </View>
                         </Pressable>
                       </View>
 
                       <View style={{ paddingHorizontal: 20, paddingBottom: 20, marginTop: -26 }}>
-                        <Text numberOfLines={2} style={{ fontSize: 24, fontWeight: "800", letterSpacing: -0.8, color: "#fff" }}>{name.trim()}</Text>
+                        <Text numberOfLines={2} style={{ fontSize: 24, fontWeight: "800", letterSpacing: -0.8, color: th("#fff") }}>{name.trim()}</Text>
 
                         {/* The plan, large: what each month asks and when it gets there. */}
                         <View style={{ marginTop: 18 }}>
                           {hasValue && perMonth > 0 ? (
                             <>
-                              <Text style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>Guardar por mês</Text>
-                              <Text style={{ marginTop: 2, fontSize: 36, fontWeight: "800", letterSpacing: -1.3, color: "#fff" }}>
+                              <Text style={{ fontSize: 12, fontWeight: "600", color: th(INK.softer) }}>Guardar por mês</Text>
+                              <Text style={{ marginTop: 2, fontSize: 36, fontWeight: "800", letterSpacing: -1.3, color: th("#fff") }}>
                                 {money(perMonth)}
                               </Text>
-                              <Text style={{ marginTop: 2, fontSize: 14, color: INK.soft }}>
-                                pra chegar lá em <Text style={{ fontWeight: "700", color: "#fff" }}>{due}</Text>
+                              <Text style={{ marginTop: 2, fontSize: 14, color: th(INK.soft) }}>
+                                pra chegar lá em <Text style={{ fontWeight: "700", color: th("#fff") }}>{due}</Text>
                                 {months ? ` · ${months >= 12 && months % 12 === 0 ? yearsLabel(months / 12) : `${months} meses`}` : ""}
                               </Text>
                             </>
                           ) : hasValue ? (
                             <>
-                              <Text style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>Sem prazo</Text>
-                              <Text style={{ marginTop: 2, fontSize: 24, fontWeight: "800", letterSpacing: -0.8, color: "#fff" }}>
+                              <Text style={{ fontSize: 12, fontWeight: "600", color: th(INK.softer) }}>Sem prazo</Text>
+                              <Text style={{ marginTop: 2, fontSize: 24, fontWeight: "800", letterSpacing: -0.8, color: th("#fff") }}>
                                 {monthlyCents > 0 ? `${money(monthlyCents / 100)} por mês` : "Guarda quando der"}
                               </Text>
                             </>
                           ) : (
                             <>
-                              <Text style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>Sem valor definido</Text>
-                              <Text style={{ marginTop: 2, fontSize: 24, fontWeight: "800", letterSpacing: -0.8, color: "#fff" }}>No seu ritmo</Text>
+                              <Text style={{ fontSize: 12, fontWeight: "600", color: th(INK.softer) }}>Sem valor definido</Text>
+                              <Text style={{ marginTop: 2, fontSize: 24, fontWeight: "800", letterSpacing: -0.8, color: th("#fff") }}>No seu ritmo</Text>
                             </>
                           )}
                         </View>
 
-                        <View style={{ marginTop: 18, paddingTop: 16, flexDirection: "row", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)" }}>
+                        <View style={{ marginTop: 18, paddingTop: 16, flexDirection: "row", borderTopWidth: 1, borderTopColor: th("rgba(255,255,255,0.08)", "line") }}>
                           <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>Meta</Text>
-                            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 3, fontSize: 17, fontWeight: "700", color: "#fff" }}>
+                            <Text style={{ fontSize: 12, fontWeight: "600", color: th(INK.softer) }}>Meta</Text>
+                            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 3, fontSize: 17, fontWeight: "700", color: th("#fff") }}>
                               {hasValue ? money(target) : "Livre"}
                             </Text>
                           </View>
-                          <View style={{ width: 1, marginHorizontal: 16, backgroundColor: "rgba(255,255,255,0.08)" }} />
+                          <View style={{ width: 1, marginHorizontal: 16, backgroundColor: th("rgba(255,255,255,0.08)", "bg") }} />
                           <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 12, fontWeight: "600", color: INK.softer }}>Começa com</Text>
-                            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 3, fontSize: 17, fontWeight: "700", color: "#fff" }}>
+                            <Text style={{ fontSize: 12, fontWeight: "600", color: th(INK.softer) }}>Começa com</Text>
+                            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 3, fontSize: 17, fontWeight: "700", color: th("#fff") }}>
                               {money(start)}
                             </Text>
-                            {start > 0 && account && <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, color: INK.softer }}>de {account.name}</Text>}
+                            {start > 0 && account && <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, color: th(INK.softer) }}>de {account.name}</Text>}
                           </View>
                         </View>
                       </View>
@@ -702,7 +703,7 @@ export default function CaixinhaSheet({
                   </Animated.View>
                 )}
 
-                {error && <Text style={{ marginTop: 16, fontSize: 13.5, lineHeight: 18, color: RED }}>{error}</Text>}
+                {error && <Text style={{ marginTop: 16, fontSize: 13.5, lineHeight: 18, color: th(RED) }}>{error}</Text>}
               </ScrollView>
 
               {/* On the first page a picture is the answer, so there is no button until one has been chosen. */}
@@ -721,12 +722,12 @@ export default function CaixinhaSheet({
                     borderRadius: 28,
                     alignItems: "center",
                     justifyContent: "center",
-                    backgroundColor: "#fff",
+                    backgroundColor: th("#fff", "bg"),
                     opacity: !canNext ? 0.28 : saving ? 0.7 : 1,
                     transform: [{ scale: pressed && canNext ? 0.98 : 1 }],
                   })}
                 >
-                  <Text style={{ fontSize: 16.5, fontWeight: "700", letterSpacing: -0.2, color: "#0B0B0B" }}>
+                  <Text style={{ fontSize: 16.5, fontWeight: "700", letterSpacing: -0.2, color: th("#0B0B0B") }}>
                     {saving ? "Só um instante…" : last ? "Criar caixinha" : "Continuar"}
                   </Text>
                 </Pressable>
@@ -776,13 +777,13 @@ function Willo({ ask, tip }: { ask: string; tip: string }) {
     <View>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginLeft: -6 }}>
         <ParticleOrb size={44} density={170} mode={typing ? "thinking" : "idle"} />
-        <Text style={{ fontSize: 13, fontWeight: "700", letterSpacing: 0.3, color: "rgba(255,255,255,0.9)" }}>Willo</Text>
+        <Text style={{ fontSize: 13, fontWeight: "700", letterSpacing: 0.3, color: th("rgba(255,255,255,0.9)") }}>Willo</Text>
       </View>
-      <Text style={{ marginTop: 10, fontSize: 29, fontWeight: "800", letterSpacing: -1, lineHeight: 34, color: "#fff" }}>
+      <Text style={{ marginTop: 10, fontSize: 29, fontWeight: "800", letterSpacing: -1, lineHeight: 34, color: th("#fff") }}>
         {ask.slice(0, shown)}
         <Text style={{ color: "transparent" }}>{ask.slice(shown)}</Text>
       </Text>
-      <Animated.Text style={[{ marginTop: 10, fontSize: 15, lineHeight: 22, color: "rgba(255,255,255,0.62)" }, note]}>{tip}</Animated.Text>
+      <Animated.Text style={[{ marginTop: 10, fontSize: 15, lineHeight: 22, color: th("rgba(255,255,255,0.62)") }, note]}>{tip}</Animated.Text>
     </View>
   );
 }
@@ -819,28 +820,28 @@ function PictureCard({
           borderCurve: "continuous",
           overflow: "hidden",
           borderWidth: on ? 2 : 1,
-          borderColor: on ? "#fff" : "rgba(255,255,255,0.12)",
+          borderColor: th(on ? "#fff" : "rgba(255,255,255,0.12)", "line"),
           opacity: dim ? 0.5 : 1,
         }}
       >
         {children}
-        <LinearGradient colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.55)", "rgba(8,9,10,0.9)"]} locations={[0, 0.45, 1]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 86 }} />
+        <LinearGradient colors={th(["rgba(8,9,10,0)", "rgba(8,9,10,0.55)", "rgba(8,9,10,0.9)"], "grad")} locations={[0, 0.45, 1]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 86 }} />
         <View style={{ position: "absolute", left: 14, right: 14, bottom: 12 }}>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ fontSize: 15.5, fontWeight: "800", letterSpacing: -0.3, color: "#fff" }}>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ fontSize: 15.5, fontWeight: "800", letterSpacing: -0.3, color: th("#fff") }}>
             {label}
           </Text>
-          <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, color: "rgba(255,255,255,0.66)" }}>{hint}</Text>
+          <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, color: th("rgba(255,255,255,0.66)") }}>{hint}</Text>
         </View>
         {badge && (
-          <View style={{ position: "absolute", top: 12, left: 12, height: 26, paddingHorizontal: 10, borderRadius: 13, overflow: "hidden", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.26)" }}>
-            <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 13 }} />
-            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 13, backgroundColor: "rgba(255,255,255,0.12)" }} />
-            <Text style={{ zIndex: 1, fontSize: 11.5, fontWeight: "700", color: "#fff" }}>{badge}</Text>
+          <View style={{ position: "absolute", top: 12, left: 12, height: 26, paddingHorizontal: 10, borderRadius: 13, overflow: "hidden", justifyContent: "center", borderWidth: 1, borderColor: th("rgba(255,255,255,0.26)", "line") }}>
+            <BlurView intensity={30} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 13 }} />
+            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 13, backgroundColor: th("rgba(255,255,255,0.12)", "bg") }} />
+            <Text style={{ zIndex: 1, fontSize: 11.5, fontWeight: "700", color: th("#fff") }}>{badge}</Text>
           </View>
         )}
         {on && (
-          <View style={{ position: "absolute", top: 12, right: 12, width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
-            <Check size={15} color="#0B0B0B" strokeWidth={3.2} />
+          <View style={{ position: "absolute", top: 12, right: 12, width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg") }}>
+            <Check size={15} color={th("#0B0B0B")} strokeWidth={3.2} />
           </View>
         )}
       </View>
@@ -860,8 +861,8 @@ function GlassDot({ label, onPress, children }: { label: string; onPress: () => 
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.14)",
-          backgroundColor: "rgba(255,255,255,0.07)",
+          borderColor: th("rgba(255,255,255,0.14)", "line"),
+          backgroundColor: th("rgba(255,255,255,0.07)", "bg"),
         }}
       >
         {children}
@@ -881,12 +882,12 @@ function Tag({ on, onPress, children }: { on: boolean; onPress: () => void; chil
         borderRadius: 17,
         justifyContent: "center",
         borderWidth: 1,
-        borderColor: on ? "#fff" : "rgba(255,255,255,0.16)",
-        backgroundColor: on ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.05)",
+        borderColor: th(on ? "#fff" : "rgba(255,255,255,0.16)", "line"),
+        backgroundColor: th(on ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.05)", "bg"),
         transform: [{ scale: pressed ? 0.96 : 1 }],
       })}
     >
-      <Text style={{ fontSize: 13, fontWeight: "600", color: "#fff" }}>{children}</Text>
+      <Text style={{ fontSize: 13, fontWeight: "600", color: th("#fff") }}>{children}</Text>
     </Pressable>
   );
 }

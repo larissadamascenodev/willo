@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import RoundButton from "~/components/RoundButton";
 import { ChevronLeft } from "~/components/icons";
 
+import { th } from "~/theme/theme";
 /**
  * The way back out of a page.
  *
@@ -25,7 +26,7 @@ export default function BackButton({ to, onImage = false }: { to?: string; onIma
         else router.replace("/" as never);
       }}
     >
-      <ChevronLeft size={20} color="rgba(255,255,255,0.9)" strokeWidth={2.2} />
+      <ChevronLeft size={20} color={th("rgba(255,255,255,0.9)")} strokeWidth={2.2} />
     </RoundButton>
   );
 }

@@ -8,6 +8,7 @@ import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 import type { CategoryExpense } from "@/types/finance";
 
+import { th } from "~/theme/theme";
 /**
  * How the month is going, in the only terms that can still change it.
  *
@@ -67,13 +68,13 @@ export default function SaudeDoMesCard({
               overflow: "hidden",
               fontSize: 11,
               fontWeight: "700",
-              backgroundColor: `${tone.hex}1F`,
-              color: tone.hex,
+              backgroundColor: th(`${tone.hex}1F`, "bg"),
+              color: th(tone.hex),
             }}
           >
             {tone.label}
           </Text>
-          <ChevronRight size={16} color={INK.faint} />
+          <ChevronRight size={16} color={th(INK.faint)} />
         </View>
       </View>
 
@@ -90,7 +91,7 @@ export default function SaudeDoMesCard({
           marginTop: 14,
           height: 7,
           borderRadius: 999,
-          backgroundColor: "rgba(255,255,255,0.07)",
+          backgroundColor: th("rgba(255,255,255,0.07)", "bg"),
           overflow: "hidden",
         }}
       >
@@ -98,16 +99,16 @@ export default function SaudeDoMesCard({
       </View>
 
       <View style={{ marginTop: 12, flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-        <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer, flexShrink: 1 }}>
-          <Text style={{ fontWeight: "600", color: "rgba(255,255,255,0.8)" }}>
+        <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.softer), flexShrink: 1 }}>
+          <Text style={{ fontWeight: "600", color: th("rgba(255,255,255,0.8)") }}>
             {Math.round(spentShare * 100)}%
           </Text>{" "}
           do que entrou já saiu
         </Text>
         {villain && (
-          <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>
+          <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.softer) }}>
             maior gasto:{" "}
-            <Text style={{ fontWeight: "600", color: "rgba(255,255,255,0.8)" }}>{villain.name}</Text>
+            <Text style={{ fontWeight: "600", color: th("rgba(255,255,255,0.8)") }}>{villain.name}</Text>
           </Text>
         )}
       </View>
@@ -117,15 +118,15 @@ export default function SaudeDoMesCard({
           marginTop: 14,
           paddingTop: 12,
           borderTopWidth: 1,
-          borderTopColor: "rgba(255,255,255,0.06)",
+          borderTopColor: th("rgba(255,255,255,0.06)", "line"),
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
         }}
       >
-        <Text style={{ fontSize: 12.5, color: INK.soft }}>Sobra prevista no fim do mês</Text>
-        <Text style={{ fontSize: 15, fontWeight: "700", color: saldoPrevisto < 0 ? RED : "#fff" }}>
+        <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>Sobra prevista no fim do mês</Text>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: th(saldoPrevisto < 0 ? RED : "#fff") }}>
           {money(saldoPrevisto)}
         </Text>
       </View>

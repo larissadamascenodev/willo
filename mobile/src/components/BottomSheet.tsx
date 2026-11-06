@@ -14,6 +14,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { th } from "~/theme/theme";
 /**
  * A panel that comes up from the foot of the screen.
  *
@@ -93,8 +94,8 @@ export default function BottomSheet({
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={{ flex: 1 }} onPress={onClose}>
-        <AnimatedBlur tint="dark" animatedProps={blurProps} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.4)" }, dim]} />
+        <AnimatedBlur tint={th("dark", "tint")} animatedProps={blurProps} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(0,0,0,0.4)", "bg") }, dim]} />
       </Pressable>
 
       <Animated.View
@@ -117,8 +118,8 @@ export default function BottomSheet({
           rise,
         ]}
       >
-        <BlurView intensity={60} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.38)" }} />
+        <BlurView intensity={60} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.38)", "bg") }} />
 
         {/* The grab handle, which says which way this came from. */}
         <View
@@ -127,7 +128,7 @@ export default function BottomSheet({
             width: 38,
             height: 4,
             borderRadius: 999,
-            backgroundColor: "rgba(255,255,255,0.22)",
+            backgroundColor: th("rgba(255,255,255,0.22)", "bg"),
             marginBottom: 12,
           }}
         />

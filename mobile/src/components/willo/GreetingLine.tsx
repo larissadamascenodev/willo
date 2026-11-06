@@ -5,6 +5,7 @@ import { greetings, layOut, longestUnsaid, markSaid, type Greeting } from "~/lib
 import { face } from "~/lib/chatFont";
 import { INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * What he says under the sphere: a word at a time as it arrives, then the next thing
  * after a while. The first line is the hello, chosen once for each time the screen opens.
@@ -23,7 +24,7 @@ function Word({ text, delay, size }: { text: string; delay: number; size: number
   const style = useAnimatedStyle(() => ({ opacity: shown.get(), transform: [{ translateY: (1 - shown.get()) * 7 }] }));
   return (
     <Animated.View style={style}>
-      <Text style={{ fontSize: size, ...face(700), letterSpacing: -0.4, color: "#fff" }}>{text}</Text>
+      <Text style={{ fontSize: size, ...face(700), letterSpacing: -0.4, color: th("#fff") }}>{text}</Text>
     </Animated.View>
   );
 }
@@ -131,7 +132,7 @@ export default function GreetingLine({
         </View>
       ))}
       <Rising delay={line.title.split(" ").length * WORD_MS + 120}>
-        <Text style={{ marginTop: 4, fontSize: sub.size, lineHeight: sub.size * 1.36, ...face(500), color: INK.soft, textAlign: "center" }}>{sub.lines.join("\n")}</Text>
+        <Text style={{ marginTop: 4, fontSize: sub.size, lineHeight: sub.size * 1.36, ...face(500), color: th(INK.soft), textAlign: "center" }}>{sub.lines.join("\n")}</Text>
       </Rising>
       </Pressable>
     </Animated.View>

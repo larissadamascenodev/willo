@@ -4,6 +4,7 @@ import Room from "~/components/Room";
 import { INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * A screen that has not been carried over yet.
  *
@@ -17,7 +18,7 @@ export default function EmBreve({ title, note }: { title: string; note?: string 
       <View style={{ flex: 1, paddingTop: insets.top + 16, paddingHorizontal: 20 }}>
         <Text style={T.title}>{title}</Text>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: 90 }}>
-          <Text style={{ fontSize: 14, color: INK.softer, textAlign: "center", lineHeight: 20 }}>
+          <Text style={{ fontSize: 14, color: th(INK.softer), textAlign: "center", lineHeight: 20 }}>
             {note ?? "Esta tela ainda está sendo reconstruída."}
           </Text>
         </View>

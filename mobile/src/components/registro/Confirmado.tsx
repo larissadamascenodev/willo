@@ -17,6 +17,7 @@ import { money } from "~/lib/money";
 import { playCash } from "~/lib/sounds";
 import { GREEN, INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * The moment something lands — a sticker, like a payment app's "pago".
  *
@@ -52,7 +53,7 @@ export default function Confirmado({ text, total, income = false }: { text: stri
       <View style={{ width: 132, height: 132, alignItems: "center", justifyContent: "center" }}>
         <Animated.View
           pointerEvents="none"
-          style={[{ position: "absolute", width: 132, height: 132, borderRadius: 66, borderWidth: 2, borderColor: tone }, halo]}
+          style={[{ position: "absolute", width: 132, height: 132, borderRadius: 66, borderWidth: 2, borderColor: th(tone, "line") }, halo]}
         />
         <Animated.View
           style={[
@@ -62,27 +63,27 @@ export default function Confirmado({ text, total, income = false }: { text: stri
               borderRadius: 56,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: `${tone}1F`,
+              backgroundColor: th(`${tone}1F`, "bg"),
               borderWidth: 2,
-              borderColor: tone,
+              borderColor: th(tone, "line"),
               borderStyle: "dashed",
             },
             seal,
           ]}
         >
-          <View style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: tone }}>
-            <Check size={19} color="#0B0B0B" strokeWidth={3.6} />
+          <View style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: th(tone, "bg") }}>
+            <Check size={19} color={th("#0B0B0B")} strokeWidth={3.6} />
           </View>
-          <Text style={{ marginTop: 6, fontSize: 13, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase", color: tone }}>{text}</Text>
+          <Text style={{ marginTop: 6, fontSize: 13, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase", color: th(tone) }}>{text}</Text>
           {total != null && total > 0 && (
-            <Text style={{ marginTop: 1, fontSize: 12, fontWeight: "700", color: "#fff" }}>
+            <Text style={{ marginTop: 1, fontSize: 12, fontWeight: "700", color: th("#fff") }}>
               {income ? "+" : ""}
               {money(total)}
             </Text>
           )}
         </Animated.View>
       </View>
-      <Animated.Text entering={FadeIn.delay(380).duration(300)} style={{ marginTop: 2, fontSize: 12.5, color: INK.softer }}>
+      <Animated.Text entering={FadeIn.delay(380).duration(300)} style={{ marginTop: 2, fontSize: 12.5, color: th(INK.softer) }}>
         Está nas suas transações
       </Animated.Text>
     </View>

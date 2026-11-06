@@ -6,6 +6,7 @@ import { deleteChat, loadChats, type SavedChat } from "~/lib/willoChats";
 import { INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /** The conversations already had, newest first, by day. */
 
 const dayName = (at: number) => {
@@ -57,7 +58,7 @@ export default function ChatHistory({
     <BottomSheet open={open} onClose={onClose} full>
       <View style={{ paddingHorizontal: 20, paddingBottom: 12 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>Conversas</Text>
+          <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>Conversas</Text>
           <Pressable
             onPress={onNew}
             hitSlop={8}
@@ -68,16 +69,16 @@ export default function ChatHistory({
               height: 34,
               paddingHorizontal: 13,
               borderRadius: 17,
-              backgroundColor: "#fff",
+              backgroundColor: th("#fff", "bg"),
               opacity: pressed ? 0.7 : 1,
             })}
           >
-            <Plus size={15} color="#0B0B0B" strokeWidth={2.6} />
-            <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#0B0B0B" }}>Nova</Text>
+            <Plus size={15} color={th("#0B0B0B")} strokeWidth={2.6} />
+            <Text style={{ fontSize: 13.5, fontWeight: "700", color: th("#0B0B0B") }}>Nova</Text>
           </Pressable>
         </View>
 
-        {days.length === 0 && <Text style={{ marginTop: 18, fontSize: 14, lineHeight: 20, color: INK.soft }}>Suas conversas com o Willo ficam guardadas aqui.</Text>}
+        {days.length === 0 && <Text style={{ marginTop: 18, fontSize: 14, lineHeight: 20, color: th(INK.soft) }}>Suas conversas com o Willo ficam guardadas aqui.</Text>}
 
         {days.map((day) => (
           <View key={day.name}>
@@ -85,14 +86,14 @@ export default function ChatHistory({
             {day.chats.map((chat, i) => (
               <View
                 key={chat.id}
-                style={{ flexDirection: "row", alignItems: "center", gap: 10, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: "rgba(255,255,255,0.06)" }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 10, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: th("rgba(255,255,255,0.06)", "line") }}
               >
                 <Pressable onPress={() => onOpen(chat)} style={({ pressed }) => ({ flex: 1, minWidth: 0, paddingVertical: 12, opacity: pressed ? 0.6 : 1 })}>
-                  <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: chat.id === currentId ? "700" : "500", color: "#fff" }}>
+                  <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: chat.id === currentId ? "700" : "500", color: th("#fff") }}>
                     {chat.title}
                   </Text>
                   {lastWords(chat) ? (
-                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 13, color: INK.soft }}>
+                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 13, color: th(INK.soft) }}>
                       {lastWords(chat)}
                     </Text>
                   ) : null}
@@ -107,7 +108,7 @@ export default function ChatHistory({
                   hitSlop={8}
                   style={({ pressed }) => ({ width: 34, height: 34, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.5 : 1 })}
                 >
-                  <Trash2 size={16} color={INK.softer} strokeWidth={2} />
+                  <Trash2 size={16} color={th(INK.softer)} strokeWidth={2} />
                 </Pressable>
               </View>
             ))}

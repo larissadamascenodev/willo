@@ -25,6 +25,7 @@ import { showToast } from "~/lib/toast";
 import { useAuth } from "~/lib/auth";
 import { INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Registro rápido — the same steps wherever an entry starts: a double tap on the sphere
  * (from "O que aconteceu?"), or something said or written to Willo (already read, so it
@@ -549,9 +550,9 @@ export default function QuickEntryFlow({
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <ParticleOrb size={34} />
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>{spoken ? "Confirme o que ouvi" : "Confirme o que você escreveu"}</Text>
+                  <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>{spoken ? "Confirme o que ouvi" : "Confirme o que você escreveu"}</Text>
                   {said.trim() ? (
-                    <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 13, fontStyle: "italic", color: INK.softer }}>
+                    <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 13, fontStyle: "italic", color: th(INK.softer) }}>
                       “{said.trim()}”
                     </Text>
                   ) : null}
@@ -559,10 +560,10 @@ export default function QuickEntryFlow({
               </View>
             ) : (
               <>
-                <Text style={{ fontSize: 26, fontWeight: "800", letterSpacing: -0.7, color: "#fff" }}>O que aconteceu?</Text>
-                <View style={{ marginTop: 16, height: 56, flexDirection: "row", alignItems: "center", paddingHorizontal: 6, gap: 2, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: said.trim() || listening ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)" }}>
+                <Text style={{ fontSize: 26, fontWeight: "800", letterSpacing: -0.7, color: th("#fff") }}>O que aconteceu?</Text>
+                <View style={{ marginTop: 16, height: 56, flexDirection: "row", alignItems: "center", paddingHorizontal: 6, gap: 2, borderRadius: 20, backgroundColor: th("rgba(255,255,255,0.06)", "bg"), borderWidth: 1, borderColor: th(said.trim() || listening ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)", "line") }}>
                   <Pressable onPress={choosePhoto} accessibilityLabel="Foto do comprovante" hitSlop={4} style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.5 : 1 })}>
-                    <Camera size={20} color="rgba(255,255,255,0.78)" strokeWidth={2} />
+                    <Camera size={20} color={th("rgba(255,255,255,0.78)")} strokeWidth={2} />
                   </Pressable>
                   <TextInput
                     autoFocus
@@ -577,16 +578,16 @@ export default function QuickEntryFlow({
                     }}
                     returnKeyType={draft ? "done" : "next"}
                     placeholder={listening ? "Estou ouvindo…" : reading ? "Lendo…" : "Ex.: padaria 48"}
-                    placeholderTextColor={INK.faint}
-                    style={{ flex: 1, minWidth: 0, height: "100%", paddingHorizontal: 4, fontSize: 19, fontWeight: "600", color: "#fff" }}
+                    placeholderTextColor={th(INK.faint)}
+                    style={{ flex: 1, minWidth: 0, height: "100%", paddingHorizontal: 4, fontSize: 19, fontWeight: "600", color: th("#fff") }}
                   />
                   <Pressable
                     onPress={() => void toggleVoice()}
                     accessibilityLabel={listening ? "Parar e enviar" : "Falar"}
                     hitSlop={4}
-                    style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: listening ? "#fff" : "transparent", opacity: pressed ? 0.5 : 1 })}
+                    style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: th(listening ? "#fff" : "transparent", "bg"), opacity: pressed ? 0.5 : 1 })}
                   >
-                    <Mic size={20} color={listening ? "#0B0B0B" : "rgba(255,255,255,0.78)"} strokeWidth={2.1} />
+                    <Mic size={20} color={th(listening ? "#0B0B0B" : "rgba(255,255,255,0.78)")} strokeWidth={2.1} />
                   </Pressable>
                 </View>
                 {!said.trim() && !draft && !listening && !reading && (
@@ -598,8 +599,8 @@ export default function QuickEntryFlow({
                           write(e);
                           Keyboard.dismiss();
                         }}
-                        style={({ pressed }) => ({ flex: 1, height: 32, alignItems: "center", justifyContent: "center", paddingHorizontal: 8, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.06)", opacity: pressed ? 0.6 : 1 })}>
-                        <Text numberOfLines={1} style={{ fontSize: 13, color: INK.soft }}>
+                        style={({ pressed }) => ({ flex: 1, height: 32, alignItems: "center", justifyContent: "center", paddingHorizontal: 8, borderRadius: 16, backgroundColor: th("rgba(255,255,255,0.06)", "bg"), opacity: pressed ? 0.6 : 1 })}>
+                        <Text numberOfLines={1} style={{ fontSize: 13, color: th(INK.soft) }}>
                           {e}
                         </Text>
                       </Pressable>
@@ -619,7 +620,7 @@ export default function QuickEntryFlow({
             <View>
               {question && !typing ? (
                 <Animated.View key={question} entering={FadeIn.duration(220)} style={{ marginTop: 16 }}>
-                  <Text style={{ fontSize: 15.5, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>
+                  <Text style={{ fontSize: 15.5, fontWeight: "600", letterSpacing: -0.2, color: th("#fff") }}>
                     {question === "method"
                       ? "Foi no débito ou no crédito?"
                       : question === "where"
@@ -637,8 +638,8 @@ export default function QuickEntryFlow({
 
                   {question === "method" && (
                     <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
-                      <Choice icon={<Landmark size={19} color="#fff" strokeWidth={2.1} />} label="Débito" on={reopen === "method" && how === "conta"} onPress={() => answered({ method: "conta" })} />
-                      <Choice icon={<CreditCard size={19} color="#fff" strokeWidth={2.1} />} label="Crédito" on={reopen === "method" && how === "cartao"} onPress={() => answered({ method: "cartao" })} />
+                      <Choice icon={<Landmark size={19} color={th("#fff")} strokeWidth={2.1} />} label="Débito" on={reopen === "method" && how === "conta"} onPress={() => answered({ method: "conta" })} />
+                      <Choice icon={<CreditCard size={19} color={th("#fff")} strokeWidth={2.1} />} label="Crédito" on={reopen === "method" && how === "cartao"} onPress={() => answered({ method: "cartao" })} />
                     </View>
                   )}
 
@@ -652,8 +653,8 @@ export default function QuickEntryFlow({
 
                   {question === "plan" && (
                     <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
-                      <Choice icon={<Banknote size={19} color="#fff" strokeWidth={2.1} />} label="À vista" on={reopen === "plan" && plan === "avista"} onPress={() => answered({ plan: "avista" })} />
-                      <Choice icon={<CalendarClock size={19} color="#fff" strokeWidth={2.1} />} label="Parcelado" on={reopen === "plan" && plan === "parcelado"} onPress={() => answered({ plan: "parcelado" })} />
+                      <Choice icon={<Banknote size={19} color={th("#fff")} strokeWidth={2.1} />} label="À vista" on={reopen === "plan" && plan === "avista"} onPress={() => answered({ plan: "avista" })} />
+                      <Choice icon={<CalendarClock size={19} color={th("#fff")} strokeWidth={2.1} />} label="Parcelado" on={reopen === "plan" && plan === "parcelado"} onPress={() => answered({ plan: "parcelado" })} />
                     </View>
                   )}
 
@@ -678,7 +679,7 @@ export default function QuickEntryFlow({
                 </Animated.View>
               ) : (
                 <>
-                  {error && <Text style={{ marginTop: 14, fontSize: 13.5, color: RED }}>{error}</Text>}
+                  {error && <Text style={{ marginTop: 14, fontSize: 13.5, color: th(RED) }}>{error}</Text>}
                   {!question && (hasEntry || said.trim()) && (
                     <Primary
                       label={reading ? "Lendo…" : "Continuar"}
@@ -700,14 +701,14 @@ export default function QuickEntryFlow({
         {/* ── Check before saving: the same page as the guided entry's ── */}
         {step === "confirm" && f && (
           <Animated.View key="confirm" entering={FadeInDown.duration(320)} style={{ marginTop: 18 }}>
-            <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>Confira antes de salvar</Text>
+            <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>Confira antes de salvar</Text>
             {said.trim() ? (
-              <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 12.5, color: INK.softer }}>
-                {spoken ? "Você disse" : "Você escreveu"} <Text style={{ fontStyle: "italic", color: INK.soft }}>“{said.trim()}”</Text>
+              <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 12.5, color: th(INK.softer) }}>
+                {spoken ? "Você disse" : "Você escreveu"} <Text style={{ fontStyle: "italic", color: th(INK.soft) }}>“{said.trim()}”</Text>
               </Text>
             ) : null}
             <EntryForm values={f} onChange={(patch) => setForm((cur) => (cur ? { ...cur, ...patch } : cur))} accounts={accounts} cards={cards} onPickCategory={() => setPicking(true)} />
-            {error && <Text style={{ marginTop: 14, fontSize: 13.5, color: RED }}>{error}</Text>}
+            {error && <Text style={{ marginTop: 14, fontSize: 13.5, color: th(RED) }}>{error}</Text>}
             <Primary
               label={saving ? "Registrando…" : scheduled ? "Agendar" : "Registrar"}
               busy={saving}

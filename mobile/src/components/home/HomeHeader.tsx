@@ -4,6 +4,7 @@ import Animated, { Easing, withTiming, type EntryExitAnimationFunction } from "r
 import { Bell, User } from "~/components/icons";
 import { GREEN } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * The row that stays put while everything else scrolls under it.
  *
@@ -84,17 +85,17 @@ export default function HomeHeader({
           justifyContent: "center",
           overflow: "hidden",
           borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.34)",
-          backgroundColor: "rgba(255,255,255,0.10)",
+          borderColor: th("rgba(255,255,255,0.34)", "line"),
+          backgroundColor: th("rgba(255,255,255,0.10)", "bg"),
           opacity: pressed ? 0.7 : 1,
         })}
       >
         {avatarUrl ? (
           <Image source={{ uri: avatarUrl }} style={{ width: "100%", height: "100%" }} />
         ) : initial ? (
-          <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>{initial}</Text>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff") }}>{initial}</Text>
         ) : (
-          <User size={18} color="rgba(255,255,255,0.8)" />
+          <User size={18} color={th("rgba(255,255,255,0.8)")} />
         )}
       </Pressable>
 
@@ -103,7 +104,7 @@ export default function HomeHeader({
           entering={enter}
           exiting={leave}
           numberOfLines={1}
-          style={{ flex: 1, fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}
+          style={{ flex: 1, fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}
         >
           {firstName}
         </Animated.Text>
@@ -122,7 +123,7 @@ export default function HomeHeader({
           opacity: pressed ? 0.7 : 1,
         })}
       >
-        <Bell size={18} color="#fff" />
+        <Bell size={18} color={th("#fff")} />
         {unread > 0 && (
           <View
             style={{
@@ -132,9 +133,9 @@ export default function HomeHeader({
               width: 8,
               height: 8,
               borderRadius: 4,
-              backgroundColor: GREEN,
+              backgroundColor: th(GREEN, "bg"),
               borderWidth: 2,
-              borderColor: "rgba(0,0,0,0.7)",
+              borderColor: th("rgba(0,0,0,0.7)", "line"),
             }}
           />
         )}

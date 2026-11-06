@@ -26,6 +26,7 @@ import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * Where the money is.
  *
@@ -157,13 +158,13 @@ export default function Gestao() {
         <View style={{ height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <BackButton to="/" />
           <RoundButton label="Adicionar conta" onPress={() => setAddingAccount(true)}>
-            <Plus size={18} color="rgba(255,255,255,0.9)" strokeWidth={2.4} />
+            <Plus size={18} color={th("rgba(255,255,255,0.9)")} strokeWidth={2.4} />
           </RoundButton>
         </View>
 
         {accounts === null ? (
           <View style={{ marginTop: 20, gap: 16 }}>
-            <View style={{ height: 96, borderRadius: 24, backgroundColor: "rgba(255,255,255,0.04)" }} />
+            <View style={{ height: 96, borderRadius: 24, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }} />
             <Surface style={{ height: 170 }}><View /></Surface>
           </View>
         ) : rows.length === 0 ? (
@@ -176,16 +177,16 @@ export default function Gestao() {
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
-                borderColor: INK.edge,
-                backgroundColor: "rgba(255,255,255,0.04)",
+                borderColor: th(INK.edge, "line"),
+                backgroundColor: th("rgba(255,255,255,0.04)", "bg"),
               }}
             >
-              <Landmark size={22} color="rgba(255,255,255,0.7)" strokeWidth={2} />
+              <Landmark size={22} color={th("rgba(255,255,255,0.7)")} strokeWidth={2} />
             </View>
-            <Text style={{ marginTop: 14, fontSize: 17, fontWeight: "700", color: "#fff" }}>
+            <Text style={{ marginTop: 14, fontSize: 17, fontWeight: "700", color: th("#fff") }}>
               Nenhuma conta cadastrada
             </Text>
-            <Text style={{ marginTop: 6, maxWidth: 256, textAlign: "center", fontSize: 13.5, lineHeight: 18, color: INK.soft }}>
+            <Text style={{ marginTop: 6, maxWidth: 256, textAlign: "center", fontSize: 13.5, lineHeight: 18, color: th(INK.soft) }}>
               Cadastre uma conta para acompanhar o saldo e o que entra e sai dela.
             </Text>
             <Pressable
@@ -197,18 +198,18 @@ export default function Gestao() {
                 borderRadius: 23,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "#fff",
+                backgroundColor: th("#fff", "bg"),
                 opacity: pressed ? 0.85 : 1,
               })}
             >
-              <Text style={{ fontSize: 15, fontWeight: "700", color: "#0B0B0B" }}>Adicionar conta</Text>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: th("#0B0B0B") }}>Adicionar conta</Text>
             </Pressable>
           </Surface>
         ) : (
           <>
             {/* ══ Everything you hold ══ */}
             <Animated.View entering={FadeInDown.duration(400)} style={{ paddingHorizontal: 4, paddingTop: 12 }}>
-              <Text style={{ fontSize: 13.5, color: "rgba(255,255,255,0.62)" }}>Saldo em contas</Text>
+              <Text style={{ fontSize: 13.5, color: th("rgba(255,255,255,0.62)") }}>Saldo em contas</Text>
               <Text
                 numberOfLines={1}
                 style={{
@@ -216,7 +217,7 @@ export default function Gestao() {
                   fontSize: 40,
                   fontWeight: "800",
                   letterSpacing: -1.6,
-                  color: saldo < 0 ? RED : "#fff",
+                  color: th(saldo < 0 ? RED : "#fff"),
                 }}
               >
                 {money(saldo)}
@@ -226,22 +227,22 @@ export default function Gestao() {
               <View style={{ marginTop: 14, flexDirection: "row", gap: 28 }}>
                 {previsto !== undefined && (
                   <View style={{ flexShrink: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>Previsto no final do mês</Text>
-                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: previsto < 0 ? RED : "#fff" }}>
+                    <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.softer) }}>Previsto no final do mês</Text>
+                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: th(previsto < 0 ? RED : "#fff") }}>
                       {money(previsto)}
                     </Text>
                   </View>
                 )}
                 {guardado > 0 && (
                   <View style={{ flexShrink: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>Patrimônio total</Text>
-                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
+                    <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.softer) }}>Patrimônio total</Text>
+                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
                       {money(total)}
                     </Text>
                   </View>
                 )}
               </View>
-              <Text style={{ marginTop: 10, fontSize: 12.5, color: INK.soft }}>
+              <Text style={{ marginTop: 10, fontSize: 12.5, color: th(INK.soft) }}>
                 {rows.length} {rows.length === 1 ? "conta" : "contas"}
               </Text>
             </Animated.View>
@@ -262,7 +263,7 @@ export default function Gestao() {
                       />
                     ))
                 ) : (
-                  <View style={{ flex: 1, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)" }} />
+                  <View style={{ flex: 1, borderRadius: 999, backgroundColor: th("rgba(255,255,255,0.08)", "bg") }} />
                 )}
               </View>
 
@@ -279,7 +280,7 @@ export default function Gestao() {
                         paddingHorizontal: 4,
                         paddingVertical: 16,
                         borderTopWidth: i > 0 ? 1 : 0,
-                        borderTopColor: "rgba(255,255,255,0.06)",
+                        borderTopColor: th("rgba(255,255,255,0.06)", "line"),
                         opacity: pressed ? 0.6 : 1,
                       })}
                     >
@@ -287,7 +288,7 @@ export default function Gestao() {
 
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                          <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15.5, fontWeight: "600", color: "#fff" }}>
+                          <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>
                             {r.account.name}
                           </Text>
                           {r.account.is_default && (
@@ -299,15 +300,15 @@ export default function Gestao() {
                                 paddingVertical: 2,
                                 fontSize: 10,
                                 fontWeight: "700",
-                                backgroundColor: "rgba(255,255,255,0.08)",
-                                color: INK.soft,
+                                backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
+                                color: th(INK.soft),
                               }}
                             >
                               Principal
                             </Text>
                           )}
                         </View>
-                        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: INK.softer }}>
+                        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: th(INK.softer) }}>
                           {r.typeLabel}
                         </Text>
                       </View>
@@ -317,12 +318,12 @@ export default function Gestao() {
                           style={{
                             fontSize: 15.5,
                             fontWeight: "700",
-                            color: r.balance < 0 ? RED : r.balance > 0 ? "#fff" : INK.softer,
+                            color: th(r.balance < 0 ? RED : r.balance > 0 ? "#fff" : INK.softer),
                           }}
                         >
                           {money(r.balance)}
                         </Text>
-                        <Text style={{ marginTop: 2, fontSize: 12, color: share > 0 ? r.hex : INK.faint }}>
+                        <Text style={{ marginTop: 2, fontSize: 12, color: th(share > 0 ? r.hex : INK.faint) }}>
                           {Math.round(share * 100)}%
                         </Text>
                       </View>
@@ -337,15 +338,15 @@ export default function Gestao() {
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 4 }}>
                 <View>
                   <Text style={T.eyebrow}>Caixinhas</Text>
-                  <Text style={{ marginTop: 3, fontSize: 12.5, color: INK.soft }}>Organize seus objetivos</Text>
+                  <Text style={{ marginTop: 3, fontSize: 12.5, color: th(INK.soft) }}>Organize seus objetivos</Text>
                 </View>
                 <Pressable
                   onPress={() => setAddingCaixinha(true)}
                   hitSlop={8}
                   style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, opacity: pressed ? 0.6 : 1 })}
                 >
-                  <Plus size={14} color="#fff" strokeWidth={2.6} />
-                  <Text style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>Criar nova</Text>
+                  <Plus size={14} color={th("#fff")} strokeWidth={2.6} />
+                  <Text style={{ fontSize: 13.5, fontWeight: "600", color: th("#fff") }}>Criar nova</Text>
                 </Pressable>
               </View>
 
@@ -359,44 +360,44 @@ export default function Gestao() {
                     gap: 14,
                     borderRadius: 22,
                     borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.08)",
-                    backgroundColor: "rgba(255,255,255,0.04)",
+                    borderColor: th("rgba(255,255,255,0.08)", "line"),
+                    backgroundColor: th("rgba(255,255,255,0.04)", "bg"),
                     padding: 16,
                     opacity: pressed ? 0.7 : 1,
                   })}
                 >
-                  <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.07)" }}>
-                    <PiggyBank size={20} color="#fff" strokeWidth={2} />
+                  <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
+                    <PiggyBank size={20} color={th("#fff")} strokeWidth={2} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Crie sua primeira caixinha</Text>
-                    <Text style={{ marginTop: 2, fontSize: 12.5, lineHeight: 17, color: INK.soft }}>
+                    <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff") }}>Crie sua primeira caixinha</Text>
+                    <Text style={{ marginTop: 2, fontSize: 12.5, lineHeight: 17, color: th(INK.soft) }}>
                       Para a viagem, a reserva de emergência, o carro. O dinheiro sai da conta, mas continua seu.
                     </Text>
                   </View>
-                  <ChevronRight size={16} color={INK.softer} />
+                  <ChevronRight size={16} color={th(INK.softer)} />
                 </Pressable>
               ) : (
                 <>
                   {/* The caixinhas as numbers first, the way the accounts are. Each one keeps its
                       own goal and pace on its own page, so only the total and what it earns are here. */}
                   <View style={{ paddingHorizontal: 4, paddingTop: 10 }}>
-                    <Text style={{ fontSize: 13.5, color: "rgba(255,255,255,0.62)" }}>Total em caixinhas</Text>
-                    <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 32, fontWeight: "800", letterSpacing: -1.2, color: "#fff" }}>
+                    <Text style={{ fontSize: 13.5, color: th("rgba(255,255,255,0.62)") }}>Total em caixinhas</Text>
+                    <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 32, fontWeight: "800", letterSpacing: -1.2, color: th("#fff") }}>
                       {money(guardado)}
                     </Text>
                     {rendem && (
                       <View style={{ marginTop: 12, flexDirection: "row", gap: 26 }}>
                         <View style={{ flexShrink: 1, minWidth: 0 }}>
-                          <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>Rendimentos</Text>
-                          <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: GREEN }}>
+                          <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.softer) }}>Rendimentos</Text>
+                          <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: th(GREEN) }}>
                             {money(earned)}
                           </Text>
                         </View>
                         {noMes > 0 && (
                           <View style={{ flexShrink: 1, minWidth: 0 }}>
-                            <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>Estimado em um mês</Text>
-                            <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
+                            <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.softer) }}>Estimado em um mês</Text>
+                            <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
                               {money(noMes)}
                             </Text>
                           </View>

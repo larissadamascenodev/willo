@@ -11,7 +11,9 @@ export const GROUND = "#08090A";
 /** The room — the home, the wallet and the accounts screen. */
 export const GROUND_LIT = "#0D0E10";
 
-export const GREEN = "#C8F36D";
+/** The one green, in every place the app is green: the iPhone switch's, the colour
+    of Pago and Recebido. */
+export const GREEN = "#67CD67";
 /** Money coming in, on the entry flows — the green of the phone's own switch. */
 export const INCOME = "#67CD67";
 export const AMBER = "#F9CE4E";

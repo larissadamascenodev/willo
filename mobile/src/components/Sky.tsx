@@ -9,6 +9,7 @@ import Svg, {
   Stop,
 } from "react-native-svg";
 
+import { th } from "~/theme/theme";
 /**
  * The hour the home arrives at.
  *
@@ -57,13 +58,13 @@ export default function Sky() {
       <Svg width="100%" height="100%">
         <Defs>
           <LinearGradient id="sky-base" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#080d18" />
-            <Stop offset="0.14" stopColor="#16233c" />
-            <Stop offset="0.32" stopColor="#123048" />
-            <Stop offset="0.46" stopColor="#114058" />
-            <Stop offset="0.62" stopColor="#0e2a3a" />
-            <Stop offset="0.84" stopColor="#0D0E10" stopOpacity={0.88} />
-            <Stop offset="1" stopColor="#0D0E10" />
+            <Stop offset="0" stopColor={th("#080d18", "grad")} />
+            <Stop offset="0.14" stopColor={th("#16233c", "grad")} />
+            <Stop offset="0.32" stopColor={th("#123048", "grad")} />
+            <Stop offset="0.46" stopColor={th("#114058", "grad")} />
+            <Stop offset="0.62" stopColor={th("#0e2a3a", "grad")} />
+            <Stop offset="0.84" stopColor={th("#0D0E10", "grad")} stopOpacity={0.88} />
+            <Stop offset="1" stopColor={th("#0D0E10", "grad")} />
           </LinearGradient>
 
           {LIGHTS.map((l, i) => (
@@ -75,18 +76,18 @@ export default function Sky() {
               rx={String(l.rx)}
               ry={String(l.ry)}
             >
-              <Stop offset="0" stopColor={`rgb(${l.rgb})`} stopOpacity={l.a} />
-              <Stop offset="1" stopColor={`rgb(${l.rgb})`} stopOpacity={0} />
+              <Stop offset="0" stopColor={th(`rgb(${l.rgb})`, "grad")} stopOpacity={l.a} />
+              <Stop offset="1" stopColor={th(`rgb(${l.rgb})`, "grad")} stopOpacity={0} />
             </RadialGradient>
           ))}
 
           {/* It has to be gone before the cards start, or they read as sitting on a
               photograph rather than in a room. */}
           <LinearGradient id="sky-fade" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#fff" stopOpacity={1} />
-            <Stop offset="0.5" stopColor="#fff" stopOpacity={1} />
-            <Stop offset="0.74" stopColor="#fff" stopOpacity={0.42} />
-            <Stop offset="1" stopColor="#fff" stopOpacity={0} />
+            <Stop offset="0" stopColor={th("#fff", "grad")} stopOpacity={1} />
+            <Stop offset="0.5" stopColor={th("#fff", "grad")} stopOpacity={1} />
+            <Stop offset="0.74" stopColor={th("#fff", "grad")} stopOpacity={0.42} />
+            <Stop offset="1" stopColor={th("#fff", "grad")} stopOpacity={0} />
           </LinearGradient>
           <Mask id="sky-mask">
             <Rect x="0" y="0" width="100%" height="100%" fill="url(#sky-fade)" />
@@ -96,7 +97,7 @@ export default function Sky() {
         <G mask="url(#sky-mask)">
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#sky-base)" />
           {LIGHTS.map((_, i) => (
-            <Rect key={i} x="0" y="0" width="100%" height="100%" fill={`url(#sky${i})`} />
+            <Rect key={i} x="0" y="0" width="100%" height="100%" fill={th(`url(#sky${i})`)} />
           ))}
         </G>
       </Svg>

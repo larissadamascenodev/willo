@@ -15,6 +15,7 @@ import { money } from "~/lib/money";
 import { GREEN, INK } from "~/theme/tokens";
 import { EXPAND } from "~/lib/expand";
 
+import { th } from "~/theme/theme";
 /**
  * What the chosen month's instalments are made of.
  *
@@ -82,8 +83,8 @@ export default function InstallmentCategories({
       <Surface>
         <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12, padding: 14 }}>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ fontSize: 12, color: INK.soft }}>Por categoria · {monthLabel}</Text>
-            <Text numberOfLines={1} style={[nums, { marginTop: 6, fontSize: 26, fontWeight: "800", letterSpacing: -0.9, color: "#fff" }]}>
+            <Text style={{ fontSize: 12, color: th(INK.soft) }}>Por categoria · {monthLabel}</Text>
+            <Text numberOfLines={1} style={[nums, { marginTop: 6, fontSize: 26, fontWeight: "800", letterSpacing: -0.9, color: th("#fff") }]}>
               {money(total)}
             </Text>
           </View>
@@ -92,10 +93,10 @@ export default function InstallmentCategories({
             hitSlop={8}
             style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, marginTop: 2, opacity: pressed ? 0.6 : 1 })}
           >
-            <Text style={{ fontSize: 12, fontWeight: "600", color: INK.soft }}>
+            <Text style={{ fontSize: 12, fontWeight: "600", color: th(INK.soft) }}>
               {categories.length > SHOWN ? `Ver todas (${categories.length})` : "Detalhes"}
             </Text>
-            <ChevronRight size={14} color={INK.soft} />
+            <ChevronRight size={14} color={th(INK.soft)} />
           </Pressable>
         </View>
 
@@ -126,7 +127,7 @@ export default function InstallmentCategories({
               <Animated.View
                 key={c.category}
                 layout={EXPAND}
-                style={{ borderTopWidth: i > 0 ? 1 : 0, borderTopColor: RULE }}
+                style={{ borderTopWidth: i > 0 ? 1 : 0, borderTopColor: th(RULE, "line") }}
               >
                 <CategoryRow
                   share={c}
@@ -146,7 +147,7 @@ export default function InstallmentCategories({
                       paddingVertical: 4,
                       borderRadius: 16,
                       borderCurve: "continuous",
-                      backgroundColor: "rgba(255,255,255,0.04)",
+                      backgroundColor: th("rgba(255,255,255,0.04)", "bg"),
                     }}
                   >
                     {c.parts.map((p, j) => {
@@ -164,11 +165,11 @@ export default function InstallmentCategories({
                             gap: 10,
                             paddingVertical: 10,
                             borderTopWidth: j > 0 ? 1 : 0,
-                            borderTopColor: "rgba(255,255,255,0.05)",
+                            borderTopColor: th("rgba(255,255,255,0.05)", "line"),
                           }}
                         >
                           <View style={{ flex: 1, minWidth: 0 }}>
-                            <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>
+                            <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "600", color: th("#fff") }}>
                               {p.name}
                             </Text>
                             <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -177,15 +178,15 @@ export default function InstallmentCategories({
                                   width: 6,
                                   height: 6,
                                   borderRadius: 3,
-                                  backgroundColor: last ? GREEN : isCard ? cardHex(card?.color ?? null) : "rgba(255,255,255,0.35)",
+                                  backgroundColor: th(last ? GREEN : isCard ? cardHex(card?.color ?? null) : "rgba(255,255,255,0.35)", "bg"),
                                 }}
                               />
-                              <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: INK.softer }}>
+                              <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: th(INK.softer) }}>
                                 Parcela {p.number} de {p.total} · {where}
                               </Text>
                             </View>
                           </View>
-                          <Text style={[nums, { fontSize: 13.5, fontWeight: "600", color: "#fff" }]}>{money(p.amount)}</Text>
+                          <Text style={[nums, { fontSize: 13.5, fontWeight: "600", color: th("#fff") }]}>{money(p.amount)}</Text>
                         </View>
                       );
                     })}
@@ -246,29 +247,29 @@ function CategoryRow({
         gap: 12,
         paddingVertical: 10,
         borderTopWidth: first ? 0 : 1,
-        borderTopColor: RULE,
+        borderTopColor: th(RULE, "line"),
         opacity: pressed ? 0.6 : 1,
       })}
     >
       <View style={{ width: 22, alignItems: "center" }}>
-        <Icon size={17} color={hex} />
+        <Icon size={17} color={th(hex)} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>
+        <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "600", color: th("#fff") }}>
           {c.category}
         </Text>
         {withCount && (
-          <Text style={{ marginTop: 1, fontSize: 11.5, color: INK.softer }}>
+          <Text style={{ marginTop: 1, fontSize: 11.5, color: th(INK.softer) }}>
             {count} {count === 1 ? "parcela" : "parcelas"}
           </Text>
         )}
       </View>
       <View style={{ alignItems: "flex-end" }}>
-        <Text style={[nums, { fontSize: 13.5, fontWeight: "700", color: "#fff" }]}>{money(c.amount)}</Text>
-        <Text style={[nums, { fontSize: 10.5, color: INK.softer }]}>{pct}%</Text>
+        <Text style={[nums, { fontSize: 13.5, fontWeight: "700", color: th("#fff") }]}>{money(c.amount)}</Text>
+        <Text style={[nums, { fontSize: 10.5, color: th(INK.softer) }]}>{pct}%</Text>
       </View>
       {open !== undefined && (
-        <ChevronDown size={15} color={INK.softer} style={{ transform: [{ rotate: open ? "180deg" : "0deg" }] }} />
+        <ChevronDown size={15} color={th(INK.softer)} style={{ transform: [{ rotate: open ? "180deg" : "0deg" }] }} />
       )}
     </Pressable>
   );

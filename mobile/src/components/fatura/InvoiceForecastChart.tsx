@@ -7,6 +7,7 @@ import { Check } from "~/components/icons";
 import { money } from "~/lib/money";
 import { INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * What this card is about to ask for.
  *
@@ -126,15 +127,15 @@ export default function InvoiceForecastChart({
     <View style={{ paddingHorizontal: 4 }}>
       <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
         <View>
-          <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 1.4, textTransform: "uppercase", color: INK.soft }}>
+          <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 1.4, textTransform: "uppercase", color: th(INK.soft) }}>
             Próximas faturas
           </Text>
-          <Text style={{ marginTop: 6, fontSize: 24, fontWeight: "800", letterSpacing: -0.8, color: "#fff" }}>
+          <Text style={{ marginTop: 6, fontSize: 24, fontWeight: "800", letterSpacing: -0.8, color: th("#fff") }}>
             {money(committed)}
           </Text>
         </View>
         {lastLabel && (
-          <Text style={{ textAlign: "right", fontSize: 11.5, lineHeight: 14, color: INK.faint }}>
+          <Text style={{ textAlign: "right", fontSize: 11.5, lineHeight: 14, color: th(INK.faint) }}>
             comprometido{"\n"}até {lastLabel}
           </Text>
         )}
@@ -167,7 +168,7 @@ export default function InvoiceForecastChart({
                     /* Settled and open invoices are the card's colour at full
                        strength; the ones still to come are the same colour, lighter.
                        One hue, so any bank's card reads the same way. */
-                    backgroundColor: bar.status === "futura" ? shade(hex, 0.55) : hex,
+                    backgroundColor: th(bar.status === "futura" ? shade(hex, 0.55) : hex, "bg"),
                     opacity: selected ? 1 : past ? 0.45 : 0.72,
                   }}
                 />
@@ -182,10 +183,10 @@ export default function InvoiceForecastChart({
                         borderRadius: 9,
                         alignItems: "center",
                         justifyContent: "center",
-                        backgroundColor: "rgba(0,0,0,0.35)",
+                        backgroundColor: th("rgba(0,0,0,0.35)", "bg"),
                       }}
                     >
-                      <Check size={11} color="#fff" strokeWidth={3.4} />
+                      <Check size={11} color={th("#fff")} strokeWidth={3.4} />
                     </View>
                   </View>
                 )}
@@ -195,7 +196,7 @@ export default function InvoiceForecastChart({
                 style={{
                   fontSize: 11,
                   fontWeight: selected ? "700" : "400",
-                  color: selected ? "#fff" : past ? INK.faint : INK.soft,
+                  color: th(selected ? "#fff" : past ? INK.faint : INK.soft),
                 }}
               >
                 {MONTH_SHORT[bar.month - 1]}
@@ -224,12 +225,12 @@ function Legend({ hex, label, tick }: { hex: string; label: string; tick?: boole
           borderRadius: 3,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: hex,
+          backgroundColor: th(hex, "bg"),
         }}
       >
-        {tick && <Check size={8} color="#fff" strokeWidth={4} />}
+        {tick && <Check size={8} color={th("#fff")} strokeWidth={4} />}
       </View>
-      <Text style={{ fontSize: 11, color: INK.softer }}>{label}</Text>
+      <Text style={{ fontSize: 11, color: th(INK.softer) }}>{label}</Text>
     </View>
   );
 }

@@ -32,6 +32,7 @@ import { useAuth } from "~/lib/auth";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * What is still to come this month — and whether the money is there when it does.
  *
@@ -142,9 +143,9 @@ export default function Eventos() {
                 opacity: pressed ? 0.5 : 1,
               })}
             >
-              <ChevronLeft size={17} color="#fff" />
+              <ChevronLeft size={17} color={th("#fff")} />
             </Pressable>
-            <Text style={{ minWidth: 84, textAlign: "center", fontSize: 14, fontWeight: "600", color: "#fff" }}>
+            <Text style={{ minWidth: 84, textAlign: "center", fontSize: 14, fontWeight: "600", color: th("#fff") }}>
               {capitalise(MONTHS[month])}
               {year !== today.getFullYear() ? ` ${String(year).slice(2)}` : ""}
             </Text>
@@ -161,7 +162,7 @@ export default function Eventos() {
                 opacity: pressed ? 0.5 : 1,
               })}
             >
-              <ChevronRight size={17} color="#fff" />
+              <ChevronRight size={17} color={th("#fff")} />
             </Pressable>
           </Glass>
         </View>
@@ -172,7 +173,7 @@ export default function Eventos() {
         <Surface radius={22} style={{ marginTop: 18 }}>
           <View style={{ flexDirection: "row" }}>
             <Figure dot={GREEN} label="A receber" value={waiting ? null : money(aReceber)} />
-            <View style={{ width: 1, marginVertical: 14, backgroundColor: RULE }} />
+            <View style={{ width: 1, marginVertical: 14, backgroundColor: th(RULE, "bg") }} />
             <Figure dot={AMBER} label="A pagar" value={waiting ? null : money(aPagar)} />
           </View>
           <View
@@ -180,23 +181,23 @@ export default function Eventos() {
               marginHorizontal: 16,
               paddingVertical: 12,
               borderTopWidth: 1,
-              borderTopColor: RULE,
+              borderTopColor: th(RULE, "line"),
               flexDirection: "row",
               alignItems: "center",
               gap: 12,
             }}
           >
-            <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: INK.soft }}>
+            <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: th(INK.soft) }}>
               {isPastMonth ? `Saldo no fim de ${MONTHS[month]}` : `Se tudo acontecer, fim de ${MONTHS[month]}`}
             </Text>
             {waiting ? (
-              <View style={{ height: 16, width: 90, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.07)" }} />
+              <View style={{ height: 16, width: 90, borderRadius: 6, backgroundColor: th("rgba(255,255,255,0.07)", "bg") }} />
             ) : (
               <Text
                 numberOfLines={1}
                 adjustsFontSizeToFit
                 minimumFontScale={0.75}
-                style={[nums, { flexShrink: 1, fontSize: 16, fontWeight: "700", color: ending < 0 ? RED : "#fff" }]}
+                style={[nums, { flexShrink: 1, fontSize: 16, fontWeight: "700", color: th(ending < 0 ? RED : "#fff") }]}
               >
                 {ending < 0 ? "−" : ""}
                 {money(Math.abs(ending))}
@@ -229,27 +230,27 @@ export default function Eventos() {
 
         {/* ══ What falls when ══ */}
         {waiting ? (
-          <View style={{ marginTop: 24, height: 180, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.03)" }} />
+          <View style={{ marginTop: 24, height: 180, borderRadius: 14, backgroundColor: th("rgba(255,255,255,0.03)", "bg") }} />
         ) : day !== null ? (
           <Animated.View key={`dia-${day}-${kind}`} entering={FadeIn.duration(180)} style={{ marginTop: 20 }}>
             <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-              <Text style={{ fontSize: 17, fontWeight: "600", color: "#fff" }}>
+              <Text style={{ fontSize: 17, fontWeight: "600", color: th("#fff") }}>
                 {capitalise(weekdayShort(new Date(year, month, day)))}, {day} de {MONTHS[month]}
               </Text>
               <Pressable onPress={() => setDay(null)} hitSlop={10} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
-                <Text style={{ fontSize: 14, color: INK.soft }}>Ver o mês todo</Text>
+                <Text style={{ fontSize: 14, color: th(INK.soft) }}>Ver o mês todo</Text>
               </Pressable>
             </View>
             <View style={{ marginTop: 6 }}>
               {onDay.length === 0 ? (
-                <Text style={{ paddingVertical: 18, fontSize: 14, color: INK.softer }}>{nothing} neste dia.</Text>
+                <Text style={{ paddingVertical: 18, fontSize: 14, color: th(INK.softer) }}>{nothing} neste dia.</Text>
               ) : (
                 onDay.map((e) => <EventRow key={e.id} event={e} today={today} />)
               )}
             </View>
           </Animated.View>
         ) : events.length === 0 ? (
-          <Text style={{ marginTop: 24, paddingHorizontal: 4, fontSize: 14, color: INK.softer }}>
+          <Text style={{ marginTop: 24, paddingHorizontal: 4, fontSize: 14, color: th(INK.softer) }}>
             {nothing} em {MONTHS[month]}.
           </Text>
         ) : (
@@ -285,14 +286,14 @@ export default function Eventos() {
                     justifyContent: "space-between",
                     paddingVertical: 12,
                     borderTopWidth: 1,
-                    borderTopColor: RULE,
+                    borderTopColor: th(RULE, "line"),
                     opacity: pressed ? 0.6 : 1,
                   })}
                 >
-                  <Text style={{ fontSize: 15, color: INK.soft }}>
-                    Já pagos e recebidos <Text style={{ color: INK.faint }}>{settled.length}</Text>
+                  <Text style={{ fontSize: 15, color: th(INK.soft) }}>
+                    Já pagos e recebidos <Text style={{ color: th(INK.faint) }}>{settled.length}</Text>
                   </Text>
-                  {showSettled ? <ChevronUp size={16} color={INK.soft} /> : <ChevronDown size={16} color={INK.soft} />}
+                  {showSettled ? <ChevronUp size={16} color={th(INK.soft)} /> : <ChevronDown size={16} color={th(INK.soft)} />}
                 </Pressable>
                 {showSettled && (
                   <Animated.View entering={FadeIn.duration(180)}>
@@ -315,17 +316,17 @@ function Figure({ dot, label, value }: { dot: string; label: string; value: stri
   return (
     <View style={{ flex: 1, minWidth: 0, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
-        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: dot }} />
-        <Text style={{ fontSize: 13, color: INK.soft }}>{label}</Text>
+        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: th(dot, "bg") }} />
+        <Text style={{ fontSize: 13, color: th(INK.soft) }}>{label}</Text>
       </View>
       {value === null ? (
-        <View style={{ marginTop: 8, height: 22, width: "80%", borderRadius: 7, backgroundColor: "rgba(255,255,255,0.06)" }} />
+        <View style={{ marginTop: 8, height: 22, width: "80%", borderRadius: 7, backgroundColor: th("rgba(255,255,255,0.06)", "bg") }} />
       ) : (
         <Text
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.6}
-          style={[nums, { marginTop: 5, fontSize: 22, fontWeight: "700", letterSpacing: -0.6, color: "#fff" }]}
+          style={[nums, { marginTop: 5, fontSize: 22, fontWeight: "700", letterSpacing: -0.6, color: th("#fff") }]}
         >
           {value}
         </Text>
@@ -348,9 +349,9 @@ function Section({
   return (
     <View style={{ marginTop: 18 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingBottom: 2 }}>
-        {dot && <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: dot }} />}
-        <Text style={{ fontSize: 17, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>{title}</Text>
-        <Text style={{ fontSize: 14, color: INK.faint }}>{count}</Text>
+        {dot && <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: th(dot, "bg") }} />}
+        <Text style={{ fontSize: 17, fontWeight: "600", letterSpacing: -0.2, color: th("#fff") }}>{title}</Text>
+        <Text style={{ fontSize: 14, color: th(INK.faint) }}>{count}</Text>
       </View>
       {children}
     </View>
@@ -365,16 +366,16 @@ function DayHeader({ event, today, list }: { event: FinanceEvent; today: Date; l
   const net = list.reduce((s, e) => s + (isIncome(e) ? e.amount : -e.amount), 0);
   return (
     <View style={{ marginTop: 12, flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-      <Text style={{ fontSize: 13, fontWeight: "600", color: n <= 1 ? "#fff" : INK.soft }}>
+      <Text style={{ fontSize: 13, fontWeight: "600", color: th(n <= 1 ? "#fff" : INK.soft) }}>
         {label}
         {n <= 1 ? (
-          <Text style={{ fontWeight: "400", color: INK.softer }}>
+          <Text style={{ fontWeight: "400", color: th(INK.softer) }}>
             {"  "}
             {weekdayShort(d)}, {d.getDate()} {monthShort(d)}
           </Text>
         ) : null}
       </Text>
-      <Text style={[nums, { fontSize: 12.5, color: INK.softer }]}>
+      <Text style={[nums, { fontSize: 12.5, color: th(INK.softer) }]}>
         {net < 0 ? "−" : "+"}
         {money(Math.abs(net))}
       </Text>
@@ -398,7 +399,7 @@ function EventRow({ event: e, today }: { event: FinanceEvent; today: Date }) {
         gap: 12,
         paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: RULE,
+        borderBottomColor: th(RULE, "line"),
         opacity: done ? 0.6 : 1,
       }}
     >
@@ -409,13 +410,13 @@ function EventRow({ event: e, today }: { event: FinanceEvent; today: Date }) {
           borderRadius: 20,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: chipFill(hex),
+          backgroundColor: th(chipFill(hex), "bg"),
         }}
       >
-        <Icon size={18} color={chipInk(hex)} strokeWidth={2} />
+        <Icon size={18} color={th(chipInk(hex))} strokeWidth={2} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "500", color: "#fff" }}>
+        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "500", color: th("#fff") }}>
           {e.name}
         </Text>
         <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -425,16 +426,16 @@ function EventRow({ event: e, today }: { event: FinanceEvent; today: Date }) {
                 width: 6,
                 height: 6,
                 borderRadius: 3,
-                backgroundColor: lateNow ? RED : income ? GREEN : AMBER,
+                backgroundColor: th(lateNow ? RED : income ? GREEN : AMBER, "bg"),
               }}
             />
           )}
-          <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: lateNow ? RED : INK.soft }}>
+          <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: th(lateNow ? RED : INK.soft) }}>
             {dueLabel(e, today)} · {e.category}
           </Text>
         </View>
       </View>
-      <Text numberOfLines={1} style={[nums, { flexShrink: 0, fontSize: 15.5, fontWeight: "600", color: "#fff" }]}>
+      <Text numberOfLines={1} style={[nums, { flexShrink: 0, fontSize: 15.5, fontWeight: "600", color: th("#fff") }]}>
         {income ? "+" : ""}
         {money(e.amount)}
       </Text>

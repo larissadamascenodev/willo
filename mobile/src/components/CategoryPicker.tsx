@@ -10,6 +10,7 @@ import { Search, Sparkles, Tag, X } from "~/components/icons";
 import type { IconCmp } from "~/lib/categoryIconSlugs";
 import { INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Choosing a category, from the whole list.
  *
@@ -89,16 +90,16 @@ export default function CategoryPicker({
   return (
     <Modal visible={open} animationType="slide" transparent onRequestClose={onClose} statusBarTranslucent>
       <View style={{ flex: 1, marginTop: insets.top + 8, borderTopLeftRadius: 32, borderTopRightRadius: 32, borderCurve: "continuous", overflow: "hidden" }}>
-        <BlurView intensity={70} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(12,13,16,0.72)" }} />
+        <BlurView intensity={70} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(12,13,16,0.72)", "bg") }} />
 
         {/* ══ Title, out, and the search ══ */}
         <View style={{ paddingTop: 16, paddingHorizontal: 20 }}>
           <View style={{ height: 44, flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ fontSize: 19, fontWeight: "800", color: "#fff" }}>Categorias</Text>
+            <Text style={{ fontSize: 19, fontWeight: "800", color: th("#fff") }}>Categorias</Text>
             {onManage && (
               <Pressable onPress={onManage} hitSlop={8} style={({ pressed }) => ({ position: "absolute", left: 0, opacity: pressed ? 0.6 : 1 })}>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: INK.soft }}>Gerenciar</Text>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: th(INK.soft) }}>Gerenciar</Text>
               </Pressable>
             )}
             <Pressable
@@ -114,23 +115,23 @@ export default function CategoryPicker({
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.14)",
-                backgroundColor: "rgba(255,255,255,0.08)",
+                borderColor: th("rgba(255,255,255,0.14)", "line"),
+                backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
                 opacity: pressed ? 0.6 : 1,
               })}
             >
-              <X size={18} color="#fff" strokeWidth={2.3} />
+              <X size={18} color={th("#fff")} strokeWidth={2.3} />
             </Pressable>
           </View>
-          <View style={{ marginTop: 14, marginBottom: 10, height: 46, borderRadius: 23, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", backgroundColor: "rgba(255,255,255,0.05)" }}>
-            <Search size={18} color={INK.soft} />
+          <View style={{ marginTop: 14, marginBottom: 10, height: 46, borderRadius: 23, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, borderWidth: 1, borderColor: th("rgba(255,255,255,0.12)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
+            <Search size={18} color={th(INK.soft)} />
             <TextInput
               value={query}
               onChangeText={setQuery}
               placeholder="Buscar"
-              placeholderTextColor={INK.faint}
+              placeholderTextColor={th(INK.faint)}
               autoCorrect={false}
-              style={{ flex: 1, minWidth: 0, padding: 0, fontSize: 16, color: "#fff" }}
+              style={{ flex: 1, minWidth: 0, padding: 0, fontSize: 16, color: th("#fff") }}
             />
           </View>
         </View>
@@ -146,11 +147,11 @@ export default function CategoryPicker({
           renderSectionHeader={({ section }) => {
             const Icon = section.icon;
             return (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingVertical: 12, backgroundColor: "rgba(28,29,33,0.97)" }}>
-                <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: section.hex }}>
-                  <Icon size={18} color="#fff" strokeWidth={2.2} />
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingVertical: 12, backgroundColor: th("rgba(28,29,33,0.97)", "bg") }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th(section.hex, "bg") }}>
+                  <Icon size={18} color={th("#fff")} strokeWidth={2.2} />
                 </View>
-                <Text style={{ fontSize: 18, fontWeight: "800", letterSpacing: -0.3, color: "#fff" }}>{section.title}</Text>
+                <Text style={{ fontSize: 18, fontWeight: "800", letterSpacing: -0.3, color: th("#fff") }}>{section.title}</Text>
               </View>
             );
           }}
@@ -161,15 +162,15 @@ export default function CategoryPicker({
             const isSuggestion = !!suggested && item.name === suggested;
             return (
               <Pressable onPress={() => onPick(item.name)} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingVertical: 10, opacity: pressed ? 0.6 : 1 })}>
-                <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.07)" }}>
-                  <Icon size={19} color={item.hex} strokeWidth={2} />
+                <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
+                  <Icon size={19} color={th(item.hex)} strokeWidth={2} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={{ fontSize: 16, color: "#fff" }}>{item.name}</Text>
+                  <Text style={{ fontSize: 16, color: th("#fff") }}>{item.name}</Text>
                   {isSuggestion && (
                     <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 4 }}>
-                      <Sparkles size={11} color="#C8F36D" />
-                      <Text style={{ fontSize: 12, color: "#C8F36D" }}>Sugestão do Willo</Text>
+                      <Sparkles size={11} color={th("#C8F36D")} />
+                      <Text style={{ fontSize: 12, color: th("#C8F36D") }}>Sugestão do Willo</Text>
                     </View>
                   )}
                 </View>
@@ -181,15 +182,15 @@ export default function CategoryPicker({
                     alignItems: "center",
                     justifyContent: "center",
                     borderWidth: on ? 2 : 1.5,
-                    borderColor: on ? "#fff" : "rgba(255,255,255,0.3)",
+                    borderColor: th(on ? "#fff" : "rgba(255,255,255,0.3)", "line"),
                   }}
                 >
-                  {on && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: "#fff" }} />}
+                  {on && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: th("#fff", "bg") }} />}
                 </View>
               </Pressable>
             );
           }}
-          ListEmptyComponent={<Text style={{ paddingTop: 40, textAlign: "center", fontSize: 14, color: INK.soft }}>Nenhuma categoria com esse nome.</Text>}
+          ListEmptyComponent={<Text style={{ paddingTop: 40, textAlign: "center", fontSize: 14, color: th(INK.soft) }}>Nenhuma categoria com esse nome.</Text>}
         />
       </View>
     </Modal>

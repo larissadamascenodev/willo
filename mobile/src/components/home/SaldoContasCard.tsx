@@ -11,6 +11,7 @@ import { money } from "~/lib/money";
 import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * Where the money actually sits.
  *
@@ -78,10 +79,10 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
     <Surface onPress={() => router.push("/gestao")} style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <Text style={T.cardLabel}>Saldo em contas</Text>
-        <ChevronRight size={16} color={INK.faint} />
+        <ChevronRight size={16} color={th(INK.faint)} />
       </View>
 
-      <Text numberOfLines={1} style={[T.figure, { marginTop: 4 }, total < 0 && { color: RED }]}>
+      <Text numberOfLines={1} style={[T.figure, { marginTop: 4 }, total < 0 && { color: th(RED) }]}>
         {money(total)}
       </Text>
 
@@ -90,7 +91,7 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
       {saldoPrevisto !== undefined && (
         <Text numberOfLines={1} style={[T.note, { marginTop: 8, fontSize: 13 }]}>
           Previsto no final do mês:{" "}
-          <Text style={{ fontWeight: "600", color: "rgba(255,255,255,0.8)" }}>
+          <Text style={{ fontWeight: "600", color: th("rgba(255,255,255,0.8)") }}>
             {money(saldoPrevisto)}
           </Text>
         </Text>
@@ -105,13 +106,13 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
               <FlexBar key={a.id} share={a.balance / positive} color={a.hex} delay={0.04 * i} />
             ))
         ) : (
-          <View style={{ flex: 1, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)" }} />
+          <View style={{ flex: 1, borderRadius: 999, backgroundColor: th("rgba(255,255,255,0.08)", "bg") }} />
         )}
       </View>
 
       {/* However many accounts there are, they take the room of one line: the marks sit
           one over the next, and the count says how many that is. */}
-      <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+      <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: th("rgba(255,255,255,0.06)", "line"), flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           {rows.slice(0, MAX_BUBBLES).map((a, i) => (
             <View
@@ -123,7 +124,7 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
                 borderRadius: (BUBBLE + 4) / 2,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "#101113",
+                backgroundColor: th("#101113", "bg"),
                 zIndex: MAX_BUBBLES - i,
               }}
             >
@@ -141,11 +142,11 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
                 borderRadius: (BUBBLE + 4) / 2,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "#101113",
+                backgroundColor: th("#101113", "bg"),
               }}
             >
-              <View style={{ width: BUBBLE, height: BUBBLE, borderRadius: BUBBLE / 2, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" }}>
-                <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>+{rows.length - MAX_BUBBLES}</Text>
+              <View style={{ width: BUBBLE, height: BUBBLE, borderRadius: BUBBLE / 2, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.12)", "bg") }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: th("#fff") }}>+{rows.length - MAX_BUBBLES}</Text>
               </View>
             </View>
           )}

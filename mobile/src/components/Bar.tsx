@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { View, type ViewStyle } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 
+import { th } from "~/theme/theme";
 /**
  * A rule that grows into its reading.
  *
@@ -43,7 +44,7 @@ export default function Bar({
 
   return (
     <Animated.View
-      style={[{ height: "100%", borderRadius: 999, backgroundColor: color, minWidth }, style, animated]}
+      style={[{ height: "100%", borderRadius: 999, backgroundColor: th(color, "bg"), minWidth }, style, animated]}
     />
   );
 }
@@ -76,7 +77,7 @@ export function FlexBar({
 
   return (
     <Animated.View
-      style={[{ flexBasis: 0, minWidth, borderRadius: 999, backgroundColor: color }, animated]}
+      style={[{ flexBasis: 0, minWidth, borderRadius: 999, backgroundColor: th(color, "bg") }, animated]}
     />
   );
 }

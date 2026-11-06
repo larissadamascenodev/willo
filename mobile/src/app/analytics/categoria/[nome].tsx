@@ -26,6 +26,7 @@ import { useAuth } from "~/lib/auth";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * One category, up close.
  *
@@ -88,7 +89,7 @@ function HistoryBar({
           width: "100%",
           maxWidth: 30,
           borderRadius: 8,
-          backgroundColor: current ? hex : `${hex}44`,
+          backgroundColor: th(current ? hex : `${hex}44`, "bg"),
         },
         animated,
       ]}
@@ -173,11 +174,11 @@ export default function CategoriaDetalhe() {
 
         {!data ? (
           <View style={{ marginTop: 16, gap: 12 }}>
-            <View style={{ height: 140, borderRadius: 24, backgroundColor: "rgba(255,255,255,0.04)" }} />
-            <View style={{ height: 180, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.04)" }} />
+            <View style={{ height: 140, borderRadius: 24, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }} />
+            <View style={{ height: 180, borderRadius: 22, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }} />
           </View>
         ) : !summary ? (
-          <Text style={{ marginTop: 40, textAlign: "center", fontSize: 14, color: INK.soft }}>
+          <Text style={{ marginTop: 40, textAlign: "center", fontSize: 14, color: th(INK.soft) }}>
             Nada gasto em {category} em {monthLabel.toLocaleLowerCase("pt-BR")}.
           </Text>
         ) : (
@@ -192,16 +193,16 @@ export default function CategoriaDetalhe() {
                     borderRadius: 22,
                     alignItems: "center",
                     justifyContent: "center",
-                    backgroundColor: chipFill(hex),
+                    backgroundColor: th(chipFill(hex), "bg"),
                   }}
                 >
-                  <Icon size={20} color={chipInk(hex)} strokeWidth={2} />
+                  <Icon size={20} color={th(chipInk(hex))} strokeWidth={2} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: "700", color: "#fff" }}>
+                  <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: "700", color: th("#fff") }}>
                     {category}
                   </Text>
-                  <Text style={{ marginTop: 1, fontSize: 12.5, color: INK.soft }}>
+                  <Text style={{ marginTop: 1, fontSize: 12.5, color: th(INK.soft) }}>
                     {monthLabel} · {summary.txCount} {summary.txCount === 1 ? "lançamento" : "lançamentos"}
                   </Text>
                 </View>
@@ -214,8 +215,8 @@ export default function CategoriaDetalhe() {
                       paddingVertical: 4,
                       fontSize: 11,
                       fontWeight: "700",
-                      backgroundColor: `${SCORE[score.score].hex}1F`,
-                      color: SCORE[score.score].hex,
+                      backgroundColor: th(`${SCORE[score.score].hex}1F`, "bg"),
+                      color: th(SCORE[score.score].hex),
                     }}
                   >
                     {SCORE[score.score].label}
@@ -226,13 +227,13 @@ export default function CategoriaDetalhe() {
               <Text numberOfLines={1} style={[T.figureBig, { marginTop: 18 }]}>
                 {money(summary.amount)}
               </Text>
-              <Text style={{ marginTop: 4, fontSize: 13.5, color: INK.soft }}>
+              <Text style={{ marginTop: 4, fontSize: 13.5, color: th(INK.soft) }}>
                 {summary.percentage}% do mês
                 {score?.variation !== null && score?.variation !== undefined
                   ? ` · ${score.variation > 0 ? "+" : ""}${score.variation}% vs. o mês passado`
                   : ""}
               </Text>
-              <Text style={{ marginTop: 2, fontSize: 12.5, color: INK.softer }}>
+              <Text style={{ marginTop: 2, fontSize: 12.5, color: th(INK.softer) }}>
                 {money(summary.avgPerTx)} por lançamento
                 {habit ? ` · ${money(habit.dailyCost)} por dia` : ""}
               </Text>
@@ -250,7 +251,7 @@ export default function CategoriaDetalhe() {
                         <View key={`${h.year}-${h.month}`} style={{ flex: 1, alignItems: "center", gap: 6 }}>
                           <Text
                             numberOfLines={1}
-                            style={{ fontSize: 10, fontWeight: "700", color: current ? "#fff" : INK.soft }}
+                            style={{ fontSize: 10, fontWeight: "700", color: th(current ? "#fff" : INK.soft) }}
                           >
                             {h.amount > 0 ? compact(h.amount) : "—"}
                           </Text>
@@ -275,7 +276,7 @@ export default function CategoriaDetalhe() {
                               fontSize: 11,
                               fontWeight: current ? "600" : "400",
                               textTransform: "capitalize",
-                              color: current ? "#fff" : INK.soft,
+                              color: th(current ? "#fff" : INK.soft),
                             }}
                           >
                             {MONTH_SHORT[h.month]}
@@ -294,10 +295,10 @@ export default function CategoriaDetalhe() {
                 <Text style={[T.eyebrow, { marginTop: 26, paddingHorizontal: 4 }]}>Parcelas nesta categoria</Text>
                 <Surface radius={22} style={{ marginTop: 10, padding: 16 }}>
                   <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-                    <Text style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: INK.soft }}>
+                    <Text style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: th(INK.soft) }}>
                       {impact.impactPct}% do que você gastou aqui já estava comprometido
                     </Text>
-                    <Text style={{ fontSize: 17, fontWeight: "700", color: "#fff" }}>
+                    <Text style={{ fontSize: 17, fontWeight: "700", color: th("#fff") }}>
                       {money(impact.monthlyAmount)}
                     </Text>
                   </View>
@@ -307,12 +308,12 @@ export default function CategoriaDetalhe() {
                       height: 6,
                       borderRadius: 999,
                       overflow: "hidden",
-                      backgroundColor: "rgba(255,255,255,0.08)",
+                      backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
                     }}
                   >
                     <Bar share={Math.min(impact.impactPct / 100, 1)} color={hex} delay={0.12} />
                   </View>
-                  <Text style={{ marginTop: 8, fontSize: 12, color: INK.softer }}>
+                  <Text style={{ marginTop: 8, fontSize: 12, color: th(INK.softer) }}>
                     {money(impact.totalRemaining)} restantes · acaba em {impact.monthsRemaining}{" "}
                     {impact.monthsRemaining === 1 ? "mês" : "meses"}
                   </Text>
@@ -320,14 +321,14 @@ export default function CategoriaDetalhe() {
                   <View style={{ marginTop: 14, gap: 10 }}>
                     {impact.items.map((item) => (
                       <View key={item.name} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                        <Repeat size={14} color={INK.softer} />
-                        <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: "#fff" }}>
+                        <Repeat size={14} color={th(INK.softer)} />
+                        <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: th("#fff") }}>
                           {item.name}
                         </Text>
-                        <Text style={{ fontSize: 12, color: INK.soft }}>
+                        <Text style={{ fontSize: 12, color: th(INK.soft) }}>
                           {item.paidInstallments}/{item.total}
                         </Text>
-                        <Text style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>
+                        <Text style={{ fontSize: 13.5, fontWeight: "600", color: th("#fff") }}>
                           {money(item.amount)}
                         </Text>
                       </View>
@@ -340,9 +341,9 @@ export default function CategoriaDetalhe() {
             {habit?.topMerchant && (
               <Animated.View entering={FadeInDown.delay(150).duration(420)}>
                 <Surface radius={18} style={{ marginTop: 12, paddingHorizontal: 16, paddingVertical: 14 }}>
-                  <Text style={{ fontSize: 13, lineHeight: 18, color: INK.soft }}>
+                  <Text style={{ fontSize: 13, lineHeight: 18, color: th(INK.soft) }}>
                     {habit.isHabit ? "Virou rotina: " : ""}
-                    <Text style={{ fontWeight: "600", color: "#fff" }}>{habit.topMerchant.name}</Text> aparece{" "}
+                    <Text style={{ fontWeight: "600", color: th("#fff") }}>{habit.topMerchant.name}</Text> aparece{" "}
                     {habit.topMerchant.count} vezes neste mês.
                   </Text>
                 </Surface>
@@ -360,10 +361,10 @@ export default function CategoriaDetalhe() {
                     {i > 0 && <Hairline />}
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 }}>
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: "#fff" }}>
+                        <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>
                           {tx.name}
                         </Text>
-                        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 11.5, color: INK.softer }}>
+                        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 11.5, color: th(INK.softer) }}>
                           {new Date(`${tx.date.slice(0, 10)}T12:00:00`)
                             .toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })
                             .replace(".", "")}
@@ -373,7 +374,7 @@ export default function CategoriaDetalhe() {
                           {tx.payment_method === "cartao" ? " · cartão" : ""}
                         </Text>
                       </View>
-                      <Text style={{ fontSize: 14.5, fontWeight: "700", color: "#fff" }}>
+                      <Text style={{ fontSize: 14.5, fontWeight: "700", color: th("#fff") }}>
                         {money(tx.amount)}
                       </Text>
                     </View>
@@ -384,13 +385,13 @@ export default function CategoriaDetalhe() {
                   <View
                     style={{
                       borderTopWidth: 1,
-                      borderTopColor: "rgba(255,255,255,0.06)",
+                      borderTopColor: th("rgba(255,255,255,0.06)", "line"),
                       alignItems: "center",
                     }}
                   >
                     <Text
                       onPress={() => setShowAll((v) => !v)}
-                      style={{ paddingVertical: 13, fontSize: 12.5, fontWeight: "600", color: INK.soft }}
+                      style={{ paddingVertical: 13, fontSize: 12.5, fontWeight: "600", color: th(INK.soft) }}
                     >
                       {showAll ? "Mostrar menos" : `Ver todos os ${charges.length}`}
                     </Text>

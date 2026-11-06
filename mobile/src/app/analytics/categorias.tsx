@@ -31,6 +31,7 @@ import { useAuth } from "~/lib/auth";
 import { AMBER, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * Where the month went.
  *
@@ -162,13 +163,13 @@ export default function AnalyticsCategorias() {
 
         {data === null ? (
           <View style={{ marginTop: 16, gap: 12 }}>
-            <View style={{ height: 248, borderRadius: 124, alignSelf: "center", width: 248, backgroundColor: "rgba(255,255,255,0.04)" }} />
-            <View style={{ height: 80, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.04)" }} />
+            <View style={{ height: 248, borderRadius: 124, alignSelf: "center", width: 248, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }} />
+            <View style={{ height: 80, borderRadius: 22, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }} />
           </View>
         ) : categories.length === 0 ? (
           <Surface radius={22} style={{ marginTop: 20, paddingVertical: 40, alignItems: "center" }}>
-            <ChartPie size={30} color={INK.faint} strokeWidth={1.6} />
-            <Text style={{ marginTop: 12, fontSize: 14, color: INK.soft }}>
+            <ChartPie size={30} color={th(INK.faint)} strokeWidth={1.6} />
+            <Text style={{ marginTop: 12, fontSize: 14, color: th(INK.soft) }}>
               Sem despesas em {monthLabel.toLocaleLowerCase("pt-BR")}
             </Text>
           </Surface>
@@ -226,10 +227,10 @@ export default function AnalyticsCategorias() {
             <Surface radius={22} style={{ marginTop: 20, padding: 16 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>
+                  <Text style={{ fontSize: 16, fontWeight: "600", color: th("#fff") }}>
                     Limites por categoria
                   </Text>
-                  <Text style={{ marginTop: 2, fontSize: 12, color: INK.soft }}>
+                  <Text style={{ marginTop: 2, fontSize: 12, color: th(INK.soft) }}>
                     Quanto você ainda pode gastar em cada uma
                   </Text>
                 </View>
@@ -241,13 +242,13 @@ export default function AnalyticsCategorias() {
                     alignItems: "center",
                     gap: 5,
                     borderRadius: 999,
-                    backgroundColor: "#fff",
+                    backgroundColor: th("#fff", "bg"),
                     paddingHorizontal: 12,
                     transform: [{ scale: pressed ? 0.95 : 1 }],
                   })}
                 >
-                  <Plus size={15} color="#0B0B0B" strokeWidth={2.6} />
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: "#0B0B0B" }}>Criar</Text>
+                  <Plus size={15} color={th("#0B0B0B")} strokeWidth={2.6} />
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: th("#0B0B0B") }}>Criar</Text>
                 </Pressable>
               </View>
 
@@ -256,12 +257,12 @@ export default function AnalyticsCategorias() {
                   style={{
                     marginTop: 16,
                     borderRadius: 16,
-                    backgroundColor: "rgba(255,255,255,0.04)",
+                    backgroundColor: th("rgba(255,255,255,0.04)", "bg"),
                     paddingHorizontal: 14,
                     paddingVertical: 12,
                     fontSize: 13,
                     lineHeight: 18,
-                    color: INK.soft,
+                    color: th(INK.soft),
                   }}
                 >
                   Nenhum limite ainda. Crie um para acompanhar quanto falta em cada categoria.
@@ -289,20 +290,20 @@ export default function AnalyticsCategorias() {
                               borderRadius: 18,
                               alignItems: "center",
                               justifyContent: "center",
-                              backgroundColor: `${hex}22`,
+                              backgroundColor: th(`${hex}22`, "bg"),
                             }}
                           >
-                            <Icon size={16} color={hex} strokeWidth={2} />
+                            <Icon size={16} color={th(hex)} strokeWidth={2} />
                           </View>
                           <View style={{ flex: 1, minWidth: 0 }}>
-                            <Text numberOfLines={1} style={{ fontSize: 14, color: "#fff" }}>
+                            <Text numberOfLines={1} style={{ fontSize: 14, color: th("#fff") }}>
                               {lim.category}
                             </Text>
-                            <Text style={{ marginTop: 1, fontSize: 11, color: INK.soft }}>
+                            <Text style={{ marginTop: 1, fontSize: 11, color: th(INK.soft) }}>
                               {money(spent)} de {money(lim.limit_amount)}
                             </Text>
                           </View>
-                          <Text style={{ fontSize: 13, fontWeight: "600", color: tone }}>
+                          <Text style={{ fontSize: 13, fontWeight: "600", color: th(tone) }}>
                             {left < 0 ? `${money(-left)} acima` : `${money(left)} livre`}
                           </Text>
                         </View>
@@ -313,7 +314,7 @@ export default function AnalyticsCategorias() {
                             height: 6,
                             borderRadius: 999,
                             overflow: "hidden",
-                            backgroundColor: "rgba(255,255,255,0.08)",
+                            backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
                           }}
                         >
                           <Bar
@@ -432,7 +433,7 @@ function LimitSheet({
     <BottomSheet open={open} onClose={onClose} full>
       <View style={{ paddingHorizontal: 20 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text style={{ fontSize: 18, fontWeight: "700", color: "#fff" }}>
+          <Text style={{ fontSize: 18, fontWeight: "700", color: th("#fff") }}>
             {current ? "Editar limite" : "Novo limite"}
           </Text>
           <Pressable
@@ -445,15 +446,15 @@ function LimitSheet({
               borderRadius: 16,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: "rgba(255,255,255,0.06)",
+              backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
               opacity: pressed ? 0.6 : 1,
             })}
           >
-            <X size={16} color={INK.soft} />
+            <X size={16} color={th(INK.soft)} />
           </Pressable>
         </View>
 
-        <Text style={{ marginTop: 20, fontSize: 12.5, color: INK.soft }}>Categoria</Text>
+        <Text style={{ marginTop: 20, fontSize: 12.5, color: th(INK.soft) }}>Categoria</Text>
         <View style={{ marginTop: 10, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {categories.map((name) => {
             const on = picked === name;
@@ -467,19 +468,19 @@ function LimitSheet({
                 style={{
                   borderRadius: 999,
                   borderWidth: 1,
-                  borderColor: on ? "#fff" : "rgba(255,255,255,0.08)",
-                  backgroundColor: on ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.035)",
+                  borderColor: th(on ? "#fff" : "rgba(255,255,255,0.08)", "line"),
+                  backgroundColor: th(on ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.035)", "bg"),
                   paddingHorizontal: 14,
                   paddingVertical: 9,
                 }}
               >
-                <Text style={{ fontSize: 13.5, fontWeight: on ? "600" : "400", color: "#fff" }}>{name}</Text>
+                <Text style={{ fontSize: 13.5, fontWeight: on ? "600" : "400", color: th("#fff") }}>{name}</Text>
               </Pressable>
             );
           })}
         </View>
 
-        <Text style={{ marginTop: 22, fontSize: 12.5, color: INK.soft }}>Limite do mês</Text>
+        <Text style={{ marginTop: 22, fontSize: 12.5, color: th(INK.soft) }}>Limite do mês</Text>
         <TextInput
           value={brl(cents)}
           onChangeText={(t) => {
@@ -494,12 +495,12 @@ function LimitSheet({
             fontSize: 34,
             fontWeight: "800",
             letterSpacing: -1.2,
-            color: cents === 0 ? INK.faint : "#fff",
+            color: th(cents === 0 ? INK.faint : "#fff"),
             padding: 0,
           }}
         />
 
-        {error && <Text style={{ marginTop: 14, fontSize: 13, color: RED }}>{error}</Text>}
+        {error && <Text style={{ marginTop: 14, fontSize: 13, color: th(RED) }}>{error}</Text>}
 
         <Pressable
           onPress={save}
@@ -510,11 +511,11 @@ function LimitSheet({
             borderRadius: 26,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "#fff",
+            backgroundColor: th("#fff", "bg"),
             opacity: saving ? 0.6 : pressed ? 0.85 : 1,
           })}
         >
-          <Text style={{ fontSize: 16, fontWeight: "700", color: "#0B0B0B" }}>
+          <Text style={{ fontSize: 16, fontWeight: "700", color: th("#0B0B0B") }}>
             {saving ? "Salvando..." : "Salvar limite"}
           </Text>
         </Pressable>
@@ -533,8 +534,8 @@ function LimitSheet({
               opacity: pressed ? 0.6 : 1,
             })}
           >
-            <Trash2 size={16} color={RED} />
-            <Text style={{ fontSize: 15, fontWeight: "600", color: RED }}>Remover limite</Text>
+            <Trash2 size={16} color={th(RED)} />
+            <Text style={{ fontSize: 15, fontWeight: "600", color: th(RED) }}>Remover limite</Text>
           </Pressable>
         )}
       </View>

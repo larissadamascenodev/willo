@@ -11,6 +11,7 @@ import { money } from "~/lib/money";
 import { MONTH_NAMES, compare, deleteSim, loadSims, newPath, saveSim, simulate, startingPaths, type SavedSim, type SimContext, type SimPath, type SimResult } from "~/lib/purchaseSim";
 import { INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Trying a purchase before making it. The same purchase, several ways of paying it, all over
  * the same real numbers, drawn on top of one another. Nothing here touches the books: a
@@ -43,14 +44,14 @@ function contextFrom(data: RaioXData, snapshot: RadarSnapshot, category: string 
 function Field({ label, value, onChange, placeholder, numeric }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; numeric?: boolean }) {
   return (
     <View style={{ flex: 1, minWidth: 0 }}>
-      <Text style={{ fontSize: 13, ...face(500), color: INK.soft }}>{label}</Text>
+      <Text style={{ fontSize: 13, ...face(500), color: th(INK.soft) }}>{label}</Text>
       <TextInput
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
-        placeholderTextColor={INK.faint}
+        placeholderTextColor={th(INK.faint)}
         keyboardType={numeric ? "decimal-pad" : "default"}
-        style={{ marginTop: 4, height: 44, fontSize: 17, ...face(700), ...NUMS, color: "#fff", borderBottomWidth: 1, borderBottomColor: "rgba(191,227,255,0.35)" }}
+        style={{ marginTop: 4, height: 44, fontSize: 17, ...face(700), ...NUMS, color: th("#fff"), borderBottomWidth: 1, borderBottomColor: th("rgba(191,227,255,0.35)", "line") }}
       />
     </View>
   );
@@ -58,8 +59,8 @@ function Field({ label, value, onChange, placeholder, numeric }: { label: string
 
 function Pick({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={{ height: 34, paddingHorizontal: 13, borderRadius: 17, justifyContent: "center", backgroundColor: on ? "#fff" : "rgba(255,255,255,0.07)" }}>
-      <Text style={{ fontSize: 13.5, ...face(on ? 700 : 500), color: on ? "#08090A" : "rgba(255,255,255,0.86)" }}>{label}</Text>
+    <Pressable onPress={onPress} style={{ height: 34, paddingHorizontal: 13, borderRadius: 17, justifyContent: "center", backgroundColor: th(on ? "#fff" : "rgba(255,255,255,0.07)", "bg") }}>
+      <Text style={{ fontSize: 13.5, ...face(on ? 700 : 500), color: th(on ? "#08090A" : "rgba(255,255,255,0.86)") }}>{label}</Text>
     </Pressable>
   );
 }
@@ -79,18 +80,18 @@ function Overlay({ results, chosen, base }: { results: SimResult[]; chosen: stri
   return (
     <View>
       <Svg width={w} height={h}>
-        <Line x1={0} y1={y(0)} x2={w} y2={y(0)} stroke={RISK} strokeOpacity={0.5} strokeDasharray="2 4" />
-        <Path d={line(base.map((m) => m.sobra))} stroke="rgba(255,255,255,0.3)" strokeWidth={1.5} strokeDasharray="4 4" fill="none" />
+        <Line x1={0} y1={y(0)} x2={w} y2={y(0)} stroke={th(RISK)} strokeOpacity={0.5} strokeDasharray="2 4" />
+        <Path d={line(base.map((m) => m.sobra))} stroke={th("rgba(255,255,255,0.3)")} strokeWidth={1.5} strokeDasharray="4 4" fill="none" />
         {results.map((r, i) => (
-          <Path key={r.path.id} d={line(r.schedule.map((s) => s.sobraAfter))} stroke={LINE_HEX[i % 4]} strokeWidth={r.path.id === chosen ? 3 : 1.5} strokeOpacity={r.path.id === chosen ? 1 : 0.45} fill="none" strokeLinejoin="round" />
+          <Path key={r.path.id} d={line(r.schedule.map((s) => s.sobraAfter))} stroke={th(LINE_HEX[i % 4])} strokeWidth={r.path.id === chosen ? 3 : 1.5} strokeOpacity={r.path.id === chosen ? 1 : 0.45} fill="none" strokeLinejoin="round" />
         ))}
         {base.map((m, i) => (
-          <SvgText key={`${m.year}${m.month}`} x={x(i)} y={h - 3} fill={INK.softer} fontSize={11} fontFamily="PlusJakartaSans_600SemiBold" textAnchor={i === 0 ? "start" : i === base.length - 1 ? "end" : "middle"}>
+          <SvgText key={`${m.year}${m.month}`} x={x(i)} y={h - 3} fill={th(INK.softer)} fontSize={11} fontFamily="PlusJakartaSans_600SemiBold" textAnchor={i === 0 ? "start" : i === base.length - 1 ? "end" : "middle"}>
             {MONTH_NAMES[m.month - 1].slice(0, 3)}
           </SvgText>
         ))}
       </Svg>
-      <Text style={{ marginTop: 4, fontSize: 13, lineHeight: 18, ...face(500), color: INK.softer }}>O que sobra em cada mês. Tracejado é sem a compra; a linha vermelha é o zero.</Text>
+      <Text style={{ marginTop: 4, fontSize: 13, lineHeight: 18, ...face(500), color: th(INK.softer) }}>O que sobra em cada mês. Tracejado é sem a compra; a linha vermelha é o zero.</Text>
     </View>
   );
 }
@@ -215,11 +216,11 @@ export function Simulador({ data, snapshot, categories, onAsk }: { data: RaioXDa
                     setBuying(false);
                   }}
                 >
-                  {on && <View style={{ position: "absolute", left: -10, top: i === 0 ? 0 : 11, width: 3, height: 34, borderRadius: 2, backgroundColor: LINE_HEX[i % 4] }} />}
+                  {on && <View style={{ position: "absolute", left: -10, top: i === 0 ? 0 : 11, width: 3, height: 34, borderRadius: 2, backgroundColor: th(LINE_HEX[i % 4], "bg") }} />}
                 </Row>
                 {on && (
                   <Pressable onPress={() => setEditing(editing === r.path.id ? null : r.path.id)} hitSlop={6} style={{ paddingBottom: 8 }}>
-                    <Text style={{ fontSize: 13.5, ...face(600), color: ICE }}>{editing === r.path.id ? "Pronto" : "Ajustar este jeito"}</Text>
+                    <Text style={{ fontSize: 13.5, ...face(600), color: th(ICE) }}>{editing === r.path.id ? "Pronto" : "Ajustar este jeito"}</Text>
                   </Pressable>
                 )}
                 {editing === r.path.id && (
@@ -242,7 +243,7 @@ export function Simulador({ data, snapshot, categories, onAsk }: { data: RaioXDa
                           setEditing(null);
                         }}
                       >
-                        <Text style={{ fontSize: 13.5, ...face(600), color: INK.soft }}>Tirar este jeito</Text>
+                        <Text style={{ fontSize: 13.5, ...face(600), color: th(INK.soft) }}>Tirar este jeito</Text>
                       </Pressable>
                     )}
                   </View>
@@ -252,7 +253,7 @@ export function Simulador({ data, snapshot, categories, onAsk }: { data: RaioXDa
           })}
           {used.length < 4 && (
             <Pressable onPress={add} style={{ paddingTop: 8 }}>
-              <Text style={{ fontSize: 14, ...face(700), color: ICE }}>Comparar outro jeito</Text>
+              <Text style={{ fontSize: 14, ...face(700), color: th(ICE) }}>Comparar outro jeito</Text>
             </Pressable>
           )}
           </Card>
@@ -287,11 +288,11 @@ export function Simulador({ data, snapshot, categories, onAsk }: { data: RaioXDa
           {notice ? <Limitation>{notice}</Limitation> : null}
 
           {buying && (
-            <View style={{ marginTop: 16, marginHorizontal: CARD_INSET, padding: 16, borderRadius: 18, borderWidth: 1, borderColor: "rgba(191,227,255,0.3)" }}>
-              <Text style={{ fontSize: 16, lineHeight: 22, ...face(700), color: "#fff" }}>Com os números de agora:</Text>
-              <Text style={{ marginTop: 6, fontSize: 14.5, lineHeight: 20, ...face(500), color: INK.soft }}>{clean(result.reading)}</Text>
+            <View style={{ marginTop: 16, marginHorizontal: CARD_INSET, padding: 16, borderRadius: 18, borderWidth: 1, borderColor: th("rgba(191,227,255,0.3)", "line") }}>
+              <Text style={{ fontSize: 16, lineHeight: 22, ...face(700), color: th("#fff") }}>Com os números de agora:</Text>
+              <Text style={{ marginTop: 6, fontSize: 14.5, lineHeight: 20, ...face(500), color: th(INK.soft) }}>{clean(result.reading)}</Text>
               {result.path.entry > 0 || result.path.ratePct > 0 ? (
-                <Text style={{ marginTop: 10, fontSize: 14, lineHeight: 19, ...face(500), color: INK.soft }}>Com entrada ou juros, registre pelo Adicionar manualmente: lance a entrada e as parcelas separadas, nos valores reais.</Text>
+                <Text style={{ marginTop: 10, fontSize: 14, lineHeight: 19, ...face(500), color: th(INK.soft) }}>Com entrada ou juros, registre pelo Adicionar manualmente: lance a entrada e as parcelas separadas, nos valores reais.</Text>
               ) : (
                 <View style={{ marginTop: 12, alignSelf: "flex-start" }}>
                   <Action strong label="Revisar e registrar" onPress={register} />
@@ -315,7 +316,7 @@ export function Simulador({ data, snapshot, categories, onAsk }: { data: RaioXDa
             hitSlop={6}
             style={{ marginTop: 6, alignSelf: "flex-start" }}
           >
-            <Text style={{ fontSize: 13, ...face(600), color: INK.softer }}>Excluir</Text>
+            <Text style={{ fontSize: 13, ...face(600), color: th(INK.softer) }}>Excluir</Text>
           </Pressable>
         </Row>
       ))}

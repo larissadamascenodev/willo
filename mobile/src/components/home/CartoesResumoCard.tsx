@@ -13,6 +13,7 @@ import { money } from "~/lib/money";
 import { INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * What the cards add up to, and which one owes what.
  *
@@ -81,7 +82,7 @@ export default function CartoesResumoCard() {
     >
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <Text style={T.cardLabel}>Cartões de crédito</Text>
-        <ChevronRight size={16} color={INK.faint} />
+        <ChevronRight size={16} color={th(INK.faint)} />
       </View>
 
       <Text numberOfLines={1} style={[T.figure, { marginTop: 4 }]}>
@@ -103,12 +104,12 @@ export default function CartoesResumoCard() {
                   flexGrow: r.owed / total,
                   flexBasis: 0,
                   borderRadius: 999,
-                  backgroundColor: r.hex,
+                  backgroundColor: th(r.hex, "bg"),
                 }}
               />
             ))
         ) : (
-          <View style={{ flex: 1, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.08)" }} />
+          <View style={{ flex: 1, borderRadius: 999, backgroundColor: th("rgba(255,255,255,0.08)", "bg") }} />
         )}
       </View>
 
@@ -117,7 +118,7 @@ export default function CartoesResumoCard() {
           marginTop: 14,
           paddingTop: 14,
           borderTopWidth: 1,
-          borderTopColor: "rgba(255,255,255,0.06)",
+          borderTopColor: th("rgba(255,255,255,0.06)", "line"),
           gap: 12,
         }}
       >
@@ -134,11 +135,11 @@ export default function CartoesResumoCard() {
             </View>
             <View style={{ alignItems: "flex-end" }}>
               <Text
-                style={[T.rowValue, { fontSize: 14 }, r.owed === 0 && { color: INK.softer }]}
+                style={[T.rowValue, { fontSize: 14 }, r.owed === 0 && { color: th(INK.softer) }]}
               >
                 {money(r.owed)}
               </Text>
-              <Text style={{ fontSize: 11.5, color: INK.softer }}>
+              <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>
                 {money(r.available)} livres
               </Text>
             </View>

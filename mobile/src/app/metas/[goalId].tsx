@@ -49,6 +49,7 @@ import { useAuth } from "~/lib/auth";
 import { GREEN, GROUND_LIT, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { live, th } from "~/theme/theme";
 /**
  * One caixinha, up close.
  *
@@ -65,9 +66,9 @@ const PREVIEW = 5;
 
 /** A piece of glass on the page: the readings sit in these rather than loose on the ground. */
 /** The figures inside Willo's line: what is worth reading in it. */
-const B = { fontWeight: "700", color: "#fff" } as const;
+const B = live({ fontWeight: "700", color: "#fff" } as const);
 
-const PANEL = {
+const PANEL = live({
   borderRadius: 28,
   borderCurve: "continuous",
   borderWidth: 1,
@@ -75,7 +76,7 @@ const PANEL = {
   backgroundColor: "rgba(255,255,255,0.062)",
   paddingHorizontal: 18,
   paddingVertical: 18,
-} as const;
+} as const);
 
 /** The fill of the bar, drawn in once. */
 function Progress({ progress, color }: { progress: number; color: string }) {
@@ -85,8 +86,8 @@ function Progress({ progress, color }: { progress: number; color: string }) {
   }, [progress, drawn]);
   const fill = useAnimatedStyle(() => ({ width: `${drawn.get() * 100}%` }));
   return (
-    <View style={{ height: 6, borderRadius: 3, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.10)" }}>
-      <Animated.View style={[{ height: 6, borderRadius: 3, backgroundColor: color }, fill]} />
+    <View style={{ height: 6, borderRadius: 3, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.10)", "bg") }}>
+      <Animated.View style={[{ height: 6, borderRadius: 3, backgroundColor: th(color, "bg") }, fill]} />
     </View>
   );
 }
@@ -302,8 +303,8 @@ export default function MetaDetalhe() {
             <BackButton to="/gestao" />
           </View>
           <View style={{ marginTop: 16, gap: 12 }}>
-            <View style={{ height: 200, borderRadius: 24, backgroundColor: "rgba(255,255,255,0.04)" }} />
-            <View style={{ height: 80, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.04)" }} />
+            <View style={{ height: 200, borderRadius: 24, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }} />
+            <View style={{ height: 80, borderRadius: 20, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }} />
           </View>
         </ScrollView>
       </Room>
@@ -336,7 +337,7 @@ export default function MetaDetalhe() {
 
   return (
     /* A plain ground, so the picture melts into it with no seam. */
-    <View style={{ flex: 1, backgroundColor: GROUND_LIT }}>
+    <View style={{ flex: 1, backgroundColor: th(GROUND_LIT, "bg") }}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         showsVerticalScrollIndicator={false}
@@ -345,11 +346,11 @@ export default function MetaDetalhe() {
         <View style={{ height: heroH }}>
           <CaixinhaCover goal={goal} height={heroH} glyph={280} glyphTop={insets.top + 50} />
           <LinearGradient
-            colors={["rgba(0,0,0,0.45)", "rgba(0,0,0,0)"]}
+            colors={th(["rgba(0,0,0,0.45)", "rgba(0,0,0,0)"], "grad")}
             style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 120 }}
           />
           <LinearGradient
-            colors={["rgba(13,14,16,0)", "rgba(13,14,16,0.5)", "rgba(13,14,16,0.9)", GROUND_LIT]}
+            colors={th(["rgba(13,14,16,0)", "rgba(13,14,16,0.5)", "rgba(13,14,16,0.9)", GROUND_LIT], "grad")}
             locations={[0, 0.38, 0.72, 1]}
             style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: Math.round(heroH * 0.66) }}
           />
@@ -369,12 +370,12 @@ export default function MetaDetalhe() {
               {earns(goal) && <GlassPill tone={GREEN} label={`Rende ${Number(goal.yield_percent)}% do CDI`} />}
             </View>
           )}
-          <Text numberOfLines={2} style={{ fontSize: 17, fontWeight: "600", color: "rgba(255,255,255,0.8)" }}>{goal.name}</Text>
+          <Text numberOfLines={2} style={{ fontSize: 17, fontWeight: "600", color: th("rgba(255,255,255,0.8)") }}>{goal.name}</Text>
           <Text
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.7}
-            style={{ marginTop: 2, fontSize: 52, fontWeight: "800", letterSpacing: -2.4, color: isComplete ? GREEN : "#fff" }}
+            style={{ marginTop: 2, fontSize: 52, fontWeight: "800", letterSpacing: -2.4, color: th(isComplete ? GREEN : "#fff") }}
           >
             {money(goal.current_amount)}
           </Text>
@@ -382,12 +383,12 @@ export default function MetaDetalhe() {
             <View style={{ marginTop: 14 }}>
               <Progress progress={progress} color={isComplete ? GREEN : preset.hex} />
               <View style={{ marginTop: 9, flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ fontSize: 13.5, color: INK.soft }}>
-                  <Text style={{ fontWeight: "700", color: isComplete ? GREEN : "#fff" }}>{percent}%</Text> de {money(goal.target_amount)}
+                <Text style={{ fontSize: 13.5, color: th(INK.soft) }}>
+                  <Text style={{ fontWeight: "700", color: th(isComplete ? GREEN : "#fff") }}>{percent}%</Text> de {money(goal.target_amount)}
                 </Text>
                 {!isComplete && (
-                  <Text style={{ fontSize: 13.5, color: INK.soft }}>
-                    faltam <Text style={{ fontWeight: "700", color: "#fff" }}>{money(remaining)}</Text>
+                  <Text style={{ fontSize: 13.5, color: th(INK.soft) }}>
+                    faltam <Text style={{ fontWeight: "700", color: th("#fff") }}>{money(remaining)}</Text>
                   </Text>
                 )}
               </View>
@@ -399,7 +400,7 @@ export default function MetaDetalhe() {
             <View style={{ marginLeft: -7 }}>
               <ParticleOrb size={34} density={130} />
             </View>
-            <Text style={{ flex: 1, fontSize: 15, lineHeight: 21, color: "rgba(255,255,255,0.66)" }}>
+            <Text style={{ flex: 1, fontSize: 15, lineHeight: 21, color: th("rgba(255,255,255,0.66)") }}>
               {isComplete ? (
                 <>
                   Meta batida. <Text style={B}>Parabéns, você chegou lá!</Text>
@@ -434,12 +435,12 @@ export default function MetaDetalhe() {
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 8,
-                backgroundColor: "#fff",
+                backgroundColor: th("#fff", "bg"),
                 transform: [{ scale: pressed ? 0.97 : 1 }],
               })}
             >
-              <ArrowDownLeft size={20} color="#0B0B0B" strokeWidth={2.5} />
-              <Text style={{ fontSize: 16.5, fontWeight: "700", color: "#0B0B0B" }}>Guardar</Text>
+              <ArrowDownLeft size={20} color={th("#0B0B0B")} strokeWidth={2.5} />
+              <Text style={{ fontSize: 16.5, fontWeight: "700", color: th("#0B0B0B") }}>Guardar</Text>
             </Pressable>
             <Pressable
               onPress={() => setMoving("saque")}
@@ -453,14 +454,14 @@ export default function MetaDetalhe() {
                 justifyContent: "center",
                 gap: 8,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.16)",
-                backgroundColor: "rgba(255,255,255,0.08)",
+                borderColor: th("rgba(255,255,255,0.16)", "line"),
+                backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
                 opacity: goal.current_amount <= 0 ? 0.4 : 1,
                 transform: [{ scale: pressed ? 0.97 : 1 }],
               })}
             >
-              <ArrowUpRight size={20} color="#fff" strokeWidth={2.3} />
-              <Text style={{ fontSize: 16.5, fontWeight: "600", color: "#fff" }}>Retirar</Text>
+              <ArrowUpRight size={20} color={th("#fff")} strokeWidth={2.3} />
+              <Text style={{ fontSize: 16.5, fontWeight: "600", color: th("#fff") }}>Retirar</Text>
             </Pressable>
           </Animated.View>
 
@@ -468,11 +469,11 @@ export default function MetaDetalhe() {
           {earns(goal) && (
             <Animated.View
               entering={FadeInDown.delay(160).duration(420)}
-              style={[PANEL, { marginTop: 14, backgroundColor: "rgba(200,243,109,0.06)", borderColor: "rgba(200,243,109,0.18)" }]}
+              style={[PANEL, { marginTop: 14, backgroundColor: th("rgba(200,243,109,0.06)", "bg"), borderColor: th("rgba(200,243,109,0.18)", "line") }]}
             >
               <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" }}>
                 <Text style={T.eyebrow}>Rendimento estimado</Text>
-                <Text style={{ fontSize: 12.5, color: INK.softer }}>{Number(goal.yield_percent)}% do CDI</Text>
+                <Text style={{ fontSize: 12.5, color: th(INK.softer) }}>{Number(goal.yield_percent)}% do CDI</Text>
               </View>
               {forecast ? (
                 <View style={{ marginTop: 12, flexDirection: "row" }}>
@@ -481,11 +482,11 @@ export default function MetaDetalhe() {
                   <Reading label="Por ano" value={`+${money(forecast.year)}`} tone={GREEN} />
                 </View>
               ) : (
-                <Text style={{ marginTop: 10, fontSize: 13.5, color: INK.soft }}>
+                <Text style={{ marginTop: 10, fontSize: 13.5, color: th(INK.soft) }}>
                   Calculando com o CDI de hoje. Volte em instantes.
                 </Text>
               )}
-              <Text style={{ marginTop: 12, fontSize: 12, lineHeight: 16, color: INK.softer }}>
+              <Text style={{ marginTop: 12, fontSize: 12, lineHeight: 16, color: th(INK.softer) }}>
                 {earned > 0 ? `${money(earned)} já rendidos. ` : ""}Estimativa bruta de imposto, em dias úteis; o rendimento real pode variar.
               </Text>
             </Animated.View>
@@ -496,15 +497,15 @@ export default function MetaDetalhe() {
             <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", paddingHorizontal: 4 }}>
               <Text style={T.eyebrow}>Movimentações</Text>
               {movements.length > 0 && (
-                <Text style={{ fontSize: 12.5, color: INK.softer }}>
-                  <Text style={{ color: GREEN }}>+{money(totalIn)}</Text>
-                  {totalOut > 0 ? <Text>  <Text style={{ color: RED }}>−{money(totalOut)}</Text></Text> : null}
+                <Text style={{ fontSize: 12.5, color: th(INK.softer) }}>
+                  <Text style={{ color: th(GREEN) }}>+{money(totalIn)}</Text>
+                  {totalOut > 0 ? <Text>  <Text style={{ color: th(RED) }}>−{money(totalOut)}</Text></Text> : null}
                 </Text>
               )}
             </View>
 
             {movements.length === 0 ? (
-              <Text style={{ paddingVertical: 32, textAlign: "center", fontSize: 14, color: INK.soft }}>
+              <Text style={{ paddingVertical: 32, textAlign: "center", fontSize: 14, color: th(INK.soft) }}>
                 Nenhuma movimentação ainda
               </Text>
             ) : (
@@ -527,7 +528,7 @@ export default function MetaDetalhe() {
                   return (
                     <View key={tx.id}>
                     {heading && (
-                      <Text style={{ marginTop: i === 0 ? 8 : 18, marginBottom: 2, fontSize: 13, fontWeight: "600", color: INK.softer, textTransform: "capitalize" }}>
+                      <Text style={{ marginTop: i === 0 ? 8 : 18, marginBottom: 2, fontSize: 13, fontWeight: "600", color: th(INK.softer), textTransform: "capitalize" }}>
                         {heading}
                       </Text>
                     )}
@@ -543,18 +544,18 @@ export default function MetaDetalhe() {
                           borderRadius: 23,
                           alignItems: "center",
                           justifyContent: "center",
-                          backgroundColor: isWithdraw ? "rgba(248,113,113,0.13)" : "rgba(200,243,109,0.13)",
+                          backgroundColor: th(isWithdraw ? "rgba(248,113,113,0.13)" : "rgba(200,243,109,0.13)", "bg"),
                         }}
                       >
-                        <Glyph size={20} color={tone} strokeWidth={2.2} />
+                        <Glyph size={20} color={th(tone)} strokeWidth={2.2} />
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>
+                        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>
                           {isWithdraw ? "Retirada" : isYield ? "Rendimento" : "Depósito"}
                         </Text>
-                        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>{under}</Text>
+                        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>{under}</Text>
                       </View>
-                      <Text style={{ fontSize: 15, fontWeight: "600", color: tone }}>
+                      <Text style={{ fontSize: 15, fontWeight: "600", color: th(tone) }}>
                         {isWithdraw ? "−" : "+"}
                         {money(Math.abs(value))}
                       </Text>
@@ -577,34 +578,34 @@ export default function MetaDetalhe() {
                   justifyContent: "center",
                   gap: 6,
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.08)",
-                  backgroundColor: "rgba(255,255,255,0.05)",
+                  borderColor: th("rgba(255,255,255,0.08)", "line"),
+                  backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
                   opacity: pressed ? 0.7 : 1,
                 })}
               >
-                {showAll ? <ChevronUp size={15} color="#fff" /> : <ChevronDown size={15} color="#fff" />}
-                <Text style={{ fontSize: 15.5, fontWeight: "500", color: "#fff" }}>
+                {showAll ? <ChevronUp size={15} color={th("#fff")} /> : <ChevronDown size={15} color={th("#fff")} />}
+                <Text style={{ fontSize: 15.5, fontWeight: "500", color: th("#fff") }}>
                   {showAll ? "Mostrar menos" : `Ver todas as movimentações (${movements.length})`}
                 </Text>
               </Pressable>
             )}
             {movements.some((t) => t.source !== YIELD_SOURCE) && (
-              <Text style={{ marginTop: 10, paddingHorizontal: 4, fontSize: 11.5, color: INK.softer }}>
+              <Text style={{ marginTop: 10, paddingHorizontal: 4, fontSize: 11.5, color: th(INK.softer) }}>
                 Toque numa movimentação para apagá-la. O dinheiro volta para onde estava.
               </Text>
             )}
           </Animated.View>
 
-          {error && <Text style={{ marginTop: 14, paddingHorizontal: 4, fontSize: 13, color: RED }}>{error}</Text>}
+          {error && <Text style={{ marginTop: 14, paddingHorizontal: 4, fontSize: 13, color: th(RED) }}>{error}</Text>}
         </View>
       </ScrollView>
 
       <View style={{ position: "absolute", top: insets.top + 8, left: 16, right: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <HeroButton label="Voltar" onPress={() => router.replace("/gestao" as never)}>
-          <ChevronLeft size={21} color="#fff" strokeWidth={2.4} />
+          <ChevronLeft size={21} color={th("#fff")} strokeWidth={2.4} />
         </HeroButton>
         <HeroButton label="Opções da caixinha" hostRef={dots} onPress={openMenu}>
-          <MoreHorizontal size={21} color="#fff" strokeWidth={2.4} />
+          <MoreHorizontal size={21} color={th("#fff")} strokeWidth={2.4} />
         </HeroButton>
       </View>
 
@@ -728,11 +729,11 @@ function HeroButton({
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.34)",
+          borderColor: th("rgba(255,255,255,0.34)", "line"),
         }}
       >
-        <BlurView intensity={32} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 22 }} />
-        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.16)" }} />
+        <BlurView intensity={32} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 22 }} />
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 22, backgroundColor: th("rgba(255,255,255,0.16)", "bg") }} />
         <View style={{ zIndex: 1 }}>{children}</View>
       </View>
     </Pressable>
@@ -750,12 +751,12 @@ function GlassPill({ label, tone }: { label: string; tone?: string }) {
         overflow: "hidden",
         justifyContent: "center",
         borderWidth: 1,
-        borderColor: tone ? `${tone}66` : "rgba(255,255,255,0.28)",
+        borderColor: th(tone ? `${tone}66` : "rgba(255,255,255,0.28)", "line"),
       }}
     >
-      <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14 }} />
-      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14, backgroundColor: tone ? `${tone}22` : "rgba(255,255,255,0.12)" }} />
-      <Text style={{ zIndex: 1, fontSize: 12.5, fontWeight: "700", color: tone ?? "#fff" }}>{label}</Text>
+      <BlurView intensity={30} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14 }} />
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14, backgroundColor: th(tone ? `${tone}22` : "rgba(255,255,255,0.12)", "bg") }} />
+      <Text style={{ zIndex: 1, fontSize: 12.5, fontWeight: "700", color: th(tone ?? "#fff") }}>{label}</Text>
     </View>
   );
 }
@@ -764,8 +765,8 @@ function GlassPill({ label, tone }: { label: string; tone?: string }) {
 function Reading({ label, value, late, tone }: { label: string; value: string; late?: boolean; tone?: string }) {
   return (
     <View style={{ flex: 1, paddingRight: 12 }}>
-      <Text numberOfLines={1} style={{ fontSize: 12, color: INK.softer }}>{label}</Text>
-      <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 18, fontWeight: "700", letterSpacing: -0.4, color: late ? RED : (tone ?? "#fff") }}>
+      <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.softer) }}>{label}</Text>
+      <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 18, fontWeight: "700", letterSpacing: -0.4, color: th(late ? RED : (tone ?? "#fff")) }}>
         {value}
       </Text>
     </View>

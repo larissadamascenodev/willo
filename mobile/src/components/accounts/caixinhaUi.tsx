@@ -4,6 +4,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } fr
 import { Plus } from "~/components/icons";
 import { INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * The pieces a caixinha is made and changed with: grouped glass with rows in it, a
  * capsule that slides to the chosen option, a stepper, and an amount typed at the size
@@ -24,8 +25,8 @@ export function Group({ children, style }: { children: ReactNode; style?: ViewSt
           borderCurve: "continuous",
           overflow: "hidden",
           borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.10)",
-          backgroundColor: "rgba(255,255,255,0.06)",
+          borderColor: th("rgba(255,255,255,0.10)", "line"),
+          backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
         },
         style,
       ]}
@@ -37,7 +38,7 @@ export function Group({ children, style }: { children: ReactNode; style?: ViewSt
 
 export function Row({ children, last = false }: { children: ReactNode; last?: boolean }) {
   return (
-    <View style={{ paddingHorizontal: 18, paddingVertical: 15, borderBottomWidth: last ? 0 : 1, borderBottomColor: "rgba(255,255,255,0.07)" }}>
+    <View style={{ paddingHorizontal: 18, paddingVertical: 15, borderBottomWidth: last ? 0 : 1, borderBottomColor: th("rgba(255,255,255,0.07)", "line") }}>
       {children}
     </View>
   );
@@ -80,8 +81,8 @@ export function Segments<V extends string | number>({
         borderRadius: height / 2,
         flexDirection: "row",
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.10)",
-        backgroundColor: "rgba(255,255,255,0.06)",
+        borderColor: th("rgba(255,255,255,0.10)", "line"),
+        backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
       }}
     >
       {each > 0 && (
@@ -95,8 +96,8 @@ export function Segments<V extends string | number>({
               width: each,
               height: height - 10,
               borderRadius: (height - 10) / 2,
-              backgroundColor: "#fff",
-              shadowColor: "#000",
+              backgroundColor: th("#fff", "bg"),
+              shadowColor: th("#000", "line"),
               shadowOpacity: 0.25,
               shadowRadius: 8,
               shadowOffset: { width: 0, height: 2 },
@@ -109,7 +110,7 @@ export function Segments<V extends string | number>({
         const on = o.value === value;
         return (
           <Pressable key={String(o.value)} onPress={() => onChange(o.value)} style={{ flex: 1, alignItems: "center", justifyContent: "center", zIndex: 1 }}>
-            <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: on ? "700" : "600", color: on ? "#0B0B0B" : "rgba(255,255,255,0.78)" }}>{o.label}</Text>
+            <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: on ? "700" : "600", color: th(on ? "#0B0B0B" : "rgba(255,255,255,0.78)") }}>{o.label}</Text>
           </Pressable>
         );
       })}
@@ -130,13 +131,13 @@ export function Stepper({ icon: Icon, label, disabled, onPress }: { icon: typeof
         alignItems: "center",
         justifyContent: "center",
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.14)",
-        backgroundColor: "rgba(255,255,255,0.08)",
+        borderColor: th("rgba(255,255,255,0.14)", "line"),
+        backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
         opacity: disabled ? 0.3 : 1,
         transform: [{ scale: pressed ? 0.92 : 1 }],
       })}
     >
-      <Icon size={19} color="#fff" strokeWidth={2.4} />
+      <Icon size={19} color={th("#fff")} strokeWidth={2.4} />
     </Pressable>
   );
 }
@@ -157,7 +158,7 @@ export function AmountField({ cents, onChange, size }: { cents: number; onChange
         fontSize: size,
         fontWeight: "800",
         letterSpacing: -size / 26,
-        color: cents === 0 ? INK.faint : "#fff",
+        color: th(cents === 0 ? INK.faint : "#fff"),
         padding: 0,
       }}
     />

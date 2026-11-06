@@ -5,6 +5,7 @@ import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * The month, read out on the page itself.
  *
@@ -31,7 +32,7 @@ export default function TransactionsSummary({
       <Text style={[T.eyebrow, { fontSize: 11 }]}>Saldo em contas</Text>
       <Text
         numberOfLines={1}
-        style={[T.figureBig, { marginTop: 6 }, saldoAtual < 0 && { color: RED }]}
+        style={[T.figureBig, { marginTop: 6 }, saldoAtual < 0 && { color: th(RED) }]}
       >
         {money(saldoAtual)}
       </Text>
@@ -39,7 +40,7 @@ export default function TransactionsSummary({
       {saldoPrevisto !== saldoAtual && (
         <Text numberOfLines={1} style={[T.note, { marginTop: 10 }]}>
           Previsto no fim do mês:{" "}
-          <Text style={{ fontWeight: "600", color: "rgba(255,255,255,0.8)" }}>
+          <Text style={{ fontWeight: "600", color: th("rgba(255,255,255,0.8)") }}>
             {money(saldoPrevisto)}
           </Text>
         </Text>
@@ -52,8 +53,8 @@ export default function TransactionsSummary({
         ].map(({ label, value, inflow }) => (
           <View key={label}>
             <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-              <Text style={{ fontSize: 13, color: INK.soft }}>{label}</Text>
-              <Text style={{ fontSize: 14.5, fontWeight: "700", color: inflow ? "#fff" : RED }}>
+              <Text style={{ fontSize: 13, color: th(INK.soft) }}>{label}</Text>
+              <Text style={{ fontSize: 14.5, fontWeight: "700", color: th(inflow ? "#fff" : RED) }}>
                 {inflow ? "" : "−"}
                 {money(value)}
               </Text>
@@ -63,7 +64,7 @@ export default function TransactionsSummary({
                 marginTop: 8,
                 height: 5,
                 borderRadius: 999,
-                backgroundColor: "rgba(255,255,255,0.07)",
+                backgroundColor: th("rgba(255,255,255,0.07)", "bg"),
                 overflow: "hidden",
               }}
             >

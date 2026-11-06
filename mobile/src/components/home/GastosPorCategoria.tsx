@@ -11,6 +11,7 @@ import { categoryIcon } from "~/lib/categoryIcon";
 import { money } from "~/lib/money";
 import { INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /** A summary card: the full list belongs to the categories page. */
 const INITIAL_COUNT = 3;
 
@@ -96,7 +97,7 @@ export default function GastosPorCategoria({
         }}
       >
         <View style={{ minWidth: 0, flex: 1 }}>
-          <Text style={{ fontSize: 12, color: INK.soft }}>
+          <Text style={{ fontSize: 12, color: th(INK.soft) }}>
             Gastos por categoria · {monthLabel}
           </Text>
           <Text
@@ -106,7 +107,7 @@ export default function GastosPorCategoria({
               fontSize: 26,
               fontWeight: "800",
               letterSpacing: -0.9,
-              color: "#fff",
+              color: th("#fff"),
             }}
           >
             {money(total)}
@@ -123,15 +124,15 @@ export default function GastosPorCategoria({
             opacity: pressed ? 0.6 : 1,
           })}
         >
-          <Text style={{ fontSize: 12, fontWeight: "600", color: INK.soft }}>Análise</Text>
-          <ChevronRight size={14} color={INK.soft} />
+          <Text style={{ fontSize: 12, fontWeight: "600", color: th(INK.soft) }}>Análise</Text>
+          <ChevronRight size={14} color={th(INK.soft)} />
         </Pressable>
       </View>
 
       {sorted.length === 0 ? (
         <View style={{ paddingHorizontal: 14, paddingBottom: 16 }}>
-          <View style={{ height: 10, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.06)" }} />
-          <Text style={{ marginTop: 12, fontSize: 13, color: INK.soft }}>
+          <View style={{ height: 10, borderRadius: 999, backgroundColor: th("rgba(255,255,255,0.06)", "bg") }} />
+          <Text style={{ marginTop: 12, fontSize: 13, color: th(INK.soft) }}>
             Nenhum gasto registrado em {monthLabel}.
           </Text>
         </View>
@@ -152,7 +153,7 @@ export default function GastosPorCategoria({
                     minWidth: 6,
                     height: "100%",
                     borderRadius: 999,
-                    backgroundColor: catColor(cat.name, sorted.indexOf(cat), customCats),
+                    backgroundColor: th(catColor(cat.name, sorted.indexOf(cat), customCats), "bg"),
                     opacity: dimmed ? 0.25 : 1,
                   }}
                 />
@@ -177,21 +178,21 @@ export default function GastosPorCategoria({
                       gap: 12,
                       paddingVertical: 10,
                       borderTopWidth: index > 0 ? 1 : 0,
-                      borderTopColor: "rgba(255,255,255,0.06)",
+                      borderTopColor: th("rgba(255,255,255,0.06)", "line"),
                       opacity: dimmed ? 0.35 : 1,
                     }}
                   >
-                    <Icon size={17} color={color} />
+                    <Icon size={17} color={th(color)} />
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>
+                      <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "600", color: th("#fff") }}>
                         {cat.name}
                       </Text>
                     </View>
                     <View style={{ alignItems: "flex-end" }}>
-                      <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#fff" }}>
+                      <Text style={{ fontSize: 13.5, fontWeight: "700", color: th("#fff") }}>
                         {money(cat.amount)}
                       </Text>
-                      <Text style={{ fontSize: 10.5, color: INK.softer }}>{pct}%</Text>
+                      <Text style={{ fontSize: 10.5, color: th(INK.softer) }}>{pct}%</Text>
                     </View>
                   </Pressable>
                 </Animated.View>

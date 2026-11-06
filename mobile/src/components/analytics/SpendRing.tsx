@@ -4,6 +4,7 @@ import Animated, { Easing, useAnimatedProps, useSharedValue, withDelay, withTimi
 import Svg, { Circle, G } from "react-native-svg";
 import { INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * The month as a ring.
  *
@@ -105,7 +106,7 @@ export default function SpendRing({
               cy={SIZE / 2}
               r={R}
               fill="none"
-              stroke="rgba(255,255,255,0.08)"
+              stroke={th("rgba(255,255,255,0.08)")}
               strokeWidth={STROKE}
             />
           )}
@@ -133,10 +134,10 @@ export default function SpendRing({
           justifyContent: "center",
         }}
       >
-        <Text numberOfLines={1} style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1, color: "#fff" }}>
+        <Text numberOfLines={1} style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1, color: th("#fff") }}>
           {label}
         </Text>
-        <Text style={{ marginTop: 2, fontSize: 14, color: INK.soft }}>{caption}</Text>
+        <Text style={{ marginTop: 2, fontSize: 14, color: th(INK.soft) }}>{caption}</Text>
       </View>
     </View>
   );

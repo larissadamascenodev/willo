@@ -40,6 +40,7 @@ import { chipFill, chipInk } from "~/lib/chip";
 import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
 
+import { live, th } from "~/theme/theme";
 /**
  * Putting something in.
  *
@@ -57,7 +58,7 @@ import { GREEN, INK, RED } from "~/theme/tokens";
  * thing from correcting it.
  */
 
-const SECTION = {
+const SECTION = live({
   marginTop: 28,
   marginBottom: 4,
   paddingHorizontal: 4,
@@ -66,7 +67,7 @@ const SECTION = {
   letterSpacing: 1.4,
   textTransform: "uppercase" as const,
   color: INK.softer,
-};
+});
 
 const brl = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -346,9 +347,9 @@ export default function Novo() {
                 opacity: pressed ? 0.6 : 1,
               })}
             >
-              <X size={24} color="rgba(255,255,255,0.82)" />
+              <X size={24} color={th("rgba(255,255,255,0.82)")} />
             </Pressable>
-            <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>
+            <Text style={{ fontSize: 16, fontWeight: "600", color: th("#fff") }}>
               {editingId ? (isReceita ? "Editar receita" : "Editar despesa") : isReceita ? "Nova receita" : "Nova despesa"}
             </Text>
             <View style={{ width: 40 }} />
@@ -379,7 +380,7 @@ export default function Novo() {
         >
           {/* The figure, loose on the page and reading from the left. */}
           <View style={{ paddingTop: 24, paddingBottom: 28 }}>
-            <Text style={{ paddingHorizontal: 4, fontSize: 11.5, fontWeight: "600", letterSpacing: 1.4, textTransform: "uppercase", color: INK.softer }}>
+            <Text style={{ paddingHorizontal: 4, fontSize: 11.5, fontWeight: "600", letterSpacing: 1.4, textTransform: "uppercase", color: th(INK.softer) }}>
               {editingId && recurrence === "parcelado"
                 ? "Valor da parcela"
                 : isReceita
@@ -387,7 +388,7 @@ export default function Novo() {
                   : "Valor da despesa"}
             </Text>
             <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6, paddingHorizontal: 4, marginTop: 8 }}>
-              <Text style={{ fontSize: 20, fontWeight: "700", color: INK.softer }}>R$</Text>
+              <Text style={{ fontSize: 20, fontWeight: "700", color: th(INK.softer) }}>R$</Text>
               <TextInput
                 value={brl(cents)}
                 onChangeText={(t) => {
@@ -406,12 +407,12 @@ export default function Novo() {
                   fontSize: 46,
                   fontWeight: "800",
                   letterSpacing: -1.6,
-                  color: cents === 0 ? INK.faint : "#fff",
+                  color: th(cents === 0 ? INK.faint : "#fff"),
                   padding: 0,
                 }}
               />
             </View>
-            <View style={{ marginTop: 16, marginHorizontal: 4, height: 2, width: 44, borderRadius: 999, backgroundColor: accent, opacity: 0.85 }} />
+            <View style={{ marginTop: 16, marginHorizontal: 4, height: 2, width: 44, borderRadius: 999, backgroundColor: th(accent, "bg"), opacity: 0.85 }} />
           </View>
 
           <Text style={SECTION}>O que foi</Text>
@@ -419,36 +420,36 @@ export default function Novo() {
             <Row icon={FileText} label="Descrição">
               <TextInput
                 placeholder={isReceita ? "Ex: Salário" : "Ex: Mercado"}
-                placeholderTextColor={INK.faint}
+                placeholderTextColor={th(INK.faint)}
                 value={name}
                 onChangeText={(t) => {
                   setName(t);
                   setError(null);
                 }}
                 maxLength={100}
-                style={{ flex: 1, minWidth: 0, textAlign: "right", fontSize: 15, color: "#fff", padding: 0 }}
+                style={{ flex: 1, minWidth: 0, textAlign: "right", fontSize: 15, color: th("#fff"), padding: 0 }}
               />
             </Row>
             <Row icon={Tag} label="Categoria" onPress={() => setPickingCategory(true)}>
               {category && CatIcon ? (
                 <View style={{ flexShrink: 1, alignItems: "flex-end" }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <CatIcon size={16} color={categoryHex(category, customCats)} />
-                    <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15, color: "#fff" }}>
+                    <CatIcon size={16} color={th(categoryHex(category, customCats))} />
+                    <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15, color: th("#fff") }}>
                       {category}
                     </Text>
                   </View>
                   {suggested === category && !chosen.current && (
                     <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 4 }}>
-                      <Sparkles size={10} color={GREEN} />
-                      <Text style={{ fontSize: 11.5, color: GREEN }}>sugerida pelo Willo</Text>
+                      <Sparkles size={10} color={th(GREEN)} />
+                      <Text style={{ fontSize: 11.5, color: th(GREEN) }}>sugerida pelo Willo</Text>
                     </View>
                   )}
                 </View>
               ) : (
-                <Text style={{ fontSize: 15, color: INK.faint }}>{thinking ? "Willo está pensando…" : "Escolher"}</Text>
+                <Text style={{ fontSize: 15, color: th(INK.faint) }}>{thinking ? "Willo está pensando…" : "Escolher"}</Text>
               )}
-              <ChevronRight size={16} color={INK.faint} />
+              <ChevronRight size={16} color={th(INK.faint)} />
             </Row>
           </View>
 
@@ -498,7 +499,7 @@ export default function Novo() {
                   />
                 ))}
             {(usingCard ? cards : accounts).length === 0 && (
-              <Text style={{ paddingVertical: 20, textAlign: "center", fontSize: 14, color: INK.soft }}>
+              <Text style={{ paddingVertical: 20, textAlign: "center", fontSize: 14, color: th(INK.soft) }}>
                 {usingCard ? "Nenhum cartão cadastrado" : "Nenhuma conta cadastrada"}
               </Text>
             )}
@@ -532,9 +533,9 @@ export default function Novo() {
                     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                       <Stepper icon={Minus} label="Menos uma parcela" disabled={installments <= 2} onPress={() => setInstallments((n) => Math.max(2, n - 1))} />
                       <View style={{ alignItems: "center" }}>
-                        <Text style={{ fontSize: 24, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>{installments}x</Text>
+                        <Text style={{ fontSize: 24, fontWeight: "800", letterSpacing: -0.6, color: th("#fff") }}>{installments}x</Text>
                         {cents > 0 && (
-                          <Text style={{ marginTop: 1, fontSize: 13, color: INK.soft }}>de R$ {brl(Math.round(cents / installments))}</Text>
+                          <Text style={{ marginTop: 1, fontSize: 13, color: th(INK.soft) }}>de R$ {brl(Math.round(cents / installments))}</Text>
                         )}
                       </View>
                       <Stepper icon={Plus} label="Mais uma parcela" disabled={installments >= 48} onPress={() => setInstallments((n) => Math.min(48, n + 1))} />
@@ -583,17 +584,17 @@ export default function Novo() {
           <Group>
             <TextInput
               placeholder="Escreva algo sobre esse lançamento (opcional)"
-              placeholderTextColor={INK.faint}
+              placeholderTextColor={th(INK.faint)}
               value={observation}
               onChangeText={setObservation}
               maxLength={200}
               multiline
-              style={{ minHeight: 84, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14, fontSize: 15, lineHeight: 21, color: "#fff", textAlignVertical: "top" }}
+              style={{ minHeight: 84, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14, fontSize: 15, lineHeight: 21, color: th("#fff"), textAlignVertical: "top" }}
             />
           </Group>
 
           {error && (
-            <Text style={{ marginTop: 16, paddingHorizontal: 4, fontSize: 13.5, color: RED }}>{error}</Text>
+            <Text style={{ marginTop: 16, paddingHorizontal: 4, fontSize: 13.5, color: th(RED) }}>{error}</Text>
           )}
         </ScrollView>
 
@@ -601,7 +602,7 @@ export default function Novo() {
         <View
           style={{
             borderTopWidth: 1,
-            borderTopColor: "rgba(255,255,255,0.06)",
+            borderTopColor: th("rgba(255,255,255,0.06)", "line"),
             paddingHorizontal: 16,
             paddingTop: 12,
             paddingBottom: insets.bottom + 14,
@@ -615,14 +616,14 @@ export default function Novo() {
               alignItems: "center",
               justifyContent: "center",
               borderRadius: 999,
-              backgroundColor: "#fff",
+              backgroundColor: th("#fff", "bg"),
               opacity: pressed ? 0.82 : 1,
             })}
           >
             {saving ? (
-              <ActivityIndicator color="#0B0B0B" />
+              <ActivityIndicator color={th("#0B0B0B")} />
             ) : (
-              <Text style={{ fontSize: 16, fontWeight: "700", color: "#0B0B0B" }}>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: th("#0B0B0B") }}>
                 {editingId ? "Salvar alterações" : isReceita ? "Adicionar receita" : "Adicionar despesa"}
               </Text>
             )}
@@ -633,13 +634,13 @@ export default function Novo() {
       <CenterModal open={pickingDate} onClose={() => setPickingDate(false)} title="Escolher data">
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
           <Pressable accessibilityLabel="Mês anterior" hitSlop={8} onPress={() => setCalMonth(({ m, y }) => (m === 0 ? { m: 11, y: y - 1 } : { m: m - 1, y }))} style={{ padding: 6 }}>
-            <ChevronLeft size={18} color="#fff" />
+            <ChevronLeft size={18} color={th("#fff")} />
           </Pressable>
-          <Text style={{ fontSize: 16, fontWeight: "700", color: "#fff", textTransform: "capitalize" }}>
+          <Text style={{ fontSize: 16, fontWeight: "700", color: th("#fff"), textTransform: "capitalize" }}>
             {new Date(calMonth.y, calMonth.m, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
           </Text>
           <Pressable accessibilityLabel="Próximo mês" hitSlop={8} onPress={() => setCalMonth(({ m, y }) => (m === 11 ? { m: 0, y: y + 1 } : { m: m + 1, y }))} style={{ padding: 6 }}>
-            <ChevronRight size={18} color="#fff" />
+            <ChevronRight size={18} color={th("#fff")} />
           </Pressable>
         </View>
         <MonthCalendar
@@ -702,11 +703,11 @@ function Row({
         paddingHorizontal: 4,
         paddingVertical: 10,
         borderTopWidth: 1,
-        borderTopColor: "rgba(255,255,255,0.055)",
+        borderTopColor: th("rgba(255,255,255,0.055)", "line"),
       }}
     >
-      <Icon size={17} color={INK.softer} strokeWidth={2} />
-      <Text style={{ fontSize: 15, color: "#fff" }}>{label}</Text>
+      <Icon size={17} color={th(INK.softer)} strokeWidth={2} />
+      <Text style={{ fontSize: 15, color: th("#fff") }}>{label}</Text>
       <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
         {children}
       </View>
@@ -743,8 +744,8 @@ function PickRow({
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <BankMark name={name} hex={hex} size={38} />
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>{name}</Text>
-            {subtitle && <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12.5, color: INK.softer }}>{subtitle}</Text>}
+            <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>{name}</Text>
+            {subtitle && <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12.5, color: th(INK.softer) }}>{subtitle}</Text>}
           </View>
           <View
             style={{
@@ -754,11 +755,11 @@ function PickRow({
               alignItems: "center",
               justifyContent: "center",
               borderWidth: selected ? 0 : 1.5,
-              borderColor: "rgba(255,255,255,0.28)",
-              backgroundColor: selected ? "#fff" : "transparent",
+              borderColor: th("rgba(255,255,255,0.28)", "line"),
+              backgroundColor: th(selected ? "#fff" : "transparent", "bg"),
             }}
           >
-            {selected && <Check size={14} color="#0B0B0B" strokeWidth={3.2} />}
+            {selected && <Check size={14} color={th("#0B0B0B")} strokeWidth={3.2} />}
           </View>
         </View>
       </GRow>
@@ -780,13 +781,13 @@ function DayChip({ label, on, onPress, icon: Icon }: { label: string; on: boolea
         justifyContent: "center",
         gap: 6,
         borderWidth: 1,
-        borderColor: on ? "#fff" : "rgba(255,255,255,0.10)",
-        backgroundColor: on ? "#fff" : "rgba(255,255,255,0.06)",
+        borderColor: th(on ? "#fff" : "rgba(255,255,255,0.10)", "line"),
+        backgroundColor: th(on ? "#fff" : "rgba(255,255,255,0.06)", "bg"),
         transform: [{ scale: pressed ? 0.97 : 1 }],
       })}
     >
-      {Icon && <Icon size={15} color={on ? "#0B0B0B" : "#fff"} />}
-      <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: on ? "#0B0B0B" : "#fff" }}>{label}</Text>
+      {Icon && <Icon size={15} color={th(on ? "#0B0B0B" : "#fff")} />}
+      <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: th(on ? "#0B0B0B" : "#fff") }}>{label}</Text>
     </Pressable>
   );
 }

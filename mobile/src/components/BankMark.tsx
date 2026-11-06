@@ -5,6 +5,7 @@ import { bankFor, initials } from "@/lib/banks";
 import { catalogFor } from "~/lib/bankCatalog";
 import { inkOn, shade } from "@/lib/tone";
 
+import { th } from "~/theme/theme";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const WILLO_MARK = require("../../assets/willo-wallet.png") as number;
 
@@ -54,7 +55,7 @@ export default function BankMark({
           overflow: "hidden",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: known.bleed ? known.hex : "#FFFFFF",
+          backgroundColor: th(known.bleed ? known.hex : "#FFFFFF", "bg"),
         }}
       >
         <Image
@@ -68,7 +69,7 @@ export default function BankMark({
 
   return (
     <LinearGradient
-      colors={[shade(hex, 0.18), hex, shade(hex, -0.26)]}
+      colors={th([shade(hex, 0.18), hex, shade(hex, -0.26)], "grad")}
       locations={[0, 0.58, 1]}
       start={{ x: 0.1, y: 0 }}
       end={{ x: 0.9, y: 1 }}
@@ -90,12 +91,12 @@ export default function BankMark({
           left: 0,
           right: 0,
           height: 1,
-          backgroundColor: "rgba(255,255,255,0.3)",
+          backgroundColor: th("rgba(255,255,255,0.3)", "bg"),
           borderTopLeftRadius: radius,
           borderTopRightRadius: radius,
         }}
       />
-      <Text style={{ fontSize: 14, fontWeight: "800", letterSpacing: -0.3, color: inkOn(hex) }}>
+      <Text style={{ fontSize: 14, fontWeight: "800", letterSpacing: -0.3, color: th(inkOn(hex)) }}>
         {letters}
       </Text>
     </LinearGradient>

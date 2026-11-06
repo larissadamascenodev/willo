@@ -26,6 +26,7 @@ import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 import { EXPAND } from "~/lib/expand";
 
+import { th } from "~/theme/theme";
 /**
  * The categories, as one list.
  *
@@ -190,13 +191,13 @@ export default function Categorias() {
               alignItems: "center",
               gap: 6,
               borderRadius: 999,
-              backgroundColor: "#fff",
+              backgroundColor: th("#fff", "bg"),
               paddingHorizontal: 14,
               transform: [{ scale: pressed ? 0.95 : 1 }],
             })}
           >
-            <Plus size={16} color="#0B0B0B" strokeWidth={2.6} />
-            <Text style={{ fontSize: 13, fontWeight: "700", color: "#0B0B0B" }}>Nova</Text>
+            <Plus size={16} color={th("#0B0B0B")} strokeWidth={2.6} />
+            <Text style={{ fontSize: 13, fontWeight: "700", color: th("#0B0B0B") }}>Nova</Text>
           </Pressable>
         </View>
 
@@ -223,10 +224,10 @@ export default function Categorias() {
             paddingHorizontal: 4,
           }}
         >
-          <Text style={{ fontSize: 18, fontWeight: "700", color: "#fff" }}>
+          <Text style={{ fontSize: 18, fontWeight: "700", color: th("#fff") }}>
             {tab === "despesa" ? "De despesa" : "De receita"}
           </Text>
-          <Text style={{ fontSize: 13, color: INK.soft }}>
+          <Text style={{ fontSize: 13, color: th(INK.soft) }}>
             {categories.length} {categories.length === 1 ? "categoria" : "categorias"}
           </Text>
         </View>
@@ -234,7 +235,7 @@ export default function Categorias() {
         {customCats === null ? (
           <View style={{ gap: 8 }}>
             {[0, 1, 2, 3].map((i) => (
-              <View key={i} style={{ height: 60, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.04)" }} />
+              <View key={i} style={{ height: 60, borderRadius: 18, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }} />
             ))}
           </View>
         ) : categories.length === 0 ? (
@@ -243,26 +244,26 @@ export default function Categorias() {
               borderRadius: 22,
               borderWidth: 1,
               borderStyle: "dashed",
-              borderColor: "rgba(255,255,255,0.10)",
+              borderColor: th("rgba(255,255,255,0.10)", "line"),
               paddingHorizontal: 24,
               paddingVertical: 40,
               alignItems: "center",
             }}
           >
-            <Tag size={28} color={INK.faint} />
-            <Text style={{ marginTop: 10, fontSize: 14, color: INK.soft }}>Nenhuma categoria por aqui</Text>
+            <Tag size={28} color={th(INK.faint)} />
+            <Text style={{ marginTop: 10, fontSize: 14, color: th(INK.soft) }}>Nenhuma categoria por aqui</Text>
             <Pressable
               onPress={() => setCreating(true)}
               style={({ pressed }) => ({
                 marginTop: 16,
                 borderRadius: 999,
-                backgroundColor: "#fff",
+                backgroundColor: th("#fff", "bg"),
                 paddingHorizontal: 16,
                 paddingVertical: 9,
                 opacity: pressed ? 0.85 : 1,
               })}
             >
-              <Text style={{ fontSize: 13, fontWeight: "700", color: "#0B0B0B" }}>Criar a primeira</Text>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: th("#0B0B0B") }}>Criar a primeira</Text>
             </Pressable>
           </View>
         ) : (
@@ -281,7 +282,7 @@ export default function Categorias() {
                         gap: 12,
                         paddingHorizontal: 16,
                         paddingVertical: 12,
-                        backgroundColor: pressed ? "rgba(255,255,255,0.04)" : "transparent",
+                        backgroundColor: th(pressed ? "rgba(255,255,255,0.04)" : "transparent", "bg"),
                       })}
                     >
                       <View
@@ -291,20 +292,20 @@ export default function Categorias() {
                           borderRadius: 20,
                           alignItems: "center",
                           justifyContent: "center",
-                          backgroundColor: `${cat.color}1F`,
+                          backgroundColor: th(`${cat.color}1F`, "bg"),
                         }}
                       >
-                        <Icon size={18} color={cat.color} strokeWidth={2} />
+                        <Icon size={18} color={th(cat.color)} strokeWidth={2} />
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>
+                        <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>
                           {cat.name}
                         </Text>
-                        <Text style={{ marginTop: 2, fontSize: 12, color: INK.soft }}>
+                        <Text style={{ marginTop: 2, fontSize: 12, color: th(INK.soft) }}>
                           {cat.isDefault ? "Padrão do Willo" : "Criada por você"}
                         </Text>
                       </View>
-                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: cat.color }} />
+                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: th(cat.color, "bg") }} />
                     </Pressable>
                   </Animated.View>
                 );
@@ -313,13 +314,13 @@ export default function Categorias() {
           </Animated.View>
         )}
 
-        <Text style={{ marginTop: 12, paddingHorizontal: 4, fontSize: 12, lineHeight: 18, color: INK.soft }}>
+        <Text style={{ marginTop: 12, paddingHorizontal: 4, fontSize: 12, lineHeight: 18, color: th(INK.soft) }}>
           Cada categoria tem nome e cor próprios, para que seus gráficos fiquem fáceis de ler. Toque em
           uma para editar ou excluir.
         </Text>
 
         {error && (
-          <Text style={{ marginTop: 12, paddingHorizontal: 4, fontSize: 13, color: RED }}>{error}</Text>
+          <Text style={{ marginTop: 12, paddingHorizontal: 4, fontSize: 13, color: th(RED) }}>{error}</Text>
         )}
       </ScrollView>
 
@@ -343,15 +344,15 @@ export default function Categorias() {
                   borderRadius: 20,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: `${acting.color}1F`,
+                  backgroundColor: th(`${acting.color}1F`, "bg"),
                 }}
               >
                 {(() => {
                   const Icon = categoryIcon(acting.name, customCats ?? undefined);
-                  return <Icon size={18} color={acting.color} strokeWidth={2} />;
+                  return <Icon size={18} color={th(acting.color)} strokeWidth={2} />;
                 })()}
               </View>
-              <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: "600", color: "#fff" }}>
+              <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: "600", color: th("#fff") }}>
                 {acting.name}
               </Text>
             </View>
@@ -369,11 +370,11 @@ export default function Categorias() {
                 gap: 12,
                 paddingHorizontal: 20,
                 paddingVertical: 15,
-                backgroundColor: pressed ? "rgba(255,255,255,0.05)" : "transparent",
+                backgroundColor: th(pressed ? "rgba(255,255,255,0.05)" : "transparent", "bg"),
               })}
             >
-              <Pencil size={18} color="rgba(255,255,255,0.74)" />
-              <Text style={{ fontSize: 15, color: "#fff" }}>Editar nome, ícone e cor</Text>
+              <Pencil size={18} color={th("rgba(255,255,255,0.74)")} />
+              <Text style={{ fontSize: 15, color: th("#fff") }}>Editar nome, ícone e cor</Text>
             </Pressable>
 
             <Hairline />
@@ -389,11 +390,11 @@ export default function Categorias() {
                 gap: 12,
                 paddingHorizontal: 20,
                 paddingVertical: 15,
-                backgroundColor: pressed ? "rgba(255,255,255,0.05)" : "transparent",
+                backgroundColor: th(pressed ? "rgba(255,255,255,0.05)" : "transparent", "bg"),
               })}
             >
-              <Trash2 size={18} color={RED} />
-              <Text style={{ fontSize: 15, color: RED }}>Excluir categoria</Text>
+              <Trash2 size={18} color={th(RED)} />
+              <Text style={{ fontSize: 15, color: th(RED) }}>Excluir categoria</Text>
             </Pressable>
           </View>
         )}
@@ -403,10 +404,10 @@ export default function Categorias() {
       <BottomSheet open={!!confirming} onClose={() => setConfirming(null)}>
         {confirming && (
           <View style={{ paddingHorizontal: 20 }}>
-            <Text style={{ fontSize: 17, fontWeight: "700", color: "#fff" }}>
+            <Text style={{ fontSize: 17, fontWeight: "700", color: th("#fff") }}>
               Excluir “{confirming.name}”?
             </Text>
-            <Text style={{ marginTop: 8, fontSize: 14, lineHeight: 20, color: INK.soft }}>
+            <Text style={{ marginTop: 8, fontSize: 14, lineHeight: 20, color: th(INK.soft) }}>
               Transações antigas continuam salvas, mas essa categoria deixa de aparecer nas opções.
             </Text>
             <Pressable
@@ -417,13 +418,13 @@ export default function Categorias() {
                 borderRadius: 26,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "rgba(248,113,113,0.16)",
+                backgroundColor: th("rgba(248,113,113,0.16)", "bg"),
                 borderWidth: 1,
-                borderColor: "rgba(248,113,113,0.30)",
+                borderColor: th("rgba(248,113,113,0.30)", "line"),
                 opacity: pressed ? 0.8 : 1,
               })}
             >
-              <Text style={{ fontSize: 16, fontWeight: "700", color: RED }}>Excluir</Text>
+              <Text style={{ fontSize: 16, fontWeight: "700", color: th(RED) }}>Excluir</Text>
             </Pressable>
             <Pressable
               onPress={() => setConfirming(null)}
@@ -435,7 +436,7 @@ export default function Categorias() {
                 opacity: pressed ? 0.6 : 1,
               })}
             >
-              <Text style={{ fontSize: 15, fontWeight: "600", color: INK.soft }}>Cancelar</Text>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: th(INK.soft) }}>Cancelar</Text>
             </Pressable>
           </View>
         )}

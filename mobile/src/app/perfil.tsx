@@ -21,6 +21,8 @@ import { showToast } from "~/lib/toast";
 import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { LIGHT_GROUND, isLight, switchTheme, th, useThemePref, type ThemeMode } from "~/theme/theme";
+import { GROUND } from "~/theme/tokens";
 /**
  * The profile.
  *
@@ -57,6 +59,8 @@ export default function Perfil() {
   const { profile, refetch, updateDisplayName } = useProfile();
   const [hero, setHero] = useHomeHero();
   const [sky, setSky] = useSkyModel();
+  const [theme] = useThemePref();
+  const light = isLight();
   const photo = useSkyPhoto();
 
   const [editingName, setEditingName] = useState(false);
@@ -163,26 +167,26 @@ export default function Perfil() {
         {/* Who. */}
         <View style={{ alignItems: "center", marginTop: 6 }}>
           <Pressable onPress={() => void changeAvatar()} accessibilityRole="button" accessibilityLabel="Trocar foto de perfil" style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
-            <View style={{ width: 104, height: 104, borderRadius: 52, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" }}>
+            <View style={{ width: 104, height: 104, borderRadius: 52, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
               {avatar ? (
                 <Image source={{ uri: avatar }} contentFit="cover" transition={200} style={{ width: "100%", height: "100%" }} />
               ) : (
-                <Text style={{ fontSize: 40, fontWeight: "600", color: "#fff" }}>{name.slice(0, 1).toUpperCase()}</Text>
+                <Text style={{ fontSize: 40, fontWeight: "600", color: th("#fff") }}>{name.slice(0, 1).toUpperCase()}</Text>
               )}
               {sendingAvatar && (
-                <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.45)" }}>
-                  <ActivityIndicator color="#fff" />
+                <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(0,0,0,0.45)", "bg") }}>
+                  <ActivityIndicator color={th("#fff")} />
                 </View>
               )}
             </View>
-            <View style={{ position: "absolute", right: 0, bottom: 2, width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
-              <Camera size={15} color="#0B0B0B" strokeWidth={2.2} />
+            <View style={{ position: "absolute", right: 0, bottom: 2, width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg") }}>
+              <Camera size={15} color={th("#0B0B0B")} strokeWidth={2.2} />
             </View>
           </Pressable>
-          <Text numberOfLines={1} style={{ marginTop: 16, fontSize: 24, fontWeight: "700", letterSpacing: -0.6, color: "#fff" }}>
+          <Text numberOfLines={1} style={{ marginTop: 16, fontSize: 24, fontWeight: "700", letterSpacing: -0.6, color: th("#fff") }}>
             {name}
           </Text>
-          {!!email && <Text style={{ marginTop: 4, fontSize: 14, color: INK.soft }}>{email}</Text>}
+          {!!email && <Text style={{ marginTop: 4, fontSize: 14, color: th(INK.soft) }}>{email}</Text>}
         </View>
 
         {/* The account. */}
@@ -197,7 +201,7 @@ export default function Perfil() {
                 setDraft(name);
                 setEditingName(true);
               }}
-              trailing={<Pencil size={15} color={INK.faint} strokeWidth={2} />}
+              trailing={<Pencil size={15} color={th(INK.faint)} strokeWidth={2} />}
             />
           ) : (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingLeft: 16, paddingRight: 8, minHeight: 56 }}>
@@ -209,16 +213,16 @@ export default function Perfil() {
                 returnKeyType="done"
                 onSubmitEditing={() => void saveName()}
                 placeholder="Seu nome"
-                placeholderTextColor={INK.faint}
-                selectionColor="#fff"
-                style={{ flex: 1, fontSize: 16, color: "#fff", paddingVertical: 14 }}
+                placeholderTextColor={th(INK.faint)}
+                selectionColor={th("#fff")}
+                style={{ flex: 1, fontSize: 16, color: th("#fff"), paddingVertical: 14 }}
               />
               <Pressable
                 onPress={() => void saveName()}
                 disabled={savingName}
-                style={({ pressed }) => ({ height: 36, paddingHorizontal: 16, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "#fff", opacity: pressed || savingName ? 0.75 : 1 })}
+                style={({ pressed }) => ({ height: 36, paddingHorizontal: 16, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed || savingName ? 0.75 : 1 })}
               >
-                {savingName ? <ActivityIndicator color="#0B0B0B" size="small" /> : <Text style={{ fontSize: 14, fontWeight: "700", color: "#0B0B0B" }}>Salvar</Text>}
+                {savingName ? <ActivityIndicator color={th("#0B0B0B")} size="small" /> : <Text style={{ fontSize: 14, fontWeight: "700", color: th("#0B0B0B") }}>Salvar</Text>}
               </Pressable>
             </View>
           )}
@@ -226,18 +230,45 @@ export default function Perfil() {
           <Row label="E-mail" value={email} />
           <Hairline style={{ marginLeft: 16 }} />
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14 }}>
-            <View style={{ width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.07)" }}>
-              <Crown size={17} color="#fff" strokeWidth={1.9} />
+            <View style={{ width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
+              <Crown size={17} color={th("#fff")} strokeWidth={1.9} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>Willo Beta</Text>
-              <Text style={{ marginTop: 2, fontSize: 13, color: INK.soft }}>Gratuito durante a fase de testes</Text>
+              <Text style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>Willo Beta</Text>
+              <Text style={{ marginTop: 2, fontSize: 13, color: th(INK.soft) }}>Gratuito durante a fase de testes</Text>
             </View>
-            <View style={{ paddingHorizontal: 10, height: 24, borderRadius: 12, justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" }}>
-              <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 0.8, color: "rgba(255,255,255,0.75)" }}>SEU PLANO</Text>
+            <View style={{ paddingHorizontal: 10, height: 24, borderRadius: 12, justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
+              <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 0.8, color: th("rgba(255,255,255,0.75)") }}>SEU PLANO</Text>
             </View>
           </View>
         </Surface>
+
+        {/* Dark or light, inside the app. */}
+        <Eyebrow>Tema</Eyebrow>
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          {THEMES.map(({ key, label }) => {
+            const on = theme === key;
+            return (
+              <Pressable
+                key={key}
+                onPress={() => {
+                  tick();
+                  switchTheme(key, "/perfil");
+                }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={`Tema ${label.toLowerCase()}`}
+                style={({ pressed }) => ({ flex: 1, opacity: pressed ? 0.85 : 1 })}
+              >
+                <ThemeSample mode={key} on={on} />
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingHorizontal: 4 }}>
+                  <Text style={{ fontSize: 15, fontWeight: on ? "600" : "500", color: th(on ? "#fff" : INK.soft) }}>{label}</Text>
+                  <Tick on={on} />
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
 
         {/* The top of the home. */}
         <Eyebrow>Tela inicial</Eyebrow>
@@ -259,24 +290,29 @@ export default function Perfil() {
                   borderRadius: 22,
                   borderCurve: "continuous",
                   borderWidth: 1.5,
-                  borderColor: on ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.08)",
-                  backgroundColor: on ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.045)",
+                  borderColor: th(on ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.08)", "line"),
+                  backgroundColor: th(on ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.045)", "bg"),
                   opacity: pressed ? 0.85 : 1,
                 })}
               >
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <Icon size={22} color="#fff" strokeWidth={1.8} />
+                  <Icon size={22} color={th("#fff")} strokeWidth={1.8} />
                   <Tick on={on} />
                 </View>
-                <Text style={{ marginTop: 18, fontSize: 15.5, fontWeight: "600", color: "#fff" }}>{label}</Text>
-                <Text style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>{line}</Text>
+                <Text style={{ marginTop: 18, fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>{label}</Text>
+                <Text style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>{line}</Text>
               </Pressable>
             );
           })}
         </View>
 
-        {/* What is behind every screen. */}
+        {/* What is behind every screen. In the light the ground is always the pale one. */}
         <Eyebrow>Fundo</Eyebrow>
+        {light ? (
+          <Text style={{ paddingHorizontal: 4, fontSize: 13.5, lineHeight: 19, color: th(INK.soft) }}>
+            No tema claro o fundo é sempre claro. Os céus, as cores e a sua foto voltam no tema escuro.
+          </Text>
+        ) : (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -298,14 +334,14 @@ export default function Perfil() {
                         borderCurve: "continuous",
                         overflow: "hidden",
                         borderWidth: 1.5,
-                        borderColor: on ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.08)",
-                        backgroundColor: "rgba(255,255,255,0.04)",
+                        borderColor: th(on ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.08)", "line"),
+                        backgroundColor: th("rgba(255,255,255,0.04)", "bg"),
                         opacity: pressed ? 0.85 : 1,
                       }}
                     >
                       {empty ? (
                         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                          <ImagePlus size={22} color="rgba(255,255,255,0.7)" strokeWidth={1.8} />
+                          <ImagePlus size={22} color={th("rgba(255,255,255,0.7)")} strokeWidth={1.8} />
                         </View>
                       ) : (
                         <View pointerEvents="none" style={{ width: screenW, height: screenH, transformOrigin: "top left", transform: [{ scale: shrink }] }}>
@@ -318,7 +354,7 @@ export default function Perfil() {
                         </View>
                       )}
                     </View>
-                    <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 12.5, fontWeight: on ? "600" : "500", color: on ? "#fff" : INK.soft }}>
+                    <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 12.5, fontWeight: on ? "600" : "500", color: th(on ? "#fff" : INK.soft) }}>
                       {key === "custom" && on ? "Trocar foto" : label}
                     </Text>
                   </>
@@ -327,16 +363,17 @@ export default function Perfil() {
             );
           })}
         </ScrollView>
+        )}
 
         {/* The papers, and help. */}
         <Eyebrow>Sobre</Eyebrow>
         <Surface>
-          <Row icon={<FileText size={17} color="#fff" strokeWidth={1.9} />} label="Termos de Uso" onPress={() => { tick(); setLegal("terms"); }} chevron />
+          <Row icon={<FileText size={17} color={th("#fff")} strokeWidth={1.9} />} label="Termos de Uso" onPress={() => { tick(); setLegal("terms"); }} chevron />
           <Hairline style={{ marginLeft: 64 }} />
-          <Row icon={<Shield size={17} color="#fff" strokeWidth={1.9} />} label="Política de Privacidade" onPress={() => { tick(); setLegal("privacy"); }} chevron />
+          <Row icon={<Shield size={17} color={th("#fff")} strokeWidth={1.9} />} label="Política de Privacidade" onPress={() => { tick(); setLegal("privacy"); }} chevron />
           <Hairline style={{ marginLeft: 64 }} />
           <Row
-            icon={<LifeBuoy size={17} color="#fff" strokeWidth={1.9} />}
+            icon={<LifeBuoy size={17} color={th("#fff")} strokeWidth={1.9} />}
             label="Falar com o suporte"
             value={SUPPORT_EMAIL}
             onPress={() => {
@@ -349,13 +386,13 @@ export default function Perfil() {
 
         {/* Leaving. */}
         <Surface style={{ marginTop: 24 }}>
-          <Row icon={<LogOut size={17} color={RED} strokeWidth={1.9} />} label="Sair da conta" danger onPress={() => { tick(); setAsking("leave"); }} />
+          <Row icon={<LogOut size={17} color={th(RED)} strokeWidth={1.9} />} label="Sair da conta" danger onPress={() => { tick(); setAsking("leave"); }} />
         </Surface>
 
         <Pressable onPress={() => { tick(); setAsking("delete"); }} style={({ pressed }) => ({ marginTop: 22, alignSelf: "center", paddingVertical: 8, paddingHorizontal: 12, opacity: pressed ? 0.6 : 1 })}>
-          <Text style={{ fontSize: 14, fontWeight: "500", color: "rgba(248,113,113,0.85)" }}>Excluir conta</Text>
+          <Text style={{ fontSize: 14, fontWeight: "500", color: th("rgba(248,113,113,0.85)") }}>Excluir conta</Text>
         </Pressable>
-        <Text style={{ marginTop: 2, textAlign: "center", fontSize: 12, lineHeight: 17, color: INK.faint, paddingHorizontal: 24 }}>
+        <Text style={{ marginTop: 2, textAlign: "center", fontSize: 12, lineHeight: 17, color: th(INK.faint), paddingHorizontal: 24 }}>
           Apaga para sempre a sua conta e todos os seus dados no Willo.
         </Text>
       </ScrollView>
@@ -367,7 +404,7 @@ export default function Perfil() {
         title="Sair da conta?"
         confirmLabel="Sair"
         busyLabel="Saindo…"
-        icon={<LogOut size={21} color={RED} strokeWidth={2} />}
+        icon={<LogOut size={21} color={th(RED)} strokeWidth={2} />}
         busy={busy}
         onConfirm={() => void leave()}
         onClose={() => setAsking(null)}
@@ -389,6 +426,41 @@ export default function Perfil() {
   );
 }
 
+const THEMES: { key: ThemeMode; label: string }[] = [
+  { key: "dark", label: "Escuro" },
+  { key: "light", label: "Claro" },
+];
+
+/* A small page in each theme: a figure, a card and two lines, in that theme's own
+   colours whichever theme is on screen. */
+function ThemeSample({ mode, on }: { mode: ThemeMode; on: boolean }) {
+  const dark = mode === "dark";
+  const ink = dark ? "#FFFFFF" : "#111318";
+  const soft = dark ? "rgba(255,255,255,0.45)" : "rgba(17,19,24,0.45)";
+  const card = dark ? "rgba(255,255,255,0.07)" : "rgba(17,19,24,0.05)";
+  return (
+    <View
+      style={{
+        height: 112,
+        borderRadius: 20,
+        borderCurve: "continuous",
+        overflow: "hidden",
+        padding: 14,
+        backgroundColor: dark ? GROUND : LIGHT_GROUND,
+        borderWidth: 1.5,
+        borderColor: on ? th("rgba(255,255,255,0.9)", "line") : th("rgba(255,255,255,0.1)", "line"),
+      }}
+    >
+      <View style={{ width: 34, height: 6, borderRadius: 3, backgroundColor: soft }} />
+      <Text style={{ marginTop: 8, fontSize: 18, fontWeight: "700", letterSpacing: -0.4, color: ink }}>R$ 4.280</Text>
+      <View style={{ marginTop: 10, flex: 1, borderRadius: 12, backgroundColor: card, padding: 9, gap: 6 }}>
+        <View style={{ width: "70%", height: 5, borderRadius: 3, backgroundColor: soft }} />
+        <View style={{ width: "45%", height: 5, borderRadius: 3, backgroundColor: soft }} />
+      </View>
+    </View>
+  );
+}
+
 function Eyebrow({ children }: { children: ReactNode }) {
   return <Text style={[T.eyebrow, { marginTop: 30, marginBottom: 10, paddingHorizontal: 4 }]}>{children}</Text>;
 }
@@ -402,12 +474,12 @@ function Tick({ on }: { on: boolean }) {
         borderRadius: 10,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: on ? "#fff" : "transparent",
+        backgroundColor: th(on ? "#fff" : "transparent", "bg"),
         borderWidth: on ? 0 : 1.5,
-        borderColor: "rgba(255,255,255,0.25)",
+        borderColor: th("rgba(255,255,255,0.25)", "line"),
       }}
     >
-      {on && <Check size={12} color="#0B0B0B" strokeWidth={3} />}
+      {on && <Check size={12} color={th("#0B0B0B")} strokeWidth={3} />}
     </View>
   );
 }
@@ -432,25 +504,25 @@ function Row({
   const body = (
     <>
       {icon && (
-        <View style={{ width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: danger ? "rgba(248,113,113,0.12)" : "rgba(255,255,255,0.07)" }}>
+        <View style={{ width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: th(danger ? "rgba(248,113,113,0.12)" : "rgba(255,255,255,0.07)", "bg") }}>
           {icon}
         </View>
       )}
       <View style={{ flex: 1, minWidth: 0 }}>
         {value !== undefined && !icon ? (
           <>
-            <Text style={{ fontSize: 12.5, color: INK.soft }}>{label}</Text>
-            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 15.5, fontWeight: "500", color: "#fff" }}>
+            <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>{label}</Text>
+            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 15.5, fontWeight: "500", color: th("#fff") }}>
               {value}
             </Text>
           </>
         ) : (
           <>
-            <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "500", color: danger ? RED : "#fff" }}>
+            <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "500", color: th(danger ? RED : "#fff") }}>
               {label}
             </Text>
             {!!value && (
-              <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: INK.soft }}>
+              <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: th(INK.soft) }}>
                 {value}
               </Text>
             )}
@@ -458,13 +530,13 @@ function Row({
         )}
       </View>
       {trailing}
-      {chevron && <ChevronRight size={17} color={INK.faint} strokeWidth={2} />}
+      {chevron && <ChevronRight size={17} color={th(INK.faint)} strokeWidth={2} />}
     </>
   );
   const row = { flexDirection: "row" as const, alignItems: "center" as const, gap: 12, paddingHorizontal: 16, minHeight: 58, paddingVertical: 11 };
   if (!onPress) return <View style={row}>{body}</View>;
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => [row, pressed && { backgroundColor: "rgba(255,255,255,0.04)" }]}>
+    <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => [row, pressed && { backgroundColor: th("rgba(255,255,255,0.04)", "bg") }]}>
       {body}
     </Pressable>
   );

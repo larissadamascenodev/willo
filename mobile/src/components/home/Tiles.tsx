@@ -21,6 +21,7 @@ import { money } from "~/lib/money";
 import { AMBER, GREEN, INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * Instalments, subscriptions and goals.
  *
@@ -54,8 +55,8 @@ function Header({ title, aside }: { title: string; aside?: string }) {
       <Text numberOfLines={1} style={[T.cardLabel, { flex: 1 }]}>
         {title}
       </Text>
-      {aside ? <Text style={{ fontSize: 12.5, color: INK.softer }}>{aside}</Text> : null}
-      <ChevronRight size={16} color={INK.faint} />
+      {aside ? <Text style={{ fontSize: 12.5, color: th(INK.softer) }}>{aside}</Text> : null}
+      <ChevronRight size={16} color={th(INK.faint)} />
     </View>
   );
 }
@@ -64,17 +65,17 @@ function Header({ title, aside }: { title: string; aside?: string }) {
 function Lead({ value, unit, compact = false }: { value: string; unit?: string; compact?: boolean }) {
   return (
     <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: compact ? 8 : 10 }}>
-      <Text style={[nums, { fontSize: compact ? 17 : 21, fontWeight: "700", letterSpacing: -0.5, color: "#fff" }]}>
+      <Text style={[nums, { fontSize: compact ? 17 : 21, fontWeight: "700", letterSpacing: -0.5, color: th("#fff") }]}>
         {value}
       </Text>
-      {unit ? <Text style={{ fontSize: compact ? 12 : 13.5, color: INK.soft }}> {unit}</Text> : null}
+      {unit ? <Text style={{ fontSize: compact ? 12 : 13.5, color: th(INK.soft) }}> {unit}</Text> : null}
     </Text>
   );
 }
 
 function Track({ share, color = "#fff", height = 6, delay = 0.1 }: { share: number; color?: string; height?: number; delay?: number }) {
   return (
-    <View style={{ height, borderRadius: 999, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.08)" }}>
+    <View style={{ height, borderRadius: 999, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
       <Bar share={share} color={color} delay={delay} />
     </View>
   );
@@ -87,13 +88,13 @@ function Ring({ share, color, size = 30 }: { share: number; color: string; size?
   const c = 2 * Math.PI * r;
   return (
     <Svg width={size} height={size} style={{ transform: [{ rotate: "-90deg" }] }}>
-      <Circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth={stroke} />
+      <Circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={th("rgba(255,255,255,0.10)")} strokeWidth={stroke} />
       <Circle
         cx={size / 2}
         cy={size / 2}
         r={r}
         fill="none"
-        stroke={color}
+        stroke={th(color)}
         strokeWidth={stroke}
         strokeLinecap="round"
         strokeDasharray={[Math.max(share, 0.04) * c, c]}
@@ -103,7 +104,7 @@ function Ring({ share, color, size = 30 }: { share: number; color: string; size?
 }
 
 function Empty({ text }: { text: string }) {
-  return <Text style={{ marginTop: 10, fontSize: 13.5, lineHeight: 19, color: INK.soft }}>{text}</Text>;
+  return <Text style={{ marginTop: 10, fontSize: 13.5, lineHeight: 19, color: th(INK.soft) }}>{text}</Text>;
 }
 
 /** A tile that has not answered yet. A hole in the board is worse than a quiet card. */
@@ -115,8 +116,8 @@ function Skeleton({ size }: { size: WidgetSize }) {
         minHeight: size === "full" ? 170 : 150,
         borderRadius: 22,
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.08)",
-        backgroundColor: "rgba(255,255,255,0.046)",
+        borderColor: th("rgba(255,255,255,0.08)", "line"),
+        backgroundColor: th("rgba(255,255,255,0.046)", "bg"),
       }}
     />
   );
@@ -203,7 +204,7 @@ export function ParcelamentosCard({
         <View style={{ marginTop: 12 }}>
           <Track share={paid} height={5} />
         </View>
-        <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 12, color: INK.soft }}>
+        <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 12, color: th(INK.soft) }}>
           {totals.monthsUntilFree > 0 ? `Livre em ${totals.monthsUntilFree} meses` : "Termina este mês"}
         </Text>
       </Surface>
@@ -214,32 +215,32 @@ export function ParcelamentosCard({
     <Surface onPress={open} style={{ padding: 16 }}>
       <Header title="Parcelamentos" aside={`${items.length} ${items.length === 1 ? "compra" : "compras"}`} />
       <Lead value={money(totals.totalMensal)} unit="por mês" />
-      <Text style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>{ends}</Text>
+      <Text style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>{ends}</Text>
 
       {/* How much of the debt is already behind you. */}
       <View style={{ marginTop: 14 }}>
         <Track share={paid} />
       </View>
       <View style={{ marginTop: 7, flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-        <Text style={{ fontSize: 12, color: INK.soft }}>{Math.round(paid * 100)}% já pago</Text>
-        <Text style={[nums, { fontSize: 12, color: INK.soft }]}>falta {money(totals.totalRestante)}</Text>
+        <Text style={{ fontSize: 12, color: th(INK.soft) }}>{Math.round(paid * 100)}% já pago</Text>
+        <Text style={[nums, { fontSize: 12, color: th(INK.soft) }]}>falta {money(totals.totalRestante)}</Text>
       </View>
 
-      <View style={{ marginTop: 14, borderTopWidth: 1, borderTopColor: RULE }}>
+      <View style={{ marginTop: 14, borderTopWidth: 1, borderTopColor: th(RULE, "line") }}>
         {heaviest.map((item) => {
           const hex = categoryHex(item.category, customCats);
           return (
             <View key={item.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingTop: 12 }}>
               <Ring share={item.installment_current / item.installments} color={hex} />
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "500", color: "#fff" }}>
+                <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "500", color: th("#fff") }}>
                   {item.name}
                 </Text>
-                <Text style={{ marginTop: 1, fontSize: 12, color: INK.softer }}>
+                <Text style={{ marginTop: 1, fontSize: 12, color: th(INK.softer) }}>
                   parcela {item.installment_current} de {item.installments}
                 </Text>
               </View>
-              <Text style={[nums, { fontSize: 14.5, fontWeight: "600", color: "#fff" }]}>{money(item.amount)}</Text>
+              <Text style={[nums, { fontSize: 14.5, fontWeight: "600", color: th("#fff") }]}>{money(item.amount)}</Text>
             </View>
           );
         })}
@@ -270,12 +271,12 @@ function Mark({ name, size = 30, ring = false }: { name: string; size?: number; 
         borderRadius: size / 2,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: `${hex}2E`,
+        backgroundColor: th(`${hex}2E`, "bg"),
         borderWidth: ring ? 2 : 0,
-        borderColor: "#121315",
+        borderColor: th("#121315", "line"),
       }}
     >
-      <Text style={{ fontSize: size * 0.42, fontWeight: "700", color: hex }}>{initial(name)}</Text>
+      <Text style={{ fontSize: size * 0.42, fontWeight: "700", color: th(hex) }}>{initial(name)}</Text>
     </View>
   );
 }
@@ -291,7 +292,7 @@ function MarkRow({ items, max }: { items: RecurringItem[]; max: number }) {
           <Mark name={s.name} ring />
         </View>
       ))}
-      {rest > 0 && <Text style={{ marginLeft: 8, fontSize: 12.5, color: INK.soft }}>+{rest}</Text>}
+      {rest > 0 && <Text style={{ marginLeft: 8, fontSize: 12.5, color: th(INK.soft) }}>+{rest}</Text>}
     </View>
   );
 }
@@ -361,17 +362,17 @@ function EndedAsk({
         borderRadius: 18,
         borderCurve: "continuous",
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.12)",
-        backgroundColor: "rgba(255,255,255,0.06)",
+        borderColor: th("rgba(255,255,255,0.12)", "line"),
+        backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
       }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <Mark name={item.name} />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={2} style={{ fontSize: 14.5, fontWeight: "600", color: "#fff" }}>
+          <Text numberOfLines={2} style={{ fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>
             {item.name} não foi cobrada em {MONTH_NAMES[item.month]}
           </Text>
-          <Text style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>Você ainda assina?</Text>
+          <Text style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>Você ainda assina?</Text>
         </View>
       </View>
       <View style={{ marginTop: 12, flexDirection: "row", gap: 8 }}>
@@ -384,11 +385,11 @@ function EndedAsk({
             borderRadius: 20,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "#fff",
+            backgroundColor: th("#fff", "bg"),
             opacity: busy ? 0.5 : pressed ? 0.85 : 1,
           })}
         >
-          <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#0B0B0B" }}>Sim, continua</Text>
+          <Text style={{ fontSize: 13.5, fontWeight: "700", color: th("#0B0B0B") }}>Sim, continua</Text>
         </Pressable>
         <Pressable
           disabled={busy}
@@ -407,12 +408,12 @@ function EndedAsk({
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.14)",
-            backgroundColor: "rgba(255,255,255,0.08)",
+            borderColor: th("rgba(255,255,255,0.14)", "line"),
+            backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
             opacity: busy ? 0.5 : pressed ? 0.75 : 1,
           })}
         >
-          <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#fff" }}>{busy ? "Cancelando…" : "Cancelei"}</Text>
+          <Text style={{ fontSize: 13.5, fontWeight: "700", color: th("#fff") }}>{busy ? "Cancelando…" : "Cancelei"}</Text>
         </Pressable>
       </View>
     </View>
@@ -451,7 +452,7 @@ export function AssinaturasCard({
         <View style={{ marginTop: 10 }}>
           <MarkRow items={assinaturas} max={3} />
         </View>
-        <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 12, color: ask ? AMBER : INK.soft }}>
+        <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 12, color: th(ask ? AMBER : INK.soft) }}>
           {ask ? `Confirmar ${ask.name}` : next[0] ? `${next[0].name} ${whenDue(next[0].dueDay)}` : "Tudo pago no mês"}
         </Text>
       </Surface>
@@ -473,23 +474,23 @@ export function AssinaturasCard({
             <MarkRow items={assinaturas} max={7} />
           </View>
 
-          <View style={{ marginTop: 14, borderTopWidth: 1, borderTopColor: RULE }}>
+          <View style={{ marginTop: 14, borderTopWidth: 1, borderTopColor: th(RULE, "line") }}>
             {next.length === 0 ? (
-              <Text style={{ paddingTop: 12, fontSize: 13, color: INK.soft }}>Todas já foram pagas este mês.</Text>
+              <Text style={{ paddingTop: 12, fontSize: 13, color: th(INK.soft) }}>Todas já foram pagas este mês.</Text>
             ) : (
               next.slice(0, 2).map((s) => (
                 <View key={s.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingTop: 12 }}>
                   <Mark name={s.name} />
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "500", color: "#fff" }}>
+                    <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "500", color: th("#fff") }}>
                       {s.name}
                     </Text>
-                    <Text style={{ marginTop: 1, fontSize: 12, color: INK.softer }}>
+                    <Text style={{ marginTop: 1, fontSize: 12, color: th(INK.softer) }}>
                       dia {s.dueDay}, {whenDue(s.dueDay)}
                       {s.source === "cartao" ? " · no cartão" : ""}
                     </Text>
                   </View>
-                  <Text style={[nums, { fontSize: 14.5, fontWeight: "600", color: "#fff" }]}>{money(s.amount)}</Text>
+                  <Text style={[nums, { fontSize: 14.5, fontWeight: "600", color: th("#fff") }]}>{money(s.amount)}</Text>
                 </View>
               ))
             )}
@@ -578,7 +579,7 @@ export function MetasCard({
             <View style={{ marginTop: 12 }}>
               <Track share={overall} color={GREEN} height={5} />
             </View>
-            <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 12, color: INK.soft }}>
+            <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 12, color: th(INK.soft) }}>
               {Math.round(overall * 100)}% de {money(objetivo)}
             </Text>
           </>
@@ -598,7 +599,7 @@ export function MetasCard({
       <Header title="Caixinhas" aside={`${goals.length} ${goals.length === 1 ? "caixinha" : "caixinhas"}`} />
       <Lead value={money(guardado)} unit="guardados" />
       {objetivo > 0 && (
-        <Text style={[nums, { marginTop: 2, fontSize: 12.5, color: INK.soft }]}>
+        <Text style={[nums, { marginTop: 2, fontSize: 12.5, color: th(INK.soft) }]}>
           {Math.round(overall * 100)}% de {money(objetivo)}
         </Text>
       )}
@@ -617,30 +618,30 @@ export function MetasCard({
                 gap: 12,
                 paddingVertical: 11,
                 borderTopWidth: i === 0 ? 0 : 1,
-                borderTopColor: "rgba(255,255,255,0.06)",
+                borderTopColor: th("rgba(255,255,255,0.06)", "line"),
                 opacity: pressed ? 0.7 : 1,
               })}
             >
               <CaixinhaCover goal={goal} width={46} height={46} radius={14} glyph={24} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "600", color: "#fff" }}>{goal.name}</Text>
-                  <Text style={[nums, { fontSize: 15, fontWeight: "600", color: "#fff" }]}>{money(Number(goal.current_amount) || 0)}</Text>
+                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "600", color: th("#fff") }}>{goal.name}</Text>
+                  <Text style={[nums, { fontSize: 15, fontWeight: "600", color: th("#fff") }]}>{money(Number(goal.current_amount) || 0)}</Text>
                 </View>
                 {hasTarget ? (
                   <View style={{ marginTop: 7, flexDirection: "row", alignItems: "center", gap: 10 }}>
                     <View style={{ flex: 1 }}>
                       <Track share={progress} color={isComplete ? GREEN : hex} height={4} delay={0.05 * i} />
                     </View>
-                    <Text style={[nums, { fontSize: 12, color: isComplete ? GREEN : INK.soft }]}>{percent}%</Text>
+                    <Text style={[nums, { fontSize: 12, color: th(isComplete ? GREEN : INK.soft) }]}>{percent}%</Text>
                   </View>
                 ) : null}
                 {hasTarget ? (
-                  <Text numberOfLines={1} style={[nums, { marginTop: 4, fontSize: 12, color: INK.softer }]}>
+                  <Text numberOfLines={1} style={[nums, { marginTop: 4, fontSize: 12, color: th(INK.softer) }]}>
                     Meta de {money(Number(goal.target_amount) || 0)}
                   </Text>
                 ) : (
-                  <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 12.5, color: INK.softer }}>sem valor definido</Text>
+                  <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 12.5, color: th(INK.softer) }}>sem valor definido</Text>
                 )}
               </View>
             </Pressable>
@@ -649,7 +650,7 @@ export function MetasCard({
       </View>
 
       {goals.length > shown.length && (
-        <Text style={{ paddingTop: 6, paddingBottom: 10, fontSize: 13, fontWeight: "600", color: INK.soft }}>
+        <Text style={{ paddingTop: 6, paddingBottom: 10, fontSize: 13, fontWeight: "600", color: th(INK.soft) }}>
           Ver todas as {goals.length}
         </Text>
       )}

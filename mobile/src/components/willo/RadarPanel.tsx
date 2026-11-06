@@ -8,6 +8,7 @@ import { face } from "~/lib/chatFont";
 import { MONTH_NAMES } from "~/lib/purchaseSim";
 import { INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * The Radar: where the money's numbers turn into what they mean. The home shows the numbers;
  * this explains them, says what may happen next, and lets a purchase be tried before it is
@@ -47,7 +48,7 @@ export default function RadarPanel({
       <Scope selected={sector} onSelect={setSector} blips={blips} />
 
       {!data ? (
-        <Text style={{ marginTop: 20, textAlign: "center", fontSize: 15, ...face(500), color: INK.soft }}>Lendo os seus números…</Text>
+        <Text style={{ marginTop: 20, textAlign: "center", fontSize: 15, ...face(500), color: th(INK.soft) }}>Lendo os seus números…</Text>
       ) : (
         <View>
           {sector === "consumo" && <Consumo data={data} onAsk={onAsk} />}
@@ -57,7 +58,7 @@ export default function RadarPanel({
           {sector === "saude" && <Saude data={data} onAsk={onAsk} />}
           {sector === "simular" && <Simulador data={data} snapshot={snapshot} categories={categories} onAsk={onAsk} />}
           {sector !== "simular" && <QuickAsks sector={sector} data={data} snapshot={snapshot} onAsk={onAsk} />}
-          <Text style={{ marginTop: 22, paddingHorizontal: 20, fontSize: 12.5, lineHeight: 17, ...face(500), color: INK.faint }}>
+          <Text style={{ marginTop: 22, paddingHorizontal: 20, fontSize: 12.5, lineHeight: 17, ...face(500), color: th(INK.faint) }}>
             {`Dos seus registros no Willo, até hoje, ${data.today.getDate()} de ${MONTH_NAMES[data.today.getMonth()]}.`}
           </Text>
         </View>

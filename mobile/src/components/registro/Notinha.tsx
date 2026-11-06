@@ -19,6 +19,7 @@ import { AlertTriangle, Check, Undo2 } from "~/components/icons";
 import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * The slip the entries land on while they are being worked out — the phone's copy
  * of the web's Notinha.
@@ -70,7 +71,7 @@ function TornEdge() {
   d += " Z";
   return (
     <Svg width="100%" height={9} viewBox="0 0 100 3" preserveAspectRatio="none" style={{ marginTop: -1 }}>
-      <Path d={d} fill={FILL} />
+      <Path d={d} fill={th(FILL)} />
     </Svg>
   );
 }
@@ -80,14 +81,14 @@ function StatusMark({ status }: { status: NotinhaStatus }) {
     return (
       <Animated.View
         entering={ZoomIn.springify().damping(14).stiffness(420)}
-        style={{ width: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: GREEN }}
+        style={{ width: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: th(GREEN, "bg") }}
       >
-        <Check size={11} color="#0B0B0B" strokeWidth={3.4} />
+        <Check size={11} color={th("#0B0B0B")} strokeWidth={3.4} />
       </Animated.View>
     );
   }
-  if (status === "error") return <AlertTriangle size={17} color={RED} strokeWidth={2.4} />;
-  if (status === "undone") return <Undo2 size={16} color={INK.faint} strokeWidth={2.2} />;
+  if (status === "error") return <AlertTriangle size={17} color={th(RED)} strokeWidth={2.4} />;
+  if (status === "undone") return <Undo2 size={16} color={th(INK.faint)} strokeWidth={2.2} />;
   return (
     <View
       style={{
@@ -95,7 +96,7 @@ function StatusMark({ status }: { status: NotinhaStatus }) {
         height: 18,
         borderRadius: 9,
         borderWidth: 1.5,
-        borderColor: status === "asking" ? "rgba(200,243,109,0.7)" : "rgba(255,255,255,0.2)",
+        borderColor: th(status === "asking" ? "rgba(200,243,109,0.7)" : "rgba(255,255,255,0.2)", "line"),
       }}
     />
   );
@@ -140,8 +141,8 @@ export default function Notinha({ lines, onUndo }: { lines: NotinhaLine[]; onUnd
             borderTopRightRadius: 18,
             borderWidth: 1,
             borderBottomWidth: 0,
-            borderColor: "rgba(255,255,255,0.09)",
-            backgroundColor: FILL,
+            borderColor: th("rgba(255,255,255,0.09)", "line"),
+            backgroundColor: th(FILL, "bg"),
             paddingHorizontal: 18,
             paddingTop: 16,
             paddingBottom: 14,
@@ -150,15 +151,15 @@ export default function Notinha({ lines, onUndo }: { lines: NotinhaLine[]; onUnd
         ]}
       >
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 2.4, textTransform: "uppercase", color: INK.soft }}>
+          <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 2.4, textTransform: "uppercase", color: th(INK.soft) }}>
             Notinha
           </Text>
-          <Text style={[nums, { fontSize: 12, color: INK.softer }]}>
+          <Text style={[nums, { fontSize: 12, color: th(INK.softer) }]}>
             {lines.length} {lines.length === 1 ? "registro" : "registros"}
           </Text>
         </View>
 
-        <View style={{ marginTop: 12, borderTopWidth: 1, borderStyle: "dashed", borderColor: DASH }} />
+        <View style={{ marginTop: 12, borderTopWidth: 1, borderStyle: "dashed", borderColor: th(DASH, "line") }} />
 
         {lines.map((line) => (
           <Animated.View
@@ -177,13 +178,13 @@ export default function Notinha({ lines, onUndo }: { lines: NotinhaLine[]; onUnd
                   fontSize: 16,
                   fontWeight: "600",
                   letterSpacing: -0.2,
-                  color: line.status === "saved" ? "#fff" : line.status === "undone" ? INK.faint : "rgba(255,255,255,0.7)",
+                  color: th(line.status === "saved" ? "#fff" : line.status === "undone" ? INK.faint : "rgba(255,255,255,0.7)"),
                   textDecorationLine: line.status === "undone" ? "line-through" : "none",
                 }}
               >
                 {line.name}
               </Text>
-              <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12.5, color: INK.softer }}>
+              <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12.5, color: th(INK.softer) }}>
                 {subtitleFor(line)}
               </Text>
             </View>
@@ -194,7 +195,7 @@ export default function Notinha({ lines, onUndo }: { lines: NotinhaLine[]; onUnd
                   fontSize: 16,
                   fontWeight: "700",
                   letterSpacing: -0.3,
-                  color: line.status === "saved" ? (line.type === "receita" ? GREEN : "#fff") : line.status === "undone" ? INK.faint : INK.soft,
+                  color: th(line.status === "saved" ? (line.type === "receita" ? GREEN : "#fff") : line.status === "undone" ? INK.faint : INK.soft),
                   textDecorationLine: line.status === "undone" ? "line-through" : "none",
                 },
               ]}
@@ -206,8 +207,8 @@ export default function Notinha({ lines, onUndo }: { lines: NotinhaLine[]; onUnd
         ))}
 
         {allUndone && (
-          <View style={{ borderTopWidth: 1, borderStyle: "dashed", borderColor: DASH, paddingTop: 12 }}>
-            <Text style={{ fontSize: 13, color: INK.softer }}>Desfeito — nada disso ficou salvo.</Text>
+          <View style={{ borderTopWidth: 1, borderStyle: "dashed", borderColor: th(DASH, "line"), paddingTop: 12 }}>
+            <Text style={{ fontSize: 13, color: th(INK.softer) }}>Desfeito — nada disso ficou salvo.</Text>
           </View>
         )}
 
@@ -217,7 +218,7 @@ export default function Notinha({ lines, onUndo }: { lines: NotinhaLine[]; onUnd
             style={{
               borderTopWidth: 1,
               borderStyle: "dashed",
-              borderColor: DASH,
+              borderColor: th(DASH, "line"),
               paddingTop: 12,
               flexDirection: "row",
               alignItems: "center",
@@ -226,10 +227,10 @@ export default function Notinha({ lines, onUndo }: { lines: NotinhaLine[]; onUnd
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Check size={13} color={GREEN} strokeWidth={3} />
-              <Text style={{ fontSize: 13, fontWeight: "600", color: GREEN }}>Salvo no Willo</Text>
+              <Check size={13} color={th(GREEN)} strokeWidth={3} />
+              <Text style={{ fontSize: 13, fontWeight: "600", color: th(GREEN) }}>Salvo no Willo</Text>
               {lines.length > 1 && (
-                <Text style={[nums, { fontSize: 13, fontWeight: "700", color: "rgba(255,255,255,0.75)" }]}>
+                <Text style={[nums, { fontSize: 13, fontWeight: "700", color: th("rgba(255,255,255,0.75)") }]}>
                   {" · "}
                   {total >= 0 ? "+" : "−"}
                   {money(Math.abs(total))}
@@ -251,12 +252,12 @@ export default function Notinha({ lines, onUndo }: { lines: NotinhaLine[]; onUnd
                   paddingHorizontal: 10,
                   paddingVertical: 5,
                   borderRadius: 999,
-                  backgroundColor: "rgba(255,255,255,0.07)",
+                  backgroundColor: th("rgba(255,255,255,0.07)", "bg"),
                   opacity: undoing ? 0.5 : pressed ? 0.7 : 1,
                 })}
               >
-                <Undo2 size={13} color="rgba(255,255,255,0.8)" strokeWidth={2.2} />
-                <Text style={{ fontSize: 12.5, fontWeight: "600", color: "rgba(255,255,255,0.8)" }}>Desfazer</Text>
+                <Undo2 size={13} color={th("rgba(255,255,255,0.8)")} strokeWidth={2.2} />
+                <Text style={{ fontSize: 12.5, fontWeight: "600", color: th("rgba(255,255,255,0.8)") }}>Desfazer</Text>
               </Pressable>
             )}
           </Animated.View>

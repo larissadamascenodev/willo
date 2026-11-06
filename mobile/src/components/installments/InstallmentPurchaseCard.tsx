@@ -12,6 +12,7 @@ import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { EXPAND } from "~/lib/expand";
 
+import { th } from "~/theme/theme";
 /**
  * One parcelled purchase.
  *
@@ -99,8 +100,8 @@ export default function InstallmentPurchaseCard({
         borderRadius: 20,
         borderCurve: "continuous",
         borderWidth: 1,
-        borderColor: late ? "rgba(248,113,113,0.32)" : "rgba(255,255,255,0.09)",
-        backgroundColor: "rgba(255,255,255,0.055)",
+        borderColor: th(late ? "rgba(248,113,113,0.32)" : "rgba(255,255,255,0.09)", "line"),
+        backgroundColor: th("rgba(255,255,255,0.055)", "bg"),
       }}
     >
       <Pressable
@@ -116,29 +117,29 @@ export default function InstallmentPurchaseCard({
               borderRadius: 20,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: chipFill(hex),
+              backgroundColor: th(chipFill(hex), "bg"),
             }}
           >
-            <Icon size={18} color={chipInk(hex)} strokeWidth={2} />
+            <Icon size={18} color={th(chipInk(hex))} strokeWidth={2} />
           </View>
 
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>
+            <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>
               {item.name}
             </Text>
             <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 6 }}>
               {isCard && !late && (
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: hexFor(card?.color ?? null) }} />
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: th(hexFor(card?.color ?? null), "bg") }} />
               )}
-              <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: late ? RED : INK.soft }}>
+              <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: th(late ? RED : INK.soft) }}>
                 {late ? `Em atraso · ${where}` : `${where} · ${item.category}`}
               </Text>
             </View>
           </View>
 
           <View style={{ alignItems: "flex-end" }}>
-            <Text style={[nums, { fontSize: 15.5, fontWeight: "700", color: "#fff" }]}>{money(item.amount)}</Text>
-            <Text style={{ marginTop: 1, fontSize: 11.5, color: INK.softer }}>por mês</Text>
+            <Text style={[nums, { fontSize: 15.5, fontWeight: "700", color: th("#fff") }]}>{money(item.amount)}</Text>
+            <Text style={{ marginTop: 1, fontSize: 11.5, color: th(INK.softer) }}>por mês</Text>
           </View>
         </View>
 
@@ -154,20 +155,20 @@ export default function InstallmentPurchaseCard({
                     height: 6,
                     borderRadius: 999,
                     backgroundColor:
-                      s.status === "paga"
+                      th(s.status === "paga"
                         ? GREEN
                         : s.status === "atual" && late
                           ? RED
                           : s.focused
                             ? "#fff"
-                            : "rgba(255,255,255,0.10)",
+                            : "rgba(255,255,255,0.10)", "bg"),
                   }}
                 />
               ))}
             </View>
           ) : (
-            <View style={{ height: 6, borderRadius: 999, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.10)" }}>
-              <View style={{ height: "100%", width: `${(paidCount / item.installments) * 100}%`, backgroundColor: GREEN }} />
+            <View style={{ height: 6, borderRadius: 999, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.10)", "bg") }}>
+              <View style={{ height: "100%", width: `${(paidCount / item.installments) * 100}%`, backgroundColor: th(GREEN, "bg") }} />
             </View>
           )}
         </View>
@@ -176,33 +177,33 @@ export default function InstallmentPurchaseCard({
         <View style={{ marginTop: 9, flexDirection: "row", alignItems: "center", gap: 10 }}>
           {ahead ? (
             <>
-              <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: INK.soft }}>
+              <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: th(INK.soft) }}>
                 {at === item.installments ? (
                   <>
-                    <Text style={{ fontWeight: "700", color: "#fff" }}>Última</Text> parcela em {monthLabel}
+                    <Text style={{ fontWeight: "700", color: th("#fff") }}>Última</Text> parcela em {monthLabel}
                   </>
                 ) : (
                   <>
-                    <Text style={{ fontWeight: "700", color: "#fff" }}>{at}ª</Text> de {item.installments} em {monthLabel}
+                    <Text style={{ fontWeight: "700", color: th("#fff") }}>{at}ª</Text> de {item.installments} em {monthLabel}
                   </>
                 )}
               </Text>
-              <Text style={[nums, { fontSize: 12.5, color: INK.soft }]}>
+              <Text style={[nums, { fontSize: 12.5, color: th(INK.soft) }]}>
                 {at === item.installments ? "quita a compra" : `depois, faltam ${item.installments - at}`}
               </Text>
             </>
           ) : (
             <>
-              <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: INK.soft }}>
-                <Text style={{ fontWeight: "700", color: "#fff" }}>{paidCount}</Text> de {item.installments} pagas
+              <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: th(INK.soft) }}>
+                <Text style={{ fontWeight: "700", color: th("#fff") }}>{paidCount}</Text> de {item.installments} pagas
                 {next && !late ? `, próxima ${dayMonth(next)}` : ""}
               </Text>
-              <Text style={[nums, { fontSize: 12.5, color: INK.soft }]}>falta {money(item.amount * remaining)}</Text>
+              <Text style={[nums, { fontSize: 12.5, color: th(INK.soft) }]}>falta {money(item.amount * remaining)}</Text>
             </>
           )}
           <ChevronDown
             size={15}
-            color={INK.softer}
+            color={th(INK.softer)}
             style={{ transform: [{ rotate: open ? "180deg" : "0deg" }] }}
           />
         </View>
@@ -212,7 +213,7 @@ export default function InstallmentPurchaseCard({
       {open && (
         <Animated.View
           entering={FadeIn.duration(200)}
-          style={{ borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)", paddingHorizontal: 14, paddingVertical: 10 }}
+          style={{ borderTopWidth: 1, borderTopColor: th("rgba(255,255,255,0.06)", "line"), paddingHorizontal: 14, paddingVertical: 10 }}
         >
           <View>
             {/* The rail the marks hang off, so the column reads as one run of time. */}
@@ -223,7 +224,7 @@ export default function InstallmentPurchaseCard({
                 top: 14,
                 bottom: 14,
                 width: 1,
-                backgroundColor: "rgba(255,255,255,0.08)",
+                backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
               }}
             />
             {shownSchedule.map((s) => {
@@ -242,13 +243,13 @@ export default function InstallmentPurchaseCard({
                       alignItems: "center",
                       justifyContent: "center",
                       borderWidth: isPaid || isCurrent ? 0 : 1,
-                      borderColor: "rgba(255,255,255,0.22)",
-                      backgroundColor: isPaid ? GREEN : isCurrent ? (late ? RED : "#fff") : "#151618",
+                      borderColor: th("rgba(255,255,255,0.22)", "line"),
+                      backgroundColor: th(isPaid ? GREEN : isCurrent ? (late ? RED : "#fff") : "#151618", "bg"),
                     }}
                   >
-                    {isPaid && <Check size={11} color="#0B0B0B" strokeWidth={3} />}
+                    {isPaid && <Check size={11} color={th("#0B0B0B")} strokeWidth={3} />}
                   </View>
-                  <Text style={[nums, { width: 28, fontSize: 12, color: isPaid ? INK.softer : INK.soft }]}>{s.n}ª</Text>
+                  <Text style={[nums, { width: 28, fontSize: 12, color: th(isPaid ? INK.softer : INK.soft) }]}>{s.n}ª</Text>
                   <Text
                     numberOfLines={1}
                     style={{
@@ -256,16 +257,16 @@ export default function InstallmentPurchaseCard({
                       minWidth: 0,
                       fontSize: 14,
                       textTransform: "capitalize",
-                      color: isPaid ? INK.softer : "#fff",
+                      color: th(isPaid ? INK.softer : "#fff"),
                     }}
                   >
                     {shortMonth(s.date)} {s.date.getFullYear()}
                     {isCurrent ? (
-                      <Text style={{ textTransform: "none", color: late ? RED : INK.soft }}>
+                      <Text style={{ textTransform: "none", color: th(late ? RED : INK.soft) }}>
                         {late ? "  em atraso" : "  este mês"}
                       </Text>
                     ) : s.focused ? (
-                      <Text style={{ textTransform: "none", color: INK.soft }}>{`  em ${monthLabel}`}</Text>
+                      <Text style={{ textTransform: "none", color: th(INK.soft) }}>{`  em ${monthLabel}`}</Text>
                     ) : null}
                   </Text>
                   <Text
@@ -274,7 +275,7 @@ export default function InstallmentPurchaseCard({
                       {
                         fontSize: 14,
                         fontWeight: isPaid ? "400" : "500",
-                        color: isPaid ? INK.softer : "#fff",
+                        color: th(isPaid ? INK.softer : "#fff"),
                         textDecorationLine: isPaid ? "line-through" : "none",
                       },
                     ]}
@@ -297,16 +298,16 @@ export default function InstallmentPurchaseCard({
                 justifyContent: "center",
                 gap: 4,
                 borderRadius: 999,
-                backgroundColor: "rgba(255,255,255,0.05)",
+                backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
                 opacity: pressed ? 0.7 : 1,
               })}
             >
-              <Text style={{ fontSize: 12.5, fontWeight: "500", color: "rgba(255,255,255,0.82)" }}>
+              <Text style={{ fontSize: 12.5, fontWeight: "500", color: th("rgba(255,255,255,0.82)") }}>
                 {showAll ? "Mostrar menos" : `Ver as ${schedule.length} parcelas`}
               </Text>
               <ChevronDown
                 size={14}
-                color="rgba(255,255,255,0.82)"
+                color={th("rgba(255,255,255,0.82)")}
                 style={{ transform: [{ rotate: showAll ? "180deg" : "0deg" }] }}
               />
             </Pressable>

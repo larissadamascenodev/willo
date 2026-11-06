@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInUp, FadeOutUp } from "react-native-reanimated";
 import { GREEN, GROUND } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * While the board is being edited, the top of the screen says so.
  *
@@ -27,7 +28,7 @@ export default function EditBar({ open, onDone }: { open: boolean; onDone: () =>
         right: 0,
         top: 0,
         zIndex: 40,
-        backgroundColor: GROUND,
+        backgroundColor: th(GROUND, "bg"),
         paddingTop: insets.top + 10,
         paddingBottom: 16,
         paddingHorizontal: 20,
@@ -37,7 +38,7 @@ export default function EditBar({ open, onDone }: { open: boolean; onDone: () =>
         gap: 12,
       }}
     >
-      <Text style={{ fontSize: 27, fontWeight: "800", letterSpacing: -0.7, color: "#fff" }}>
+      <Text style={{ fontSize: 27, fontWeight: "800", letterSpacing: -0.7, color: th("#fff") }}>
         Editar widgets
       </Text>
 
@@ -48,11 +49,11 @@ export default function EditBar({ open, onDone }: { open: boolean; onDone: () =>
           justifyContent: "center",
           borderRadius: 999,
           paddingHorizontal: 20,
-          backgroundColor: "rgba(255,255,255,0.08)",
+          backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
           opacity: pressed ? 0.7 : 1,
         })}
       >
-        <Text style={{ fontSize: 16, fontWeight: "700", color: GREEN }}>Concluído</Text>
+        <Text style={{ fontSize: 16, fontWeight: "700", color: th(GREEN) }}>Concluído</Text>
       </Pressable>
 
       <View />

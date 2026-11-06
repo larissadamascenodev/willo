@@ -1,6 +1,7 @@
 import { View } from "react-native";
 import Svg, { Defs, Mask, Rect, Text as SvgText } from "react-native-svg";
 
+import { th } from "~/theme/theme";
 /**
  * Willo, drawn rather than photographed.
  *
@@ -24,22 +25,22 @@ export default function BotMark({ size = 34 }: { size?: number }) {
         alignItems: "center",
         justifyContent: "center",
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.18)",
-        backgroundColor: "rgba(255,255,255,0.15)",
+        borderColor: th("rgba(255,255,255,0.18)", "line"),
+        backgroundColor: th("rgba(255,255,255,0.15)", "bg"),
       }}
     >
       <Svg width={glyph} height={glyph} viewBox="0 0 32 32" fill="none">
         <Defs>
           {/* The dollar is a hole in the eye, not a mark on top of it. */}
           <Mask id="willo-eye">
-            <Rect x="17.6" y="12.1" width="4.3" height="7.6" rx="2.15" fill="#fff" />
+            <Rect x="17.6" y="12.1" width="4.3" height="7.6" rx="2.15" fill={th("#fff")} />
             <SvgText
               x="19.75"
               y="18.5"
               textAnchor="middle"
               fontSize="7"
               fontWeight="800"
-              fill="#000"
+              fill={th("#000")}
             >
               $
             </SvgText>
@@ -47,15 +48,15 @@ export default function BotMark({ size = 34 }: { size?: number }) {
         </Defs>
 
         {/* The head, and nothing else: a rounded square with two eyes. */}
-        <Rect x="3.4" y="6.6" width="25.2" height="19.2" rx="8.4" stroke="#fff" strokeWidth="2" />
-        <Rect x="10.1" y="12.1" width="4.3" height="7.6" rx="2.15" fill="#fff" />
+        <Rect x="3.4" y="6.6" width="25.2" height="19.2" rx="8.4" stroke={th("#fff")} strokeWidth="2" />
+        <Rect x="10.1" y="12.1" width="4.3" height="7.6" rx="2.15" fill={th("#fff")} />
         <Rect
           x="17.6"
           y="12.1"
           width="4.3"
           height="7.6"
           rx="2.15"
-          fill="#fff"
+          fill={th("#fff")}
           mask="url(#willo-eye)"
         />
       </Svg>

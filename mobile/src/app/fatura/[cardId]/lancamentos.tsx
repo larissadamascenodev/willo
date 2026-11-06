@@ -19,6 +19,7 @@ import { useAuth } from "~/lib/auth";
 import { INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * The whole statement.
  *
@@ -156,11 +157,11 @@ export default function Lancamentos() {
 
         {/* What the invoice asks for now, and how many lines make it. */}
         <View style={{ marginTop: 18, paddingHorizontal: 4 }}>
-          <Text style={{ fontSize: 13, color: INK.soft }}>
+          <Text style={{ fontSize: 13, color: th(INK.soft) }}>
             Fatura de {MONTH_NAMES[month - 1]} de {year}
           </Text>
-          <CountUp value={due} numberOfLines={1} style={{ marginTop: 4, fontSize: 38, fontWeight: "800", letterSpacing: -1.5, color: "#fff", fontVariant: ["tabular-nums"] }} />
-          <Text style={{ marginTop: 2, fontSize: 13, color: INK.softer }}>
+          <CountUp value={due} numberOfLines={1} style={{ marginTop: 4, fontSize: 38, fontWeight: "800", letterSpacing: -1.5, color: th("#fff"), fontVariant: ["tabular-nums"] }} />
+          <Text style={{ marginTop: 2, fontSize: 13, color: th(INK.softer) }}>
             {lines.length} {lines.length === 1 ? "lançamento" : "lançamentos"}
           </Text>
         </View>
@@ -191,24 +192,24 @@ export default function Lancamentos() {
             height: 44,
             borderRadius: 999,
             paddingHorizontal: 16,
-            backgroundColor: "rgba(255,255,255,0.05)",
+            backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.06)",
+            borderColor: th("rgba(255,255,255,0.06)", "line"),
           }}
         >
-          <Search size={15} color={INK.softer} />
+          <Search size={15} color={th(INK.softer)} />
           <TextInput
             value={search}
             onChangeText={setSearch}
             placeholder="Buscar lançamento..."
-            placeholderTextColor={INK.faint}
-            style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: "#fff" }}
+            placeholderTextColor={th(INK.faint)}
+            style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: th("#fff") }}
           />
         </View>
 
         <View style={{ marginTop: 14 }}>
           {shown.length === 0 ? (
-            <Text style={{ marginTop: 24, textAlign: "center", fontSize: 14, color: INK.softer }}>
+            <Text style={{ marginTop: 24, textAlign: "center", fontSize: 14, color: th(INK.softer) }}>
               {lines.length === 0 ? "Nenhum lançamento nesta fatura." : "Nada encontrado."}
             </Text>
           ) : (
@@ -246,10 +247,10 @@ function SplitFigure({ dot, label, value }: { dot: string; label: string; value:
   return (
     <View style={{ flex: 1 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: dot }} />
-        <Text style={{ fontSize: 12, color: INK.softer }}>{label}</Text>
+        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: th(dot, "bg") }} />
+        <Text style={{ fontSize: 12, color: th(INK.softer) }}>{label}</Text>
       </View>
-      <CountUp value={value} numberOfLines={1} style={{ marginTop: 3, fontSize: 15.5, fontWeight: "700", letterSpacing: -0.3, color: "#fff", fontVariant: ["tabular-nums"] }} />
+      <CountUp value={value} numberOfLines={1} style={{ marginTop: 3, fontSize: 15.5, fontWeight: "700", letterSpacing: -0.3, color: th("#fff"), fontVariant: ["tabular-nums"] }} />
     </View>
   );
 }

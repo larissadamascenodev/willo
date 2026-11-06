@@ -15,6 +15,7 @@ import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * What actually moved.
  *
@@ -70,15 +71,15 @@ function Column({
           borderRadius: 11,
           borderWidth: 1,
           borderStyle: "dashed",
-          borderColor: "rgba(255,255,255,0.25)",
+          borderColor: th("rgba(255,255,255,0.25)", "line"),
         }}
       />
     ) : (
-      <View style={{ width, height: 2, borderRadius: 999, backgroundColor: color, opacity: 0.6 }} />
+      <View style={{ width, height: 2, borderRadius: 999, backgroundColor: th(color, "bg"), opacity: 0.6 }} />
     );
   }
 
-  return <Animated.View style={[{ width, borderRadius: 999, backgroundColor: color }, animated]} />;
+  return <Animated.View style={[{ width, borderRadius: 999, backgroundColor: th(color, "bg") }, animated]} />;
 }
 
 export default function FluxoPanel({
@@ -203,19 +204,19 @@ export default function FluxoPanel({
             borderRadius: 18,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "rgba(255,255,255,0.06)",
+            backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
             opacity: pressed ? 0.6 : 1,
           })}
         >
-          {hidden ? <EyeOff size={16} color={INK.soft} /> : <Eye size={16} color={INK.soft} />}
+          {hidden ? <EyeOff size={16} color={th(INK.soft)} /> : <Eye size={16} color={th(INK.soft)} />}
         </Pressable>
       </View>
 
       {/* ══ What moved, in one figure ══ */}
       <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 20, paddingHorizontal: 4 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          {picked && <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: pickedColor }} />}
-          <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 14, color: INK.soft }}>{title}</Text>
+          {picked && <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: th(pickedColor, "bg") }} />}
+          <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 14, color: th(INK.soft) }}>{title}</Text>
           {/* The rule the figure follows is one tap away, not a paragraph under it. */}
           <Pressable
             accessibilityLabel="Como isso é calculado"
@@ -227,11 +228,11 @@ export default function FluxoPanel({
               borderRadius: 10,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: noteOpen ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.07)",
+              backgroundColor: th(noteOpen ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.07)", "bg"),
               opacity: pressed ? 0.6 : 1,
             })}
           >
-            <Info size={12} color={INK.soft} strokeWidth={2.2} />
+            <Info size={12} color={th(INK.soft)} strokeWidth={2.2} />
           </Pressable>
         </View>
 
@@ -243,13 +244,13 @@ export default function FluxoPanel({
               borderRadius: 18,
               borderCurve: "continuous",
               borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.14)",
+              borderColor: th("rgba(255,255,255,0.14)", "line"),
               overflow: "hidden",
             }}
           >
-            <BlurView intensity={50} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.4)" }} />
-            <Text style={{ paddingHorizontal: 14, paddingVertical: 11, fontSize: 12.5, lineHeight: 18, color: "rgba(255,255,255,0.78)" }}>
+            <BlurView intensity={50} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.4)", "bg") }} />
+            <Text style={{ paddingHorizontal: 14, paddingVertical: 11, fontSize: 12.5, lineHeight: 18, color: th("rgba(255,255,255,0.78)") }}>
               {accountId
                 ? "Considera só o dinheiro que entrou e saiu desta conta. Compras no cartão entram quando a fatura é paga."
                 : "Considera só o dinheiro que entrou e saiu das contas. Compras no cartão entram quando a fatura é paga."}
@@ -296,7 +297,7 @@ export default function FluxoPanel({
                   </Pressable>
                 )}
               </View>
-              <Text style={{ marginTop: 12, fontSize: 13, fontWeight: on ? "600" : "400", color: on ? "#fff" : INK.soft }}>
+              <Text style={{ marginTop: 12, fontSize: 13, fontWeight: on ? "600" : "400", color: th(on ? "#fff" : INK.soft) }}>
                 {b.day !== null ? String(b.day).padStart(2, "0") : MONTH_UPPER[b.month!]}
               </Text>
             </View>
@@ -324,7 +325,7 @@ export default function FluxoPanel({
       </Text>
 
       {latest.length === 0 ? (
-        <Text style={{ paddingVertical: 32, textAlign: "center", fontSize: 14, color: INK.soft }}>
+        <Text style={{ paddingVertical: 32, textAlign: "center", fontSize: 14, color: th(INK.soft) }}>
           Nada por aqui neste período
         </Text>
       ) : (
@@ -344,12 +345,12 @@ export default function FluxoPanel({
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.08)",
-          backgroundColor: "rgba(255,255,255,0.05)",
+          borderColor: th("rgba(255,255,255,0.08)", "line"),
+          backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
           opacity: pressed ? 0.7 : 1,
         })}
       >
-        <Text style={{ fontSize: 15.5, fontWeight: "500", color: "#fff" }}>Ver todos os lançamentos</Text>
+        <Text style={{ fontSize: 15.5, fontWeight: "500", color: th("#fff") }}>Ver todos os lançamentos</Text>
       </Pressable>
         </>
       )}
@@ -361,10 +362,10 @@ function Legend({ color, label, value }: { color: string; label: string; value: 
   return (
     <View style={{ flexShrink: 1, minWidth: 0 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
-        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
-        <Text style={{ fontSize: 12.5, color: INK.soft }}>{label}</Text>
+        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(color, "bg") }} />
+        <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>{label}</Text>
       </View>
-      <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
+      <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
         {value}
       </Text>
     </View>
@@ -389,21 +390,21 @@ function EntryRow({ entry, hidden }: { entry: CashFlowEntry; hidden: boolean }) 
           borderRadius: 23,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: chipFill(hex),
+          backgroundColor: th(chipFill(hex), "bg"),
         }}
       >
-        <Icon size={20} color={chipInk(hex)} strokeWidth={2} />
+        <Icon size={20} color={th(chipInk(hex))} strokeWidth={2} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>
+        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>
           {entry.name}
         </Text>
-        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>
+        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>
           {date} · {entry.category}
           {entry.accountName ? ` · ${entry.accountName}` : ""}
         </Text>
       </View>
-      <Text style={{ fontSize: 15, fontWeight: "600", color: isIn ? GREEN : RED }}>
+      <Text style={{ fontSize: 15, fontWeight: "600", color: th(isIn ? GREEN : RED) }}>
         {hidden ? "R$ ••••" : `${isIn ? "+" : "−"}${money(entry.amount)}`}
       </Text>
     </View>

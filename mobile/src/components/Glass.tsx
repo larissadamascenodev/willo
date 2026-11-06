@@ -3,6 +3,7 @@ import { AccessibilityInfo, View, type StyleProp, type ViewStyle } from "react-n
 import { BlurView } from "expo-blur";
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
 
+import { th } from "~/theme/theme";
 /**
  * A control's surface, in the system's liquid glass where the phone has it.
  *
@@ -68,7 +69,7 @@ export default function Glass({
       <View
         style={[
           shape,
-          { backgroundColor: "#1C1D20", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)" },
+          { backgroundColor: th("#1C1D20", "bg"), borderWidth: 1, borderColor: th("rgba(255,255,255,0.10)", "line") },
           style,
         ]}
       >
@@ -79,7 +80,7 @@ export default function Glass({
 
   if (NATIVE_GLASS) {
     return (
-      <GlassView glassEffectStyle="regular" colorScheme="dark" isInteractive={interactive} style={[shape, style]}>
+      <GlassView glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={interactive} style={[shape, style]}>
         {children}
       </GlassView>
     );
@@ -87,15 +88,15 @@ export default function Glass({
 
   return (
     <BlurView
-      tint="dark"
+      tint={th("dark", "tint")}
       intensity={40}
       style={[
         shape,
         {
           overflow: "hidden",
           borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.12)",
-          backgroundColor: "rgba(255,255,255,0.05)",
+          borderColor: th("rgba(255,255,255,0.12)", "line"),
+          backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
         },
         style,
       ]}

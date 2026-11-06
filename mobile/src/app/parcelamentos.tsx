@@ -26,6 +26,7 @@ import { useAuth } from "~/lib/auth";
 import { AMBER, GREEN, INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * Everything being paid off in instalments.
  *
@@ -147,17 +148,17 @@ export function ParcelamentosView({
 
         {items === null ? (
           <View style={{ marginTop: 16, gap: 14, paddingHorizontal: 4 }}>
-            <View style={{ height: 28, width: 200, borderRadius: 8, backgroundColor: "rgba(255,255,255,0.06)" }} />
-            <View style={{ height: 52, width: 240, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.06)" }} />
-            <View style={{ marginTop: 10, height: 220, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.03)" }} />
+            <View style={{ height: 28, width: 200, borderRadius: 8, backgroundColor: th("rgba(255,255,255,0.06)", "bg") }} />
+            <View style={{ height: 52, width: 240, borderRadius: 10, backgroundColor: th("rgba(255,255,255,0.06)", "bg") }} />
+            <View style={{ marginTop: 10, height: 220, borderRadius: 16, backgroundColor: th("rgba(255,255,255,0.03)", "bg") }} />
           </View>
         ) : !stats ? (
           <>
             <Text style={[T.title, { marginTop: 8, paddingHorizontal: 4 }]}>Parcelamentos</Text>
             <View style={{ marginTop: 40, alignItems: "center", paddingHorizontal: 32 }}>
-              <CalendarClock size={30} color={INK.softer} strokeWidth={1.6} />
-              <Text style={{ marginTop: 16, fontSize: 17, fontWeight: "600", color: "#fff" }}>Nenhum parcelamento ativo</Text>
-              <Text style={{ marginTop: 6, textAlign: "center", fontSize: 14, lineHeight: 20, color: INK.soft }}>
+              <CalendarClock size={30} color={th(INK.softer)} strokeWidth={1.6} />
+              <Text style={{ marginTop: 16, fontSize: 17, fontWeight: "600", color: th("#fff") }}>Nenhum parcelamento ativo</Text>
+              <Text style={{ marginTop: 6, textAlign: "center", fontSize: 14, lineHeight: 20, color: th(INK.soft) }}>
                 Compras parceladas aparecem aqui, com cada parcela marcada conforme é paga.
               </Text>
             </View>
@@ -167,7 +168,7 @@ export function ParcelamentosView({
             {/* ══ What they take, and when they stop ══ */}
             <View style={{ paddingHorizontal: 4 }}>
               <Text style={[T.title, { marginTop: 8 }]}>Parcelamentos</Text>
-              <Text style={{ marginTop: 2, fontSize: 14, color: INK.soft }}>
+              <Text style={{ marginTop: 2, fontSize: 14, color: th(INK.soft) }}>
                 {list.length} {list.length === 1 ? "compra" : "compras"}
                 {onCard > 0 && onCard < list.length
                   ? `, ${onCard} no cartão e ${list.length - onCard} na conta`
@@ -177,19 +178,19 @@ export function ParcelamentosView({
               </Text>
 
               {/* What the instalments take in the month chosen on the chart, following it. */}
-              <Text style={{ marginTop: 26, fontSize: 15, color: INK.soft }}>
+              <Text style={{ marginTop: 26, fontSize: 15, color: th(INK.soft) }}>
                 Comprometido {selected === 0 ? "este mês" : `em ${monthName}`}
               </Text>
               <CountUp
                 value={picked ? picked.value : stats.totalMensal}
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                style={[nums, { marginTop: 4, fontSize: 42, fontWeight: "700", letterSpacing: -1.6, color: "#fff" }]}
+                style={[nums, { marginTop: 4, fontSize: 42, fontWeight: "700", letterSpacing: -1.6, color: th("#fff") }]}
               />
-              <Text style={{ marginTop: 4, fontSize: 14.5, color: INK.soft }}>
+              <Text style={{ marginTop: 4, fontSize: 14.5, color: th(INK.soft) }}>
                 {stats.monthsUntilFree > 0 ? (
                   <>
-                    Livre em <Text style={{ fontWeight: "700", color: "#fff" }}>{stats.monthsUntilFree} {stats.monthsUntilFree === 1 ? "mês" : "meses"}</Text>, em {monthYear(stats.lastEndDate)}
+                    Livre em <Text style={{ fontWeight: "700", color: th("#fff") }}>{stats.monthsUntilFree} {stats.monthsUntilFree === 1 ? "mês" : "meses"}</Text>, em {monthYear(stats.lastEndDate)}
                   </>
                 ) : (
                   "A última parcela é deste mês"
@@ -211,15 +212,15 @@ export function ParcelamentosView({
               <Animated.View key={picked.key} entering={FadeIn.duration(240)}>
                 {/* ══ The chosen month ══ */}
                 <View style={{ marginTop: 30, paddingHorizontal: 4 }}>
-                  <Text style={{ fontSize: 21, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>
+                  <Text style={{ fontSize: 21, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>
                     {selected === 0 ? "Este mês" : `Em ${monthName}`}
                   </Text>
-                  <Text style={{ marginTop: 2, fontSize: 13.5, color: INK.soft }}>
+                  <Text style={{ marginTop: 2, fontSize: 13.5, color: th(INK.soft) }}>
                     {picked.parts.length} {picked.parts.length === 1 ? "parcela" : "parcelas"}
                     {selected > 0 && months[0].value - picked.value > 0.005 ? (
                       <>
                         {" · "}
-                        <Text style={[nums, { fontWeight: "600", color: "#fff" }]}>{money(months[0].value - picked.value)}</Text> a
+                        <Text style={[nums, { fontWeight: "600", color: th("#fff") }]}>{money(months[0].value - picked.value)}</Text> a
                         menos que este mês
                       </>
                     ) : null}
@@ -278,8 +279,8 @@ function Paid({ paid, left, total }: { paid: number; left: number; total: number
         <Figure swatch={PAID} label="Já pago" value={money(paid)} />
         <Figure swatch={OWED} label="Falta pagar" value={money(left)} />
       </View>
-      <Text style={{ marginTop: 10, fontSize: 12.5, color: INK.softer }}>
-        <Text style={{ fontWeight: "700", color: "#fff" }}>{Math.round(share * 100)}%</Text> de {money(total)} em compras
+      <Text style={{ marginTop: 10, fontSize: 12.5, color: th(INK.softer) }}>
+        <Text style={{ fontWeight: "700", color: th("#fff") }}>{Math.round(share * 100)}%</Text> de {money(total)} em compras
         parceladas já foi pago.
       </Text>
     </View>
@@ -291,10 +292,10 @@ function Figure({ swatch, label, value }: { swatch: string; label: string; value
   return (
     <View style={{ flex: 1, minWidth: 0 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
-        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: swatch }} />
-        <Text style={{ fontSize: 12.5, color: INK.soft }}>{label}</Text>
+        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: th(swatch, "bg") }} />
+        <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>{label}</Text>
       </View>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { marginTop: 4, fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }]}>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { marginTop: 4, fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }]}>
         {value}
       </Text>
     </View>

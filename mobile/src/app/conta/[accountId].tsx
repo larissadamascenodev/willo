@@ -37,6 +37,7 @@ import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * One account, on its own.
  *
@@ -255,15 +256,15 @@ export default function ContaDetalhe() {
             <View style={{ width: 40, height: 40 }} />
           ) : (
             <RoundButton label="Ações da conta" hostRef={dots} onPress={openMenu}>
-              <MoreVertical size={18} color="rgba(255,255,255,0.9)" />
+              <MoreVertical size={18} color={th("rgba(255,255,255,0.9)")} />
             </RoundButton>
           )}
         </View>
 
         {loading ? (
           <View style={{ marginTop: 16, gap: 12 }}>
-            <View style={{ height: 150, borderRadius: 24, backgroundColor: "rgba(255,255,255,0.04)" }} />
-            <View style={{ height: 96, borderRadius: 24, backgroundColor: "rgba(255,255,255,0.04)" }} />
+            <View style={{ height: 150, borderRadius: 24, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }} />
+            <View style={{ height: 96, borderRadius: 24, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }} />
           </View>
         ) : !account ? null : (
           <>
@@ -273,7 +274,7 @@ export default function ContaDetalhe() {
                 <BankMark name={account.name} hex={hex} size={44} />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 17, fontWeight: "700", color: "#fff" }}>
+                    <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 17, fontWeight: "700", color: th("#fff") }}>
                       {account.name}
                     </Text>
                     {account.is_default && (
@@ -285,24 +286,24 @@ export default function ContaDetalhe() {
                           paddingVertical: 2,
                           fontSize: 10,
                           fontWeight: "700",
-                          backgroundColor: "rgba(255,255,255,0.08)",
-                          color: INK.soft,
+                          backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
+                          color: th(INK.soft),
                         }}
                       >
                         Principal
                       </Text>
                     )}
                   </View>
-                  <Text style={{ marginTop: 2, fontSize: 12.5, color: INK.softer }}>
+                  <Text style={{ marginTop: 2, fontSize: 12.5, color: th(INK.softer) }}>
                     {TYPE_LABEL[account.type] ?? TYPE_LABEL.checking}
                   </Text>
                 </View>
               </View>
 
-              <Text style={{ marginTop: 22, fontSize: 13.5, color: INK.soft }}>Saldo disponível</Text>
+              <Text style={{ marginTop: 22, fontSize: 13.5, color: th(INK.soft) }}>Saldo disponível</Text>
               <Text
                 numberOfLines={1}
-                style={[T.figureBig, { marginTop: 2, color: balance < 0 ? RED : "#fff" }]}
+                style={[T.figureBig, { marginTop: 2, color: th(balance < 0 ? RED : "#fff") }]}
               >
                 {money(balance)}
               </Text>
@@ -331,7 +332,7 @@ export default function ContaDetalhe() {
             <Animated.View entering={FadeInDown.delay(160).duration(420)} style={{ marginTop: 34 }}>
               <Text style={[T.eyebrow, { paddingHorizontal: 4 }]}>Últimos lançamentos</Text>
               {ordered.length === 0 ? (
-                <Text style={{ paddingVertical: 32, textAlign: "center", fontSize: 14, color: INK.soft }}>
+                <Text style={{ paddingVertical: 32, textAlign: "center", fontSize: 14, color: th(INK.soft) }}>
                   Nada por aqui neste mês
                 </Text>
               ) : (
@@ -351,12 +352,12 @@ export default function ContaDetalhe() {
                     alignItems: "center",
                     justifyContent: "center",
                     borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.08)",
-                    backgroundColor: "rgba(255,255,255,0.05)",
+                    borderColor: th("rgba(255,255,255,0.08)", "line"),
+                    backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
                     opacity: pressed ? 0.7 : 1,
                   })}
                 >
-                  <Text style={{ fontSize: 15.5, fontWeight: "500", color: "#fff" }}>Ver todos os lançamentos</Text>
+                  <Text style={{ fontSize: 15.5, fontWeight: "500", color: th("#fff") }}>Ver todos os lançamentos</Text>
                 </Pressable>
               )}
             </Animated.View>
@@ -411,9 +412,9 @@ export default function ContaDetalhe() {
         subtitle={account ? `${account.name}${history ? ` · ${history.length} ${history.length === 1 ? "lançamento" : "lançamentos"}` : ""}` : undefined}
       >
         {history === null ? (
-          <Text style={{ paddingVertical: 36, textAlign: "center", fontSize: 14, color: INK.softer }}>Carregando…</Text>
+          <Text style={{ paddingVertical: 36, textAlign: "center", fontSize: 14, color: th(INK.softer) }}>Carregando…</Text>
         ) : history.length === 0 ? (
-          <Text style={{ paddingVertical: 36, textAlign: "center", fontSize: 14, color: INK.softer }}>Esta conta ainda não teve movimentações</Text>
+          <Text style={{ paddingVertical: 36, textAlign: "center", fontSize: 14, color: th(INK.softer) }}>Esta conta ainda não teve movimentações</Text>
         ) : (
           <>
             {history.slice(0, shownCount).map((tx) => (
@@ -422,9 +423,9 @@ export default function ContaDetalhe() {
             {history.length > shownCount && (
               <Pressable
                 onPress={() => setShownCount((n) => n + 80)}
-                style={({ pressed }) => ({ marginTop: 16, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.07)", opacity: pressed ? 0.7 : 1 })}
+                style={({ pressed }) => ({ marginTop: 16, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.07)", "bg"), opacity: pressed ? 0.7 : 1 })}
               >
-                <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>Mostrar mais</Text>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: th("#fff") }}>Mostrar mais</Text>
               </Pressable>
             )}
           </>
@@ -492,17 +493,17 @@ function MovementRow({ tx, customCats }: { tx: Movement; customCats: CustomCateg
   const date = day.toLocaleDateString("pt-BR", { day: "numeric", month: "long", ...(sameYear ? {} : { year: "numeric" }) });
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12 }}>
-      <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(catHex) }}>
-        <Icon size={20} color={chipInk(catHex)} strokeWidth={2} />
+      <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(catHex), "bg") }}>
+        <Icon size={20} color={th(chipInk(catHex))} strokeWidth={2} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>{tx.name}</Text>
-        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>
+        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>{tx.name}</Text>
+        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>
           {date} · {tx.category}
           {tx.status !== "pago" ? " · pendente" : ""}
         </Text>
       </View>
-      <Text style={{ fontSize: 15, fontWeight: "600", color: isReceita ? GREEN : RED }}>
+      <Text style={{ fontSize: 15, fontWeight: "600", color: th(isReceita ? GREEN : RED) }}>
         {isReceita ? "+" : "−"}
         {money(Number(tx.amount))}
       </Text>
@@ -515,45 +516,45 @@ function CategorySpend({ cat, spent }: { cat: { name: string; amount: number; pe
   const [open, setOpen] = useState(false);
   const Icon = cat.icon;
   return (
-    <Animated.View layout={EXPAND} style={{ borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" }}>
+    <Animated.View layout={EXPAND} style={{ borderTopWidth: 1, borderTopColor: th("rgba(255,255,255,0.06)", "line") }}>
       <Pressable
         onPress={() => setOpen((v) => !v)}
         style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}
       >
-        <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(cat.hex) }}>
-          <Icon size={20} color={chipInk(cat.hex)} strokeWidth={2} />
+        <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(cat.hex), "bg") }}>
+          <Icon size={20} color={th(chipInk(cat.hex))} strokeWidth={2} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "500", color: "#fff" }}>{cat.name}</Text>
-          <Text style={{ marginTop: 1, fontSize: 14, color: INK.soft }}>
+          <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "500", color: th("#fff") }}>{cat.name}</Text>
+          <Text style={{ marginTop: 1, fontSize: 14, color: th(INK.soft) }}>
             {cat.percentage}% · {spent.length} {spent.length === 1 ? "gasto" : "gastos"}
           </Text>
         </View>
-        <Text style={{ fontSize: 16, fontWeight: "500", color: "#fff" }}>{money(cat.amount)}</Text>
+        <Text style={{ fontSize: 16, fontWeight: "500", color: th("#fff") }}>{money(cat.amount)}</Text>
         <View style={{ transform: [{ rotate: open ? "180deg" : "0deg" }] }}>
-          <ChevronDown size={16} color={INK.soft} />
+          <ChevronDown size={16} color={th(INK.soft)} />
         </View>
       </Pressable>
 
       {open && (
         <Animated.View
           entering={FadeIn.duration(220)}
-          style={{ marginLeft: 22, marginBottom: 12, paddingLeft: 14, borderLeftWidth: 2, borderLeftColor: cat.hex }}
+          style={{ marginLeft: 22, marginBottom: 12, paddingLeft: 14, borderLeftWidth: 2, borderLeftColor: th(cat.hex, "line") }}
         >
           {spent.map((t, i) => {
             const day = new Date(`${t.date.slice(0, 10)}T12:00:00`);
             return (
               <View
                 key={t.id}
-                style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: "rgba(255,255,255,0.05)" }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: th("rgba(255,255,255,0.05)", "line") }}
               >
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={{ fontSize: 14, color: "#fff" }}>{t.name}</Text>
-                  <Text style={{ marginTop: 2, fontSize: 12, color: INK.softer }}>
+                  <Text numberOfLines={1} style={{ fontSize: 14, color: th("#fff") }}>{t.name}</Text>
+                  <Text style={{ marginTop: 2, fontSize: 12, color: th(INK.softer) }}>
                     {day.toLocaleDateString("pt-BR", { day: "numeric", month: "long" })}
                   </Text>
                 </View>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>{money(Number(t.amount))}</Text>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: th("#fff") }}>{money(Number(t.amount))}</Text>
               </View>
             );
           })}

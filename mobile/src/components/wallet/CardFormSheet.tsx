@@ -8,6 +8,7 @@ import { catalogFor } from "~/lib/bankCatalog";
 import { money } from "~/lib/money";
 import { INK, RED } from "~/theme/tokens";
 
+import { live, th } from "~/theme/theme";
 /**
  * A credit card, made or changed — the same sheet for both, so the card reads as the
  * same thing seen twice.
@@ -125,7 +126,7 @@ export default function CardFormSheet({
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={{ flex: 1 }} onPress={saving ? undefined : onClose}>
-        <BlurView intensity={18} tint="dark" style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }} />
+        <BlurView intensity={18} tint={th("dark", "tint")} style={{ flex: 1, backgroundColor: th("rgba(0,0,0,0.5)", "bg") }} />
       </Pressable>
 
       <View
@@ -141,12 +142,12 @@ export default function CardFormSheet({
           overflow: "hidden",
         }}
       >
-        <BlurView intensity={70} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.5)" }} />
+        <BlurView intensity={70} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.5)", "bg") }} />
 
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: insets.bottom + 18 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text style={{ fontSize: 20, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>
+            <Text style={{ fontSize: 20, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>
               {editing ? "Editar cartão" : "Novo cartão"}
             </Text>
             <Pressable
@@ -159,15 +160,15 @@ export default function CardFormSheet({
                 borderRadius: 16,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "rgba(255,255,255,0.09)",
+                backgroundColor: th("rgba(255,255,255,0.09)", "bg"),
                 opacity: pressed ? 0.6 : 1,
               })}
             >
-              <X size={16} color="rgba(255,255,255,0.8)" />
+              <X size={16} color={th("rgba(255,255,255,0.8)")} />
             </Pressable>
           </View>
 
-          <Text style={{ marginTop: 20, fontSize: 12.5, color: INK.soft }}>Nome</Text>
+          <Text style={{ marginTop: 20, fontSize: 12.5, color: th(INK.soft) }}>Nome</Text>
           <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 12 }}>
             <BankMark name={name.trim() || "Cartão"} hex={hex} size={52} />
             <TextInput
@@ -177,13 +178,13 @@ export default function CardFormSheet({
                 setProblem(null);
               }}
               placeholder="Ex.: Nubank, Itaú Platinum"
-              placeholderTextColor={INK.faint}
+              placeholderTextColor={th(INK.faint)}
               maxLength={40}
               style={field}
             />
           </View>
 
-          <Text style={{ marginTop: 20, fontSize: 12.5, color: INK.soft }}>Final do cartão (opcional)</Text>
+          <Text style={{ marginTop: 20, fontSize: 12.5, color: th(INK.soft) }}>Final do cartão (opcional)</Text>
           <TextInput
             value={four}
             onChangeText={(t) => {
@@ -191,13 +192,13 @@ export default function CardFormSheet({
               setProblem(null);
             }}
             placeholder="0000"
-            placeholderTextColor={INK.faint}
+            placeholderTextColor={th(INK.faint)}
             keyboardType="number-pad"
             maxLength={4}
             style={[field, { marginTop: 8, flex: 0, letterSpacing: 4 }]}
           />
 
-          <Text style={{ marginTop: 20, fontSize: 12.5, color: INK.soft }}>Limite</Text>
+          <Text style={{ marginTop: 20, fontSize: 12.5, color: th(INK.soft) }}>Limite</Text>
           <TextInput
             value={money(cents / 100)}
             onChangeText={(t) => {
@@ -206,10 +207,10 @@ export default function CardFormSheet({
               setProblem(null);
             }}
             keyboardType="number-pad"
-            style={{ marginTop: 6, fontSize: 34, fontWeight: "800", letterSpacing: -1.2, color: cents === 0 ? INK.faint : "#fff", padding: 0 }}
+            style={{ marginTop: 6, fontSize: 34, fontWeight: "800", letterSpacing: -1.2, color: th(cents === 0 ? INK.faint : "#fff"), padding: 0 }}
           />
           {editing && floor > 0 && (
-            <Text style={{ marginTop: 6, fontSize: 12.5, color: lowered ? RED : INK.softer }}>
+            <Text style={{ marginTop: 6, fontSize: 12.5, color: th(lowered ? RED : INK.softer) }}>
               Já usado: {money(floor)} · dá para diminuir o limite só até esse valor
             </Text>
           )}
@@ -219,7 +220,7 @@ export default function CardFormSheet({
             <DayStepper label="Vence dia" value={due} onChange={setDue} />
           </View>
 
-          {(problem || error) && <Text style={{ marginTop: 14, fontSize: 13, color: RED }}>{problem ?? error}</Text>}
+          {(problem || error) && <Text style={{ marginTop: 14, fontSize: 13, color: th(RED) }}>{problem ?? error}</Text>}
 
           <Pressable
             onPress={submit}
@@ -230,11 +231,11 @@ export default function CardFormSheet({
               borderRadius: 27,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: "#fff",
+              backgroundColor: th("#fff", "bg"),
               opacity: saving || unchanged ? 0.45 : pressed ? 0.85 : 1,
             })}
           >
-            <Text style={{ fontSize: 16.5, fontWeight: "700", color: "#0B0B0B" }}>
+            <Text style={{ fontSize: 16.5, fontWeight: "700", color: th("#0B0B0B") }}>
               {saving ? "Salvando…" : editing ? "Salvar" : "Criar cartão"}
             </Text>
           </Pressable>
@@ -244,7 +245,7 @@ export default function CardFormSheet({
   );
 }
 
-const field = {
+const field = live({
   flex: 1,
   minWidth: 0,
   height: 52,
@@ -255,17 +256,17 @@ const field = {
   paddingHorizontal: 16,
   fontSize: 16.5,
   color: "#fff",
-} as const;
+} as const);
 
 /** A day of the month, one step at a time, wrapping from 31 back to 1. */
 function DayStepper({ label, value, onChange }: { label: string; value: number; onChange: (d: number) => void }) {
   const step = (by: number) => onChange(((value - 1 + by + 31) % 31) + 1);
   return (
-    <View style={{ flex: 1, borderRadius: 20, borderCurve: "continuous", backgroundColor: "rgba(255,255,255,0.06)", paddingVertical: 12, paddingHorizontal: 12 }}>
-      <Text style={{ fontSize: 12, color: INK.soft, textAlign: "center" }}>{label}</Text>
+    <View style={{ flex: 1, borderRadius: 20, borderCurve: "continuous", backgroundColor: th("rgba(255,255,255,0.06)", "bg"), paddingVertical: 12, paddingHorizontal: 12 }}>
+      <Text style={{ fontSize: 12, color: th(INK.soft), textAlign: "center" }}>{label}</Text>
       <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <StepButton icon="minus" onPress={() => step(-1)} />
-        <Text style={{ fontSize: 26, fontWeight: "800", letterSpacing: -0.8, color: "#fff", fontVariant: ["tabular-nums"] }}>{value}</Text>
+        <Text style={{ fontSize: 26, fontWeight: "800", letterSpacing: -0.8, color: th("#fff"), fontVariant: ["tabular-nums"] }}>{value}</Text>
         <StepButton icon="plus" onPress={() => step(1)} />
       </View>
     </View>
@@ -285,11 +286,11 @@ function StepButton({ icon, onPress }: { icon: "minus" | "plus"; onPress: () => 
         borderRadius: 17,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "rgba(255,255,255,0.10)",
+        backgroundColor: th("rgba(255,255,255,0.10)", "bg"),
         opacity: pressed ? 0.6 : 1,
       })}
     >
-      <Icon size={16} color="#fff" strokeWidth={2.4} />
+      <Icon size={16} color={th("#fff")} strokeWidth={2.4} />
     </Pressable>
   );
 }

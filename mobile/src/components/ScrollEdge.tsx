@@ -4,6 +4,7 @@ import { BlurView } from "expo-blur";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
+import { th } from "~/theme/theme";
 /**
  * The band the page passes under.
  *
@@ -48,7 +49,7 @@ export default function ScrollEdge({ on }: { on: boolean }) {
         <BlurView
           key={i}
           intensity={layer.intensity}
-          tint="dark"
+          tint={th("dark", "tint")}
           style={{
             position: "absolute",
             top: 0,
@@ -63,10 +64,10 @@ export default function ScrollEdge({ on }: { on: boolean }) {
       <Svg width="100%" height="100%" style={{ position: "absolute", top: 0, left: 0 }}>
         <Defs>
           <LinearGradient id="edge-tint" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#0E0E0F" stopOpacity={0.8} />
-            <Stop offset="0.5" stopColor="#0E0E0F" stopOpacity={0.3} />
-            <Stop offset="0.8" stopColor="#0E0E0F" stopOpacity={0.08} />
-            <Stop offset="1" stopColor="#0E0E0F" stopOpacity={0} />
+            <Stop offset="0" stopColor={th("#0E0E0F", "grad")} stopOpacity={0.8} />
+            <Stop offset="0.5" stopColor={th("#0E0E0F", "grad")} stopOpacity={0.3} />
+            <Stop offset="0.8" stopColor={th("#0E0E0F", "grad")} stopOpacity={0.08} />
+            <Stop offset="1" stopColor={th("#0E0E0F", "grad")} stopOpacity={0} />
           </LinearGradient>
         </Defs>
         <Rect x="0" y="0" width="100%" height="100%" fill="url(#edge-tint)" />

@@ -11,6 +11,7 @@ import { money } from "~/lib/money";
 import type { IconCmp } from "~/lib/categoryIconSlugs";
 import { INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Where one subject's money went, in a pane of glass over the page.
  *
@@ -100,23 +101,23 @@ export default function SpendModal({
         <View style={{ paddingHorizontal: 22, paddingBottom: 16 }}>
           {/* ══ What it is ══ */}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-            <View style={{ width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" }}>
-              <Icon size={24} color={subject.hex} strokeWidth={2} />
+            <View style={{ width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
+              <Icon size={24} color={th(subject.hex)} strokeWidth={2} />
             </View>
-            <Text numberOfLines={2} style={{ flex: 1, fontSize: 24, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>{subject.name}</Text>
+            <Text numberOfLines={2} style={{ flex: 1, fontSize: 24, fontWeight: "800", letterSpacing: -0.6, color: th("#fff") }}>{subject.name}</Text>
           </View>
 
           {/* ══ What it took ══ */}
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { marginTop: 18, fontSize: 44, fontWeight: "800", letterSpacing: -1.8, color: "#fff" }]}>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { marginTop: 18, fontSize: 44, fontWeight: "800", letterSpacing: -1.8, color: th("#fff") }]}>
             {money(total)}
           </Text>
-          <Text style={{ marginTop: 2, fontSize: 15, color: INK.soft }}>
+          <Text style={{ marginTop: 2, fontSize: 15, color: th(INK.soft) }}>
             Gastos em {MONTH_NAMES[month]} {year}
           </Text>
           <View style={{ marginTop: 12, flexDirection: "row" }}>
-            <View style={{ height: 32, paddingHorizontal: 12, borderRadius: 16, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(255,255,255,0.07)" }}>
-              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: subject.group?.hex ?? subject.hex }} />
-              <Text style={{ fontSize: 14, color: "#fff" }}>
+            <View style={{ height: 32, paddingHorizontal: 12, borderRadius: 16, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: th(subject.group?.hex ?? subject.hex, "bg") }} />
+              <Text style={{ fontSize: 14, color: th("#fff") }}>
                 {subject.group ? subject.group.name : `${subject.categories.length > 1 ? `${parts.length} ${parts.length === 1 ? "categoria" : "categorias"}` : "Categoria"}`}
               </Text>
             </View>
@@ -131,12 +132,12 @@ export default function SpendModal({
                 <View key={`${h.year}-${h.month}`} style={{ flex: 1, alignItems: "center", gap: 10 }}>
                   <View style={{ height: TRACK, width: "100%", alignItems: "center", justifyContent: "flex-end" }}>
                     {height > 0 ? (
-                      <View style={{ width: "100%", maxWidth: 40, height, borderRadius: 20, backgroundColor: now ? subject.hex : "rgba(255,255,255,0.07)" }} />
+                      <View style={{ width: "100%", maxWidth: 40, height, borderRadius: 20, backgroundColor: th(now ? subject.hex : "rgba(255,255,255,0.07)", "bg") }} />
                     ) : (
-                      <View style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderStyle: "dashed", borderColor: "rgba(255,255,255,0.18)" }} />
+                      <View style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderStyle: "dashed", borderColor: th("rgba(255,255,255,0.18)", "line") }} />
                     )}
                   </View>
-                  <Text style={{ fontSize: 12, fontWeight: now ? "700" : "500", letterSpacing: 0.4, color: now ? "#fff" : INK.soft }}>{SHORT[h.month]}</Text>
+                  <Text style={{ fontSize: 12, fontWeight: now ? "700" : "500", letterSpacing: 0.4, color: th(now ? "#fff" : INK.soft) }}>{SHORT[h.month]}</Text>
                 </View>
               );
             })}
@@ -147,9 +148,9 @@ export default function SpendModal({
             <View style={{ marginTop: 26, gap: 2 }}>
               {parts.map(([cat, amount]) => (
                 <View key={cat} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 7 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: categoryHex(cat, data?.customCats) }} />
-                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 14.5, color: "rgba(255,255,255,0.86)" }}>{cat}</Text>
-                  <Text style={[nums, { fontSize: 14.5, fontWeight: "600", color: "#fff" }]}>{money(amount)}</Text>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(categoryHex(cat, data?.customCats), "bg") }} />
+                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 14.5, color: th("rgba(255,255,255,0.86)") }}>{cat}</Text>
+                  <Text style={[nums, { fontSize: 14.5, fontWeight: "600", color: th("#fff") }]}>{money(amount)}</Text>
                 </View>
               ))}
             </View>
@@ -158,7 +159,7 @@ export default function SpendModal({
           {/* ══ Every charge ══ */}
           <View style={{ marginTop: 22 }}>
             {charges.length === 0 ? (
-              <Text style={{ paddingVertical: 20, textAlign: "center", fontSize: 14, color: INK.softer }}>Nada gasto aqui neste mês.</Text>
+              <Text style={{ paddingVertical: 20, textAlign: "center", fontSize: 14, color: th(INK.softer) }}>Nada gasto aqui neste mês.</Text>
             ) : (
               charges.map((t) => {
                 const CatIcon = categoryIcon(t.category, data?.customCats);
@@ -166,17 +167,17 @@ export default function SpendModal({
                 const day = new Date(`${t.date}T12:00:00`).toLocaleDateString("pt-BR", { day: "numeric", month: "long" });
                 return (
                   <View key={t.id} style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 11 }}>
-                    <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-                      <CatIcon size={20} color={chipInk(hex)} strokeWidth={2} />
+                    <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+                      <CatIcon size={20} color={th(chipInk(hex))} strokeWidth={2} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "700", color: "#fff" }}>{t.name}</Text>
-                      <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: INK.soft }}>
+                      <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "700", color: th("#fff") }}>{t.name}</Text>
+                      <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: th(INK.soft) }}>
                         {day} · {t.category}
                         {t.installments && t.installment_current ? ` · ${t.installment_current}/${t.installments}` : ""}
                       </Text>
                     </View>
-                    <Text style={[nums, { fontSize: 15.5, fontWeight: "700", color: RED }]}>−{money(Number(t.amount))}</Text>
+                    <Text style={[nums, { fontSize: 15.5, fontWeight: "700", color: th(RED) }]}>−{money(Number(t.amount))}</Text>
                   </View>
                 );
               })

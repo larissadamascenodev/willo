@@ -25,6 +25,7 @@ import { Plus } from "~/components/icons";
 import ResizeGrip, { GRIP_OFFSET } from "~/components/home/ResizeGrip";
 import { INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * The home screen, arranged by the person using it.
  *
@@ -251,12 +252,12 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
             borderRadius: 20,
             borderWidth: 1,
             borderStyle: "dashed",
-            borderColor: "rgba(255,255,255,0.16)",
+            borderColor: th("rgba(255,255,255,0.16)", "line"),
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          <Plus size={18} color="rgba(255,255,255,0.8)" strokeWidth={2.4} />
-          <Text style={{ fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.8)" }}>
+          <Plus size={18} color={th("rgba(255,255,255,0.8)")} strokeWidth={2.4} />
+          <Text style={{ fontSize: 14, fontWeight: "600", color: th("rgba(255,255,255,0.8)") }}>
             Adicionar widgets
           </Text>
         </Pressable>
@@ -280,10 +281,10 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
       {/* The ones currently off the board. */}
       <BottomSheet open={adding} onClose={() => setAdding(false)} full>
         <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
-          <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>
+          <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>
             Adicionar widgets
           </Text>
-          <Text style={{ marginTop: 4, fontSize: 13, lineHeight: 18, color: "rgba(255,255,255,0.62)" }}>
+          <Text style={{ marginTop: 4, fontSize: 13, lineHeight: 18, color: th("rgba(255,255,255,0.62)") }}>
             {missing.length > 0
               ? "Tudo que não está na sua tela agora."
               : "Todos os widgets já estão na sua tela."}
@@ -300,17 +301,17 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
                   gap: 12,
                   borderRadius: 20,
                   borderWidth: 1,
-                  borderColor: INK.edge,
-                  backgroundColor: "rgba(255,255,255,0.062)",
+                  borderColor: th(INK.edge, "line"),
+                  backgroundColor: th("rgba(255,255,255,0.062)", "bg"),
                   paddingHorizontal: 16,
                   paddingVertical: 14,
                 }}
               >
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>
+                  <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>
                     {phoneLabel(w.id, w.label)}
                   </Text>
-                  <Text numberOfLines={1} style={{ fontSize: 12.5, color: INK.softer }}>
+                  <Text numberOfLines={1} style={{ fontSize: 12.5, color: th(INK.softer) }}>
                     {phoneDescription(w.id, w.description)}
                   </Text>
                 </View>
@@ -318,13 +319,13 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
                   onPress={() => add(w.id)}
                   style={({ pressed }) => ({
                     borderRadius: 999,
-                    backgroundColor: "#fff",
+                    backgroundColor: th("#fff", "bg"),
                     paddingHorizontal: 16,
                     paddingVertical: 8,
                     opacity: pressed ? 0.8 : 1,
                   })}
                 >
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: "#0B0B0B" }}>Adicionar</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: th("#0B0B0B") }}>Adicionar</Text>
                 </Pressable>
               </Animated.View>
             ))}
@@ -343,7 +344,7 @@ function Ghost() {
       style={{
         minHeight: 150,
         borderRadius: 22,
-        backgroundColor: "rgba(255,255,255,0.09)",
+        backgroundColor: th("rgba(255,255,255,0.09)", "bg"),
       }}
     />
   );

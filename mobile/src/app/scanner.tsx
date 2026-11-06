@@ -28,6 +28,7 @@ import { useAuth } from "~/lib/auth";
 import { processScanPhoto, type PickedPhoto } from "~/lib/scanUpload";
 import { GREEN, INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * A receipt, photographed and read — the phone's copy of the web's scanner.
  *
@@ -171,7 +172,7 @@ export default function Scanner() {
   const granted = permission?.granted ?? false;
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#000" }}>
+    <View style={{ flex: 1, backgroundColor: th("#000", "bg") }}>
       {/* ── What is in front of the lens, or what was taken ── */}
       {phase === "camera" ? (
         granted ? (
@@ -183,7 +184,7 @@ export default function Scanner() {
 
       <LinearGradient
         pointerEvents="none"
-        colors={["rgba(0,0,0,0.6)", "transparent"]}
+        colors={th(["rgba(0,0,0,0.6)", "transparent"], "grad")}
         style={{ position: "absolute", left: 0, right: 0, top: 0, height: 140 }}
       />
 
@@ -192,7 +193,7 @@ export default function Scanner() {
           entering={FadeIn.duration(240)}
           exiting={FadeOut.duration(200)}
           pointerEvents="none"
-          style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.4)" }]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: th("rgba(0,0,0,0.4)", "bg") }]}
         />
       )}
 
@@ -216,8 +217,8 @@ export default function Scanner() {
       >
         <View style={{ width: 40 }} />
         {phase === "camera" && granted && (
-          <View style={{ borderRadius: 999, backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 14, paddingVertical: 8 }}>
-            <Text style={{ fontSize: 12, fontWeight: "500", color: "#fff" }}>Aponte para o comprovante</Text>
+          <View style={{ borderRadius: 999, backgroundColor: th("rgba(0,0,0,0.45)", "bg"), paddingHorizontal: 14, paddingVertical: 8 }}>
+            <Text style={{ fontSize: 12, fontWeight: "500", color: th("#fff") }}>Aponte para o comprovante</Text>
           </View>
         )}
         <Pressable
@@ -230,11 +231,11 @@ export default function Scanner() {
             borderRadius: 20,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "rgba(0,0,0,0.45)",
+            backgroundColor: th("rgba(0,0,0,0.45)", "bg"),
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          <X size={20} color="#fff" strokeWidth={2.2} />
+          <X size={20} color={th("#fff")} strokeWidth={2.2} />
         </Pressable>
       </View>
 
@@ -248,15 +249,15 @@ export default function Scanner() {
               borderRadius: 28,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: "rgba(255,255,255,0.08)",
+              backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
             }}
           >
-            <Camera size={24} color="#fff" />
+            <Camera size={24} color={th("#fff")} />
           </View>
-          <Text style={{ marginTop: 6, fontSize: 17, fontWeight: "600", color: "#fff", textAlign: "center" }}>
+          <Text style={{ marginTop: 6, fontSize: 17, fontWeight: "600", color: th("#fff"), textAlign: "center" }}>
             {permission.canAskAgain ? "O Willo precisa da câmera" : "A câmera está bloqueada"}
           </Text>
-          <Text style={{ fontSize: 14, lineHeight: 20, color: INK.soft, textAlign: "center" }}>
+          <Text style={{ fontSize: 14, lineHeight: 20, color: th(INK.soft), textAlign: "center" }}>
             {permission.canAskAgain
               ? "Para ler seus comprovantes e faturas. Você também pode escolher uma foto da galeria."
               : "Libere em Ajustes › Willo › Câmera, ou escolha uma foto da galeria."}
@@ -266,13 +267,13 @@ export default function Scanner() {
             style={({ pressed }) => ({
               marginTop: 8,
               borderRadius: 999,
-              backgroundColor: "#fff",
+              backgroundColor: th("#fff", "bg"),
               paddingHorizontal: 20,
               paddingVertical: 12,
               opacity: pressed ? 0.8 : 1,
             })}
           >
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#000" }}>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: th("#000") }}>
               {permission.canAskAgain ? "Permitir câmera" : "Abrir Ajustes"}
             </Text>
           </Pressable>
@@ -292,15 +293,15 @@ export default function Scanner() {
                 gap: 8,
                 borderRadius: 999,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.15)",
-                backgroundColor: "rgba(0,0,0,0.55)",
+                borderColor: th("rgba(255,255,255,0.15)", "line"),
+                backgroundColor: th("rgba(0,0,0,0.55)", "bg"),
                 paddingHorizontal: 16,
                 paddingVertical: 12,
                 opacity: pressed ? 0.75 : 1,
               })}
             >
-              <PenLine size={16} color="#fff" strokeWidth={2.2} />
-              <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>Adicionar manualmente</Text>
+              <PenLine size={16} color={th("#fff")} strokeWidth={2.2} />
+              <Text style={{ fontSize: 14, fontWeight: "600", color: th("#fff") }}>Adicionar manualmente</Text>
             </Pressable>
           </View>
 
@@ -315,12 +316,12 @@ export default function Scanner() {
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.15)",
-                backgroundColor: "rgba(0,0,0,0.45)",
+                borderColor: th("rgba(255,255,255,0.15)", "line"),
+                backgroundColor: th("rgba(0,0,0,0.45)", "bg"),
                 opacity: pressed ? 0.7 : 1,
               })}
             >
-              <ImageIcon size={22} color="#fff" strokeWidth={2} />
+              <ImageIcon size={22} color={th("#fff")} strokeWidth={2} />
             </Pressable>
 
             <Pressable
@@ -334,12 +335,12 @@ export default function Scanner() {
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 3,
-                borderColor: "rgba(255,255,255,0.85)",
+                borderColor: th("rgba(255,255,255,0.85)", "line"),
                 opacity: !granted || shooting ? 0.4 : 1,
                 transform: [{ scale: pressed ? 0.95 : 1 }],
               })}
             >
-              <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: "#fff" }} />
+              <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: th("#fff", "bg") }} />
             </Pressable>
 
             {/* Balances the gallery button so the shutter sits dead centre. */}
@@ -366,15 +367,15 @@ export default function Scanner() {
             bottom: 0,
             borderTopLeftRadius: 32,
             borderTopRightRadius: 32,
-            backgroundColor: "#000",
+            backgroundColor: th("#000", "bg"),
             paddingHorizontal: 20,
             paddingTop: 24,
             paddingBottom: insets.bottom + 20,
             gap: 10,
           }}
         >
-          <Text style={{ fontSize: 17, fontWeight: "700", color: "#fff" }}>Não deu para ler</Text>
-          <Text style={{ fontSize: 14, lineHeight: 20, color: INK.soft }}>{failure}</Text>
+          <Text style={{ fontSize: 17, fontWeight: "700", color: th("#fff") }}>Não deu para ler</Text>
+          <Text style={{ fontSize: 14, lineHeight: 20, color: th(INK.soft) }}>{failure}</Text>
           <Pressable
             onPress={again}
             style={({ pressed }) => ({
@@ -383,11 +384,11 @@ export default function Scanner() {
               borderRadius: 999,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: "#fff",
+              backgroundColor: th("#fff", "bg"),
               opacity: pressed ? 0.82 : 1,
             })}
           >
-            <Text style={{ fontSize: 15, fontWeight: "700", color: "#0B0B0B" }}>Tentar outra foto</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: th("#0B0B0B") }}>Tentar outra foto</Text>
           </Pressable>
           <Pressable
             onPress={() => router.replace("/manual" as never)}
@@ -397,11 +398,11 @@ export default function Scanner() {
               alignItems: "center",
               justifyContent: "center",
               borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.18)",
+              borderColor: th("rgba(255,255,255,0.18)", "line"),
               opacity: pressed ? 0.7 : 1,
             })}
           >
-            <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>Digitar manualmente</Text>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>Digitar manualmente</Text>
           </Pressable>
         </Animated.View>
       )}
@@ -415,7 +416,7 @@ export default function Scanner() {
         >
           <Animated.View
             entering={SlideInDown.springify().damping(30).stiffness(260)}
-            style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: "#000", overflow: "hidden" }}
+            style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: th("#000", "bg"), overflow: "hidden" }}
           >
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: insets.bottom }}>
               <ScanResultCard
@@ -437,15 +438,15 @@ export default function Scanner() {
       {phase === "saved" && (
         <Animated.View
           entering={FadeIn.duration(220)}
-          style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.72)", alignItems: "center", justifyContent: "center", gap: 14, paddingHorizontal: 32 }]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: th("rgba(0,0,0,0.72)", "bg"), alignItems: "center", justifyContent: "center", gap: 14, paddingHorizontal: 32 }]}
         >
           <Animated.View
             entering={ZoomIn.springify().damping(12).stiffness(420)}
-            style={{ width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center", backgroundColor: GREEN }}
+            style={{ width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center", backgroundColor: th(GREEN, "bg") }}
           >
-            <Check size={32} color="#0B0B0B" strokeWidth={3.4} />
+            <Check size={32} color={th("#0B0B0B")} strokeWidth={3.4} />
           </Animated.View>
-          <Text style={{ fontSize: 20, fontWeight: "700", color: "#fff" }}>
+          <Text style={{ fontSize: 20, fontWeight: "700", color: th("#fff") }}>
             {savedCount > 1 ? `${savedCount} lançamentos salvos` : "Salvo no Willo"}
           </Text>
           <View style={{ marginTop: 10, width: "100%", gap: 10 }}>
@@ -456,11 +457,11 @@ export default function Scanner() {
                 borderRadius: 999,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "#fff",
+                backgroundColor: th("#fff", "bg"),
                 opacity: pressed ? 0.82 : 1,
               })}
             >
-              <Text style={{ fontSize: 15, fontWeight: "700", color: "#0B0B0B" }}>Concluir</Text>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: th("#0B0B0B") }}>Concluir</Text>
             </Pressable>
             <Pressable
               onPress={again}
@@ -470,11 +471,11 @@ export default function Scanner() {
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.18)",
+                borderColor: th("rgba(255,255,255,0.18)", "line"),
                 opacity: pressed ? 0.7 : 1,
               })}
             >
-              <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>Ler outro comprovante</Text>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>Ler outro comprovante</Text>
             </Pressable>
           </View>
         </Animated.View>
@@ -524,7 +525,7 @@ function Brackets({ top, bottom, sweep }: { top: number; bottom: number; sweep: 
   const frame = useAnimatedStyle(() => ({ transform: [{ scale: 1 + breath.get() * 0.02 }] }));
   const light = useAnimatedStyle(() => ({ transform: [{ translateY: pass.get() * Math.max(0, height - 64) }] }));
 
-  const corner = { position: "absolute" as const, width: 48, height: 48, borderColor: "#fff" };
+  const corner = { position: "absolute" as const, width: 48, height: 48, borderColor: th("#fff", "line") };
 
   return (
     <Animated.View
@@ -539,7 +540,7 @@ function Brackets({ top, bottom, sweep }: { top: number; bottom: number; sweep: 
       <View style={[corner, { right: 0, bottom: 0, borderRightWidth: 3, borderBottomWidth: 3, borderBottomRightRadius: 18 }]} />
       {sweep && (
         <Animated.View style={[{ position: "absolute", left: 12, right: 12, top: 0, height: 64 }, light]}>
-          <LinearGradient colors={["transparent", "rgba(255,255,255,0.08)", "transparent"]} style={{ flex: 1 }} />
+          <LinearGradient colors={th(["transparent", "rgba(255,255,255,0.08)", "transparent"], "grad")} style={{ flex: 1 }} />
         </Animated.View>
       )}
     </Animated.View>
@@ -571,14 +572,14 @@ function StatusPill({ label }: { label: string }) {
         gap: 10,
         borderRadius: 999,
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.10)",
-        backgroundColor: "rgba(0,0,0,0.85)",
+        borderColor: th("rgba(255,255,255,0.10)", "line"),
+        backgroundColor: th("rgba(0,0,0,0.85)", "bg"),
         paddingHorizontal: 20,
         paddingVertical: 12,
       }}
     >
-      <Animated.View style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#fff" }, dot]} />
-      <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 2.4, textTransform: "uppercase", color: "#fff" }}>{label}</Text>
+      <Animated.View style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: th("#fff", "bg") }, dot]} />
+      <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 2.4, textTransform: "uppercase", color: th("#fff") }}>{label}</Text>
     </Animated.View>
   );
 }

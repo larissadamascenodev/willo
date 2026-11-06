@@ -13,6 +13,7 @@ import { money } from "~/lib/money";
 import { showToast } from "~/lib/toast";
 import { GREEN, INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * One line of a card's statement, opened.
  *
@@ -103,11 +104,11 @@ export default function LineDetail({
                 borderRadius: 16,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: menu ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)",
+                backgroundColor: th(menu ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)", "bg"),
                 opacity: pressed ? 0.6 : 1,
               })}
             >
-              <MoreVertical size={16} color="rgba(255,255,255,0.86)" strokeWidth={2.4} />
+              <MoreVertical size={16} color={th("rgba(255,255,255,0.86)")} strokeWidth={2.4} />
             </Pressable>
           ) : null
         }
@@ -124,8 +125,8 @@ export default function LineDetail({
               borderRadius: 18,
               overflow: "hidden",
               borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.14)",
-              backgroundColor: "rgba(30,32,38,0.98)",
+              borderColor: th("rgba(255,255,255,0.14)", "line"),
+              backgroundColor: th("rgba(30,32,38,0.98)", "bg"),
             }}
           >
             <MenuItem
@@ -139,7 +140,7 @@ export default function LineDetail({
                 router.push({ pathname: "/manual", params: { editar: purchaseId } } as never);
               }}
             />
-            <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+            <View style={{ height: 1, backgroundColor: th("rgba(255,255,255,0.08)", "bg") }} />
             <MenuItem
               icon={Trash2}
               label="Excluir"
@@ -155,13 +156,13 @@ export default function LineDetail({
 
         {confirming ? (
           <Animated.View entering={FadeIn.duration(220)} style={{ alignItems: "center", paddingTop: 8 }}>
-            <View style={{ width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,107,107,0.14)" }}>
-              <Trash2 size={24} color={RED} />
+            <View style={{ width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,107,107,0.14)", "bg") }}>
+              <Trash2 size={24} color={th(RED)} />
             </View>
-            <Text style={{ marginTop: 14, fontSize: 18, fontWeight: "700", color: "#fff", textAlign: "center" }}>
+            <Text style={{ marginTop: 14, fontSize: 18, fontWeight: "700", color: th("#fff"), textAlign: "center" }}>
               Excluir “{shown.name}”?
             </Text>
-            <Text style={{ marginTop: 8, fontSize: 14, lineHeight: 20, color: INK.soft, textAlign: "center" }}>
+            <Text style={{ marginTop: 8, fontSize: 14, lineHeight: 20, color: th(INK.soft), textAlign: "center" }}>
               {plan
                 ? `As ${plan.total} parcelas de ${money(each)} saem de todas as faturas e o limite do cartão volta a ficar livre.`
                 : "Sai da fatura e o limite do cartão volta a ficar livre."}
@@ -170,16 +171,16 @@ export default function LineDetail({
               <Pressable
                 onPress={() => setConfirming(false)}
                 disabled={busy}
-                style={({ pressed }) => ({ flex: 1, height: 50, borderRadius: 25, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.10)", opacity: pressed ? 0.7 : 1 })}
+                style={({ pressed }) => ({ flex: 1, height: 50, borderRadius: 25, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.10)", "bg"), opacity: pressed ? 0.7 : 1 })}
               >
-                <Text style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>Cancelar</Text>
+                <Text style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>Cancelar</Text>
               </Pressable>
               <Pressable
                 onPress={() => void remove()}
                 disabled={busy || !purchaseId}
-                style={({ pressed }) => ({ flex: 1, height: 50, borderRadius: 25, alignItems: "center", justifyContent: "center", backgroundColor: RED, opacity: busy || !purchaseId ? 0.5 : pressed ? 0.8 : 1 })}
+                style={({ pressed }) => ({ flex: 1, height: 50, borderRadius: 25, alignItems: "center", justifyContent: "center", backgroundColor: th(RED, "bg"), opacity: busy || !purchaseId ? 0.5 : pressed ? 0.8 : 1 })}
               >
-                <Text style={{ fontSize: 15.5, fontWeight: "700", color: "#fff" }}>{busy ? "Excluindo…" : "Excluir"}</Text>
+                <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#fff") }}>{busy ? "Excluindo…" : "Excluir"}</Text>
               </Pressable>
             </View>
           </Animated.View>
@@ -187,15 +188,15 @@ export default function LineDetail({
           <Animated.View entering={FadeIn.duration(220)} exiting={FadeOut.duration(120)}>
         {/* ══ What it costs on this bill ══ */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-          <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-            <Icon size={21} color={chipInk(hex)} strokeWidth={2} />
+          <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+            <Icon size={21} color={th(chipInk(hex))} strokeWidth={2} />
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1, color: isRefund ? GREEN : "#fff" }}>
+            <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1, color: th(isRefund ? GREEN : "#fff") }}>
               {isRefund ? "+" : ""}
               {money(each)}
             </Text>
-            <Text style={{ marginTop: 1, fontSize: 13, color: INK.soft }}>{plan ? "Valor da parcela nesta fatura" : "Nesta fatura"}</Text>
+            <Text style={{ marginTop: 1, fontSize: 13, color: th(INK.soft) }}>{plan ? "Valor da parcela nesta fatura" : "Nesta fatura"}</Text>
           </View>
         </View>
 
@@ -203,10 +204,10 @@ export default function LineDetail({
         {plan && (
           <View style={{ marginTop: 22 }}>
             <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" }}>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff") }}>
                 Parcela {plan.current} de {plan.total}
               </Text>
-              <Text style={{ fontSize: 13, color: INK.soft }}>
+              <Text style={{ fontSize: 13, color: th(INK.soft) }}>
                 {plan.total - plan.current === 0
                   ? ""
                   : `faltam ${money(each * (plan.total - plan.current))}`}
@@ -214,17 +215,17 @@ export default function LineDetail({
             </View>
             <View style={{ marginTop: 10, height: 6, flexDirection: "row", gap: 3 }}>
               {Array.from({ length: plan.total }, (_, i) => (
-                <View key={i} style={{ flex: 1, borderRadius: 3, backgroundColor: i < plan.current ? hex : "rgba(255,255,255,0.10)" }} />
+                <View key={i} style={{ flex: 1, borderRadius: 3, backgroundColor: th(i < plan.current ? hex : "rgba(255,255,255,0.10)", "bg") }} />
               ))}
             </View>
             <View style={{ marginTop: 10, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
               <View>
-                <Text style={{ fontSize: 11.5, color: INK.softer }}>Pago até esta parcela</Text>
-                <Text style={{ marginTop: 2, fontSize: 14.5, fontWeight: "700", color: "#fff" }}>{money(each * plan.current)}</Text>
+                <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Pago até esta parcela</Text>
+                <Text style={{ marginTop: 2, fontSize: 14.5, fontWeight: "700", color: th("#fff") }}>{money(each * plan.current)}</Text>
               </View>
               <View style={{ alignItems: "flex-end" }}>
-                <Text style={{ fontSize: 11.5, color: INK.softer }}>Total da compra</Text>
-                <Text style={{ marginTop: 2, fontSize: 17, fontWeight: "800", letterSpacing: -0.4, color: "#fff" }}>{money(each * plan.total)}</Text>
+                <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Total da compra</Text>
+                <Text style={{ marginTop: 2, fontSize: 17, fontWeight: "800", letterSpacing: -0.4, color: th("#fff") }}>{money(each * plan.total)}</Text>
               </View>
             </View>
           </View>
@@ -254,11 +255,11 @@ function Fact({ label, value, last = false }: { label: string; value: string; la
         gap: 16,
         paddingVertical: 12,
         borderBottomWidth: last ? 0 : 1,
-        borderBottomColor: "rgba(255,255,255,0.06)",
+        borderBottomColor: th("rgba(255,255,255,0.06)", "line"),
       }}
     >
-      <Text style={{ fontSize: 14.5, color: INK.soft }}>{label}</Text>
-      <Text numberOfLines={2} style={{ flexShrink: 1, fontSize: 15, fontWeight: "600", color: "#fff", textAlign: "right" }}>
+      <Text style={{ fontSize: 14.5, color: th(INK.soft) }}>{label}</Text>
+      <Text numberOfLines={2} style={{ flexShrink: 1, fontSize: 15, fontWeight: "600", color: th("#fff"), textAlign: "right" }}>
         {value}
       </Text>
     </View>
@@ -291,8 +292,8 @@ function MenuItem({
         opacity: disabled ? 0.4 : pressed ? 0.6 : 1,
       })}
     >
-      <Icon size={16} color={danger ? RED : "#fff"} />
-      <Text style={{ fontSize: 15, fontWeight: "600", color: danger ? RED : "#fff" }}>{label}</Text>
+      <Icon size={16} color={th(danger ? RED : "#fff")} />
+      <Text style={{ fontSize: 15, fontWeight: "600", color: th(danger ? RED : "#fff") }}>{label}</Text>
     </Pressable>
   );
 }

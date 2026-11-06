@@ -20,6 +20,7 @@ import { money } from "~/lib/money";
 import type { VoiceEntry } from "~/lib/voiceEntry";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 
+import { live, th } from "~/theme/theme";
 /**
  * What was heard, for a look before it is written — and the receipt once it is.
  *
@@ -40,7 +41,7 @@ import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
  * after a double tap, said, or written to Willo.
  */
 
-const GLASS = { borderRadius: 22, borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.05)" } as const;
+const GLASS = live({ borderRadius: 22, borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.05)" } as const);
 
 const nums: TextStyle = Platform.select({
   ios: { fontVariant: ["tabular-nums"] },
@@ -147,7 +148,7 @@ export default function VoiceEntrySheet({ entry, onSaved }: { entry: VoiceEntry;
       <View style={{ paddingHorizontal: 20, paddingBottom: 6 }}>
         {saved ? (
           <View style={{ paddingTop: 4 }}>
-            <Text style={{ marginBottom: 14, fontSize: 20, fontWeight: "800", letterSpacing: -0.4, color: "#fff" }}>
+            <Text style={{ marginBottom: 14, fontSize: 20, fontWeight: "800", letterSpacing: -0.4, color: th("#fff") }}>
               {lines.every((l) => l.draft.type === "receita") ? "Receita registrada." : "Gasto registrado."}
             </Text>
             <ReceiptCard lines={receipt} />
@@ -158,11 +159,11 @@ export default function VoiceEntrySheet({ entry, onSaved }: { entry: VoiceEntry;
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <ParticleOrb size={38} mode={busy ? "thinking" : "idle"} />
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ fontSize: 16.5, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>
+                <Text style={{ fontSize: 16.5, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
                   {editing ? "Corrija o que precisar" : entry.source === "text" ? "Confirme o que você digitou" : "Confirme o que ouvi"}
                 </Text>
                 {transcript && !editing ? (
-                  <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 13, fontStyle: "italic", color: INK.softer }}>
+                  <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 13, fontStyle: "italic", color: th(INK.softer) }}>
                     “{transcript}”
                   </Text>
                 ) : null}
@@ -178,11 +179,11 @@ export default function VoiceEntrySheet({ entry, onSaved }: { entry: VoiceEntry;
                   borderRadius: 19,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: editing ? "#fff" : "rgba(255,255,255,0.08)",
+                  backgroundColor: th(editing ? "#fff" : "rgba(255,255,255,0.08)", "bg"),
                   opacity: busy ? 0.4 : pressed ? 0.7 : 1,
                 })}
               >
-                {editing ? <Check size={18} color="#0B0B0B" strokeWidth={3} /> : <Pencil size={16} color="rgba(255,255,255,0.85)" />}
+                {editing ? <Check size={18} color={th("#0B0B0B")} strokeWidth={3} /> : <Pencil size={16} color={th("rgba(255,255,255,0.85)")} />}
               </Pressable>
             </View>
 
@@ -206,9 +207,9 @@ export default function VoiceEntrySheet({ entry, onSaved }: { entry: VoiceEntry;
                   </Animated.View>
                 ))}
                 {!editing && (
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 12, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.07)" }}>
-                    <Text style={{ fontSize: 13.5, color: INK.soft }}>Total</Text>
-                    <Text style={[nums, { fontSize: 15, fontWeight: "700", color: "rgba(255,255,255,0.88)" }]}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 12, borderTopWidth: 1, borderTopColor: th("rgba(255,255,255,0.07)", "line") }}>
+                    <Text style={{ fontSize: 13.5, color: th(INK.soft) }}>Total</Text>
+                    <Text style={[nums, { fontSize: 15, fontWeight: "700", color: th("rgba(255,255,255,0.88)") }]}>
                       {total >= 0 ? "+" : "−"}
                       {money(Math.abs(total))}
                     </Text>
@@ -217,12 +218,12 @@ export default function VoiceEntrySheet({ entry, onSaved }: { entry: VoiceEntry;
               </View>
             )}
 
-            {message ? <Text style={{ marginTop: 12, fontSize: 13.5, color: RED }}>{message}</Text> : null}
+            {message ? <Text style={{ marginTop: 12, fontSize: 13.5, color: th(RED) }}>{message}</Text> : null}
 
             {/* ── What is still to answer — and answering the last one writes it ── */}
             {question && !editing && (
               <Animated.View entering={FadeIn.duration(220)} style={{ marginTop: 16 }}>
-                <Text style={{ fontSize: 15.5, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>{question.prompt}</Text>
+                <Text style={{ fontSize: 15.5, fontWeight: "600", letterSpacing: -0.2, color: th("#fff") }}>{question.prompt}</Text>
                 {options.length > 0 && (
                   <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
                     {options.map((o) => {
@@ -246,17 +247,17 @@ export default function VoiceEntrySheet({ entry, onSaved }: { entry: VoiceEntry;
                             gap: 10,
                             paddingHorizontal: 12,
                             borderWidth: 1,
-                            borderColor: "rgba(255,255,255,0.16)",
-                            backgroundColor: "rgba(255,255,255,0.08)",
+                            borderColor: th("rgba(255,255,255,0.16)", "line"),
+                            backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
                             transform: [{ scale: pressed ? 0.97 : 1 }],
                           })}
                         >
                                 {MethodIcon ? (
-                            <MethodIcon size={19} color="#fff" strokeWidth={2.1} />
+                            <MethodIcon size={19} color={th("#fff")} strokeWidth={2.1} />
                           ) : (
                             <BankMark name={o.label} hex={colorFor(o.label, null)} size={30} />
                           )}
-                          <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 16, fontWeight: "700", color: "#fff" }}>
+                          <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 16, fontWeight: "700", color: th("#fff") }}>
                             {o.label}
                           </Text>
                         </Pressable>
@@ -276,12 +277,12 @@ export default function VoiceEntrySheet({ entry, onSaved }: { entry: VoiceEntry;
                           borderRadius: 20,
                           justifyContent: "center",
                           borderWidth: 1,
-                          borderColor: "rgba(255,255,255,0.12)",
-                          backgroundColor: "rgba(255,255,255,0.06)",
+                          borderColor: th("rgba(255,255,255,0.12)", "line"),
+                          backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
                           transform: [{ scale: pressed ? 0.95 : 1 }],
                         })}
                       >
-                        <Text style={{ fontSize: 14.5, fontWeight: "500", color: "rgba(255,255,255,0.88)" }}>{c}</Text>
+                        <Text style={{ fontSize: 14.5, fontWeight: "500", color: th("rgba(255,255,255,0.88)") }}>{c}</Text>
                       </Pressable>
                     ))}
                   </View>
@@ -305,18 +306,18 @@ export default function VoiceEntrySheet({ entry, onSaved }: { entry: VoiceEntry;
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 7,
-                  backgroundColor: "rgba(255,255,255,0.08)",
+                  backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
                   opacity: pressed ? 0.7 : 1,
                 })}
               >
-                <Undo2 size={16} color="rgba(255,255,255,0.85)" strokeWidth={2.2} />
-                <Text style={{ fontSize: 15, fontWeight: "600", color: "rgba(255,255,255,0.85)" }}>Desfazer</Text>
+                <Undo2 size={16} color={th("rgba(255,255,255,0.85)")} strokeWidth={2.2} />
+                <Text style={{ fontSize: 15, fontWeight: "600", color: th("rgba(255,255,255,0.85)") }}>Desfazer</Text>
               </Pressable>
               <Pressable
                 onPress={entry.reset}
-                style={({ pressed }) => ({ flex: 1.4, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: "#fff", opacity: pressed ? 0.85 : 1 })}
+                style={({ pressed }) => ({ flex: 1.4, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.85 : 1 })}
               >
-                <Text style={{ fontSize: 16, fontWeight: "700", color: "#0B0B0B" }}>Concluir</Text>
+                <Text style={{ fontSize: 16, fontWeight: "700", color: th("#0B0B0B") }}>Concluir</Text>
               </Pressable>
             </Animated.View>
           ) : (
@@ -333,21 +334,21 @@ export default function VoiceEntrySheet({ entry, onSaved }: { entry: VoiceEntry;
                     borderRadius: 28,
                     alignItems: "center",
                     justifyContent: "center",
-                    backgroundColor: "#fff",
+                    backgroundColor: th("#fff", "bg"),
                     opacity: busy ? 0.75 : question ? 0.35 : pressed ? 0.85 : 1,
                   })}
                 >
                   {busy ? (
-                    <ActivityIndicator color="#0B0B0B" />
+                    <ActivityIndicator color={th("#0B0B0B")} />
                   ) : (
-                    <Text style={{ fontSize: 17, fontWeight: "700", color: "#0B0B0B" }}>
+                    <Text style={{ fontSize: 17, fontWeight: "700", color: th("#0B0B0B") }}>
                       {question ? "Falta responder" : lines.length > 1 ? `Confirmar ${lines.length}` : "Confirmar"}
                     </Text>
                   )}
                 </Pressable>
               )}
               <Pressable onPress={entry.reset} disabled={busy} style={({ pressed }) => ({ height: 44, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
-                <Text style={{ fontSize: 15, fontWeight: "500", color: INK.soft }}>Cancelar</Text>
+                <Text style={{ fontSize: 15, fontWeight: "500", color: th(INK.soft) }}>Cancelar</Text>
               </Pressable>
             </>
           )}
@@ -379,8 +380,8 @@ function HeroEntry({
   return (
     <View>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-        <View style={{ width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-          <Icon size={23} color={chipInk(hex)} strokeWidth={2} />
+        <View style={{ width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+          <Icon size={23} color={th(chipInk(hex))} strokeWidth={2} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           {editing ? (
@@ -388,32 +389,32 @@ function HeroEntry({
               value={d.name}
               onChangeText={onName}
               placeholder="Nome"
-              placeholderTextColor={INK.faint}
-              style={{ height: 40, paddingHorizontal: 12, borderRadius: 12, fontSize: 20, fontWeight: "700", color: "#fff", backgroundColor: "rgba(255,255,255,0.08)" }}
+              placeholderTextColor={th(INK.faint)}
+              style={{ height: 40, paddingHorizontal: 12, borderRadius: 12, fontSize: 20, fontWeight: "700", color: th("#fff"), backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}
             />
           ) : (
-            <Text numberOfLines={1} style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>
+            <Text numberOfLines={1} style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>
               {d.name}
             </Text>
           )}
-          <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13.5, color: d.category ? INK.soft : AMBER }}>
+          <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13.5, color: th(d.category ? INK.soft : AMBER) }}>
             {d.category ?? "Falta a categoria"}
           </Text>
         </View>
       </View>
 
       {editing ? (
-        <View style={{ marginTop: 16, height: 62, flexDirection: "row", alignItems: "center", paddingHorizontal: 14, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.08)" }}>
-          <Text style={{ fontSize: 17, fontWeight: "700", color: INK.softer }}>{income ? "+ R$" : "− R$"}</Text>
+        <View style={{ marginTop: 16, height: 62, flexDirection: "row", alignItems: "center", paddingHorizontal: 14, borderRadius: 16, backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
+          <Text style={{ fontSize: 17, fontWeight: "700", color: th(INK.softer) }}>{income ? "+ R$" : "− R$"}</Text>
           <TextInput
             value={brl(d.amount)}
             onChangeText={(t) => onAmount(Number(t.replace(/\D/g, "") || "0") / 100)}
             keyboardType="number-pad"
-            style={[nums, { flex: 1, marginLeft: 8, fontSize: 34, fontWeight: "800", letterSpacing: -1, color: "#fff", padding: 0 }]}
+            style={[nums, { flex: 1, marginLeft: 8, fontSize: 34, fontWeight: "800", letterSpacing: -1, color: th("#fff"), padding: 0 }]}
           />
         </View>
       ) : (
-        <Text numberOfLines={1} adjustsFontSizeToFit style={[nums, { marginTop: 16, fontSize: 44, fontWeight: "800", letterSpacing: -1.6, color: income ? GREEN : "#fff" }]}>
+        <Text numberOfLines={1} adjustsFontSizeToFit style={[nums, { marginTop: 16, fontSize: 44, fontWeight: "800", letterSpacing: -1.6, color: th(income ? GREEN : "#fff") }]}>
           {income ? "+" : "−"}
           {money(d.amount)}
         </Text>
@@ -447,9 +448,9 @@ function RowEntry({
   const hex = d.category ? categoryHex(d.category) : "#8B8D94";
   const method = how(d, setup);
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderTopWidth: first ? 0 : 1, borderTopColor: "rgba(255,255,255,0.07)" }}>
-      <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-        <Icon size={17} color={chipInk(hex)} strokeWidth={2} />
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderTopWidth: first ? 0 : 1, borderTopColor: th("rgba(255,255,255,0.07)", "line") }}>
+      <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+        <Icon size={17} color={th(chipInk(hex))} strokeWidth={2} />
       </View>
       {editing ? (
         <>
@@ -457,30 +458,30 @@ function RowEntry({
             value={d.name}
             onChangeText={onName}
             placeholder="Nome"
-            placeholderTextColor={INK.faint}
-            style={{ flex: 1, minWidth: 0, height: 42, paddingHorizontal: 12, borderRadius: 12, fontSize: 16, fontWeight: "600", color: "#fff", backgroundColor: "rgba(255,255,255,0.08)" }}
+            placeholderTextColor={th(INK.faint)}
+            style={{ flex: 1, minWidth: 0, height: 42, paddingHorizontal: 12, borderRadius: 12, fontSize: 16, fontWeight: "600", color: th("#fff"), backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}
           />
-          <View style={{ width: 112, height: 42, flexDirection: "row", alignItems: "center", paddingHorizontal: 10, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.08)" }}>
-            <Text style={{ fontSize: 13, color: INK.softer }}>R$</Text>
+          <View style={{ width: 112, height: 42, flexDirection: "row", alignItems: "center", paddingHorizontal: 10, borderRadius: 12, backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
+            <Text style={{ fontSize: 13, color: th(INK.softer) }}>R$</Text>
             <TextInput
               value={brl(d.amount)}
               onChangeText={(t) => onAmount(Number(t.replace(/\D/g, "") || "0") / 100)}
               keyboardType="number-pad"
-              style={[nums, { flex: 1, minWidth: 0, marginLeft: 4, textAlign: "right", fontSize: 16, fontWeight: "700", color: "#fff", padding: 0 }]}
+              style={[nums, { flex: 1, minWidth: 0, marginLeft: 4, textAlign: "right", fontSize: 16, fontWeight: "700", color: th("#fff"), padding: 0 }]}
             />
           </View>
         </>
       ) : (
         <>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>
+            <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "600", letterSpacing: -0.2, color: th("#fff") }}>
               {d.name}
             </Text>
-            <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12.5, color: d.category ? INK.softer : AMBER }}>
+            <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12.5, color: th(d.category ? INK.softer : AMBER) }}>
               {[d.category ?? "Falta a categoria", dayLabel(d.date), method].filter(Boolean).join(" · ")}
             </Text>
           </View>
-          <Text style={[nums, { fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: d.type === "receita" ? GREEN : "#fff" }]}>
+          <Text style={[nums, { fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: th(d.type === "receita" ? GREEN : "#fff") }]}>
             {d.type === "receita" ? "+" : "−"}
             {money(d.amount)}
           </Text>
@@ -498,10 +499,10 @@ function Pill({ label, warn }: { label: string; warn?: boolean }) {
         paddingHorizontal: 12,
         borderRadius: 15,
         justifyContent: "center",
-        backgroundColor: warn ? "rgba(249,206,78,0.12)" : "rgba(255,255,255,0.07)",
+        backgroundColor: th(warn ? "rgba(249,206,78,0.12)" : "rgba(255,255,255,0.07)", "bg"),
       }}
     >
-      <Text style={{ fontSize: 13, fontWeight: "500", color: warn ? AMBER : "rgba(255,255,255,0.8)" }}>{label}</Text>
+      <Text style={{ fontSize: 13, fontWeight: "500", color: th(warn ? AMBER : "rgba(255,255,255,0.8)") }}>{label}</Text>
     </View>
   );
 }
@@ -533,7 +534,7 @@ export function DrawnTick() {
   return (
     <Animated.View style={[{ width: 84, height: 84, alignItems: "center", justifyContent: "center" }, seal]}>
       <Svg width={84} height={84} viewBox="0 0 84 84">
-        <Circle cx={42} cy={42} r={34} fill="rgba(200,243,109,0.12)" />
+        <Circle cx={42} cy={42} r={34} fill={th("rgba(200,243,109,0.12)")} />
         <AnimatedCircle cx={42} cy={42} r={34} stroke={GREEN} strokeWidth={3} fill="none" strokeDasharray={`${RING} ${RING}`} strokeLinecap="round" rotation={-90} origin="42, 42" animatedProps={ringProps} />
         <AnimatedPath d="M27 43 L37 53 L57 32" stroke={GREEN} strokeWidth={5} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${TICK} ${TICK}`} animatedProps={tickProps} />
       </Svg>

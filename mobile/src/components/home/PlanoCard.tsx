@@ -11,6 +11,7 @@ import { BUCKET_HEX } from "~/app/plano";
 import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * Meu Plano Financeiro, on the home.
  *
@@ -30,9 +31,9 @@ export default function PlanoCard() {
     <Surface onPress={() => router.push("/plano" as never)} style={{ paddingHorizontal: 18, paddingTop: 16, paddingBottom: 18 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <Text numberOfLines={1} style={[T.cardLabel, { flex: 1 }]}>
-          Meu plano <Text style={{ color: INK.faint }}>·</Text> {chosen ? chosen.label : "recomendado"}
+          Meu plano <Text style={{ color: th(INK.faint) }}>·</Text> {chosen ? chosen.label : "recomendado"}
         </Text>
-        <ChevronRight size={16} color={INK.faint} />
+        <ChevronRight size={16} color={th(INK.faint)} />
       </View>
 
       {chosen && current ? (
@@ -40,16 +41,16 @@ export default function PlanoCard() {
           {planVsActual(chosen, current).map((r, i) => (
             <View key={r.label}>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>{r.label}</Text>
-                <Text style={{ fontSize: 13, color: r.over ? RED : INK.soft }}>{r.over ? `passou ${money(-r.left)}` : `restam ${money(r.left)}`}</Text>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: th("#fff") }}>{r.label}</Text>
+                <Text style={{ fontSize: 13, color: th(r.over ? RED : INK.soft) }}>{r.over ? `passou ${money(-r.left)}` : `restam ${money(r.left)}`}</Text>
               </View>
-              <View style={{ marginTop: 6, height: 6, borderRadius: 3, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.08)" }}>
+              <View style={{ marginTop: 6, height: 6, borderRadius: 3, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
                 <View
                   style={{
                     width: `${r.planned > 0 ? Math.min(r.spent / r.planned, 1) * 100 : 0}%`,
                     height: 6,
                     borderRadius: 3,
-                    backgroundColor: r.over ? RED : BUCKET_HEX[chosen.allocations[i]?.bucket ?? "livre"],
+                    backgroundColor: th(r.over ? RED : BUCKET_HEX[chosen.allocations[i]?.bucket ?? "livre"], "bg"),
                   }}
                 />
               </View>
@@ -60,8 +61,8 @@ export default function PlanoCard() {
         <View style={{ marginTop: 12, flexDirection: "row", alignItems: "center", gap: 12 }}>
           <AgentMark hex="#5EEAD4" size={36} />
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ fontSize: 17, fontWeight: "800", letterSpacing: -0.3, color: "#fff" }}>{best.label}</Text>
-            <Text numberOfLines={2} style={{ marginTop: 2, fontSize: 12.5, lineHeight: 17, color: INK.soft }}>{best.why}</Text>
+            <Text style={{ fontSize: 17, fontWeight: "800", letterSpacing: -0.3, color: th("#fff") }}>{best.label}</Text>
+            <Text numberOfLines={2} style={{ marginTop: 2, fontSize: 12.5, lineHeight: 17, color: th(INK.soft) }}>{best.why}</Text>
           </View>
         </View>
       ) : null}

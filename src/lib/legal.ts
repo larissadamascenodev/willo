@@ -20,7 +20,7 @@ export const OPERATOR = {
   /** CPF is not published; for a company, "CNPJ 00.000.000/0001-00". */
   document: "CNPJ 59.261.159/0001-02",
   city: "Campinas/SP",
-  email: "[E-MAIL DE CONTATO]",
+  email: "usewillo@gmail.com",
   site: "https://willo-app.vercel.app",
 };
 

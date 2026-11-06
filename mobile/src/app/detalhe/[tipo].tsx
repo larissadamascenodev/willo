@@ -35,6 +35,7 @@ import { useAuth } from "~/lib/auth";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * One side of the month: everything that came in, or everything that went out.
  *
@@ -90,7 +91,7 @@ function HistoryBar({
           width: "100%",
           maxWidth: 28,
           borderRadius: 8,
-          backgroundColor: current ? accent : `${accent}44`,
+          backgroundColor: th(current ? accent : `${accent}44`, "bg"),
         },
         animated,
       ]}
@@ -215,24 +216,24 @@ export default function ReceitasDespesasDetalhe() {
                 borderRadius: 20,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: chipFill(hex),
+                backgroundColor: th(chipFill(hex), "bg"),
               }}
             >
-              <CreditCard size={18} color={chipInk(hex)} strokeWidth={2} />
+              <CreditCard size={18} color={th(chipInk(hex))} strokeWidth={2} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: "#fff" }}>
+              <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>
                 Fatura {inv.card_name}
               </Text>
-              <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: INK.soft }}>
+              <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: th(INK.soft) }}>
                 {MONTH_SHORT[inv.month - 1]}/{inv.year}
               </Text>
             </View>
             <View style={{ alignItems: "flex-end" }}>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: tone }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: th(tone) }}>
                 −{money(inv.total_amount)}
               </Text>
-              <Text style={{ marginTop: 1, fontSize: 10.5, fontWeight: "500", color: tone, opacity: 0.65 }}>
+              <Text style={{ marginTop: 1, fontSize: 10.5, fontWeight: "500", color: th(tone), opacity: 0.65 }}>
                 {isPendingList ? "Pendente" : "Paga"}
               </Text>
             </View>
@@ -256,16 +257,16 @@ export default function ReceitasDespesasDetalhe() {
               borderRadius: 20,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: chipFill(hex),
+              backgroundColor: th(chipFill(hex), "bg"),
             }}
           >
-            <Icon size={18} color={chipInk(hex)} strokeWidth={2} />
+            <Icon size={18} color={th(chipInk(hex))} strokeWidth={2} />
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: "#fff" }}>
+            <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>
               {tx.name}
             </Text>
-            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: INK.soft }}>
+            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: th(INK.soft) }}>
               {tx.category} ·{" "}
               {new Date(`${tx.date.slice(0, 10)}T12:00:00`)
                 .toLocaleDateString("pt-BR", { day: "numeric", month: "short" })
@@ -273,11 +274,11 @@ export default function ReceitasDespesasDetalhe() {
             </Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
-            <Text style={{ fontSize: 14, fontWeight: "700", color: tone }}>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: th(tone) }}>
               {isReceita ? "+" : "−"}
               {money(tx.amount)}
             </Text>
-            <Text style={{ marginTop: 1, fontSize: 10.5, fontWeight: "500", color: tone, opacity: 0.65 }}>
+            <Text style={{ marginTop: 1, fontSize: 10.5, fontWeight: "500", color: th(tone), opacity: 0.65 }}>
               {isPendingList
                 ? isReceita
                   ? "A receber"
@@ -317,13 +318,13 @@ export default function ReceitasDespesasDetalhe() {
                   borderRadius: 20,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: `${accent}22`,
+                  backgroundColor: th(`${accent}22`, "bg"),
                 }}
               >
-                <HeroIcon size={18} color={accent} strokeWidth={2} />
+                <HeroIcon size={18} color={th(accent)} strokeWidth={2} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ fontSize: 13, color: INK.soft }}>
+                <Text style={{ fontSize: 13, color: th(INK.soft) }}>
                   Total {isReceita ? "de receitas" : "de despesas"}
                 </Text>
                 <Text numberOfLines={1} style={[T.figure, { marginTop: 1 }]}>
@@ -337,17 +338,17 @@ export default function ReceitasDespesasDetalhe() {
                     alignItems: "center",
                     gap: 4,
                     borderRadius: 999,
-                    backgroundColor: "rgba(255,255,255,0.08)",
+                    backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
                     paddingHorizontal: 10,
                     paddingVertical: 6,
                   }}
                 >
                   {trendPositive ? (
-                    <ChevronUp size={14} color={GREEN} strokeWidth={2.6} />
+                    <ChevronUp size={14} color={th(GREEN)} strokeWidth={2.6} />
                   ) : (
-                    <ChevronDown size={14} color={RED} strokeWidth={2.6} />
+                    <ChevronDown size={14} color={th(RED)} strokeWidth={2.6} />
                   )}
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: trendPositive ? GREEN : RED }}>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: th(trendPositive ? GREEN : RED) }}>
                     {trend > 0 ? "+" : ""}
                     {trend}%
                   </Text>
@@ -361,7 +362,7 @@ export default function ReceitasDespesasDetalhe() {
                 height: 8,
                 borderRadius: 999,
                 overflow: "hidden",
-                backgroundColor: "rgba(255,255,255,0.07)",
+                backgroundColor: th("rgba(255,255,255,0.07)", "bg"),
               }}
             >
               <Bar share={Math.min(paidPct, 100) / 100} color={accent} delay={0.1} />
@@ -369,16 +370,16 @@ export default function ReceitasDespesasDetalhe() {
 
             <View style={{ marginTop: 12, flexDirection: "row", alignItems: "center", gap: 16 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Check size={13} color={accent} strokeWidth={3} />
-                <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.74)" }}>
+                <Check size={13} color={th(accent)} strokeWidth={3} />
+                <Text style={{ fontSize: 13, color: th("rgba(255,255,255,0.74)") }}>
                   {isReceita ? "Recebido" : "Pago"}{" "}
-                  <Text style={{ fontWeight: "600", color: "#fff" }}>{money(paid)}</Text>
+                  <Text style={{ fontWeight: "600", color: th("#fff") }}>{money(paid)}</Text>
                 </Text>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Clock size={13} color={AMBER} />
-                <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.74)" }}>
-                  Pendente <Text style={{ fontWeight: "600", color: "#fff" }}>{money(pending)}</Text>
+                <Clock size={13} color={th(AMBER)} />
+                <Text style={{ fontSize: 13, color: th("rgba(255,255,255,0.74)") }}>
+                  Pendente <Text style={{ fontWeight: "600", color: th("#fff") }}>{money(pending)}</Text>
                 </Text>
               </View>
             </View>
@@ -397,7 +398,7 @@ export default function ReceitasDespesasDetalhe() {
                     <View key={`${h.year}-${h.month}`} style={{ flex: 1, alignItems: "center", gap: 6 }}>
                       <Text
                         numberOfLines={1}
-                        style={{ fontSize: 10, fontWeight: "700", color: current ? "#fff" : INK.soft }}
+                        style={{ fontSize: 10, fontWeight: "700", color: th(current ? "#fff" : INK.soft) }}
                       >
                         {h.value > 0 ? compact(h.value) : "—"}
                       </Text>
@@ -410,7 +411,7 @@ export default function ReceitasDespesasDetalhe() {
                           delay={i * 0.03}
                         />
                       </View>
-                      <Text style={{ fontSize: 11, fontWeight: current ? "600" : "400", color: current ? "#fff" : INK.soft }}>
+                      <Text style={{ fontSize: 11, fontWeight: current ? "600" : "400", color: th(current ? "#fff" : INK.soft) }}>
                         {MONTH_SHORT[h.month]}
                       </Text>
                     </View>
@@ -434,7 +435,7 @@ export default function ReceitasDespesasDetalhe() {
               }}
             >
               <Text style={T.eyebrow}>{isReceita ? "A receber" : "Pendentes"}</Text>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: "rgba(252,211,77,0.70)" }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: th("rgba(252,211,77,0.70)") }}>
                 {allPending.length}
               </Text>
             </View>
@@ -457,7 +458,7 @@ export default function ReceitasDespesasDetalhe() {
               }}
             >
               <Text style={T.eyebrow}>{isReceita ? "Recebidas" : "Pagas"}</Text>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: accent, opacity: 0.7 }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: th(accent), opacity: 0.7 }}>
                 {allPaid.length}
               </Text>
             </View>
@@ -478,25 +479,25 @@ export default function ReceitasDespesasDetalhe() {
               justifyContent: "center",
               gap: 6,
               borderRadius: 999,
-              backgroundColor: "rgba(255,255,255,0.06)",
+              backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
               opacity: pressed ? 0.7 : 1,
             })}
           >
-            {showAll ? <ChevronUp size={16} color="#fff" /> : <ChevronDown size={16} color="#fff" />}
-            <Text style={{ fontSize: 13, fontWeight: "600", color: "#fff" }}>
+            {showAll ? <ChevronUp size={16} color={th("#fff")} /> : <ChevronDown size={16} color={th("#fff")} />}
+            <Text style={{ fontSize: 13, fontWeight: "600", color: th("#fff") }}>
               {showAll ? "Ver menos" : "Ver todos"}
             </Text>
           </Pressable>
         )}
 
         {loading && transactions.length === 0 && (
-          <Text style={{ paddingVertical: 48, textAlign: "center", fontSize: 14, color: INK.soft }}>
+          <Text style={{ paddingVertical: 48, textAlign: "center", fontSize: 14, color: th(INK.soft) }}>
             Carregando...
           </Text>
         )}
 
         {!loading && allPending.length === 0 && allPaid.length === 0 && (
-          <Text style={{ paddingVertical: 48, textAlign: "center", fontSize: 14, color: INK.softer }}>
+          <Text style={{ paddingVertical: 48, textAlign: "center", fontSize: 14, color: th(INK.softer) }}>
             {isReceita ? "Nenhuma receita neste mês." : "Nenhuma despesa neste mês."}
           </Text>
         )}

@@ -16,6 +16,7 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { onToast } from "~/lib/toast";
 
+import { th } from "~/theme/theme";
 /**
  * The notice, in the shape of the phone's own.
  *
@@ -160,21 +161,21 @@ export default function ToastHost({ quiet = false }: { quiet?: boolean }) {
             borderRadius: 26,
             borderCurve: "continuous",
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.16)",
+            borderColor: th("rgba(255,255,255,0.16)", "line"),
             overflow: "hidden",
           }}
         >
-          <BlurView intensity={70} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.42)" }} />
-          <View style={{ position: "absolute", top: 0, left: 24, right: 24, height: 1, backgroundColor: "rgba(255,255,255,0.24)" }} />
+          <BlurView intensity={70} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.42)", "bg") }} />
+          <View style={{ position: "absolute", top: 0, left: 24, right: 24, height: 1, backgroundColor: th("rgba(255,255,255,0.24)", "bg") }} />
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12 }}>
             <Image source={MARK} contentFit="cover" style={{ width: 40, height: 40, borderRadius: 10 }} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>Willo</Text>
-                <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>agora</Text>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: th("#fff") }}>Willo</Text>
+                <Text style={{ fontSize: 12, color: th("rgba(255,255,255,0.55)") }}>agora</Text>
               </View>
-              <Text numberOfLines={2} style={{ marginTop: 1, fontSize: 14.5, color: "rgba(255,255,255,0.92)" }}>{text}</Text>
+              <Text numberOfLines={2} style={{ marginTop: 1, fontSize: 14.5, color: th("rgba(255,255,255,0.92)") }}>{text}</Text>
             </View>
           </View>
         </Pressable>

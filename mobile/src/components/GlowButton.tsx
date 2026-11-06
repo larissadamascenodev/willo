@@ -3,6 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import Animated, { Easing, cancelAnimation, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
 
+import { th } from "~/theme/theme";
 /**
  * The web's primary button, on the phone: a black pill with a beam of light that
  * keeps circling its border, white and grey only.
@@ -65,19 +66,19 @@ export default function GlowButton({
       onLayout={(e) => setW(e.nativeEvent.layout.width)}
       style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}
     >
-      <View style={{ height: H + RING * 2, borderRadius: (H + RING * 2) / 2, overflow: "hidden", padding: RING, backgroundColor: disabled ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.16)" }}>
+      <View style={{ height: H + RING * 2, borderRadius: (H + RING * 2) / 2, overflow: "hidden", padding: RING, backgroundColor: th(disabled ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.16)", "bg") }}>
         {!disabled && w > 0 && (
           <Animated.View pointerEvents="none" style={[{ position: "absolute", left: w / 2 + RING - c, top: (H + RING * 2) / 2 - c, width: side, height: side }, turning]}>
             <Svg width={side} height={side}>
               {STEPS.map((a, i) => (
-                <Path key={i} d={wedge(c, c, i * SPAN, (i + 1) * SPAN + 0.5)} fill="#FFFFFF" fillOpacity={a} />
+                <Path key={i} d={wedge(c, c, i * SPAN, (i + 1) * SPAN + 0.5)} fill={th("#FFFFFF")} fillOpacity={a} />
               ))}
             </Svg>
           </Animated.View>
         )}
-        <View style={{ height: H, borderRadius: H / 2, backgroundColor: "#0B0B0B", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+        <View style={{ height: H, borderRadius: H / 2, backgroundColor: th("#0B0B0B", "bg"), flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
           {icon}
-          <Text style={{ fontSize: 14, fontWeight: "700", letterSpacing: 3, textTransform: "uppercase", color: disabled ? "rgba(255,255,255,0.45)" : "#fff" }}>{label}</Text>
+          <Text style={{ fontSize: 14, fontWeight: "700", letterSpacing: 3, textTransform: "uppercase", color: th(disabled ? "rgba(255,255,255,0.45)" : "#fff") }}>{label}</Text>
         </View>
       </View>
     </Pressable>

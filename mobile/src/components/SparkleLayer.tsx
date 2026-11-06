@@ -4,6 +4,7 @@ import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, w
 import { onSparkle, type SparkleShower } from "~/lib/sparkles";
 import { GREEN } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Where the sparkles are drawn: over the sheet, touching nothing.
  *
@@ -86,7 +87,7 @@ function Bit({ p, clock }: { p: Piece; clock: SharedValue<number> }) {
   return (
     <Animated.View
       style={[
-        { position: "absolute", left: 0, top: 0, width: w, height: h, borderRadius: p.long ? 1 : h / 2, backgroundColor: p.color, shadowColor: p.color, shadowOpacity: 0.9, shadowRadius: 3, shadowOffset: { width: 0, height: 0 } },
+        { position: "absolute", left: 0, top: 0, width: w, height: h, borderRadius: p.long ? 1 : h / 2, backgroundColor: th(p.color, "bg"), shadowColor: th(p.color, "line"), shadowOpacity: 0.9, shadowRadius: 3, shadowOffset: { width: 0, height: 0 } },
         style,
       ]}
     />

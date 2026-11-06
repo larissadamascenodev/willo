@@ -7,6 +7,7 @@ import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /* Figures line up in columns, so their digits have to be the same width. */
 const nums: TextStyle = Platform.select({
   ios: { fontVariant: ["tabular-nums"] },
@@ -66,10 +67,10 @@ export default function FluxoCard({
     >
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <Text numberOfLines={1} style={[T.cardLabel, { flex: 1 }]}>
-          Receitas e despesas <Text style={{ color: INK.faint }}>·</Text>{" "}
+          Receitas e despesas <Text style={{ color: th(INK.faint) }}>·</Text>{" "}
           {isCurrentMonth ? "este mês" : "no mês"}
         </Text>
-        <ChevronRight size={16} color={INK.faint} />
+        <ChevronRight size={16} color={th(INK.faint)} />
       </View>
 
       <View style={{ marginTop: 16, gap: 16 }}>
@@ -83,15 +84,15 @@ export default function FluxoCard({
           marginTop: 18,
           paddingTop: 16,
           borderTopWidth: 1,
-          borderTopColor: "rgba(255,255,255,0.07)",
+          borderTopColor: th("rgba(255,255,255,0.07)", "line"),
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
         }}
       >
-        <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.2, color: "#fff" }}>Fluxo de caixa</Text>
-        <Text numberOfLines={1} style={[nums, { flexShrink: 0, fontSize: 18, fontWeight: "700", letterSpacing: -0.3, color: short ? RED : "#fff" }]}>
+        <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.2, color: th("#fff") }}>Fluxo de caixa</Text>
+        <Text numberOfLines={1} style={[nums, { flexShrink: 0, fontSize: 18, fontWeight: "700", letterSpacing: -0.3, color: th(short ? RED : "#fff") }]}>
           {short ? "−" : ""}
           {money(Math.abs(balanco))}
         </Text>
@@ -117,13 +118,13 @@ function Flow({
   return (
     <View>
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-        <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.2, color: "#fff" }}>{label}</Text>
-        <Text style={[nums, { fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: inflow ? "#fff" : RED }]}>
+        <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.2, color: th("#fff") }}>{label}</Text>
+        <Text style={[nums, { fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: th(inflow ? "#fff" : RED) }]}>
           {inflow ? "" : "−"}
           {money(amount)}
         </Text>
       </View>
-      <View style={{ marginTop: 10, height: 10, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+      <View style={{ marginTop: 10, height: 10, borderRadius: 999, backgroundColor: th("rgba(255,255,255,0.06)", "bg"), overflow: "hidden" }}>
         <Bar share={Math.max(amount / scale, amount > 0 ? 0.03 : 0)} color={inflow ? GREEN : RED} delay={delay} />
       </View>
     </View>

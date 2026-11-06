@@ -6,6 +6,7 @@ import { goalPreset } from "~/lib/goalIcon";
 import { coverKind } from "~/lib/coverKind";
 import CoverArt from "~/components/accounts/CoverArt";
 
+import { th } from "~/theme/theme";
 /**
  * What a cofrinho looks like.
  *
@@ -59,14 +60,14 @@ export default function CaixinhaCover({
       ) : (
         <>
           <LinearGradient
-            colors={[deep(preset.hex, 0.92), deep(preset.hex, 0.5), deep(preset.hex, 0.2)]}
+            colors={th([deep(preset.hex, 0.92), deep(preset.hex, 0.5), deep(preset.hex, 0.2)], "grad")}
             start={{ x: 0.1, y: 0 }}
             end={{ x: 0.9, y: 1 }}
             style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
           />
           {/* A soft light from the top corner, so it is a surface and not a fill. */}
           <LinearGradient
-            colors={["rgba(255,255,255,0.18)", "rgba(255,255,255,0)"]}
+            colors={th(["rgba(255,255,255,0.18)", "rgba(255,255,255,0)"], "grad")}
             start={{ x: 0.85, y: 0 }}
             end={{ x: 0.3, y: 0.7 }}
             style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
@@ -74,11 +75,11 @@ export default function CaixinhaCover({
           {/* Small, the glyph sits in the middle; large, it is held in the corner and cropped. */}
           {height < 90 ? (
             <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
-              <Icon size={Math.round(height * 0.44)} color="rgba(255,255,255,0.92)" strokeWidth={1.9} />
+              <Icon size={Math.round(height * 0.44)} color={th("rgba(255,255,255,0.92)")} strokeWidth={1.9} />
             </View>
           ) : (
             <View style={[{ position: "absolute", right: -size * 0.12, opacity: 0.34 }, glyphTop !== undefined ? { top: glyphTop } : { bottom: -size * 0.14 }]}>
-              <Icon size={size} color="#fff" strokeWidth={1.4} />
+              <Icon size={size} color={th("#fff")} strokeWidth={1.4} />
             </View>
           )}
         </>

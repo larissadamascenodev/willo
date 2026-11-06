@@ -29,6 +29,7 @@ import Svg, {
 import Glass from "~/components/Glass";
 import { GREEN, INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Where the balance has been and where it goes, six months at a time.
  *
@@ -353,16 +354,16 @@ export default function BalanceLine({
                 <Defs>
                   {/* Lime above zero, red below — the line's colour is its sign. */}
                   <LinearGradient id="tone" x1="0" y1="0" x2="0" y2={HEIGHT} gradientUnits="userSpaceOnUse">
-                    <Stop offset={0} stopColor={GREEN} />
-                    <Stop offset={zeroOffset} stopColor={GREEN} />
-                    <Stop offset={zeroOffset} stopColor={RED} />
-                    <Stop offset={1} stopColor={RED} />
+                    <Stop offset={0} stopColor={th(GREEN, "grad")} />
+                    <Stop offset={zeroOffset} stopColor={th(GREEN, "grad")} />
+                    <Stop offset={zeroOffset} stopColor={th(RED, "grad")} />
+                    <Stop offset={1} stopColor={th(RED, "grad")} />
                   </LinearGradient>
                   <LinearGradient id="ground" x1="0" y1="0" x2="0" y2={HEIGHT} gradientUnits="userSpaceOnUse">
-                    <Stop offset={0} stopColor={GREEN} stopOpacity={0.34} />
-                    <Stop offset={zeroOffset} stopColor={GREEN} stopOpacity={0.02} />
-                    <Stop offset={zeroOffset} stopColor={RED} stopOpacity={0.02} />
-                    <Stop offset={1} stopColor={RED} stopOpacity={0.28} />
+                    <Stop offset={0} stopColor={th(GREEN, "grad")} stopOpacity={0.34} />
+                    <Stop offset={zeroOffset} stopColor={th(GREEN, "grad")} stopOpacity={0.02} />
+                    <Stop offset={zeroOffset} stopColor={th(RED, "grad")} stopOpacity={0.02} />
+                    <Stop offset={1} stopColor={th(RED, "grad")} stopOpacity={0.28} />
                   </LinearGradient>
                   <ClipPath id="wipe">
                     <AnimatedRect x={0} y={0} height={HEIGHT} animatedProps={clipProps} />
@@ -375,7 +376,7 @@ export default function BalanceLine({
                     x2={contentWidth}
                     y1={geo.zeroY}
                     y2={geo.zeroY}
-                    stroke="rgba(255,255,255,0.16)"
+                    stroke={th("rgba(255,255,255,0.16)")}
                     strokeWidth={1}
                   />
                 )}
@@ -388,7 +389,7 @@ export default function BalanceLine({
                       x2={todayX}
                       y1={14}
                       y2={HEIGHT - PAD_B + 4}
-                      stroke="rgba(255,255,255,0.07)"
+                      stroke={th("rgba(255,255,255,0.07)")}
                       strokeWidth={1}
                     />
                     <SvgText
@@ -396,7 +397,7 @@ export default function BalanceLine({
                       y={10}
                       fontSize={9.5}
                       fontWeight="600"
-                      fill="rgba(255,255,255,0.45)"
+                      fill={th("rgba(255,255,255,0.45)")}
                       textAnchor="middle"
                     >
                       hoje
@@ -515,7 +516,7 @@ export default function BalanceLine({
                     textAlign: "center",
                     fontSize: 11,
                     fontWeight: i === selected ? "700" : "400",
-                    color: i === selected ? "#fff" : i > todayIndex ? INK.softer : INK.soft,
+                    color: th(i === selected ? "#fff" : i > todayIndex ? INK.softer : INK.soft),
                   }}
                 >
                   {SHORT[m]}

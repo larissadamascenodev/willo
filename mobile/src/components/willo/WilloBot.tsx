@@ -14,6 +14,7 @@ import * as Haptics from "expo-haptics";
 import Svg, { Defs, Ellipse, Path, RadialGradient, Stop } from "react-native-svg";
 import type { OrbMode } from "~/components/registro/ParticleOrb";
 
+import { th } from "~/theme/theme";
 /**
  * Willo the robot: graphite, dark metal and a mirrored black visor, lit along his edges in silver
  * and cold blue, with no colour of his own to fight whatever the background is. He is cut into six
@@ -426,13 +427,13 @@ export default function WilloBot({
             <Svg width={side} height={side}>
               <Defs>
                 <RadialGradient id="bot-aura" cx="50%" cy="50%" r="50%">
-                  <Stop offset="0" stopColor={COLD} stopOpacity={0.2} />
-                  <Stop offset="0.7" stopColor={COLD} stopOpacity={0.06} />
-                  <Stop offset="1" stopColor={COLD} stopOpacity={0} />
+                  <Stop offset="0" stopColor={th(COLD, "grad")} stopOpacity={0.2} />
+                  <Stop offset="0.7" stopColor={th(COLD, "grad")} stopOpacity={0.06} />
+                  <Stop offset="1" stopColor={th(COLD, "grad")} stopOpacity={0} />
                 </RadialGradient>
                 <RadialGradient id="bot-floor" cx="50%" cy="50%" r="50%">
-                  <Stop offset="0" stopColor={COLD} stopOpacity={0.4} />
-                  <Stop offset="1" stopColor={COLD} stopOpacity={0} />
+                  <Stop offset="0" stopColor={th(COLD, "grad")} stopOpacity={0.4} />
+                  <Stop offset="1" stopColor={th(COLD, "grad")} stopOpacity={0} />
                 </RadialGradient>
               </Defs>
               <Ellipse cx={side * 0.5} cy={side * 0.46} rx={side * 0.5} ry={side * 0.5} fill="url(#bot-aura)" />
@@ -455,13 +456,13 @@ export default function WilloBot({
                   <Svg width={w * 2.4} height={h * 1.6} style={{ position: "absolute" }}>
                     <Defs>
                       <RadialGradient id="bot-eye" cx="50%" cy="50%" r="50%">
-                        <Stop offset="0.35" stopColor={COLD} stopOpacity={0.5} />
-                        <Stop offset="1" stopColor={COLD} stopOpacity={0} />
+                        <Stop offset="0.35" stopColor={th(COLD, "grad")} stopOpacity={0.5} />
+                        <Stop offset="1" stopColor={th(COLD, "grad")} stopOpacity={0} />
                       </RadialGradient>
                     </Defs>
                     <Ellipse cx={w * 1.2} cy={h * 0.8} rx={w * 1.2} ry={h * 0.8} fill="url(#bot-eye)" />
                   </Svg>
-                  <View style={{ width: w, height: h, borderRadius: w, backgroundColor: WHITE }} />
+                  <View style={{ width: w, height: h, borderRadius: w, backgroundColor: th(WHITE, "bg") }} />
                 </Animated.View>
               </Animated.View>
             ))}
@@ -469,8 +470,8 @@ export default function WilloBot({
             {EYES.map((e) => (
               <Animated.View key={`arc-${e.x}`} style={[{ position: "absolute", left: e.x * side - w * 1.1, top: e.y * side - w * 0.7, width: w * 2.2, height: w * 1.4 }, arc]}>
                 <Svg width={w * 2.2} height={w * 1.4}>
-                  <Path d={`M${w * 0.3} ${w * 1.05}Q${w * 1.1} ${-w * 0.35} ${w * 1.9} ${w * 1.05}`} stroke={COLD} strokeOpacity={0.3} strokeWidth={w * 0.72} strokeLinecap="round" fill="none" />
-                  <Path d={`M${w * 0.3} ${w * 1.05}Q${w * 1.1} ${-w * 0.35} ${w * 1.9} ${w * 1.05}`} stroke={WHITE} strokeWidth={w * 0.42} strokeLinecap="round" fill="none" />
+                  <Path d={`M${w * 0.3} ${w * 1.05}Q${w * 1.1} ${-w * 0.35} ${w * 1.9} ${w * 1.05}`} stroke={th(COLD)} strokeOpacity={0.3} strokeWidth={w * 0.72} strokeLinecap="round" fill="none" />
+                  <Path d={`M${w * 0.3} ${w * 1.05}Q${w * 1.1} ${-w * 0.35} ${w * 1.9} ${w * 1.05}`} stroke={th(WHITE)} strokeWidth={w * 0.42} strokeLinecap="round" fill="none" />
                 </Svg>
               </Animated.View>
             ))}

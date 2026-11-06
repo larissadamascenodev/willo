@@ -9,6 +9,7 @@ import { setWilloPrefs, useWilloPrefs } from "~/lib/willoPrefs";
 import { INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * Making Willo yours: how he talks and how much he says. The voice chosen is heard, in
  * the words under its name; the others stay one line each, so it all fits on the screen.
@@ -20,11 +21,11 @@ export default function WilloSettings({ open, onClose }: { open: boolean; onClos
   return (
     <BottomSheet open={open} onClose={onClose}>
       <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
-        <Text style={{ fontSize: 22, letterSpacing: -0.5, ...face(800), color: "#fff" }}>Personalizar o Willo</Text>
+        <Text style={{ fontSize: 22, letterSpacing: -0.5, ...face(800), color: th("#fff") }}>Personalizar o Willo</Text>
 
         {/* ── Voice ── */}
         <Text style={[T.eyebrow, { marginTop: 20 }]}>Personalidade</Text>
-        <View style={{ marginTop: 8, borderRadius: 20, borderCurve: "continuous", paddingHorizontal: 14, backgroundColor: "rgba(255,255,255,0.05)" }}>
+        <View style={{ marginTop: 8, borderRadius: 20, borderCurve: "continuous", paddingHorizontal: 14, backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
           {STYLES.map((s, i) => {
             const on = prefs.style === s.id;
             return (
@@ -36,19 +37,19 @@ export default function WilloSettings({ open, onClose }: { open: boolean; onClos
                 style={({ pressed }) => ({
                   paddingVertical: 13,
                   borderTopWidth: i === 0 ? 0 : 1,
-                  borderTopColor: "rgba(255,255,255,0.06)",
+                  borderTopColor: th("rgba(255,255,255,0.06)", "line"),
                   opacity: pressed ? 0.7 : 1,
                 })}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 22 }}>
-                  <Text style={{ fontSize: 15.5, ...face(on ? 700 : 500), color: on ? "#fff" : "rgba(255,255,255,0.78)" }}>{s.label}</Text>
+                  <Text style={{ fontSize: 15.5, ...face(on ? 700 : 500), color: th(on ? "#fff" : "rgba(255,255,255,0.78)") }}>{s.label}</Text>
                   {on && (
-                    <Animated.View entering={FadeIn.duration(200)} style={{ width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
-                      <Check size={13} color="#0B0B0B" strokeWidth={3.4} />
+                    <Animated.View entering={FadeIn.duration(200)} style={{ width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg") }}>
+                      <Check size={13} color={th("#0B0B0B")} strokeWidth={3.4} />
                     </Animated.View>
                   )}
                 </View>
-                {on && <Text style={{ marginTop: 5, fontSize: 13, lineHeight: 18, ...face(500), color: INK.soft }}>“{s.sample}”</Text>}
+                {on && <Text style={{ marginTop: 5, fontSize: 13, lineHeight: 18, ...face(500), color: th(INK.soft) }}>“{s.sample}”</Text>}
               </Pressable>
             );
           })}
@@ -69,8 +70,8 @@ export default function WilloSettings({ open, onClose }: { open: boolean; onClos
 
         {/* ── Notices ── */}
         <View style={{ marginTop: 16, flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <Bell size={16} color={INK.softer} />
-          <Text style={{ flex: 1, fontSize: 12.5, lineHeight: 17, ...face(500), color: INK.softer }}>Avisos do Willo no iPhone chegam com a próxima versão do app.</Text>
+          <Bell size={16} color={th(INK.softer)} />
+          <Text style={{ flex: 1, fontSize: 12.5, lineHeight: 17, ...face(500), color: th(INK.softer) }}>Avisos do Willo no iPhone chegam com a próxima versão do app.</Text>
         </View>
       </View>
     </BottomSheet>

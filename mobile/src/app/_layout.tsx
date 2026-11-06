@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -13,6 +14,7 @@ import ToastHost from "~/components/ToastHost";
 import LaunchIntro from "~/components/LaunchIntro";
 import { markIntroDone } from "~/lib/launchIntro";
 import { GREEN, GROUND } from "~/theme/tokens";
+import { LIGHT_GROUND, setActiveTheme, takeReturnRoute, th, useThemePref } from "~/theme/theme";
 
 /* Before any shared module is imported for real, the handful of browser things it
    expects have to exist. */
@@ -38,7 +40,7 @@ export default function RootLayout() {
   const [intro, setIntro] = useState(!introPlayed);
 
   return (
-    <View style={{ flex: 1, backgroundColor: GROUND }}>
+    <View style={{ flex: 1, backgroundColor: th(GROUND, "bg") }}>
       <Shell />
       {intro && (
         <LaunchIntro
@@ -66,13 +68,12 @@ function Shell() {
   if (!ready) return <Splash />;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: GROUND }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: th(GROUND, "bg") }}>
       <SafeAreaProvider>
         <AuthProvider>
           {/* Which month the screens are reading. Shared with the web, which has no
               browser in it — just the month and a way to change it. */}
           <MonthProvider>
-            <StatusBar style="light" />
             <Door />
             <ToastHost />
           </MonthProvider>
@@ -84,8 +85,8 @@ function Shell() {
 
 function Splash() {
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: GROUND }}>
-      <ActivityIndicator color={GREEN} />
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: th(GROUND, "bg") }}>
+      <ActivityIndicator color={th(GREEN)} />
     </View>
   );
 }
@@ -94,14 +95,47 @@ function Door() {
   const { session, loading } = useAuth();
   useApplyOnboarding();
 
+  /* Light only inside the app: the welcome, sign-in and sign-up are always dark. Set
+     before anything below draws, so every colour is read for the right theme. */
+  const [pref] = useThemePref();
+  const mode = !loading && session ? pref : "dark";
+  setActiveTheme(mode);
+
+  /* Changing the theme draws the screens again from scratch. A veil in the new
+     ground covers the swap, and the person is put back on the profile, where the
+     choice was made. */
+  const router = useRouter();
+  const veil = useSharedValue(0);
+  const first = useRef(true);
+  const [quiet, setQuiet] = useState(false);
+  useLayoutEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    veil.set(1);
+    veil.set(withDelay(260, withTiming(0, { duration: 460, easing: Easing.out(Easing.cubic) })));
+    const back = takeReturnRoute();
+    if (back) {
+      setQuiet(true);
+      requestAnimationFrame(() => router.push(back as never));
+      const id = setTimeout(() => setQuiet(false), 700);
+      return () => clearTimeout(id);
+    }
+  }, [mode, veil, router]);
+  const veilStyle = useAnimatedStyle(() => ({ opacity: veil.get() }));
+
   if (loading) return <Splash />;
   const signedIn = !!session;
 
   return (
+    <>
+    <StatusBar style={mode === "light" ? "dark" : "light"} />
     <Stack
+      key={mode}
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: GROUND },
+        contentStyle: { backgroundColor: th(GROUND, "bg") },
       }}
     >
       <Stack.Protected guard={signedIn} redirectTo="/bem-vindo">
@@ -118,7 +152,7 @@ function Door() {
         <Stack.Screen name="fluxo-de-caixa" />
         <Stack.Screen name="analytics/categorias" />
         <Stack.Screen name="analytics/categoria/[nome]" />
-        <Stack.Screen name="perfil" />
+        <Stack.Screen name="perfil" options={{ animation: quiet ? "none" : "default" }} />
         {/* Comes up from the foot of the screen, but as a screen rather than a card:
             the modal presentation insets its own content, which on a form that is
             already full width shows up as a left edge cut off. */}
@@ -128,7 +162,7 @@ function Door() {
         <Stack.Screen name="registro" options={{ animation: "slide_from_bottom" }} />
         <Stack.Screen name="rapido" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />
         <Stack.Screen name="manual" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />
-        <Stack.Screen name="scanner" options={{ animation: "fade", contentStyle: { backgroundColor: "#000" } }} />
+        <Stack.Screen name="scanner" options={{ animation: "fade", contentStyle: { backgroundColor: th("#000", "bg") } }} />
       </Stack.Protected>
 
       <Stack.Protected guard={!signedIn} redirectTo="/">
@@ -137,5 +171,10 @@ function Door() {
         <Stack.Screen name="login" />
       </Stack.Protected>
     </Stack>
+    <Animated.View
+      pointerEvents="none"
+      style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: mode === "light" ? LIGHT_GROUND : GROUND }, veilStyle]}
+    />
+    </>
   );
 }

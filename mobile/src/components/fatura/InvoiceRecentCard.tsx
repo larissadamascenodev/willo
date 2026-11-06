@@ -12,6 +12,7 @@ import { money } from "~/lib/money";
 import { GREEN, INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * The last few things that happened on this card.
  *
@@ -48,8 +49,8 @@ export default function InvoiceRecentCard({
 
       {visible.length === 0 ? (
         <View style={{ alignItems: "center", paddingVertical: 32 }}>
-          <Receipt size={20} color={INK.soft} />
-          <Text style={{ marginTop: 10, fontSize: 14, color: INK.soft }}>Nenhum lançamento nesta fatura</Text>
+          <Receipt size={20} color={th(INK.soft)} />
+          <Text style={{ marginTop: 10, fontSize: 14, color: th(INK.soft) }}>Nenhum lançamento nesta fatura</Text>
         </View>
       ) : (
         <View style={{ marginTop: 6 }}>
@@ -80,12 +81,12 @@ export default function InvoiceRecentCard({
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.08)",
-            backgroundColor: "rgba(255,255,255,0.05)",
+            borderColor: th("rgba(255,255,255,0.08)", "line"),
+            backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          <Text style={{ fontSize: 15.5, fontWeight: "500", color: "#fff" }}>Ver todos os lançamentos</Text>
+          <Text style={{ fontSize: 15.5, fontWeight: "500", color: th("#fff") }}>Ver todos os lançamentos</Text>
         </Pressable>
       )}
     </View>
@@ -106,30 +107,30 @@ export function InvoiceLineRow({ line, onPress }: { line: InvoiceLine; onPress?:
       onPress={onPress}
       style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}
     >
-      <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-        <Icon size={20} color={chipInk(hex)} strokeWidth={2} />
+      <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+        <Icon size={20} color={th(chipInk(hex))} strokeWidth={2} />
       </View>
 
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>{line.name}</Text>
-        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>
+        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>{line.name}</Text>
+        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>
           {day} · {line.category}
         </Text>
         {plan && (
           <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8 }}>
             <View style={{ flex: 1, maxWidth: 120, height: 4, flexDirection: "row", gap: plan.total > 24 ? 1 : 2 }}>
               {Array.from({ length: plan.total }, (_, i) => (
-                <View key={i} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i < plan.current ? hex : "rgba(255,255,255,0.12)" }} />
+                <View key={i} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: th(i < plan.current ? hex : "rgba(255,255,255,0.12)", "bg") }} />
               ))}
             </View>
-            <Text style={{ fontSize: 11.5, fontWeight: "600", color: INK.soft }}>
+            <Text style={{ fontSize: 11.5, fontWeight: "600", color: th(INK.soft) }}>
               {plan.current} de {plan.total}
             </Text>
           </View>
         )}
       </View>
 
-      <Text style={{ fontSize: 15, fontWeight: "600", color: isRefund ? GREEN : "#fff" }}>
+      <Text style={{ fontSize: 15, fontWeight: "600", color: th(isRefund ? GREEN : "#fff") }}>
         {isRefund ? "+" : ""}
         {money(Math.abs(line.amount))}
       </Text>

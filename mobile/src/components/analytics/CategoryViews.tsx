@@ -11,6 +11,7 @@ import { INK } from "~/theme/tokens";
 import type { IconCmp } from "~/lib/categoryIconSlugs";
 import { EXPAND } from "~/lib/expand";
 
+import { th } from "~/theme/theme";
 /**
  * The two ways to read a month: by category, or by the handful of things those
  * categories are really about.
@@ -49,20 +50,20 @@ export function TopSpendRow({
             borderRadius: 24,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: `${category.hex}26`,
+            backgroundColor: th(`${category.hex}26`, "bg"),
           }}
         >
-          <Icon size={20} color={category.hex} strokeWidth={2} />
+          <Icon size={20} color={th(category.hex)} strokeWidth={2} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ fontSize: 12, color: INK.soft }}>Maior gasto em {monthLabel}</Text>
-          <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 16, fontWeight: "600", color: "#fff" }}>
+          <Text style={{ fontSize: 12, color: th(INK.soft) }}>Maior gasto em {monthLabel}</Text>
+          <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 16, fontWeight: "600", color: th("#fff") }}>
             {category.name}
           </Text>
         </View>
         <View style={{ alignItems: "flex-end" }}>
-          <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>{money(category.amount)}</Text>
-          <Text style={{ marginTop: 1, fontSize: 12, color: INK.soft }}>{category.percentage}% do total</Text>
+          <Text style={{ fontSize: 16, fontWeight: "600", color: th("#fff") }}>{money(category.amount)}</Text>
+          <Text style={{ marginTop: 1, fontSize: 12, color: th(INK.soft) }}>{category.percentage}% do total</Text>
         </View>
       </View>
     </Surface>
@@ -92,7 +93,7 @@ export function CategoryRows({
                 borderRadius: 16,
                 paddingHorizontal: 4,
                 paddingVertical: 10,
-                backgroundColor: pressed ? "rgba(255,255,255,0.04)" : "transparent",
+                backgroundColor: th(pressed ? "rgba(255,255,255,0.04)" : "transparent", "bg"),
               })}
             >
               <View
@@ -102,19 +103,19 @@ export function CategoryRows({
                   borderRadius: 24,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: chipFill(cat.hex),
+                  backgroundColor: th(chipFill(cat.hex), "bg"),
                 }}
               >
-                <Icon size={20} color={chipInk(cat.hex)} strokeWidth={2} />
+                <Icon size={20} color={th(chipInk(cat.hex))} strokeWidth={2} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "500", color: "#fff" }}>
+                <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "500", color: th("#fff") }}>
                   {cat.name}
                 </Text>
-                <Text style={{ marginTop: 1, fontSize: 15, color: INK.soft }}>{cat.percentage}%</Text>
+                <Text style={{ marginTop: 1, fontSize: 15, color: th(INK.soft) }}>{cat.percentage}%</Text>
               </View>
-              <Text style={{ fontSize: 16, fontWeight: "500", color: "#fff" }}>{money(cat.amount)}</Text>
-              {onOpen && <ChevronRight size={16} color={INK.faint} />}
+              <Text style={{ fontSize: 16, fontWeight: "500", color: th("#fff") }}>{money(cat.amount)}</Text>
+              {onOpen && <ChevronRight size={16} color={th(INK.faint)} />}
             </Pressable>
           </Animated.View>
         );
@@ -147,8 +148,8 @@ export function GroupCards({
               overflow: "hidden",
               borderRadius: 22,
               borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.08)",
-              backgroundColor: "rgba(255,255,255,0.046)",
+              borderColor: th("rgba(255,255,255,0.08)", "line"),
+              backgroundColor: th("rgba(255,255,255,0.046)", "bg"),
             }}
           >
             <Pressable
@@ -169,24 +170,24 @@ export function GroupCards({
                   borderRadius: 24,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: g.def.hex,
+                  backgroundColor: th(g.def.hex, "bg"),
                 }}
               >
-                <Icon size={20} color="#fff" strokeWidth={2} />
+                <Icon size={20} color={th("#fff")} strokeWidth={2} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "500", color: "#fff" }}>
+                <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "500", color: th("#fff") }}>
                   {g.def.name}
                 </Text>
-                <Text style={{ marginTop: 1, fontSize: 15, color: INK.soft }}>{g.percentage}%</Text>
+                <Text style={{ marginTop: 1, fontSize: 15, color: th(INK.soft) }}>{g.percentage}%</Text>
               </View>
-              <Text style={{ fontSize: 16, fontWeight: "500", color: "#fff" }}>{money(g.amount)}</Text>
+              <Text style={{ fontSize: 16, fontWeight: "500", color: th("#fff") }}>{money(g.amount)}</Text>
               {onOpen ? (
-                <ChevronRight size={16} color="rgba(255,255,255,0.74)" />
+                <ChevronRight size={16} color={th("rgba(255,255,255,0.74)")} />
               ) : (
                 <ChevronDown
                   size={16}
-                  color="rgba(255,255,255,0.74)"
+                  color={th("rgba(255,255,255,0.74)")}
                   style={{ transform: [{ rotate: isOpen ? "180deg" : "0deg" }] }}
                 />
               )}
@@ -211,22 +212,22 @@ export function GroupCards({
                             borderRadius: 22,
                             alignItems: "center",
                             justifyContent: "center",
-                            backgroundColor: "rgba(255,255,255,0.06)",
+                            backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
                           }}
                         >
-                          <CatIcon size={20} color={cat.hex} strokeWidth={2} />
+                          <CatIcon size={20} color={th(cat.hex)} strokeWidth={2} />
                         </View>
                         <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text numberOfLines={1} style={{ fontSize: 15, color: "#fff" }}>
+                          <Text numberOfLines={1} style={{ fontSize: 15, color: th("#fff") }}>
                             {cat.name}
                           </Text>
                           {g.categories.length > 1 && (
-                            <Text style={{ marginTop: 1, fontSize: 13, color: INK.soft }}>
+                            <Text style={{ marginTop: 1, fontSize: 13, color: th(INK.soft) }}>
                               {share}% do grupo
                             </Text>
                           )}
                         </View>
-                        <Text style={{ fontSize: 15, color: "#fff" }}>{money(cat.amount)}</Text>
+                        <Text style={{ fontSize: 15, color: th("#fff") }}>{money(cat.amount)}</Text>
                       </View>
                     );
                   })}

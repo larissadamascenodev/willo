@@ -10,6 +10,7 @@ import { showToast } from "~/lib/toast";
 import { useAuth } from "~/lib/auth";
 import { INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * An entry already written, opened to change: the same page as the check before saving,
  * everything on it changeable — out or in, amount, words, category, how it was paid,
@@ -101,7 +102,7 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
   if (!v || !tx) {
     return (
       <View style={{ paddingVertical: 60, alignItems: "center" }}>
-        {error ? <Text style={{ fontSize: 14, color: RED }}>{error}</Text> : <ActivityIndicator color="#fff" />}
+        {error ? <Text style={{ fontSize: 14, color: th(RED) }}>{error}</Text> : <ActivityIndicator color={th("#fff")} />}
       </View>
     );
   }
@@ -167,8 +168,8 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
   return (
     <>
       <View style={{ paddingHorizontal: 20, paddingTop: 2, paddingBottom: 8 }}>
-        <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: "rgba(255,255,255,0.72)" }}>EDITAR LANÇAMENTO</Text>
-        <Text style={{ marginTop: 10, fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>{tx.name}</Text>
+        <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: th("rgba(255,255,255,0.72)") }}>EDITAR LANÇAMENTO</Text>
+        <Text style={{ marginTop: 10, fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>{tx.name}</Text>
 
         <EntryForm
           values={v}
@@ -182,18 +183,18 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
           onPickCategory={() => setPicking(true)}
         />
 
-        {error && <Text style={{ marginTop: 14, fontSize: 13.5, color: RED }}>{error}</Text>}
+        {error && <Text style={{ marginTop: 14, fontSize: 13.5, color: th(RED) }}>{error}</Text>}
 
         {/* A recurring one: where the change goes */}
         {asking ? (
           <Animated.View entering={FadeIn.duration(200)} style={{ marginTop: 16 }}>
-            <Text style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>Aplicar a mudança em:</Text>
-            <Text style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>É um lançamento recorrente.</Text>
+            <Text style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>Aplicar a mudança em:</Text>
+            <Text style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>É um lançamento recorrente.</Text>
             <View style={{ marginTop: 12, flexDirection: "row", gap: 8 }}>
               <Chip label="Só este mês" on={false} onPress={() => void save("month")} />
               <Chip label="Este e os próximos" on={false} onPress={() => void save("all")} />
             </View>
-            {saving && <ActivityIndicator style={{ marginTop: 12 }} color="#fff" />}
+            {saving && <ActivityIndicator style={{ marginTop: 12 }} color={th("#fff")} />}
           </Animated.View>
         ) : (
           <Primary label={saving ? "Salvando…" : "Salvar alterações"} busy={saving} disabled={saving || v.cents <= 0 || !v.name.trim() || !v.whereId || (v.repeat === "parcelado" && !v.parts)} onPress={() => void save()} />

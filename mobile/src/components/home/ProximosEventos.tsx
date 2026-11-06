@@ -9,6 +9,7 @@ import { money } from "~/lib/money";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * What is still to settle this month.
  *
@@ -43,10 +44,10 @@ export default function ProximosEventos({ events }: { events: FinanceEvent[] }) 
     <Surface onPress={() => router.push("/eventos")} style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <Text style={[T.cardLabel, { flex: 1 }]}>Próximos eventos</Text>
-        <Text style={{ fontSize: 12.5, color: INK.softer }}>
+        <Text style={{ fontSize: 12.5, color: th(INK.softer) }}>
           {next.length} {next.length === 1 ? "pendente" : "pendentes"}
         </Text>
-        <ChevronRight size={16} color={INK.faint} />
+        <ChevronRight size={16} color={th(INK.faint)} />
       </View>
 
       <View style={{ marginTop: 12, gap: 8 }}>
@@ -66,27 +67,27 @@ export default function ProximosEventos({ events }: { events: FinanceEvent[] }) 
                 borderRadius: 18,
                 borderCurve: "continuous",
                 borderWidth: 1,
-                borderColor: late ? "rgba(248,113,113,0.22)" : "rgba(255,255,255,0.09)",
-                backgroundColor: "rgba(255,255,255,0.05)",
+                borderColor: th(late ? "rgba(248,113,113,0.22)" : "rgba(255,255,255,0.09)", "line"),
+                backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
               }}
             >
               <DateTile date={dateOf(e)} isToday={daysFrom(e, today) === 0} late={late} />
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>
+                <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>
                   {e.name}
                 </Text>
-                <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: late ? RED : INK.soft }}>
+                <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: th(late ? RED : INK.soft) }}>
                   {dueLabel(e, today)}
                 </Text>
               </View>
               <View style={{ alignItems: "flex-end", gap: 4 }}>
-                <Text numberOfLines={1} style={[nums, { flexShrink: 0, fontSize: 15, fontWeight: "700", color: "#fff" }]}>
+                <Text numberOfLines={1} style={[nums, { flexShrink: 0, fontSize: 15, fontWeight: "700", color: th("#fff") }]}>
                   {income ? "+" : ""}
                   {money(e.amount)}
                 </Text>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: tone }} />
-                  <Text style={{ fontSize: 11.5, color: INK.softer }}>{income ? "A receber" : "A pagar"}</Text>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: th(tone, "bg") }} />
+                  <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>{income ? "A receber" : "A pagar"}</Text>
                 </View>
               </View>
             </View>
@@ -95,7 +96,7 @@ export default function ProximosEventos({ events }: { events: FinanceEvent[] }) 
       </View>
 
       {rest > 0 && (
-        <Text style={{ marginTop: 12, textAlign: "center", fontSize: 13, fontWeight: "600", color: INK.soft }}>
+        <Text style={{ marginTop: 12, textAlign: "center", fontSize: 13, fontWeight: "600", color: th(INK.soft) }}>
           Ver mais {rest} {rest === 1 ? "evento" : "eventos"}
         </Text>
       )}
@@ -116,11 +117,11 @@ function DateTile({ date, isToday, late }: { date: Date; isToday: boolean; late:
         borderCurve: "continuous",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: ground,
+        backgroundColor: th(ground, "bg"),
       }}
     >
-      <Text style={[nums, { fontSize: 17, fontWeight: "700", lineHeight: 19, color: ink }]}>{date.getDate()}</Text>
-      <Text style={{ fontSize: 10.5, fontWeight: "600", color: isToday ? "rgba(11,11,11,0.6)" : INK.softer }}>
+      <Text style={[nums, { fontSize: 17, fontWeight: "700", lineHeight: 19, color: th(ink) }]}>{date.getDate()}</Text>
+      <Text style={{ fontSize: 10.5, fontWeight: "600", color: th(isToday ? "rgba(11,11,11,0.6)" : INK.softer) }}>
         {monthShort(date)}
       </Text>
     </View>

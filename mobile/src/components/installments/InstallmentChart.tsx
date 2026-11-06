@@ -14,6 +14,7 @@ import { Check } from "~/components/icons";
 import { money } from "~/lib/money";
 import { INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * The monthly figure, month by month, until it reaches nothing.
  *
@@ -63,11 +64,11 @@ export default function InstallmentChart({
   return (
     <View style={{ paddingHorizontal: 4 }}>
       <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
-        <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 1.4, textTransform: "uppercase", color: INK.soft }}>
+        <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 1.4, textTransform: "uppercase", color: th(INK.soft) }}>
           Próximos meses
         </Text>
         {last && (
-          <Text style={{ textAlign: "right", fontSize: 11.5, lineHeight: 14, color: INK.faint }}>
+          <Text style={{ textAlign: "right", fontSize: 11.5, lineHeight: 14, color: th(INK.faint) }}>
             última parcela{"\n"}em {MONTH_SHORT[last.month]}/{String(last.year).slice(2)}
           </Text>
         )}
@@ -108,11 +109,11 @@ export default function InstallmentChart({
                 />
               </View>
 
-              <Text style={{ fontSize: 11, fontWeight: on ? "700" : "400", color: on ? "#fff" : INK.soft }}>
+              <Text style={{ fontSize: 11, fontWeight: on ? "700" : "400", color: th(on ? "#fff" : INK.soft) }}>
                 {MONTH_SHORT[p.month]}
               </Text>
               {/* The year, once, where it turns. */}
-              <Text style={{ marginTop: -4, height: 13, fontSize: 10, color: INK.faint }}>
+              <Text style={{ marginTop: -4, height: 13, fontSize: 10, color: th(INK.faint) }}>
                 {p.month === 0 ? p.year : ""}
               </Text>
             </Pressable>
@@ -151,7 +152,7 @@ function Column({ value, max, color, on, delay }: { value: number; max: number; 
 
   return (
     <Animated.View
-      style={[{ width: "100%", borderRadius: 9, borderCurve: "continuous", backgroundColor: value > 0 ? color : "rgba(255,255,255,0.10)" }, animated]}
+      style={[{ width: "100%", borderRadius: 9, borderCurve: "continuous", backgroundColor: th(value > 0 ? color : "rgba(255,255,255,0.10)", "bg") }, animated]}
     />
   );
 }
@@ -166,12 +167,12 @@ function Legend({ color, label, tick }: { color: string; label: string; tick?: b
           borderRadius: tick ? 6 : 3,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: tick ? "rgba(255,255,255,0.14)" : color,
+          backgroundColor: th(tick ? "rgba(255,255,255,0.14)" : color, "bg"),
         }}
       >
-        {tick && <Check size={8} color="#fff" strokeWidth={4} />}
+        {tick && <Check size={8} color={th("#fff")} strokeWidth={4} />}
       </View>
-      <Text style={{ fontSize: 11, color: INK.softer }}>{label}</Text>
+      <Text style={{ fontSize: 11, color: th(INK.softer) }}>{label}</Text>
     </View>
   );
 }

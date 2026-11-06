@@ -12,6 +12,7 @@ import { AmountField, Group, Row, Segments, Stepper, brl } from "~/components/ac
 import { Check, Minus, Plus, X } from "~/components/icons";
 import { INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Changing a caixinha, in the same glass it was made in.
  *
@@ -155,13 +156,13 @@ export default function GoalFormSheet({
     }
   };
 
-  const label = (t: string) => <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: INK.softer }}>{t}</Text>;
+  const label = (t: string) => <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: th(INK.softer) }}>{t}</Text>;
 
   return (
     <BottomSheet open={open} onClose={onClose} full>
       <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>{title}</Text>
+          <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.6, color: th("#fff") }}>{title}</Text>
           <Pressable
             accessibilityLabel="Fechar"
             onPress={onClose}
@@ -173,12 +174,12 @@ export default function GoalFormSheet({
               alignItems: "center",
               justifyContent: "center",
               borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.14)",
-              backgroundColor: "rgba(255,255,255,0.07)",
+              borderColor: th("rgba(255,255,255,0.14)", "line"),
+              backgroundColor: th("rgba(255,255,255,0.07)", "bg"),
               opacity: pressed ? 0.6 : 1,
             })}
           >
-            <X size={16} color="rgba(255,255,255,0.86)" strokeWidth={2.3} />
+            <X size={16} color={th("rgba(255,255,255,0.86)")} strokeWidth={2.3} />
           </Pressable>
         </View>
 
@@ -212,17 +213,17 @@ export default function GoalFormSheet({
                     borderCurve: "continuous",
                     overflow: "hidden",
                     borderWidth: on ? 2 : 1,
-                    borderColor: on ? "#fff" : "rgba(255,255,255,0.12)",
+                    borderColor: th(on ? "#fff" : "rgba(255,255,255,0.12)", "line"),
                   }}
                 >
                   <CoverArt kind={k} />
                   {on && (
-                    <View style={{ position: "absolute", top: 6, right: 6, width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
-                      <Check size={12} color="#0B0B0B" strokeWidth={3.2} />
+                    <View style={{ position: "absolute", top: 6, right: 6, width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg") }}>
+                      <Check size={12} color={th("#0B0B0B")} strokeWidth={3.2} />
                     </View>
                   )}
                 </View>
-                <Text style={{ marginTop: 6, fontSize: 12, fontWeight: on ? "700" : "500", color: on ? "#fff" : INK.soft }}>{LABEL[k]}</Text>
+                <Text style={{ marginTop: 6, fontSize: 12, fontWeight: on ? "700" : "500", color: th(on ? "#fff" : INK.soft) }}>{LABEL[k]}</Text>
               </Pressable>
             );
           })}
@@ -245,13 +246,13 @@ export default function GoalFormSheet({
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: kind === null ? 2 : 1,
-                borderColor: kind === null ? "#fff" : "rgba(255,255,255,0.12)",
-                backgroundColor: "rgba(255,255,255,0.07)",
+                borderColor: th(kind === null ? "#fff" : "rgba(255,255,255,0.12)", "line"),
+                backgroundColor: th("rgba(255,255,255,0.07)", "bg"),
               }}
             >
-              <Plus size={20} color="#fff" strokeWidth={2.2} />
+              <Plus size={20} color={th("#fff")} strokeWidth={2.2} />
             </View>
-            <Text style={{ marginTop: 6, fontSize: 12, fontWeight: kind === null ? "700" : "500", color: kind === null ? "#fff" : INK.soft }}>Personalizado</Text>
+            <Text style={{ marginTop: 6, fontSize: 12, fontWeight: kind === null ? "700" : "500", color: th(kind === null ? "#fff" : INK.soft) }}>Personalizado</Text>
           </Pressable>
         </ScrollView>
 
@@ -267,9 +268,9 @@ export default function GoalFormSheet({
                 setError(null);
               }}
               placeholder="Ex.: Viagem para o Japão"
-              placeholderTextColor={INK.faint}
+              placeholderTextColor={th(INK.faint)}
               maxLength={60}
-              style={{ marginTop: 4, minWidth: 0, padding: 0, fontSize: 17, fontWeight: "600", color: "#fff" }}
+              style={{ marginTop: 4, minWidth: 0, padding: 0, fontSize: 17, fontWeight: "600", color: th("#fff") }}
             />
           </Row>
           <Row last={!hasValue}>
@@ -294,7 +295,7 @@ export default function GoalFormSheet({
             <Row last>
               {label("Quanto quer juntar")}
               <AmountField cents={cents} onChange={(c) => { setCents(c); setError(null); }} size={34} />
-              {saved > 0 && <Text style={{ marginTop: 4, fontSize: 12.5, color: INK.soft }}>{money(saved)} já guardados</Text>}
+              {saved > 0 && <Text style={{ marginTop: 4, fontSize: 12.5, color: th(INK.soft) }}>{money(saved)} já guardados</Text>}
             </Row>
           )}
         </Group>
@@ -327,7 +328,7 @@ export default function GoalFormSheet({
               hitSlop={10}
               style={{ alignSelf: "center", marginTop: 12, paddingVertical: 2 }}
             >
-              <Text style={{ fontSize: 13.5, fontWeight: "600", color: INK.soft }}>{span === 0 ? "Definir um prazo" : "Não tem prazo"}</Text>
+              <Text style={{ fontSize: 13.5, fontWeight: "600", color: th(INK.soft) }}>{span === 0 ? "Definir um prazo" : "Não tem prazo"}</Text>
             </Pressable>
 
             {more && span > 0 && (
@@ -335,7 +336,7 @@ export default function GoalFormSheet({
                 <Row last>
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                     <Stepper icon={Minus} label="Menos seis meses" disabled={span <= 6} onPress={() => setSpan(Math.max(6, span - 6))} />
-                    <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>{spanLabel(span)}</Text>
+                    <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.6, color: th("#fff") }}>{spanLabel(span)}</Text>
                     <Stepper icon={Plus} label="Mais seis meses" disabled={span >= 360} onPress={() => setSpan(Math.min(360, span + 6))} />
                   </View>
                 </Row>
@@ -347,9 +348,9 @@ export default function GoalFormSheet({
                 {dated ? (
                   <>
                     {label(`Para chegar em ${monthYear(deadlineIn(span))}`)}
-                    <Text style={{ marginTop: 4, fontSize: 28, fontWeight: "800", letterSpacing: -1, color: "#fff" }}>
+                    <Text style={{ marginTop: 4, fontSize: 28, fontWeight: "800", letterSpacing: -1, color: th("#fff") }}>
                       {money(perMonth)}
-                      <Text style={{ fontSize: 14, fontWeight: "500", letterSpacing: 0, color: INK.soft }}> por mês</Text>
+                      <Text style={{ fontSize: 14, fontWeight: "500", letterSpacing: 0, color: th(INK.soft) }}> por mês</Text>
                     </Text>
                   </>
                 ) : (
@@ -363,8 +364,8 @@ export default function GoalFormSheet({
                       }}
                       keyboardType="number-pad"
                       placeholder="Conforme der"
-                      placeholderTextColor={INK.faint}
-                      style={{ marginTop: 4, minWidth: 0, padding: 0, fontSize: 22, fontWeight: "700", color: "#fff" }}
+                      placeholderTextColor={th(INK.faint)}
+                      style={{ marginTop: 4, minWidth: 0, padding: 0, fontSize: 22, fontWeight: "700", color: th("#fff") }}
                     />
                   </>
                 )}
@@ -373,7 +374,7 @@ export default function GoalFormSheet({
           </>
         )}
 
-        {error && <Text style={{ marginTop: 16, fontSize: 13.5, lineHeight: 18, color: RED }}>{error}</Text>}
+        {error && <Text style={{ marginTop: 16, fontSize: 13.5, lineHeight: 18, color: th(RED) }}>{error}</Text>}
 
         <Pressable
           onPress={submit}
@@ -384,12 +385,12 @@ export default function GoalFormSheet({
             borderRadius: 28,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "#fff",
+            backgroundColor: th("#fff", "bg"),
             opacity: saving ? 0.6 : 1,
             transform: [{ scale: pressed ? 0.98 : 1 }],
           })}
         >
-          <Text style={{ fontSize: 16.5, fontWeight: "700", color: "#0B0B0B" }}>{saving ? "Salvando…" : "Salvar alterações"}</Text>
+          <Text style={{ fontSize: 16.5, fontWeight: "700", color: th("#0B0B0B") }}>{saving ? "Salvando…" : "Salvar alterações"}</Text>
         </Pressable>
       </View>
     </BottomSheet>

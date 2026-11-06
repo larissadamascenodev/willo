@@ -2,6 +2,7 @@ import { type ReactNode } from "react";
 import { Pressable, View, type ViewStyle } from "react-native";
 import { INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * A card, one step up from the ground.
  *
@@ -31,8 +32,8 @@ export default function Surface({
   const skin: ViewStyle = {
     borderRadius: radius,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: SURFACE_FILL,
+    borderColor: th("rgba(255,255,255,0.10)", "line"),
+    backgroundColor: th(SURFACE_FILL, "bg"),
     overflow: "hidden",
   };
 
@@ -50,5 +51,5 @@ export default function Surface({
 
 /** The hairline that separates rows inside a card, and on the open page. */
 export function Hairline({ style }: { style?: ViewStyle }) {
-  return <View style={[{ height: 1, backgroundColor: "rgba(255,255,255,0.06)" }, style]} />;
+  return <View style={[{ height: 1, backgroundColor: th("rgba(255,255,255,0.06)", "bg") }, style]} />;
 }

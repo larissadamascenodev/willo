@@ -10,6 +10,7 @@ import { money } from "~/lib/money";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * One movement, written on the page.
  *
@@ -84,7 +85,7 @@ export default function TransactionRow({
         paddingHorizontal: 4,
         paddingVertical: 14,
         borderRadius: 18,
-        backgroundColor: pressed ? "#0A0B0D" : "transparent",
+        backgroundColor: th(pressed ? "#0A0B0D" : "transparent", "bg"),
       })}
     >
       <View
@@ -94,10 +95,10 @@ export default function TransactionRow({
           borderRadius: 22,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: chipFill(discHex),
+          backgroundColor: th(chipFill(discHex), "bg"),
         }}
       >
-        <Icon size={18} color={chipInk(discHex)} />
+        <Icon size={18} color={th(chipInk(discHex))} />
       </View>
 
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -105,7 +106,7 @@ export default function TransactionRow({
           <Text numberOfLines={1} style={[T.rowName, { flexShrink: 1 }]}>
             {tx.name}
           </Text>
-          {isRecurring && <RefreshCw size={12} color={INK.faint} />}
+          {isRecurring && <RefreshCw size={12} color={th(INK.faint)} />}
         </View>
         <Text numberOfLines={1} style={[T.rowNote, { marginTop: 2, fontSize: 12 }]}>
           {under}
@@ -113,11 +114,11 @@ export default function TransactionRow({
       </View>
 
       <View style={{ alignItems: "flex-end" }}>
-        <Text style={[T.rowValue, isReceita && { color: GREEN }]}>
+        <Text style={[T.rowValue, isReceita && { color: th(GREEN) }]}>
           {isReceita ? "+" : "−"}
           {money(tx.amount)}
         </Text>
-        <Text style={{ marginTop: 2, fontSize: 11.5, color: isPending ? AMBER : INK.softer }}>
+        <Text style={{ marginTop: 2, fontSize: 11.5, color: th(isPending ? AMBER : INK.softer) }}>
           {isPending
             ? isReceita
               ? "A receber"

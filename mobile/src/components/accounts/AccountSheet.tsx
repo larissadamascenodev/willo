@@ -11,6 +11,7 @@ import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { INK, RED } from "~/theme/tokens";
 
+import { live, th } from "~/theme/theme";
 /**
  * Opening an account, one question at a time.
  *
@@ -35,7 +36,7 @@ const OTHER_HEX = "#7C8AA5";
 const brl = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-const FIELD = {
+const FIELD = live({
   height: 54,
   minWidth: 0,
   borderRadius: 18,
@@ -45,7 +46,7 @@ const FIELD = {
   paddingHorizontal: 18,
   fontSize: 17,
   color: "#fff",
-} as const;
+} as const);
 
 export default function AccountSheet({
   open,
@@ -194,12 +195,12 @@ export default function AccountSheet({
                   borderRadius: 29,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: "rgba(255,255,255,0.08)",
+                  backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.14)",
+                  borderColor: th("rgba(255,255,255,0.14)", "line"),
                 }}
               >
-                <Plus size={22} color="#fff" strokeWidth={2.2} />
+                <Plus size={22} color={th("#fff")} strokeWidth={2.2} />
               </View>
             </Tile>
           </View>
@@ -228,19 +229,19 @@ export default function AccountSheet({
                     paddingRight: 14,
                     borderRadius: 21,
                     borderWidth: 1,
-                    borderColor: on ? "#fff" : "rgba(255,255,255,0.10)",
-                    backgroundColor: on ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)",
+                    borderColor: th(on ? "#fff" : "rgba(255,255,255,0.10)", "line"),
+                    backgroundColor: th(on ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)", "bg"),
                     transform: [{ scale: pressed ? 0.96 : 1 }],
                   })}
                 >
                   <BankMark name={b.name} hex={b.hex} size={32} />
-                  <Text style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>{b.name}</Text>
+                  <Text style={{ fontSize: 13.5, fontWeight: "600", color: th("#fff") }}>{b.name}</Text>
                 </Pressable>
               );
             })}
           </View>
 
-          <Text style={{ marginTop: 20, fontSize: 12.5, color: INK.soft }}>Ou escreva o nome</Text>
+          <Text style={{ marginTop: 20, fontSize: 12.5, color: th(INK.soft) }}>Ou escreva o nome</Text>
           <TextInput
             value={typed}
             onChangeText={(t) => {
@@ -248,7 +249,7 @@ export default function AccountSheet({
               choose(CATALOG.find((b) => b.name.toLowerCase() === t.trim().toLowerCase()) ?? null);
             }}
             placeholder="Ex: Banco Digital, Cooperativa"
-            placeholderTextColor={INK.faint}
+            placeholderTextColor={th(INK.faint)}
             maxLength={40}
             style={{ ...FIELD, marginTop: 8 }}
           />
@@ -271,12 +272,12 @@ export default function AccountSheet({
                         borderRadius: 13,
                         alignItems: "center",
                         justifyContent: "center",
-                        backgroundColor: c.hex,
+                        backgroundColor: th(c.hex, "bg"),
                         borderWidth: on ? 2 : 0,
-                        borderColor: "#fff",
+                        borderColor: th("#fff", "line"),
                       }}
                     >
-                      {on && <Check size={13} color="#0B0B0B" strokeWidth={3} />}
+                      {on && <Check size={13} color={th("#0B0B0B")} strokeWidth={3} />}
                     </Pressable>
                   );
                 })}
@@ -293,7 +294,7 @@ export default function AccountSheet({
             hitSlop={10}
             style={{ marginTop: 18, alignSelf: "flex-start" }}
           >
-            <Text style={{ fontSize: 13.5, fontWeight: "600", color: INK.soft }}>‹ Voltar à lista</Text>
+            <Text style={{ fontSize: 13.5, fontWeight: "600", color: th(INK.soft) }}>‹ Voltar à lista</Text>
           </Pressable>
         </View>
       )}
@@ -314,17 +315,17 @@ export default function AccountSheet({
                     borderRadius: 22,
                     borderCurve: "continuous",
                     borderWidth: 1,
-                    borderColor: on ? "#fff" : "rgba(255,255,255,0.10)",
-                    backgroundColor: on ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)",
+                    borderColor: th(on ? "#fff" : "rgba(255,255,255,0.10)", "line"),
+                    backgroundColor: th(on ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)", "bg"),
                     padding: 14,
                     transform: [{ scale: pressed ? 0.97 : 1 }],
                   })}
                 >
-                  <Icon size={20} color={on ? "#fff" : INK.soft} strokeWidth={2} />
-                  <Text numberOfLines={1} style={{ marginTop: 12, fontSize: 15, fontWeight: "700", color: "#fff" }}>
+                  <Icon size={20} color={th(on ? "#fff" : INK.soft)} strokeWidth={2} />
+                  <Text numberOfLines={1} style={{ marginTop: 12, fontSize: 15, fontWeight: "700", color: th("#fff") }}>
                     {k.label}
                   </Text>
-                  <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: INK.softer }}>
+                  <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: th(INK.softer) }}>
                     {k.note}
                   </Text>
                 </Pressable>
@@ -332,7 +333,7 @@ export default function AccountSheet({
             })}
           </View>
 
-          <Text style={{ marginTop: 22, fontSize: 12.5, color: INK.soft }}>Como quer chamar</Text>
+          <Text style={{ marginTop: 22, fontSize: 12.5, color: th(INK.soft) }}>Como quer chamar</Text>
           <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 12 }}>
             <BankMark name={name.trim() || chosen || "?"} hex={hex} size={54} />
             <TextInput
@@ -343,12 +344,12 @@ export default function AccountSheet({
                 setError(null);
               }}
               placeholder="Nome da conta"
-              placeholderTextColor={INK.faint}
+              placeholderTextColor={th(INK.faint)}
               maxLength={40}
               style={{ ...FIELD, flex: 1 }}
             />
           </View>
-          {error && <Text style={{ marginTop: 10, fontSize: 13, color: RED }}>{error}</Text>}
+          {error && <Text style={{ marginTop: 10, fontSize: 13, color: th(RED) }}>{error}</Text>}
         </View>
       )}
 
@@ -364,7 +365,7 @@ export default function AccountSheet({
           />
           <View style={{ marginTop: 26, flexDirection: "row", alignItems: "center", gap: 12 }}>
             <BankMark name={name.trim() || chosen} hex={hex} size={44} />
-            <Text numberOfLines={1} style={{ flex: 1, fontSize: 16, fontWeight: "600", color: "#fff" }}>
+            <Text numberOfLines={1} style={{ flex: 1, fontSize: 16, fontWeight: "600", color: th("#fff") }}>
               {name.trim()}
             </Text>
           </View>
@@ -382,14 +383,14 @@ export default function AccountSheet({
               fontSize: 44,
               fontWeight: "800",
               letterSpacing: -1.6,
-              color: cents === 0 ? INK.faint : "#fff",
+              color: th(cents === 0 ? INK.faint : "#fff"),
               padding: 0,
             }}
           />
           <Pressable onPress={() => setCents(0)} hitSlop={10} style={{ marginTop: 14, alignSelf: "flex-start", opacity: cents === 0 ? 0.4 : 1 }}>
-            <Text style={{ fontSize: 13.5, fontWeight: "600", color: INK.soft }}>Começar zerada</Text>
+            <Text style={{ fontSize: 13.5, fontWeight: "600", color: th(INK.soft) }}>Começar zerada</Text>
           </Pressable>
-          {error && <Text style={{ marginTop: 12, fontSize: 13, color: RED }}>{error}</Text>}
+          {error && <Text style={{ marginTop: 12, fontSize: 13, color: th(RED) }}>{error}</Text>}
         </View>
       )}
     </StepSheet>
@@ -400,8 +401,8 @@ export default function AccountSheet({
 function Tile({ label, on, onPress, children }: { label: string; on: boolean; onPress: () => void; children: ReactNode }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => ({ width: "25%", alignItems: "center", transform: [{ scale: pressed ? 0.94 : 1 }] })}>
-      <View style={{ padding: 3, borderRadius: 24, borderWidth: 2, borderColor: on ? "#fff" : "transparent" }}>{children}</View>
-      <Text numberOfLines={1} style={{ marginTop: 6, maxWidth: "100%", paddingHorizontal: 2, fontSize: 11.5, fontWeight: on ? "700" : "500", color: on ? "#fff" : INK.soft }}>
+      <View style={{ padding: 3, borderRadius: 24, borderWidth: 2, borderColor: th(on ? "#fff" : "transparent", "line") }}>{children}</View>
+      <Text numberOfLines={1} style={{ marginTop: 6, maxWidth: "100%", paddingHorizontal: 2, fontSize: 11.5, fontWeight: on ? "700" : "500", color: th(on ? "#fff" : INK.soft) }}>
         {label}
       </Text>
     </Pressable>

@@ -27,6 +27,7 @@ import { firstName } from "~/lib/greeting";
 import { INK } from "~/theme/tokens";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
+import { th } from "~/theme/theme";
 /**
  * The top of the home, with Willo in it.
  *
@@ -190,16 +191,16 @@ export default function OrbHero({ slides, lines = false }: { slides: InsightSlid
         {listening ? (
           /* Swollen, the sphere reaches further down: the words keep clear of it. */
           <Animated.View entering={FadeIn.duration(220)} style={{ alignItems: "center", marginTop: lines ? 0 : orb * 0.09 }}>
-            <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Estou ouvindo…</Text>
-            <Text style={{ marginTop: 3, fontSize: 13.5, color: INK.soft, textAlign: "center" }}>Pode falar. Eu paro quando você parar.</Text>
+            <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>Estou ouvindo…</Text>
+            <Text style={{ marginTop: 3, fontSize: 13.5, color: th(INK.soft), textAlign: "center" }}>Pode falar. Eu paro quando você parar.</Text>
           </Animated.View>
         ) : reading ? (
           <Animated.View entering={FadeIn.duration(220)} style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: "#fff" }}>Pensando…</Text>
+            <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>Pensando…</Text>
           </Animated.View>
         ) : entry.message ? (
           <Animated.View entering={FadeIn.duration(220)} style={{ paddingHorizontal: 12 }}>
-            <Text numberOfLines={3} style={{ fontSize: 14.5, lineHeight: 20, color: "#F9CE4E", textAlign: "center" }}>{entry.message}</Text>
+            <Text numberOfLines={3} style={{ fontSize: 14.5, lineHeight: 20, color: th("#F9CE4E"), textAlign: "center" }}>{entry.message}</Text>
           </Animated.View>
         ) : (
           <View pointerEvents={lines ? "none" : "auto"} style={{ alignSelf: "stretch" }}>
@@ -217,12 +218,12 @@ export default function OrbHero({ slides, lines = false }: { slides: InsightSlid
       <View style={{ marginTop: 4, height: FOOT, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 }}>
         {listening ? (
           <Pressable onPress={() => void entry.cancel()} hitSlop={10} style={({ pressed }) => ({ paddingVertical: 4, paddingHorizontal: 14, opacity: pressed ? 0.6 : 1 })}>
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.7)" }}>Cancelar</Text>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: th("rgba(255,255,255,0.7)") }}>Cancelar</Text>
           </Pressable>
         ) : !reading ? (
           <>
-            <Mic size={12} color={INK.softer} strokeWidth={2.2} />
-            <Text style={{ fontSize: 12.5, color: INK.softer }}>{lines ? "Segure para falar · Dois toques para um gasto rápido" : "Segure para falar"}</Text>
+            <Mic size={12} color={th(INK.softer)} strokeWidth={2.2} />
+            <Text style={{ fontSize: 12.5, color: th(INK.softer) }}>{lines ? "Segure para falar · Dois toques para um gasto rápido" : "Segure para falar"}</Text>
           </>
         ) : null}
       </View>
@@ -263,7 +264,7 @@ export function Typewriter({ text, onDone, failed }: { text: string; onDone: () 
   }, [shown, text]);
 
   return (
-    <Text numberOfLines={3} style={{ fontSize: 16, lineHeight: 21, letterSpacing: -0.2, color: failed ? "#F9CE4E" : "rgba(255,255,255,0.92)", textAlign: "center" }}>
+    <Text numberOfLines={3} style={{ fontSize: 16, lineHeight: 21, letterSpacing: -0.2, color: th(failed ? "#F9CE4E" : "rgba(255,255,255,0.92)"), textAlign: "center" }}>
       {text.slice(0, shown)}
       <Text style={{ color: "transparent" }}>{text.slice(shown)}</Text>
     </Text>
@@ -280,9 +281,9 @@ export function WilloGlow({ height }: { height: number }) {
     <Svg pointerEvents="none" width={width} height={height} style={{ position: "absolute", top: 0, left: 0 }}>
       <Defs>
         <RadialGradient id="willo-light" cx="50%" cy="34%" rx="80%" ry="50%">
-          <Stop offset="0" stopColor="#CFE3FF" stopOpacity={0.16} />
-          <Stop offset="0.4" stopColor="#8DB8FF" stopOpacity={0.07} />
-          <Stop offset="1" stopColor="#000000" stopOpacity={0} />
+          <Stop offset="0" stopColor={th("#CFE3FF", "grad")} stopOpacity={0.16} />
+          <Stop offset="0.4" stopColor={th("#8DB8FF", "grad")} stopOpacity={0.07} />
+          <Stop offset="1" stopColor={th("#000000", "grad")} stopOpacity={0} />
         </RadialGradient>
       </Defs>
       <Rect x={0} y={0} width={width} height={height} fill="url(#willo-light)" />

@@ -5,6 +5,7 @@ import { useHiddenValues, setHiddenValues } from "@/hooks/useHiddenValues";
 import type { WidgetSize } from "@/lib/homeWidgets";
 import { GREEN } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /** What can be done to the card you are holding, opened beside it. */
 
 export interface WidgetMenuTarget {
@@ -52,7 +53,7 @@ export default function WidgetMenu({
             justifyContent: "center",
             gap: 8,
             borderTopWidth: 1,
-            borderTopColor: "rgba(255,255,255,0.08)",
+            borderTopColor: th("rgba(255,255,255,0.08)", "line"),
             paddingHorizontal: 12,
             paddingVertical: 10,
           }}
@@ -92,12 +93,12 @@ function SizeButton({
         justifyContent: "center",
         borderRadius: 14,
         borderWidth: 1,
-        borderColor: active ? "rgba(200,243,109,0.6)" : "rgba(255,255,255,0.10)",
-        backgroundColor: active ? "rgba(200,243,109,0.12)" : "rgba(255,255,255,0.04)",
+        borderColor: th(active ? "rgba(200,243,109,0.6)" : "rgba(255,255,255,0.10)", "line"),
+        backgroundColor: th(active ? "rgba(200,243,109,0.12)" : "rgba(255,255,255,0.04)", "bg"),
         opacity: pressed ? 0.7 : 1,
       })}
     >
-      <Icon size={20} color={active ? GREEN : "rgba(255,255,255,0.7)"} strokeWidth={1.8} />
+      <Icon size={20} color={th(active ? GREEN : "rgba(255,255,255,0.7)")} strokeWidth={1.8} />
     </Pressable>
   );
 }

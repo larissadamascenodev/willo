@@ -7,6 +7,7 @@ import Bar from "~/components/Bar";
 import { money } from "~/lib/money";
 import { GREEN, INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * A card, as a face.
  *
@@ -28,10 +29,10 @@ export const FREE_LIMIT_HEX = "#C8F36D";
  */
 export function statusPill(hex: string, strong = false) {
   return {
-    backgroundColor: withAlpha(hex, strong ? 0.26 : 0.16),
+    backgroundColor: th(withAlpha(hex, strong ? 0.26 : 0.16), "bg"),
     borderWidth: 1,
-    borderColor: withAlpha(shade(hex, -0.28), 0.95),
-    color: shade(hex, 0.66),
+    borderColor: th(withAlpha(shade(hex, -0.28), 0.95), "line"),
+    color: th(shade(hex, 0.66)),
   };
 }
 
@@ -82,8 +83,8 @@ export default function CardFaceTile({
           overflow: "hidden",
           borderRadius: 24,
           borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.10)",
-          backgroundColor: "rgba(255,255,255,0.062)",
+          borderColor: th("rgba(255,255,255,0.10)", "line"),
+          backgroundColor: th("rgba(255,255,255,0.062)", "bg"),
           paddingHorizontal: 18,
           paddingTop: 17,
           paddingBottom: 18,
@@ -94,12 +95,12 @@ export default function CardFaceTile({
           <BankMark name={card.name} hex={hex} />
 
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "700", color: "#fff" }}>
+            <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "700", color: th("#fff") }}>
               {card.name}
             </Text>
-            <Text numberOfLines={1} style={{ fontSize: 11.5, color: INK.softer }}>
+            <Text numberOfLines={1} style={{ fontSize: 11.5, color: th(INK.softer) }}>
               •••• {card.lastFour ?? "••••"}
-              <Text style={{ color: "rgba(255,255,255,0.2)" }}> · </Text>
+              <Text style={{ color: th("rgba(255,255,255,0.2)") }}> · </Text>
               vence dia {card.dueDay}
             </Text>
           </View>
@@ -114,8 +115,8 @@ export default function CardFaceTile({
                 paddingVertical: 4,
                 fontSize: 10.5,
                 fontWeight: "700",
-                backgroundColor: "rgba(200,243,109,0.12)",
-                color: GREEN,
+                backgroundColor: th("rgba(200,243,109,0.12)", "bg"),
+                color: th(GREEN),
               }}
             >
               Em dia
@@ -144,12 +145,12 @@ export default function CardFaceTile({
             fontSize: 29,
             fontWeight: "800",
             letterSpacing: -1,
-            color: owed > 0 ? "#fff" : INK.softer,
+            color: th(owed > 0 ? "#fff" : INK.softer),
           }}
         >
           {money(owed)}
         </Text>
-        <Text numberOfLines={1} style={{ marginTop: 6, fontSize: 12, color: INK.softer }}>
+        <Text numberOfLines={1} style={{ marginTop: 6, fontSize: 12, color: th(INK.softer) }}>
           {owed > 0 ? status.label : "Sem fatura em aberto"}
         </Text>
 
@@ -178,15 +179,15 @@ export default function CardFaceTile({
             gap: 12,
           }}
         >
-          <Text numberOfLines={1} style={{ fontSize: 11.5, color: INK.softer }}>
-            Usado <Text style={{ fontWeight: "600", color: "#fff" }}>{money(card.used)}</Text>
+          <Text numberOfLines={1} style={{ fontSize: 11.5, color: th(INK.softer) }}>
+            Usado <Text style={{ fontWeight: "600", color: th("#fff") }}>{money(card.used)}</Text>
           </Text>
-          <Text numberOfLines={1} style={{ fontSize: 11.5, color: INK.softer }}>
+          <Text numberOfLines={1} style={{ fontSize: 11.5, color: th(INK.softer) }}>
             Disponível{" "}
             <Text
               style={{
                 fontWeight: "600",
-                color: available > 0 ? "#fff" : "rgba(255,255,255,0.55)",
+                color: th(available > 0 ? "#fff" : "rgba(255,255,255,0.55)"),
               }}
             >
               {money(available)}

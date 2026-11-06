@@ -12,6 +12,7 @@ import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
 import { AMBER, INCOME, INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Everything about one entry on one page — the check of the guided entry, and the editor.
  *
@@ -103,16 +104,16 @@ export default function EntryForm({
     <View>
       {/* Out or in */}
       {!lockedCard && (
-        <View style={{ marginTop: 14, flexDirection: "row", padding: 3, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.06)" }}>
+        <View style={{ marginTop: 14, flexDirection: "row", padding: 3, borderRadius: 22, backgroundColor: th("rgba(255,255,255,0.06)", "bg") }}>
           {(["despesa", "receita"] as const).map((t) => {
             const on = v.type === t;
             return (
               <Pressable
                 key={t}
                 onPress={() => onChange(t === "receita" ? { type: t, method: "conta", whereId: v.method === "conta" ? v.whereId : null, repeat: v.repeat === "parcelado" ? "unica" : v.repeat, parts: null } : { type: t })}
-                style={({ pressed }) => ({ flex: 1, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: on ? "rgba(255,255,255,0.16)" : "transparent", opacity: pressed ? 0.7 : 1 })}
+                style={({ pressed }) => ({ flex: 1, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: th(on ? "rgba(255,255,255,0.16)" : "transparent", "bg"), opacity: pressed ? 0.7 : 1 })}
               >
-                <Text style={{ fontSize: 14, fontWeight: "700", color: on ? (t === "receita" ? INCOME : "#fff") : INK.soft }}>{t === "despesa" ? "Despesa" : "Receita"}</Text>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: th(on ? (t === "receita" ? INCOME : "#fff") : INK.soft) }}>{t === "despesa" ? "Despesa" : "Receita"}</Text>
               </Pressable>
             );
           })}
@@ -121,17 +122,17 @@ export default function EntryForm({
 
       {/* The amount, large, and the words */}
       <View style={{ marginTop: 18, alignItems: "center" }}>
-        <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.4, color: INK.softer }}>
+        <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.4, color: th(INK.softer) }}>
           {partOf ? "VALOR DA PARCELA" : parcelado ? "VALOR TOTAL" : v.repeat === "fixa" ? "VALOR POR MÊS" : "VALOR"}
         </Text>
         <TextInput
           value={money(v.cents / 100)}
           onChangeText={(t) => onChange({ cents: Math.min(Number(t.replace(/\D/g, "") || "0"), 99999999) })}
           keyboardType="number-pad"
-          style={[nums, { marginTop: 2, padding: 0, minWidth: 160, textAlign: "center", fontSize: 40, fontWeight: "800", letterSpacing: -1.4, color: income ? INCOME : "#fff" }]}
+          style={[nums, { marginTop: 2, padding: 0, minWidth: 160, textAlign: "center", fontSize: 40, fontWeight: "800", letterSpacing: -1.4, color: th(income ? INCOME : "#fff") }]}
         />
         {parcelado && v.parts ? (
-          <Text style={[nums, { marginTop: 2, fontSize: 13.5, color: INK.soft }]}>
+          <Text style={[nums, { marginTop: 2, fontSize: 13.5, color: th(INK.soft) }]}>
             {v.parts}x de {money(v.cents / 100 / v.parts)}
           </Text>
         ) : null}
@@ -141,36 +142,36 @@ export default function EntryForm({
         onChangeText={(name) => onChange({ name })}
         maxLength={40}
         placeholder="Descrição"
-        placeholderTextColor={INK.faint}
-        style={{ marginTop: 14, height: 50, borderRadius: 18, paddingHorizontal: 16, textAlign: "center", fontSize: 17, fontWeight: "600", color: "#fff", backgroundColor: "rgba(255,255,255,0.06)" }}
+        placeholderTextColor={th(INK.faint)}
+        style={{ marginTop: 14, height: 50, borderRadius: 18, paddingHorizontal: 16, textAlign: "center", fontSize: 17, fontWeight: "600", color: th("#fff"), backgroundColor: th("rgba(255,255,255,0.06)", "bg") }}
       />
 
       {/* Whether it is settled, then what it is, how it was paid, whether it repeats, the day */}
-      <View style={{ marginTop: 14, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.04)", overflow: "hidden" }}>
+      <View style={{ marginTop: 14, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: th("rgba(255,255,255,0.09)", "line"), backgroundColor: th("rgba(255,255,255,0.04)", "bg"), overflow: "hidden" }}>
         {credit ? (
           <View style={{ minHeight: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 10 }}>
             <RowMark>
-              <CreditCard size={15} color="#fff" strokeWidth={2.1} />
+              <CreditCard size={15} color={th("#fff")} strokeWidth={2.1} />
             </RowMark>
             {card ? (
-              <Text style={{ flex: 1, fontSize: 14.5, color: INK.soft }}>
-                Entra na fatura de <Text style={{ fontWeight: "700", color: "#fff" }}>{invoiceMonthOf(v.date, card.closing_day).label}</Text> do {card.name}
+              <Text style={{ flex: 1, fontSize: 14.5, color: th(INK.soft) }}>
+                Entra na fatura de <Text style={{ fontWeight: "700", color: th("#fff") }}>{invoiceMonthOf(v.date, card.closing_day).label}</Text> do {card.name}
               </Text>
             ) : (
-              <Text style={{ flex: 1, fontSize: 14.5, color: INK.soft }}>Entra na fatura do cartão</Text>
+              <Text style={{ flex: 1, fontSize: 14.5, color: th(INK.soft) }}>Entra na fatura do cartão</Text>
             )}
           </View>
         ) : (
           <Pressable
             onPress={() => onChange({ status: v.status === "pago" ? "pendente" : "pago" })}
-            style={({ pressed }) => ({ minHeight: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: pressed ? "rgba(255,255,255,0.06)" : "transparent" })}
+            style={({ pressed }) => ({ minHeight: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: th(pressed ? "rgba(255,255,255,0.06)" : "transparent", "bg") })}
           >
             <RowMark>
-              <Check size={15} color="#fff" strokeWidth={2.4} />
+              <Check size={15} color={th("#fff")} strokeWidth={2.4} />
             </RowMark>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{income ? "Já recebi" : "Já está pago"}</Text>
-              <Text style={{ marginTop: 1, fontSize: 12.5, color: INK.soft }}>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>{income ? "Já recebi" : "Já está pago"}</Text>
+              <Text style={{ marginTop: 1, fontSize: 12.5, color: th(INK.soft) }}>
                 {v.status === "pago" ? (income ? "Entrou na conta" : "Saiu da conta") : isAhead(v.date) ? "Agendado" : income ? "A receber" : "Pendente"}
               </Text>
             </View>
@@ -179,8 +180,8 @@ export default function EntryForm({
         )}
         <Row
           icon={
-            <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-              <CatIcon size={15} color={chipInk(hex)} strokeWidth={2.2} />
+            <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+              <CatIcon size={15} color={th(chipInk(hex))} strokeWidth={2.2} />
             </View>
           }
           label="Categoria"
@@ -190,7 +191,7 @@ export default function EntryForm({
         />
 
         <Row
-          icon={<RowMark>{picked ? <BankMark name={picked.name} hex={colorFor(picked.name, picked.color)} size={32} /> : credit ? <CreditCard size={15} color="#fff" /> : <Landmark size={15} color="#fff" />}</RowMark>}
+          icon={<RowMark>{picked ? <BankMark name={picked.name} hex={colorFor(picked.name, picked.color)} size={32} /> : credit ? <CreditCard size={15} color={th("#fff")} /> : <Landmark size={15} color={th("#fff")} />}</RowMark>}
           label={income ? "Entrou em" : "Pagamento"}
           value={payValue}
           missing="Escolher"
@@ -200,13 +201,13 @@ export default function EntryForm({
         />
         {open === "pay" && !lockedCard && (
           <Animated.View entering={FadeIn.duration(180)} style={{ paddingHorizontal: 12, paddingBottom: 12, gap: 8 }}>
-            <Text style={{ paddingHorizontal: 2, fontSize: 13, color: INK.soft }}>
+            <Text style={{ paddingHorizontal: 2, fontSize: 13, color: th(INK.soft) }}>
               {payStep === "method" ? "Foi no débito ou no crédito?" : credit ? "Em qual cartão?" : income ? "Em qual conta entrou?" : "De qual conta saiu?"}
             </Text>
             {payStep === "method" ? (
               <View style={{ flexDirection: "row", gap: 8 }}>
-                <Choice icon={<Landmark size={18} color="#fff" strokeWidth={2.1} />} label="Débito" on={v.method === "conta"} onPress={() => pickMethod("conta")} />
-                <Choice icon={<CreditCard size={18} color="#fff" strokeWidth={2.1} />} label="Crédito" on={v.method === "cartao"} onPress={() => pickMethod("cartao")} />
+                <Choice icon={<Landmark size={18} color={th("#fff")} strokeWidth={2.1} />} label="Débito" on={v.method === "conta"} onPress={() => pickMethod("conta")} />
+                <Choice icon={<CreditCard size={18} color={th("#fff")} strokeWidth={2.1} />} label="Crédito" on={v.method === "cartao"} onPress={() => pickMethod("cartao")} />
               </View>
             ) : (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -231,7 +232,7 @@ export default function EntryForm({
         <Row
           icon={
             <RowMark>
-              <RepeatIcon size={15} color="#fff" strokeWidth={2.1} />
+              <RepeatIcon size={15} color={th("#fff")} strokeWidth={2.1} />
             </RowMark>
           }
           label="Repetição"
@@ -257,7 +258,7 @@ export default function EntryForm({
         <Row
           icon={
             <RowMark>
-              <CalendarDays size={15} color="#fff" strokeWidth={2.1} />
+              <CalendarDays size={15} color={th("#fff")} strokeWidth={2.1} />
             </RowMark>
           }
           label={v.repeat === "fixa" ? "A partir de" : "Data"}
@@ -278,7 +279,7 @@ export default function EntryForm({
 
 /** The round mark at the start of a row. */
 function RowMark({ children }: { children: React.ReactNode }) {
-  return <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>{children}</View>;
+  return <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg"), overflow: "hidden" }}>{children}</View>;
 }
 
 /** One line of the group: its mark, what it is, what it is set to; touched, its choices open under it. */
@@ -313,18 +314,18 @@ function Row({
         paddingHorizontal: 14,
         paddingVertical: 10,
         borderTopWidth: first ? 0 : 1,
-        borderTopColor: "rgba(255,255,255,0.07)",
-        backgroundColor: pressed ? "rgba(255,255,255,0.06)" : "transparent",
+        borderTopColor: th("rgba(255,255,255,0.07)", "line"),
+        backgroundColor: th(pressed ? "rgba(255,255,255,0.06)" : "transparent", "bg"),
       })}
     >
       {icon}
-      <Text style={{ fontSize: 14.5, color: INK.soft }}>{label}</Text>
-      <Text numberOfLines={1} style={{ flex: 1, textAlign: "right", fontSize: 15, fontWeight: "600", color: value ? "#fff" : AMBER }}>
+      <Text style={{ fontSize: 14.5, color: th(INK.soft) }}>{label}</Text>
+      <Text numberOfLines={1} style={{ flex: 1, textAlign: "right", fontSize: 15, fontWeight: "600", color: th(value ? "#fff" : AMBER) }}>
         {value ?? missing ?? ""}
       </Text>
       {!disabled && (
         <View style={{ transform: [{ rotate: open ? "90deg" : "0deg" }] }}>
-          <ChevronRight size={16} color={INK.softer} />
+          <ChevronRight size={16} color={th(INK.softer)} />
         </View>
       )}
     </Pressable>
@@ -378,11 +379,11 @@ export function DatePick({
         <Animated.View entering={FadeIn.duration(180)} style={{ marginTop: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
             <Pressable accessibilityLabel="Mês anterior" hitSlop={8} onPress={() => setCal(({ m, y }) => (m === 0 ? { m: 11, y: y - 1 } : { m: m - 1, y }))} style={{ padding: 6 }}>
-              <ChevronLeft size={18} color="#fff" />
+              <ChevronLeft size={18} color={th("#fff")} />
             </Pressable>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff", textTransform: "capitalize" }}>{new Date(cal.y, cal.m, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</Text>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff"), textTransform: "capitalize" }}>{new Date(cal.y, cal.m, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</Text>
             <Pressable accessibilityLabel="Próximo mês" hitSlop={8} onPress={() => setCal(({ m, y }) => (m === 11 ? { m: 0, y: y + 1 } : { m: m + 1, y }))} style={{ padding: 6 }}>
-              <ChevronRight size={18} color="#fff" />
+              <ChevronRight size={18} color={th("#fff")} />
             </Pressable>
           </View>
           <MonthCalendar
@@ -401,11 +402,11 @@ export function DatePick({
         </Animated.View>
       )}
       {quiet ? null : credit ? (
-        <Text style={{ marginTop: 10, fontSize: 12.5, color: INK.soft }}>
+        <Text style={{ marginTop: 10, fontSize: 12.5, color: th(INK.soft) }}>
           {card ? `Entra na fatura de ${invoiceMonthOf(v.date, card.closing_day).label} do ${card.name}.` : "Entra na fatura do cartão."}
         </Text>
       ) : isAhead(v.date) ? (
-        <Text style={{ marginTop: 10, fontSize: 12.5, color: INK.soft }}>Fica agendado para {dayLabel(v.date).toLowerCase()}.</Text>
+        <Text style={{ marginTop: 10, fontSize: 12.5, color: th(INK.soft) }}>Fica agendado para {dayLabel(v.date).toLowerCase()}.</Text>
       ) : null}
     </View>
   );

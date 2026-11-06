@@ -11,6 +11,7 @@ import { categoryIcon } from "~/lib/categoryIcon";
 import { money } from "~/lib/money";
 import { GREEN, INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * What you finish paying in the month chosen on the chart.
  *
@@ -63,7 +64,7 @@ export default function InstallmentPayoffs({
 
   return (
     <>
-      <View style={{ overflow: "hidden", borderRadius: 22, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", backgroundColor: SURFACE_FILL }}>
+      <View style={{ overflow: "hidden", borderRadius: 22, borderCurve: "continuous", borderWidth: 1, borderColor: th("rgba(255,255,255,0.10)", "line"), backgroundColor: th(SURFACE_FILL, "bg") }}>
         <Pressable
           disabled={ending.length === 0}
           onPress={() => setOpen(true)}
@@ -84,52 +85,52 @@ export default function InstallmentPayoffs({
                       height: 32,
                       borderRadius: 16,
                       borderWidth: 2,
-                      borderColor: "#121316",
+                      borderColor: th("#121316", "line"),
                       alignItems: "center",
                       justifyContent: "center",
-                      backgroundColor: chipFill(hex),
+                      backgroundColor: th(chipFill(hex), "bg"),
                     }}
                   >
-                    <Icon size={14} color={chipInk(hex)} strokeWidth={2} />
+                    <Icon size={14} color={th(chipInk(hex))} strokeWidth={2} />
                   </View>
                 );
               })}
             </View>
           ) : (
-            <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.06)" }}>
-              <Check size={14} color={INK.softer} strokeWidth={2.6} />
+            <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.06)", "bg") }}>
+              <Check size={14} color={th(INK.softer)} strokeWidth={2.6} />
             </View>
           )}
 
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "700", color: "#fff" }}>
+            <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "700", color: th("#fff") }}>
               {ending.length === 0 ? "Nenhuma compra termina" : `${ending.length} ${ending.length === 1 ? "compra termina" : "compras terminam"}`}
             </Text>
-            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: INK.soft }}>
+            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>
               {ending.length === 0 ? (
                 `${selected === 0 ? "Este mês" : name(picked)} segue igual`
               ) : after ? (
                 <>
-                  <Text style={[nums, { fontWeight: "700", color: GREEN }]}>+{money(freed)}</Text>/mês a partir de {SHORT[after.month]}
+                  <Text style={[nums, { fontWeight: "700", color: th(GREEN) }]}>+{money(freed)}</Text>/mês a partir de {SHORT[after.month]}
                 </>
               ) : (
                 "É o último mês de parcelas"
               )}
             </Text>
           </View>
-          {ending.length > 0 && <ChevronRight size={16} color={INK.softer} />}
+          {ending.length > 0 && <ChevronRight size={16} color={th(INK.softer)} />}
         </Pressable>
 
         {next && (
           <Pressable
             onPress={() => onSelect(nextIndex)}
-            style={({ pressed }) => ({ marginHorizontal: 14, paddingVertical: 11, borderTopWidth: 1, borderTopColor: RULE, flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? 0.6 : 1 })}
+            style={({ pressed }) => ({ marginHorizontal: 14, paddingVertical: 11, borderTopWidth: 1, borderTopColor: th(RULE, "line"), flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? 0.6 : 1 })}
           >
-            <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: INK.soft }}>
-              Próxima em <Text style={{ fontWeight: "600", color: "#fff" }}>{name(next)}</Text> · {nextEnding[0].name}
+            <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: th(INK.soft) }}>
+              Próxima em <Text style={{ fontWeight: "600", color: th("#fff") }}>{name(next)}</Text> · {nextEnding[0].name}
               {nextEnding.length > 1 ? ` e mais ${nextEnding.length - 1}` : ""}
             </Text>
-            <ChevronRight size={15} color={INK.softer} />
+            <ChevronRight size={15} color={th(INK.softer)} />
           </Pressable>
         )}
       </View>
@@ -141,27 +142,27 @@ export default function InstallmentPayoffs({
         subtitle={`${ending.length} ${ending.length === 1 ? "compra termina" : "compras terminam"} ${selected === 0 ? "este mês" : `em ${name(picked)}`}`}
       >
         {after && freed > 0 && (
-          <View style={{ marginBottom: 6, borderRadius: 16, padding: 14, backgroundColor: "rgba(200,243,109,0.08)" }}>
-            <Text style={{ fontSize: 12.5, color: INK.soft }}>A partir de {name(after)}</Text>
-            <Text style={[nums, { marginTop: 2, fontSize: 22, fontWeight: "800", letterSpacing: -0.6, color: GREEN }]}>+{money(freed)} por mês</Text>
+          <View style={{ marginBottom: 6, borderRadius: 16, padding: 14, backgroundColor: th("rgba(200,243,109,0.08)", "bg") }}>
+            <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>A partir de {name(after)}</Text>
+            <Text style={[nums, { marginTop: 2, fontSize: 22, fontWeight: "800", letterSpacing: -0.6, color: th(GREEN) }]}>+{money(freed)} por mês</Text>
           </View>
         )}
         {ending.map((part, i) => {
           const Icon = categoryIcon(part.category, customCats);
           const hex = categoryHex(part.category, customCats);
           return (
-            <View key={part.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: "rgba(255,255,255,0.06)" }}>
-              <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-                <Icon size={17} color={chipInk(hex)} strokeWidth={2} />
+            <View key={part.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: th("rgba(255,255,255,0.06)", "line") }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+                <Icon size={17} color={th(chipInk(hex))} strokeWidth={2} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{part.name}</Text>
+                <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>{part.name}</Text>
                 <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 5 }}>
-                  <Check size={11} color={GREEN} strokeWidth={3} />
-                  <Text style={{ fontSize: 12, color: INK.softer }}>{part.total} de {part.total} parcelas</Text>
+                  <Check size={11} color={th(GREEN)} strokeWidth={3} />
+                  <Text style={{ fontSize: 12, color: th(INK.softer) }}>{part.total} de {part.total} parcelas</Text>
                 </View>
               </View>
-              <Text style={[nums, { fontSize: 15, fontWeight: "600", color: "#fff" }]}>{money(part.amount)}</Text>
+              <Text style={[nums, { fontSize: 15, fontWeight: "600", color: th("#fff") }]}>{money(part.amount)}</Text>
             </View>
           );
         })}

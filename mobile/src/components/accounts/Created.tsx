@@ -15,6 +15,7 @@ import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * The moment the thing exists.
  *
@@ -69,7 +70,7 @@ export default function Created({
         <Animated.View style={markStyle}>
           <View
             style={{
-              shadowColor: accent,
+              shadowColor: th(accent, "line"),
               shadowOpacity: 0.55,
               shadowRadius: 28,
               shadowOffset: { width: 0, height: 8 },
@@ -81,8 +82,8 @@ export default function Created({
       </View>
 
       <Animated.View entering={FadeInDown.delay(520).duration(420)} style={{ marginTop: 22, alignItems: "center" }}>
-        <Text style={{ fontSize: 28, fontWeight: "800", letterSpacing: -0.9, color: "#fff", textAlign: "center" }}>{title}</Text>
-        <Text style={{ marginTop: 8, fontSize: 15, lineHeight: 21, color: INK.soft, textAlign: "center" }}>{subtitle.replace(/R\$\s/g, "R$ ")}</Text>
+        <Text style={{ fontSize: 28, fontWeight: "800", letterSpacing: -0.9, color: th("#fff"), textAlign: "center" }}>{title}</Text>
+        <Text style={{ marginTop: 8, fontSize: 15, lineHeight: 21, color: th(INK.soft), textAlign: "center" }}>{subtitle.replace(/R\$\s/g, "R$ ")}</Text>
       </Animated.View>
 
       <View style={{ flex: 1 }} />
@@ -95,13 +96,13 @@ export default function Created({
             borderRadius: 27,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "rgba(255,255,255,0.12)",
+            backgroundColor: th("rgba(255,255,255,0.12)", "bg"),
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.16)",
+            borderColor: th("rgba(255,255,255,0.16)", "line"),
             transform: [{ scale: pressed ? 0.98 : 1 }],
           })}
         >
-          <Text style={{ fontSize: 16.5, fontWeight: "700", color: "#fff" }}>Pronto</Text>
+          <Text style={{ fontSize: 16.5, fontWeight: "700", color: th("#fff") }}>Pronto</Text>
         </Pressable>
       </Animated.View>
     </View>
@@ -122,7 +123,7 @@ function Ring({ accent, delay }: { accent: string; delay: number }) {
     <Animated.View
       pointerEvents="none"
       style={[
-        { position: "absolute", width: 150, height: 150, borderRadius: 75, borderWidth: 2, borderColor: accent },
+        { position: "absolute", width: 150, height: 150, borderRadius: 75, borderWidth: 2, borderColor: th(accent, "line") },
         style,
       ]}
     />
@@ -158,7 +159,7 @@ function Spark({ index, accent }: { index: number; accent: string }) {
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: index % 3 === 0 ? "#fff" : accent,
+          backgroundColor: th(index % 3 === 0 ? "#fff" : accent, "bg"),
         },
         style,
       ]}

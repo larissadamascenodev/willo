@@ -58,6 +58,7 @@ import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import VoiceEntrySheet from "~/components/registro/VoiceEntrySheet";
 import { GREEN, INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Willo: talk to him, or tell him what you spent, in the same place.
  *
@@ -875,11 +876,11 @@ export default function Registro() {
                 setAtSphere(true);
               }}
             >
-              <ChevronLeft size={18} color="rgba(255,255,255,0.88)" strokeWidth={2.4} />
+              <ChevronLeft size={18} color={th("rgba(255,255,255,0.88)")} strokeWidth={2.4} />
             </HeaderButton>
           ) : (
             <HeaderButton label={hasEntries ? "Concluir" : "Fechar"} onPress={close}>
-              <X size={17} color="rgba(255,255,255,0.88)" strokeWidth={2.4} />
+              <X size={17} color={th("rgba(255,255,255,0.88)")} strokeWidth={2.4} />
             </HeaderButton>
           )}
           <View style={{ flex: 1, minWidth: 0, alignItems: "center" }}>
@@ -901,10 +902,10 @@ export default function Registro() {
             </View>
           </View>
           <HeaderButton label="Conversas anteriores" onPress={() => setHistoryOpen(true)}>
-            <Clock size={16} color="rgba(255,255,255,0.88)" strokeWidth={2.2} />
+            <Clock size={16} color={th("rgba(255,255,255,0.88)")} strokeWidth={2.2} />
           </HeaderButton>
           <HeaderButton label="Personalizar o Willo" onPress={() => setSettingsOpen(true)}>
-            <SlidersHorizontal size={16} color="rgba(255,255,255,0.88)" strokeWidth={2.2} />
+            <SlidersHorizontal size={16} color={th("rgba(255,255,255,0.88)")} strokeWidth={2.2} />
           </HeaderButton>
         </View>
 
@@ -922,14 +923,14 @@ export default function Registro() {
                   {listening ? (
                     /* Swollen, the sphere reaches further down: the words keep clear of it. */
                     <Animated.View entering={FadeIn.duration(240)} style={{ alignItems: "center", marginTop: orb * 0.09 }}>
-                      <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Estou ouvindo…</Text>
+                      <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff") }}>Estou ouvindo…</Text>
                       <Pressable onPress={() => void entry.cancel()} hitSlop={10} style={({ pressed }) => ({ marginTop: 4, paddingVertical: 4, paddingHorizontal: 14, opacity: pressed ? 0.6 : 1 })}>
-                        <Text style={{ fontSize: 13, fontWeight: "600", color: "rgba(255,255,255,0.7)" }}>Cancelar</Text>
+                        <Text style={{ fontSize: 13, fontWeight: "600", color: th("rgba(255,255,255,0.7)") }}>Cancelar</Text>
                       </Pressable>
                     </Animated.View>
                   ) : reading ? (
                     <Animated.View entering={FadeIn.duration(240)}>
-                      <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>Entendendo…</Text>
+                      <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff") }}>Entendendo…</Text>
                     </Animated.View>
                   ) : (
                     <>
@@ -942,11 +943,11 @@ export default function Registro() {
                         }}
                       />
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 8 }}>
-                        <Mic size={12} color={INK.softer} strokeWidth={2.2} />
-                        <Text style={{ fontSize: 12.5, color: INK.softer }}>Toque nele para falar</Text>
+                        <Mic size={12} color={th(INK.softer)} strokeWidth={2.2} />
+                        <Text style={{ fontSize: 12.5, color: th(INK.softer) }}>Toque nele para falar</Text>
                       </View>
                       {entry.message ? (
-                        <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 12, color: "#F9CE4E", textAlign: "center" }}>
+                        <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 12, color: th("#F9CE4E"), textAlign: "center" }}>
                           {entry.message}
                         </Text>
                       ) : null}
@@ -960,7 +961,7 @@ export default function Registro() {
             {/* Back to where the conversation was */}
             {started && !listening && !reading && (
               <Pressable onPress={() => setAtSphere(false)} hitSlop={8} style={({ pressed }) => ({ alignSelf: "center", marginBottom: 12, paddingVertical: 6, paddingHorizontal: 14, opacity: pressed ? 0.6 : 1 })}>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.75)" }}>Voltar à conversa</Text>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: th("rgba(255,255,255,0.75)") }}>Voltar à conversa</Text>
               </Pressable>
             )}
 
@@ -968,8 +969,8 @@ export default function Registro() {
             {!listening && !reading && (
               <Animated.View entering={FadeInDown.delay(100).duration(380)} style={{ paddingBottom: 14 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 22 }}>
-                  <Sparkles size={12} color="#B9B0FF" />
-                  <Text style={{ fontSize: 11.5, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase", color: INK.soft }}>Pergunte</Text>
+                  <Sparkles size={12} color={th("#B9B0FF")} />
+                  <Text style={{ fontSize: 11.5, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase", color: th(INK.soft) }}>Pergunte</Text>
                 </View>
                 <ScrollView
                   horizontal
@@ -990,12 +991,12 @@ export default function Registro() {
                         paddingHorizontal: 14,
                         borderRadius: 19,
                         borderWidth: 1,
-                        borderColor: "rgba(185,176,255,0.28)",
-                        backgroundColor: "rgba(185,176,255,0.08)",
+                        borderColor: th("rgba(185,176,255,0.28)", "line"),
+                        backgroundColor: th("rgba(185,176,255,0.08)", "bg"),
                         transform: [{ scale: pressed ? 0.96 : 1 }],
                       })}
                     >
-                      <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>{q}</Text>
+                      <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "600", color: th("#fff") }}>{q}</Text>
                     </Pressable>
                   ))}
                 </ScrollView>
@@ -1049,7 +1050,7 @@ export default function Registro() {
             {busy && (
               <Animated.View entering={FadeIn.duration(200)} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <ParticleOrb size={30} mode="thinking" />
-                <Text style={{ fontSize: 13.5, color: INK.soft }}>{thinking}…</Text>
+                <Text style={{ fontSize: 13.5, color: th(INK.soft) }}>{thinking}…</Text>
               </Animated.View>
             )}
           </ScrollView>
@@ -1060,7 +1061,7 @@ export default function Registro() {
         {view === "chat" && (
         <View style={{ paddingTop: 8, paddingBottom: insets.bottom + 8 }}>
           {!stage && entry.message ? (
-            <Text style={{ marginHorizontal: 24, marginBottom: 8, fontSize: 12.5, lineHeight: 17, color: "#F9CE4E", textAlign: "center" }}>{entry.message}</Text>
+            <Text style={{ marginHorizontal: 24, marginBottom: 8, fontSize: 12.5, lineHeight: 17, color: th("#F9CE4E"), textAlign: "center" }}>{entry.message}</Text>
           ) : null}
           {!stage && !listening && !reading && (
             <ScrollView
@@ -1136,7 +1137,7 @@ export default function Registro() {
                 paddingHorizontal: 6,
                 gap: 4,
                 borderWidth: 1,
-                borderColor: typed ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.10)",
+                borderColor: th(typed ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.10)", "line"),
               }}
             >
               <Pressable
@@ -1149,10 +1150,10 @@ export default function Registro() {
                   borderRadius: 22,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "transparent",
+                  backgroundColor: th(pressed ? "rgba(255,255,255,0.08)" : "transparent", "bg"),
                 })}
               >
-                {listening ? <X size={20} color="rgba(255,255,255,0.78)" strokeWidth={2} /> : <Camera size={20} color="rgba(255,255,255,0.78)" strokeWidth={2} />}
+                {listening ? <X size={20} color={th("rgba(255,255,255,0.78)")} strokeWidth={2} /> : <Camera size={20} color={th("rgba(255,255,255,0.78)")} strokeWidth={2} />}
               </Pressable>
               <TextInput
                 ref={inputRef}
@@ -1160,11 +1161,11 @@ export default function Registro() {
                 onChangeText={setText}
                 onSubmitEditing={submitText}
                 placeholder={listening ? "Ouvindo…" : reading ? "Entendendo…" : question ? "sua resposta…" : "converse ou anote um gasto"}
-                placeholderTextColor={INK.faint}
+                placeholderTextColor={th(INK.faint)}
                 editable={!listening}
                 returnKeyType="send"
                 submitBehavior="submit"
-                style={{ flex: 1, minWidth: 0, height: "100%", paddingHorizontal: 4, fontSize: 16, color: "#fff" }}
+                style={{ flex: 1, minWidth: 0, height: "100%", paddingHorizontal: 4, fontSize: 16, color: th("#fff") }}
               />
               {/* Only once there is something to send: the microphone is the sphere. */}
               {typed ? (
@@ -1182,11 +1183,11 @@ export default function Registro() {
                     borderRadius: 22,
                     alignItems: "center",
                     justifyContent: "center",
-                    backgroundColor: listening ? "#fff" : "rgba(255,255,255,0.10)",
+                    backgroundColor: th(listening ? "#fff" : "rgba(255,255,255,0.10)", "bg"),
                     transform: [{ scale: pressed ? 0.94 : 1 }],
                   })}
                 >
-                  <Mic size={19} color={listening ? "#0B0B0B" : "#fff"} strokeWidth={2.2} />
+                  <Mic size={19} color={th(listening ? "#0B0B0B" : "#fff")} strokeWidth={2.2} />
                 </Pressable>
               ) : null}
             </Glass>
@@ -1206,8 +1207,8 @@ export default function Registro() {
                 opacity: pressed ? 0.6 : 1,
               })}
             >
-              <PenLine size={13} color={INK.softer} strokeWidth={2.2} />
-              <Text style={{ fontSize: 12.5, fontWeight: "500", color: INK.softer }}>Adicionar manualmente</Text>
+              <PenLine size={13} color={th(INK.softer)} strokeWidth={2.2} />
+              <Text style={{ fontSize: 12.5, fontWeight: "500", color: th(INK.softer) }}>Adicionar manualmente</Text>
             </Pressable>
           )}
         </View>
@@ -1258,19 +1259,19 @@ function ShortcutChip({
         paddingRight: 13,
         borderRadius: 19,
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.09)",
-        backgroundColor: "rgba(255,255,255,0.05)",
+        borderColor: th("rgba(255,255,255,0.09)", "line"),
+        backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
         transform: [{ scale: pressed ? 0.96 : 1 }],
       })}
     >
-      <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-        <Icon size={14} color={chipInk(hex)} strokeWidth={2} />
+      <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+        <Icon size={14} color={th(chipInk(hex))} strokeWidth={2} />
       </View>
-      <Text numberOfLines={1} style={{ maxWidth: 130, fontSize: 13.5, fontWeight: "600", color: "#fff" }}>
+      <Text numberOfLines={1} style={{ maxWidth: 130, fontSize: 13.5, fontWeight: "600", color: th("#fff") }}>
         {label}
       </Text>
       {note ? (
-        <Text style={{ fontSize: 12.5, color: income ? GREEN : INK.soft }}>
+        <Text style={{ fontSize: 12.5, color: th(income ? GREEN : INK.soft) }}>
           {income ? "+" : ""}
           {note}
         </Text>
@@ -1304,13 +1305,13 @@ function Chip({
         height: 34,
         borderRadius: 999,
         borderWidth: tone === "answer" ? 0 : 1,
-        borderColor: tone === "next" ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.09)",
-        backgroundColor: tone === "answer" ? GREEN : tone === "next" ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)",
+        borderColor: th(tone === "next" ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.09)", "line"),
+        backgroundColor: th(tone === "answer" ? GREEN : tone === "next" ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)", "bg"),
         transform: [{ scale: pressed ? 0.95 : 1 }],
       })}
     >
-      {Icon && hex && <Icon size={13} color={chipInk(hex)} strokeWidth={2} />}
-      <Text style={{ fontSize: 13, fontWeight: tone === "answer" ? "700" : tone === "next" ? "600" : "500", color: tone === "answer" ? "#0B0B0B" : tone === "next" ? "#fff" : "rgba(255,255,255,0.86)" }}>
+      {Icon && hex && <Icon size={13} color={th(chipInk(hex))} strokeWidth={2} />}
+      <Text style={{ fontSize: 13, fontWeight: tone === "answer" ? "700" : tone === "next" ? "600" : "500", color: th(tone === "answer" ? "#0B0B0B" : tone === "next" ? "#fff" : "rgba(255,255,255,0.86)") }}>
         {label}
       </Text>
     </Pressable>
@@ -1331,12 +1332,12 @@ function SendButton({ disabled, onPress }: { disabled: boolean; onPress: () => v
           borderRadius: 22,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#fff",
+          backgroundColor: th("#fff", "bg"),
           opacity: disabled ? 0.4 : 1,
           transform: [{ scale: pressed ? 0.94 : 1 }],
         })}
       >
-        <ArrowUp size={20} color="#0B0B0B" strokeWidth={2.8} />
+        <ArrowUp size={20} color={th("#0B0B0B")} strokeWidth={2.8} />
       </Pressable>
     </Animated.View>
   );

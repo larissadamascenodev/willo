@@ -12,6 +12,7 @@ import { iconForSlug } from "~/lib/categoryIconSlugs";
 import { Check, X } from "~/components/icons";
 import { INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Naming a category, and choosing how it will read in a chart.
  *
@@ -80,7 +81,7 @@ export default function CategorySheet({
     <BottomSheet open={open} onClose={onClose} full>
       <View style={{ paddingHorizontal: 20 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text style={{ fontSize: 18, fontWeight: "700", color: "#fff" }}>{title}</Text>
+          <Text style={{ fontSize: 18, fontWeight: "700", color: th("#fff") }}>{title}</Text>
           <Pressable
             accessibilityLabel="Fechar"
             onPress={onClose}
@@ -91,11 +92,11 @@ export default function CategorySheet({
               borderRadius: 16,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: "rgba(255,255,255,0.06)",
+              backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
               opacity: pressed ? 0.6 : 1,
             })}
           >
-            <X size={16} color={INK.soft} />
+            <X size={16} color={th(INK.soft)} />
           </Pressable>
         </View>
 
@@ -108,12 +109,12 @@ export default function CategorySheet({
               borderRadius: 26,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: `${color}1F`,
+              backgroundColor: th(`${color}1F`, "bg"),
             }}
           >
             {(() => {
               const Icon = iconForSlug(icon);
-              return <Icon size={24} color={color} strokeWidth={2} />;
+              return <Icon size={24} color={th(color)} strokeWidth={2} />;
             })()}
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
@@ -124,28 +125,28 @@ export default function CategorySheet({
                 setTouched(true);
               }}
               placeholder="Nome da categoria"
-              placeholderTextColor={INK.faint}
+              placeholderTextColor={th(INK.faint)}
               maxLength={40}
               style={{
                 height: 48,
                 minWidth: 0,
                 borderRadius: 16,
                 borderWidth: 1,
-                borderColor: INK.edge,
-                backgroundColor: "rgba(255,255,255,0.05)",
+                borderColor: th(INK.edge, "line"),
+                backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
                 paddingHorizontal: 16,
                 fontSize: 15.5,
-                color: "#fff",
+                color: th("#fff"),
               }}
             />
           </View>
         </View>
 
         {touched && problem && (
-          <Text style={{ marginTop: 10, fontSize: 12.5, color: RED }}>{problem}</Text>
+          <Text style={{ marginTop: 10, fontSize: 12.5, color: th(RED) }}>{problem}</Text>
         )}
 
-        <Text style={{ marginTop: 22, fontSize: 12.5, color: INK.soft }}>Cor</Text>
+        <Text style={{ marginTop: 22, fontSize: 12.5, color: th(INK.soft) }}>Cor</Text>
         <View style={{ marginTop: 10, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {CATEGORY_COLOR_OPTIONS.map((c) => {
             const on = c.toLowerCase() === color.toLowerCase();
@@ -162,22 +163,22 @@ export default function CategorySheet({
                   borderRadius: 17,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: c,
+                  backgroundColor: th(c, "bg"),
                   opacity: used ? 0.18 : on ? 1 : 0.62,
                   borderWidth: on ? 2 : 0,
-                  borderColor: "#fff",
+                  borderColor: th("#fff", "line"),
                 }}
               >
-                {on && <Check size={15} color="#0B0B0B" strokeWidth={3} />}
+                {on && <Check size={15} color={th("#0B0B0B")} strokeWidth={3} />}
               </Pressable>
             );
           })}
         </View>
-        <Text style={{ marginTop: 8, fontSize: 11.5, lineHeight: 16, color: INK.softer }}>
+        <Text style={{ marginTop: 8, fontSize: 11.5, lineHeight: 16, color: th(INK.softer) }}>
           As cores apagadas já pertencem a outra categoria.
         </Text>
 
-        <Text style={{ marginTop: 22, fontSize: 12.5, color: INK.soft }}>Ícone</Text>
+        <Text style={{ marginTop: 22, fontSize: 12.5, color: th(INK.soft) }}>Ícone</Text>
         <View style={{ marginTop: 10, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {CATEGORY_ICON_SLUGS.map((slug) => {
             const Icon = iconForSlug(slug);
@@ -194,11 +195,11 @@ export default function CategorySheet({
                   alignItems: "center",
                   justifyContent: "center",
                   borderWidth: 1,
-                  borderColor: on ? color : "rgba(255,255,255,0.07)",
-                  backgroundColor: on ? `${color}1F` : "rgba(255,255,255,0.04)",
+                  borderColor: th(on ? color : "rgba(255,255,255,0.07)", "line"),
+                  backgroundColor: th(on ? `${color}1F` : "rgba(255,255,255,0.04)", "bg"),
                 }}
               >
-                <Icon size={19} color={on ? color : INK.soft} strokeWidth={2} />
+                <Icon size={19} color={th(on ? color : INK.soft)} strokeWidth={2} />
               </Pressable>
             );
           })}
@@ -213,11 +214,11 @@ export default function CategorySheet({
             borderRadius: 26,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "#fff",
+            backgroundColor: th("#fff", "bg"),
             opacity: saving ? 0.6 : problem ? 0.5 : pressed ? 0.85 : 1,
           })}
         >
-          <Text style={{ fontSize: 16, fontWeight: "700", color: "#0B0B0B" }}>
+          <Text style={{ fontSize: 16, fontWeight: "700", color: th("#0B0B0B") }}>
             {saving ? "Salvando..." : "Salvar"}
           </Text>
         </Pressable>

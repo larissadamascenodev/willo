@@ -7,6 +7,7 @@ import { useSkyModel, useSkyPhoto, type SkyModel } from "~/lib/skyModel";
 import { GROUND, GROUND_LIT } from "~/theme/tokens";
 import { BACKDROPS, STARS, type BackdropKey } from "~/lib/backdrops";
 
+import { LIGHT_GROUND, isLight, th } from "~/theme/theme";
 /**
  * The second sky: the hour as a picture.
  *
@@ -79,27 +80,56 @@ export default function Room({
      gradients share one document, so each name carries the background it belongs to. */
   const id = (name: string) => `${name}-${sky ? model : "room"}`;
 
+  /* In the light there is no sky: a pale ground with a soft cool light from above,
+     closing a touch at the edges so the page still reads as a room. */
+  if (isLight()) {
+    return (
+      <View style={[{ flex: 1, backgroundColor: LIGHT_GROUND }, style]}>
+        <Svg width="100%" height="100%" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+          <Defs>
+            <RadialGradient id="light-top" cx="0.5" cy="0" rx="0.9" ry="0.45">
+              <Stop offset="0" stopColor="#FFFFFF" stopOpacity={1} />
+              <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
+            </RadialGradient>
+            <RadialGradient id="light-cool" cx="0.85" cy="0.08" rx="0.7" ry="0.32">
+              <Stop offset="0" stopColor="rgb(170,190,235)" stopOpacity={0.22} />
+              <Stop offset="1" stopColor="rgb(170,190,235)" stopOpacity={0} />
+            </RadialGradient>
+            <RadialGradient id="light-edge" cx="0.5" cy="0.45" rx="0.75" ry="0.6">
+              <Stop offset="0.55" stopColor="rgb(30,34,44)" stopOpacity={0} />
+              <Stop offset="1" stopColor="rgb(30,34,44)" stopOpacity={0.06} />
+            </RadialGradient>
+          </Defs>
+          <Rect x="0" y="0" width="100%" height="100%" fill="url(#light-top)" />
+          <Rect x="0" y="0" width="100%" height="100%" fill="url(#light-cool)" />
+          <Rect x="0" y="0" width="100%" height="100%" fill="url(#light-edge)" />
+        </Svg>
+        {children}
+      </View>
+    );
+  }
+
   if (drawn) {
     return (
-      <View style={[{ flex: 1, backgroundColor: drawn.ground }, style]}>
+      <View style={[{ flex: 1, backgroundColor: th(drawn.ground, "bg") }, style]}>
         <Svg width="100%" height="100%" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
           <Defs>
             {drawn.lights.map((l, i) => (
               <RadialGradient key={i} id={id(`glow${i}`)} cx={String(l.cx)} cy={String(l.cy)} rx={String(l.rx)} ry={String(l.ry)}>
-                <Stop offset="0" stopColor={`rgb(${l.rgb})`} stopOpacity={l.a} />
-                <Stop offset={String(l.fade ?? 1)} stopColor={`rgb(${l.rgb})`} stopOpacity={0} />
+                <Stop offset="0" stopColor={th(`rgb(${l.rgb})`, "grad")} stopOpacity={l.a} />
+                <Stop offset={String(l.fade ?? 1)} stopColor={th(`rgb(${l.rgb})`, "grad")} stopOpacity={0} />
               </RadialGradient>
             ))}
             <RadialGradient id={id("edge")} cx="0.5" cy="0.44" rx="0.7" ry="0.5">
-              <Stop offset="0.42" stopColor="#000" stopOpacity={0} />
-              <Stop offset="1" stopColor="#000" stopOpacity={0.55} />
+              <Stop offset="0.42" stopColor={th("#000", "grad")} stopOpacity={0} />
+              <Stop offset="1" stopColor={th("#000", "grad")} stopOpacity={0.55} />
             </RadialGradient>
           </Defs>
           {drawn.lights.map((_, i) => (
-            <Rect key={i} x="0" y="0" width="100%" height="100%" fill={`url(#${id(`glow${i}`)})`} />
+            <Rect key={i} x="0" y="0" width="100%" height="100%" fill={th(`url(#${id(`glow${i}`)})`)} />
           ))}
-          {drawn.stars && STARS.map((st, i) => <Circle key={i} cx={`${st.x * 100}%`} cy={`${st.y * 100}%`} r={st.r} fill="#fff" fillOpacity={st.o} />)}
-          <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id("edge")})`} />
+          {drawn.stars && STARS.map((st, i) => <Circle key={i} cx={`${st.x * 100}%`} cy={`${st.y * 100}%`} r={st.r} fill={th("#fff")} fillOpacity={st.o} />)}
+          <Rect x="0" y="0" width="100%" height="100%" fill={th(`url(#${id("edge")})`)} />
         </Svg>
         {children}
       </View>
@@ -107,7 +137,7 @@ export default function Room({
   }
 
   return (
-    <View style={[{ flex: 1, backgroundColor: lit ? GROUND_LIT : GROUND }, style]}>
+    <View style={[{ flex: 1, backgroundColor: th(lit ? GROUND_LIT : GROUND, "bg") }, style]}>
       {sky && !picture && <Sky />}
       {picture && !own && <Image source={HOUR} contentFit="fill" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />}
       {/* The person's own photo, held down so the cards and the figures over it stay
@@ -115,12 +145,12 @@ export default function Room({
       {own && (
         <>
           <Image source={{ uri: photo! }} contentFit="cover" transition={200} pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(6,7,9,0.5)" }} />
+          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(6,7,9,0.5)", "bg") }} />
           <Svg width="100%" height="100%" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
             <Defs>
               <RadialGradient id="ownVignette" cx="0.5" cy="0.42" rx="0.75" ry="0.55">
-                <Stop offset="0.35" stopColor="#000" stopOpacity={0} />
-                <Stop offset="1" stopColor="#000" stopOpacity={0.6} />
+                <Stop offset="0.35" stopColor={th("#000", "grad")} stopOpacity={0} />
+                <Stop offset="1" stopColor={th("#000", "grad")} stopOpacity={0.6} />
               </RadialGradient>
             </Defs>
             <Rect x="0" y="0" width="100%" height="100%" fill="url(#ownVignette)" />
@@ -148,9 +178,9 @@ export default function Room({
                 rx={String(l.rx)}
                 ry={String(l.ry)}
               >
-                <Stop offset="0" stopColor={l.rgb} stopOpacity={l.alpha * strength} />
-                <Stop offset={String(l.fade)} stopColor={l.rgb} stopOpacity={0} />
-                <Stop offset="1" stopColor={l.rgb} stopOpacity={0} />
+                <Stop offset="0" stopColor={th(l.rgb, "grad")} stopOpacity={l.alpha * strength} />
+                <Stop offset={String(l.fade)} stopColor={th(l.rgb, "grad")} stopOpacity={0} />
+                <Stop offset="1" stopColor={th(l.rgb, "grad")} stopOpacity={0} />
               </RadialGradient>
             ))}
 
@@ -162,17 +192,17 @@ export default function Room({
             rx={sky ? "0.68" : "0.66"}
             ry={sky ? "0.44" : "0.43"}
           >
-            <Stop offset={sky ? "0.44" : "0.32"} stopColor="#000" stopOpacity={0} />
-            <Stop offset={sky ? "0.82" : "0.78"} stopColor="#000" stopOpacity={(sky ? 0.4 : 0.5) * (sky ? 1 : strength)} />
-            <Stop offset="1" stopColor="#000" stopOpacity={(sky ? 0.66 : 0.72) * (sky ? 1 : strength)} />
+            <Stop offset={sky ? "0.44" : "0.32"} stopColor={th("#000", "grad")} stopOpacity={0} />
+            <Stop offset={sky ? "0.82" : "0.78"} stopColor={th("#000", "grad")} stopOpacity={(sky ? 0.4 : 0.5) * (sky ? 1 : strength)} />
+            <Stop offset="1" stopColor={th("#000", "grad")} stopOpacity={(sky ? 0.66 : 0.72) * (sky ? 1 : strength)} />
           </RadialGradient>
         </Defs>
 
         {!sky &&
           LIGHTS.map((_, i) => (
-            <Rect key={i} x="0" y="0" width="100%" height="100%" fill={`url(#${id(`light${i}`)})`} />
+            <Rect key={i} x="0" y="0" width="100%" height="100%" fill={th(`url(#${id(`light${i}`)})`)} />
           ))}
-        <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id("vignette")})`} />
+        <Rect x="0" y="0" width="100%" height="100%" fill={th(`url(#${id("vignette")})`)} />
       </Svg>
       )}
 

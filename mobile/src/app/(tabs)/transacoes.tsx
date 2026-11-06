@@ -23,6 +23,7 @@ import { useNavChrome } from "~/lib/navChrome";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * The month's movements.
  *
@@ -205,7 +206,7 @@ export default function Transacoes() {
               setRefreshing(true);
               void load();
             }}
-            tintColor={INK.softer}
+            tintColor={th(INK.softer)}
           />
         }
       >
@@ -236,29 +237,29 @@ export default function Transacoes() {
             height: 44,
             borderRadius: 999,
             paddingHorizontal: 16,
-            backgroundColor: "rgba(255,255,255,0.05)",
+            backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.06)",
+            borderColor: th("rgba(255,255,255,0.06)", "line"),
           }}
         >
-          <Search size={15} color={INK.softer} />
+          <Search size={15} color={th(INK.softer)} />
           <TextInput
             value={search}
             onChangeText={setSearch}
             placeholder="Buscar transação..."
-            placeholderTextColor={INK.faint}
-            style={{ flex: 1, fontSize: 14.5, color: "#fff" }}
+            placeholderTextColor={th(INK.faint)}
+            style={{ flex: 1, fontSize: 14.5, color: th("#fff") }}
           />
         </View>
 
         {loading && transactions.length === 0 ? (
-          <ActivityIndicator color={GREEN} style={{ marginTop: 40 }} />
+          <ActivityIndicator color={th(GREEN)} style={{ marginTop: 40 }} />
         ) : (
           <View style={{ marginTop: 22, gap: 18 }}>
             {isThisMonth && !days.some(([date]) => date === todayKey) && (
               <View>
                 <DayHeader label={`Hoje · ${formatDateHeader(todayKey).label}`} today />
-                <Text style={{ paddingVertical: 20, textAlign: "center", fontSize: 13.5, color: INK.softer }}>
+                <Text style={{ paddingVertical: 20, textAlign: "center", fontSize: 13.5, color: th(INK.softer) }}>
                   Nada registrado hoje
                 </Text>
               </View>
@@ -307,7 +308,7 @@ export default function Transacoes() {
             })}
 
             {days.length === 0 && !loading && (
-              <Text style={{ marginTop: 30, textAlign: "center", fontSize: 14, color: INK.softer }}>
+              <Text style={{ marginTop: 30, textAlign: "center", fontSize: 14, color: th(INK.softer) }}>
                 {user ? "Nada encontrado neste mês." : "Entre na sua conta para ver os seus lançamentos."}
               </Text>
             )}
@@ -323,7 +324,7 @@ export default function Transacoes() {
         />
         {asking ? (
           <View style={{ padding: 12, gap: 8 }}>
-            <Text style={{ paddingHorizontal: 4, paddingBottom: 4, fontSize: 12.5, lineHeight: 17, color: "rgba(255,255,255,0.78)" }}>
+            <Text style={{ paddingHorizontal: 4, paddingBottom: 4, fontSize: 12.5, lineHeight: 17, color: th("rgba(255,255,255,0.78)") }}>
               {held?.recurrence_type === "fixa"
                 ? "Ela se repete todo mês. Tirar só deste mês ou dela em diante?"
                 : (held?.installments ?? 0) > 1
@@ -340,7 +341,7 @@ export default function Transacoes() {
               onPress={() => void removeHeld("all")}
             />
             <HoldButton label="Cancelar" onPress={() => setAsking(false)} disabled={removing} />
-            {holdError && <Text style={{ paddingHorizontal: 4, fontSize: 12.5, color: RED }}>{holdError}</Text>}
+            {holdError && <Text style={{ paddingHorizontal: 4, fontSize: 12.5, color: th(RED) }}>{holdError}</Text>}
           </View>
         ) : (
           <>
@@ -418,14 +419,14 @@ function HoldButton({
         borderRadius: 14,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: danger ? RED : "rgba(255,255,255,0.07)",
+        backgroundColor: th(danger ? RED : "rgba(255,255,255,0.07)", "bg"),
         opacity: disabled ? 0.5 : pressed ? 0.8 : 1,
       })}
     >
       {loading ? (
-        <ActivityIndicator color="#fff" />
+        <ActivityIndicator color={th("#fff")} />
       ) : (
-        <Text style={{ fontSize: 14.5, fontWeight: danger ? "700" : "600", color: "#fff" }}>{label}</Text>
+        <Text style={{ fontSize: 14.5, fontWeight: danger ? "700" : "600", color: th("#fff") }}>{label}</Text>
       )}
     </Pressable>
   );
@@ -450,13 +451,13 @@ function DayHeader({ label, today, net }: { label: string; today?: boolean; net?
           fontWeight: "600",
           letterSpacing: 1.4,
           textTransform: "uppercase",
-          color: today ? "#fff" : INK.softer,
+          color: th(today ? "#fff" : INK.softer),
         }}
       >
         {label}
       </Text>
       {net !== undefined && (
-        <Text style={{ fontSize: 12, fontWeight: "600", color: net >= 0 ? GREEN : INK.softer }}>
+        <Text style={{ fontSize: 12, fontWeight: "600", color: th(net >= 0 ? GREEN : INK.softer) }}>
           {net >= 0 ? "+" : "−"}
           {money(Math.abs(net))}
         </Text>

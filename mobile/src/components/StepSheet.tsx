@@ -21,6 +21,7 @@ import Glass from "~/components/Glass";
 import { ChevronLeft, X } from "~/components/icons";
 import { INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * A sheet that asks one thing at a time.
  *
@@ -129,8 +130,8 @@ export default function StepSheet({
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={{ flex: 1 }} onPress={finished || busy ? undefined : onClose}>
-        <AnimatedBlur tint="dark" animatedProps={blurProps} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.4)" }, dim]} />
+        <AnimatedBlur tint={th("dark", "tint")} animatedProps={blurProps} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(0,0,0,0.4)", "bg") }, dim]} />
       </Pressable>
 
       <Animated.View
@@ -149,8 +150,8 @@ export default function StepSheet({
           rise,
         ]}
       >
-        <BlurView intensity={60} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.38)" }} />
+        <BlurView intensity={60} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.38)", "bg") }} />
 
         {finished ? (
           <Animated.View entering={FadeIn.duration(260)} style={{ flex: 1 }}>
@@ -165,7 +166,7 @@ export default function StepSheet({
                   <Animated.View entering={FadeIn.duration(180)}>
                     <Pressable accessibilityLabel="Voltar" onPress={onBack} hitSlop={8}>
                       <Glass interactive style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
-                        <ChevronLeft size={18} color="#fff" strokeWidth={2.4} />
+                        <ChevronLeft size={18} color={th("#fff")} strokeWidth={2.4} />
                       </Glass>
                     </Pressable>
                   </Animated.View>
@@ -180,7 +181,7 @@ export default function StepSheet({
 
               <Pressable accessibilityLabel="Fechar" onPress={onClose} hitSlop={8}>
                 <Glass interactive style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
-                  <X size={16} color={INK.soft} strokeWidth={2.4} />
+                  <X size={16} color={th(INK.soft)} strokeWidth={2.4} />
                 </Glass>
               </Pressable>
             </View>
@@ -211,12 +212,12 @@ export default function StepSheet({
                   borderRadius: 27,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: "#fff",
+                  backgroundColor: th("#fff", "bg"),
                   opacity: nextDisabled ? 0.32 : busy ? 0.7 : 1,
                   transform: [{ scale: pressed && !nextDisabled ? 0.98 : 1 }],
                 })}
               >
-                <Text style={{ fontSize: 16.5, fontWeight: "700", letterSpacing: -0.2, color: "#0B0B0B" }}>
+                <Text style={{ fontSize: 16.5, fontWeight: "700", letterSpacing: -0.2, color: th("#0B0B0B") }}>
                   {busy ? "Só um instante…" : nextLabel}
                 </Text>
               </Pressable>
@@ -236,8 +237,8 @@ function Segment({ on }: { on: boolean }) {
   }, [on, fill]);
   const bar = useAnimatedStyle(() => ({ width: `${fill.get() * 100}%` }));
   return (
-    <View style={{ flex: 1, height: 3, borderRadius: 2, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.14)" }}>
-      <Animated.View style={[{ height: 3, borderRadius: 2, backgroundColor: "#fff" }, bar]} />
+    <View style={{ flex: 1, height: 3, borderRadius: 2, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.14)", "bg") }}>
+      <Animated.View style={[{ height: 3, borderRadius: 2, backgroundColor: th("#fff", "bg") }, bar]} />
     </View>
   );
 }
@@ -246,8 +247,8 @@ function Segment({ on }: { on: boolean }) {
 export function Ask({ title, note }: { title: string; note?: string }) {
   return (
     <View style={{ paddingTop: 6 }}>
-      <Text style={{ fontSize: 26, fontWeight: "800", letterSpacing: -0.9, lineHeight: 31, color: "#fff" }}>{title}</Text>
-      {note ? <Text style={{ marginTop: 6, fontSize: 14, lineHeight: 19, color: INK.soft }}>{note}</Text> : null}
+      <Text style={{ fontSize: 26, fontWeight: "800", letterSpacing: -0.9, lineHeight: 31, color: th("#fff") }}>{title}</Text>
+      {note ? <Text style={{ marginTop: 6, fontSize: 14, lineHeight: 19, color: th(INK.soft) }}>{note}</Text> : null}
     </View>
   );
 }

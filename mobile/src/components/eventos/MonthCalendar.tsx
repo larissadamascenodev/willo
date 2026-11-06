@@ -12,6 +12,7 @@ import type { FinanceEvent } from "@/types/finance";
 import { dayOfMonth, isIncome, isOverdue, isSettled } from "~/lib/events";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * The month as a month.
  *
@@ -120,7 +121,7 @@ export default function MonthCalendar({
     <View onLayout={onLayout}>
       <View style={{ flexDirection: "row", paddingBottom: 8 }}>
         {WEEKDAYS.map((w, i) => (
-          <Text key={i} style={{ flex: 1, textAlign: "center", fontSize: 11, fontWeight: "600", color: INK.faint }}>
+          <Text key={i} style={{ flex: 1, textAlign: "center", fontSize: 11, fontWeight: "600", color: th(INK.faint) }}>
             {w}
           </Text>
         ))}
@@ -138,7 +139,7 @@ export default function MonthCalendar({
                 width: MARK,
                 height: MARK,
                 borderRadius: MARK / 2,
-                backgroundColor: "#FFFFFF",
+                backgroundColor: th("#FFFFFF", "bg"),
               },
               mark,
             ]}
@@ -174,7 +175,7 @@ export default function MonthCalendar({
                     alignItems: "center",
                     justifyContent: "center",
                     borderWidth: isToday && !on ? 1 : 0,
-                    borderColor: "rgba(255,255,255,0.45)",
+                    borderColor: th("rgba(255,255,255,0.45)", "line"),
                   }}
                 >
                   <Text
@@ -183,7 +184,7 @@ export default function MonthCalendar({
                       {
                         fontSize: 15,
                         fontWeight: on || isToday ? "700" : list.length ? "600" : "400",
-                        color: on ? "#0B0B0B" : isPast && !isToday ? INK.softer : "#fff",
+                        color: th(on ? "#0B0B0B" : isPast && !isToday ? INK.softer : "#fff"),
                       },
                     ]}
                   >
@@ -196,7 +197,7 @@ export default function MonthCalendar({
                   {list.slice(0, 3).map((e) => (
                     <View
                       key={e.id}
-                      style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: toneOf(e, today) }}
+                      style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: th(toneOf(e, today), "bg") }}
                     />
                   ))}
                 </View>

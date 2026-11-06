@@ -2,6 +2,7 @@ import { useRef, type ComponentRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { INK, GREEN, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Months as bars, the strip the invoices use.
  *
@@ -64,12 +65,12 @@ export default function MonthBars({
                   height,
                   width: "100%",
                   borderRadius: 10,
-                  backgroundColor: ahead ? `${color}99` : color,
+                  backgroundColor: th(ahead ? `${color}99` : color, "bg"),
                   opacity: on ? 1 : past ? 0.3 : 0.55,
                 }}
               />
             </View>
-            <Text style={{ fontSize: 11, fontWeight: on ? "700" : "500", color: on ? "#fff" : past ? INK.faint : INK.soft }}>
+            <Text style={{ fontSize: 11, fontWeight: on ? "700" : "500", color: th(on ? "#fff" : past ? INK.faint : INK.soft) }}>
               {i === todayIndex ? "Hoje" : SHORT[b.month]}
             </Text>
           </Pressable>

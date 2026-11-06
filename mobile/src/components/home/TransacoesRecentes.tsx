@@ -13,6 +13,7 @@ import { money } from "~/lib/money";
 import { AMBER, GREEN, INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /** Three is enough to recognise the month; the rest is a different screen. */
 const VISIBLE_COUNT = 3;
 
@@ -43,11 +44,11 @@ export default function TransacoesRecentes({ transactions }: { transactions: Tra
   return (
     <Surface style={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>Transações recentes</Text>
+        <Text style={{ fontSize: 16, fontWeight: "600", color: th("#fff") }}>Transações recentes</Text>
         {transactions.length > 0 && (
           <Text
             onPress={() => router.push("/transacoes")}
-            style={{ fontSize: 13, color: INK.soft }}
+            style={{ fontSize: 13, color: th(INK.soft) }}
           >
             Ver todas ›
           </Text>
@@ -63,12 +64,12 @@ export default function TransacoesRecentes({ transactions }: { transactions: Tra
               borderRadius: 24,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: "rgba(255,255,255,0.06)",
+              backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
             }}
           >
-            <Receipt size={20} color={INK.soft} />
+            <Receipt size={20} color={th(INK.soft)} />
           </View>
-          <Text style={{ marginTop: 12, fontSize: 14, color: INK.soft }}>
+          <Text style={{ marginTop: 12, fontSize: 14, color: th(INK.soft) }}>
             Nenhuma transação neste mês
           </Text>
         </View>
@@ -80,7 +81,7 @@ export default function TransacoesRecentes({ transactions }: { transactions: Tra
               entering={FadeInDown.delay(i * 40).duration(260)}
               style={{
                 borderTopWidth: i === 0 ? 0 : 1,
-                borderTopColor: "rgba(255,255,255,0.06)",
+                borderTopColor: th("rgba(255,255,255,0.06)", "line"),
               }}
             >
               <TxRow tx={tx} customCategories={customCats} />
@@ -120,10 +121,10 @@ function TxRow({ tx, customCategories }: { tx: Transaction; customCategories: Cu
           borderRadius: 22,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: chipFill(hex),
+          backgroundColor: th(chipFill(hex), "bg"),
         }}
       >
-        <Icon size={18} color={chipInk(hex)} />
+        <Icon size={18} color={th(chipInk(hex))} />
         {isPending && (
           <View
             style={{
@@ -133,9 +134,9 @@ function TxRow({ tx, customCategories }: { tx: Transaction; customCategories: Cu
               width: 12,
               height: 12,
               borderRadius: 6,
-              backgroundColor: AMBER,
+              backgroundColor: th(AMBER, "bg"),
               borderWidth: 2,
-              borderColor: "#141414",
+              borderColor: th("#141414", "line"),
             }}
           />
         )}
@@ -145,17 +146,17 @@ function TxRow({ tx, customCategories }: { tx: Transaction; customCategories: Cu
         <Text numberOfLines={1} style={T.rowName}>
           {tx.name}
         </Text>
-        <Text numberOfLines={1} style={{ fontSize: 12, color: INK.soft, marginTop: 1 }}>
+        <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.soft), marginTop: 1 }}>
           {subtitle}
         </Text>
       </View>
 
       <View style={{ alignItems: "flex-end" }}>
-        <Text style={[T.rowValue, isReceita && { color: GREEN }]}>
+        <Text style={[T.rowValue, isReceita && { color: th(GREEN) }]}>
           {isReceita ? "+" : "−"}
           {money(tx.amount)}
         </Text>
-        <Text style={{ fontSize: 11, color: isPending ? AMBER : INK.soft }}>
+        <Text style={{ fontSize: 11, color: th(isPending ? AMBER : INK.soft) }}>
           {statusLabel(tx)}
         </Text>
       </View>

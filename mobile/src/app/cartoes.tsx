@@ -21,6 +21,7 @@ import { useAuth } from "~/lib/auth";
 import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * The wallet.
  *
@@ -157,7 +158,7 @@ export default function Cartoes() {
             is nothing to show. */}
         {loading && user ? (
           <View style={{ marginTop: 20, gap: 16 }}>
-            <View style={{ height: 90, borderRadius: 24, backgroundColor: "rgba(255,255,255,0.04)" }} />
+            <View style={{ height: 90, borderRadius: 24, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }} />
             <Surface style={{ height: 420 }}><View /></Surface>
           </View>
         ) : cards.length === 0 ? (
@@ -170,16 +171,16 @@ export default function Cartoes() {
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
-                borderColor: INK.edge,
-                backgroundColor: "rgba(255,255,255,0.04)",
+                borderColor: th(INK.edge, "line"),
+                backgroundColor: th("rgba(255,255,255,0.04)", "bg"),
               }}
             >
-              <CreditCard size={22} color="rgba(255,255,255,0.7)" strokeWidth={2} />
+              <CreditCard size={22} color={th("rgba(255,255,255,0.7)")} strokeWidth={2} />
             </View>
-            <Text style={{ marginTop: 14, fontSize: 17, fontWeight: "700", color: "#fff" }}>
+            <Text style={{ marginTop: 14, fontSize: 17, fontWeight: "700", color: th("#fff") }}>
               Nenhum cartão cadastrado
             </Text>
-            <Text style={{ marginTop: 6, maxWidth: 256, textAlign: "center", fontSize: 13.5, lineHeight: 18, color: INK.soft }}>
+            <Text style={{ marginTop: 6, maxWidth: 256, textAlign: "center", fontSize: 13.5, lineHeight: 18, color: th(INK.soft) }}>
               Cadastre um cartão para acompanhar faturas, limite e parcelamentos.
             </Text>
           </Surface>
@@ -187,18 +188,18 @@ export default function Cartoes() {
           <>
             {/* ══ The figure itself, with nothing drawn around it ══ */}
             <Animated.View entering={FadeInDown.duration(400)} style={{ paddingHorizontal: 4, paddingTop: 12 }}>
-              <Text style={{ fontSize: 13.5, color: "rgba(255,255,255,0.62)" }}>Total em faturas</Text>
+              <Text style={{ fontSize: 13.5, color: th("rgba(255,255,255,0.62)") }}>Total em faturas</Text>
               <Text
                 numberOfLines={1}
-                style={{ marginTop: 4, fontSize: 40, fontWeight: "800", letterSpacing: -1.6, color: "#fff" }}
+                style={{ marginTop: 4, fontSize: 40, fontWeight: "800", letterSpacing: -1.6, color: th("#fff") }}
               >
                 {money(sums.faturas)}
               </Text>
-              <Text style={{ marginTop: 10, fontSize: 12.5, color: INK.soft }}>
+              <Text style={{ marginTop: 10, fontSize: 12.5, color: th(INK.soft) }}>
                 {sums.lancamentos} {sums.lancamentos === 1 ? "lançamento" : "lançamentos"}
                 {sums.parcelados > 0 ? (
                   <Text>
-                    <Text style={{ color: "rgba(255,255,255,0.2)" }}> · </Text>
+                    <Text style={{ color: th("rgba(255,255,255,0.2)") }}> · </Text>
                     {sums.parcelados} parcelado{sums.parcelados === 1 ? "" : "s"}
                   </Text>
                 ) : null}
@@ -213,7 +214,7 @@ export default function Cartoes() {
                   style={{
                     fontSize: 12,
                     fontWeight: "600",
-                    color: sums.usadoPct >= 100 ? RED : INK.softer,
+                    color: th(sums.usadoPct >= 100 ? RED : INK.softer),
                   }}
                 >
                   {sums.usadoPct.toFixed(0)}% usado
@@ -248,17 +249,17 @@ export default function Cartoes() {
               <View style={{ marginTop: 16, flexDirection: "row", gap: 16 }}>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: USED_LIMIT_HEX }} />
-                    <Text style={{ fontSize: 11.5, color: INK.softer }}>Usado</Text>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(USED_LIMIT_HEX, "bg") }} />
+                    <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Usado</Text>
                   </View>
-                  <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 16, fontWeight: "700", color: "rgba(255,255,255,0.72)" }}>
+                  <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 16, fontWeight: "700", color: th("rgba(255,255,255,0.72)") }}>
                     {money(sums.usado)}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: FREE_LIMIT_HEX }} />
-                    <Text style={{ fontSize: 11.5, color: INK.softer }}>Disponível</Text>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(FREE_LIMIT_HEX, "bg") }} />
+                    <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Disponível</Text>
                   </View>
                   <Text
                     numberOfLines={1}
@@ -266,7 +267,7 @@ export default function Cartoes() {
                       marginTop: 4,
                       fontSize: 16,
                       fontWeight: "700",
-                      color: sums.disponivel > 0 ? FREE_LIMIT_HEX : RED,
+                      color: th(sums.disponivel > 0 ? FREE_LIMIT_HEX : RED),
                     }}
                   >
                     {money(sums.disponivel)}
@@ -274,7 +275,7 @@ export default function Cartoes() {
                 </View>
               </View>
 
-              <Text style={{ marginTop: 12, fontSize: 11.5, color: INK.faint }}>
+              <Text style={{ marginTop: 12, fontSize: 11.5, color: th(INK.faint) }}>
                 Limite total {money(sums.limite)}
               </Text>
             </Animated.View>
@@ -319,12 +320,12 @@ export default function Cartoes() {
                   borderRadius: 20,
                   borderWidth: 1,
                   borderStyle: "dashed",
-                  borderColor: "rgba(255,255,255,0.2)",
+                  borderColor: th("rgba(255,255,255,0.2)", "line"),
                   opacity: pressed ? 0.7 : 1,
                 })}
               >
-                <Plus size={18} color="rgba(255,255,255,0.82)" strokeWidth={2.4} />
-                <Text style={{ fontSize: 14.5, fontWeight: "600", color: "rgba(255,255,255,0.82)" }}>
+                <Plus size={18} color={th("rgba(255,255,255,0.82)")} strokeWidth={2.4} />
+                <Text style={{ fontSize: 14.5, fontWeight: "600", color: th("rgba(255,255,255,0.82)") }}>
                   Adicionar cartão
                 </Text>
               </Pressable>

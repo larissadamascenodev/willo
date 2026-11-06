@@ -7,6 +7,7 @@ import { categoryIcon } from "~/lib/categoryIcon";
 import { money } from "~/lib/money";
 import { AMBER, INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * What the reader found on the receipt, laid over the photo of it — the phone's
  * copy of the web's result card.
@@ -146,13 +147,13 @@ export default function ScanResultCard({
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <Animated.View entering={FadeInLeft.duration(260)} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           {!editing && !lowConfidence ? (
-            <View style={{ width: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: TEAL }}>
-              <Check size={12} color="#0B0B0B" strokeWidth={3.5} />
+            <View style={{ width: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: th(TEAL, "bg") }}>
+              <Check size={12} color={th("#0B0B0B")} strokeWidth={3.5} />
             </View>
           ) : editing ? (
-            <Pencil size={14} color="rgba(255,255,255,0.8)" />
+            <Pencil size={14} color={th("rgba(255,255,255,0.8)")} />
           ) : (
-            <AlertTriangle size={16} color={AMBER} />
+            <AlertTriangle size={16} color={th(AMBER)} />
           )}
           <Text
             style={{
@@ -160,7 +161,7 @@ export default function ScanResultCard({
               fontWeight: "700",
               letterSpacing: 2.2,
               textTransform: "uppercase",
-              color: editing ? "rgba(255,255,255,0.8)" : lowConfidence ? AMBER : TEAL,
+              color: th(editing ? "rgba(255,255,255,0.8)" : lowConfidence ? AMBER : TEAL),
             }}
           >
             {statusLabel}
@@ -178,11 +179,11 @@ export default function ScanResultCard({
             borderRadius: 18,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: editing ? "#fff" : "rgba(255,255,255,0.08)",
+            backgroundColor: th(editing ? "#fff" : "rgba(255,255,255,0.08)", "bg"),
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          {editing ? <Check size={16} color="#0B0B0B" strokeWidth={3} /> : <Pencil size={16} color="#fff" />}
+          {editing ? <Check size={16} color={th("#0B0B0B")} strokeWidth={3} /> : <Pencil size={16} color={th("#fff")} />}
         </Pressable>
       </View>
 
@@ -194,11 +195,11 @@ export default function ScanResultCard({
           multiline
           scrollEnabled={false}
           submitBehavior="blurAndSubmit"
-          style={{ marginTop: 12, fontSize: 22, fontWeight: "800", letterSpacing: -0.3, textTransform: "uppercase", color: "#fff" }}
+          style={{ marginTop: 12, fontSize: 22, fontWeight: "800", letterSpacing: -0.3, textTransform: "uppercase", color: th("#fff") }}
           accessibilityLabel="Nome"
         />
       ) : (
-        <Text numberOfLines={2} style={{ marginTop: 12, fontSize: 22, fontWeight: "800", letterSpacing: -0.3, lineHeight: 26, textTransform: "uppercase", color: "#fff" }}>
+        <Text numberOfLines={2} style={{ marginTop: 12, fontSize: 22, fontWeight: "800", letterSpacing: -0.3, lineHeight: 26, textTransform: "uppercase", color: th("#fff") }}>
           {title}
         </Text>
       )}
@@ -217,15 +218,15 @@ export default function ScanResultCard({
                     gap: 16,
                     paddingVertical: 13,
                     borderTopWidth: i > 0 ? 1 : 0,
-                    borderTopColor: RULE,
+                    borderTopColor: th(RULE, "line"),
                   }}
                 >
-                  <Text numberOfLines={1} style={{ fontSize: 16, color: "rgba(255,255,255,0.74)" }}>
+                  <Text numberOfLines={1} style={{ fontSize: 16, color: th("rgba(255,255,255,0.74)") }}>
                     {row.label}
                   </Text>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 1 }}>
-                    {row.hex && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: row.hex }} />}
-                    <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "500", color: "#fff" }}>
+                    {row.hex && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(row.hex, "bg") }} />}
+                    <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "500", color: th("#fff") }}>
                       {row.value}
                     </Text>
                   </View>
@@ -241,18 +242,18 @@ export default function ScanResultCard({
                     gap: 16,
                     paddingVertical: 13,
                     borderTopWidth: i > 0 ? 1 : 0,
-                    borderTopColor: RULE,
+                    borderTopColor: th(RULE, "line"),
                     opacity: item.selected === false ? 0.4 : 1,
                   }}
                 >
-                  <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 16, color: "rgba(255,255,255,0.74)" }}>
+                  <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 16, color: th("rgba(255,255,255,0.74)") }}>
                     {item.description}
                   </Text>
-                  <Text style={[nums, { fontSize: 16, fontWeight: "500", color: "#fff" }]}>{money(item.amount)}</Text>
+                  <Text style={[nums, { fontSize: 16, fontWeight: "500", color: th("#fff") }]}>{money(item.amount)}</Text>
                 </View>
               ))}
           {!single && items.length > 5 && (
-            <Text style={{ paddingVertical: 8, fontSize: 13, color: INK.soft }}>+{items.length - 5} itens</Text>
+            <Text style={{ paddingVertical: 8, fontSize: 13, color: th(INK.soft) }}>+{items.length - 5} itens</Text>
           )}
           {single && isOtherMonth(single.date) && (
             <View
@@ -262,13 +263,13 @@ export default function ScanResultCard({
                 alignItems: "flex-start",
                 gap: 6,
                 borderRadius: 14,
-                backgroundColor: "rgba(249,206,78,0.10)",
+                backgroundColor: th("rgba(249,206,78,0.10)", "bg"),
                 paddingHorizontal: 12,
                 paddingVertical: 8,
               }}
             >
-              <AlertTriangle size={14} color={AMBER} />
-              <Text style={{ flex: 1, fontSize: 12, lineHeight: 17, color: "#FDE68A" }}>
+              <AlertTriangle size={14} color={th(AMBER)} />
+              <Text style={{ flex: 1, fontSize: 12, lineHeight: 17, color: th("#FDE68A") }}>
                 Comprovante de outro mês: ele entra no histórico dessa data e não muda o saldo deste mês. Toque no lápis
                 para alterar a data.
               </Text>
@@ -278,16 +279,16 @@ export default function ScanResultCard({
       ) : single ? (
         <View style={{ marginTop: 6 }}>
           <EditRow label="Tipo">
-            <View style={{ flexDirection: "row", borderRadius: 999, backgroundColor: "rgba(255,255,255,0.06)", padding: 2 }}>
+            <View style={{ flexDirection: "row", borderRadius: 999, backgroundColor: th("rgba(255,255,255,0.06)", "bg"), padding: 2 }}>
               {(["despesa", "receita"] as const).map((t) => {
                 const on = (isIncome ? "receita" : "despesa") === t;
                 return (
                   <Pressable
                     key={t}
                     onPress={() => update(0, { type: t })}
-                    style={{ height: 32, paddingHorizontal: 14, borderRadius: 999, justifyContent: "center", backgroundColor: on ? "#fff" : "transparent" }}
+                    style={{ height: 32, paddingHorizontal: 14, borderRadius: 999, justifyContent: "center", backgroundColor: th(on ? "#fff" : "transparent", "bg") }}
                   >
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: on ? "#0B0B0B" : "rgba(255,255,255,0.7)" }}>
+                    <Text style={{ fontSize: 13, fontWeight: "600", color: th(on ? "#0B0B0B" : "rgba(255,255,255,0.7)") }}>
                       {t === "despesa" ? "Despesa" : "Receita"}
                     </Text>
                   </Pressable>
@@ -301,21 +302,21 @@ export default function ScanResultCard({
               <TextInput
                 value={single.description}
                 onChangeText={(v) => update(0, { description: v })}
-                style={{ flex: 1, minWidth: 0, textAlign: "right", fontSize: 16, fontWeight: "500", color: "#fff" }}
+                style={{ flex: 1, minWidth: 0, textAlign: "right", fontSize: 16, fontWeight: "500", color: th("#fff") }}
               />
             </EditRow>
           ) : null}
 
-          <View style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: RULE }}>
+          <View style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: th(RULE, "line") }}>
             <Pressable
               onPress={() => setPickingCategory((v) => !v)}
               style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
             >
-              <Text style={{ fontSize: 16, color: "rgba(255,255,255,0.74)" }}>Categoria</Text>
+              <Text style={{ fontSize: 16, color: th("rgba(255,255,255,0.74)") }}>Categoria</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: categoryHex(single.category || "Outros") }} />
-                <Text style={{ fontSize: 16, fontWeight: "500", color: "#fff" }}>{single.category || "Escolher"}</Text>
-                <ChevronDown size={16} color={INK.soft} style={{ transform: [{ rotate: pickingCategory ? "180deg" : "0deg" }] }} />
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(categoryHex(single.category || "Outros"), "bg") }} />
+                <Text style={{ fontSize: 16, fontWeight: "500", color: th("#fff") }}>{single.category || "Escolher"}</Text>
+                <ChevronDown size={16} color={th(INK.soft)} style={{ transform: [{ rotate: pickingCategory ? "180deg" : "0deg" }] }} />
               </View>
             </Pressable>
             {pickingCategory && (
@@ -340,12 +341,12 @@ export default function ScanResultCard({
                             paddingHorizontal: 12,
                             borderRadius: 999,
                             borderWidth: 1,
-                            borderColor: on ? "#fff" : "rgba(255,255,255,0.08)",
-                            backgroundColor: on ? "#fff" : "rgba(255,255,255,0.04)",
+                            borderColor: th(on ? "#fff" : "rgba(255,255,255,0.08)", "line"),
+                            backgroundColor: th(on ? "#fff" : "rgba(255,255,255,0.04)", "bg"),
                           }}
                         >
-                          <Icon size={14} color={on ? "#0B0B0B" : categoryHex(cat)} />
-                          <Text style={{ fontSize: 13, color: on ? "#0B0B0B" : "rgba(255,255,255,0.8)" }}>{cat}</Text>
+                          <Icon size={14} color={th(on ? "#0B0B0B" : categoryHex(cat))} />
+                          <Text style={{ fontSize: 13, color: th(on ? "#0B0B0B" : "rgba(255,255,255,0.8)") }}>{cat}</Text>
                         </Pressable>
                       );
                     })}
@@ -364,15 +365,15 @@ export default function ScanResultCard({
                 if (iso) update(0, { date: iso });
               }}
               placeholder="dd/mm/aaaa"
-              placeholderTextColor={INK.faint}
+              placeholderTextColor={th(INK.faint)}
               keyboardType="numbers-and-punctuation"
-              style={[nums, { flex: 1, minWidth: 0, textAlign: "right", fontSize: 16, fontWeight: "500", color: "#fff" }]}
+              style={[nums, { flex: 1, minWidth: 0, textAlign: "right", fontSize: 16, fontWeight: "500", color: th("#fff") }]}
             />
           </EditRow>
 
           {accounts.length > 0 && (
-            <View style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: RULE }}>
-              <Text style={{ fontSize: 16, color: "rgba(255,255,255,0.74)" }}>Conta</Text>
+            <View style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: th(RULE, "line") }}>
+              <Text style={{ fontSize: 16, color: th("rgba(255,255,255,0.74)") }}>Conta</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingTop: 8 }}>
                 {accounts.map((a) => {
                   const on = a.id === accountId;
@@ -386,11 +387,11 @@ export default function ScanResultCard({
                         paddingHorizontal: 14,
                         borderRadius: 999,
                         borderWidth: 1,
-                        borderColor: on ? "#fff" : "rgba(255,255,255,0.08)",
-                        backgroundColor: on ? "#fff" : "rgba(255,255,255,0.04)",
+                        borderColor: th(on ? "#fff" : "rgba(255,255,255,0.08)", "line"),
+                        backgroundColor: th(on ? "#fff" : "rgba(255,255,255,0.04)", "bg"),
                       }}
                     >
-                      <Text style={{ fontSize: 13, fontWeight: "500", color: on ? "#0B0B0B" : "rgba(255,255,255,0.8)" }}>{a.name}</Text>
+                      <Text style={{ fontSize: 13, fontWeight: "500", color: th(on ? "#0B0B0B" : "rgba(255,255,255,0.8)") }}>{a.name}</Text>
                     </Pressable>
                   );
                 })}
@@ -411,7 +412,7 @@ export default function ScanResultCard({
                   gap: 12,
                   paddingVertical: 10,
                   borderTopWidth: i > 0 ? 1 : 0,
-                  borderTopColor: "rgba(255,255,255,0.06)",
+                  borderTopColor: th("rgba(255,255,255,0.06)", "line"),
                   opacity: on ? 1 : 0.4,
                 }}
               >
@@ -426,22 +427,22 @@ export default function ScanResultCard({
                     alignItems: "center",
                     justifyContent: "center",
                     borderWidth: on ? 0 : 1,
-                    borderColor: "rgba(255,255,255,0.3)",
-                    backgroundColor: on ? "#fff" : "transparent",
+                    borderColor: th("rgba(255,255,255,0.3)", "line"),
+                    backgroundColor: th(on ? "#fff" : "transparent", "bg"),
                   }}
                 >
-                  {on && <Check size={14} color="#0B0B0B" strokeWidth={3} />}
+                  {on && <Check size={14} color={th("#0B0B0B")} strokeWidth={3} />}
                 </Pressable>
                 <TextInput
                   value={item.description}
                   onChangeText={(v) => update(i, { description: v })}
-                  style={{ flex: 1, minWidth: 0, fontSize: 15, color: "#fff" }}
+                  style={{ flex: 1, minWidth: 0, fontSize: 15, color: th("#fff") }}
                 />
                 <TextInput
                   value={plain(item.amount)}
                   onChangeText={(v) => update(i, { amount: fromDigits(v) })}
                   keyboardType="number-pad"
-                  style={[nums, { width: 96, textAlign: "right", fontSize: 15, fontWeight: "600", color: "#fff" }]}
+                  style={[nums, { width: 96, textAlign: "right", fontSize: 15, fontWeight: "600", color: th("#fff") }]}
                 />
               </View>
             );
@@ -451,24 +452,24 @@ export default function ScanResultCard({
 
       {/* ── The amount ── */}
       <View style={{ marginTop: 18 }}>
-        <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 2.6, textTransform: "uppercase", color: "rgba(255,255,255,0.62)" }}>
+        <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 2.6, textTransform: "uppercase", color: th("rgba(255,255,255,0.62)") }}>
           {single ? (isIncome ? "Receita" : "Despesa") : "Total"}
         </Text>
         <View style={{ marginTop: 4, flexDirection: "row", alignItems: "baseline", gap: 6 }}>
-          <Text style={{ fontSize: 15, fontWeight: "700", letterSpacing: 1.5, color: "rgba(255,255,255,0.66)" }}>R$</Text>
+          <Text style={{ fontSize: 15, fontWeight: "700", letterSpacing: 1.5, color: th("rgba(255,255,255,0.66)") }}>R$</Text>
           {editing && single ? (
             <TextInput
               value={plain(single.amount)}
               onChangeText={(v) => update(0, { amount: fromDigits(v) })}
               keyboardType="number-pad"
               accessibilityLabel="Valor"
-              style={[nums, { flex: 1, minWidth: 0, fontSize: 44, fontWeight: "800", letterSpacing: -1.2, color: "#fff" }]}
+              style={[nums, { flex: 1, minWidth: 0, fontSize: 44, fontWeight: "800", letterSpacing: -1.2, color: th("#fff") }]}
             />
           ) : (
             <Text
               numberOfLines={1}
               adjustsFontSizeToFit
-              style={[nums, { flexShrink: 1, fontSize: plain(total).length <= 8 ? 48 : 40, fontWeight: "800", letterSpacing: -1.4, color: "#fff" }]}
+              style={[nums, { flexShrink: 1, fontSize: plain(total).length <= 8 ? 48 : 40, fontWeight: "800", letterSpacing: -1.4, color: th("#fff") }]}
             >
               {plain(total)}
             </Text>
@@ -485,14 +486,14 @@ export default function ScanResultCard({
           borderRadius: 999,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#fff",
+          backgroundColor: th("#fff", "bg"),
           opacity: confirming || active.length === 0 || total <= 0 ? 0.45 : pressed ? 0.82 : 1,
         })}
       >
         {confirming ? (
-          <ActivityIndicator color="#0B0B0B" />
+          <ActivityIndicator color={th("#0B0B0B")} />
         ) : (
-          <Text style={{ fontSize: 16, fontWeight: "700", color: "#0B0B0B" }}>
+          <Text style={{ fontSize: 16, fontWeight: "700", color: th("#0B0B0B") }}>
             {single ? (isIncome ? "Confirmar receita" : "Confirmar gasto") : `Confirmar ${active.length}`}
           </Text>
         )}
@@ -511,10 +512,10 @@ function EditRow({ label, children }: { label: string; children: ReactNode }) {
         gap: 16,
         paddingVertical: 10,
         borderTopWidth: 1,
-        borderTopColor: RULE,
+        borderTopColor: th(RULE, "line"),
       }}
     >
-      <Text style={{ fontSize: 16, color: "rgba(255,255,255,0.74)" }}>{label}</Text>
+      <Text style={{ fontSize: 16, color: th("rgba(255,255,255,0.74)") }}>{label}</Text>
       {children}
     </View>
   );

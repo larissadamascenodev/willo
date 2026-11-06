@@ -10,6 +10,7 @@ import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * One side of the month — receitas or despesas — lifted into a pane in the middle of the screen.
  *
@@ -124,28 +125,28 @@ export default function EntriesModal({
       subtitle={`${MONTH_NAMES[month]}${year !== new Date().getFullYear() ? ` de ${year}` : ""}`}
     >
       {failed ? (
-        <Text style={{ paddingVertical: 30, textAlign: "center", fontSize: 14, color: INK.soft }}>Não foi possível carregar o mês.</Text>
+        <Text style={{ paddingVertical: 30, textAlign: "center", fontSize: 14, color: th(INK.soft) }}>Não foi possível carregar o mês.</Text>
       ) : !data ? (
         <View style={{ gap: 10, paddingVertical: 6 }}>
-          <View style={{ height: 40, width: "60%", borderRadius: 12, backgroundColor: "rgba(255,255,255,0.05)" }} />
-          <View style={{ height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.05)" }} />
-          <View style={{ height: 160, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.04)" }} />
+          <View style={{ height: 40, width: "60%", borderRadius: 12, backgroundColor: th("rgba(255,255,255,0.05)", "bg") }} />
+          <View style={{ height: 8, borderRadius: 4, backgroundColor: th("rgba(255,255,255,0.05)", "bg") }} />
+          <View style={{ height: 160, borderRadius: 16, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }} />
         </View>
       ) : (
         <View>
           {/* ══ The total, and how much of it is fixed ══ */}
-          <Text style={[{ fontSize: 34, fontWeight: "800", letterSpacing: -1.2, color: "#fff" }, nums]}>{money(total)}</Text>
-          <View style={{ marginTop: 12, height: 8, borderRadius: 4, overflow: "hidden", flexDirection: "row", backgroundColor: "rgba(255,255,255,0.08)" }}>
+          <Text style={[{ fontSize: 34, fontWeight: "800", letterSpacing: -1.2, color: th("#fff") }, nums]}>{money(total)}</Text>
+          <View style={{ marginTop: 12, height: 8, borderRadius: 4, overflow: "hidden", flexDirection: "row", backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
             {total > 0 && (
               <>
-                <View style={{ width: `${(a / total) * 100}%`, backgroundColor: tone }} />
-                <View style={{ flex: 1, backgroundColor: `${tone}55` }} />
+                <View style={{ width: `${(a / total) * 100}%`, backgroundColor: th(tone, "bg") }} />
+                <View style={{ flex: 1, backgroundColor: th(`${tone}55`, "bg") }} />
               </>
             )}
           </View>
           <View style={{ marginTop: 12, flexDirection: "row" }}>
             <Part dot={tone} label={receita ? "Fixas" : "Fixas e parcelas"} value={a} />
-            <View style={{ width: 1, marginHorizontal: 14, backgroundColor: RULE }} />
+            <View style={{ width: 1, marginHorizontal: 14, backgroundColor: th(RULE, "bg") }} />
             <Part dot={`${tone}55`} label="Variáveis" value={b} />
           </View>
 
@@ -162,10 +163,10 @@ function Part({ dot, label, value }: { dot: string; label: string; value: number
   return (
     <View style={{ flex: 1 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dot }} />
-        <Text style={{ fontSize: 12.5, color: INK.soft }}>{label}</Text>
+        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(dot, "bg") }} />
+        <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>{label}</Text>
       </View>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[{ marginTop: 3, fontSize: 17, fontWeight: "700", color: "#fff" }, nums]}>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[{ marginTop: 3, fontSize: 17, fontWeight: "700", color: th("#fff") }, nums]}>
         {money(value)}
       </Text>
     </View>
@@ -177,15 +178,15 @@ function Group({ title, hint, items, receita, extra = 0 }: { title: string; hint
   const total = items.reduce((s, t) => s + Number(t.amount), 0) + extra;
   return (
     <View style={{ marginTop: 24 }}>
-      <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: RULE }}>
+      <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: th(RULE, "line") }}>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>{title}</Text>
-          <Text style={{ marginTop: 1, fontSize: 12, color: INK.softer }}>{hint}</Text>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff") }}>{title}</Text>
+          <Text style={{ marginTop: 1, fontSize: 12, color: th(INK.softer) }}>{hint}</Text>
         </View>
-        <Text style={[{ fontSize: 15, fontWeight: "800", color: "#fff" }, nums]}>{money(total)}</Text>
+        <Text style={[{ fontSize: 15, fontWeight: "800", color: th("#fff") }, nums]}>{money(total)}</Text>
       </View>
       {items.length === 0 && !extra ? (
-        <Text style={{ paddingVertical: 14, fontSize: 13.5, color: INK.softer }}>Nada por aqui neste mês.</Text>
+        <Text style={{ paddingVertical: 14, fontSize: 13.5, color: th(INK.softer) }}>Nada por aqui neste mês.</Text>
       ) : (
         <>
           {extra > 0 && <Line name="Saldo inicial das contas" category="Outros" sub="Conta aberta neste mês" amount={extra} receita />}
@@ -237,17 +238,17 @@ function Line({
   const hex = categoryHex(category);
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 }}>
-      <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-        <Icon size={16} color={chipInk(hex)} strokeWidth={2.1} />
+      <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+        <Icon size={16} color={th(chipInk(hex))} strokeWidth={2.1} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: "#fff" }}>{name}</Text>
-        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: INK.soft }}>
+        <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>{name}</Text>
+        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: th(INK.soft) }}>
           {sub}
-          {pending ? <Text style={{ color: AMBER }}>{sub ? " · " : ""}{receita ? "a receber" : "a pagar"}</Text> : null}
+          {pending ? <Text style={{ color: th(AMBER) }}>{sub ? " · " : ""}{receita ? "a receber" : "a pagar"}</Text> : null}
         </Text>
       </View>
-      <Text style={[{ fontSize: 14.5, fontWeight: "600", color: receita ? GREEN : "#fff" }, nums]}>
+      <Text style={[{ fontSize: 14.5, fontWeight: "600", color: th(receita ? GREEN : "#fff") }, nums]}>
         {receita ? "+" : "−"}
         {money(Math.abs(amount))}
       </Text>

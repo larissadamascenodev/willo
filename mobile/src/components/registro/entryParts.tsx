@@ -13,6 +13,7 @@ import { saveReceipt, shareReceipt } from "~/lib/receiptShare";
 import { showToast } from "~/lib/toast";
 import { AMBER, INCOME, INK } from "~/theme/tokens";
 
+import { live, th } from "~/theme/theme";
 /**
  * The pieces the entry flows share — Registro rápido, the guided manual entry and the
  * editor: the card of what an entry became, the large answers, the fields of the check,
@@ -37,7 +38,7 @@ export interface Card {
   closing_day?: number | null;
 }
 
-export const GLASS = { borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.05)" } as const;
+export const GLASS = live({ borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.05)" } as const);
 
 export const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }, default: {} }) as TextStyle;
 
@@ -97,18 +98,18 @@ export function EntryCard({
   return (
     <View>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-          <Icon size={18} color={chipInk(hex)} strokeWidth={2} />
+        <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+          <Icon size={18} color={th(chipInk(hex))} strokeWidth={2} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: name ? "#fff" : INK.faint }}>
+          <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: th(name ? "#fff" : INK.faint) }}>
             {name || "Descrição"}
           </Text>
-          <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 13, color: category ? INK.soft : AMBER }}>
+          <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 13, color: th(category ? INK.soft : AMBER) }}>
             {category ?? "Falta a categoria"}
           </Text>
         </View>
-        <Text style={[nums, { fontSize: 17, fontWeight: "800", letterSpacing: -0.4, color: income ? INCOME : "#fff" }]}>
+        <Text style={[nums, { fontSize: 17, fontWeight: "800", letterSpacing: -0.4, color: th(income ? INCOME : "#fff") }]}>
           {income ? "+" : "−"}
           {money(cents / 100)}
         </Text>
@@ -124,8 +125,8 @@ export function EntryCard({
 
 export function Pill({ label, warn }: { label: string; warn?: boolean }) {
   return (
-    <View style={{ height: 26, paddingHorizontal: 10, borderRadius: 13, justifyContent: "center", backgroundColor: warn ? "rgba(249,206,78,0.12)" : "rgba(255,255,255,0.07)" }}>
-      <Text style={{ fontSize: 12.5, fontWeight: "500", color: warn ? AMBER : "rgba(255,255,255,0.8)" }}>{label}</Text>
+    <View style={{ height: 26, paddingHorizontal: 10, borderRadius: 13, justifyContent: "center", backgroundColor: th(warn ? "rgba(249,206,78,0.12)" : "rgba(255,255,255,0.07)", "bg") }}>
+      <Text style={{ fontSize: 12.5, fontWeight: "500", color: th(warn ? AMBER : "rgba(255,255,255,0.8)") }}>{label}</Text>
     </View>
   );
 }
@@ -151,13 +152,13 @@ export function Choice({ icon, label, wide, on, onPress }: { icon: React.ReactNo
         gap: 10,
         paddingHorizontal: 12,
         borderWidth: 1,
-        borderColor: on ? "#fff" : "rgba(255,255,255,0.16)",
-        backgroundColor: pressed || on ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.08)",
+        borderColor: th(on ? "#fff" : "rgba(255,255,255,0.16)", "line"),
+        backgroundColor: th(pressed || on ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.08)", "bg"),
         transform: [{ scale: pressed ? 0.97 : 1 }],
       })}
     >
       {icon}
-      <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 16, fontWeight: "700", color: "#fff" }}>
+      <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 16, fontWeight: "700", color: th("#fff") }}>
         {label}
       </Text>
     </Pressable>
@@ -183,7 +184,7 @@ export function Toggle({ value, onChange, label }: { value: boolean; onChange: (
     at.set(withTiming(value ? 1 : 0, { duration: 260, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }));
   }, [value, at]);
 
-  const track = useAnimatedStyle(() => ({ backgroundColor: interpolateColor(at.get(), [0, 1], [SWITCH_OFF, INCOME]) }));
+  const track = useAnimatedStyle(() => ({ backgroundColor: th(interpolateColor(at.get(), [0, 1], [SWITCH_OFF, INCOME]), "bg") }));
   const knob = useAnimatedStyle(() => ({ transform: [{ translateX: at.get() * TRAVEL }] }));
 
   return (
@@ -198,7 +199,7 @@ export function Toggle({ value, onChange, label }: { value: boolean; onChange: (
       }}
     >
       <Animated.View style={[{ width: TRACK_W, height: TRACK_H, borderRadius: TRACK_H / 2, padding: INSET, justifyContent: "center" }, track]}>
-        <Animated.View style={[{ width: KNOB_W, height: KNOB_H, borderRadius: KNOB_H / 2, backgroundColor: "#fff", shadowColor: "#000", shadowOpacity: 0.22, shadowRadius: 3, shadowOffset: { width: 0, height: 2 } }, knob]} />
+        <Animated.View style={[{ width: KNOB_W, height: KNOB_H, borderRadius: KNOB_H / 2, backgroundColor: th("#fff", "bg"), shadowColor: th("#000", "line"), shadowOpacity: 0.22, shadowRadius: 3, shadowOffset: { width: 0, height: 2 } }, knob]} />
       </Animated.View>
     </Pressable>
   );
@@ -217,19 +218,19 @@ export function StepHeader({ label, stage, total, onBack }: { label: string; sta
           <Pressable
             onPress={onBack}
             hitSlop={10}
-            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, height: 30, paddingLeft: 6, paddingRight: 11, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.08)", opacity: pressed ? 0.6 : 1 })}
+            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, height: 30, paddingLeft: 6, paddingRight: 11, borderRadius: 15, backgroundColor: th("rgba(255,255,255,0.08)", "bg"), opacity: pressed ? 0.6 : 1 })}
           >
-            <ChevronLeft size={15} color="#fff" />
-            <Text style={{ fontSize: 13, fontWeight: "600", color: "#fff" }}>Voltar</Text>
+            <ChevronLeft size={15} color={th("#fff")} />
+            <Text style={{ fontSize: 13, fontWeight: "600", color: th("#fff") }}>Voltar</Text>
           </Pressable>
         )}
-        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ flex: 1, textAlign: "center", fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: "rgba(255,255,255,0.72)" }}>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ flex: 1, textAlign: "center", fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: th("rgba(255,255,255,0.72)") }}>
           {label}
         </Text>
       </View>
       <View style={{ marginTop: 8, flexDirection: "row", gap: 4 }}>
         {Array.from({ length: total }, (_, i) => (
-          <View key={i} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: i < stage ? "#fff" : "rgba(255,255,255,0.12)" }} />
+          <View key={i} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: th(i < stage ? "#fff" : "rgba(255,255,255,0.12)", "bg") }} />
         ))}
       </View>
     </>
@@ -253,11 +254,11 @@ export function Chip({ label, on, onPress, height = 48 }: { label: string; on: b
         justifyContent: "center",
         paddingHorizontal: 6,
         borderWidth: 1,
-        borderColor: on ? "#fff" : "rgba(255,255,255,0.14)",
-        backgroundColor: on ? "#fff" : pressed ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.07)",
+        borderColor: th(on ? "#fff" : "rgba(255,255,255,0.14)", "line"),
+        backgroundColor: th(on ? "#fff" : pressed ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.07)", "bg"),
       })}
     >
-      <Text numberOfLines={1} style={{ fontSize: height < 44 ? 14 : 16, fontWeight: "700", color: on ? "#0B0B0B" : "#fff" }}>
+      <Text numberOfLines={1} style={{ fontSize: height < 44 ? 14 : 16, fontWeight: "700", color: th(on ? "#0B0B0B" : "#fff") }}>
         {label}
       </Text>
     </Pressable>
@@ -273,7 +274,7 @@ export function StepButton({ icon, label, disabled, onPress }: { icon: React.Rea
         void Haptics.selectionAsync().catch(() => undefined);
         onPress();
       }}
-      style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)", opacity: disabled ? 0.3 : pressed ? 0.6 : 1 })}
+      style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg"), opacity: disabled ? 0.3 : pressed ? 0.6 : 1 })}
     >
       {icon}
     </Pressable>
@@ -290,10 +291,10 @@ export function PartsBar({ cents, value, onChange }: { cents: number; value: num
   return (
     <View>
       {more ? (
-        <View style={{ height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 6, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", backgroundColor: "rgba(255,255,255,0.07)" }}>
-          <StepButton icon={<Minus size={18} color="#fff" strokeWidth={2.4} />} label="Menos uma parcela" disabled={n <= 2} onPress={() => onChange(Math.max(2, n - 1))} />
-          <Text style={[nums, { fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }]}>{n}x</Text>
-          <StepButton icon={<Plus size={18} color="#fff" strokeWidth={2.4} />} label="Mais uma parcela" disabled={n >= MAX_PARTS} onPress={() => onChange(Math.min(MAX_PARTS, n + 1))} />
+        <View style={{ height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 6, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: th("rgba(255,255,255,0.14)", "line"), backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
+          <StepButton icon={<Minus size={18} color={th("#fff")} strokeWidth={2.4} />} label="Menos uma parcela" disabled={n <= 2} onPress={() => onChange(Math.max(2, n - 1))} />
+          <Text style={[nums, { fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }]}>{n}x</Text>
+          <StepButton icon={<Plus size={18} color={th("#fff")} strokeWidth={2.4} />} label="Mais uma parcela" disabled={n >= MAX_PARTS} onPress={() => onChange(Math.min(MAX_PARTS, n + 1))} />
         </View>
       ) : (
         <View style={{ flexDirection: "row", gap: 8 }}>
@@ -311,8 +312,8 @@ export function PartsBar({ cents, value, onChange }: { cents: number; value: num
         </View>
       )}
       {value ? (
-        <Text style={[nums, { marginTop: 12, fontSize: 14.5, color: INK.soft }]}>
-          <Text style={{ fontWeight: "800", color: "#fff" }}>
+        <Text style={[nums, { marginTop: 12, fontSize: 14.5, color: th(INK.soft) }]}>
+          <Text style={{ fontWeight: "800", color: th("#fff") }}>
             {value}x de {money(cents / 100 / value)}
           </Text>
           {"  ·  "}total {money(cents / 100)}
@@ -357,22 +358,22 @@ export function RepeatList({ value, income, onPick }: { value: Repeat | null; in
               borderRadius: 20,
               borderCurve: "continuous",
               borderWidth: on ? 1.5 : 1,
-              borderColor: on ? "#fff" : "rgba(255,255,255,0.12)",
-              backgroundColor: pressed ? "rgba(255,255,255,0.12)" : on ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.05)",
+              borderColor: th(on ? "#fff" : "rgba(255,255,255,0.12)", "line"),
+              backgroundColor: th(pressed ? "rgba(255,255,255,0.12)" : on ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.05)", "bg"),
               transform: [{ scale: pressed ? 0.98 : 1 }],
             })}
           >
-            <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: on ? "#fff" : "rgba(255,255,255,0.08)" }}>
-              <Icon size={19} color={on ? "#0B0B0B" : "#fff"} strokeWidth={2.1} />
+            <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th(on ? "#fff" : "rgba(255,255,255,0.08)", "bg") }}>
+              <Icon size={19} color={th(on ? "#0B0B0B" : "#fff")} strokeWidth={2.1} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ fontSize: 16.5, fontWeight: "700", letterSpacing: -0.2, color: "#fff" }}>{REPEAT_LABEL[r]}</Text>
-              <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: INK.soft }}>
+              <Text style={{ fontSize: 16.5, fontWeight: "700", letterSpacing: -0.2, color: th("#fff") }}>{REPEAT_LABEL[r]}</Text>
+              <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: th(INK.soft) }}>
                 {REPEAT_NOTE[r]}
               </Text>
             </View>
-            <View style={{ width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", borderWidth: on ? 0 : 1.5, borderColor: "rgba(255,255,255,0.3)", backgroundColor: on ? "#fff" : "transparent" }}>
-              {on ? <Check size={14} color="#0B0B0B" strokeWidth={3} /> : null}
+            <View style={{ width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", borderWidth: on ? 0 : 1.5, borderColor: th("rgba(255,255,255,0.3)", "line"), backgroundColor: th(on ? "#fff" : "transparent", "bg") }}>
+              {on ? <Check size={14} color={th("#0B0B0B")} strokeWidth={3} /> : null}
             </View>
           </Pressable>
         );
@@ -386,23 +387,23 @@ export function CategoryButton({ onPress }: { onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => ({ height: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", backgroundColor: pressed ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.08)" })}
+      style={({ pressed }) => ({ height: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: th("rgba(255,255,255,0.16)", "line"), backgroundColor: th(pressed ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.08)", "bg") })}
     >
-      <Tag size={18} color="#fff" strokeWidth={2.1} />
-      <Text style={{ flex: 1, fontSize: 16, fontWeight: "600", color: "#fff" }}>Escolher categoria</Text>
-      <ChevronRight size={18} color={INK.soft} />
+      <Tag size={18} color={th("#fff")} strokeWidth={2.1} />
+      <Text style={{ flex: 1, fontSize: 16, fontWeight: "600", color: th("#fff") }}>Escolher categoria</Text>
+      <ChevronRight size={18} color={th(INK.soft)} />
     </Pressable>
   );
 }
 
 export function Field({ label, changeable, children, style }: { label: string; changeable?: boolean; children: React.ReactNode; style?: object }) {
   return (
-    <View style={[{ marginTop: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", backgroundColor: "rgba(255,255,255,0.04)" }, style]}>
+    <View style={[{ marginTop: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 16, borderWidth: 1, borderColor: th("rgba(255,255,255,0.10)", "line"), backgroundColor: th("rgba(255,255,255,0.04)", "bg") }, style]}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 4, marginBottom: 5 }}>
-        <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 11, color: INK.softer }}>
+        <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 11, color: th(INK.softer) }}>
           {label}
         </Text>
-        {changeable ? <ChevronRight size={12} color={INK.softer} /> : null}
+        {changeable ? <ChevronRight size={12} color={th(INK.softer)} /> : null}
       </View>
       {children}
     </View>
@@ -414,10 +415,10 @@ export function Primary({ label, onPress, disabled, busy, tight }: { label: stri
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => ({ marginTop: tight ? 10 : 16, height: 54, borderRadius: 27, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, backgroundColor: "#fff", opacity: disabled && !busy ? 0.35 : pressed ? 0.85 : 1 })}
+      style={({ pressed }) => ({ marginTop: tight ? 10 : 16, height: 54, borderRadius: 27, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, backgroundColor: th("#fff", "bg"), opacity: disabled && !busy ? 0.35 : pressed ? 0.85 : 1 })}
     >
-      {busy && <ActivityIndicator color="#0B0B0B" />}
-      <Text style={{ fontSize: 17, fontWeight: "700", color: "#0B0B0B" }}>{label}</Text>
+      {busy && <ActivityIndicator color={th("#0B0B0B")} />}
+      <Text style={{ fontSize: 17, fontWeight: "700", color: th("#0B0B0B") }}>{label}</Text>
     </Pressable>
   );
 }
@@ -426,10 +427,10 @@ export function Secondary({ icon, label, onPress }: { icon: React.ReactNode; lab
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => ({ flex: 1, height: 46, borderRadius: 23, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", backgroundColor: "rgba(255,255,255,0.07)", opacity: pressed ? 0.7 : 1 })}
+      style={({ pressed }) => ({ flex: 1, height: 46, borderRadius: 23, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1, borderColor: th("rgba(255,255,255,0.14)", "line"), backgroundColor: th("rgba(255,255,255,0.07)", "bg"), opacity: pressed ? 0.7 : 1 })}
     >
       {icon}
-      <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{label}</Text>
+      <Text style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>{label}</Text>
     </Pressable>
   );
 }
@@ -463,8 +464,8 @@ export function SavedView({
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <ParticleOrb size={34} />
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ fontSize: 21, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>{title ?? (line.type === "receita" ? "Receita registrada" : "Gasto registrado")}</Text>
-          <Text style={{ marginTop: 1, fontSize: 13, color: INK.soft }}>Anotado pelo Willo às {hhmm(savedAt)}</Text>
+          <Text style={{ fontSize: 21, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>{title ?? (line.type === "receita" ? "Receita registrada" : "Gasto registrado")}</Text>
+          <Text style={{ marginTop: 1, fontSize: 13, color: th(INK.soft) }}>Anotado pelo Willo às {hhmm(savedAt)}</Text>
         </View>
       </View>
       <View ref={receiptRef} collapsable={false} style={{ marginTop: 10, paddingTop: 2, paddingBottom: 4 }}>
@@ -473,12 +474,12 @@ export function SavedView({
 
       <View style={{ marginTop: 14, flexDirection: "row", gap: 10 }}>
         <Secondary
-          icon={<Share2 size={16} color="#fff" />}
+          icon={<Share2 size={16} color={th("#fff")} />}
           label="Compartilhar"
           onPress={() => void shareReceipt(receiptRef, `Willo · ${line.name} · ${sign}${money(line.amount)} · ${line.category} · ${(line.day ? new Date(`${line.day}T12:00:00`) : savedAt).toLocaleDateString("pt-BR")}`)}
         />
         <Secondary
-          icon={<Download size={16} color="#fff" />}
+          icon={<Download size={16} color={th("#fff")} />}
           label="Salvar"
           onPress={() =>
             void saveReceipt(receiptRef).then((r) =>
@@ -489,7 +490,7 @@ export function SavedView({
       </View>
       <Primary label="Concluir" onPress={onClose} tight />
       <Pressable onPress={onSee} style={({ pressed }) => ({ marginTop: 2, height: 40, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
-        <Text style={{ fontSize: 15, fontWeight: "600", color: INK.soft }}>{seeLabel}</Text>
+        <Text style={{ fontSize: 15, fontWeight: "600", color: th(INK.soft) }}>{seeLabel}</Text>
       </Pressable>
     </Animated.View>
   );

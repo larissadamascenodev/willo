@@ -19,6 +19,7 @@ import { showToast } from "~/lib/toast";
 import { useAuth } from "~/lib/auth";
 import { INCOME, INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Adicionar manualmente, guided — the Registro rápido's way, with nothing taken from a
  * sentence: everything is asked, one question at a time, with the usual answer chosen.
@@ -268,24 +269,24 @@ export default function ManualEntryFlow({
                     <Pressable
                       key={t}
                       onPress={() => set(t === "receita" ? { type: t, method: "conta", repeat: v.repeat === "parcelado" ? "unica" : v.repeat, parts: null } : { type: t, method: null })}
-                      style={({ pressed }) => ({ flex: 1, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: on ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.10)", backgroundColor: on ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.04)", opacity: pressed ? 0.7 : 1 })}
+                      style={({ pressed }) => ({ flex: 1, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: th(on ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.10)", "line"), backgroundColor: th(on ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.04)", "bg"), opacity: pressed ? 0.7 : 1 })}
                     >
-                      <Text style={{ fontSize: 14, fontWeight: "700", color: on ? (t === "receita" ? INCOME : "#fff") : INK.soft }}>{t === "despesa" ? "Despesa" : "Receita"}</Text>
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: th(on ? (t === "receita" ? INCOME : "#fff") : INK.soft) }}>{t === "despesa" ? "Despesa" : "Receita"}</Text>
                     </Pressable>
                   );
                 })}
               </View>
             )}
-            <Text style={{ marginTop: locked ? 0 : 18, fontSize: 26, fontWeight: "800", letterSpacing: -0.7, color: "#fff" }}>
+            <Text style={{ marginTop: locked ? 0 : 18, fontSize: 26, fontWeight: "800", letterSpacing: -0.7, color: th("#fff") }}>
               {income ? "Quanto você recebeu?" : locked ? "Qual o valor da compra?" : "Quanto você gastou?"}
             </Text>
-            {locked && picked ? <Text style={{ marginTop: 4, fontSize: 14, color: INK.soft }}>No cartão {picked.name}</Text> : null}
+            {locked && picked ? <Text style={{ marginTop: 4, fontSize: 14, color: th(INK.soft) }}>No cartão {picked.name}</Text> : null}
             <TextInput
               autoFocus
               value={money(v.cents / 100)}
               onChangeText={(t) => set({ cents: Math.min(Number(t.replace(/\D/g, "") || "0"), 99999999) })}
               keyboardType="number-pad"
-              style={[nums, { marginTop: 14, height: 64, borderRadius: 20, paddingHorizontal: 18, fontSize: 34, fontWeight: "800", letterSpacing: -1, color: income ? INCOME : "#fff", backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: v.cents > 0 ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)" }]}
+              style={[nums, { marginTop: 14, height: 64, borderRadius: 20, paddingHorizontal: 18, fontSize: 34, fontWeight: "800", letterSpacing: -1, color: th(income ? INCOME : "#fff"), backgroundColor: th("rgba(255,255,255,0.06)", "bg"), borderWidth: 1, borderColor: th(v.cents > 0 ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)", "line") }]}
             />
             <Primary
               label="Continuar"
@@ -314,7 +315,7 @@ export default function ManualEntryFlow({
             </Animated.View>
 
             <Animated.View key={q} entering={FadeIn.duration(220)} style={{ marginTop: 16 }}>
-              <Text style={{ fontSize: 15.5, fontWeight: "600", letterSpacing: -0.2, color: "#fff" }}>{title[q]}</Text>
+              <Text style={{ fontSize: 15.5, fontWeight: "600", letterSpacing: -0.2, color: th("#fff") }}>{title[q]}</Text>
 
               {q === "name" && (
                 <>
@@ -326,8 +327,8 @@ export default function ManualEntryFlow({
                     returnKeyType="next"
                     maxLength={40}
                     placeholder={income ? "Ex.: salário, freela, venda" : "Ex.: academia, mercado, Uber"}
-                    placeholderTextColor={INK.faint}
-                    style={{ marginTop: 12, height: 56, borderRadius: 20, paddingHorizontal: 18, fontSize: 19, fontWeight: "600", color: "#fff", backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: nameDraft.trim() ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)" }}
+                    placeholderTextColor={th(INK.faint)}
+                    style={{ marginTop: 12, height: 56, borderRadius: 20, paddingHorizontal: 18, fontSize: 19, fontWeight: "600", color: th("#fff"), backgroundColor: th("rgba(255,255,255,0.06)", "bg"), borderWidth: 1, borderColor: th(nameDraft.trim() ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)", "line") }}
                   />
                   <Primary label="Continuar" disabled={!nameDraft.trim()} onPress={submitName} tight />
                 </>
@@ -346,7 +347,7 @@ export default function ManualEntryFlow({
                       onPress={() => advance({ category: suggested })}
                     />
                   ) : thinking ? (
-                    <Text style={{ fontSize: 13.5, color: INK.soft }}>Willo está pensando…</Text>
+                    <Text style={{ fontSize: 13.5, color: th(INK.soft) }}>Willo está pensando…</Text>
                   ) : null}
                   <CategoryButton onPress={() => setPicking(true)} />
                 </View>
@@ -354,8 +355,8 @@ export default function ManualEntryFlow({
 
               {q === "method" && (
                 <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
-                  <Choice icon={<Landmark size={19} color="#fff" strokeWidth={2.1} />} label="Débito" on={v.method === "conta"} onPress={() => advance({ method: "conta", whereId: v.method === "conta" ? v.whereId : null })} />
-                  <Choice icon={<CreditCard size={19} color="#fff" strokeWidth={2.1} />} label="Crédito" on={v.method === "cartao"} onPress={() => advance({ method: "cartao", whereId: v.method === "cartao" ? v.whereId : null })} />
+                  <Choice icon={<Landmark size={19} color={th("#fff")} strokeWidth={2.1} />} label="Débito" on={v.method === "conta"} onPress={() => advance({ method: "conta", whereId: v.method === "conta" ? v.whereId : null })} />
+                  <Choice icon={<CreditCard size={19} color={th("#fff")} strokeWidth={2.1} />} label="Crédito" on={v.method === "cartao"} onPress={() => advance({ method: "cartao", whereId: v.method === "cartao" ? v.whereId : null })} />
                 </View>
               )}
 
@@ -374,9 +375,9 @@ export default function ManualEntryFlow({
         {/* ── 3 · Check before saving: every part changeable here ── */}
         {step === "confirm" && (
           <Animated.View key="confirm" entering={FadeInDown.duration(320)} style={{ marginTop: 18 }}>
-            <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>Confira antes de salvar</Text>
+            <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>Confira antes de salvar</Text>
             <EntryForm values={v} onChange={set} accounts={accounts} cards={cards} lockedCard={locked} onPickCategory={() => setPicking(true)} />
-            {error && <Text style={{ marginTop: 14, fontSize: 13.5, color: RED }}>{error}</Text>}
+            {error && <Text style={{ marginTop: 14, fontSize: 13.5, color: th(RED) }}>{error}</Text>}
             <Primary
               label={saving ? "Registrando…" : scheduled ? "Agendar" : "Registrar"}
               busy={saving}

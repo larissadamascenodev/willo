@@ -4,6 +4,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-na
 import Glass from "~/components/Glass";
 import { INK } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Two or three choices, with the pill travelling between them.
  *
@@ -79,7 +80,7 @@ export default function SegmentedTabs<T extends string>({
               left: 4,
               height,
               borderRadius: 999,
-              backgroundColor: "#fff",
+              backgroundColor: th("#fff", "bg"),
             },
             pill,
           ]}
@@ -103,7 +104,7 @@ export default function SegmentedTabs<T extends string>({
                 paddingHorizontal: 6,
                 fontSize: compact ? 12 : 13,
                 fontWeight: "600",
-                color: on ? "#0B0B0B" : glass ? "rgba(255,255,255,0.78)" : INK.soft,
+                color: th(on ? "#0B0B0B" : glass ? "rgba(255,255,255,0.78)" : INK.soft),
               }}
             >
               {option.label}
@@ -133,8 +134,8 @@ export default function SegmentedTabs<T extends string>({
         flexDirection: "row",
         borderRadius: 999,
         borderWidth: compact ? 0 : 1,
-        borderColor: "rgba(255,255,255,0.06)",
-        backgroundColor: compact ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.035)",
+        borderColor: th("rgba(255,255,255,0.06)", "line"),
+        backgroundColor: th(compact ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.035)", "bg"),
         padding: 4,
       }}
     >

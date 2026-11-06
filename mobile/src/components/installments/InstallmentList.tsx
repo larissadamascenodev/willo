@@ -12,6 +12,7 @@ import { money } from "~/lib/money";
 import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * The purchases with an instalment in the chosen month, written the way a card's
  * statement is: on the ground, a few at first, each with its glyph, where it is paid
@@ -51,12 +52,12 @@ export default function InstallmentList({
     <View>
       <View style={{ paddingHorizontal: 4, flexDirection: "row", alignItems: "baseline", gap: 8 }}>
         <Text style={T.eyebrow}>{title}</Text>
-        <Text style={{ fontSize: 12, color: INK.faint }}>{entries.length}</Text>
+        <Text style={{ fontSize: 12, color: th(INK.faint) }}>{entries.length}</Text>
       </View>
 
       <View style={{ marginTop: 6 }}>
         {visible.length === 0 ? (
-          <Text style={{ paddingVertical: 24, textAlign: "center", fontSize: 14, color: INK.softer }}>{emptyLabel}</Text>
+          <Text style={{ paddingVertical: 24, textAlign: "center", fontSize: 14, color: th(INK.softer) }}>{emptyLabel}</Text>
         ) : (
           visible.map((entry, i) => (
             <Animated.View key={entry.item.id} entering={FadeInDown.delay(Math.min(i, 8) * 35).duration(320)}>
@@ -81,12 +82,12 @@ export default function InstallmentList({
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.08)",
-            backgroundColor: "rgba(255,255,255,0.05)",
+            borderColor: th("rgba(255,255,255,0.08)", "line"),
+            backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          <Text style={{ fontSize: 15.5, fontWeight: "500", color: "#fff" }}>Ver todos os parcelamentos</Text>
+          <Text style={{ fontSize: 15.5, fontWeight: "500", color: th("#fff") }}>Ver todos os parcelamentos</Text>
         </Pressable>
       )}
 
@@ -118,24 +119,24 @@ export function InstallmentRow({
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
-      <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-        <Icon size={20} color={chipInk(hex)} strokeWidth={2} />
+      <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+        <Icon size={20} color={th(chipInk(hex))} strokeWidth={2} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: "#fff" }}>{item.name}</Text>
-        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: item.isOverdue ? RED : INK.soft }}>
+        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>{item.name}</Text>
+        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: th(item.isOverdue ? RED : INK.soft) }}>
           {item.isOverdue ? `Em atraso · ${where}` : `${where} · ${item.category}`}
         </Text>
         <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8 }}>
           <View style={{ flex: 1, maxWidth: 120, height: 4, flexDirection: "row", gap: item.installments > 24 ? 1 : 2 }}>
             {Array.from({ length: item.installments }, (_, i) => (
-              <View key={i} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: i < number ? hex : "rgba(255,255,255,0.12)" }} />
+              <View key={i} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: th(i < number ? hex : "rgba(255,255,255,0.12)", "bg") }} />
             ))}
           </View>
-          <Text style={{ fontSize: 11.5, fontWeight: "600", color: INK.soft }}>{`${number} de ${item.installments}`}</Text>
+          <Text style={{ fontSize: 11.5, fontWeight: "600", color: th(INK.soft) }}>{`${number} de ${item.installments}`}</Text>
         </View>
       </View>
-      <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>{money(item.amount)}</Text>
+      <Text style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>{money(item.amount)}</Text>
     </Pressable>
   );
 }
@@ -174,37 +175,37 @@ export function InstallmentDetail({
   return (
     <CenterModal open={!!entry} onClose={onClose} title={item.name} subtitle={where}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-        <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: chipFill(hex) }}>
-          <Icon size={21} color={chipInk(hex)} strokeWidth={2} />
+        <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+          <Icon size={21} color={th(chipInk(hex))} strokeWidth={2} />
         </View>
         <View>
-          <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1, color: "#fff" }}>{money(item.amount)}</Text>
-          <Text style={{ marginTop: 1, fontSize: 13, color: INK.soft }}>por mês</Text>
+          <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1, color: th("#fff") }}>{money(item.amount)}</Text>
+          <Text style={{ marginTop: 1, fontSize: 13, color: th(INK.soft) }}>por mês</Text>
         </View>
       </View>
 
       <View style={{ marginTop: 22 }}>
         <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" }}>
-          <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff") }}>
             Parcela {number} de {item.installments}
           </Text>
-          <Text style={{ fontSize: 13, color: INK.soft }}>
+          <Text style={{ fontSize: 13, color: th(INK.soft) }}>
             {number === item.installments ? "" : `faltam ${money(item.amount * (item.installments - number))}`}
           </Text>
         </View>
         <View style={{ marginTop: 10, height: 6, flexDirection: "row", gap: 3 }}>
           {Array.from({ length: item.installments }, (_, i) => (
-            <View key={i} style={{ flex: 1, borderRadius: 3, backgroundColor: i < number ? hex : "rgba(255,255,255,0.10)" }} />
+            <View key={i} style={{ flex: 1, borderRadius: 3, backgroundColor: th(i < number ? hex : "rgba(255,255,255,0.10)", "bg") }} />
           ))}
         </View>
         <View style={{ marginTop: 10, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
           <View>
-            <Text style={{ fontSize: 11.5, color: INK.softer }}>Pago</Text>
-            <Text style={{ marginTop: 2, fontSize: 14.5, fontWeight: "700", color: "#fff" }}>{money(item.amount * paidCount)}</Text>
+            <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Pago</Text>
+            <Text style={{ marginTop: 2, fontSize: 14.5, fontWeight: "700", color: th("#fff") }}>{money(item.amount * paidCount)}</Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
-            <Text style={{ fontSize: 11.5, color: INK.softer }}>Total da compra</Text>
-            <Text style={{ marginTop: 2, fontSize: 17, fontWeight: "800", letterSpacing: -0.4, color: "#fff" }}>{money(item.amount * item.installments)}</Text>
+            <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Total da compra</Text>
+            <Text style={{ marginTop: 2, fontSize: 17, fontWeight: "800", letterSpacing: -0.4, color: th("#fff") }}>{money(item.amount * item.installments)}</Text>
           </View>
         </View>
       </View>
@@ -219,10 +220,10 @@ export function InstallmentDetail({
       <View style={{ marginTop: 6 }}>
         {ahead.map((a) => (
           <View key={a.n} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 }}>
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: a.n === paidCount + 1 ? "#fff" : "rgba(255,255,255,0.22)" }} />
-            <Text style={{ width: 30, fontSize: 12.5, color: INK.softer }}>{a.n}ª</Text>
-            <Text style={{ flex: 1, fontSize: 14, color: "#fff" }}>{a.label}</Text>
-            <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>{money(item.amount)}</Text>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(a.n === paidCount + 1 ? "#fff" : "rgba(255,255,255,0.22)", "bg") }} />
+            <Text style={{ width: 30, fontSize: 12.5, color: th(INK.softer) }}>{a.n}ª</Text>
+            <Text style={{ flex: 1, fontSize: 14, color: th("#fff") }}>{a.label}</Text>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: th("#fff") }}>{money(item.amount)}</Text>
           </View>
         ))}
       </View>
@@ -232,9 +233,9 @@ export function InstallmentDetail({
 
 function Fact({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 16, paddingVertical: 12, borderBottomWidth: last ? 0 : 1, borderBottomColor: "rgba(255,255,255,0.06)" }}>
-      <Text style={{ fontSize: 14.5, color: INK.soft }}>{label}</Text>
-      <Text numberOfLines={2} style={{ flexShrink: 1, fontSize: 15, fontWeight: "600", color: "#fff", textAlign: "right" }}>{value}</Text>
+    <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 16, paddingVertical: 12, borderBottomWidth: last ? 0 : 1, borderBottomColor: th("rgba(255,255,255,0.06)", "line") }}>
+      <Text style={{ fontSize: 14.5, color: th(INK.soft) }}>{label}</Text>
+      <Text numberOfLines={2} style={{ flexShrink: 1, fontSize: 15, fontWeight: "600", color: th("#fff"), textAlign: "right" }}>{value}</Text>
     </View>
   );
 }

@@ -14,6 +14,7 @@ import { money } from "~/lib/money";
 import { AMBER, GREEN, INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
+import { th } from "~/theme/theme";
 /**
  * What is certain every month.
  *
@@ -91,12 +92,12 @@ export function GastosFixosView({ items, customCats }: { items: RecurringItem[];
               borderRadius: 20,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: "rgba(255,255,255,0.06)",
+              backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
             }}
           >
-            <Repeat size={16} color={INK.soft} />
+            <Repeat size={16} color={th(INK.soft)} />
           </View>
-          <Text style={{ flex: 1, fontSize: 13.5, lineHeight: 19, color: INK.soft }}>
+          <Text style={{ flex: 1, fontSize: 13.5, lineHeight: 19, color: th(INK.soft) }}>
             Nenhuma conta ou receita fixa ainda. Marque um lançamento como fixo e ele aparece aqui.
           </Text>
         </View>
@@ -131,16 +132,16 @@ export function GastosFixosView({ items, customCats }: { items: RecurringItem[];
         </View>
 
         {filtered.length === 0 ? (
-          <Text style={{ paddingVertical: 22, fontSize: 13.5, color: INK.soft }}>
+          <Text style={{ paddingVertical: 22, fontSize: 13.5, color: th(INK.soft) }}>
             Nenhuma {income ? "receita fixa" : "despesa fixa"} ainda.
           </Text>
         ) : (
           <>
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 14 }}>
-              <Text style={[nums, { fontSize: 21, fontWeight: "700", letterSpacing: -0.5, color: "#fff" }]}>
+              <Text style={[nums, { fontSize: 21, fontWeight: "700", letterSpacing: -0.5, color: th("#fff") }]}>
                 {money(total)}
               </Text>
-              <Text style={{ fontSize: 13.5, color: INK.soft }}> por mês</Text>
+              <Text style={{ fontSize: 13.5, color: th(INK.soft) }}> por mês</Text>
             </Text>
 
             {/* The month's progress through them: one tick each, filled once it has happened. */}
@@ -157,21 +158,21 @@ export function GastosFixosView({ items, customCats }: { items: RecurringItem[];
                         flex: 1,
                         height: 5,
                         borderRadius: 999,
-                        backgroundColor: s.isPaidThisMonth
+                        backgroundColor: th(s.isPaidThisMonth
                           ? income
                             ? GREEN
                             : "#fff"
-                          : "rgba(255,255,255,0.10)",
+                          : "rgba(255,255,255,0.10)", "bg"),
                       }}
                     />
                   ))}
                 </View>
               ) : (
-                <View style={{ height: 5, borderRadius: 999, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.10)" }}>
+                <View style={{ height: 5, borderRadius: 999, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.10)", "bg") }}>
                   <Bar share={paidCount / filtered.length} color={income ? GREEN : "#fff"} delay={0.06} />
                 </View>
               )}
-              <Text style={{ marginTop: 7, fontSize: 12, color: INK.soft }}>
+              <Text style={{ marginTop: 7, fontSize: 12, color: th(INK.soft) }}>
                 {paidCount} de {filtered.length} {income ? "já recebidas" : "já pagas"} este mês
               </Text>
             </View>
@@ -180,7 +181,7 @@ export function GastosFixosView({ items, customCats }: { items: RecurringItem[];
       </View>
 
       {filtered.length > 0 && (
-        <View style={{ marginTop: 12, marginHorizontal: 16, borderTopWidth: 1, borderTopColor: RULE }}>
+        <View style={{ marginTop: 12, marginHorizontal: 16, borderTopWidth: 1, borderTopColor: th(RULE, "line") }}>
           {shown.map((s, i) => (
             <FixedRow key={s.id} item={s} customCats={customCats} first={i === 0} />
           ))}
@@ -197,18 +198,18 @@ export function GastosFixosView({ items, customCats }: { items: RecurringItem[];
             gap: 4,
             marginTop: 4,
             borderTopWidth: 1,
-            borderTopColor: RULE,
+            borderTopColor: th(RULE, "line"),
             paddingVertical: 12,
             opacity: pressed ? 0.6 : 1,
           })}
         >
-          <Text style={{ fontSize: 13, fontWeight: "500", color: "rgba(255,255,255,0.74)" }}>
+          <Text style={{ fontSize: 13, fontWeight: "500", color: th("rgba(255,255,255,0.74)") }}>
             {expanded ? "Mostrar menos" : `Ver todas (${filtered.length})`}
           </Text>
           {expanded ? (
-            <ChevronUp size={16} color="rgba(255,255,255,0.74)" />
+            <ChevronUp size={16} color={th("rgba(255,255,255,0.74)")} />
           ) : (
-            <ChevronDown size={16} color="rgba(255,255,255,0.74)" />
+            <ChevronDown size={16} color={th("rgba(255,255,255,0.74)")} />
           )}
         </Pressable>
       ) : (
@@ -238,7 +239,7 @@ function FixedRow({ item: s, customCats, first }: { item: RecurringItem; customC
         gap: 12,
         paddingVertical: 12,
         borderTopWidth: first ? 0 : 1,
-        borderTopColor: RULE,
+        borderTopColor: th(RULE, "line"),
         opacity: s.isPaidThisMonth ? 0.62 : 1,
       }}
     >
@@ -249,22 +250,22 @@ function FixedRow({ item: s, customCats, first }: { item: RecurringItem; customC
           borderRadius: 20,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: chipFill(hex),
+          backgroundColor: th(chipFill(hex), "bg"),
         }}
       >
-        <Icon size={18} color={chipInk(hex)} strokeWidth={2} />
+        <Icon size={18} color={th(chipInk(hex))} strokeWidth={2} />
       </View>
 
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "500", color: "#fff" }}>
+        <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "500", color: th("#fff") }}>
           {s.name}
         </Text>
-        <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, color: soon ? AMBER : INK.soft }}>
+        <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, color: th(soon ? AMBER : INK.soft) }}>
           {where}
         </Text>
       </View>
 
-      <Text numberOfLines={1} style={[nums, { fontSize: 15, fontWeight: "600", color: "#fff" }]}>
+      <Text numberOfLines={1} style={[nums, { fontSize: 15, fontWeight: "600", color: th("#fff") }]}>
         {income ? "+" : ""}
         {money(s.amount)}
       </Text>
@@ -276,10 +277,10 @@ function FixedRow({ item: s, customCats, first }: { item: RecurringItem; customC
             borderRadius: 9,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: income ? GREEN : "#fff",
+            backgroundColor: th(income ? GREEN : "#fff", "bg"),
           }}
         >
-          <Check size={11} color="#0B0B0B" strokeWidth={3} />
+          <Check size={11} color={th("#0B0B0B")} strokeWidth={3} />
         </View>
       )}
     </View>

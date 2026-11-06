@@ -18,6 +18,7 @@ import { compact } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 
+import { th } from "~/theme/theme";
 /**
  * Where the balance is going.
  *
@@ -104,11 +105,11 @@ export default function ProjecoesPanel({ projection }: { projection: Projection 
   if ((!data.transactions.length && !data.events.length) || rows.length === 0) {
     return (
       <View style={{ marginTop: 56, alignItems: "center", paddingHorizontal: 32 }}>
-        <CalendarDays size={30} color={INK.softer} strokeWidth={1.6} />
-        <Text style={{ marginTop: 16, fontSize: 17, fontWeight: "600", color: "#fff" }}>
+        <CalendarDays size={30} color={th(INK.softer)} strokeWidth={1.6} />
+        <Text style={{ marginTop: 16, fontSize: 17, fontWeight: "600", color: th("#fff") }}>
           Ainda não há o que projetar
         </Text>
-        <Text style={{ marginTop: 6, textAlign: "center", fontSize: 14, lineHeight: 20, color: INK.soft }}>
+        <Text style={{ marginTop: 6, textAlign: "center", fontSize: 14, lineHeight: 20, color: th(INK.soft) }}>
           Lance suas receitas e contas fixas para ver para onde seu saldo vai.
         </Text>
         <Pressable
@@ -119,12 +120,12 @@ export default function ProjecoesPanel({ projection }: { projection: Projection 
             borderRadius: 22,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "#fff",
+            backgroundColor: th("#fff", "bg"),
             paddingHorizontal: 22,
             opacity: pressed ? 0.85 : 1,
           })}
         >
-          <Text style={{ fontSize: 14.5, fontWeight: "600", color: "#0B0B0B" }}>Ver transações</Text>
+          <Text style={{ fontSize: 14.5, fontWeight: "600", color: th("#0B0B0B") }}>Ver transações</Text>
         </Pressable>
       </View>
     );
@@ -138,10 +139,10 @@ export default function ProjecoesPanel({ projection }: { projection: Projection 
     <View style={{ marginTop: 28, paddingHorizontal: 4 }}>
       {/* ══ The line's readout ══ */}
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-        <Text style={{ flex: 1, minWidth: 0, fontSize: 15, color: INK.soft }}>
+        <Text style={{ flex: 1, minWidth: 0, fontSize: 15, color: th(INK.soft) }}>
           Saldo no fim de {fullName(pick)}
         </Text>
-        <Text style={{ fontSize: 13, color: INK.softer }}>
+        <Text style={{ fontSize: 13, color: th(INK.softer) }}>
           {offset === 0
             ? "este mês"
             : offset > 0
@@ -162,13 +163,13 @@ export default function ProjecoesPanel({ projection }: { projection: Projection 
               fontSize: 44,
               fontWeight: "800",
               letterSpacing: -1.6,
-              color: pick.fecha < 0 ? RED : "#fff",
+              color: th(pick.fecha < 0 ? RED : "#fff"),
             },
           ]}
         >
           {signedValue(pick.fecha)}
         </Text>
-        <Text style={{ marginTop: 6, fontSize: 13.5, color: INK.soft }}>
+        <Text style={{ marginTop: 6, fontSize: 13.5, color: th(INK.soft) }}>
           {offset < 0
             ? `No mês, entrou ${compact(pick.income)} e saiu ${compact(pick.expense)}`
             : `No mês, entra ${compact(pick.income)} e sai ${compact(pick.expense)}`}
@@ -182,12 +183,12 @@ export default function ProjecoesPanel({ projection }: { projection: Projection 
 
       {below.length > 0 && (
         <View style={{ marginTop: 20, flexDirection: "row", alignItems: "baseline", gap: 9 }}>
-          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: RED, top: -1 }} />
-          <Text style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: 20, color: "#fff" }}>
+          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: th(RED, "bg"), top: -1 }} />
+          <Text style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: 20, color: th("#fff") }}>
             {below.length === 1
               ? `Seu saldo fica negativo em ${fullName(below[0])}.`
               : `Seu saldo fica negativo em ${below.length} meses, a partir de ${fullName(below[0])}.`}{" "}
-            <Text style={{ color: INK.softer }}>Dá tempo de mudar.</Text>
+            <Text style={{ color: th(INK.softer) }}>Dá tempo de mudar.</Text>
           </Text>
         </View>
       )}
@@ -195,14 +196,14 @@ export default function ProjecoesPanel({ projection }: { projection: Projection 
       {/* ══ The month picked, written out right under the bars, on the ground ══ */}
       <Animated.View key={`detail-${selected}`} entering={FadeIn.duration(220)} style={{ marginTop: 26 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: toneOf(pick) }} />
-          <Text style={{ flex: 1, fontSize: 17, fontWeight: "700", color: "#fff", textTransform: "capitalize" }}>{fullName(pick)}</Text>
-          <Text style={{ fontSize: 12.5, color: INK.softer }}>{offset === 0 ? "mês atual" : offset < 0 ? "já passou" : "previsto"}</Text>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(toneOf(pick), "bg") }} />
+          <Text style={{ flex: 1, fontSize: 17, fontWeight: "700", color: th("#fff"), textTransform: "capitalize" }}>{fullName(pick)}</Text>
+          <Text style={{ fontSize: 12.5, color: th(INK.softer) }}>{offset === 0 ? "mês atual" : offset < 0 ? "já passou" : "previsto"}</Text>
         </View>
         <MonthBreakdown row={pick} prevName={MONTH_NAMES[(pick.month + 11) % 12]} />
       </Animated.View>
 
-      <Text style={{ marginTop: 14, fontSize: 12.5, lineHeight: 18, color: INK.softer }}>
+      <Text style={{ marginTop: 14, fontSize: 12.5, lineHeight: 18, color: th(INK.softer) }}>
         Toque numa barra para ver o mês. Conta só o que já está previsto: contas fixas, parcelas
         lançadas e recorrências.
       </Text>
@@ -214,10 +215,10 @@ function Skeleton() {
   const track = "rgba(255,255,255,0.06)";
   return (
     <View style={{ marginTop: 28, paddingHorizontal: 4 }}>
-      <View style={{ height: 16, width: 190, borderRadius: 6, backgroundColor: track }} />
-      <View style={{ marginTop: 12, height: 52, width: 220, borderRadius: 10, backgroundColor: track }} />
-      <View style={{ marginTop: 26, height: 156, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.03)" }} />
-      <View style={{ marginTop: 38, height: 260, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.03)" }} />
+      <View style={{ height: 16, width: 190, borderRadius: 6, backgroundColor: th(track, "bg") }} />
+      <View style={{ marginTop: 12, height: 52, width: 220, borderRadius: 10, backgroundColor: th(track, "bg") }} />
+      <View style={{ marginTop: 26, height: 156, borderRadius: 14, backgroundColor: th("rgba(255,255,255,0.03)", "bg") }} />
+      <View style={{ marginTop: 38, height: 260, borderRadius: 12, backgroundColor: th("rgba(255,255,255,0.03)", "bg") }} />
     </View>
   );
 }
