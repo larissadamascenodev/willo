@@ -85,7 +85,8 @@ export default function InstallmentPayoffs({
                       height: 32,
                       borderRadius: 16,
                       borderWidth: 2,
-                      borderColor: th("#121316", "line"),
+                      /* The ring that parts one circle from the next is the card's own ground, in either theme. */
+                      borderColor: th("#121316", "bg"),
                       alignItems: "center",
                       justifyContent: "center",
                       backgroundColor: th(chipFill(hex), "bg"),

@@ -231,7 +231,8 @@ export default function Cartoes() {
                     <Bar
                       key={r.card.id}
                       share={share}
-                      color={USED_LIMIT_HEX}
+                      /* Each card's share in the card's own colour, so the bar reads as the wallet. */
+                      color={r.hex}
                       minWidth={6}
                       delay={0.1 + i * 0.06}
                     />
@@ -249,7 +250,7 @@ export default function Cartoes() {
               <View style={{ marginTop: 16, flexDirection: "row", gap: 16 }}>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(USED_LIMIT_HEX) }} />
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(rows[0]?.hex ?? USED_LIMIT_HEX) }} />
                     <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Usado</Text>
                   </View>
                   <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 16, fontWeight: "700", color: th("rgba(255,255,255,0.72)") }}>

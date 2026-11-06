@@ -124,7 +124,7 @@ function Flow({
           {money(amount)}
         </Text>
       </View>
-      <View style={{ marginTop: 10, height: 10, borderRadius: 999, backgroundColor: th("rgba(255,255,255,0.06)", "bg"), overflow: "hidden" }}>
+      <View style={{ marginTop: 10, height: 7, borderRadius: 999, backgroundColor: th("rgba(255,255,255,0.06)", "bg"), overflow: "hidden" }}>
         <Bar share={Math.max(amount / scale, amount > 0 ? 0.03 : 0)} color={inflow ? GREEN : RED} delay={delay} />
       </View>
     </View>

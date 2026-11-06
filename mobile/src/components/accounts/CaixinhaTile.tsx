@@ -54,54 +54,54 @@ export default function CaixinhaTile({
       {/* No border on the clipped frame itself: a picture clipped to a rounded border shows a
           thin bright fringe where the border's anti-aliasing meets it. The edge is drawn on top
           instead, over the picture and its shade alike. */}
-      <View style={{ width, height, borderRadius: 28, borderCurve: "continuous", overflow: "hidden", backgroundColor: th("#0D0E10", "bg") }}>
+      <View style={{ width, height, borderRadius: 28, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#0D0E10" }}>
         <CaixinhaCover goal={goal} width={width} height={height} glyph={Math.round(width * 0.72)} glyphTop={Math.round(height * 0.07)} />
         <LinearGradient
-          colors={th(["rgba(8,9,10,0)", "rgba(8,9,10,0.55)", "rgba(8,9,10,0.92)"], "grad")}
+          colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.55)", "rgba(8,9,10,0.92)"]}
           locations={[0.3, 0.62, 1]}
           style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
         />
 
         {/* How far along, in a small glass tag; a caixinha with no amount to reach has no "how far". */}
         {hasTarget && (
-          <View style={{ position: "absolute", top: 12, left: 12, height: 26, paddingHorizontal: 10, borderRadius: 13, overflow: "hidden", justifyContent: "center", borderWidth: 1, borderColor: th("rgba(255,255,255,0.18)", "line") }}>
-            <BlurView intensity={40} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.3)", "bg") }} />
-            <Text style={{ fontSize: 12, fontWeight: "700", color: th(isComplete ? GREEN : "#fff") }}>{percent}%</Text>
+          <View style={{ position: "absolute", top: 12, left: 12, height: 26, paddingHorizontal: 10, borderRadius: 13, overflow: "hidden", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" }}>
+            <BlurView intensity={40} tint={"dark"} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18,20,26,0.3)" }} />
+            <Text style={{ fontSize: 12, fontWeight: "700", color: isComplete ? GREEN : "#fff" }}>{percent}%</Text>
           </View>
         )}
 
         {/* One that earns says so in the opposite corner. */}
         {earns(goal) && (
-          <View style={{ position: "absolute", top: 12, right: 12, height: 26, paddingHorizontal: 9, borderRadius: 13, overflow: "hidden", flexDirection: "row", alignItems: "center", gap: 4, borderWidth: 1, borderColor: th("rgba(200,243,109,0.45)", "line") }}>
-            <BlurView intensity={40} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(200,243,109,0.16)", "bg") }} />
-            <TrendingUp size={12} color={th(GREEN)} strokeWidth={2.6} />
-            <Text style={{ fontSize: 11.5, fontWeight: "700", color: th(GREEN) }}>{Number(goal.yield_percent)}%</Text>
+          <View style={{ position: "absolute", top: 12, right: 12, height: 26, paddingHorizontal: 9, borderRadius: 13, overflow: "hidden", flexDirection: "row", alignItems: "center", gap: 4, borderWidth: 1, borderColor: "rgba(200,243,109,0.45)" }}>
+            <BlurView intensity={40} tint={"dark"} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(200,243,109,0.16)" }} />
+            <TrendingUp size={12} color={GREEN} strokeWidth={2.6} />
+            <Text style={{ fontSize: 11.5, fontWeight: "700", color: GREEN }}>{Number(goal.yield_percent)}%</Text>
           </View>
         )}
 
         <View style={{ position: "absolute", left: 16, right: 16, bottom: 16 }}>
-          <Text numberOfLines={2} style={{ fontSize: 14, fontWeight: "600", lineHeight: 18, color: th("rgba(255,255,255,0.86)") }}>{goal.name}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 4, fontSize: width < 150 ? 18 : 23, fontWeight: "800", letterSpacing: -0.8, color: th("#fff") }}>
+          <Text numberOfLines={2} style={{ fontSize: 14, fontWeight: "600", lineHeight: 18, color: "rgba(255,255,255,0.86)" }}>{goal.name}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ marginTop: 4, fontSize: width < 150 ? 18 : 23, fontWeight: "800", letterSpacing: -0.8, color: "#fff" }}>
             {money(Number(goal.current_amount) || 0)}
           </Text>
           {hasTarget ? (
             <>
-              <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, color: th("rgba(255,255,255,0.6)") }}>
+              <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, color: "rgba(255,255,255,0.6)" }}>
                 de {money(Number(goal.target_amount) || 0)}
               </Text>
-              <View style={{ marginTop: 10, height: 4, borderRadius: 2, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.18)", "bg") }}>
-                <Animated.View style={[{ height: 4, borderRadius: 2, backgroundColor: th(isComplete ? GREEN : preset.hex, "bg") }, bar]} />
+              <View style={{ marginTop: 10, height: 4, borderRadius: 2, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.18)" }}>
+                <Animated.View style={[{ height: 4, borderRadius: 2, backgroundColor: isComplete ? GREEN : preset.hex }, bar]} />
               </View>
             </>
           ) : (
-            <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, color: th("rgba(255,255,255,0.6)") }}>
+            <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, color: "rgba(255,255,255,0.6)" }}>
               {earns(goal) ? `rende ${Number(goal.yield_percent)}% do CDI` : "sem valor definido"}
             </Text>
           )}
         </View>
-        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 28, borderCurve: "continuous", borderWidth: 1, borderColor: th("rgba(255,255,255,0.08)", "line") }} />
+        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 28, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
       </View>
     </Pressable>
   );

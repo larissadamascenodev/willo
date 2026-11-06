@@ -408,10 +408,10 @@ export default function CaixinhaSheet({
                         hint="Do seu jeito"
                         onPress={() => pick("custom")}
                       >
-                        <LinearGradient colors={th(["#242838", "#14161E"], "grad")} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+                        <LinearGradient colors={["#242838", "#14161E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
                         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 44, alignItems: "center", justifyContent: "center" }}>
-                          <View style={{ width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: th("rgba(255,255,255,0.22)", "line"), backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
-                            <Plus size={22} color={th("#fff")} strokeWidth={2.2} />
+                          <View style={{ width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.22)", backgroundColor: "rgba(255,255,255,0.08)" }}>
+                            <Plus size={22} color={"#fff"} strokeWidth={2.2} />
                           </View>
                         </View>
                       </PictureCard>
@@ -422,12 +422,12 @@ export default function CaixinhaSheet({
                 {/* ══ Name and amount ══ */}
                 {key === "about" && (
                   <Animated.View entering={FadeInDown.delay(180).duration(420)} style={{ marginTop: 24, gap: 14 }}>
-                    <View style={{ height: 150, borderRadius: 28, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.12)", "line") }}>
+                    <View style={{ height: 150, borderRadius: 28, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" }}>
                       <CaixinhaCover goal={{ name: name || "Nova caixinha", cover_image: null }} height={150} glyph={130} glyphTop={-4} />
-                      <LinearGradient colors={th(["rgba(8,9,10,0)", "rgba(8,9,10,0.78)"], "grad")} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 92 }} />
+                      <LinearGradient colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.78)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 92 }} />
                       <View style={{ position: "absolute", left: 18, right: 18, bottom: 14 }}>
-                        <Text numberOfLines={1} style={{ fontSize: 19, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>{name.trim() || "Nova caixinha"}</Text>
-                        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: th("rgba(255,255,255,0.72)") }}>
+                        <Text numberOfLines={1} style={{ fontSize: 19, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>{name.trim() || "Nova caixinha"}</Text>
+                        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: "rgba(255,255,255,0.72)" }}>
                           {hasValue ? (cents > 0 ? `Meta de ${brl(cents)}` : "Defina um valor") : "Sem valor definido"}
                         </Text>
                       </View>
@@ -820,28 +820,28 @@ function PictureCard({
           borderCurve: "continuous",
           overflow: "hidden",
           borderWidth: on ? 2 : 1,
-          borderColor: th(on ? "#fff" : "rgba(255,255,255,0.12)", "line"),
+          borderColor: on ? "#fff" : "rgba(255,255,255,0.12)",
           opacity: dim ? 0.5 : 1,
         }}
       >
         {children}
-        <LinearGradient colors={th(["rgba(8,9,10,0)", "rgba(8,9,10,0.55)", "rgba(8,9,10,0.9)"], "grad")} locations={[0, 0.45, 1]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 86 }} />
+        <LinearGradient colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.55)", "rgba(8,9,10,0.9)"]} locations={[0, 0.45, 1]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 86 }} />
         <View style={{ position: "absolute", left: 14, right: 14, bottom: 12 }}>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ fontSize: 15.5, fontWeight: "800", letterSpacing: -0.3, color: th("#fff") }}>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ fontSize: 15.5, fontWeight: "800", letterSpacing: -0.3, color: "#fff" }}>
             {label}
           </Text>
-          <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, color: th("rgba(255,255,255,0.66)") }}>{hint}</Text>
+          <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, color: "rgba(255,255,255,0.66)" }}>{hint}</Text>
         </View>
         {badge && (
-          <View style={{ position: "absolute", top: 12, left: 12, height: 26, paddingHorizontal: 10, borderRadius: 13, overflow: "hidden", justifyContent: "center", borderWidth: 1, borderColor: th("rgba(255,255,255,0.26)", "line") }}>
-            <BlurView intensity={30} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 13 }} />
-            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 13, backgroundColor: th("rgba(255,255,255,0.12)", "bg") }} />
-            <Text style={{ zIndex: 1, fontSize: 11.5, fontWeight: "700", color: th("#fff") }}>{badge}</Text>
+          <View style={{ position: "absolute", top: 12, left: 12, height: 26, paddingHorizontal: 10, borderRadius: 13, overflow: "hidden", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.26)" }}>
+            <BlurView intensity={30} tint={"dark"} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 13 }} />
+            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 13, backgroundColor: "rgba(255,255,255,0.12)" }} />
+            <Text style={{ zIndex: 1, fontSize: 11.5, fontWeight: "700", color: "#fff" }}>{badge}</Text>
           </View>
         )}
         {on && (
-          <View style={{ position: "absolute", top: 12, right: 12, width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg") }}>
-            <Check size={15} color={th("#0B0B0B")} strokeWidth={3.2} />
+          <View style={{ position: "absolute", top: 12, right: 12, width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
+            <Check size={15} color={"#0B0B0B"} strokeWidth={3.2} />
           </View>
         )}
       </View>
