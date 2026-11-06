@@ -1,31 +1,67 @@
 import { useSyncExternalStore } from "react";
+import { File, Paths } from "expo-file-system";
+import { onHydrated } from "~/lib/shims";
 
 /**
- * Which sky the screens that wear one are wearing.
+ * What the screens that wear a sky are wearing.
  *
- * 1 is the first: drawn live, the hour with its fire and its water. 2 is the picture
- * taken from the welcome, with the glow turned down so cards pass over it quietly.
- * Both are kept so the person can choose, and the choice stays on the phone. It is read
- * from the same synchronous store as the home's top, so the screen opens already on
- * the one that was chosen rather than changing under the eye.
+ * - "2", the default: the hour as a picture, with the glow turned down so cards pass
+ *   over it quietly.
+ * - "1": the same hour drawn live, with its fire and its water.
+ * - "plain": no sky, only the room's soft lights on the dark ground.
+ * - "custom": a photo the person chose, kept on the phone.
+ *
+ * The choice stays on the phone until it is changed. It is read from the same
+ * synchronous store as the home's top, and read again the moment that store is filled
+ * from disk, so the screen opens already on the one that was chosen.
+ *
+ * The custom photo is kept by its file name only: the folder an app's documents live
+ * in can move between installs, so the full address is rebuilt each time.
  */
 
-export type SkyModel = "1" | "2";
+export type SkyModel = "1" | "2" | "plain" | "custom";
 
 const KEY = "sky-model";
+const PHOTO_KEY = "sky-photo";
 const listeners = new Set<() => void>();
 
-const read = (): SkyModel => {
+const readModel = (): SkyModel => {
   try {
-    return localStorage.getItem(KEY) === "1" ? "1" : "2";
+    const v = localStorage.getItem(KEY);
+    return v === "1" || v === "plain" || v === "custom" ? v : "2";
   } catch {
     return "2";
   }
 };
 
-let current: SkyModel = read();
+const readPhoto = (): string | null => {
+  try {
+    const name = localStorage.getItem(PHOTO_KEY);
+    if (!name) return null;
+    const file = new File(Paths.document, name);
+    return file.exists ? file.uri : null;
+  } catch {
+    return null;
+  }
+};
+
+let current: SkyModel = readModel();
+let photo: string | null = readPhoto();
+/* A custom choice with its photo gone falls back to the default. */
+const settle = () => {
+  if (current === "custom" && !photo) current = "2";
+};
+settle();
+
+onHydrated(() => {
+  current = readModel();
+  photo = readPhoto();
+  settle();
+  listeners.forEach((l) => l());
+});
 
 export function setSkyModel(next: SkyModel) {
+  if (next === "custom" && !photo) return;
   current = next;
   try {
     localStorage.setItem(KEY, next);
@@ -33,6 +69,33 @@ export function setSkyModel(next: SkyModel) {
     /* Kept for this session only. */
   }
   listeners.forEach((l) => l());
+}
+
+/** Keeps a new photo (already saved in the documents folder) and wears it. */
+export function setSkyPhoto(fileName: string) {
+  const previous = (() => {
+    try {
+      return localStorage.getItem(PHOTO_KEY);
+    } catch {
+      return null;
+    }
+  })();
+  try {
+    localStorage.setItem(PHOTO_KEY, fileName);
+  } catch {
+    /* Kept for this session only. */
+  }
+  photo = new File(Paths.document, fileName).uri;
+  /* The photo it replaces is no longer reachable from anywhere. */
+  if (previous && previous !== fileName) {
+    try {
+      const old = new File(Paths.document, previous);
+      if (old.exists) old.delete();
+    } catch {
+      /* Left behind; harmless. */
+    }
+  }
+  setSkyModel("custom");
 }
 
 const subscribe = (l: () => void) => {
@@ -45,4 +108,9 @@ const subscribe = (l: () => void) => {
 export function useSkyModel() {
   const model = useSyncExternalStore(subscribe, () => current, () => current);
   return [model, setSkyModel] as const;
+}
+
+/** The custom photo's address on this phone, if there is one. */
+export function useSkyPhoto() {
+  return useSyncExternalStore(subscribe, () => photo, () => photo);
 }

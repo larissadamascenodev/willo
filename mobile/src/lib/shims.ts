@@ -61,6 +61,18 @@ const events = {
   },
 };
 
+/* Modules that keep a choice in memory read it when they are first imported, which
+   is before the stored keys have arrived: they would always see the default. They
+   ask to be told once the keys are in, and read again then. */
+let hydrated = false;
+const whenHydrated = new Set<() => void>();
+
+/** Runs `fn` once the stored keys are in memory — at once, if they already are. */
+export function onHydrated(fn: () => void) {
+  if (hydrated) fn();
+  else whenHydrated.add(fn);
+}
+
 /** Reads the stored keys into memory. Call once, before the first screen draws. */
 export async function hydrateShims() {
   try {
@@ -72,6 +84,15 @@ export async function hydrateShims() {
   } catch {
     /* a first run with nothing stored is the normal case */
   }
+  hydrated = true;
+  whenHydrated.forEach((fn) => {
+    try {
+      fn();
+    } catch {
+      /* one bad reader should not stop the others */
+    }
+  });
+  whenHydrated.clear();
 }
 
 export function installShims() {

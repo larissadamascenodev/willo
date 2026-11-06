@@ -3,21 +3,19 @@ import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
-import * as WebBrowser from "expo-web-browser";
 import * as Haptics from "expo-haptics";
 import { LEGAL, OPERATOR, type LegalBlock } from "@/lib/legal";
 import GlowButton from "~/components/GlowButton";
 import RoundButton from "~/components/RoundButton";
-import { ChevronRight, CircleCheck, ExternalLink, X } from "~/components/icons";
-import { INK } from "~/theme/tokens";
+import { CircleCheck, X } from "~/components/icons";
 
 /**
  * The Terms or the Privacy Policy, read in the app.
  *
- * A tall sheet: the document's name, a card that opens the always-current version on
- * the site, the full text, and at the foot the circling-light button to accept it. The
- * text comes from the same source as the site (lib/legal), so both always agree.
- * Accepting records which version was accepted and when, on this phone.
+ * A tall sheet: the document's name on one line, when it was last changed, the full
+ * text set like a printed page, and at the foot the circling-light button to accept
+ * it. The text comes from the same source as the site (lib/legal), so both always
+ * agree. Accepting records which version was accepted and when, on this phone.
  */
 
 const ACCEPTED_KEY = "willo.legal.accepted";
@@ -33,6 +31,10 @@ export function recordAcceptance(which: "terms" | "privacy") {
     /* Nothing to record into. */
   }
 }
+
+/* One measure for the whole page: body, lists and tables share it. */
+const BODY = { fontSize: 15, lineHeight: 23.5, letterSpacing: -0.1, color: "rgba(255,255,255,0.68)" } as const;
+const GUTTER = 24;
 
 export default function LegalSheet({ which, onClose, onAccept }: { which: "terms" | "privacy" | null; onClose: () => void; onAccept?: () => void }) {
   const insets = useSafeAreaInsets();
@@ -54,7 +56,6 @@ export default function LegalSheet({ which, onClose, onAccept }: { which: "terms
   const dim = useAnimatedStyle(() => ({ opacity: up.get() }));
   if (!shown) return null;
   const doc = LEGAL[shown];
-  const url = `${OPERATOR.site}${doc.path}`;
 
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
@@ -67,73 +68,60 @@ export default function LegalSheet({ which, onClose, onAccept }: { which: "terms
 
       <Animated.View
         style={[
-          { position: "absolute", left: 0, right: 0, bottom: 0, top: insets.top + 24, borderTopLeftRadius: 30, borderTopRightRadius: 30, borderCurve: "continuous", overflow: "hidden" },
+          { position: "absolute", left: 0, right: 0, bottom: 0, top: insets.top + 24, borderTopLeftRadius: 32, borderTopRightRadius: 32, borderCurve: "continuous", overflow: "hidden" },
           rise,
         ]}
       >
         <BlurView intensity={60} tint="dark" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
-        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(16,18,22,0.72)" }} />
+        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "rgba(14,15,18,0.78)" }} />
 
-        <View style={{ alignSelf: "center", width: 38, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.22)", marginTop: 10 }} />
+        <View style={{ alignSelf: "center", width: 36, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.18)", marginTop: 9 }} />
 
-        {/* Its name, and the way out. */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 14, flexDirection: "row", alignItems: "flex-start" }}>
-          <View style={{ width: 40 }} />
-          <View style={{ flex: 1, alignItems: "center" }}>
-            <Text style={{ fontSize: 11.5, fontWeight: "700", letterSpacing: 2, color: INK.softer }}>{doc.kicker}</Text>
-            <Text style={{ marginTop: 4, fontSize: 24, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>{doc.title}</Text>
-          </View>
+        {/* The way out, alone at the top right. */}
+        <View style={{ flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 16, paddingTop: 6 }}>
           <RoundButton label="Fechar" onPress={onClose}>
             <X size={18} color="#fff" strokeWidth={2.2} />
           </RoundButton>
         </View>
 
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 18, paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
-          {/* The always-current version, on the site. */}
-          <Pressable
-            onPress={() => {
-              void Haptics.selectionAsync().catch(() => undefined);
-              void WebBrowser.openBrowserAsync(url);
-            }}
-            accessibilityRole="link"
-            accessibilityLabel={`Abrir a versão sempre atualizada em ${url}`}
-            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, padding: 14, borderRadius: 22, backgroundColor: pressed ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.06)" })}
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: GUTTER, paddingTop: 2, paddingBottom: 36 }} showsVerticalScrollIndicator={false}>
+          {/* Its name, on one line, and when it last changed. */}
+          <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 2.4, color: "rgba(255,255,255,0.42)" }}>{doc.kicker}</Text>
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            style={{ marginTop: 8, fontSize: 30, lineHeight: 36, fontWeight: "700", letterSpacing: -0.9, color: "#fff" }}
           >
-            <View style={{ width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" }}>
-              <ExternalLink size={19} color="#fff" strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "700", color: "#fff" }}>
-                Versão sempre atualizada
-              </Text>
-              <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: INK.softer }}>
-                {url.replace(/^https?:\/\//, "")}
-              </Text>
-            </View>
-            <ChevronRight size={18} color={INK.faint} strokeWidth={2} />
-          </Pressable>
-
-          <Text style={{ marginTop: 18, fontSize: 12.5, color: INK.softer }}>
-            Versão {doc.version} · atualizada em {doc.updated}
+            {doc.title}
           </Text>
-          <Text style={{ marginTop: 10, fontSize: 16, lineHeight: 23, fontWeight: "600", color: "#fff" }}>{doc.intro}</Text>
+          <Text style={{ marginTop: 8, fontSize: 12.5, letterSpacing: 0.2, color: "rgba(255,255,255,0.4)", fontVariant: ["tabular-nums"] }}>
+            Versão {doc.version}  ·  atualizada em {doc.updated}
+          </Text>
+
+          <View style={{ height: 1, marginTop: 22, marginBottom: 22, backgroundColor: "rgba(255,255,255,0.07)" }} />
+
+          <Text style={{ fontSize: 16.5, lineHeight: 25, letterSpacing: -0.2, fontWeight: "500", color: "rgba(255,255,255,0.92)" }}>{doc.intro}</Text>
 
           {doc.sections.map((s) => (
-            <View key={s.title} style={{ marginTop: 26 }}>
-              <Text style={{ fontSize: 17, fontWeight: "800", letterSpacing: -0.3, color: "#fff" }}>{s.title}</Text>
+            <View key={s.title} style={{ marginTop: 34 }}>
+              <Text style={{ fontSize: 17.5, lineHeight: 23, fontWeight: "700", letterSpacing: -0.35, color: "#fff" }}>{s.title}</Text>
               {s.blocks.map((b, i) => (
                 <Fragment key={i}>{renderBlock(b)}</Fragment>
               ))}
             </View>
           ))}
 
-          <Text style={{ marginTop: 28, fontSize: 13, lineHeight: 19, color: INK.faint }}>
-            Contato: {OPERATOR.email} · {OPERATOR.name}, {OPERATOR.city}
+          <View style={{ height: 1, marginTop: 36, marginBottom: 18, backgroundColor: "rgba(255,255,255,0.07)" }} />
+          <Text style={{ fontSize: 12.5, lineHeight: 19, color: "rgba(255,255,255,0.38)" }}>
+            {OPERATOR.name} · {OPERATOR.document}
+            {"\n"}
+            {OPERATOR.city} · {OPERATOR.email}
           </Text>
         </ScrollView>
 
         {/* Accepting. */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: insets.bottom + 12 }}>
+        <View style={{ paddingHorizontal: GUTTER - 4, paddingTop: 12, paddingBottom: insets.bottom + 12 }}>
           <GlowButton
             label="Li e aceito"
             icon={<CircleCheck size={18} color="#fff" strokeWidth={2.2} />}
@@ -151,32 +139,31 @@ export default function LegalSheet({ which, onClose, onAccept }: { which: "terms
 }
 
 function renderBlock(b: LegalBlock) {
-  const body = { marginTop: 10, fontSize: 15, lineHeight: 22, color: INK.soft };
-  if ("p" in b) return <Text style={body}>{b.p}</Text>;
+  if ("p" in b) return <Text style={[BODY, { marginTop: 12 }]}>{b.p}</Text>;
   if ("list" in b)
     return (
-      <View style={{ marginTop: 8, gap: 6 }}>
+      <View style={{ marginTop: 10, gap: 8 }}>
         {b.list.map((item) => (
-          <View key={item} style={{ flexDirection: "row", gap: 10 }}>
-            <Text style={{ fontSize: 15, lineHeight: 22, color: INK.faint }}>•</Text>
-            <Text style={{ flex: 1, fontSize: 15, lineHeight: 22, color: INK.soft }}>{item}</Text>
+          <View key={item} style={{ flexDirection: "row", gap: 12, paddingLeft: 2 }}>
+            <View style={{ width: 4, height: 4, borderRadius: 2, marginTop: 10, backgroundColor: "rgba(255,255,255,0.38)" }} />
+            <Text style={[BODY, { flex: 1 }]}>{item}</Text>
           </View>
         ))}
       </View>
     );
   return (
-    <View style={{ marginTop: 12, borderRadius: 16, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.04)" }}>
-      <View style={{ flexDirection: "row", paddingHorizontal: 12, paddingVertical: 10, backgroundColor: "rgba(255,255,255,0.06)" }}>
+    <View style={{ marginTop: 16, borderRadius: 18, borderCurve: "continuous", overflow: "hidden", backgroundColor: "rgba(255,255,255,0.035)" }}>
+      <View style={{ flexDirection: "row", gap: 12, paddingHorizontal: 14, paddingVertical: 11, backgroundColor: "rgba(255,255,255,0.05)" }}>
         {b.table.head.map((h) => (
-          <Text key={h} style={{ flex: 1, fontSize: 12, fontWeight: "700", letterSpacing: 0.6, color: "#fff" }}>
+          <Text key={h} style={{ flex: 1, fontSize: 10.5, fontWeight: "600", letterSpacing: 1.4, color: "rgba(255,255,255,0.5)" }}>
             {h.toUpperCase()}
           </Text>
         ))}
       </View>
       {b.table.rows.map((row, r) => (
-        <View key={r} style={{ flexDirection: "row", gap: 10, paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: r ? 1 : 0, borderTopColor: "rgba(255,255,255,0.05)" }}>
+        <View key={r} style={{ flexDirection: "row", gap: 12, paddingHorizontal: 14, paddingVertical: 12, borderTopWidth: r ? 1 : 0, borderTopColor: "rgba(255,255,255,0.05)" }}>
           {row.map((cell, k) => (
-            <Text key={k} style={{ flex: 1, fontSize: 13.5, lineHeight: 19, color: k === 0 ? "#fff" : INK.soft }}>
+            <Text key={k} style={{ flex: 1, fontSize: 13.5, lineHeight: 19.5, color: k === 0 ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.6)" }}>
               {cell}
             </Text>
           ))}

@@ -21,6 +21,8 @@ export default function ConfirmGlass({
   children,
   confirmLabel,
   busy = false,
+  icon,
+  busyLabel = "Excluindo…",
   onConfirm,
   onClose,
 }: {
@@ -29,6 +31,9 @@ export default function ConfirmGlass({
   children?: ReactNode;
   confirmLabel: string;
   busy?: boolean;
+  /** In place of the bin, when what is about to happen is not a deletion. */
+  icon?: ReactNode;
+  busyLabel?: string;
   onConfirm: () => void;
   onClose: () => void;
 }) {
@@ -84,7 +89,7 @@ export default function ConfirmGlass({
 
           <View style={{ alignItems: "center", paddingHorizontal: 22, paddingTop: 26, paddingBottom: 18 }}>
             <View style={{ width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(248,113,113,0.16)" }}>
-              <Trash2 size={22} color={RED} strokeWidth={2} />
+              {icon ?? <Trash2 size={22} color={RED} strokeWidth={2} />}
             </View>
             <Text style={{ marginTop: 16, textAlign: "center", fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: "#fff" }}>{title}</Text>
             <View style={{ marginTop: 8 }}>
@@ -123,7 +128,7 @@ export default function ConfirmGlass({
                 opacity: busy ? 0.6 : pressed ? 0.75 : 1,
               })}
             >
-              <Text style={{ fontSize: 15.5, fontWeight: "700", color: RED }}>{busy ? "Excluindo…" : confirmLabel}</Text>
+              <Text style={{ fontSize: 15.5, fontWeight: "700", color: RED }}>{busy ? busyLabel : confirmLabel}</Text>
             </Pressable>
           </View>
         </Animated.View>

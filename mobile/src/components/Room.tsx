@@ -3,7 +3,7 @@ import { View, type ViewStyle } from "react-native";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import { Image } from "expo-image";
 import Sky from "~/components/Sky";
-import { useSkyModel } from "~/lib/skyModel";
+import { useSkyModel, useSkyPhoto, type SkyModel } from "~/lib/skyModel";
 import { GROUND, GROUND_LIT } from "~/theme/tokens";
 
 /**
@@ -50,11 +50,14 @@ const LIGHTS = [
 
 export default function Room({
   lit = true,
-  sky = true,
+  sky: wantsSky = true,
+  preview,
   children,
   style,
 }: {
   lit?: boolean;
+  /** Shows this background instead of the chosen one: the profile's previews. */
+  preview?: SkyModel;
   /** The home, the wallet and the accounts screen get the hour instead of the lights. */
   sky?: boolean;
   children?: ReactNode;
@@ -62,13 +65,35 @@ export default function Room({
 }) {
   /* Turned down is not a different picture, only a quieter one. */
   const strength = lit ? 1 : 0.45;
-  const [model] = useSkyModel();
-  const picture = sky && model === "2";
+  const [chosen] = useSkyModel();
+  const model = preview ?? chosen;
+  const photo = useSkyPhoto();
+  /* "plain" is the room without its sky: the soft lights on the dark ground. */
+  const sky = wantsSky && model !== "plain";
+  const own = sky && model === "custom" && !!photo;
+  const picture = sky && (model === "2" || own);
 
   return (
     <View style={[{ flex: 1, backgroundColor: lit ? GROUND_LIT : GROUND }, style]}>
       {sky && !picture && <Sky />}
-      {picture && <Image source={HOUR} contentFit="fill" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />}
+      {picture && !own && <Image source={HOUR} contentFit="fill" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />}
+      {/* The person's own photo, held down so the cards and the figures over it stay
+          the brightest thing on the screen, and closed at the edges like the hour. */}
+      {own && (
+        <>
+          <Image source={{ uri: photo! }} contentFit="cover" transition={200} pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(6,7,9,0.5)" }} />
+          <Svg width="100%" height="100%" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+            <Defs>
+              <RadialGradient id="ownVignette" cx="0.5" cy="0.42" rx="0.75" ry="0.55">
+                <Stop offset="0.35" stopColor="#000" stopOpacity={0} />
+                <Stop offset="1" stopColor="#000" stopOpacity={0.6} />
+              </RadialGradient>
+            </Defs>
+            <Rect x="0" y="0" width="100%" height="100%" fill="url(#ownVignette)" />
+          </Svg>
+        </>
+      )}
 
       {/* Both the box and the drawing have to be told to fill: left to itself the
           canvas takes its intrinsic size and the light stops partway down. */}

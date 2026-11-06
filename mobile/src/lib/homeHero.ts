@@ -1,13 +1,14 @@
 import { useSyncExternalStore } from "react";
+import { onHydrated } from "~/lib/shims";
 
 /**
  * Which of the two the top of the home is: the robot saying his lines, or the same
  * lines centred with no robot.
  *
- * They exist so they can be tried against each other, and the choice is kept on the
- * phone. It is read from the same synchronous store the shared code uses, which is
- * filled before anything draws — so the screen opens on the one that was chosen,
- * rather than on one and then changing to the other.
+ * The choice is kept on the phone, in the same synchronous store the shared code
+ * uses. That store is filled from disk only after this module has been imported, so
+ * the choice is read again the moment it is filled — before any screen draws — and
+ * the home opens on the one that was chosen, every time, until it is changed.
  */
 
 export type HomeHero = "orb" | "stories";
@@ -24,6 +25,10 @@ const read = (): HomeHero => {
 };
 
 let current: HomeHero = read();
+onHydrated(() => {
+  current = read();
+  listeners.forEach((l) => l());
+});
 
 export function setHomeHero(next: HomeHero) {
   current = next;

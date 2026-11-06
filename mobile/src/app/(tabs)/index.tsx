@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
 import { RefreshControl, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
@@ -17,7 +18,6 @@ import { useCardsOverview, invoiceDueDate } from "@/hooks/useCardsOverview";
 import Room from "~/components/Room";
 import ScrollEdge from "~/components/ScrollEdge";
 import HomeHeader from "~/components/home/HomeHeader";
-import ProfileSheet from "~/components/ProfileSheet";
 import OrbHero, { LINES_HERO_BODY, ORB_HERO_BODY, WilloGlow } from "~/components/home/OrbHero";
 import { useHomeHero } from "~/lib/homeHero";
 import WidgetBoard from "~/components/home/WidgetBoard";
@@ -62,14 +62,20 @@ export default function Home() {
   /* Held here, not in the board: the bar that says it is being edited has to stay
      put while the board scrolls under it. */
   const [editing, setEditing] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const router = useRouter();
 
   const today = useMemo(() => new Date(), []);
   const month = today.getMonth();
   const year = today.getFullYear();
 
   const { data, refetch } = useFinanceData(month, year, { includeHistorical: false });
-  const { profile } = useProfile();
+  const { profile, refetch: refetchProfile } = useProfile();
+  /* Coming back from the profile, the photo and the name may have changed. */
+  useFocusEffect(
+    useCallback(() => {
+      void refetchProfile();
+    }, [refetchProfile]),
+  );
   const { cards, invoices } = useCardsOverview();
   const { assinaturas, totalAssinaturas } = useRecorrentes();
   const { ended, keep: keepEnded, cancel: cancelEnded } = useEndedSubscriptions(user?.id);
@@ -245,9 +251,8 @@ export default function Home() {
         name={name}
         avatarUrl={profile?.avatar_url}
         collapsed={collapsed && !editing}
-        onProfile={() => setProfileOpen(true)}
+        onProfile={() => router.push("/perfil" as never)}
       />
-      <ProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} name={name} avatarUrl={profile?.avatar_url} />
       <EditBar open={editing} onDone={() => setEditing(false)} />
     </Room>
   );

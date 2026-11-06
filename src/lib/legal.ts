@@ -4,7 +4,7 @@
  *
  * Written for what Willo actually does: a personal finance organiser that writes down
  * what the person tells it (typed, spoken, photographed, read from e-mail or, with
- * Willo Copilot, from a bank's purchase notification), explains it and forecasts it,
+ * Willo Copilot, from a purchase an iOS Shortcuts automation sends), explains it and forecasts it,
  * with AI from Anthropic and Google. Brazilian law (LGPD, CDC, Marco Civil, Decreto
  * 7.962/2013) and the App Store's rules (account deletion in the app, the AI-sharing
  * disclosure of guideline 5.1.2, the standard licence terms) shape it.
@@ -16,10 +16,10 @@
 
 export const OPERATOR = {
   /** Who runs Willo: the person's full name, or the company's name and CNPJ. */
-  name: "[NOME COMPLETO OU RAZÃO SOCIAL]",
+  name: "Larissa Dias Damasceno",
   /** CPF is not published; for a company, "CNPJ 00.000.000/0001-00". */
-  document: "[CNPJ, SE HOUVER]",
-  city: "[CIDADE/UF]",
+  document: "CNPJ 59.261.159/0001-02",
+  city: "Campinas/SP",
   email: "[E-MAIL DE CONTATO]",
   site: "https://willo-app.vercel.app",
 };
@@ -46,7 +46,7 @@ export const TERMS: LegalDoc = {
   key: "terms",
   title: "Termos de Uso",
   kicker: "CONTRATO DE USO",
-  version: "1.0",
+  version: "1.1",
   updated: "06/11/2026",
   path: "/termos-de-uso",
   intro: "Leia com atenção antes de usar. Ao criar sua conta ou continuar usando o Willo, você declara ter lido, compreendido e aceito estes Termos.",
@@ -88,7 +88,7 @@ export const TERMS: LegalDoc = {
       title: "4. Os dados que você registra",
       blocks: [
         { p: "4.1. Você é responsável pela exatidão do que registra. O Willo não confere os seus lançamentos com o seu banco." },
-        { p: "4.2. Quando o Willo lê um texto, uma foto, um áudio, um e-mail ou uma notificação, o resultado é uma sugestão de lançamento. Confira antes de salvar: o que você salva é registro seu." },
+        { p: "4.2. Quando o Willo lê um texto, uma foto, um áudio, um e-mail ou uma compra enviada pelos Atalhos, o resultado é uma sugestão de lançamento. Confira antes de salvar: o que você salva é registro seu." },
       ],
     },
     {
@@ -100,12 +100,12 @@ export const TERMS: LegalDoc = {
       ],
     },
     {
-      title: "6. Willo Copilot: compras lidas das notificações do banco",
+      title: "6. Willo Copilot: compras anotadas pelos Atalhos",
       blocks: [
-        { p: "6.1. O Willo Copilot é uma função opcional que, com a sua permissão, lê as notificações de compra enviadas pelos aplicativos do seu banco e transforma cada uma em um lançamento para você conferir." },
-        { p: "6.2. Ele lê apenas o necessário para o lançamento: valor, estabelecimento, data, forma de pagamento e o banco que avisou. Ele não acessa a sua conta bancária, não vê a sua senha e não movimenta dinheiro." },
-        { p: "6.3. A função só funciona onde o sistema do aparelho permite essa leitura, e pode ser desligada a qualquer momento. Desligá-la não apaga os lançamentos já salvos." },
-        { p: "6.4. O banco pode mudar o texto das notificações, e o Copilot pode deixar de reconhecer uma compra ou reconhecê-la errado. Confira sempre o que ele anotou." },
+        { p: "6.1. O Willo Copilot é uma função opcional que registra suas compras com a ajuda de uma automação que você mesmo cria no app Atalhos do iPhone. Quando você paga com o cartão ou com o aplicativo do banco escolhido, a automação envia ao Willo os dados daquela compra, e o Willo transforma esses dados em um lançamento." },
+        { p: "6.2. A automação envia apenas o necessário para o lançamento: valor, estabelecimento, data, forma de pagamento e cartão ou banco. O Willo não lê as suas notificações, não acessa a sua conta bancária, não vê a sua senha e não movimenta dinheiro." },
+        { p: "6.3. Você cria, edita e desliga a automação no app Atalhos, a qualquer momento. Desligá-la não apaga os lançamentos já salvos. O app Atalhos é da Apple, e o que ele permite pode mudar com as versões do iOS." },
+        { p: "6.4. Os dados que chegam podem vir incompletos, e o Copilot pode deixar de reconhecer uma compra ou reconhecê-la errado. Confira sempre o que ele anotou." },
       ],
     },
     {
@@ -138,7 +138,7 @@ export const TERMS: LegalDoc = {
       title: "11. Disponibilidade e limitação de responsabilidade",
       blocks: [
         { p: "11.1. Trabalhamos para manter o Willo disponível e correto, mas ele pode ficar fora do ar, apresentar falhas ou perder dados por motivos técnicos, inclusive de fornecedores." },
-        { p: "11.2. Na extensão permitida pela lei, o Willo não responde por decisões financeiras tomadas com base nas suas análises, por juros, multas ou atrasos de contas, por erros de leitura de fotos, áudios, e-mails ou notificações não conferidos antes de salvar, nem por erros da inteligência artificial." },
+        { p: "11.2. Na extensão permitida pela lei, o Willo não responde por decisões financeiras tomadas com base nas suas análises, por juros, multas ou atrasos de contas, por erros de leitura de fotos, áudios, e-mails ou compras enviadas pelos Atalhos não conferidos antes de salvar, nem por erros da inteligência artificial." },
         { p: "11.3. Nada nestes Termos afasta direitos garantidos pelo Código de Defesa do Consumidor (Lei 8.078/1990) nem a responsabilidade por dano causado com dolo." },
       ],
     },
@@ -196,7 +196,7 @@ export const PRIVACY: LegalDoc = {
   key: "privacy",
   title: "Política de Privacidade",
   kicker: "POLÍTICA DE DADOS",
-  version: "1.0",
+  version: "1.1",
   updated: "06/11/2026",
   path: "/politica-privacidade",
   intro: "Como o Willo coleta, usa, compartilha e protege os seus dados, conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018). O Willo não vende os seus dados e não usa os seus dados financeiros para publicidade.",
@@ -215,7 +215,7 @@ export const PRIVACY: LegalDoc = {
         { p: "2.2. Dados financeiros que você registra: receitas, despesas, valores, datas, categorias, descrições, contas e os saldos que você informa, cartões (nome, limite, fechamento e vencimento), faturas e parcelas, metas, cofrinhos, recorrências e lembretes." },
         { p: "2.3. Conteúdo que você envia: fotos de comprovantes, arquivos de fatura, áudios de voz e mensagens ao assistente." },
         { p: "2.4. E-mail (opcional, versão web): se você conectar o Gmail, lemos, em modo somente leitura, as mensagens necessárias para importar faturas e compras." },
-        { p: "2.5. Notificações do banco (opcional, Willo Copilot): se você ativar a função, lemos as notificações de compra dos aplicativos de banco que você escolher, apenas para extrair valor, estabelecimento, data, forma de pagamento e banco." },
+        { p: "2.5. Compras enviadas pelos Atalhos (opcional, Willo Copilot): se você criar a automação no app Atalhos do iPhone, recebemos os dados de cada compra que ela envia: valor, estabelecimento, data, forma de pagamento e cartão ou banco. Não lemos as suas notificações nem outros dados do aparelho." },
         { p: "2.6. Aparelho e uso técnico: sistema e modelo do aparelho, versão do aplicativo, idioma e registros técnicos de erro no servidor, incluindo endereço IP." },
         { p: "2.7. Registros de aceite: data, hora e versão dos Termos e desta Política que você aceitou." },
         { p: "2.8. O que nunca pedimos: senha do banco, número completo do cartão, código de segurança (CVV) ou acesso à sua conta bancária." },
@@ -228,7 +228,7 @@ export const PRIVACY: LegalDoc = {
           list: [
             "prestar o serviço: registrar, organizar e mostrar os seus lançamentos, saldos, faturas e metas;",
             "gerar análises, previsões, alertas e respostas do assistente;",
-            "ler comprovantes, áudios, e-mails e notificações quando você usar essas funções;",
+            "ler comprovantes, áudios, e-mails e as compras enviadas pelos Atalhos quando você usar essas funções;",
             "enviar os lembretes e avisos que você autorizou;",
             "manter a segurança, prevenir fraude e corrigir erros;",
             "cumprir obrigações legais e exercer direitos em processos.",
