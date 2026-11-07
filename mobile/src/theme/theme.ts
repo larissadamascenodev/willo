@@ -70,59 +70,40 @@ const subscribe = (l: () => void) => {
 /* Where to put the person back after the screens are drawn again for a new theme. */
 let returnRoute: string | null = null;
 
-/** Changes the theme from a screen, coming back to `route` once it is drawn again. */
-/* A picture of the screen as it was, laid over the screen while it is drawn again in
-   the other theme, then faded away: the change is a crossfade, not a blink. */
-let snapshot: string | null = null;
-const snapshotListeners = new Set<() => void>();
-const setSnapshot = (uri: string | null) => {
-  snapshot = uri;
-  snapshotListeners.forEach((l) => l());
+/*
+ * The change itself. Tapping a theme covers the screen at once in the new theme's
+ * ground — a quick fade, so it reads as the colour changing — the screens are drawn
+ * again under the cover, and the cover lifts off them. Nothing is photographed or
+ * waited for: the first thing the person sees, in the same instant, is the new colour.
+ */
+let cover: ThemeMode | null = null;
+const coverListeners = new Set<() => void>();
+const setCover = (next: ThemeMode | null) => {
+  cover = next;
+  coverListeners.forEach((l) => l());
 };
-export function useThemeSnapshot() {
+export function useThemeCover() {
   return useSyncExternalStore(
     (l) => {
-      snapshotListeners.add(l);
+      coverListeners.add(l);
       return () => {
-        snapshotListeners.delete(l);
+        coverListeners.delete(l);
       };
     },
-    () => snapshot,
-    () => snapshot,
+    () => cover,
+    () => cover,
   );
 }
-export const clearThemeSnapshot = () => setSnapshot(null);
+export const liftThemeCover = () => setCover(null);
 
-const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+/** How long the cover takes to come down before the screens are drawn again. */
+export const COVER_IN_MS = 140;
 
 /** Changes the theme from a screen, coming back to `route` once it is drawn again. */
-/* Resolved once the picture of the screen is actually painted over it. */
-let snapshotPainted: (() => void) | null = null;
-export const markSnapshotPainted = () => {
-  snapshotPainted?.();
-  snapshotPainted = null;
-};
-
 export async function switchTheme(next: ThemeMode, route: string) {
-  if (next === pref) return;
-  try {
-    const { captureScreen } = await import("react-native-view-shot");
-    const { Dimensions } = await import("react-native");
-    /* Taken at the screen's size in points, not its pixels: a third of the work, and
-       the picture is gone in under a second anyway. */
-    const uri = await captureScreen({ format: "jpg", quality: 0.85, result: "tmpfile", width: Dimensions.get("window").width * 2 });
-    /* Nothing under it changes until the picture is really on screen: swapping before it
-       has loaded is the blink between the two themes. */
-    const painted = new Promise<void>((resolve) => {
-      snapshotPainted = resolve;
-      setTimeout(resolve, 700);
-    });
-    setSnapshot(uri);
-    await painted;
-    await nextFrame();
-  } catch {
-    setSnapshot(null);
-  }
+  if (next === pref || cover) return;
+  setCover(next);
+  await new Promise((resolve) => setTimeout(resolve, COVER_IN_MS + 20));
   returnRoute = route;
   setThemePref(next);
 }
