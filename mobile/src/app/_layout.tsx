@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, View, useWindowDimensions } from "react-native";
 import { Stack, useNavigationContainerRef, useRouter } from "expo-router";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
+import RNMaskedView from "@react-native-masked-view/masked-view";
+import Svg, { Path } from "react-native-svg";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { installShims, hydrateShims } from "~/lib/shims";
@@ -16,7 +18,7 @@ import LaunchIntro from "~/components/LaunchIntro";
 import { markIntroDone } from "~/lib/launchIntro";
 import NotificationBridge from "~/lib/NotificationBridge";
 import { GREEN, GROUND } from "~/theme/tokens";
-import { clearThemeSnapshot, markSnapshotPainted, setActiveTheme, takeReturnRoute, th, useThemePref, useThemeSnapshot } from "~/theme/theme";
+import { clearThemeSnapshot, markSnapshotPainted, themeOrigin, setActiveTheme, takeReturnRoute, th, useThemePref, useThemeSnapshot } from "~/theme/theme";
 
 /* Before any shared module is imported for real, the handful of browser things it
    expects have to exist. */
@@ -95,6 +97,10 @@ function Splash() {
   );
 }
 
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+/* Its class type predates the React types in use; it is used as a plain component. */
+const MaskedView = RNMaskedView as unknown as React.ComponentType<{ style?: object; pointerEvents?: "none"; maskElement: React.ReactElement; children?: React.ReactNode }>;
+
 /** The route on top of the stack: what the person is looking at. */
 type NavState = { index?: number; routes: { name: string; state?: NavState }[] } | undefined;
 function topRoute(state: NavState): string | null {
@@ -120,27 +126,38 @@ function Door() {
   const router = useRouter();
   const nav = useNavigationContainerRef();
   const snapshot = useThemeSnapshot();
-  const shot = useSharedValue(snapshot ? 1 : 0);
   const first = useRef(true);
   const [quiet, setQuiet] = useState(false);
   const swapped = useRef(false);
   const shotLoaded = useRef(false);
+  /* The reveal: the photograph of the old screen with a hole in it, the hole growing
+     from where the finger was until the new screen shows through all of it — the new
+     theme spreading out in a circle, as Telegram does it. */
+  const { width: W, height: H } = useWindowDimensions();
+  const hole = useSharedValue(0);
+  const cx = useSharedValue(W / 2);
+  const cy = useSharedValue(H / 2);
   const dissolve = () => {
     swapped.current = false;
     shotLoaded.current = false;
+    const o = themeOrigin() ?? { x: W / 2, y: H * 0.4 };
+    cx.set(o.x);
+    cy.set(o.y);
+    /* Far enough to reach the farthest corner. */
+    const reach = Math.hypot(Math.max(o.x, W - o.x), Math.max(o.y, H - o.y)) + 8;
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        shot.set(withTiming(0, { duration: 420, easing: Easing.inOut(Easing.quad) }));
-        setTimeout(clearThemeSnapshot, 480);
+        hole.set(withTiming(reach, { duration: 560, easing: Easing.inOut(Easing.cubic) }));
+        setTimeout(clearThemeSnapshot, 600);
       }),
     );
   };
   useLayoutEffect(() => {
     if (snapshot) {
-      shot.set(1);
+      hole.set(0);
       shotLoaded.current = false;
     }
-  }, [snapshot, shot]);
+  }, [snapshot, hole]);
   useLayoutEffect(() => {
     if (first.current) {
       first.current = false;
@@ -170,8 +187,14 @@ function Door() {
       return () => clearTimeout(id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, shot, router]);
-  const shotStyle = useAnimatedStyle(() => ({ opacity: shot.get() }));
+  }, [mode, router]);
+  /* The whole screen, less a circle: drawn with the even-odd rule, the circle is a hole. */
+  const holeProps = useAnimatedProps(() => {
+    const r = hole.get();
+    const x = cx.get();
+    const y = cy.get();
+    return { d: `M0 0H${W}V${H}H0Z M${x - r} ${y} a${r} ${r} 0 1 0 ${2 * r} 0 a${r} ${r} 0 1 0 ${-2 * r} 0Z` };
+  });
 
   if (loading) return <Splash />;
   const signedIn = !!session;
@@ -227,20 +250,29 @@ function Door() {
       </Stack.Protected>
     </Stack>
     {snapshot && (
-      <Animated.Image
+      <MaskedView
         pointerEvents="none"
-        source={{ uri: snapshot }}
-        fadeDuration={0}
-        onLoad={() =>
-          requestAnimationFrame(() => {
-            shotLoaded.current = true;
-            markSnapshotPainted();
-            if (swapped.current) dissolve();
-          })
+        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+        maskElement={
+          <Svg width={W} height={H}>
+            <AnimatedPath animatedProps={holeProps} fill="#000" fillRule="evenodd" />
+          </Svg>
         }
-        resizeMode="cover"
-        style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }, shotStyle]}
-      />
+      >
+        <Animated.Image
+          source={{ uri: snapshot }}
+          fadeDuration={0}
+          onLoad={() =>
+            requestAnimationFrame(() => {
+              shotLoaded.current = true;
+              markSnapshotPainted();
+              if (swapped.current) dissolve();
+            })
+          }
+          resizeMode="cover"
+          style={{ position: "absolute", top: 0, left: 0, width: W, height: H }}
+        />
+      </MaskedView>
     )}
     </>
   );

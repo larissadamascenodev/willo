@@ -263,9 +263,9 @@ export default function Perfil() {
             return (
               <Pressable
                 key={key}
-                onPress={() => {
+                onPress={(e) => {
                   tick();
-                  void switchTheme(key, "/perfil");
+                  void switchTheme(key, "/perfil", { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
                 }}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: on }}

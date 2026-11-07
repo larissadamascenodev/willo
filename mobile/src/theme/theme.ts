@@ -112,9 +112,14 @@ export const markSnapshotPainted = () => {
 let switching = false;
 
 /** Changes the theme from a screen, coming back to `route` once it is drawn again. */
-export async function switchTheme(next: ThemeMode, route: string) {
+/* Where the finger was: the new theme spreads from there. */
+let origin: { x: number; y: number } | null = null;
+export const themeOrigin = () => origin;
+
+export async function switchTheme(next: ThemeMode, route: string, from?: { x: number; y: number }) {
   if (next === pref || switching) return;
   switching = true;
+  origin = from ?? null;
   try {
     const uri = await captureScreen({ format: "jpg", quality: 0.9, result: "tmpfile", width: Dimensions.get("window").width * PixelRatio.get() });
     const shown = new Promise<void>((resolve) => {
