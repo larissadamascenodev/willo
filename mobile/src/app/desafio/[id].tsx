@@ -42,7 +42,7 @@ const WEEK = ["D", "S", "T", "Q", "Q", "S", "S"];
 const dayMonth = (d: Date) => d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(".", "");
 
 /* How tall the fade from the dark veil into the page is. */
-const FADE = 130;
+const FADE = 96;
 
 export default function DesafioPage() {
   const insets = useSafeAreaInsets();
@@ -174,7 +174,7 @@ export default function DesafioPage() {
           {/* Dark behind the words, then, under them, the picture dissolving into the page. */}
           <HeroVeil height={heroH} fade={FADE} ground={th(GROUND_LIT, "bg")} light={isLight()} />
 
-          <Animated.View entering={FadeInDown.duration(460)} style={{ position: "absolute", left: 22, right: 22, bottom: FADE - 10 }}>
+          <Animated.View entering={FadeInDown.duration(460)} style={{ position: "absolute", left: 22, right: 22, bottom: FADE - 30 }}>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
               {finished ? (
                 <HeroPill tone={GREEN} label="Desafio cumprido" />
@@ -203,10 +203,10 @@ export default function DesafioPage() {
           </Animated.View>
         </View>
 
-        <View style={{ paddingHorizontal: 16 }}>
+        <View style={{ marginTop: -34, paddingHorizontal: 16 }}>
           {/* ══ The flame, and today's check-in ══ */}
           <Animated.View entering={FadeInDown.delay(80).duration(420)}>
-            <Surface style={{ marginTop: 22 }}>
+            <Surface>
               <View style={{ padding: 18, flexDirection: "row", alignItems: "center", gap: 16 }}>
                 <View style={{ width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                   {r.streak > 0 ? (

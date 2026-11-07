@@ -94,7 +94,7 @@ function Progress({ progress, color }: { progress: number; color: string }) {
 }
 
 /* How tall the fade from the dark veil into the page is. */
-const FADE = 130;
+const FADE = 96;
 
 export default function MetaDetalhe() {
   const { goalId } = useLocalSearchParams<{ goalId: string }>();
@@ -356,7 +356,7 @@ export default function MetaDetalhe() {
           <HeroVeil height={heroH} fade={FADE} ground={th(GROUND_LIT, "bg")} light={isLight()} />
 
           {/* ══ What it is and what is kept, written on the veil ══ */}
-          <Animated.View entering={FadeInDown.duration(460)} style={{ position: "absolute", left: 22, right: 22, bottom: FADE - 10 }}>
+          <Animated.View entering={FadeInDown.duration(460)} style={{ position: "absolute", left: 22, right: 22, bottom: FADE - 30 }}>
             {(earns(goal) || (hasTarget && !isComplete && goal.deadline) || isComplete || !hasTarget) && (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
                 {isComplete ? (
@@ -391,7 +391,7 @@ export default function MetaDetalhe() {
           </Animated.View>
         </View>
 
-        <Animated.View entering={FadeInDown.delay(60).duration(460)} style={{ marginTop: 14, paddingHorizontal: 22 }}>
+        <Animated.View entering={FadeInDown.delay(60).duration(460)} style={{ marginTop: -20, paddingHorizontal: 22 }}>
           {/* ══ Willo, saying the plan: written on the fade like the rest, no box around it ══ */}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <View style={{ marginLeft: -7 }}>
