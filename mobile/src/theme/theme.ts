@@ -120,7 +120,7 @@ interface Shot {
   ready: string | null;
 }
 let shot: Shot = { uri: null, ready: null };
-let reveal: { x: number; y: number } | null = null;
+let reveal: { x: number; y: number; to: ThemeMode } | null = null;
 const shotListeners = new Set<() => void>();
 const emitShot = () => shotListeners.forEach((l) => l());
 const subscribeShot = (l: () => void) => {
@@ -209,10 +209,12 @@ export async function switchTheme(next: ThemeMode, route: string, from?: { x: nu
   changing = false;
   if (shot.ready) {
     /* The photograph goes over the screen and the theme changes under it, in one go. */
-    reveal = at;
+    reveal = { ...at, to: next };
     emitShot();
+    /* The photograph goes up and starts opening first; the screens are drawn in the new
+       theme right after, while the circle is still small. */
     returnRoute = route;
-    setThemePref(next);
+    setTimeout(() => setThemePref(next), 0);
     return;
   }
   setCover({ to: next, x: at.x, y: at.y });

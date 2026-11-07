@@ -3,7 +3,7 @@ import { ActivityIndicator, Image, View, useWindowDimensions } from "react-nativ
 import { Stack } from "expo-router";
 import Animated, { Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
-import Svg, { ClipPath, Defs, Image as SvgImage, Path } from "react-native-svg";
+import Svg, { ClipPath, Defs, Image as SvgImage, Path, Rect } from "react-native-svg";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { installShims, hydrateShims } from "~/lib/shims";
@@ -130,25 +130,49 @@ function Door() {
   const hole = useSharedValue(0);
   const holeX = useSharedValue(W / 2);
   const holeY = useSharedValue(H / 2);
+  /* The reveal starts the moment the photograph is up — at the touch — not once the
+     screens have been drawn again: under the first, slow part of the opening the circle
+     is still small, and the screens are drawn in the new theme in that time. It ends once
+     both the opening is done and the screens are drawn. */
+  const swappedRef = useRef(false);
+  /* Until the screens are drawn in the new theme, the opening shows its ground. */
+  const [awaitingSwap, setAwaitingSwap] = useState(false);
+  const openedRef = useRef(false);
+  const finishReveal = () => {
+    if (!swappedRef.current || !openedRef.current) return;
+    swappedRef.current = false;
+    openedRef.current = false;
+    endThemeReveal();
+    hole.set(0);
+  };
+  useLayoutEffect(() => {
+    if (!revealAt) return;
+    setAwaitingSwap(true);
+    swappedRef.current = false;
+    openedRef.current = false;
+    holeX.set(revealAt.x);
+    holeY.set(revealAt.y);
+    hole.set(0);
+    const reachOut = Math.hypot(Math.max(revealAt.x, W - revealAt.x), Math.max(revealAt.y, H - revealAt.y)) + 8;
+    /* Unhurried: it starts softly from the finger, opens, and settles. */
+    hole.set(withTiming(reachOut, { duration: 950, easing: Easing.bezier(0.42, 0, 0.25, 1) }));
+    const id = setTimeout(() => {
+      openedRef.current = true;
+      finishReveal();
+    }, 1000);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revealAt]);
   useLayoutEffect(() => {
     if (first.current) {
       first.current = false;
       return;
     }
     if (revealAt) {
-      /* The screens are drawn again under the photograph; a frame, then it opens. */
-      holeX.set(revealAt.x);
-      holeY.set(revealAt.y);
-      hole.set(0);
-      const reachOut = Math.hypot(Math.max(revealAt.x, W - revealAt.x), Math.max(revealAt.y, H - revealAt.y)) + 8;
-      requestAnimationFrame(() => {
-        /* Unhurried: it starts softly from the finger, opens, and settles. */
-        hole.set(withTiming(reachOut, { duration: 950, easing: Easing.bezier(0.42, 0, 0.25, 1) }));
-        setTimeout(() => {
-          endThemeReveal();
-          hole.set(0);
-        }, 1000);
-      });
+      /* The screens are drawn in the new theme under the opening photograph. */
+      swappedRef.current = true;
+      setAwaitingSwap(false);
+      finishReveal();
     } else {
       /* The screens are drawn again in place under the circle; a frame, then it clears off them. */
       requestAnimationFrame(() => {
@@ -242,6 +266,8 @@ function Door() {
               <AnimatedPath animatedProps={holeProps} clipRule="evenodd" />
             </ClipPath>
           </Defs>
+          {/* The new theme's ground, in the opening, for the moment before its screens are drawn. */}
+          {awaitingSwap && revealAt && <Rect x={0} y={0} width={W} height={H} fill={revealAt.to === "light" ? LIGHT_GROUND : GROUND} />}
           <SvgImage href={{ uri: themeShot.ready }} x={0} y={0} width={W} height={H} preserveAspectRatio="xMidYMid slice" clipPath="url(#theme-hole)" />
         </Svg>
       </View>
