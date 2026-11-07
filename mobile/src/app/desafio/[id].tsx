@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View, useWindowDimensio
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import HeroVeil from "~/components/HeroVeil";
 import { BlurView } from "expo-blur";
 import Animated, { FadeIn, FadeInDown, ZoomIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
@@ -39,6 +40,9 @@ const DIFF_TONE = { facil: "#8FE08F", medio: "#FFC46B", dificil: "#FF8A8A" } as 
 const WEEK = ["D", "S", "T", "Q", "Q", "S", "S"];
 
 const dayMonth = (d: Date) => d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(".", "");
+
+/* How tall the fade from the dark veil into the page is. */
+const FADE = 130;
 
 export default function DesafioPage() {
   const insets = useSafeAreaInsets();
@@ -142,7 +146,7 @@ export default function DesafioPage() {
     );
   }
 
-  const heroH = Math.round(width * 1.12) + insets.top;
+  const heroH = Math.round(width * 1.12) + insets.top + FADE;
   const broken = r.state === "broken";
   const finished = r.state === "finished";
   const days = calendarOf(r, txs);
@@ -164,16 +168,13 @@ export default function DesafioPage() {
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 48 }} showsVerticalScrollIndicator={false}>
         {/* ══ Its picture, edge to edge, under a dark veil in both themes, with what it is
               and where it stands written on the veil ══ */}
-        <View style={{ height: heroH, borderBottomLeftRadius: isLight() ? 30 : 0, borderBottomRightRadius: isLight() ? 30 : 0, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#0D0E10" }}>
+        <View style={{ height: heroH, overflow: "hidden", backgroundColor: "#0D0E10" }}>
           <ChallengeCover template={r.template} cover={r.cover} width={width} height={heroH} />
           <LinearGradient colors={["rgba(0,0,0,0.45)", "rgba(0,0,0,0)"]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 120 }} />
-          <LinearGradient
-            colors={isLight() ? ["rgba(8,9,10,0)", "rgba(8,9,10,0.6)", "rgba(8,9,10,0.88)", "rgba(8,9,10,0.95)"] : ["rgba(13,14,16,0)", "rgba(13,14,16,0.6)", "rgba(13,14,16,0.92)", GROUND_LIT]}
-            locations={[0, 0.4, 0.75, 1]}
-            style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: Math.round(heroH * 0.7) }}
-          />
+          {/* Dark behind the words, then, under them, the picture dissolving into the page. */}
+          <HeroVeil height={heroH} fade={FADE} ground={th(GROUND_LIT, "bg")} light={isLight()} />
 
-          <Animated.View entering={FadeInDown.duration(460)} style={{ position: "absolute", left: 22, right: 22, bottom: 22 }}>
+          <Animated.View entering={FadeInDown.duration(460)} style={{ position: "absolute", left: 22, right: 22, bottom: FADE - 10 }}>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
               {finished ? (
                 <HeroPill tone={GREEN} label="Desafio cumprido" />

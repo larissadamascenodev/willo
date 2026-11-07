@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, FadeInDown, ReduceMotion, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
+import HeroVeil from "~/components/HeroVeil";
 import {
   createGoalDeposit,
   createGoalWithdraw,
@@ -91,6 +92,9 @@ function Progress({ progress, color }: { progress: number; color: string }) {
     </View>
   );
 }
+
+/* How tall the fade from the dark veil into the page is. */
+const FADE = 130;
 
 export default function MetaDetalhe() {
   const { goalId } = useLocalSearchParams<{ goalId: string }>();
@@ -333,7 +337,7 @@ export default function MetaDetalhe() {
 
   const forecast = earns(goal) && cdi !== null ? estimate(Number(goal.current_amount) || 0, cdi, Number(goal.yield_percent)) : null;
   const shown = showAll ? movements : movements.slice(0, PREVIEW);
-  const heroH = Math.round(width * 1.15) + insets.top;
+  const heroH = Math.round(width * 1.15) + insets.top + FADE;
 
   return (
     /* A plain ground, so the picture melts into it with no seam. */
@@ -345,17 +349,14 @@ export default function MetaDetalhe() {
         {/* ══ Its picture, edge to edge, darkening under what is kept: a dark veil in both
               themes, so the words on it are always white. In the dark theme it melts into
               the page; in the light one it ends in a soft rounded edge. ══ */}
-        <View style={{ height: heroH, overflow: "hidden", borderBottomLeftRadius: isLight() ? 30 : 0, borderBottomRightRadius: isLight() ? 30 : 0, borderCurve: "continuous", backgroundColor: "#0D0E10" }}>
+        <View style={{ height: heroH, overflow: "hidden", backgroundColor: "#0D0E10" }}>
           <CaixinhaCover goal={goal} height={heroH} glyph={280} glyphTop={insets.top + 50} />
           <LinearGradient colors={["rgba(0,0,0,0.45)", "rgba(0,0,0,0)"]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 120 }} />
-          <LinearGradient
-            colors={isLight() ? ["rgba(8,9,10,0)", "rgba(8,9,10,0.6)", "rgba(8,9,10,0.88)", "rgba(8,9,10,0.95)"] : ["rgba(13,14,16,0)", "rgba(13,14,16,0.6)", "rgba(13,14,16,0.92)", GROUND_LIT]}
-            locations={[0, 0.4, 0.75, 1]}
-            style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: Math.round(heroH * 0.7) }}
-          />
+          {/* Dark behind the words, then, under them, the picture dissolving into the page. */}
+          <HeroVeil height={heroH} fade={FADE} ground={th(GROUND_LIT, "bg")} light={isLight()} />
 
           {/* ══ What it is and what is kept, written on the veil ══ */}
-          <Animated.View entering={FadeInDown.duration(460)} style={{ position: "absolute", left: 22, right: 22, bottom: 22 }}>
+          <Animated.View entering={FadeInDown.duration(460)} style={{ position: "absolute", left: 22, right: 22, bottom: FADE - 10 }}>
             {(earns(goal) || (hasTarget && !isComplete && goal.deadline) || isComplete || !hasTarget) && (
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
                 {isComplete ? (
