@@ -135,6 +135,7 @@ function Door() {
       first.current = false;
       return;
     }
+    console.log(`[THEMEDBG] drawn in ${mode} reveal=${!!revealAt} shot=${!!themeShot.ready}`);
     if (revealAt) {
       /* The screens are drawn again under the photograph; a frame, then it opens. */
       holeX.set(revealAt.x);
@@ -232,20 +233,24 @@ function Door() {
     {themeShot.ready && (
       /* Drawn as one picture: the photograph, clipped to the screen less a circle. The
          clip is redrawn on every frame of the animation, so the circle opens smoothly. */
-      <Svg pointerEvents="none" width={W} height={H} style={{ position: "absolute", top: 0, left: 0, opacity: revealAt ? 1 : 0 }}>
-        <Defs>
-          <ClipPath id="theme-hole">
-            <AnimatedPath animatedProps={holeProps} clipRule="evenodd" />
-          </ClipPath>
-        </Defs>
-        <SvgImage href={{ uri: themeShot.ready }} x={0} y={0} width={W} height={H} preserveAspectRatio="xMidYMid slice" clipPath="url(#theme-hole)" />
-      </Svg>
+      /* In front of everything, explicitly: without it the native screens can be drawn
+         over it, and a dark screen, being opaque, hid the change entirely. */
+      <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, width: W, height: H, zIndex: 9999, elevation: 9999, opacity: revealAt ? 1 : 0 }}>
+        <Svg width={W} height={H}>
+          <Defs>
+            <ClipPath id="theme-hole">
+              <AnimatedPath animatedProps={holeProps} clipRule="evenodd" />
+            </ClipPath>
+          </Defs>
+          <SvgImage href={{ uri: themeShot.ready }} x={0} y={0} width={W} height={H} preserveAspectRatio="xMidYMid slice" clipPath="url(#theme-hole)" />
+        </Svg>
+      </View>
     )}
     {coverTo && (
       <Animated.View
         pointerEvents="none"
         style={[
-          { position: "absolute", left: cx - reach, top: cy - reach, width: reach * 2, height: reach * 2, borderRadius: reach, backgroundColor: coverTo.to === "light" ? LIGHT_GROUND : GROUND },
+          { position: "absolute", left: cx - reach, top: cy - reach, width: reach * 2, height: reach * 2, borderRadius: reach, zIndex: 9999, elevation: 9999, backgroundColor: coverTo.to === "light" ? LIGHT_GROUND : GROUND },
           circleStyle,
         ]}
       />
