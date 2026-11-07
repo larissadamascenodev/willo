@@ -3,8 +3,7 @@ import { ActivityIndicator, Image, View, useWindowDimensions } from "react-nativ
 import { Stack, useNavigationContainerRef, useRouter } from "expo-router";
 import Animated, { Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
-import RNMaskedView from "@react-native-masked-view/masked-view";
-import Svg, { Path } from "react-native-svg";
+import Svg, { ClipPath, Defs, Image as SvgImage, Path } from "react-native-svg";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { installShims, hydrateShims } from "~/lib/shims";
@@ -98,8 +97,6 @@ function Splash() {
 }
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
-/* Its class type predates the React types in use; it is used as a plain component. */
-const MaskedView = RNMaskedView as unknown as React.ComponentType<{ style?: object; pointerEvents?: "none"; maskElement: React.ReactElement; children?: React.ReactNode }>;
 
 /** The route on top of the stack: what the person is looking at. */
 type NavState = { index?: number; routes: { name: string; state?: NavState }[] } | undefined;
@@ -255,17 +252,16 @@ function Door() {
     )}
     {/* Kept mounted (and so decoded) while it waits, unseen; shown at the touch. */}
     {themeShot.ready && (
-      <MaskedView
-        pointerEvents="none"
-        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: revealAt ? 1 : 0 }}
-        maskElement={
-          <Svg width={W} height={H}>
-            <AnimatedPath animatedProps={holeProps} fill="#000" fillRule="evenodd" />
-          </Svg>
-        }
-      >
-        <Image source={{ uri: themeShot.ready }} fadeDuration={0} resizeMode="cover" style={{ position: "absolute", top: 0, left: 0, width: W, height: H }} />
-      </MaskedView>
+      /* Drawn as one picture: the photograph, clipped to the screen less a circle. The
+         clip is redrawn on every frame of the animation, so the circle opens smoothly. */
+      <Svg pointerEvents="none" width={W} height={H} style={{ position: "absolute", top: 0, left: 0, opacity: revealAt ? 1 : 0 }}>
+        <Defs>
+          <ClipPath id="theme-hole">
+            <AnimatedPath animatedProps={holeProps} clipRule="evenodd" />
+          </ClipPath>
+        </Defs>
+        <SvgImage href={{ uri: themeShot.ready }} x={0} y={0} width={W} height={H} preserveAspectRatio="xMidYMid slice" clipPath="url(#theme-hole)" />
+      </Svg>
     )}
     {coverTo && (
       <Animated.View

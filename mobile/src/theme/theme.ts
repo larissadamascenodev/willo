@@ -138,6 +138,7 @@ export function useThemeReveal() {
 /** The photograph has loaded: it may be used at the next touch. */
 export const markShotReady = (uri: string) => {
   if (shot.uri !== uri) return;
+  console.log(`[THEMEDBG] shot ready in ${pref}`);
   shot = { ...shot, ready: uri };
   emitShot();
 };
@@ -154,12 +155,15 @@ export async function prepareThemeShot() {
   if (taking || reveal || cover) return;
   taking = true;
   try {
+    const t0 = Date.now();
     const uri = await captureScreen({ format: "jpg", quality: 0.85, result: "tmpfile", width: Math.round(Dimensions.get("window").width * 2) });
+    console.log(`[THEMEDBG] shot taken in ${pref} after ${Date.now() - t0}ms`);
     if (!reveal && !cover) {
       shot = { ...shot, uri };
       emitShot();
     }
-  } catch {
+  } catch (e) {
+    console.log(`[THEMEDBG] shot failed in ${pref}: ${String(e)}`);
     /* No photograph: the circle of colour does the change instead. */
   } finally {
     taking = false;
@@ -171,6 +175,7 @@ export function switchTheme(next: ThemeMode, route: string, from?: { x: number; 
   if (next === pref || cover || reveal) return;
   const { width, height } = Dimensions.get("window");
   const at = { x: from?.x ?? width / 2, y: from?.y ?? height * 0.4 };
+  console.log(`[THEMEDBG] switch ${pref}->${next} ready=${!!shot.ready} uri=${!!shot.uri} taking=${taking}`);
   if (shot.ready) {
     /* The photograph goes over the screen and the theme changes under it, in one go. */
     reveal = at;
