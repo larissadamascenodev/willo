@@ -27,7 +27,7 @@ export async function loadPlanInputs(today = new Date(), monthsBack = 3): Promis
   const months = new Map<string, PlanMonth>();
   for (let i = 0; i <= monthsBack; i++) {
     const d = new Date(today.getFullYear(), today.getMonth() - monthsBack + i, 1);
-    months.set(key(d), { month: key(d), income: 0, spending: {}, fixed: 0, installments: 0 });
+    months.set(key(d), { month: key(d), income: 0, spending: {}, fixed: 0, installments: 0, fixedIncome: 0 });
   }
   for (const t of (txs ?? []) as { type: string; amount: number; category: string; date: string; recurrence_type: string | null }[]) {
     const m = months.get(String(t.date).slice(0, 7));
@@ -35,6 +35,8 @@ export async function loadPlanInputs(today = new Date(), monthsBack = 3): Promis
     const v = Number(t.amount) || 0;
     if (t.type === "receita") {
       m.income += v;
+      /* Only what comes in every month for certain is planned on. */
+      if (t.recurrence_type === "fixa") m.fixedIncome = (m.fixedIncome ?? 0) + v;
       continue;
     }
     const cat = t.category || "Outros";

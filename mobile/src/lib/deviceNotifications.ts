@@ -1,6 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getOrCreateSettings } from "@/services/notificationService";
 import { money } from "~/lib/money";
+import { buildProfile, planMethods, withFixedIncome } from "@/lib/plan/financialPlan";
+import { loadPlanInputs } from "@/services/financialPlan";
+import { planAlertsWanted, readActivePlan } from "~/lib/activePlan";
+import { planStatus } from "~/lib/planStatus";
+import { FEATURES } from "~/lib/features";
 
 /**
  * Willo's notifications on the phone itself.
@@ -228,6 +233,35 @@ async function run(userId: string | undefined | null) {
     nudge(2, 20, "Teve algum gasto hoje?", "Anota em dois toques e o Willo organiza o resto.");
     nudge(6, 19, "Seu mês continua andando", "Abre o Willo e veja quanto ainda sobra até o fim do mês.");
     nudge(14, 19, "O Willo sentiu sua falta", "Voltar leva um minuto: conta o que entrou e saiu e ele refaz a previsão.");
+  }
+
+  /* The plan in use: a word in the evening when a part of it is slipping, and on
+     Monday morning what can be spent a day for the rest of the month. */
+  const chosen = readActivePlan();
+  if (FEATURES.plano && chosen && planAlertsWanted()) {
+    try {
+      const inputs = await loadPlanInputs();
+      const built = buildProfile(inputs) ?? buildProfile({ months: [inputs.current], saved: inputs.saved });
+      const profile = built ? withFixedIncome(built, inputs.current.fixedIncome ?? 0) : null;
+      const plan = profile ? planMethods(profile).find((m) => m.id === chosen.method) : null;
+      if (plan) {
+        const status = planStatus(plan, inputs.current, now);
+        const slip = status.alerts.find((a) => a.tone !== "ok");
+        if (slip) {
+          const evening = new Date(now);
+          if (evening.getHours() >= 20) evening.setDate(evening.getDate() + 1);
+          evening.setHours(20, 0, 0, 0);
+          planned.push({ date: evening, title: slip.title, body: slip.body, url: "/plano" });
+        }
+        const monday = new Date(now);
+        monday.setDate(monday.getDate() + ((8 - monday.getDay()) % 7 || 7));
+        monday.setHours(9, 0, 0, 0);
+        if (monday.getMonth() === now.getMonth())
+          planned.push({ date: monday, title: `Seu plano ${plan.label} esta semana`, body: `Dá para gastar até ${money(status.perDay)} por dia e continuar dentro do plano.`, url: "/plano" });
+      }
+    } catch {
+      /* No plan alerts this time. */
+    }
   }
 
   const later = planned

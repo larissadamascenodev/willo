@@ -26,6 +26,7 @@ import ResizeGrip, { GRIP_OFFSET } from "~/components/home/ResizeGrip";
 import { INK } from "~/theme/tokens";
 
 import { th } from "~/theme/theme";
+import { FEATURES } from "~/lib/features";
 /**
  * The home screen, arranged by the person using it.
  *
@@ -198,7 +199,7 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
     return out;
   }, [slots, skip]);
 
-  const missing = WIDGETS.filter((w) => !slots.some((s) => s.id === w.id));
+  const missing = WIDGETS.filter((w) => !slots.some((s) => s.id === w.id) && (w.id !== "plano" || FEATURES.plano));
 
   return (
     <>

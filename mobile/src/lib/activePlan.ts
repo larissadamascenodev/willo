@@ -47,3 +47,22 @@ export function useActivePlan(): ActivePlan | null {
     () => current,
   );
 }
+
+/* Whether Willo may warn about the plan on the phone (on unless turned off). */
+const ALERTS_KEY = "willo-plan-alerts";
+export function planAlertsWanted(): boolean {
+  try {
+    return localStorage.getItem(ALERTS_KEY) !== "0";
+  } catch {
+    return true;
+  }
+}
+export function setPlanAlertsWanted(on: boolean) {
+  try {
+    localStorage.setItem(ALERTS_KEY, on ? "1" : "0");
+  } catch {
+    /* Kept for this session only. */
+  }
+}
+/** The plan chosen, read once, for code that is not a screen. */
+export const readActivePlan = () => current;

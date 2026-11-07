@@ -5,6 +5,7 @@ import { fetchGoals } from "@/services/goalService";
 import { buildProfile, planMethods } from "@/lib/plan/financialPlan";
 import { loadPlanInputs } from "@/services/financialPlan";
 import type { AnswerCard, Simulation } from "~/components/willo/AnswerCards";
+import { FEATURES } from "~/lib/features";
 
 /**
  * Which picture goes with which question, and what Willo says he is doing meanwhile.
@@ -85,7 +86,7 @@ export async function cardsFor(
       tone: "sobra",
       items: ctx.snapshot.previsao!.proximos_meses.map((m, i) => ({ mes: m.mes.replace(/ de \d{4}$/, "").slice(0, 3), valor: m.sobra, destaque: i === 0 })),
     });
-  } else if (/plano|organizar|salario|renda|orcamento|metodo/.test(q)) {
+  } else if (FEATURES.plano && /plano|organizar|salario|renda|orcamento|metodo/.test(q)) {
     try {
       const inputs = await loadPlanInputs();
       const past = buildProfile(inputs);

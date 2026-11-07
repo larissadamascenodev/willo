@@ -4,6 +4,7 @@ import type { CategoryExpense, FinanceEvent, Transaction } from "@/types/finance
 import type { RecurringItem } from "@/hooks/useRecorrentes";
 import type { EndedSubscription } from "~/lib/subscriptionCheck";
 import { upcoming } from "~/lib/events";
+import { FEATURES } from "~/lib/features";
 import SaldoContasCard from "~/components/home/SaldoContasCard";
 import FluxoCard from "~/components/home/FluxoCard";
 import PlanoCard from "~/components/home/PlanoCard";
@@ -45,6 +46,7 @@ export interface HomeWidgetContext {
  * back as soon as there is something, so nothing is removed from the person's layout.
  */
 export function widgetIsEmpty(id: string, ctx: HomeWidgetContext): boolean {
+  if (id === "plano") return !FEATURES.plano;
   if (id === "assinaturas") return ctx.assinaturas.length === 0 && ctx.ended.length === 0;
   if (id === "eventos") return upcoming(ctx.events).length === 0;
   return false;

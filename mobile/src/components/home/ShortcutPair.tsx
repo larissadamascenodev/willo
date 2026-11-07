@@ -25,6 +25,8 @@ import { ChallengeCover } from "~/components/desafios/ChallengeTile";
 import { Check, ChevronRight, Flame, Trophy } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
 import { pendingCheckins, tickToday, type PendingCheckin } from "~/lib/challenges";
+import { FEATURES } from "~/lib/features";
+import { loadConquistas, type Conquistas } from "~/lib/conquistas";
 import { showToast } from "~/lib/toast";
 import { th } from "~/theme/theme";
 import { INK } from "~/theme/tokens";
@@ -48,10 +50,16 @@ export default function ShortcutPair({ gap = 16 }: { gap?: number }) {
   const router = useRouter();
   const { user } = useAuth();
   const [running, setRunning] = useState<PendingCheckin[] | null>(null);
+  const [wins, setWins] = useState<Conquistas | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       if (!user) return;
+      /* While the challenges are put away, the tile is the medals and the sequence. */
+      if (!FEATURES.desafios) {
+        void loadConquistas(user.id).then(setWins).catch(() => undefined);
+        return;
+      }
       void pendingCheckins(user.id).then(setRunning).catch(() => setRunning([]));
     }, [user]),
   );
@@ -66,7 +74,11 @@ export default function ShortcutPair({ gap = 16 }: { gap?: number }) {
       {/* One size for both, measured once, so the pair is even. */}
       <View onLayout={(e) => setRowW(e.nativeEvent.layout.width)} style={{ flexDirection: "row", gap }}>
         <RadarTile art={art} onPress={() => router.push("/radar" as never)} />
-        <ChallengesTile art={art} running={running} onPress={() => router.push("/desafios" as never)} />
+        {FEATURES.desafios ? (
+          <ChallengesTile art={art} running={running} onPress={() => router.push("/desafios" as never)} />
+        ) : (
+          <ConquistasTile art={art} wins={wins} onPress={() => router.push("/conquistas" as never)} />
+        )}
       </View>
       {pending.length > 0 && (
         <CheckinShelf
@@ -322,6 +334,69 @@ function ChallengesTile({ art, running, onPress }: { art: number; running: Pendi
             <ChevronRight size={14} color={th(INK.faint)} />
           </View>
           <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: waiting > 0 ? th("#FF9F45") : th(INK.soft) }}>
+            {line}
+          </Text>
+        </View>
+      </View>
+    </Surface>
+  );
+}
+
+/* ── Conquistas ────────────────────────────────────────────────────────────── */
+
+/**
+ * Conquistas e sequência, beside the Radar: the flame and the days in a row on a warm
+ * dark picture, the last seven days as dots under it, and under the picture how many
+ * medals are won — or, while today is still open on a live sequence, a word to keep it.
+ */
+function ConquistasTile({ art, wins, onPress }: { art: number; wins: Conquistas | null; onPress: () => void }) {
+  const pic = Math.max(art, 120);
+  const s = wins?.streak;
+  const lit = (s?.current ?? 0) > 0;
+  const won = wins ? wins.medals.filter((m) => m.earned).length : 0;
+  const keep = !!s && lit && !s.todayDone;
+  const line = !wins ? " " : keep ? "Anote algo hoje" : `${won} de ${wins.medals.length} medalhas`;
+
+  return (
+    <Surface onPress={onPress} style={{ flex: 1 }}>
+      <Glow hex="#FF9F45" />
+      <View style={{ flex: 1, padding: 14, gap: 12 }}>
+        <View style={{ height: pic, borderRadius: 18, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#120C08", alignItems: "center", justifyContent: "center" }}>
+          <LinearGradient colors={["#3B2210", "#1A110A", "#100B08"]} locations={[0, 0.6, 1]} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <LinearGradient colors={["rgba(255,159,69,0.3)", "rgba(255,159,69,0)"]} start={{ x: 0.5, y: 0.1 }} end={{ x: 0.5, y: 0.75 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          {s && (
+            <>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Flame size={Math.round(pic * 0.2)} color={lit ? FIRE : "rgba(255,255,255,0.45)"} fill={lit ? "rgba(255,159,69,0.35)" : "transparent"} strokeWidth={2.2} />
+                <Text style={{ fontSize: Math.round(pic * 0.28), fontWeight: "800", letterSpacing: -1, color: "#fff", fontVariant: ["tabular-nums"] }}>{s.current}</Text>
+              </View>
+              <Text style={{ marginTop: 2, fontSize: 11.5, color: "rgba(255,255,255,0.65)" }}>{s.current === 1 ? "dia seguido" : "dias seguidos"}</Text>
+              <View style={{ marginTop: 12, flexDirection: "row", gap: 5 }}>
+                {s.week.map((d) => (
+                  <View
+                    key={d.iso}
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: d.done ? FIRE : "rgba(255,255,255,0.16)",
+                      borderWidth: d.today && !d.done ? 1 : 0,
+                      borderColor: FIRE,
+                    }}
+                  />
+                ))}
+              </View>
+            </>
+          )}
+        </View>
+        <View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15, fontWeight: "700", letterSpacing: -0.2, color: th("#fff") }}>
+              Conquistas
+            </Text>
+            <ChevronRight size={14} color={th(INK.faint)} />
+          </View>
+          <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: keep ? th(FIRE) : th(INK.soft) }}>
             {line}
           </Text>
         </View>

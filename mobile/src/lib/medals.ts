@@ -75,7 +75,8 @@ const CHEER = ["Você começou muito bem!", "Está pegando o ritmo!", "Isso já 
 
 /** How much is left for one not won yet, in words. */
 export function medalLeft(m: Medal): string {
-  return `Faltam ${plural(Math.max(0, m.step - m.value), m.unit)}`;
+  const n = Math.max(0, m.step - m.value);
+  return `${n === 1 ? "Falta" : "Faltam"} ${plural(n, m.unit)}`;
 }
 
 export const longDate = (iso: string) => {

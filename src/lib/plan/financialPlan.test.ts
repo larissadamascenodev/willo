@@ -60,4 +60,32 @@ describe("financial plan", () => {
   it("has no profile without data", () => {
     expect(buildProfile({ months: [], saved: 0 })).toBeNull();
   });
+
+  it("builds every plan on the fixed income only, never on extra income", () => {
+    const p = buildProfile({
+      months: [
+        { ...month("2026-08", 5000, { Supermercado: 1200 }), fixedIncome: 3000 },
+        { ...month("2026-09", 3600, { Supermercado: 1200 }), fixedIncome: 3000 },
+      ],
+      saved: 0,
+    })!;
+    expect(p.incomeAvg).toBe(4300);
+    expect(p.base).toBe(3000);
+    expect(p.baseSource).toBe("fixa");
+    const fifty = planMethods(p).find((m) => m.id === "50-30-20")!;
+    expect(fifty.base).toBe(3000);
+    expect(fifty.allocations[0].amount).toBe(1500);
+  });
+
+  it("with no income marked fixed, plans on the weakest month", () => {
+    const p = buildProfile({
+      months: [
+        { ...month("2026-08", 5000, { Supermercado: 1200 }), fixedIncome: 0 },
+        { ...month("2026-09", 3600, { Supermercado: 1200 }), fixedIncome: 0 },
+      ],
+      saved: 0,
+    })!;
+    expect(p.base).toBe(3600);
+    expect(p.baseSource).toBe("menor");
+  });
 });

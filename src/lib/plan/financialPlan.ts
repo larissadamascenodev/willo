@@ -18,6 +18,9 @@ export interface PlanMonth {
   /** Of that, what was fixed (recurring) and what was instalments. */
   fixed: number;
   installments: number;
+  /** Of the income, what is fixed: received every month for certain (salary, rent received).
+      Left out when it is not known; a plan is built on it when it is. */
+  fixedIncome?: number;
 }
 
 export interface PlanInputs {
@@ -56,6 +59,13 @@ const avg = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.le
 export interface Profile {
   months: number;
   incomeAvg: number;
+  /** The fixed income a month, when the months say which income is fixed; null when they do not. */
+  incomeFixed: number | null;
+  /** The income every plan is built on: the fixed income; with none marked fixed, the
+      weakest month; when nothing says what is fixed, the average. Extra income never
+      counts — it is not certain. */
+  base: number;
+  baseSource: "fixa" | "menor" | "media";
   incomeMin: number;
   /** How much income swings month to month, 0..1. */
   incomeSwing: number;
@@ -86,9 +96,17 @@ export function buildProfile(input: PlanInputs): Profile | null {
     }
   const spendingAvg = Object.values(byBucket).reduce((s, v) => s + v, 0);
   const swing = incomeAvg > 0 ? (Math.max(...incomes) - Math.min(...incomes)) / incomeAvg : 0;
+  const knowsFixed = months.some((m) => m.fixedIncome !== undefined);
+  const fixedMonths = months.map((m) => m.fixedIncome ?? 0).filter((v) => v > 0);
+  const incomeFixed = knowsFixed ? round(avg(fixedMonths)) : null;
+  const incomeMin = Math.min(...incomes);
+  const base = incomeFixed && incomeFixed > 0 ? incomeFixed : knowsFixed ? incomeMin : incomeAvg;
   return {
     months: months.length,
     incomeAvg: round(incomeAvg),
+    incomeFixed,
+    base: round(base),
+    baseSource: incomeFixed && incomeFixed > 0 ? "fixa" : knowsFixed ? "menor" : "media",
     incomeMin: round(Math.min(...incomes)),
     incomeSwing: round(swing),
     spendingAvg: round(spendingAvg),
@@ -135,8 +153,15 @@ function alloc(base: number, rows: [string, Bucket | "livre", number, number][])
   return rows.map(([label, bucket, share, today]) => ({ label, bucket, share, amount: round(base * share), today: round(today) }));
 }
 
+/** The same profile with a fixed income known better (this month's, say). */
+export function withFixedIncome(p: Profile, fixed: number): Profile {
+  if (!(fixed > 0)) return p;
+  return { ...p, incomeFixed: round(fixed), base: round(fixed), baseSource: "fixa" };
+}
+
 export function planMethods(p: Profile): MethodPlan[] {
-  const I = p.incomeAvg;
+  /* Plans are built on the income that is certain: the fixed income (see Profile.base). */
+  const I = p.base;
   const b = p.byBucket;
   const variable = p.incomeSwing > 0.25;
   const heavy = p.committed > 0.85 || b.dividas + p.installmentsAvg > I * 0.3;
@@ -223,9 +248,10 @@ export function planMethods(p: Profile): MethodPlan[] {
         ? `Parcelas e dívidas levam ${Math.round(((b.dividas + p.installmentsAvg) / Math.max(I, 1)) * 100)}% da renda; liberar isso é a prioridade.`
         : "Suas parcelas não pesam a ponto de exigir esse método.",
       base: I,
+      /* The essential first, a little for choices, and everything else to the debts. */
       allocations: alloc(I, [
         ["Essencial", "necessidades", I > 0 ? Math.min(b.necessidades / I, 0.6) : 0.5, b.necessidades],
-        ["Parcelas e dívidas", "dividas", I > 0 ? Math.min((b.dividas + p.installmentsAvg) / I, 0.35) : 0.3, b.dividas + p.installmentsAvg],
+        ["Parcelas e dívidas", "dividas", Math.max(0, 0.9 - (I > 0 ? Math.min(b.necessidades / I, 0.6) : 0.5)), b.dividas + p.installmentsAvg],
         ["Escolhas, reduzidas", "desejos", 0.1, b.desejos],
       ]),
     },
@@ -240,8 +266,8 @@ export function planMethods(p: Profile): MethodPlan[] {
       why: variable
         ? `Sua renda variou ${Math.round(p.incomeSwing * 100)}% entre os meses; planejar sobre o mês mais fraco (${p.incomeMin.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}) evita aperto.`
         : "Sua renda é estável, então esse cuidado não é necessário.",
-      base: p.incomeMin,
-      allocations: alloc(p.incomeMin, [
+      base: p.baseSource === "fixa" ? p.base : p.incomeMin,
+      allocations: alloc(p.baseSource === "fixa" ? p.base : p.incomeMin, [
         ["Essencial", "necessidades", 0.55, b.necessidades],
         ["Escolhas", "desejos", 0.3, b.desejos],
         ["Reserva", "guardar", 0.15, b.guardar],
