@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from "react";
+import { Dimensions, PixelRatio } from "react-native";
+import { captureScreen } from "react-native-view-shot";
 import { onHydrated } from "~/lib/shims";
 
 /**
@@ -71,41 +73,62 @@ const subscribe = (l: () => void) => {
 let returnRoute: string | null = null;
 
 /*
- * The change itself. Tapping a theme covers the screen at once in the new theme's
- * ground — a quick fade, so it reads as the colour changing — the screens are drawn
- * again under the cover, and the cover lifts off them. Nothing is photographed or
- * waited for: the first thing the person sees, in the same instant, is the new colour.
+ * The change itself: the screen as it is, photographed, laid over everything; the
+ * screens drawn again in the new theme under it; the photograph dissolving into them.
+ * The person sees their own screen turn from one theme into the other — no veil, no
+ * colour in between.
+ *
+ * The camera is imported up front. Fetched on demand, in development it pulled a
+ * second copy of the app's native layer over the network: seconds of waiting, and a
+ * crash. Should the photograph fail, the theme simply changes at once.
  */
-let cover: ThemeMode | null = null;
-const coverListeners = new Set<() => void>();
-const setCover = (next: ThemeMode | null) => {
-  cover = next;
-  coverListeners.forEach((l) => l());
+let snapshot: string | null = null;
+const snapshotListeners = new Set<() => void>();
+const setSnapshot = (uri: string | null) => {
+  snapshot = uri;
+  snapshotListeners.forEach((l) => l());
 };
-export function useThemeCover() {
+export function useThemeSnapshot() {
   return useSyncExternalStore(
     (l) => {
-      coverListeners.add(l);
+      snapshotListeners.add(l);
       return () => {
-        coverListeners.delete(l);
+        snapshotListeners.delete(l);
       };
     },
-    () => cover,
-    () => cover,
+    () => snapshot,
+    () => snapshot,
   );
 }
-export const liftThemeCover = () => setCover(null);
+export const clearThemeSnapshot = () => setSnapshot(null);
 
-/** How long the cover takes to come down before the screens are drawn again. */
-export const COVER_IN_MS = 140;
+/* Resolved once the photograph is actually on screen. */
+let painted: (() => void) | null = null;
+export const markSnapshotPainted = () => {
+  painted?.();
+  painted = null;
+};
+
+let switching = false;
 
 /** Changes the theme from a screen, coming back to `route` once it is drawn again. */
 export async function switchTheme(next: ThemeMode, route: string) {
-  if (next === pref || cover) return;
-  setCover(next);
-  await new Promise((resolve) => setTimeout(resolve, COVER_IN_MS + 20));
+  if (next === pref || switching) return;
+  switching = true;
+  try {
+    const uri = await captureScreen({ format: "jpg", quality: 0.9, result: "tmpfile", width: Dimensions.get("window").width * PixelRatio.get() });
+    const shown = new Promise<void>((resolve) => {
+      painted = resolve;
+      setTimeout(resolve, 400);
+    });
+    setSnapshot(uri);
+    await shown;
+  } catch {
+    setSnapshot(null);
+  }
   returnRoute = route;
   setThemePref(next);
+  switching = false;
 }
 
 export function takeReturnRoute() {

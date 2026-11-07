@@ -3,7 +3,6 @@ import { ActivityIndicator, View } from "react-native";
 import { Stack, useNavigationContainerRef, useRouter } from "expo-router";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
-import { BlurView } from "expo-blur";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { installShims, hydrateShims } from "~/lib/shims";
@@ -17,7 +16,7 @@ import LaunchIntro from "~/components/LaunchIntro";
 import { markIntroDone } from "~/lib/launchIntro";
 import NotificationBridge from "~/lib/NotificationBridge";
 import { GREEN, GROUND } from "~/theme/tokens";
-import { COVER_IN_MS, LIGHT_GROUND, liftThemeCover, setActiveTheme, takeReturnRoute, th, useThemeCover, useThemePref } from "~/theme/theme";
+import { clearThemeSnapshot, markSnapshotPainted, setActiveTheme, takeReturnRoute, th, useThemePref, useThemeSnapshot } from "~/theme/theme";
 
 /* Before any shared module is imported for real, the handful of browser things it
    expects have to exist. */
@@ -114,30 +113,29 @@ function Door() {
   const mode = !loading && session ? pref : "dark";
   setActiveTheme(mode);
 
-  /* Changing the theme draws the screens again from scratch. The moment a theme is
-     tapped, the screen is covered in the new theme's ground (a quick fade); the screens
-     are drawn again under it, and it lifts off them. The person is put back on the
+  /* Changing the theme draws the screens again from scratch. A photograph of the screen
+     as it was lies over the swap and dissolves into the new screens underneath, so one
+     theme turns into the other on the screen itself. The person is put back on the
      profile, where the choice was made. */
   const router = useRouter();
   const nav = useNavigationContainerRef();
-  const coverTo = useThemeCover();
-  const veil = useSharedValue(0);
+  const snapshot = useThemeSnapshot();
+  const shot = useSharedValue(snapshot ? 1 : 0);
   const first = useRef(true);
   const [quiet, setQuiet] = useState(false);
   useLayoutEffect(() => {
-    if (coverTo) veil.set(withTiming(1, { duration: COVER_IN_MS, easing: Easing.out(Easing.quad) }));
-  }, [coverTo, veil]);
+    if (snapshot) shot.set(1);
+  }, [snapshot, shot]);
   useLayoutEffect(() => {
     if (first.current) {
       first.current = false;
       return;
     }
-    /* Two frames for the new screens to be on, then the cover lifts. */
-    veil.set(1);
+    /* Two frames for the new screens to be on, then the photograph dissolves into them. */
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        veil.set(withTiming(0, { duration: 340, easing: Easing.out(Easing.cubic) }));
-        setTimeout(liftThemeCover, 360);
+        shot.set(withTiming(0, { duration: 360, easing: Easing.inOut(Easing.quad) }));
+        setTimeout(clearThemeSnapshot, 420);
       }),
     );
     const back = takeReturnRoute();
@@ -155,8 +153,8 @@ function Door() {
       return () => clearTimeout(id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, veil, router]);
-  const veilStyle = useAnimatedStyle(() => ({ opacity: veil.get() }));
+  }, [mode, shot, router]);
+  const shotStyle = useAnimatedStyle(() => ({ opacity: shot.get() }));
 
   if (loading) return <Splash />;
   const signedIn = !!session;
@@ -211,15 +209,16 @@ function Door() {
         <Stack.Screen name="login" />
       </Stack.Protected>
     </Stack>
-    <Animated.View
-      pointerEvents="none"
-      style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }, veilStyle]}
-    >
-      {/* Not a wall of colour: the screen stays there behind frosted glass tinted with the
-          new theme, the swap happens under the glass, and the glass clears. */}
-      <BlurView intensity={34} tint={(coverTo ?? mode) === "light" ? "light" : "dark"} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: (coverTo ?? mode) === "light" ? "rgba(245,245,247,0.42)" : "rgba(8,9,10,0.42)" }} />
-    </Animated.View>
+    {snapshot && (
+      <Animated.Image
+        pointerEvents="none"
+        source={{ uri: snapshot }}
+        fadeDuration={0}
+        onLoad={() => requestAnimationFrame(markSnapshotPainted)}
+        resizeMode="cover"
+        style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }, shotStyle]}
+      />
+    )}
     </>
   );
 }
