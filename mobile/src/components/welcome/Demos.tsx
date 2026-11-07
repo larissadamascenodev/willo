@@ -17,8 +17,9 @@ import { LinearGradient as Fade } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import WilloBot from "~/components/willo/WilloBot";
 import { Scope, type SectorKey, SECTORS } from "~/components/radar/parts";
-import { Bell, Camera, Check, Mic, Receipt, Sparkles } from "~/components/icons";
+import { Camera, Check, Mic, Receipt, Sparkles } from "~/components/icons";
 import { INK } from "~/theme/tokens";
+import BankMark from "~/components/BankMark";
 
 /**
  * The welcome's demonstrations, one per slide.
@@ -221,8 +222,8 @@ function Label({ children }: { children: string }) {
 /* ================================================================== */
 
 const PURCHASES = [
-  { merchant: "UBER *TRIP", title: "Uber", tags: ["Transporte", "Débito", "agora"], how: "débito", amount: 18.4 },
-  { merchant: "SUPERMERCADO BOA COMPRA", title: "Supermercado Boa Compra", tags: ["Mercado", "Débito", "agora"], how: "débito", amount: 127.9 },
+  { bank: "Nubank", hex: "#8A05BE", merchant: "UBER *TRIP", title: "Uber", tags: ["Transporte", "Crédito", "agora"], how: "crédito", amount: 18.4 },
+  { bank: "Itaú", hex: "#EC7000", merchant: "SUPERMERCADO BOA COMPRA", title: "Supermercado Boa Compra", tags: ["Mercado", "Débito", "agora"], how: "débito", amount: 127.9 },
 ];
 
 export function NotifyDemo({ active }: { active: boolean }) {
@@ -268,17 +269,16 @@ export function NotifyDemo({ active }: { active: boolean }) {
   return (
     <View style={{ width: "100%" }}>
       <Animated.View style={banner}>
-        <View style={{ flexDirection: "row", gap: 10, padding: 13, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.11)" }}>
-          <View style={{ width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.16)" }}>
-            <Bell size={16} color="#fff" strokeWidth={2} />
-          </View>
+        {/* An iOS notification, as the bank's own app sends it. */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 11, paddingHorizontal: 13, paddingVertical: 12, borderRadius: 22, borderCurve: "continuous", backgroundColor: "rgba(255,255,255,0.13)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
+          <BankMark name={p.bank} hex={p.hex} size={38} />
           <View style={{ flex: 1, minWidth: 0 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#fff" }}>Seu banco</Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>{p.bank}</Text>
               <Text style={{ fontSize: 12, color: INK.softer }}>agora</Text>
             </View>
-            <Text numberOfLines={2} style={{ marginTop: 2, fontSize: 14, lineHeight: 19, color: INK.soft }}>
-              Compra no {p.how} aprovada: {money(p.amount)} em {p.merchant}
+            <Text numberOfLines={2} style={{ marginTop: 1, fontSize: 13.5, lineHeight: 18, color: "rgba(255,255,255,0.86)" }}>
+              Compra aprovada no {p.how}: {money(p.amount)} em {p.merchant}
             </Text>
           </View>
         </View>
@@ -502,16 +502,57 @@ function Lens({ x, y }: { x: number; y: number }) {
 }
 
 /** The app as the phone shows it: the balance and Willo. */
+/** The app's own home, small: the header, the month's in and out, the Radar and Conquistas, the bar. */
 function AppHome() {
+  const card = { borderRadius: 11, backgroundColor: "rgba(255,255,255,0.07)", padding: 7 };
   return (
-    <View style={{ alignItems: "center", marginTop: 56 }}>
-      <Text style={{ fontSize: 10, color: INK.softer }}>Saldo em contas</Text>
-      <Text style={{ fontSize: 18, fontWeight: "800", color: "#fff", marginTop: 2 }}>R$ 2.430,00</Text>
-      <View style={{ width: 96, height: 96, marginTop: 18 }}>
-        <WilloBot size={96} mode="idle" />
+    <View style={{ flex: 1, paddingTop: 32, paddingHorizontal: 8, gap: 6 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+        <Fade colors={["#B9B0FF", "#6FA8E8"]} style={{ width: 15, height: 15, borderRadius: 8 }} />
+        <Text style={{ flex: 1, fontSize: 9, fontWeight: "800", color: "#fff" }}>Larissa</Text>
+        <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: "#67CD67" }} />
       </View>
-      <View style={{ marginTop: 22, width: 120, height: 9, borderRadius: 5, backgroundColor: "rgba(255,255,255,0.1)" }} />
-      <View style={{ marginTop: 7, width: 84, height: 9, borderRadius: 5, backgroundColor: "rgba(255,255,255,0.06)" }} />
+      <View style={[card, { gap: 4 }]}>
+        <Text style={{ fontSize: 6.5, color: INK.softer }}>Receitas e despesas · este mês</Text>
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <Text style={{ fontSize: 7.5, fontWeight: "700", color: "#fff" }}>Entrada</Text>
+          <Text style={{ fontSize: 7.5, fontWeight: "700", color: "#fff" }}>R$ 2.885</Text>
+        </View>
+        <View style={{ height: 3, borderRadius: 2, backgroundColor: "#67CD67" }} />
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <Text style={{ fontSize: 7.5, fontWeight: "700", color: "#fff" }}>Saída</Text>
+          <Text style={{ fontSize: 7.5, fontWeight: "700", color: "#F87171" }}>−R$ 2.521</Text>
+        </View>
+        <View style={{ height: 3, borderRadius: 2, width: "86%", backgroundColor: "#F87171" }} />
+      </View>
+      <View style={{ flexDirection: "row", gap: 6 }}>
+        <View style={[card, { flex: 1, alignItems: "center", gap: 4 }]}>
+          <View style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: "rgba(111,168,232,0.6)", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(111,168,232,0.1)" }}>
+            <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: "rgba(220,235,255,0.85)" }} />
+          </View>
+          <Text style={{ fontSize: 7, fontWeight: "800", color: "#fff" }}>Radar</Text>
+        </View>
+        <View style={[card, { flex: 1, alignItems: "center", gap: 4, backgroundColor: "rgba(255,159,69,0.14)" }]}>
+          <View style={{ height: 34, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 17, fontWeight: "800", color: "#fff" }}>1</Text>
+          </View>
+          <Text style={{ fontSize: 7, fontWeight: "800", color: "#fff" }}>Conquistas</Text>
+        </View>
+      </View>
+      <View style={[card, { gap: 5 }]}>
+        <Text style={{ fontSize: 6.5, color: INK.softer }}>Próximos eventos</Text>
+        {["Fatura Nubank", "Internet"].map((t) => (
+          <View key={t} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: "#FF9F45" }} />
+            <Text style={{ flex: 1, fontSize: 7, color: "#fff" }}>{t}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={{ position: "absolute", left: 8, right: 8, bottom: 9, height: 24, borderRadius: 12, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 6, backgroundColor: "rgba(255,255,255,0.1)" }}>
+        <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: "rgba(255,255,255,0.16)" }} />
+        <Text style={{ flex: 1, fontSize: 7, color: INK.soft }}>Converse com o Willo</Text>
+        <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: "rgba(255,255,255,0.16)" }} />
+      </View>
     </View>
   );
 }

@@ -28,6 +28,26 @@ export interface PendingOnboarding {
   balance: number;
 }
 
+const ANSWERS_KEY = "willo:onboarding-answers";
+
+/** Everything answered in the onboarding, kept on the phone for the profile and Willo to read. */
+export async function saveOnboardingAnswers(answers: object) {
+  try {
+    await AsyncStorage.setItem(ANSWERS_KEY, JSON.stringify({ ...answers, at: new Date().toISOString() }));
+  } catch {
+    /* Nothing is lost that cannot be asked again. */
+  }
+}
+
+export async function readOnboardingAnswers<T = Record<string, unknown>>(): Promise<T | null> {
+  try {
+    const raw = await AsyncStorage.getItem(ANSWERS_KEY);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function savePendingOnboarding(p: PendingOnboarding) {
   try {
     await AsyncStorage.setItem(KEY, JSON.stringify({ ...p, email: p.email.trim().toLowerCase() }));

@@ -1,55 +1,39 @@
-import { useState, type ReactNode } from "react";
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { useRef, useState, type ComponentRef } from "react";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeIn, FadeInRight, ZoomIn } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition, ZoomIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { BANKS } from "@/lib/banks";
 import { supabase } from "~/supabase/client";
 import Room from "~/components/Room";
 import Glass from "~/components/Glass";
 import Field, { PasswordField } from "~/components/auth/Field";
-import { Check, ChevronLeft, Mail } from "~/components/icons";
-import { savePendingOnboarding } from "~/lib/onboarding";
+import LegalSheet from "~/components/auth/LegalSheet";
+import Provider from "~/components/auth/Provider";
+import { AppleMark, GoogleMark } from "~/components/auth/BrandIcons";
+import { AlertTriangle, Check, ChevronLeft, Info, Mail } from "~/components/icons";
+import Funnel from "~/components/onboarding/Funnel";
+import { savePendingOnboarding, saveOnboardingAnswers } from "~/lib/onboarding";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { useThemeRedraw } from "~/theme/theme";
 
 /**
- * The questions that make an account — for someone new.
+ * The way in for someone new.
  *
- * Four short steps, one thing at a time: what to call them, what they want from the
- * app, the account they use most, and last the e-mail and password. The account
- * comes last on purpose. By then they have already said who they are and what they
- * want, so being asked for a password feels like the end of something rather than
- * a wall at the start.
+ * First the onboarding (components/onboarding/Funnel): Willo's questions, what he will
+ * do with the answers, the financial profile and the plans. Then the account, on a page
+ * drawn like the sign-in: the Apple button, the Google button, a line for e-mail that
+ * grows the form in place, and "Já tenho conta" for someone who already has one. The
+ * onboarding stays mounted under it, so going back lands on the plans as they were.
  *
- * What they said waits on the phone until the account is live, and is written for
- * them then — see lib/onboarding. If the project asks for e-mail confirmation, the
- * last screen says so and sends them to sign in once they have confirmed.
+ * What was answered waits on the phone until the account is live and is written for
+ * the person then — see lib/onboarding. If the project asks for e-mail confirmation,
+ * the page says so and sends them to sign in once they have confirmed.
  */
 
-const GOALS = [
-  { id: "ver", label: "Saber para onde vai o meu dinheiro", hint: "Gastos por categoria, mês a mês" },
-  { id: "controlar", label: "Parar de fechar o mês no vermelho", hint: "Contas, vencimentos e saldo previsto" },
-  { id: "juntar", label: "Juntar dinheiro para uma meta", hint: "Uma viagem, uma reserva, um sonho" },
-  { id: "cartoes", label: "Organizar cartões e parcelas", hint: "Faturas, limites e quando você fica livre" },
-] as const;
-
-const OTHER = "Outra";
-const STEPS = 4;
 const APP_URL = "https://willo-app.vercel.app";
 
-const brl = (cents: number) =>
-  (cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+type Note = { tone: "bad" | "info"; text: string; field?: "email" | "password" };
 
 export default function Comecar() {
   /* Drawn again in place when the theme changes. */
@@ -57,63 +41,51 @@ export default function Comecar() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [step, setStep] = useState(0);
+  const [funnel, setFunnel] = useState(true);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState<string | null>(null);
-  const [bank, setBank] = useState<string | null>(null);
-  const [otherBank, setOtherBank] = useState("");
-  const [cents, setCents] = useState(0);
+  const [form, setForm] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<string | null>(null);
+  const [note, setNote] = useState<Note | null>(null);
   const [confirmEmail, setConfirmEmail] = useState(false);
-
-  const accountName = bank === OTHER ? otherBank.trim() : bank;
+  const [legal, setLegal] = useState<"terms" | "privacy" | null>(null);
+  const emailRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const passwordRef = useRef<ComponentRef<typeof TextInput>>(null);
 
   const back = () => {
     setNote(null);
-    if (confirmEmail) {
-      setConfirmEmail(false);
-      return;
-    }
-    if (step === 0) router.canGoBack() ? router.back() : router.replace("/bem-vindo" as never);
-    else setStep((s) => s - 1);
+    if (confirmEmail) return setConfirmEmail(false);
+    if (form) return setForm(false);
+    setFunnel(true);
   };
 
-  const next = () => {
-    setNote(null);
+  const openForm = () => {
     void Haptics.selectionAsync().catch(() => undefined);
-    setStep((s) => Math.min(STEPS - 1, s + 1));
+    setNote(null);
+    setForm(true);
+    setTimeout(() => emailRef.current?.focus(), 380);
   };
 
-  /** Each button is solid; what is missing is said when it is pressed. */
-  const advance = () => {
-    if (step === 0) {
-      if (name.trim().length < 2) return setNote("Como posso te chamar?");
-      return next();
-    }
-    if (step === 1) return next();
-    if (step === 2) {
-      if (bank === OTHER && accountName!.length < 2) return setNote("Escreva o nome da conta.");
-      return next();
-    }
+  const soon = (who: string) => {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
+    setNote({ tone: "info", text: `Criar conta com ${who} chega em breve. Por enquanto, use o seu e-mail.` });
+  };
+
+  const refuse = (text: string, field?: "email" | "password") => {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
+    setNote({ tone: "bad", text, field });
   };
 
   const createAccount = async () => {
     if (busy) return;
-    if (!email.trim().includes("@")) return setNote("Digite o seu e-mail.");
-    if (password.length < 6) return setNote("A senha precisa ter pelo menos 6 caracteres.");
+    if (!email.trim().includes("@")) return refuse("Digite o seu e-mail.", "email");
+    if (password.length < 6) return refuse("A senha precisa ter pelo menos 6 caracteres.", "password");
 
     setBusy(true);
     setNote(null);
-    await savePendingOnboarding({
-      email,
-      name: name.trim(),
-      goal,
-      bank: accountName || null,
-      balance: cents / 100,
-    });
+    await savePendingOnboarding({ email, name: name.trim(), goal, bank: null, balance: 0 });
 
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
@@ -123,7 +95,7 @@ export default function Comecar() {
 
     if (error) {
       const msg = error.message.toLowerCase();
-      setNote(
+      refuse(
         msg.includes("already")
           ? "Esse e-mail já tem conta. Toque em “Já tenho conta” para entrar."
           : msg.includes("password")
@@ -137,7 +109,7 @@ export default function Comecar() {
     /* An address that already has an account comes back as a success with no
        identities, so the answer that it exists cannot be an error. */
     if (data.user && data.user.identities?.length === 0) {
-      setNote("Esse e-mail já tem conta. Toque em “Já tenho conta” para entrar.");
+      refuse("Esse e-mail já tem conta. Toque em “Já tenho conta” para entrar.");
       setBusy(false);
       return;
     }
@@ -151,308 +123,179 @@ export default function Comecar() {
     }
   };
 
-  return (
-    <Room lit sky>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        {/* ── Back, and how far along ── */}
-        <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 14 }}>
-          <Pressable onPress={back} accessibilityLabel="Voltar" hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-            <Glass radius={20} interactive style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
-              <ChevronLeft size={22} color="#fff" strokeWidth={2.4} />
-            </Glass>
-          </Pressable>
-          <View style={{ flex: 1, flexDirection: "row", gap: 5 }}>
-            {Array.from({ length: STEPS }, (_, i) => (
-              <View
-                key={i}
-                style={{
-                  flex: 1,
-                  height: 4,
-                  borderRadius: 2,
-                  backgroundColor: i <= step || confirmEmail ? "#fff" : "rgba(255,255,255,0.16)",
-                }}
-              />
-            ))}
-          </View>
-        </View>
+  const funnelView = (
+    <View style={funnel ? { flex: 1 } : { display: "none" }}>
+      <Funnel
+        onExit={() => (router.canGoBack() ? router.back() : router.replace("/bem-vindo" as never))}
+        onDone={(answers, plan) => {
+          setName(answers.name.trim());
+          setGoal(answers.goal);
+          void saveOnboardingAnswers({ ...answers, plan });
+          setFunnel(false);
+        }}
+      />
+    </View>
+  );
 
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 36, paddingBottom: 16 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+  if (funnel) return funnelView;
+
+  const transition = LinearTransition.duration(340);
+  const first = name.split(" ")[0];
+
+  return (
+    <>
+      {funnelView}
+      <Room lit sky={false}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 16 }}>
+            <Pressable onPress={back} accessibilityLabel="Voltar" hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, alignSelf: "flex-start" })}>
+              <Glass radius={20} interactive style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
+                <ChevronLeft size={22} color="#fff" strokeWidth={2.4} />
+              </Glass>
+            </Pressable>
+          </View>
+
           {confirmEmail ? (
-            <Animated.View entering={FadeIn.duration(400)} style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingBottom: 60 }}>
-              <Animated.View
-                entering={ZoomIn.springify().damping(12).stiffness(380)}
-                style={{ width: 68, height: 68, borderRadius: 34, alignItems: "center", justifyContent: "center", backgroundColor: GREEN }}
-              >
+            <Animated.View entering={FadeIn.duration(400)} style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 24, paddingBottom: 60 }}>
+              <Animated.View entering={ZoomIn.springify().damping(12).stiffness(380)} style={{ width: 68, height: 68, borderRadius: 34, alignItems: "center", justifyContent: "center", backgroundColor: GREEN }}>
                 <Check size={34} color="#0B0B0B" strokeWidth={3.2} />
               </Animated.View>
-              <Text style={{ marginTop: 22, fontSize: 28, fontWeight: "800", letterSpacing: -0.9, color: "#fff", textAlign: "center" }}>
-                Confirme o seu e-mail
-              </Text>
+              <Text style={{ marginTop: 22, fontSize: 28, fontWeight: "800", letterSpacing: -0.9, color: "#fff", textAlign: "center" }}>Confirme o seu e-mail</Text>
               <Text style={{ marginTop: 10, maxWidth: 320, fontSize: 15.5, lineHeight: 22, color: INK.soft, textAlign: "center" }}>
                 Enviamos um link para <Text style={{ fontWeight: "700", color: "#fff" }}>{email.trim()}</Text>. Abra, confirme e volte aqui para entrar.
               </Text>
+              <Pressable
+                onPress={() => router.replace({ pathname: "/login", params: { email: email.trim() } } as never)}
+                style={({ pressed }) => ({ marginTop: 28, alignSelf: "stretch", height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: "#fff", opacity: pressed ? 0.85 : 1 })}
+              >
+                <Text style={{ fontSize: 16.5, fontWeight: "700", color: "#0B0B0B" }}>Já confirmei, entrar</Text>
+              </Pressable>
             </Animated.View>
           ) : (
-            <Animated.View key={step} entering={FadeInRight.duration(320)}>
-              {step === 0 && (
-                <>
-                  <Heading>Como posso{"\n"}te chamar?</Heading>
-                  <Sub>É assim que o Willo vai falar com você.</Sub>
-                  <TextInput
-                    value={name}
+            <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingBottom: insets.bottom + 18 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <Animated.View layout={transition} style={{ flex: form ? 0 : 1, minHeight: form ? 28 : 0 }} />
+
+              <Animated.View layout={transition} entering={FadeInDown.delay(60).duration(420)} style={{ alignItems: "center" }}>
+                <Text style={{ fontSize: 38, fontWeight: "300", letterSpacing: -1, lineHeight: 44, color: "#fff", textAlign: "center" }}>{first ? `${first}, crie` : "Crie"}</Text>
+                <Text style={{ fontSize: 38, fontWeight: "800", letterSpacing: -1.3, lineHeight: 44, color: "#fff", textAlign: "center" }}>sua conta.</Text>
+                {!form && <Text style={{ marginTop: 12, fontSize: 15, lineHeight: 21, color: INK.soft, textAlign: "center" }}>Seu perfil e o que você me contou ficam guardados nela.</Text>}
+              </Animated.View>
+
+              <Animated.View layout={transition} entering={FadeInDown.delay(160).duration(420)} style={{ marginTop: form ? 24 : 34, flexDirection: form ? "row" : "column", gap: form ? 10 : 12 }}>
+                <Provider compact={form} label="Continuar com Apple" short="Apple" onPress={() => soon("a Apple")}>
+                  <AppleMark size={form ? 16 : 20} />
+                </Provider>
+                <Provider compact={form} label="Continuar com Google" short="Google" onPress={() => soon("o Google")}>
+                  <GoogleMark size={form ? 16 : 19} />
+                </Provider>
+              </Animated.View>
+
+              {!form && (
+                <Animated.View entering={FadeIn.delay(220).duration(300)} exiting={FadeOut.duration(120)} style={{ alignItems: "center" }}>
+                  <Pressable onPress={openForm} hitSlop={8} accessibilityRole="button" style={({ pressed }) => ({ marginTop: 14, paddingVertical: 12, paddingHorizontal: 12, opacity: pressed ? 0.6 : 1 })}>
+                    <Text style={{ fontSize: 16, fontWeight: "700", color: "rgba(255,255,255,0.86)" }}>Continuar com e-mail</Text>
+                  </Pressable>
+                  <Pressable onPress={() => router.replace("/login" as never)} hitSlop={8} accessibilityRole="button" style={({ pressed }) => ({ paddingVertical: 10, paddingHorizontal: 12, opacity: pressed ? 0.6 : 1 })}>
+                    <Text style={{ fontSize: 15, color: INK.soft }}>
+                      Já tenho conta · <Text style={{ fontWeight: "700", color: "#fff" }}>Entrar</Text>
+                    </Text>
+                  </Pressable>
+                </Animated.View>
+              )}
+
+              {form && (
+                <Animated.View entering={FadeInDown.delay(120).duration(380)} style={{ marginTop: 14, gap: 12 }}>
+                  <Field
+                    ref={emailRef}
+                    label="E-mail"
+                    inset
+                    icon={Mail}
+                    value={email}
+                    error={note?.tone === "bad" && note.field === "email"}
                     onChangeText={(t) => {
-                      setName(t);
+                      setEmail(t);
                       setNote(null);
                     }}
-                    placeholder="Seu nome"
-                    placeholderTextColor={INK.faint}
-                    autoFocus
-                    autoCapitalize="words"
-                    autoComplete="given-name"
+                    placeholder="seu@email.com"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="email"
                     returnKeyType="next"
-                    onSubmitEditing={advance}
-                    style={{
-                      marginTop: 34,
-                      paddingVertical: 10,
-                      fontSize: 34,
-                      fontWeight: "700",
-                      letterSpacing: -0.8,
-                      color: "#fff",
-                      borderBottomWidth: 2,
-                      borderBottomColor: name ? GREEN : "rgba(255,255,255,0.18)",
-                    }}
+                    onSubmitEditing={() => passwordRef.current?.focus()}
                   />
-                </>
+                  <PasswordField
+                    ref={passwordRef}
+                    label="Senha"
+                    inset
+                    value={password}
+                    error={note?.tone === "bad" && note.field === "password"}
+                    onChangeText={(t) => {
+                      setPassword(t);
+                      setNote(null);
+                    }}
+                    placeholder="Pelo menos 6 caracteres"
+                    autoComplete="new-password"
+                    onSubmitEditing={createAccount}
+                    returnKeyType="go"
+                  />
+                </Animated.View>
               )}
 
-              {step === 1 && (
-                <>
-                  <Heading>{name.trim().split(" ")[0]}, o que você{"\n"}quer do Willo?</Heading>
-                  <Sub>Escolha o que mais combina com você agora.</Sub>
-                  <View style={{ marginTop: 26, gap: 10 }}>
-                    {GOALS.map((g, i) => {
-                      const on = goal === g.id;
-                      return (
-                        <Animated.View key={g.id} entering={FadeInRight.delay(60 + i * 50).duration(300)}>
-                          <Pressable
-                            onPress={() => {
-                              setGoal(g.id);
-                              setNote(null);
-                              void Haptics.selectionAsync().catch(() => undefined);
-                              setTimeout(next, 320);
-                            }}
-                            style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}
-                          >
-                            <Glass
-                              radius={20}
-                              interactive
-                              style={{
-                                flexDirection: "row",
-                                alignItems: "center",
-                                gap: 12,
-                                paddingHorizontal: 16,
-                                paddingVertical: 15,
-                                borderWidth: 1,
-                                borderColor: on ? "#fff" : "rgba(255,255,255,0.08)",
-                              }}
-                            >
-                              <View style={{ flex: 1, minWidth: 0 }}>
-                                <Text style={{ fontSize: 16, fontWeight: "600", color: "#fff" }}>{g.label}</Text>
-                                <Text style={{ marginTop: 2, fontSize: 13, color: INK.softer }}>{g.hint}</Text>
-                              </View>
-                              <View
-                                style={{
-                                  width: 24,
-                                  height: 24,
-                                  borderRadius: 12,
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  borderWidth: on ? 0 : 1.5,
-                                  borderColor: "rgba(255,255,255,0.28)",
-                                  backgroundColor: on ? "#fff" : "transparent",
-                                }}
-                              >
-                                {on && <Check size={14} color="#0B0B0B" strokeWidth={3.2} />}
-                              </View>
-                            </Glass>
-                          </Pressable>
-                        </Animated.View>
-                      );
-                    })}
-                  </View>
-                </>
-              )}
-
-              {step === 2 && (
-                <>
-                  <Heading>Qual é a sua{"\n"}conta principal?</Heading>
-                  <Sub>Onde o seu dinheiro entra e sai. Você pode adicionar outras depois.</Sub>
-
-                  <View style={{ marginTop: 26, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                    {[...BANKS.map((b) => ({ name: b.name, hex: b.hex })), { name: OTHER, hex: "#8B8D94" }].map((b) => {
-                      const on = bank === b.name;
-                      return (
-                        <Pressable
-                          key={b.name}
-                          onPress={() => {
-                            setBank(on ? null : b.name);
-                            setNote(null);
-                            void Haptics.selectionAsync().catch(() => undefined);
-                          }}
-                          style={({ pressed }) => ({
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 8,
-                            height: 42,
-                            paddingHorizontal: 14,
-                            borderRadius: 21,
-                            borderWidth: 1,
-                            borderColor: on ? "#fff" : "rgba(255,255,255,0.10)",
-                            backgroundColor: on ? "#fff" : "rgba(255,255,255,0.05)",
-                            transform: [{ scale: pressed ? 0.96 : 1 }],
-                          })}
-                        >
-                          <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: b.hex }} />
-                          <Text style={{ fontSize: 14.5, fontWeight: "600", color: on ? "#0B0B0B" : "#fff" }}>{b.name}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-
-                  {bank === OTHER && (
-                    <Animated.View entering={FadeIn.duration(220)} style={{ marginTop: 18 }}>
-                      <Field
-                        label="Nome da conta"
-                        value={otherBank}
-                        onChangeText={(t) => {
-                          setOtherBank(t);
-                          setNote(null);
-                        }}
-                        placeholder="Ex.: Carteira, Sicredi…"
-                        autoCapitalize="words"
-                      />
-                    </Animated.View>
-                  )}
-
-                  {bank && (
-                    <Animated.View entering={FadeIn.duration(220)} style={{ marginTop: 26 }}>
-                      <Text style={{ fontSize: 11.5, fontWeight: "600", letterSpacing: 1.2, textTransform: "uppercase", color: INK.softer }}>
-                        Quanto tem nela hoje? <Text style={{ textTransform: "none", letterSpacing: 0, color: INK.faint }}>(opcional)</Text>
-                      </Text>
-                      <View style={{ marginTop: 6, flexDirection: "row", alignItems: "baseline", gap: 8 }}>
-                        <Text style={{ fontSize: 20, fontWeight: "700", color: INK.softer }}>R$</Text>
-                        <TextInput
-                          value={brl(cents)}
-                          onChangeText={(t) => setCents(Number(t.replace(/\D/g, "") || "0"))}
-                          keyboardType="number-pad"
-                          style={{ flex: 1, fontSize: 36, fontWeight: "800", letterSpacing: -1, color: "#fff", padding: 0 }}
-                        />
-                      </View>
-                    </Animated.View>
-                  )}
-                </>
-              )}
-
-              {step === 3 && (
-                <>
-                  <Heading>Agora, crie a{"\n"}sua conta.</Heading>
-                  <Sub>É com ela que você entra aqui e no navegador.</Sub>
-                  <View style={{ marginTop: 28, gap: 12 }}>
-                    <Field
-                      label="E-mail"
-                      inset
-                      icon={Mail}
-                      value={email}
-                      onChangeText={(t) => {
-                        setEmail(t);
-                        setNote(null);
-                      }}
-                      placeholder="seu@email.com"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      autoComplete="email"
-                    />
-                    <PasswordField
-                      label="Senha"
-                      inset
-                      value={password}
-                      onChangeText={(t) => {
-                        setPassword(t);
-                        setNote(null);
-                      }}
-                      placeholder="Pelo menos 6 caracteres"
-                      autoComplete="new-password"
-                      onSubmitEditing={createAccount}
-                      returnKeyType="go"
-                    />
-                  </View>
-                </>
-              )}
-
-              {note && <Text style={{ marginTop: 16, fontSize: 14, lineHeight: 20, color: RED }}>{note}</Text>}
-            </Animated.View>
-          )}
-        </ScrollView>
-
-        {/* ── The one button ── */}
-        <View style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: insets.bottom + 14 }}>
-          {confirmEmail ? (
-            <Pressable
-              onPress={() => router.replace({ pathname: "/login", params: { email: email.trim() } } as never)}
-              style={({ pressed }) => ({ height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: "#fff", opacity: pressed ? 0.85 : 1 })}
-            >
-              <Text style={{ fontSize: 16.5, fontWeight: "700", color: "#0B0B0B" }}>Já confirmei, entrar</Text>
-            </Pressable>
-          ) : step === 1 && !goal ? null : (
-            <>
-              <Pressable
-                onPress={step === 3 ? createAccount : advance}
-                disabled={busy}
-                style={({ pressed }) => ({ height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: "#fff", opacity: pressed ? 0.85 : 1 })}
-              >
-                {busy ? (
-                  <ActivityIndicator color="#0B0B0B" />
-                ) : (
-                  <Text style={{ fontSize: 16.5, fontWeight: "700", color: "#0B0B0B" }}>{step === 3 ? "Criar conta" : "Continuar"}</Text>
-                )}
-              </Pressable>
-              {step === 2 && (
-                <Pressable
-                  onPress={() => {
-                    setBank(null);
-                    setCents(0);
-                    next();
+              {note && (
+                <Animated.View
+                  entering={FadeInDown.duration(220)}
+                  style={{
+                    marginTop: 14,
+                    flexDirection: "row",
+                    alignItems: "flex-start",
+                    gap: 10,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    borderColor: note.tone === "bad" ? "rgba(248,113,113,0.25)" : "rgba(255,255,255,0.14)",
+                    backgroundColor: note.tone === "bad" ? "rgba(248,113,113,0.08)" : "rgba(255,255,255,0.06)",
                   }}
-                  style={({ pressed }) => ({ marginTop: 6, height: 40, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
                 >
-                  <Text style={{ fontSize: 14, color: INK.soft }}>Pular por enquanto</Text>
-                </Pressable>
+                  {note.tone === "bad" ? <AlertTriangle size={16} color={RED} /> : <Info size={16} color="rgba(255,255,255,0.8)" />}
+                  <Text style={{ flex: 1, fontSize: 13.5, lineHeight: 19, color: "rgba(255,255,255,0.88)" }}>{note.text}</Text>
+                </Animated.View>
               )}
-              {step === 3 && (
-                <Pressable
-                  onPress={() => router.replace("/login" as never)}
-                  style={({ pressed }) => ({ marginTop: 6, height: 40, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
-                >
-                  <Text style={{ fontSize: 14, color: INK.soft }}>Já tenho conta</Text>
-                </Pressable>
+
+              {form && (
+                <Animated.View entering={FadeInDown.delay(200).duration(380)}>
+                  <Pressable
+                    onPress={createAccount}
+                    disabled={busy}
+                    style={({ pressed }) => ({ marginTop: 16, height: 58, borderRadius: 29, alignItems: "center", justifyContent: "center", backgroundColor: "#fff", transform: [{ scale: pressed ? 0.985 : 1 }] })}
+                  >
+                    {busy ? <ActivityIndicator color="#0B0B0B" /> : <Text style={{ fontSize: 17, fontWeight: "700", color: "#0B0B0B" }}>Criar conta</Text>}
+                  </Pressable>
+                  <Pressable onPress={() => router.replace("/login" as never)} hitSlop={8} style={({ pressed }) => ({ alignSelf: "center", marginTop: 8, paddingVertical: 12, paddingHorizontal: 12, opacity: pressed ? 0.6 : 1 })}>
+                    <Text style={{ fontSize: 15, fontWeight: "600", color: INK.soft }}>Já tenho conta</Text>
+                  </Pressable>
+                </Animated.View>
               )}
-            </>
+
+              <Animated.View layout={transition} style={{ flex: form ? 1 : 1.15, minHeight: 24 }} />
+
+              <Text style={{ paddingHorizontal: 8, fontSize: 13, lineHeight: 20, color: INK.faint, textAlign: "center" }}>
+                Ao continuar, você concorda com os{" "}
+                <Text onPress={() => setLegal("terms")} style={{ fontWeight: "700", color: INK.soft, textDecorationLine: "underline" }}>
+                  Termos de Uso
+                </Text>{" "}
+                e{" "}
+                <Text onPress={() => setLegal("privacy")} style={{ fontWeight: "700", color: INK.soft, textDecorationLine: "underline" }}>
+                  Política de Privacidade
+                </Text>
+                .
+              </Text>
+            </ScrollView>
           )}
-        </View>
-      </KeyboardAvoidingView>
-    </Room>
+        </KeyboardAvoidingView>
+        <LegalSheet which={legal} onClose={() => setLegal(null)} />
+      </Room>
+    </>
   );
-}
-
-function Heading({ children }: { children: ReactNode }) {
-  return <Text style={{ fontSize: 34, fontWeight: "800", letterSpacing: -1.2, lineHeight: 38, color: "#fff" }}>{children}</Text>;
-}
-
-function Sub({ children }: { children: ReactNode }) {
-  return <Text style={{ marginTop: 10, fontSize: 15.5, lineHeight: 22, color: INK.soft }}>{children}</Text>;
 }
