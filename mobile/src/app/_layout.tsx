@@ -123,21 +123,38 @@ function Door() {
   const shot = useSharedValue(snapshot ? 1 : 0);
   const first = useRef(true);
   const [quiet, setQuiet] = useState(false);
+  const swapped = useRef(false);
+  const shotLoaded = useRef(false);
+  const dissolve = () => {
+    swapped.current = false;
+    shotLoaded.current = false;
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        shot.set(withTiming(0, { duration: 420, easing: Easing.inOut(Easing.quad) }));
+        setTimeout(clearThemeSnapshot, 480);
+      }),
+    );
+  };
   useLayoutEffect(() => {
-    if (snapshot) shot.set(1);
+    if (snapshot) {
+      shot.set(1);
+      shotLoaded.current = false;
+    }
   }, [snapshot, shot]);
   useLayoutEffect(() => {
     if (first.current) {
       first.current = false;
       return;
     }
-    /* Two frames for the new screens to be on, then the photograph dissolves into them. */
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        shot.set(withTiming(0, { duration: 360, easing: Easing.inOut(Easing.quad) }));
-        setTimeout(clearThemeSnapshot, 420);
-      }),
-    );
+    /* The photograph dissolves only once both have happened: the new screens are on, and
+       the photograph itself is on screen over them. Whichever comes second starts it, so
+       the dissolve is never run before there is anything to see. */
+    swapped.current = true;
+    if (shotLoaded.current || !snapshot) dissolve();
+    /* Never left covering the app: if the photograph never says it loaded, it goes anyway. */
+    setTimeout(() => {
+      if (swapped.current) dissolve();
+    }, 1000);
     const back = takeReturnRoute();
     if (back) {
       setQuiet(true);
@@ -214,7 +231,13 @@ function Door() {
         pointerEvents="none"
         source={{ uri: snapshot }}
         fadeDuration={0}
-        onLoad={() => requestAnimationFrame(markSnapshotPainted)}
+        onLoad={() =>
+          requestAnimationFrame(() => {
+            shotLoaded.current = true;
+            markSnapshotPainted();
+            if (swapped.current) dissolve();
+          })
+        }
         resizeMode="cover"
         style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }, shotStyle]}
       />

@@ -119,7 +119,7 @@ export async function switchTheme(next: ThemeMode, route: string) {
     const uri = await captureScreen({ format: "jpg", quality: 0.9, result: "tmpfile", width: Dimensions.get("window").width * PixelRatio.get() });
     const shown = new Promise<void>((resolve) => {
       painted = resolve;
-      setTimeout(resolve, 400);
+      setTimeout(resolve, 900);
     });
     setSnapshot(uri);
     await shown;
