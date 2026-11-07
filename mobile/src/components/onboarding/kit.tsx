@@ -397,7 +397,9 @@ export function Evolution({
   toLabel = "SUA META",
   marks,
   accent,
+  play = true,
 }: {
+  play?: boolean;
   dir: "up" | "down";
   from: string;
   to: string;
@@ -411,8 +413,8 @@ export function Evolution({
   const pad = 18;
   const p = useSharedValue(0);
   useEffect(() => {
-    p.set(withDelay(250, withTiming(1, { duration: 1700, easing: Easing.inOut(Easing.cubic) })));
-  }, [p]);
+    if (play) p.set(withDelay(200, withTiming(1, { duration: 1700, easing: Easing.inOut(Easing.cubic) })));
+  }, [p, play]);
 
   const { d, area, len, pts } = useMemo(() => {
     if (w <= 0) return { d: "", area: "", len: 1, pts: [] as { x: number; y: number }[] };
@@ -509,14 +511,14 @@ function TrophyDot({ x, y, p, accent }: { x: number; y: number; p: SharedValue<n
  * the line drawing itself up to where the person is now, Willo standing on that step,
  * and the next one lit as where he takes them.
  */
-export function Journey({ stages, at }: { stages: string[]; at: number }) {
+export function Journey({ stages, at, play = true }: { stages: string[]; at: number; play?: boolean }) {
   const [w, setW] = useState(0);
-  const H = 170;
-  const pad = 22;
+  const H = 176;
+  const pad = 26;
   const p = useSharedValue(0);
   useEffect(() => {
-    p.set(withDelay(300, withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.cubic) })));
-  }, [p]);
+    if (play) p.set(withDelay(200, withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.cubic) })));
+  }, [p, play]);
   const n = stages.length;
   const pos = (i: number) => ({ x: pad + (i / (n - 1)) * (w - pad * 2), y: H - pad - 26 - (i / (n - 1)) * (H - pad * 2 - 40) });
   const { d, len } = useMemo(() => {
@@ -546,7 +548,7 @@ export function Journey({ stages, at }: { stages: string[]; at: number }) {
             const next = i === at + 1;
             return (
               <View key={s} style={{ position: "absolute", left: q.x - 7, top: q.y - 7 }}>
-                <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: done || now ? "#fff" : C.bg, borderWidth: 2.5, borderColor: next ? C.green : done || now ? "#fff" : "rgba(255,255,255,0.25)" }} />
+                <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: done || now ? "#fff" : C.bg, borderWidth: 2.5, borderColor: next ? "rgba(255,255,255,0.85)" : done || now ? "#fff" : "rgba(255,255,255,0.25)" }} />
               </View>
             );
           })}
@@ -556,7 +558,7 @@ export function Journey({ stages, at }: { stages: string[]; at: number }) {
             const now = i === at;
             const next = i === at + 1;
             return (
-              <Text key={`l-${s}`} numberOfLines={2} style={{ position: "absolute", left: Math.min(Math.max(q.x - 34, 0), w - 68), top: q.y + 12, width: 68, textAlign: "center", fontSize: 10, lineHeight: 12, fontWeight: now || next ? "800" : "600", color: now ? "#fff" : next ? C.green : C.softer }}>
+              <Text key={`l-${s}`} numberOfLines={2} style={{ position: "absolute", left: Math.min(Math.max(q.x - 40, 0), w - 80), top: q.y + 12, width: 80, textAlign: "center", fontSize: 10, lineHeight: 12, fontWeight: now || next ? "800" : "600", color: now ? "#fff" : next ? "#fff" : C.softer }}>
                 {s}
               </Text>
             );

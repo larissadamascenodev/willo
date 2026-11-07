@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, FadeIn, FadeInDown, FadeInRight, ZoomIn, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
@@ -152,6 +152,8 @@ export default function Funnel({ onDone, onExit }: { onDone: (a: OnboardingAnswe
   const tileW = Math.floor((width - 40 - 20) / 3);
   const [a, setA] = useState<OnboardingAnswers>(EMPTY_ANSWERS);
   const [i, setI] = useState(0);
+  /* The income only counts as answered once something is typed — zero included. */
+  const [incomeTyped, setIncomeTyped] = useState(false);
   const set = (patch: Partial<OnboardingAnswers>) => setA((v) => ({ ...v, ...patch }));
 
   const steps = useMemo<StepId[]>(() => {
@@ -176,6 +178,12 @@ export default function Funnel({ onDone, onExit }: { onDone: (a: OnboardingAnswe
     switch (step) {
       case "name":
         return first.length >= 2;
+      case "source":
+        return !!a.source;
+      case "income":
+        return incomeTyped && (a.income === 0 || !!a.incomeKind);
+      case "habits":
+        return a.habits.length === 3;
       case "goal":
         return !!a.goal;
       case "monthEnd":
@@ -185,7 +193,7 @@ export default function Funnel({ onDone, onExit }: { onDone: (a: OnboardingAnswe
       case "emergency":
         return !!a.emergency;
       case "detail":
-        return a.goal === "dividas" ? (a.debt?.total ?? 0) > 0 : (a.dream?.amount ?? 0) > 0 && (a.goal !== "viagem" && a.goal !== "outro" ? true : (a.dream?.label.trim().length ?? 0) > 1);
+        return a.goal === "dividas" ? (a.debt?.total ?? 0) > 0 && (a.debt?.kinds.length ?? 0) > 0 && a.debt?.late != null : (a.dream?.amount ?? 0) > 0 && (a.goal !== "viagem" && a.goal !== "outro" ? true : (a.dream?.label.trim().length ?? 0) > 1);
       default:
         return true;
     }
@@ -270,8 +278,15 @@ export default function Funnel({ onDone, onExit }: { onDone: (a: OnboardingAnswe
         return (
           <Ask lead="Agora, o tamanho do seu mês." title="Quanto você" strong="ganha por mês?">
             <Label>Por mês, já com os descontos</Label>
-            <MoneyInput value={a.income} onChange={(v) => set({ income: v })} big />
-            <Text style={{ marginTop: 8, fontSize: 12.5, color: C.softer }}>Pode arredondar. É só para eu entender o tamanho do seu mês.</Text>
+            <MoneyInput
+              value={a.income}
+              onChange={(v) => {
+                setIncomeTyped(true);
+                set({ income: v });
+              }}
+              big
+            />
+            <Text style={{ marginTop: 8, fontSize: 12.5, lineHeight: 17, color: C.softer }}>Pode arredondar. Se hoje não entra nada, digite zero.</Text>
             <View style={{ marginTop: 20, gap: 9 }}>
               <Label>Esse valor é…</Label>
               <Choice label="Fixo" sub="Salário, aposentadoria: cai igual todo mês" on={a.incomeKind === "fixa"} onPress={() => set({ incomeKind: "fixa" })} tile={{ Icon: CalendarDays, hex: C.green }} />
@@ -348,7 +363,7 @@ export default function Funnel({ onDone, onExit }: { onDone: (a: OnboardingAnswe
       case "habits":
         return (
           <Ask lead="Agora o que mais importa no dia a dia." title="O que pesa" strong="todo mês?">
-            <Label>Marque até 3. Só preciso saber o que vigiar.</Label>
+            <Label>{a.habits.length < 3 ? `Escolha 3. Faltam ${3 - a.habits.length}.` : "Pronto, são esses 3 que eu vou vigiar."}</Label>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {HABITS.map((h) => {
                 const on = a.habits.includes(h.id);
@@ -359,7 +374,7 @@ export default function Funnel({ onDone, onExit }: { onDone: (a: OnboardingAnswe
                     on={on}
                     style={{ width: "48.6%", minHeight: 52, paddingHorizontal: 12 }}
                     icon={<h.Icon size={17} color={on ? "#0B0B0B" : h.hex} strokeWidth={2.2} />}
-                    onPress={() => set({ habits: on ? a.habits.filter((x) => x !== h.id) : a.habits.length >= 3 ? [...a.habits.slice(1), h.id] : [...a.habits, h.id] })}
+                    onPress={() => set({ habits: on ? a.habits.filter((x) => x !== h.id) : a.habits.length >= 3 ? a.habits : [...a.habits, h.id] })}
                   />
                 );
               })}
@@ -704,7 +719,7 @@ function HabitViz({ viz, hex, delay }: { viz: Viz; hex: string; delay: number })
 }
 
 function WatchDemo({ habits }: { habits: string[] }) {
-  const list = (habits.length ? habits : ["delivery", "fatura", "parcelas"]).map((id) => HABITS.find((h) => h.id === id)!).filter(Boolean);
+  const list = habits.map((id) => HABITS.find((h) => h.id === id)!).filter(Boolean);
   return (
     <View>
       <Title title="Você vive." strong="Eu fico de olho." line={`Para ${list.length === 1 ? "o que você marcou" : `os ${list.length} que você marcou`}, eu já sei o que fazer.`} />
@@ -744,7 +759,6 @@ function Building({ a, onDone }: { a: OnboardingAnswers; onDone: () => void }) {
   const insets = useSafeAreaInsets();
   const p = useSharedValue(0);
   const [pct, setPct] = useState(0);
-  const [ready, setReady] = useState(false);
   const goal = GOALS.find((g) => g.id === a.goal);
   const lines = [
     a.income > 0 ? "Calculando sua hora de trabalho" : "Entendendo o seu mês",
@@ -761,235 +775,232 @@ function Building({ a, onDone }: { a: OnboardingAnswers; onDone: () => void }) {
       setPct(Math.round(eased * 100));
       if (f >= 1) {
         clearInterval(t);
-        setReady(true);
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-        setTimeout(onDone, 1100);
+        setTimeout(onDone, 900);
       }
     }, 33);
     return () => clearInterval(t);
     // Runs once, as the screen opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const shown = Math.min(lines.length, Math.floor(pct / 25) + 1);
+  /* A step shows once the one before it is done and its line has drawn down to it. */
+  const shown = lines.filter((_, n) => n === 0 || pct >= n * 25 + 5).length;
   return (
     <Animated.View entering={FadeIn.duration(500)} style={{ flex: 1, backgroundColor: C.bg, paddingTop: insets.top, alignItems: "center", justifyContent: "center" }}>
       <Aura hex="#8FA4C8" top={-60} height={720} />
-      <View style={{ width: 196, height: 196, alignItems: "center", justifyContent: "center" }}>
-        <Ring p={p} label={ready ? "" : `${pct}%`} />
-        {ready && (
-          <Animated.View entering={ZoomIn.springify().damping(11).stiffness(200)} style={{ position: "absolute", width: 84, height: 84, borderRadius: 42, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
-            <Check size={40} color="#0B0B0B" strokeWidth={3} />
-          </Animated.View>
-        )}
-      </View>
-      <Animated.Text key={ready ? "pronto" : "montando"} entering={FadeIn.duration(400)} style={{ marginTop: 30, fontSize: 22, fontWeight: "800", letterSpacing: -0.4, color: "#fff" }}>
-        {ready ? "Tudo pronto!" : "Montando o seu perfil"}
-      </Animated.Text>
-      <View style={{ marginTop: 22, gap: 14, width: 290, minHeight: 4 * 36 }}>
-        {lines.slice(0, shown).map((l, n) => {
-          const done = pct >= (n + 1) * 25;
-          return (
-            <Animated.View key={l} entering={FadeInDown.duration(420).easing(Easing.out(Easing.cubic))} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <View style={{ width: 22, height: 22, alignItems: "center", justifyContent: "center" }}>
-                {done ? (
-                  <Animated.View entering={ZoomIn.springify().damping(12).stiffness(260)} style={{ width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
-                    <Check size={13} color="#0B0B0B" strokeWidth={3.2} />
-                  </Animated.View>
-                ) : (
-                  <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.7)" }} />
-                )}
-              </View>
-              <Text style={{ flex: 1, fontSize: 14.5, fontWeight: done ? "500" : "700", color: done ? "rgba(255,255,255,0.7)" : "#fff" }}>{l}</Text>
-            </Animated.View>
-          );
-        })}
+      <Ring p={p} label={`${pct}%`} />
+      <Text style={{ marginTop: 30, fontSize: 22, fontWeight: "800", letterSpacing: -0.4, color: "#fff" }}>{pct >= 100 ? "Tudo pronto!" : "Montando o seu perfil"}</Text>
+      <View style={{ marginTop: 26, width: 290, minHeight: 4 * 48 }}>
+        {lines.slice(0, shown).map((l, n) => (
+          <TimelineStep key={l} label={l} done={pct >= (n + 1) * 25} last={n === lines.length - 1} />
+        ))}
       </View>
     </Animated.View>
   );
 }
 
+/** One step of the loading timeline: a dot that fills when done, and the line down to the next. */
+function TimelineStep({ label, done, last }: { label: string; done: boolean; last: boolean }) {
+  const line = useSharedValue(0);
+  useEffect(() => {
+    if (done && !last) line.set(withTiming(1, { duration: 420, easing: Easing.out(Easing.cubic) }));
+  }, [done, last, line]);
+  const grow = useAnimatedStyle(() => ({ height: 26 * line.get() }));
+  return (
+    <Animated.View entering={FadeIn.duration(380)} style={{ flexDirection: "row", gap: 14 }}>
+      <View style={{ width: 22, alignItems: "center" }}>
+        <View style={{ width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: done ? "#fff" : "transparent", borderWidth: done ? 0 : 1.5, borderColor: "rgba(255,255,255,0.75)" }}>
+          {done && (
+            <Animated.View entering={ZoomIn.duration(260)}>
+              <Check size={13} color="#0B0B0B" strokeWidth={3.2} />
+            </Animated.View>
+          )}
+        </View>
+        {!last && (
+          <View style={{ width: 2, height: 26, marginVertical: 1, borderRadius: 1, backgroundColor: "rgba(255,255,255,0.1)", overflow: "hidden" }}>
+            <Animated.View style={[{ width: 2, backgroundColor: "#fff" }, grow]} />
+          </View>
+        )}
+      </View>
+      <Text style={{ flex: 1, marginTop: 1, fontSize: 14.5, lineHeight: 20, fontWeight: done ? "500" : "700", color: done ? "rgba(255,255,255,0.7)" : "#fff" }}>{label}</Text>
+    </Animated.View>
+  );
+}
+
+/** A thin line across, between the result's sections. */
+function Rule() {
+  return <View style={{ height: 1, marginVertical: 26, backgroundColor: "rgba(255,255,255,0.08)" }} />;
+}
+
 function Result({ a, onNext }: { a: OnboardingAnswers; onNext: () => void }) {
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const prof = profileOf(a);
   const first = a.name.trim().split(" ")[0];
   const goal = GOALS.find((g) => g.id === a.goal);
-  const habits = (a.habits.length ? a.habits : ["delivery", "fatura", "parcelas"]).map((id) => HABITS.find((h) => h.id === id)!).filter(Boolean);
+  const habits = a.habits.map((id) => HABITS.find((h) => h.id === id)!).filter(Boolean);
   const debt = a.goal === "dividas" && a.debt ? debtPlan(a.debt.total, a.income) : null;
   const dream = a.dream && a.dream.amount > 0 ? dreamPlan(a.dream) : null;
-  const traitHex = [C.blue, C.violet, C.orange, C.teal];
   const ranked = [...prof.traits].sort((x, y) => y.value - x.value);
   const best = ranked[0];
   const worst = ranked[ranked.length - 1];
+  const stage = Math.max(0, STAGES.indexOf(prof.type));
+
+  /* The charts play when they are scrolled to, not before. */
+  const tops = useRef<Record<string, number>>({});
+  const [seen, setSeen] = useState<Record<string, boolean>>({});
+  const look = (y: number) => {
+    const fresh: Record<string, boolean> = {};
+    for (const [k, top] of Object.entries(tops.current)) if (!seen[k] && y + height * 0.82 > top) fresh[k] = true;
+    if (Object.keys(fresh).length) setSeen((v) => ({ ...v, ...fresh }));
+  };
+  const mark = (k: string) => (e: { nativeEvent: { layout: { y: number } } }) => {
+    tops.current[k] = e.nativeEvent.layout.y;
+    look(0);
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <Aura hex={C.green} top={-160} />
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 26, paddingHorizontal: 20, paddingBottom: 120, gap: 14 }} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeInDown.duration(500)} style={{ alignItems: "center", gap: 14, paddingHorizontal: 10, paddingBottom: 8 }}>
-          <Pop>
-            <View style={{ width: 58, height: 58, borderRadius: 29, borderWidth: 2, borderColor: C.green, alignItems: "center", justifyContent: "center" }}>
-              <Check size={28} color={C.green} strokeWidth={2.8} />
-            </View>
-          </Pop>
-          <Text style={{ fontSize: 26, lineHeight: 32, fontWeight: "300", letterSpacing: -0.5, color: "#fff", textAlign: "center" }}>
+      <Aura hex="#8FA4C8" top={-180} />
+      <ScrollView onScroll={(e) => look(e.nativeEvent.contentOffset.y)} scrollEventThrottle={64} contentContainerStyle={{ paddingTop: insets.top + 24, paddingHorizontal: 24, paddingBottom: 130 }} showsVerticalScrollIndicator={false}>
+        <Animated.View entering={FadeInDown.duration(500)} style={{ alignItems: "center", gap: 16 }}>
+          <View style={{ width: 64, height: 64 }}>
+            <WilloBot size={64} />
+          </View>
+          <Text style={{ fontSize: 27, lineHeight: 33, fontWeight: "300", letterSpacing: -0.5, color: "#fff", textAlign: "center" }}>
             {first}, seu perfil{"\n"}
             <Text style={{ fontWeight: "800" }}>financeiro está pronto.</Text>
           </Text>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(200).duration(500)}>
-          <Card style={{ gap: 16, overflow: "hidden" }}>
-            <LinearGradient colors={["rgba(124,196,255,0.14)", "transparent"]} start={{ x: 0, y: 0 }} end={{ x: 0.9, y: 0.9 }} style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }} />
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Eyebrow>SEU PERFIL FINANCEIRO</Eyebrow>
-              <View style={{ height: 24, borderRadius: 12, paddingHorizontal: 10, justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" }}>
-                <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(255,255,255,0.75)" }}>Estimado</Text>
-              </View>
-            </View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-              <IconTile Icon={Target} hex={C.blue} size={54} />
-              <View style={{ flex: 1, gap: 3 }}>
-                <Text style={{ fontSize: 23, fontWeight: "800", letterSpacing: -0.5, color: "#fff" }}>{prof.type}</Text>
-                <Text style={{ fontSize: 13, lineHeight: 18, color: C.soft }}>{prof.line}</Text>
-              </View>
-            </View>
-            <View style={{ gap: 12 }}>
-              {prof.traits.map((t, n) => (
-                <View key={t.label} style={{ gap: 6 }}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.78)" }}>{t.label}</Text>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: "#fff" }}>{t.word}</Text>
-                  </View>
-                  <Fill to={t.value} hex={traitHex[n % traitHex.length]} delay={500 + n * 150} />
+        {/* The profile, on the ground itself. */}
+        <Animated.View entering={FadeInDown.delay(200).duration(500)} style={{ marginTop: 30 }}>
+          <Eyebrow>SEU PERFIL · ESTIMADO</Eyebrow>
+          <Text style={{ marginTop: 8, fontSize: 36, fontWeight: "800", letterSpacing: -1.2, color: "#fff" }}>{prof.type}</Text>
+          <Text style={{ marginTop: 6, fontSize: 15, lineHeight: 21, color: C.soft }}>{prof.line}</Text>
+          <View style={{ marginTop: 20, gap: 14 }}>
+            {prof.traits.map((t, n) => (
+              <View key={t.label} style={{ gap: 7 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ fontSize: 13.5, color: "rgba(255,255,255,0.78)" }}>{t.label}</Text>
+                  <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#fff" }}>{t.word}</Text>
                 </View>
-              ))}
-            </View>
-            <Text style={{ fontSize: 12, lineHeight: 17, color: C.softer }}>Ele fica mais preciso conforme você usa o app, e muda junto com você.</Text>
-          </Card>
+                <Fill to={t.value} hex="#fff" delay={500 + n * 140} height={4} />
+              </View>
+            ))}
+          </View>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(280).duration(500)}>
-          <Card style={{ gap: 14 }}>
-            <Eyebrow>SUA JORNADA</Eyebrow>
-            <Journey stages={STAGES} at={Math.max(0, STAGES.indexOf(prof.type))} />
-            <Text style={{ fontSize: 13.5, lineHeight: 19, color: C.soft }}>
-              {STAGES.indexOf(prof.type) < STAGES.length - 1 ? (
-                <>
-                  Você está em <Text style={{ fontWeight: "800", color: "#fff" }}>{prof.type}</Text>. A próxima etapa é <Text style={{ fontWeight: "800", color: C.green }}>{STAGES[STAGES.indexOf(prof.type) + 1]}</Text>, e eu te levo até lá.
-                </>
-              ) : (
-                <>
-                  Você já está em <Text style={{ fontWeight: "800", color: "#fff" }}>{prof.type}</Text>. Agora é manter o ritmo, e eu fico de olho com você.
-                </>
-              )}
-            </Text>
-          </Card>
-        </Animated.View>
+        <Rule />
 
-        <Animated.View entering={FadeInDown.delay(320).duration(500)} style={{ flexDirection: "row", gap: 12 }}>
+        {/* Where they are, and where they are going. */}
+        <View onLayout={mark("journey")}>
+          <Eyebrow>SUA JORNADA</Eyebrow>
+          <View style={{ marginTop: 6, marginHorizontal: -8 }}>
+            <Journey stages={STAGES} at={stage} play={!!seen.journey} />
+          </View>
+          <Text style={{ marginTop: 4, fontSize: 14.5, lineHeight: 21, color: C.soft }}>
+            {stage < STAGES.length - 1 ? (
+              <>
+                Você está em <Text style={{ fontWeight: "800", color: "#fff" }}>{prof.type}</Text>. A próxima etapa é <Text style={{ fontWeight: "800", color: "#fff" }}>{STAGES[stage + 1]}</Text>, e eu te levo até lá.
+              </>
+            ) : (
+              <>
+                Você já está em <Text style={{ fontWeight: "800", color: "#fff" }}>{prof.type}</Text>. Agora é manter o ritmo, comigo de olho.
+              </>
+            )}
+          </Text>
+        </View>
+
+        <Rule />
+
+        <View style={{ flexDirection: "row" }}>
           {[best, worst].map((t, n) => (
-            <Card key={t.label} style={{ flex: 1, padding: 14, gap: 8 }}>
-              <IconTile Icon={n === 0 ? TrendingUp : AlertTriangle} hex={n === 0 ? C.green : C.orange} size={34} />
-              <Eyebrow color={n === 0 ? C.green : C.orange}>{n === 0 ? "PONTO FORTE" : "PEDE ATENÇÃO"}</Eyebrow>
-              <Text style={{ fontSize: 14.5, lineHeight: 19, fontWeight: "700", color: "#fff" }}>{t.label}</Text>
-            </Card>
+            <View key={t.label} style={{ flex: 1, gap: 8, paddingRight: n === 0 ? 16 : 0, paddingLeft: n === 1 ? 16 : 0, borderLeftWidth: n === 1 ? 1 : 0, borderLeftColor: "rgba(255,255,255,0.08)" }}>
+              {n === 0 ? <TrendingUp size={18} color="rgba(255,255,255,0.85)" strokeWidth={2} /> : <AlertTriangle size={18} color="rgba(255,255,255,0.85)" strokeWidth={2} />}
+              <Eyebrow>{n === 0 ? "PONTO FORTE" : "PEDE ATENÇÃO"}</Eyebrow>
+              <Text style={{ fontSize: 16, lineHeight: 21, fontWeight: "700", color: "#fff" }}>{t.label}</Text>
+            </View>
           ))}
-        </Animated.View>
+        </View>
 
         {a.income > 0 && (
-          <Animated.View entering={FadeInDown.delay(350).duration(500)}>
-            <Card style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-              <IconTile Icon={Clock2} hex={C.green} />
+          <>
+            <Rule />
+            <View style={{ gap: 4 }}>
+              <Eyebrow>SUA HORA DE TRABALHO</Eyebrow>
+              <Text style={{ marginTop: 4, fontSize: 36, fontWeight: "800", letterSpacing: -1.2, color: "#fff" }}>
+                {brl(hourValue(a.income))}
+                <Text style={{ fontSize: 15, fontWeight: "600", letterSpacing: 0, color: C.soft }}> por hora</Text>
+              </Text>
+              <Text style={{ fontSize: 14, lineHeight: 20, color: C.soft }}>Um delivery de R$ 45 custa {workTime(45, a.income)}.</Text>
+            </View>
+          </>
+        )}
+
+        {goal && (dream || (a.goal === "dividas" && a.debt)) && (
+          <>
+            <Rule />
+            <View onLayout={mark("goal")} style={{ gap: 12 }}>
+              <Eyebrow>{a.goal === "dividas" ? "SAIR DAS DÍVIDAS" : (a.dream?.label || goal.label).toUpperCase().slice(0, 30)}</Eyebrow>
+              {a.goal === "dividas" && a.debt ? (
+                <Evolution play={!!seen.goal} dir="down" from={brl(a.debt.total)} to="R$ 0" fromLabel="HOJE" toLabel="LIVRE" marks={debt ? marksFor(debt.months) : ["hoje", "", "", "", "livre"]} accent="#fff" />
+              ) : dream && a.dream ? (
+                <Evolution play={!!seen.goal} dir="up" from="R$ 0" to={brl(a.dream.amount)} fromLabel="HOJE" marks={marksFor(dream.months)} accent="#fff" />
+              ) : null}
+              <Text style={{ fontSize: 14, lineHeight: 20, color: C.soft }}>
+                {a.goal === "dividas"
+                  ? debt
+                    ? `Separando ${brl(debt.monthly)} por mês, você fica livre por volta de ${debt.free}. Uma prévia: eu ajusto com os seus números quando você entrar.`
+                    : "Eu monto o caminho com os seus números quando você entrar."
+                  : dream
+                    ? `${brl(dream.monthly)} por mês e fica pronto em ${dream.ready}. A caixinha já nasce criada.`
+                    : ""}
+              </Text>
+            </View>
+          </>
+        )}
+
+        <Rule />
+
+        <View style={{ gap: 4 }}>
+          <Eyebrow>VOU ACOMPANHAR DE PERTO</Eyebrow>
+          {habits.map((h, n) => (
+            <View key={h.id} style={{ flexDirection: "row", gap: 14, alignItems: "center", paddingVertical: 14, borderTopWidth: n ? 1 : 0, borderTopColor: "rgba(255,255,255,0.07)" }}>
+              <h.Icon size={20} color="rgba(255,255,255,0.88)" strokeWidth={1.9} />
               <View style={{ flex: 1, gap: 2 }}>
-                <Eyebrow>SUA HORA VALE</Eyebrow>
-                <Text style={{ fontSize: 24, fontWeight: "800", letterSpacing: -0.6, color: "#fff" }}>{brl(hourValue(a.income))}</Text>
-                <Text style={{ fontSize: 12.5, color: C.softer }}>Um delivery de R$ 45 = {workTime(45, a.income)}</Text>
+                <Text style={{ fontSize: 15.5, fontWeight: "700", color: "#fff" }}>{h.label}</Text>
+                <Text style={{ fontSize: 13, lineHeight: 18, color: C.soft }}>{h.watch}</Text>
               </View>
-            </Card>
-          </Animated.View>
-        )}
+            </View>
+          ))}
+        </View>
 
-        {goal && (dream || a.goal === "dividas") && (
-          <Animated.View entering={FadeInDown.delay(500).duration(500)}>
-            {a.goal === "dividas" && a.debt ? (
-              <Evolution dir="down" from={brl(a.debt.total)} to="R$ 0" toLabel="LIVRE" fromLabel="SUAS DÍVIDAS" marks={debt ? marksFor(debt.months).map((m, n) => (n === 4 ? m : n === 0 ? "hoje" : m)) : ["hoje", "", "", "", "livre"]} accent={C.green} />
-            ) : dream && a.dream ? (
-              <Evolution dir="up" from="R$ 0" to={brl(a.dream.amount)} fromLabel={(a.dream.label || goal.label).toUpperCase().slice(0, 26)} marks={marksFor(dream.months)} accent={goal.hex === "#fff" ? C.green : goal.hex} />
-            ) : null}
-            <Text style={{ marginTop: 10, paddingHorizontal: 6, fontSize: 13, lineHeight: 19, color: C.soft }}>
-              {a.goal === "dividas"
-                ? debt
-                  ? `Separando ${brl(debt.monthly)} por mês, você fica livre por volta de ${debt.free}. Uma prévia: eu ajusto com os seus números quando você entrar.`
-                  : "Eu monto o caminho com os seus números quando você entrar."
-                : dream
-                  ? `${brl(dream.monthly)} por mês e fica pronto em ${dream.ready}. A caixinha já nasce criada.`
-                  : ""}
-            </Text>
-          </Animated.View>
-        )}
+        <Rule />
 
-        <Animated.View entering={FadeInDown.delay(650).duration(500)}>
-          <Card style={{ gap: 14 }}>
-            <Eyebrow>VOU ACOMPANHAR DE PERTO</Eyebrow>
-            {habits.map((h) => (
-              <View key={h.id} style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-                <IconTile Icon={h.Icon} hex={h.hex} size={38} />
-                <View style={{ flex: 1, gap: 1 }}>
-                  <Text style={{ fontSize: 14.5, fontWeight: "700", color: "#fff" }}>{h.label}</Text>
-                  <Text style={{ fontSize: 12.5, lineHeight: 17, color: C.soft }}>{h.watch}</Text>
-                </View>
+        <View>
+          <Eyebrow>SEUS PRIMEIROS 30 DIAS</Eyebrow>
+          {(
+            [
+              ["HOJE", "Ativar o Willo Copilot", "Seus gastos começam a se anotar sozinhos."],
+              ["SEMANA 1", "Eu aprendo o seu mês", "Entradas, contas fixas e o que pesa."],
+              ["SEMANA 2", `Limites para ${habits[0]?.label.toLowerCase() ?? "o que pesa"}`, "Eu sugiro, você confirma."],
+              ["DIA 30", "Seu primeiro relatório", "E o perfil deixa de ser estimado."],
+            ] as const
+          ).map(([when, what, line], n, all) => (
+            <View key={when} style={{ flexDirection: "row", gap: 14, marginTop: n === 0 ? 16 : 0 }}>
+              <View style={{ alignItems: "center", width: 14 }}>
+                <View style={{ width: 12, height: 12, borderRadius: 6, marginTop: 3, backgroundColor: n === 0 ? "#fff" : C.bg, borderWidth: 2, borderColor: n === 0 ? "#fff" : "rgba(255,255,255,0.35)" }} />
+                {n < all.length - 1 && <View style={{ flex: 1, width: 2, marginVertical: 3, backgroundColor: "rgba(255,255,255,0.12)" }} />}
               </View>
-            ))}
-          </Card>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(720).duration(500)}>
-          <Card style={{ gap: 0 }}>
-            <Eyebrow>SEUS PRIMEIROS 30 DIAS</Eyebrow>
-            {(
-              [
-                ["HOJE", "Ativar o Willo Copilot", "Seus gastos começam a se anotar sozinhos."],
-                ["SEMANA 1", "Eu aprendo o seu mês", "Entradas, contas fixas e o que pesa."],
-                ["SEMANA 2", `Limites para ${habits[0]?.label.toLowerCase() ?? "o que pesa"}`, "Eu sugiro, você confirma."],
-                ["DIA 30", "Seu primeiro relatório", "E o perfil deixa de ser estimado."],
-              ] as const
-            ).map(([when, what, line], n, all) => (
-              <View key={when} style={{ flexDirection: "row", gap: 14, marginTop: n === 0 ? 16 : 0 }}>
-                <View style={{ alignItems: "center", width: 14 }}>
-                  <View style={{ width: 12, height: 12, borderRadius: 6, marginTop: 3, backgroundColor: n === 0 ? C.green : C.bg, borderWidth: 2, borderColor: n === 0 ? C.green : "rgba(255,255,255,0.35)" }} />
-                  {n < all.length - 1 && <View style={{ flex: 1, width: 2, marginVertical: 3, backgroundColor: "rgba(255,255,255,0.12)" }} />}
-                </View>
-                <View style={{ flex: 1, paddingBottom: n < all.length - 1 ? 16 : 0, gap: 2 }}>
-                  <Text style={{ fontSize: 10.5, fontWeight: "800", letterSpacing: 1.2, color: n === 0 ? C.green : C.softer }}>{when}</Text>
-                  <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>{what}</Text>
-                  <Text style={{ fontSize: 12.5, lineHeight: 17, color: C.soft }}>{line}</Text>
-                </View>
+              <View style={{ flex: 1, paddingBottom: n < all.length - 1 ? 18 : 0, gap: 2 }}>
+                <Text style={{ fontSize: 10.5, fontWeight: "800", letterSpacing: 1.2, color: n === 0 ? "#fff" : C.softer }}>{when}</Text>
+                <Text style={{ fontSize: 15.5, fontWeight: "700", color: "#fff" }}>{what}</Text>
+                <Text style={{ fontSize: 13, lineHeight: 18, color: C.soft }}>{line}</Text>
               </View>
-            ))}
-          </Card>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(800).duration(500)}>
-          <Card style={{ gap: 14 }}>
-            <Eyebrow>O QUE O WILLO FAZ POR VOCÊ</Eyebrow>
-            {(
-              [
-                [Zap, C.teal, "Willo Copilot", "Seus gastos se anotam sozinhos. Você só confirma."],
-                [Smartphone2, C.violet, "Dois toques", "Atrás do celular, e o registro rápido abre."],
-                [Bell, C.orange, "Avisos na hora certa", "Contas, fatura, limites e o salário caindo."],
-                [MessageIcon, C.lilac, "Pergunte qualquer coisa", "Respostas com os seus números, de verdade."],
-              ] as [IconC, string, string, string][]
-            ).map(([Icon, hex, t, l]) => (
-              <View key={t} style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-                <IconTile Icon={Icon} hex={hex} size={38} />
-                <View style={{ flex: 1, gap: 1 }}>
-                  <Text style={{ fontSize: 14.5, fontWeight: "700", color: "#fff" }}>{t}</Text>
-                  <Text style={{ fontSize: 12.5, lineHeight: 17, color: C.soft }}>{l}</Text>
-                </View>
-              </View>
-            ))}
-          </Card>
-        </Animated.View>
+            </View>
+          ))}
+        </View>
       </ScrollView>
       <LinearGradient colors={["rgba(13,14,16,0)", C.bg]} locations={[0, 0.4]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 30, paddingBottom: insets.bottom + 12 }}>
         <Cta label="Vamos começar!" onPress={onNext} />
@@ -997,4 +1008,3 @@ function Result({ a, onNext }: { a: OnboardingAnswers; onNext: () => void }) {
     </View>
   );
 }
-

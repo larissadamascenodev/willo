@@ -17,7 +17,7 @@ import { LinearGradient as Fade } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import WilloBot from "~/components/willo/WilloBot";
 import { Scope, type SectorKey, SECTORS } from "~/components/radar/parts";
-import { Camera, Check, Mic, Receipt, Sparkles } from "~/components/icons";
+import { Camera, Car, Check, Mic, Receipt, ShoppingCart, Sparkles } from "~/components/icons";
 import { INK } from "~/theme/tokens";
 import BankMark from "~/components/BankMark";
 
@@ -155,7 +155,7 @@ function Chip({ children, strong }: { children: string; strong?: boolean }) {
  * An entry as the app shows it: what, how much, and its tags. The name may take two
  * lines rather than be cut; a fresh one has a light pass across it as it arrives.
  */
-function Entry({ title, amount, tags, fresh, dim, income }: { title: string; amount: string; tags: string[]; fresh?: boolean; dim?: boolean; income?: boolean }) {
+function Entry({ title, amount, tags, fresh, dim, income, Icon = Receipt, hex = "#FFFFFF" }: { title: string; amount: string; tags: string[]; fresh?: boolean; dim?: boolean; income?: boolean; Icon?: typeof Receipt; hex?: string }) {
   const sweep = useSharedValue(0);
   useEffect(() => {
     if (fresh) sweep.set(withDelay(220, withTiming(1, { duration: 900, easing: Easing.inOut(Easing.cubic) })));
@@ -164,8 +164,8 @@ function Entry({ title, amount, tags, fresh, dim, income }: { title: string; amo
   return (
     <View style={{ borderRadius: 18, overflow: "hidden", opacity: dim ? 0.5 : 1 }}>
       <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 4 }}>
-        <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" }}>
-          <Receipt size={18} color="#fff" strokeWidth={2} />
+        <View style={{ width: 40, height: 40, borderRadius: 13, borderCurve: "continuous", alignItems: "center", justifyContent: "center", backgroundColor: hex === "#FFFFFF" ? "rgba(255,255,255,0.08)" : `${hex}26`, borderWidth: 1, borderColor: hex === "#FFFFFF" ? "rgba(255,255,255,0.06)" : `${hex}40` }}>
+          <Icon size={18} color={hex} strokeWidth={2} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
           <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
@@ -214,7 +214,7 @@ function Glass({ children, style }: { children: ReactNode; style?: object }) {
 }
 
 function Label({ children }: { children: string }) {
-  return <Text style={{ fontFamily: "Menlo", fontSize: 11, letterSpacing: 1.2, color: "rgba(200,220,245,0.7)" }}>{children}</Text>;
+  return <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 1.5, color: "rgba(255,255,255,0.58)" }}>{children}</Text>;
 }
 
 /* ================================================================== */
@@ -222,8 +222,8 @@ function Label({ children }: { children: string }) {
 /* ================================================================== */
 
 const PURCHASES = [
-  { bank: "Nubank", hex: "#8A05BE", merchant: "UBER *TRIP", title: "Uber", tags: ["Transporte", "Crédito", "agora"], how: "crédito", amount: 18.4 },
-  { bank: "Itaú", hex: "#EC7000", merchant: "SUPERMERCADO BOA COMPRA", title: "Supermercado Boa Compra", tags: ["Mercado", "Débito", "agora"], how: "débito", amount: 127.9 },
+  { bank: "Nubank", hex: "#8A05BE", merchant: "UBER *TRIP", title: "Uber", tags: ["Transporte", "Crédito", "agora"], how: "crédito", amount: 18.4, Icon: Car, tint: "#7CC4FF" },
+  { bank: "Itaú", hex: "#EC7000", merchant: "SUPERMERCADO BOA COMPRA", title: "Supermercado Boa Compra", tags: ["Mercado", "Débito", "agora"], how: "débito", amount: 127.9, Icon: ShoppingCart, tint: "#67CD67" },
 ];
 
 export function NotifyDemo({ active }: { active: boolean }) {
@@ -290,11 +290,14 @@ export function NotifyDemo({ active }: { active: boolean }) {
 
       <Glass>
         {/* A fixed height: what arrives never pushes the slide's title down. */}
-        <View style={{ padding: 16, gap: 14, height: 204 }}>
-          <Label>ANOTADO PELO COPILOT</Label>
+        <View style={{ padding: 16, gap: 16, height: 212 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Label>ANOTADO PELO COPILOT</Label>
+            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "#67CD67" }} />
+          </View>
           {caught.map((k, i) => (
             <Rise key={`${k}-${caught.length}`}>
-              <Entry title={PURCHASES[k].title} amount={money(PURCHASES[k].amount)} tags={PURCHASES[k].tags} fresh={i === 0} dim={i > 0} />
+              <Entry title={PURCHASES[k].title} amount={money(PURCHASES[k].amount)} tags={PURCHASES[k].tags} fresh={i === 0} dim={i > 0} Icon={PURCHASES[k].Icon} hex={PURCHASES[k].tint} />
             </Rise>
           ))}
         </View>
