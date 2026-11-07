@@ -19,7 +19,7 @@ import { useAuth } from "~/lib/auth";
 import { INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * The whole statement.
  *
@@ -36,6 +36,8 @@ const MONTH_NAMES = [
 ];
 
 export default function Lancamentos() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const { cardId, month: qMonth, year: qYear } = useLocalSearchParams<{
     cardId: string;
     month?: string;

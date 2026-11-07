@@ -8,6 +8,7 @@ import Room from "~/components/Room";
 import { AskDemo, DURATIONS, ForecastDemo, NotifyDemo, QuickDemo, RadarDemo, ReceiptDemo, VoiceDemo } from "~/components/welcome/Demos";
 import { INK } from "~/theme/tokens";
 import { isIntroDone, onIntroDone } from "~/lib/launchIntro";
+import { useThemeRedraw } from "~/theme/theme";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const LOGO = require("../../assets/images/willo-logo-white.png") as number;
@@ -58,6 +59,8 @@ const DEMO_H = 420;
 const SHRINK_BELOW = 390;
 
 export default function BemVindo() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();

@@ -26,7 +26,7 @@ import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * Where the money is.
  *
@@ -53,6 +53,8 @@ interface Account {
 }
 
 export default function Gestao() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();

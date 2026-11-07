@@ -31,7 +31,7 @@ import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 import StatusTag, { TAG_TONES } from "~/components/StatusTag";
 /**
  * The card's own panel.
@@ -59,6 +59,8 @@ interface CardInfo {
 }
 
 export default function Fatura() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const { cardId } = useLocalSearchParams<{ cardId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();

@@ -28,7 +28,7 @@ import { useAuth } from "~/lib/auth";
 import { processScanPhoto, type PickedPhoto } from "~/lib/scanUpload";
 import { GREEN, INK } from "~/theme/tokens";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * A receipt, photographed and read — the phone's copy of the web's scanner.
  *
@@ -43,6 +43,8 @@ import { th } from "~/theme/theme";
 type Phase = "camera" | "reading" | "result" | "failed" | "saved";
 
 export default function Scanner() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();

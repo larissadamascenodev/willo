@@ -4,6 +4,7 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import ParticleOrb from "~/components/registro/ParticleOrb";
 import BottomSheet from "~/components/BottomSheet";
 import QuickEntryFlow, { type Step } from "~/components/registro/QuickEntryFlow";
+import { useThemeRedraw } from "~/theme/theme";
 
 /**
  * Registro rápido, a double tap away: the steps in a half sheet over whatever was on
@@ -11,6 +12,8 @@ import QuickEntryFlow, { type Step } from "~/components/registro/QuickEntryFlow"
  * Willo stands above the sheet, covering none of it.
  */
 export default function Rapido() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const router = useRouter();
   const { frase } = useLocalSearchParams<{ frase?: string }>();
   const [open, setOpen] = useState(false);

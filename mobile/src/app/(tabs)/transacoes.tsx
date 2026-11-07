@@ -23,7 +23,7 @@ import { useNavChrome } from "~/lib/navChrome";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * The month's movements.
  *
@@ -53,6 +53,8 @@ const formatDateHeader = (dateStr: string, today = new Date()) => {
 };
 
 export default function Transacoes() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuth();

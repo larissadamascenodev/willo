@@ -24,7 +24,7 @@ import { useAuth } from "~/lib/auth";
 import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * The wallet.
  *
@@ -37,6 +37,8 @@ import { th } from "~/theme/theme";
  * bill, not a balance.
  */
 export default function Cartoes() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();

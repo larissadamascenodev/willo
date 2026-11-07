@@ -20,7 +20,7 @@ import {
   syncDeviceNotifications,
   type PermissionState,
 } from "~/lib/deviceNotifications";
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 import { INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
@@ -42,6 +42,8 @@ const DAYS = [
 ] as const;
 
 export default function NotificacoesAjustes() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [settings, setSettings] = useState<NotificationSettings | null>(null);

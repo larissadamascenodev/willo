@@ -16,7 +16,7 @@ import { setActivePlan, useActivePlan } from "~/lib/activePlan";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * Meu Plano Financeiro.
  *
@@ -39,6 +39,8 @@ export const BUCKET_HEX: Record<Bucket | "livre" | "sobra", string> = {
 const BUCKET_LABEL: Record<Bucket, string> = { necessidades: "Essencial", desejos: "Escolhas", dividas: "Dívidas", guardar: "Guardado" };
 
 export default function Plano() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const insets = useSafeAreaInsets();
   const { loading, profile, methods, current } = usePlan();
   const active = useActivePlan();

@@ -26,7 +26,7 @@ import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 import { EXPAND } from "~/lib/expand";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * The categories, as one list.
  *
@@ -48,6 +48,8 @@ interface UnifiedCategory {
 }
 
 export default function Categorias() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
 

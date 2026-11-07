@@ -9,7 +9,7 @@ import Surface from "~/components/Surface";
 import { X } from "~/components/icons";
 import { VEIL_STEPS, nearestStep, discardPhoto, photoUri, setLightSkyModel, setPhotoLook, setSkyModel, setSkyPhoto, usePhotoLook, useSkyPhoto } from "~/lib/skyModel";
 import SegmentedTabs from "~/components/SegmentedTabs";
-import { isLight, th, thIn } from "~/theme/theme";
+import { isLight, th, thIn, useThemeRedraw } from "~/theme/theme";
 import { INK } from "~/theme/tokens";
 
 /**
@@ -23,6 +23,8 @@ import { INK } from "~/theme/tokens";
  * Backing out of a newly picked photo throws it away.
  */
 export default function FundoFoto() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { file } = useLocalSearchParams<{ file?: string }>();

@@ -32,7 +32,7 @@ import { useAuth } from "~/lib/auth";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * What is still to come this month — and whether the money is there when it does.
  *
@@ -67,6 +67,8 @@ const nums: TextStyle = Platform.select({
 const capitalise = (s: string) => s.charAt(0).toLocaleUpperCase("pt-BR") + s.slice(1);
 
 export default function Eventos() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { selectedMonth: month, selectedYear: year, setMonth } = useMonth();

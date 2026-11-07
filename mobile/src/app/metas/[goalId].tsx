@@ -49,7 +49,7 @@ import { useAuth } from "~/lib/auth";
 import { GREEN, GROUND_LIT, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { isLight, live, th } from "~/theme/theme";
+import { isLight, live, th, useThemeRedraw } from "~/theme/theme";
 /**
  * One caixinha, up close.
  *
@@ -93,6 +93,8 @@ function Progress({ progress, color }: { progress: number; color: string }) {
 }
 
 export default function MetaDetalhe() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const { goalId } = useLocalSearchParams<{ goalId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();

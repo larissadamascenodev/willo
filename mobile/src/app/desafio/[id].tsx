@@ -18,7 +18,7 @@ import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
 import { showToast } from "~/lib/toast";
 import { DIFFICULTY_LABEL, abandonChallenge, calendarOf, estimateSavings, loadOne, restartChallenge, savedSoFar, setChallengeCover, tickToday, type Running, type Tx } from "~/lib/challenges";
-import { isLight, th } from "~/theme/theme";
+import { isLight, th, useThemeRedraw } from "~/theme/theme";
 import { GREEN, GROUND_LIT, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
@@ -42,6 +42,8 @@ const dayMonth = (d: Date) => d.toLocaleDateString("pt-BR", { day: "numeric", mo
 
 
 export default function DesafioPage() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { width } = useWindowDimensions();

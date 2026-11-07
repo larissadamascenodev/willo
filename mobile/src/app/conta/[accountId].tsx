@@ -37,7 +37,7 @@ import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * One account, on its own.
  *
@@ -88,6 +88,8 @@ interface Movement {
 const newestFirst = (a: Movement, b: Movement) => b.date.localeCompare(a.date) || (b.created_at ?? "").localeCompare(a.created_at ?? "");
 
 export default function ContaDetalhe() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const { accountId } = useLocalSearchParams<{ accountId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();

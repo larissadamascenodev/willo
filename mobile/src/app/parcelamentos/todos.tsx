@@ -17,7 +17,7 @@ import { useAuth } from "~/lib/auth";
 import { INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * Every instalment of a month, the way a card's statement lists its lines.
  *
@@ -32,6 +32,8 @@ const MONTH_NAMES = [
 ];
 
 export default function TodosParcelamentos() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const { month: qMonth, year: qYear } = useLocalSearchParams<{ month?: string; year?: string }>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();

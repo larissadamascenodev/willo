@@ -35,7 +35,7 @@ import { useAuth } from "~/lib/auth";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * One side of the month: everything that came in, or everything that went out.
  *
@@ -100,6 +100,8 @@ function HistoryBar({
 }
 
 export default function ReceitasDespesasDetalhe() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const { tipo } = useLocalSearchParams<{ tipo: string }>();
   const isReceita = tipo === "receitas";
   const router = useRouter();

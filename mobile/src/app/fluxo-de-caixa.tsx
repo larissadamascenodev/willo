@@ -10,6 +10,7 @@ import SegmentedTabs from "~/components/SegmentedTabs";
 import BalancoPanel from "~/components/financeiro/BalancoPanel";
 import ProjecoesPanel from "~/components/financeiro/ProjecoesPanel";
 import EntriesModal, { type Side } from "~/components/financeiro/EntriesModal";
+import { useThemeRedraw } from "~/theme/theme";
 
 /**
  * Two views, one per question.
@@ -22,6 +23,8 @@ import EntriesModal, { type Side } from "~/components/financeiro/EntriesModal";
 type Tool = "balanco" | "projecoes";
 
 export default function FluxoDeCaixa() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const { tool: initial } = useLocalSearchParams<{ tool?: string }>();
   const insets = useSafeAreaInsets();
   const { selectedMonth, selectedYear } = useMonth();

@@ -22,7 +22,7 @@ import { showToast } from "~/lib/toast";
 import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { LIGHT_GROUND, isLight, switchTheme, th, useThemePref, type ThemeMode } from "~/theme/theme";
+import { LIGHT_GROUND, isLight, switchTheme, th, useThemePref, type ThemeMode, useThemeRedraw } from "~/theme/theme";
 import { GROUND } from "~/theme/tokens";
 /**
  * The profile.
@@ -59,6 +59,8 @@ const BACKGROUNDS: { key: SkyModel; label: string }[] = [
 ];
 
 export default function Perfil() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { width: screenW, height: screenH } = useWindowDimensions();

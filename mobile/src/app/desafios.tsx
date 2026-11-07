@@ -21,7 +21,7 @@ import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
 import { showToast } from "~/lib/toast";
 import { estimateSavings, loadChallenges, startChallenge, type ChallengeData, type Template } from "~/lib/challenges";
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 import { INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
@@ -41,6 +41,8 @@ import { type as T } from "~/theme/type";
 type Tab = "desafios" | "conquistas";
 
 export default function Desafios() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const insets = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
   const half = Math.floor((screenW - 32 - 12) / 2);

@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import BottomSheet from "~/components/BottomSheet";
 import EditEntry from "~/components/registro/EditEntry";
 import ManualEntryFlow, { type ManualStep } from "~/components/registro/ManualEntryFlow";
+import { useThemeRedraw } from "~/theme/theme";
 
 /**
  * Adicionar manualmente — guided, in a sheet over whatever was on screen — and the same
@@ -10,6 +11,8 @@ import ManualEntryFlow, { type ManualStep } from "~/components/registro/ManualEn
  * is a purchase on that card. The sheet leaves first; the screen behind it is already there.
  */
 export default function Manual() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const router = useRouter();
   const { cartao, editar, mes, ano } = useLocalSearchParams<{ cartao?: string; editar?: string; mes?: string; ano?: string }>();
   const [open, setOpen] = useState(false);

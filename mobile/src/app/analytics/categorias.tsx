@@ -31,7 +31,7 @@ import { useAuth } from "~/lib/auth";
 import { AMBER, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * Where the month went.
  *
@@ -65,6 +65,8 @@ const brl = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function AnalyticsCategorias() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();

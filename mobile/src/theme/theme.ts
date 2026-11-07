@@ -123,6 +123,16 @@ export function takeReturnRoute() {
   return r;
 }
 
+/**
+ * Called at the top of every screen: when the theme changes, the screen is drawn again
+ * where it stands — same state, same data, same scroll — and every colour read with
+ * th() comes out in the new theme. Nothing is torn down and built again, so the change
+ * takes a moment rather than the time to load every screen afresh.
+ */
+export function useThemeRedraw() {
+  useSyncExternalStore(subscribe, () => pref, () => pref);
+}
+
 export function useThemePref() {
   const value = useSyncExternalStore(subscribe, () => pref, () => pref);
   return [value, setThemePref] as const;

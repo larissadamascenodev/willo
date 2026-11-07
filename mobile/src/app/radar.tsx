@@ -8,7 +8,7 @@ import { allowedCategories } from "@/services/quickEntry";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
 import RadarPanel from "~/components/willo/RadarPanel";
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 import { type as T } from "~/theme/type";
 
 /**
@@ -19,6 +19,8 @@ import { type as T } from "~/theme/type";
  * same six sectors; a question asked from it opens the conversation with it asked.
  */
 export default function RadarScreen() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const data = useRaioX();

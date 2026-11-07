@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 import BottomNav from "~/components/BottomNav";
 import { NavChromeProvider } from "~/lib/navChrome";
+import { useThemeRedraw } from "~/theme/theme";
 
 /**
  * The two places the bar goes, and the screen between them.
@@ -10,6 +11,8 @@ import { NavChromeProvider } from "~/lib/navChrome";
  * The navigator still owns the routes and which one is current; the bar only reads it.
  */
 export default function TabsLayout() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   return (
     <NavChromeProvider>
       <Tabs

@@ -21,6 +21,7 @@ import Field, { PasswordField } from "~/components/auth/Field";
 import { Check, ChevronLeft, Mail } from "~/components/icons";
 import { savePendingOnboarding } from "~/lib/onboarding";
 import { GREEN, INK, RED } from "~/theme/tokens";
+import { useThemeRedraw } from "~/theme/theme";
 
 /**
  * The questions that make an account — for someone new.
@@ -51,6 +52,8 @@ const brl = (cents: number) =>
   (cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function Comecar() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 

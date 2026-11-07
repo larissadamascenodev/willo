@@ -58,7 +58,7 @@ import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
 import VoiceEntrySheet from "~/components/registro/VoiceEntrySheet";
 import { GREEN, INK } from "~/theme/tokens";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * Willo: talk to him, or tell him what you spent, in the same place.
  *
@@ -164,6 +164,8 @@ const tapSaved = () => void Haptics.notificationAsync(Haptics.NotificationFeedba
 const tapAsked = () => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
 
 export default function Registro() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();

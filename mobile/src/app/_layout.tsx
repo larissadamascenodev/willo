@@ -136,13 +136,11 @@ function Door() {
       first.current = false;
       return;
     }
-    /* The new screens are on under the circle: two frames, then it clears off them. */
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        clear.set(withTiming(0, { duration: 300, easing: Easing.out(Easing.quad) }));
-        setTimeout(liftThemeCover, 320);
-      }),
-    );
+    /* The screens are drawn again in place under the circle; a frame, then it clears off them. */
+    requestAnimationFrame(() => {
+      clear.set(withTiming(0, { duration: 260, easing: Easing.out(Easing.quad) }));
+      setTimeout(liftThemeCover, 280);
+    });
     const back = takeReturnRoute();
     if (back) {
       setQuiet(true);
@@ -173,7 +171,6 @@ function Door() {
     <StatusBar style={mode === "light" ? "dark" : "light"} />
     <NotificationBridge userId={signedIn ? (session?.user?.id ?? null) : null} />
     <Stack
-      key={mode}
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: th(GROUND, "bg") },

@@ -26,7 +26,7 @@ import { useAuth } from "~/lib/auth";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * One category, up close.
  *
@@ -98,6 +98,8 @@ function HistoryBar({
 }
 
 export default function CategoriaDetalhe() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const { nome } = useLocalSearchParams<{ nome: string }>();
   const category = decodeURIComponent(nome ?? "");
   const insets = useSafeAreaInsets();

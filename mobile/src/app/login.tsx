@@ -21,6 +21,7 @@ import LegalSheet from "~/components/auth/LegalSheet";
 import { AppleMark, GoogleMark } from "~/components/auth/BrandIcons";
 import { AlertTriangle, ChevronLeft, CircleCheck, Info, Mail } from "~/components/icons";
 import { GREEN, INK, RED } from "~/theme/tokens";
+import { useThemeRedraw } from "~/theme/theme";
 
 /**
  * The door, for someone who already has an account.
@@ -50,6 +51,8 @@ const RESET_REDIRECT = "https://willo-app.vercel.app/reset-password";
 type Note = { tone: "bad" | "good" | "info"; text: string; field?: "email" | "password" };
 
 export default function Login() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const [legal, setLegal] = useState<"terms" | "privacy" | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();

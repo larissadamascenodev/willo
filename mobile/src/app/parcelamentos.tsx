@@ -26,7 +26,7 @@ import { useAuth } from "~/lib/auth";
 import { AMBER, GREEN, INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * Everything being paid off in instalments.
  *
@@ -55,6 +55,8 @@ const monthYear = (d: Date) =>
   d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(".", "").replace(" de ", " ");
 
 export default function Parcelamentos() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const { user } = useAuth();
   const [items, setItems] = useState<ActiveInstallmentItem[] | null>(null);
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);

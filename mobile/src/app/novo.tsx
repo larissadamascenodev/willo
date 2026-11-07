@@ -40,7 +40,7 @@ import { chipFill, chipInk } from "~/lib/chip";
 import { useAuth } from "~/lib/auth";
 import { GREEN, INK, RED } from "~/theme/tokens";
 
-import { live, th } from "~/theme/theme";
+import { live, th, useThemeRedraw } from "~/theme/theme";
 /**
  * Putting something in.
  *
@@ -112,6 +112,8 @@ interface Card {
 }
 
 export default function Novo() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();

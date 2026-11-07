@@ -30,7 +30,7 @@ import { useAuth } from "~/lib/auth";
 import { useNavChrome } from "~/lib/navChrome";
 import { INK } from "~/theme/tokens";
 
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 import { GroundInkProvider } from "~/theme/groundInk";
 import { useLightSkyModel, usePhotoLook, useSkyModel, useSkyPhoto } from "~/lib/skyModel";
 import { isLight } from "~/theme/theme";
@@ -56,6 +56,8 @@ const ORB_TRAVEL = 270;
  * reading the greeting is no longer the point.
  */
 export default function Home() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const insets = useSafeAreaInsets();
   const { height: screenH } = useWindowDimensions();
   const { user } = useAuth();

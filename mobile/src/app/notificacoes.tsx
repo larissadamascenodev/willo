@@ -16,7 +16,7 @@ import { Bell, CalendarClock, ChevronDown, ChevronUp, CreditCard, SlidersHorizon
 import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
 import { askPermission, permissionState, setDevicePushWanted, syncDeviceNotifications, type PermissionState } from "~/lib/deviceNotifications";
-import { th } from "~/theme/theme";
+import { th, useThemeRedraw } from "~/theme/theme";
 import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
@@ -68,6 +68,8 @@ interface Detail {
 }
 
 export default function Notificacoes() {
+  /* Drawn again in place when the theme changes. */
+  useThemeRedraw();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuth();
