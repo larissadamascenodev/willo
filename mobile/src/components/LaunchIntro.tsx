@@ -7,15 +7,17 @@ import { GROUND } from "~/theme/tokens";
 /**
  * What plays when the app opens, over the app while it gets ready underneath.
  *
- * Three points of light — orange, teal, violet — spin close together in the middle of
- * the dark screen, and as they open out the name writes itself out between them, from
- * the left. They circle the name, each with a comet's tail, closer and faster, until
- * the name gives way and they meet. Where they meet, the
- * three cards rise, opened like a hand of cards. The wallet comes up from below and the
- * cards drop into it one after another, back card first, the wallet giving a little as
- * it takes each one. Willo rises out of it, his eyes come on, he looks to one side and
- * the other and blinks, and the name is printed on the wallet. Then the screen fades
- * and the app is there.
+ * Nine small points of light — orange, teal, violet — come up in a ring in the middle
+ * of the dark screen, spin, and close into a knot. The knot moves along and lets out
+ * the name a letter at a time: each one comes out of it, the letters spaced wide at
+ * first and drawing together as the name fills in. With the name whole, the knot opens
+ * into a ring round it and the points circle it, each with a comet's tail, until they
+ * close in, the name gives way, and they meet. Where they meet, the three cards rise,
+ * opened like a hand of cards. The wallet comes up from below and the cards drop into
+ * it one after another, back card first, the wallet giving a little as it takes each
+ * one. Willo rises out of it, his eyes come on, he looks to one side and the other and
+ * blinks, and the name is printed on the wallet. Then the screen fades and the app is
+ * there.
  *
  * Every piece is cut from the icon itself — the tile, each card, Willo's head and eyes,
  * the wallet and the name — and placed where it is in the artwork, so the last frame is
@@ -25,21 +27,22 @@ import { GROUND } from "~/theme/tokens";
  * moment, and a fade.
  */
 
-const SPIN = [0, 1100] as const; // the points appear, spinning close together in the middle
-const WRITE = [950, 1900] as const; // the name writes itself out as they open around it
-const SPREAD = [950, 1700] as const; // they open out round the name
-const CLOSE = [2150, 3150] as const; // and circle it, closing in
-const NAME_OUT = [2750, 3100] as const; // the name gives way to them
-const MEET = 3100; // where they meet, the cards rise
-const FAN = [3100, 580, 100] as const; // start, length, gap: each card into a fan
-const POCKET = [3750, 4350] as const; // the wallet comes up
-const DROP = [4080, 500, 180] as const; // start, length, gap: each card into the wallet
-const PEEK = [5000, 5420] as const; // Willo rises out of it
-const EYES_ON = [5350, 5600] as const; // his eyes come on
-const PRINT = [5480, 6020] as const; // the name on the wallet
-const LOOK = [5650, 6350] as const; // a look to each side
-const BLINK = [6420, 6620] as const;
-const OUT = [7000, 7550] as const; // the screen fades onto the app
+const CONTRACT = [380, 1300] as const; // the ring of points closes into a knot
+const WRITE = [1300, 270, 380] as const; // start, gap, length: each letter out of the knot
+const TIGHT = [1300, 2950] as const; // the letters, spaced wide, draw together
+const OPEN = [2820, 3480] as const; // the knot opens into a ring round the name
+const CLOSE = [3620, 4520] as const; // and circles it, closing in
+const NAME_OUT = [4170, 4500] as const; // the name gives way to them
+const MEET = 4500; // where they meet, the cards rise
+const FAN = [MEET, 580, 100] as const; // start, length, gap: each card into a fan
+const POCKET = [MEET + 650, MEET + 1250] as const; // the wallet comes up
+const DROP = [MEET + 980, 500, 180] as const; // start, length, gap: each card into the wallet
+const PEEK = [MEET + 1900, MEET + 2320] as const; // Willo rises out of it
+const EYES_ON = [MEET + 2250, MEET + 2500] as const; // his eyes come on
+const PRINT = [MEET + 2380, MEET + 2920] as const; // the name on the wallet
+const LOOK = [MEET + 2550, MEET + 3250] as const; // a look to each side
+const BLINK = [MEET + 3320, MEET + 3520] as const;
+const OUT = [MEET + 3900, MEET + 4450] as const; // the screen fades onto the app
 export const LAUNCH_INTRO_MS = OUT[1] + 20;
 const QUICK = [800, 1150] as const;
 
@@ -69,7 +72,24 @@ const SPARKS = [
   { color: "#3FE0B8", core: "#D2FFF3" },
   { color: "#A066FF", core: "#E9DDFF" },
 ] as const;
-const TAIL = 8;
+const DOTS = 9;
+const TAIL = 5;
+/* The ring they come up in, and the knot it closes into, in points. */
+const RING_R = 36;
+const KNOT = 11;
+const KNOT_GAP = 8;
+
+/* The name's letters, cut from the wordmark at the gaps between them, in its own pixels. */
+const WORD_PX = 725;
+const LETTERS = [
+  [0, 255],
+  [255, 325],
+  [325, 400],
+  [400, 471],
+  [471, 725],
+] as const;
+/* How wide the letters are spaced as they come out, against how they end. */
+const SPACED = 1.7;
 
 function clamp01(v: number) {
   "worklet";
@@ -99,6 +119,32 @@ function backOut(v: number, s = 1.6) {
 function mix(a: number, b: number, v: number) {
   "worklet";
   return a + (b - a) * v;
+}
+/** How far letter j is out of the knot, 0..1. */
+function emerged(now: number, j: number) {
+  "worklet";
+  const a = WRITE[0] + j * WRITE[1];
+  return span(now, a, a + WRITE[2]);
+}
+/**
+ * Where the name and the knot stand at a moment. The letters out so far and the knot
+ * after them are kept centred on the screen as the name grows, as one line; the
+ * spacing draws in as it fills; once the knot opens, the name alone is centred.
+ */
+function lineUp(now: number, cx: number, wordW: number) {
+  "worklet";
+  const u = wordW / WORD_PX;
+  const sp = mix(SPACED, 1, outCubic(span(now, TIGHT[0], TIGHT[1])));
+  const c0 = ((LETTERS[0][0] + LETTERS[0][1]) / 2) * u;
+  let right = 0;
+  for (let j = 0; j < LETTERS.length; j++) {
+    const cen = c0 + (((LETTERS[j][0] + LETTERS[j][1]) / 2) * u - c0) * sp;
+    const half = ((LETTERS[j][1] - LETTERS[j][0]) / 2) * u;
+    right = mix(right, cen + half, outCubic(emerged(now, j)));
+  }
+  const o = inOutCubic(span(now, OPEN[0], OPEN[1]));
+  const left = cx - (right + (KNOT_GAP + KNOT * 2) * (1 - o)) / 2;
+  return { sp, c0, left, knot: left + right + KNOT_GAP + KNOT, o };
 }
 /* When card i lands in the wallet. */
 function landing(i: number) {
@@ -149,17 +195,10 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
     return { opacity: 1 - inOutCubic(out) };
   });
 
-  /* The name: written out from the left as the points open round it, then drawn in
-     and gone as they meet. */
-  const wordClip = useAnimatedStyle(() => {
-    const v = inOutCubic(span(reduced ? 0 : t.get(), WRITE[0], WRITE[1]));
-    return { width: wordW * v };
-  });
+  /* The name, as a whole, gives way as the points meet. */
   const word = useAnimatedStyle(() => {
-    const now = reduced ? 0 : t.get();
-    const inn = span(now, WRITE[0], WRITE[0] + 260);
-    const out = inCubic(span(now, NAME_OUT[0], NAME_OUT[1]));
-    return { opacity: inn * (1 - out), transform: [{ scale: mix(1, 0.7, out) }] };
+    const out = inCubic(span(reduced ? 0 : t.get(), NAME_OUT[0], NAME_OUT[1]));
+    return { opacity: 1 - out, transform: [{ scale: mix(1, 0.7, out) }] };
   });
 
   /* The tile and the wallet come up from below together, and give as each card lands. */
@@ -209,17 +248,19 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
 
   return (
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: GROUND, zIndex: 100, overflow: "hidden" }, shell]}>
-      {/* The name, alone, first. */}
-      <Animated.View style={[{ position: "absolute", left: cx - wordW / 2, top: cy - wordH / 2, width: wordW, height: wordH }, word]}>
-        <Animated.View style={[{ height: wordH, overflow: "hidden" }, wordClip]}>
-          <Image source={WORD} style={{ width: wordW, height: wordH }} resizeMode="contain" />
-        </Animated.View>
+      {/* The name, a letter at a time out of the knot. */}
+      <Animated.View style={[{ position: "absolute", left: 0, top: cy - wordH / 2, width, height: wordH }, word]}>
+        {LETTERS.map((_, j) => (
+          <Letter key={j} j={j} t={t} cx={cx} wordW={wordW} wordH={wordH} reduced={reduced} />
+        ))}
       </Animated.View>
 
-      {/* The points of light around it, with their tails. */}
+      {/* The points of light: a ring, a knot, a ring round the name, with their tails. */}
       {!reduced &&
-        SPARKS.map((s, i) =>
-          Array.from({ length: TAIL }).map((_, j) => <Spark key={`${i}-${j}`} i={i} lag={j} color={s.color} core={s.core} t={t} cx={cx} cy={cy} rx={wordW * 0.66} ry={wordH * 1.5} />),
+        Array.from({ length: DOTS }).map((_, i) =>
+          Array.from({ length: TAIL }).map((__, j) => (
+            <Spark key={`${i}-${j}`} i={i} lag={j} color={SPARKS[i % 3].color} core={SPARKS[i % 3].core} t={t} cx={cx} cy={cy} rx={wordW * 0.66} ry={wordH * 1.5} wordW={wordW} />
+          )),
         )}
 
       {/* The icon and what goes in it, in the artwork's own frame. */}
@@ -256,25 +297,30 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
 
 /**
  * One point of light, or one step of its tail: the tail is the same point a little
- * behind on the same path, smaller and fainter, so it reads as a comet.
+ * behind on the same path, smaller and fainter, so it reads as a comet. The tails only
+ * show once the points circle the name.
  */
-function Spark({ i, lag, color, core, t, cx, cy, rx, ry }: { i: number; lag: number; color: string; core: string; t: SharedValue<number>; cx: number; cy: number; rx: number; ry: number }) {
-  const size = lag === 0 ? 10 : Math.max(2.5, 8 - lag * 0.8);
+function Spark({ i, lag, color, core, t, cx, cy, rx, ry, wordW }: { i: number; lag: number; color: string; core: string; t: SharedValue<number>; cx: number; cy: number; rx: number; ry: number; wordW: number }) {
+  const size = lag === 0 ? 9 : Math.max(2.5, 7 - lag * 0.9);
   const style = useAnimatedStyle(() => {
-    const now = t.get() - lag * 16;
-    /* One continuous turning, quick at first, steadier as they circle the name. */
-    const angle = (i * 2 * Math.PI) / 3 + (now / 1000) * Math.PI * 2.1 * (1 + 0.6 * span(now, CLOSE[0], CLOSE[1])) - Math.PI / 2;
-    /* Close together in the middle, opened out round the name, then closing in. */
-    const tight = rx * 0.16;
-    const open = inOutCubic(span(now, SPREAD[0], SPREAD[1]));
+    const real = t.get();
+    const now = real - lag * 18;
+    /* One turning throughout: a little quicker as the ring closes, and again as they close in on the name. */
+    const turns = (now / 1000) * 0.95 + 0.45 * outCubic(span(now, CONTRACT[0], CONTRACT[1])) + 1.1 * inCubic(span(now, CLOSE[0], CLOSE[1]));
+    const angle = (i * 2 * Math.PI) / DOTS - Math.PI / 2 + turns * 2 * Math.PI;
+    const line = lineUp(now, cx, wordW);
+    /* A ring closing into the knot; the knot carried after the letters; opened round the name; closed in. */
+    const r = mix(RING_R, KNOT, inOutCubic(span(now, CONTRACT[0], CONTRACT[1])));
     const close = 1 - inCubic(span(now, CLOSE[0], CLOSE[1]));
-    const ax = mix(tight, rx, open) * close;
-    const ay = mix(tight, ry, open) * close;
-    const appear = outCubic(span(t.get(), SPIN[0] + 60 + i * 100, SPIN[0] + 460 + i * 100));
-    const gone = span(t.get(), MEET - 40, MEET + 60);
+    const ax = mix(r, rx, line.o) * close;
+    const ay = mix(r, ry, line.o) * close;
+    const x0 = mix(line.knot, cx, line.o);
+    const appear = outCubic(span(real, i * 30, 480 + i * 30));
+    const gone = span(real, MEET - 40, MEET + 60);
+    const tail = lag === 0 ? 1 : (0.55 - lag * 0.08) * span(now, OPEN[0], OPEN[1]);
     return {
-      opacity: appear * (1 - gone) * (lag === 0 ? 1 : 0.6 - lag * 0.065),
-      transform: [{ translateX: Math.cos(angle) * ax }, { translateY: Math.sin(angle) * ay }],
+      opacity: appear * (1 - gone) * tail,
+      transform: [{ translateX: x0 - cx + Math.cos(angle) * ax }, { translateY: Math.sin(angle) * ay }],
     };
   });
   return (
@@ -294,6 +340,30 @@ function Spark({ i, lag, color, core, t, cx, cy, rx, ry }: { i: number; lag: num
         style,
       ]}
     />
+  );
+}
+
+/** One letter of the name: out of the knot, small, to its place in the line. */
+function Letter({ j, t, cx, wordW, wordH, reduced }: { j: number; t: SharedValue<number>; cx: number; wordW: number; wordH: number; reduced: boolean }) {
+  const u = wordW / WORD_PX;
+  const a = LETTERS[j][0];
+  const b = LETTERS[j][1];
+  const w = (b - a) * u;
+  const style = useAnimatedStyle(() => {
+    const now = reduced ? 0 : t.get();
+    const line = lineUp(now, cx, wordW);
+    const place = line.left + line.c0 + (((a + b) / 2) * u - line.c0) * line.sp;
+    const e = emerged(now, j);
+    const v = outCubic(e);
+    return {
+      opacity: clamp01(e * 2.4),
+      transform: [{ translateX: mix(line.knot, place, v) - w / 2 }, { scale: mix(0.35, 1, v) }],
+    };
+  });
+  return (
+    <Animated.View style={[{ position: "absolute", left: 0, top: 0, width: w, height: wordH, overflow: "hidden" }, style]}>
+      <Image source={WORD} style={{ position: "absolute", left: -a * u, top: 0, width: wordW, height: wordH }} resizeMode="contain" />
+    </Animated.View>
   );
 }
 
