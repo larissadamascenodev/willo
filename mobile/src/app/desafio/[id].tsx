@@ -3,7 +3,6 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View, useWindowDimensio
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import HeroVeil from "~/components/HeroVeil";
 import { BlurView } from "expo-blur";
 import Animated, { FadeIn, FadeInDown, ZoomIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
@@ -41,8 +40,6 @@ const WEEK = ["D", "S", "T", "Q", "Q", "S", "S"];
 
 const dayMonth = (d: Date) => d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(".", "");
 
-/* How tall the fade from the dark veil into the page is. */
-const FADE = 96;
 
 export default function DesafioPage() {
   const insets = useSafeAreaInsets();
@@ -146,7 +143,7 @@ export default function DesafioPage() {
     );
   }
 
-  const heroH = Math.round(width * 1.12) + insets.top + FADE;
+  const heroH = Math.round(width * 1.12) + insets.top;
   const broken = r.state === "broken";
   const finished = r.state === "finished";
   const days = calendarOf(r, txs);
@@ -160,96 +157,143 @@ export default function DesafioPage() {
   const start = new Date(`${r.startedAt.slice(0, 10)}T12:00:00`);
   const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + r.template.days - 1);
   const accent = accentOf(r.template);
+  /* The last seven days, ending today: lit with a check-in, green when Willo saw it clean. */
+  const byDay = new Map(days.map((d) => [d.iso, d.state]));
+  const today = new Date();
+  const week = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6 + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const state = byDay.get(iso);
+    return { iso, label: WEEK[d.getDay()], today: i === 6, lit: state === "checked", clean: state === "clean", out: !state };
+  });
   const auto = r.template.kind !== "manual";
 
   return (
     /* A plain ground, so the picture melts into it with no seam. */
     <View style={{ flex: 1, backgroundColor: th(GROUND_LIT, "bg") }}>
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 48 }} showsVerticalScrollIndicator={false}>
-        {/* ══ Its picture, edge to edge, under a dark veil in both themes, with what it is
-              and where it stands written on the veil ══ */}
-        <View style={{ height: heroH, overflow: "hidden", backgroundColor: "#0D0E10" }}>
+        {/* ══ Its picture, edge to edge, melting into the page under what it is and where it
+              stands, as a caixinha's does. The veil starts low and soft, so the top of the
+              picture keeps its own light. ══ */}
+        <View style={{ height: heroH }}>
           <ChallengeCover template={r.template} cover={r.cover} width={width} height={heroH} />
-          <LinearGradient colors={["rgba(0,0,0,0.45)", "rgba(0,0,0,0)"]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 120 }} />
-          {/* Dark behind the words, then, under them, the picture dissolving into the page. */}
-          <HeroVeil height={heroH} fade={FADE} ground={th(GROUND_LIT, "bg")} light={isLight()} />
+          {/* A light shade under the clock in the dark theme only; in the light one the top of the picture is left as it is. */}
+          {!isLight() && <LinearGradient colors={["rgba(0,0,0,0.35)", "rgba(0,0,0,0)"]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 100 }} />}
+          <LinearGradient
+            colors={th(["rgba(13,14,16,0)", "rgba(13,14,16,0.08)", "rgba(13,14,16,0.4)", "rgba(13,14,16,0.82)", GROUND_LIT], "grad")}
+            locations={[0, 0.35, 0.62, 0.86, 1]}
+            style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: Math.round(heroH * 0.48) }}
+          />
 
-          <Animated.View entering={FadeInDown.duration(460)} style={{ position: "absolute", left: 22, right: 22, bottom: FADE - 30 }}>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
-              {finished ? (
-                <HeroPill tone={GREEN} label="Desafio cumprido" />
-              ) : broken ? (
-                <HeroPill tone="#FF8A8A" label="Desafio quebrado" />
-              ) : (
-                <HeroPill label={`Dia ${day} de ${r.template.days}`} />
-              )}
-              <HeroPill label={DIFFICULTY_LABEL[r.template.difficulty]} tone={DIFF_TONE[r.template.difficulty]} />
-            </View>
-            <Text style={{ fontSize: 32, fontWeight: "800", letterSpacing: -1.1, lineHeight: 36, color: "#fff" }}>{r.template.name}</Text>
-            <Text style={{ marginTop: 8, fontSize: 15, lineHeight: 21, color: "rgba(255,255,255,0.74)" }}>{r.template.line}</Text>
-
-            {/* A mark for every day of it. */}
-            <View style={{ marginTop: 18, flexDirection: "row", gap: r.template.days > 15 ? 2 : 3 }}>
-              {Array.from({ length: r.template.days }).map((_, i) => (
-                <View key={i} style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: i < r.done ? (broken ? "#FF8A8A" : finished ? GREEN : accent) : "rgba(255,255,255,0.18)" }} />
-              ))}
-            </View>
-            <View style={{ marginTop: 9, flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ fontSize: 13.5, color: "rgba(255,255,255,0.7)" }}>
-                <Text style={{ fontWeight: "700", color: "#fff" }}>{r.done}</Text> de {r.template.days} dias cumpridos
-              </Text>
-              <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#fff" }}>{Math.round(share * 100)}%</Text>
-            </View>
-          </Animated.View>
         </View>
 
-        <View style={{ marginTop: -34, paddingHorizontal: 16 }}>
-          {/* ══ The flame, and today's check-in ══ */}
+        <Animated.View entering={FadeInDown.duration(460)} style={{ marginTop: -92, paddingHorizontal: 22 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+            {finished ? (
+              <GlassPill tone={GREEN} label="Desafio cumprido" />
+            ) : broken ? (
+              <GlassPill tone={RED} label="Desafio quebrado" />
+            ) : (
+              <GlassPill label={`Dia ${day} de ${r.template.days}`} />
+            )}
+            <GlassPill label={DIFFICULTY_LABEL[r.template.difficulty]} tone={DIFF_TONE[r.template.difficulty]} />
+          </View>
+          <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8} style={{ fontSize: 26, fontWeight: "800", letterSpacing: -0.8, lineHeight: 30, color: th("#fff") }}>{r.template.name}</Text>
+          <Text style={{ marginTop: 6, fontSize: 14, lineHeight: 19, color: th("rgba(255,255,255,0.74)") }}>{r.template.line}</Text>
+
+          {/* A mark for every day of it. */}
+          <View style={{ marginTop: 18, flexDirection: "row", gap: r.template.days > 15 ? 2 : 3 }}>
+            {Array.from({ length: r.template.days }).map((_, i) => (
+              <View key={i} style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: i < r.done ? th(broken ? RED : finished ? GREEN : accent) : th("rgba(255,255,255,0.16)", "bg") }} />
+            ))}
+          </View>
+          <View style={{ marginTop: 9, flexDirection: "row", justifyContent: "space-between" }}>
+            <Text style={{ fontSize: 13.5, color: th(INK.soft) }}>
+              <Text style={{ fontWeight: "700", color: th("#fff") }}>{r.done}</Text> de {r.template.days} dias cumpridos
+            </Text>
+            <Text style={{ fontSize: 13.5, fontWeight: "700", color: th("#fff") }}>{Math.round(share * 100)}%</Text>
+          </View>
+        </Animated.View>
+
+        <View style={{ marginTop: 22, paddingHorizontal: 16 }}>
+          {/* ══ The run of days: the flame and the count, the record beside it, the last
+                seven days as a row of small flames, and today's check-in ══ */}
           <Animated.View entering={FadeInDown.delay(80).duration(420)}>
             <Surface>
-              <View style={{ padding: 18, flexDirection: "row", alignItems: "center", gap: 16 }}>
-                <View style={{ width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                  {r.streak > 0 ? (
-                    <LinearGradient colors={["rgba(255,159,69,0.34)", "rgba(255,90,40,0.12)"]} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-                  ) : (
-                    <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(255,255,255,0.06)", "bg") }} />
-                  )}
-                  <Flame size={34} color={r.streak > 0 ? FIRE : th(INK.faint)} strokeWidth={2} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 34, fontWeight: "800", letterSpacing: -1.2, color: th("#fff") }}>
-                    {r.streak} <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: th(INK.soft) }}>{r.streak === 1 ? "dia seguido" : "dias seguidos"}</Text>
-                  </Text>
-                  <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", gap: 5 }}>
-                    <Trophy size={13} color={th("#E9C462")} strokeWidth={2.2} />
-                    <Text style={{ fontSize: 13, color: th(INK.soft) }}>Recorde: {Math.max(r.best, r.streak)} {Math.max(r.best, r.streak) === 1 ? "dia" : "dias"}</Text>
+              <View style={{ padding: 18 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                  <View style={{ width: 56, height: 56, borderRadius: 18, borderCurve: "continuous", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                    {r.streak > 0 ? (
+                      <LinearGradient colors={["#FFB15E", "#FF6A3D"]} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+                    ) : (
+                      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(255,255,255,0.07)", "bg") }} />
+                    )}
+                    <View style={{ zIndex: 1 }}>
+                      <Flame size={28} color={r.streak > 0 ? "#FFFFFF" : th(INK.faint)} strokeWidth={2.2} />
+                    </View>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 1, color: th(INK.softer) }}>SEQUÊNCIA</Text>
+                    <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 28, fontWeight: "800", letterSpacing: -0.9, color: th("#fff") }}>
+                      {r.streak}
+                      <Text style={{ fontSize: 15, fontWeight: "700", letterSpacing: -0.2, color: th(INK.soft) }}> {r.streak === 1 ? "dia seguido" : "dias seguidos"}</Text>
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: "center", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, backgroundColor: th("rgba(233,196,98,0.12)", "bg") }}>
+                    <Trophy size={15} color={th("#E9C462")} strokeWidth={2.2} />
+                    <Text style={{ marginTop: 2, fontSize: 15, fontWeight: "800", color: th("#fff") }}>{Math.max(r.best, r.streak)}</Text>
+                    <Text style={{ fontSize: 10.5, fontWeight: "600", color: th(INK.soft) }}>recorde</Text>
                   </View>
                 </View>
-              </View>
 
-              {!finished && !broken && (
-                <View style={{ paddingHorizontal: 18, paddingBottom: 18 }}>
-                  {r.tickedToday ? (
-                    <Animated.View entering={ZoomIn.duration(260)}>
-                      <View style={{ height: 52, borderRadius: 26, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "rgba(103,205,103,0.16)" }}>
-                        <Check size={18} color={th(GREEN)} strokeWidth={2.8} />
-                        <Text style={{ fontSize: 15.5, fontWeight: "700", color: th(GREEN) }}>Check-in de hoje feito</Text>
+                {/* The last seven days. */}
+                <View style={{ marginTop: 16, flexDirection: "row", justifyContent: "space-between" }}>
+                  {week.map((d) => (
+                    <View key={d.iso} style={{ alignItems: "center", gap: 6 }}>
+                      <Text style={{ fontSize: 11.5, fontWeight: "700", color: th(d.today ? "#fff" : INK.softer) }}>{d.label}</Text>
+                      <View
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 17,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          overflow: "hidden",
+                          borderWidth: d.today && !d.lit ? 1.5 : 0,
+                          borderColor: th("#fff", "line"),
+                          backgroundColor: d.lit ? "transparent" : d.clean ? "rgba(103,205,103,0.16)" : th("rgba(255,255,255,0.05)", "bg"),
+                        }}
+                      >
+                        {d.lit && <LinearGradient colors={["#FFB15E", "#FF6A3D"]} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />}
+                        <View style={{ zIndex: 1 }}>
+                          {d.lit ? <Flame size={16} color="#FFFFFF" strokeWidth={2.4} /> : d.clean ? <Check size={14} color={th(GREEN)} strokeWidth={3} /> : <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: th(d.out ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.22)", "bg") }} />}
+                        </View>
                       </View>
-                      <Text style={{ marginTop: 10, textAlign: "center", fontSize: 13, color: th(INK.soft) }}>Volte amanhã para manter a chama acesa.</Text>
-                    </Animated.View>
-                  ) : (
-                    <Pressable
-                      onPress={() => void checkIn()}
-                      disabled={busy}
-                      accessibilityRole="button"
-                      style={({ pressed }) => ({ height: 54, borderRadius: 27, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: th("#fff", "bg"), opacity: pressed || busy ? 0.85 : 1 })}
-                    >
-                      {busy ? <ActivityIndicator color={th("#0B0B0B")} /> : <Flame size={19} color={FIRE} strokeWidth={2.4} />}
-                      <Text style={{ fontSize: 16, fontWeight: "700", color: th("#0B0B0B") }}>Fazer check-in de hoje</Text>
-                    </Pressable>
-                  )}
+                    </View>
+                  ))}
                 </View>
-              )}
+
+                {!finished && !broken && (
+                  <View style={{ marginTop: 18 }}>
+                    {r.tickedToday ? (
+                      <Animated.View entering={ZoomIn.duration(260)} style={{ height: 50, borderRadius: 25, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "rgba(103,205,103,0.14)" }}>
+                        <Check size={18} color={th(GREEN)} strokeWidth={2.8} />
+                        <Text style={{ fontSize: 15, fontWeight: "700", color: th(GREEN) }}>Feito hoje · volte amanhã</Text>
+                      </Animated.View>
+                    ) : (
+                      <Pressable
+                        onPress={() => void checkIn()}
+                        disabled={busy}
+                        accessibilityRole="button"
+                        style={({ pressed }) => ({ height: 52, borderRadius: 26, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: th("#fff", "bg"), opacity: pressed || busy ? 0.85 : 1 })}
+                      >
+                        {busy ? <ActivityIndicator color={th("#0B0B0B")} /> : <Flame size={19} color={FIRE} strokeWidth={2.4} />}
+                        <Text style={{ fontSize: 16, fontWeight: "700", color: th("#0B0B0B") }}>Fazer check-in de hoje</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                )}
+              </View>
             </Surface>
           </Animated.View>
 
@@ -342,22 +386,19 @@ export default function DesafioPage() {
   );
 }
 
-function HeroPill({ label, tone }: { label: string; tone?: string }) {
-  return (
-    <View style={{ height: 28, paddingHorizontal: 12, borderRadius: 14, overflow: "hidden", justifyContent: "center", borderWidth: 1, borderColor: tone ? `${tone}77` : "rgba(255,255,255,0.24)" }}>
-      <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: tone ? `${tone}26` : "rgba(255,255,255,0.1)" }} />
-      <Text style={{ zIndex: 1, fontSize: 12.5, fontWeight: "700", color: tone ?? "#fff" }}>{label}</Text>
-    </View>
-  );
-}
-
 function GlassPill({ label, tone }: { label: string; tone?: string }) {
+  /* In the light theme a solid white tag, so it stands out on the faded picture; in the dark, glass. */
+  if (isLight())
+    return (
+      <View style={{ height: 30, paddingHorizontal: 13, borderRadius: 15, justifyContent: "center", backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "rgba(0,0,0,0.06)", shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: th(tone ?? "#fff") }}>{label}</Text>
+      </View>
+    );
   return (
-    <View style={{ height: 28, paddingHorizontal: 12, borderRadius: 14, overflow: "hidden", justifyContent: "center", borderWidth: 1, borderColor: th(tone ? `${tone}66` : "rgba(255,255,255,0.28)", "line") }}>
-      <BlurView intensity={30} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14 }} />
-      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14, backgroundColor: th(tone ? `${tone}22` : "rgba(255,255,255,0.12)", "bg") }} />
-      <Text style={{ zIndex: 1, fontSize: 12.5, fontWeight: "700", color: th(tone ?? "#fff") }}>{label}</Text>
+    <View style={{ height: 28, paddingHorizontal: 12, borderRadius: 14, overflow: "hidden", justifyContent: "center", borderWidth: 1, borderColor: tone ? `${tone}66` : "rgba(255,255,255,0.28)" }}>
+      <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14 }} />
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14, backgroundColor: tone ? `${tone}22` : "rgba(255,255,255,0.12)" }} />
+      <Text style={{ zIndex: 1, fontSize: 12.5, fontWeight: "700", color: tone ?? "#fff" }}>{label}</Text>
     </View>
   );
 }
