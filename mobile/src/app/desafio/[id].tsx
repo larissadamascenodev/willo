@@ -8,14 +8,16 @@ import Animated, { FadeIn, FadeInDown, ZoomIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Room from "~/components/Room";
 import BackButton from "~/components/BackButton";
+import RoundButton from "~/components/RoundButton";
+import { CoverError, pickGoalCover } from "~/lib/goalCover";
 import ConfirmGlass from "~/components/ConfirmGlass";
 import Surface from "~/components/Surface";
 import { ChallengeCover, accentOf } from "~/components/desafios/ChallengeTile";
-import { Check, Flame, Trophy } from "~/components/icons";
+import { Check, Flame, ImagePlus, Trophy } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
 import { showToast } from "~/lib/toast";
-import { DIFFICULTY_LABEL, abandonChallenge, calendarOf, estimateSavings, loadOne, restartChallenge, savedSoFar, tickToday, type Running, type Tx } from "~/lib/challenges";
+import { DIFFICULTY_LABEL, abandonChallenge, calendarOf, estimateSavings, loadOne, restartChallenge, savedSoFar, setChallengeCover, tickToday, type Running, type Tx } from "~/lib/challenges";
 import { th } from "~/theme/theme";
 import { GREEN, GROUND_LIT, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
@@ -32,6 +34,8 @@ import { type as T } from "~/theme/type";
  */
 
 const FIRE = "#FF9F45";
+/* How hard, in a colour that reads on the dark veil. */
+const DIFF_TONE = { facil: "#8FE08F", medio: "#FFC46B", dificil: "#FF8A8A" } as const;
 const WEEK = ["D", "S", "T", "Q", "Q", "S", "S"];
 
 const dayMonth = (d: Date) => d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(".", "");
@@ -47,6 +51,7 @@ export default function DesafioPage() {
   const [missing, setMissing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!user || !id) return;
@@ -75,6 +80,32 @@ export default function DesafioPage() {
       showToast("Não foi possível fazer o check-in. Tente de novo.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const choosePhoto = async () => {
+    if (!user || !r || photoBusy) return;
+    setPhotoBusy(true);
+    try {
+      const url = await pickGoalCover(user.id);
+      if (!url) return;
+      await setChallengeCover(user.id, r.id, r.template, url);
+      showToast("Foto do desafio salva");
+      await load();
+    } catch (e) {
+      showToast(e instanceof CoverError ? e.message : "Não foi possível salvar a foto. Tente de novo.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const removePhoto = async () => {
+    if (!user || !r) return;
+    try {
+      await setChallengeCover(user.id, r.id, r.template, null);
+      await load();
+    } catch {
+      showToast("Não foi possível tirar a foto. Tente de novo.");
     }
   };
 
@@ -122,7 +153,7 @@ export default function DesafioPage() {
   const worth = estimateSavings(r.template, txs)?.saves ?? r.template.saves ?? 0;
   const share = Math.max(0, Math.min(1, r.done / r.template.days));
   const day = Math.min(r.done + (r.tickedToday ? 0 : 1), r.template.days);
-  const start = new Date(r.startedAt);
+  const start = new Date(`${r.startedAt.slice(0, 10)}T12:00:00`);
   const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + r.template.days - 1);
   const accent = accentOf(r.template);
   const auto = r.template.kind !== "manual";
@@ -131,48 +162,45 @@ export default function DesafioPage() {
     /* A plain ground, so the picture melts into it with no seam. */
     <View style={{ flex: 1, backgroundColor: th(GROUND_LIT, "bg") }}>
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 48 }} showsVerticalScrollIndicator={false}>
-        {/* ══ Its picture, edge to edge, melting into the page ══ */}
-        <View style={{ height: heroH }}>
+        {/* ══ Its picture, edge to edge, under a dark veil in both themes, with what it is
+              and where it stands written on the veil ══ */}
+        <View style={{ height: heroH, borderBottomLeftRadius: 34, borderBottomRightRadius: 34, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#0D0E10" }}>
           <ChallengeCover template={r.template} cover={r.cover} width={width} height={heroH} />
           <LinearGradient colors={["rgba(0,0,0,0.45)", "rgba(0,0,0,0)"]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 120 }} />
           <LinearGradient
-            colors={th(["rgba(13,14,16,0)", "rgba(13,14,16,0.5)", "rgba(13,14,16,0.9)", GROUND_LIT], "grad")}
-            locations={[0, 0.38, 0.72, 1]}
-            style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: Math.round(heroH * 0.66) }}
+            colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.62)", "rgba(8,9,10,0.9)", "rgba(8,9,10,0.96)"]}
+            locations={[0, 0.4, 0.75, 1]}
+            style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: Math.round(heroH * 0.7) }}
           />
+
+          <Animated.View entering={FadeInDown.duration(460)} style={{ position: "absolute", left: 22, right: 22, bottom: 22 }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+              {finished ? (
+                <HeroPill tone={GREEN} label="Desafio cumprido" />
+              ) : broken ? (
+                <HeroPill tone="#FF8A8A" label="Desafio quebrado" />
+              ) : (
+                <HeroPill label={`Dia ${day} de ${r.template.days}`} />
+              )}
+              <HeroPill label={DIFFICULTY_LABEL[r.template.difficulty]} tone={DIFF_TONE[r.template.difficulty]} />
+            </View>
+            <Text style={{ fontSize: 32, fontWeight: "800", letterSpacing: -1.1, lineHeight: 36, color: "#fff" }}>{r.template.name}</Text>
+            <Text style={{ marginTop: 8, fontSize: 15, lineHeight: 21, color: "rgba(255,255,255,0.74)" }}>{r.template.line}</Text>
+
+            {/* A mark for every day of it. */}
+            <View style={{ marginTop: 18, flexDirection: "row", gap: r.template.days > 15 ? 2 : 3 }}>
+              {Array.from({ length: r.template.days }).map((_, i) => (
+                <View key={i} style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: i < r.done ? (broken ? "#FF8A8A" : finished ? GREEN : accent) : "rgba(255,255,255,0.18)" }} />
+              ))}
+            </View>
+            <View style={{ marginTop: 9, flexDirection: "row", justifyContent: "space-between" }}>
+              <Text style={{ fontSize: 13.5, color: "rgba(255,255,255,0.7)" }}>
+                <Text style={{ fontWeight: "700", color: "#fff" }}>{r.done}</Text> de {r.template.days} dias cumpridos
+              </Text>
+              <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#fff" }}>{Math.round(share * 100)}%</Text>
+            </View>
+          </Animated.View>
         </View>
-
-        {/* ══ What it is and where it stands, written on the fade ══ */}
-        <Animated.View entering={FadeInDown.duration(460)} style={{ marginTop: -168, paddingHorizontal: 22 }}>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
-            {finished ? (
-              <GlassPill tone={GREEN} label="Desafio cumprido" />
-            ) : broken ? (
-              <GlassPill tone={RED} label="Desafio quebrado" />
-            ) : (
-              <GlassPill label={`Dia ${day} de ${r.template.days}`} />
-            )}
-            <GlassPill label={`${auto ? "O Willo confere" : "Check-in diário"} · ${DIFFICULTY_LABEL[r.template.difficulty]}`} />
-          </View>
-          <Text style={{ fontSize: 34, fontWeight: "800", letterSpacing: -1.2, lineHeight: 38, color: th("#fff") }}>{r.template.name}</Text>
-          <Text style={{ marginTop: 8, fontSize: 15, lineHeight: 21, color: th("rgba(255,255,255,0.72)") }}>{r.template.line}</Text>
-
-          {/* A mark for every day of it. */}
-          <View style={{ marginTop: 18, flexDirection: "row", gap: r.template.days > 15 ? 2 : 3 }}>
-            {Array.from({ length: r.template.days }).map((_, i) => (
-              <View
-                key={i}
-                style={{ flex: 1, height: 6, borderRadius: 3, backgroundColor: i < r.done ? th(broken ? RED : finished ? GREEN : accent) : th("rgba(255,255,255,0.16)", "bg") }}
-              />
-            ))}
-          </View>
-          <View style={{ marginTop: 9, flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={{ fontSize: 13.5, color: th(INK.soft) }}>
-              <Text style={{ fontWeight: "700", color: th("#fff") }}>{r.done}</Text> de {r.template.days} dias cumpridos
-            </Text>
-            <Text style={{ fontSize: 13.5, fontWeight: "700", color: th("#fff") }}>{Math.round(share * 100)}%</Text>
-          </View>
-        </Animated.View>
 
         <View style={{ paddingHorizontal: 16 }}>
           {/* ══ The flame, and today's check-in ══ */}
@@ -285,6 +313,11 @@ export default function DesafioPage() {
                 <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#0B0B0B") }}>{finished ? "Fazer de novo" : "Recomeçar hoje"}</Text>
               </Pressable>
             )}
+            {r.cover && (
+              <Pressable onPress={() => void removePhoto()} style={({ pressed }) => ({ height: 44, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
+                <Text style={{ fontSize: 14.5, color: th(INK.soft) }}>Voltar para a imagem do Willo</Text>
+              </Pressable>
+            )}
             {!finished && (
               <Pressable onPress={() => setLeaving(true)} style={({ pressed }) => ({ height: 44, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
                 <Text style={{ fontSize: 14.5, color: th(INK.soft) }}>Encerrar desafio</Text>
@@ -294,13 +327,26 @@ export default function DesafioPage() {
         </View>
       </ScrollView>
 
-      <View style={{ position: "absolute", top: insets.top + 8, left: 16 }}>
+      <View style={{ position: "absolute", top: insets.top + 8, left: 16, right: 16, flexDirection: "row", justifyContent: "space-between" }}>
         <BackButton onImage />
+        <RoundButton label={r.cover ? "Trocar a foto" : "Colocar uma foto"} onImage onPress={() => void choosePhoto()}>
+          {photoBusy ? <ActivityIndicator color="#fff" /> : <ImagePlus size={19} color={th("rgba(255,255,255,0.9)")} strokeWidth={2.2} />}
+        </RoundButton>
       </View>
 
       <ConfirmGlass open={leaving} title="Encerrar o desafio?" confirmLabel="Encerrar" busyLabel="Encerrando…" onConfirm={() => void leave()} onClose={() => setLeaving(false)}>
         Os dias até aqui ficam no seu histórico. Dá para começar de novo quando quiser.
       </ConfirmGlass>
+    </View>
+  );
+}
+
+function HeroPill({ label, tone }: { label: string; tone?: string }) {
+  return (
+    <View style={{ height: 28, paddingHorizontal: 12, borderRadius: 14, overflow: "hidden", justifyContent: "center", borderWidth: 1, borderColor: tone ? `${tone}77` : "rgba(255,255,255,0.24)" }}>
+      <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: tone ? `${tone}26` : "rgba(255,255,255,0.1)" }} />
+      <Text style={{ zIndex: 1, fontSize: 12.5, fontWeight: "700", color: tone ?? "#fff" }}>{label}</Text>
     </View>
   );
 }

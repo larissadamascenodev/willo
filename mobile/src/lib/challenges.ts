@@ -345,12 +345,14 @@ export interface Achievement {
   revealed?: boolean;
   /** How it is revealed, while it is secret. */
   hint?: string;
+  /** The day each unit was reached, oldest first, where it can be told: dates[n-1] is when the value reached n. */
+  dates?: string[];
 }
 
 export interface AchInput {
   txs: Tx[];
   paidInvoices: number;
-  goals: { current_amount: number; target_amount: number }[];
+  goals: { current_amount: number; target_amount: number; created_at?: string }[];
   finished: Running[];
   checkins: string[][];
   accounts: number;
@@ -375,8 +377,29 @@ function bestRun(days: string[]) {
   return best;
 }
 
+/** The days a run of consecutive days first reached 1, 2, 3… */
+function runDates(days: string[]) {
+  const sorted = [...new Set(days)].sort();
+  const out: string[] = [];
+  let run = 0;
+  let prev: Date | null = null;
+  for (const d of sorted) {
+    const cur = startOf(d);
+    run = prev && daysBetween(prev, cur) === 1 ? run + 1 : 1;
+    while (out.length < run) out.push(d);
+    prev = cur;
+  }
+  return out;
+}
+
+const dayOf = (iso: string) => iso.slice(0, 10);
+const sortedDays = (list: string[]) => list.map(dayOf).sort();
+/** The last day of a "YYYY-MM" month. */
+const monthEnd = (m: string) => isoDay(new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0));
+
 export function achievements(input: AchInput): Achievement[] {
   const { txs } = input;
+  const madeOn = (t: Tx) => isoDay(new Date(t.created_at));
   const thisMonth = isoDay(new Date()).slice(0, 7);
   const today = isoDay(new Date());
 
@@ -406,9 +429,22 @@ export function achievements(input: AchInput): Achievement[] {
     inOut.set(m, row);
   }
   const months = [...inOut.entries()].sort(([a], [b]) => (a < b ? -1 : 1));
-  const blueMonths = months.filter(([, v]) => v.in > v.out && v.in > 0).length;
-  const leaner = months.filter(([, v], i) => i > 0 && v.out > 0 && v.out < months[i - 1][1].out).length;
-  const earned = months.filter(([, v]) => v.in > 0).length;
+  const blueList = months.filter(([, v]) => v.in > v.out && v.in > 0).map(([m]) => monthEnd(m));
+  const leanerList = months.filter(([, v], i) => i > 0 && v.out > 0 && v.out < months[i - 1][1].out).map(([m]) => monthEnd(m));
+  const earnedList = months.filter(([, v]) => v.in > 0).map(([m]) => monthEnd(m));
+  const blueMonths = blueList.length;
+  const leaner = leanerList.length;
+  const earned = earnedList.length;
+
+  /* When each was reached, where the entries tell it. */
+  const firstFixed = new Map<string, string>();
+  for (const t of txs) {
+    if (t.recurrence_type !== "fixa") continue;
+    const k = t.name.trim().toLowerCase();
+    const d = madeOn(t);
+    if (!firstFixed.has(k) || d < (firstFixed.get(k) as string)) firstFixed.set(k, d);
+  }
+  const doneDates = (match: (t: Template) => boolean) => sortedDays(input.finished.filter((r) => match(r.template) && r.completedAt).map((r) => r.completedAt as string));
 
   /* Saving. */
   const goalsMade = input.goals.length;
@@ -422,34 +458,42 @@ export function achievements(input: AchInput): Achievement[] {
   const kitchen = doneOf((t) => t.icon === "delivery");
   const emptyCart = doneOf((t) => t.icon === "online" || t.icon === "bag");
 
+  const byMade = (list: Tx[]) => list.map(madeOn).sort();
+  const bills = txs.filter((t) => isBill(t) && t.status === "pago");
+  const paidOffList = txs.filter((t) => (t.installments ?? 0) > 1 && t.installment_current === t.installments && t.status === "pago");
+  const onTimeList = [...billMonths].filter((m) => !lateMonths.has(m)).sort().map(monthEnd);
+  const goalDates = sortedDays(input.goals.map((g) => g.created_at ?? "").filter(Boolean));
+
+  /* Steps of one are medals won once, with no levels; the others are a row of medals, one per step. */
   const list: Omit<Achievement, "tier" | "next">[] = [
-    { key: "writer", group: "Registro", name: "Anotador", what: "Lançamentos registrados no Willo", icon: "pen", steps: [10, 50, 150, 500, 1500], unit: ["registro", "registros"], value: txs.length },
-    { key: "streak", group: "Registro", name: "Constância", what: "Maior sequência de dias seguidos anotando", icon: "flame", steps: [3, 7, 30, 90, 180], unit: ["dia seguido", "dias seguidos"], value: bestRun(writtenDays) },
-    { key: "early", group: "Registro", name: "Madrugador", what: "Lançamentos anotados antes das 8h", icon: "sunrise", steps: [1, 10, 40, 100], unit: ["registro cedo", "registros cedo"], value: early },
-    { key: "detail", group: "Registro", name: "Detalhista", what: "Lançamentos com uma observação escrita", icon: "note", steps: [5, 25, 100, 300], unit: ["observação", "observações"], value: noted },
+    { key: "first", group: "Registro", name: "Primeiro passo", what: "Fez o primeiro lançamento no Willo", icon: "pen", steps: [1], unit: ["lançamento", "lançamentos"], value: txs.length, dates: byMade(txs) },
+    { key: "writer", group: "Registro", name: "Anotador", what: "Lançamentos registrados no Willo", icon: "pen", steps: [10, 50, 150, 500, 1500], unit: ["registro", "registros"], value: txs.length, dates: byMade(txs) },
+    { key: "streak", group: "Registro", name: "Constância", what: "Dias seguidos anotando no Willo", icon: "flame", steps: [3, 7, 30, 90, 180], unit: ["dia seguido", "dias seguidos"], value: bestRun(writtenDays), dates: runDates(writtenDays) },
+    { key: "early", group: "Registro", name: "Madrugador", what: "Anotou um gasto antes das 8h da manhã", icon: "sunrise", steps: [1], unit: ["registro cedo", "registros cedo"], value: early, dates: byMade(txs.filter((t) => new Date(t.created_at).getHours() < 8)) },
+    { key: "detail", group: "Registro", name: "Detalhista", what: "Lançamentos com uma observação escrita", icon: "note", steps: [5, 25, 100], unit: ["observação", "observações"], value: noted, dates: byMade(txs.filter((t) => (t.observation ?? "").trim().length > 0)) },
 
-    { key: "bills", group: "Contas e cartões", name: "Contas em dia", what: "Contas e boletos pagos", icon: "check", steps: [5, 20, 60, 150, 300], unit: ["conta paga", "contas pagas"], value: billsPaid },
-    { key: "ontime", group: "Contas e cartões", name: "Sem atraso", what: "Meses sem nenhuma conta vencida sem pagar", icon: "calendar", steps: [1, 3, 6, 12, 24], unit: ["mês sem atraso", "meses sem atraso"], value: onTimeMonths },
-    { key: "invoices", group: "Contas e cartões", name: "Fatura zerada", what: "Faturas de cartão pagas", icon: "card", steps: [1, 3, 6, 12, 24], unit: ["fatura paga", "faturas pagas"], value: input.paidInvoices },
-    { key: "paidoff", group: "Contas e cartões", name: "Parcela quitada", what: "Compras parceladas pagas até a última parcela", icon: "layers", steps: [1, 5, 15, 40], unit: ["compra quitada", "compras quitadas"], value: paidOff },
-    { key: "planned", group: "Contas e cartões", name: "Planejado", what: "Contas fixas cadastradas, para o mês nunca pegar de surpresa", icon: "calendar", steps: [1, 3, 8, 15], unit: ["conta fixa", "contas fixas"], value: fixed },
+    { key: "bills", group: "Contas e cartões", name: "Contas em dia", what: "Contas e boletos pagos", icon: "check", steps: [5, 20, 60, 150, 300], unit: ["conta paga", "contas pagas"], value: billsPaid, dates: sortedDays(bills.map((t) => t.date)) },
+    { key: "ontime", group: "Contas e cartões", name: "Sem atraso", what: "Meses sem nenhuma conta vencida sem pagar", icon: "calendar", steps: [1, 3, 6, 12], unit: ["mês sem atraso", "meses sem atraso"], value: onTimeMonths, dates: onTimeList },
+    { key: "invoices", group: "Contas e cartões", name: "Fatura zerada", what: "Faturas de cartão pagas", icon: "card", steps: [1, 3, 6, 12], unit: ["fatura paga", "faturas pagas"], value: input.paidInvoices },
+    { key: "paidoff", group: "Contas e cartões", name: "Parcela quitada", what: "Pagou uma compra parcelada até a última parcela", icon: "layers", steps: [1], unit: ["compra quitada", "compras quitadas"], value: paidOff, dates: sortedDays(paidOffList.map((t) => t.date)) },
+    { key: "planned", group: "Contas e cartões", name: "Planejado", what: "Cadastrou as contas fixas, para o mês nunca pegar de surpresa", icon: "calendar", steps: [3], unit: ["conta fixa", "contas fixas"], value: fixed, dates: [...firstFixed.values()].sort() },
 
-    { key: "firstbox", group: "Guardar", name: "Primeira caixinha", what: "Caixinhas criadas para guardar dinheiro", icon: "piggy", steps: [1, 3, 5, 10], unit: ["caixinha", "caixinhas"], value: goalsMade },
+    { key: "firstbox", group: "Guardar", name: "Primeira caixinha", what: "Criou a primeira caixinha para guardar dinheiro", icon: "piggy", steps: [1], unit: ["caixinha", "caixinhas"], value: goalsMade, dates: goalDates },
     { key: "goals", group: "Guardar", name: "Poupador", what: "Caixinhas que chegaram ao valor", icon: "flag", steps: [1, 3, 5, 10], unit: ["meta concluída", "metas concluídas"], value: goalsReached },
     { key: "vault", group: "Guardar", name: "Guardião", what: "Reais guardados nas caixinhas", icon: "vault", steps: [100, 500, 2000, 5000, 20000], unit: ["real guardado", "reais guardados"], value: saved },
 
-    { key: "blue", group: "Mês saudável", name: "Mês no azul", what: "Meses que fecharam com mais entrada que saída", icon: "sun", steps: [1, 3, 6, 12, 24], unit: ["mês no azul", "meses no azul"], value: blueMonths },
-    { key: "leaner", group: "Mês saudável", name: "Economista", what: "Meses em que você gastou menos que no mês anterior", icon: "trending", steps: [1, 3, 6, 12], unit: ["mês mais enxuto", "meses mais enxutos"], value: leaner },
-    { key: "income", group: "Mês saudável", name: "Renda em ordem", what: "Meses com o que entrou registrado", icon: "income", steps: [1, 3, 6, 12, 24], unit: ["mês registrado", "meses registrados"], value: earned },
+    { key: "blue", group: "Mês saudável", name: "Mês no azul", what: "Meses que fecharam com mais entrada que saída", icon: "sun", steps: [1, 3, 6, 12], unit: ["mês no azul", "meses no azul"], value: blueMonths, dates: blueList },
+    { key: "leaner", group: "Mês saudável", name: "Economista", what: "Meses em que você gastou menos que no mês anterior", icon: "trending", steps: [1, 3, 6], unit: ["mês mais enxuto", "meses mais enxutos"], value: leaner, dates: leanerList },
+    { key: "income", group: "Mês saudável", name: "Renda em ordem", what: "Registrou tudo o que entrou no mês", icon: "income", steps: [1], unit: ["mês registrado", "meses registrados"], value: earned, dates: earnedList },
 
-    { key: "challenges", group: "Desafios", name: "Desafiante", what: "Desafios cumpridos até o fim", icon: "flag", steps: [1, 3, 5, 10, 20], unit: ["desafio cumprido", "desafios cumpridos"], value: done },
-    { key: "flame", group: "Desafios", name: "Chama acesa", what: "Maior sequência de check-ins seguidos num desafio", icon: "fire", steps: [3, 7, 15, 30, 60], unit: ["dia seguido", "dias seguidos"], value: flame },
-    { key: "kitchen", group: "Desafios", name: "Cozinha de casa", what: "Desafios sem delivery cumpridos", icon: "bike", steps: [1, 3, 5], unit: ["desafio", "desafios"], value: kitchen },
-    { key: "cart", group: "Desafios", name: "Carrinho vazio", what: "Desafios sem compras cumpridos", icon: "bag", steps: [1, 3, 5], unit: ["desafio", "desafios"], value: emptyCart },
+    { key: "challenges", group: "Desafios", name: "Desafiante", what: "Desafios cumpridos até o fim", icon: "flag", steps: [1, 3, 5, 10, 20], unit: ["desafio cumprido", "desafios cumpridos"], value: done, dates: doneDates(() => true) },
+    { key: "flame", group: "Desafios", name: "Chama acesa", what: "Check-ins seguidos num desafio", icon: "fire", steps: [3, 7, 15, 30], unit: ["dia seguido", "dias seguidos"], value: flame, dates: input.checkins.length ? runDates(input.checkins.reduce((best, c) => (bestRun(c) > bestRun(best) ? c : best), [] as string[])) : undefined },
+    { key: "kitchen", group: "Desafios", name: "Cozinha de casa", what: "Cumpriu um desafio sem delivery", icon: "bike", steps: [1], unit: ["desafio", "desafios"], value: kitchen, dates: doneDates((t) => t.icon === "delivery") },
+    { key: "cart", group: "Desafios", name: "Carrinho vazio", what: "Cumpriu um desafio sem compras", icon: "bag", steps: [1], unit: ["desafio", "desafios"], value: emptyCart, dates: doneDates((t) => t.icon === "online" || t.icon === "bag") },
 
     { key: "presence", group: "Uso do Willo", name: "Presença", what: "Dias em que você abriu o Willo", icon: "eye", steps: [7, 30, 90, 180, 365], unit: ["dia", "dias"], value: input.loginDays },
-    { key: "wallet", group: "Uso do Willo", name: "Carteira montada", what: "Contas e cartões cadastrados", icon: "wallet", steps: [1, 3, 6], unit: ["conta ou cartão", "contas e cartões"], value: input.accounts + input.cards },
-    { key: "organizer", group: "Uso do Willo", name: "Organizador", what: "Categorias criadas do seu jeito", icon: "tag", steps: [1, 3, 8], unit: ["categoria", "categorias"], value: input.customCategories },
+    { key: "wallet", group: "Uso do Willo", name: "Carteira montada", what: "Cadastrou três contas ou cartões", icon: "wallet", steps: [3], unit: ["conta ou cartão", "contas e cartões"], value: input.accounts + input.cards },
+    { key: "organizer", group: "Uso do Willo", name: "Organizador", what: "Criou uma categoria do seu jeito", icon: "tag", steps: [1], unit: ["categoria", "categorias"], value: input.customCategories },
   ];
 
   const open: Achievement[] = list.map((a) => {
@@ -459,15 +503,15 @@ export function achievements(input: AchInput): Achievement[] {
 
   /* The secret two: revealed by the others. */
   const levels = open.reduce((n, a) => n + a.tier, 0);
-  const maxed = open.filter((a) => a.tier === a.steps.length).length;
+  const maxed = open.filter((a) => a.steps.length > 1 && a.tier === a.steps.length).length;
   const secret = (a: Omit<Achievement, "tier" | "next" | "group" | "secret" | "revealed">, revealed: boolean): Achievement => {
     const tier = tierOf(a.value, a.steps);
     return { ...a, group: "Secretas", secret: true, revealed, tier: revealed ? tier : 0, next: tier >= a.steps.length ? null : a.steps[tier] };
   };
   return [
     ...open,
-    secret({ key: "collector", name: "Colecionador", what: "Níveis de medalha conquistados, somando todas", icon: "crown", steps: [10, 25, 50, 80, 110], unit: ["nível", "níveis"], value: levels, hint: "Conquiste 5 níveis de medalha para revelar" }, levels >= 5),
-    secret({ key: "legend", name: "Lenda", what: "Medalhas levadas até o último nível", icon: "gem", steps: [1, 3, 6, 10, 22], unit: ["medalha completa", "medalhas completas"], value: maxed, hint: "Leve uma medalha ao Ouro para revelar" }, open.some((a) => a.tier >= 3)),
+    secret({ key: "collector", name: "Colecionador", what: "Medalhas conquistadas, somando todas", icon: "crown", steps: [10, 25, 50], unit: ["medalha", "medalhas"], value: levels, hint: "Conquiste 5 medalhas para revelar" }, levels >= 5),
+    secret({ key: "legend", name: "Lenda", what: "Coleções completas, até a última medalha", icon: "gem", steps: [1, 3], unit: ["coleção completa", "coleções completas"], value: maxed, hint: "Conquiste a terceira medalha de uma coleção para revelar" }, open.some((a) => a.tier >= 3)),
   ];
 }
 
@@ -498,7 +542,7 @@ export async function loadChallenges(userId: string): Promise<ChallengeData> {
     supabase.from("challenges").select("id, name, icon, duration_days, description, cover_image"),
     supabase.from("transactions").select("id, name, category, type, status, payment_method, credit_card_id, created_at, date, amount, recurrence_type, observation, installments, installment_current").eq("user_id", userId).order("date", { ascending: false }).limit(5000),
     supabase.from("invoices").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("is_paid", true),
-    supabase.from("goals").select("current_amount, target_amount").eq("user_id", userId),
+    supabase.from("goals").select("current_amount, target_amount, created_at").eq("user_id", userId),
     supabase.from("accounts").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("credit_cards").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("custom_categories").select("id", { count: "exact", head: true }).eq("user_id", userId),
@@ -520,12 +564,14 @@ export async function loadChallenges(userId: string): Promise<ChallengeData> {
     const template = templateFor(row);
     const checkins = ticks.get(u.id) ?? [];
     const status = (u.status === "completed" || u.status === "abandoned" ? u.status : "active") as Running["status"];
-    const view = status === "completed" ? { done: template.days, state: "finished" as const, note: "Desafio cumprido", tickedToday: true } : evaluate(template, u.started_at, checkins, txs);
+    /* The day it started, on the phone's own clock: a start in the evening is stored in UTC as the next day. */
+    const startedOn = isoDay(new Date(u.started_at));
+    const view = status === "completed" ? { done: template.days, state: "finished" as const, note: "Desafio cumprido", tickedToday: true } : evaluate(template, startedOn, checkins, txs);
     /* Finished just now: kept as done. */
     if (status === "active" && view.state === "finished") {
       void supabase.from("user_challenges").update({ status: "completed", completed_at: new Date().toISOString(), progress: 100 } as never).eq("id", u.id);
     }
-    all.push({ id: u.id, template, cover: row.cover_image ?? null, ...streakOf(checkins), startedAt: u.started_at, status: view.state === "finished" ? "completed" : status, completedAt: u.completed_at, checkins, ...view });
+    all.push({ id: u.id, template, cover: row.cover_image ?? null, ...streakOf(checkins), startedAt: startedOn, status: view.state === "finished" ? "completed" : status, completedAt: u.completed_at, checkins, ...view });
   }
 
   const running = all.filter((r) => r.status === "active");
@@ -592,6 +638,33 @@ export async function startChallenge(userId: string, t: Template) {
   }
   const { error } = await supabase.from("user_challenges").insert({ user_id: userId, challenge_id: challengeId, status: "active", progress: 0, started_at: new Date().toISOString() } as never);
   if (error) throw error;
+}
+
+/**
+ * A picture of the person's own for a running challenge, or none (back to the drawn
+ * scene). The picture is kept on the person's own challenge row; a ready-made one
+ * that is shared by everyone is first copied into a row of their own, so the picture
+ * is never seen by anyone else.
+ */
+export async function setChallengeCover(userId: string, runningId: string, t: Template, url: string | null) {
+  const { data: uc, error: e1 } = await supabase.from("user_challenges").select("challenge_id").eq("id", runningId).single();
+  if (e1 || !uc) throw e1 ?? new Error("desafio não encontrado");
+  const challengeId = (uc as { challenge_id: string }).challenge_id;
+  const { data: row } = await supabase.from("challenges").select("id, user_id").eq("id", challengeId).maybeSingle();
+  if ((row as { user_id: string | null } | null)?.user_id === userId) {
+    const { error } = await supabase.from("challenges").update({ cover_image: url } as never).eq("id", challengeId).eq("user_id", userId);
+    if (error) throw error;
+    return;
+  }
+  if (!url) return;
+  const { data: made, error: e2 } = await supabase
+    .from("challenges")
+    .insert({ user_id: userId, name: t.name, description: t.line, duration_days: t.days, icon: `tpl:${t.key}`, difficulty: t.difficulty, potential_savings: t.saves ?? 0, is_system: false, cover_image: url } as never)
+    .select("id")
+    .single();
+  if (e2 || !made) throw e2 ?? new Error("não foi possível guardar");
+  const { error: e3 } = await supabase.from("user_challenges").update({ challenge_id: (made as { id: string }).id } as never).eq("id", runningId);
+  if (e3) throw e3;
 }
 
 /** Ticks today on a challenge only the person can tell. */

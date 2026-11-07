@@ -260,9 +260,11 @@ function RadarReading({ size }: { size: number }) {
 /* ── Desafios ──────────────────────────────────────────────────────────────── */
 
 /**
- * Desafios e conquistas, as a picture card: the leading challenge's photo filling it
- * under a dark veil, the best run of days as a flame, how many are running, and what
- * waits for today. With nothing running, a quiet dark card with a medal to earn.
+ * Desafios e conquistas, on the same card as the Radar beside it — light in the light
+ * theme, dark in the dark — so the pair reads as one row. The leading challenge's
+ * picture sits in it as a rounded window, the same size as the Radar's scope, with
+ * the best run of days as a flame and how many are running; under it, what it is and
+ * what waits for today. With nothing running, a medal waiting to be earned.
  */
 function ChallengesTile({ art, running, onPress }: { art: number; running: PendingCheckin[] | null; onPress: () => void }) {
   const list = running ?? [];
@@ -276,66 +278,55 @@ function ChallengesTile({ art, running, onPress }: { art: number; running: Pendi
       : waiting > 0
         ? `${waiting} ${waiting === 1 ? "espera" : "esperam"} o check-in de hoje`
         : "Check-in de hoje feito";
-  const minH = Math.max(art, 120) + 76;
+  const pic = Math.max(art, 120);
 
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="Desafios e conquistas" style={({ pressed }) => ({ flex: 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
-      <View style={{ flex: 1, minHeight: minH, borderRadius: 22, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#0D0E10" }}>
-        {lead ? (
-          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-            <ChallengeCover template={lead.template} cover={lead.cover} width="100%" height="100%" />
-          </View>
-        ) : (
-          <LinearGradient colors={["#2A2414", "#14120C", "#0D0E10"]} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        )}
-        <LinearGradient colors={["rgba(8,9,10,0.35)", "rgba(8,9,10,0.05)", "rgba(8,9,10,0.7)", "rgba(8,9,10,0.95)"]} locations={[0, 0.3, 0.62, 1]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-
-        {/* Top: the flame, and how many are running. */}
-        <View style={{ position: "absolute", top: 12, left: 12, right: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+    <Surface onPress={onPress} style={{ flex: 1 }}>
+      <Glow hex="#FF9F45" />
+      <View style={{ flex: 1, padding: 14, gap: 12 }}>
+        <View style={{ height: pic, borderRadius: 18, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#0D0E10" }}>
           {lead ? (
-            <View style={{ height: 30, paddingHorizontal: 10, borderRadius: 15, flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(10,11,13,0.55)", borderWidth: 1, borderColor: "rgba(255,159,69,0.4)" }}>
-              <Flame size={14} color="#FF9F45" strokeWidth={2.4} />
-              <Text style={{ fontSize: 14, fontWeight: "800", color: "#fff", fontVariant: ["tabular-nums"] }}>{best}</Text>
-            </View>
+            <ChallengeCover template={lead.template} cover={lead.cover} width="100%" height="100%" />
           ) : (
-            <View />
+            <LinearGradient colors={["#2A2414", "#14120C"]} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
           )}
-          {list.length > 1 && (
-            <View style={{ height: 26, paddingHorizontal: 9, borderRadius: 13, justifyContent: "center", backgroundColor: "rgba(10,11,13,0.55)" }}>
-              <Text style={{ fontSize: 11.5, fontWeight: "700", color: "rgba(255,255,255,0.85)" }}>{list.length} ativos</Text>
+          <LinearGradient colors={["rgba(8,9,10,0.35)", "rgba(8,9,10,0)", "rgba(8,9,10,0)"]} locations={[0, 0.4, 1]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <View style={{ position: "absolute", top: 8, left: 8, right: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            {lead ? (
+              <View style={{ height: 26, paddingHorizontal: 9, borderRadius: 13, flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(10,11,13,0.6)", borderWidth: 1, borderColor: "rgba(255,159,69,0.45)" }}>
+                <Flame size={12} color="#FF9F45" strokeWidth={2.4} />
+                <Text style={{ fontSize: 12.5, fontWeight: "800", color: "#fff", fontVariant: ["tabular-nums"] }}>{best}</Text>
+              </View>
+            ) : (
+              <View />
+            )}
+            {list.length > 1 && (
+              <View style={{ height: 24, paddingHorizontal: 8, borderRadius: 12, justifyContent: "center", backgroundColor: "rgba(10,11,13,0.6)" }}>
+                <Text style={{ fontSize: 11, fontWeight: "700", color: "rgba(255,255,255,0.9)" }}>{list.length} ativos</Text>
+              </View>
+            )}
+          </View>
+          {!lead && (
+            <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
+              <View style={{ width: pic * 0.5, height: pic * 0.5, borderRadius: pic * 0.25, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: "rgba(233,196,98,0.5)", backgroundColor: "rgba(233,196,98,0.1)" }}>
+                <Trophy size={pic * 0.2} color="#E9C462" strokeWidth={1.6} />
+              </View>
             </View>
           )}
         </View>
-
-        {/* Nothing running: a medal waiting to be earned. */}
-        {!lead && art > 0 && (
-          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 70, alignItems: "center", justifyContent: "center" }}>
-            <View style={{ width: art * 0.5, height: art * 0.5, borderRadius: art * 0.25, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: "rgba(233,196,98,0.5)", backgroundColor: "rgba(233,196,98,0.1)" }}>
-              <Trophy size={art * 0.2} color="#E9C462" strokeWidth={1.6} />
-            </View>
-          </View>
-        )}
-
-        {/* Bottom: what it is, and what waits. */}
-        <View style={{ position: "absolute", left: 14, right: 14, bottom: 14 }}>
-          {lead && (
-            <Text numberOfLines={1} style={{ fontSize: 11.5, fontWeight: "700", letterSpacing: 0.3, color: "rgba(255,255,255,0.62)" }}>
-              {lead.template.name.toUpperCase()}
-            </Text>
-          )}
-          <View style={{ marginTop: lead ? 4 : 0, flexDirection: "row", alignItems: "center", gap: 4 }}>
-            <Text numberOfLines={2} style={{ flexShrink: 1, fontSize: 16, fontWeight: "800", lineHeight: 20, letterSpacing: -0.3, color: "#fff" }}>
+        <View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15, fontWeight: "700", letterSpacing: -0.2, color: th("#fff") }}>
               Desafios e conquistas
             </Text>
-            <ChevronRight size={14} color="rgba(255,255,255,0.5)" />
+            <ChevronRight size={14} color={th(INK.faint)} />
           </View>
-          <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 12.5, color: waiting > 0 ? "#FFB877" : "rgba(255,255,255,0.7)" }}>
+          <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: waiting > 0 ? th("#FF9F45") : th(INK.soft) }}>
             {line}
           </Text>
         </View>
-        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 22, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }} />
       </View>
-    </Pressable>
+    </Surface>
   );
 }
 
