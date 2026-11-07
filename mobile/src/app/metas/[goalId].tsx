@@ -49,7 +49,7 @@ import { useAuth } from "~/lib/auth";
 import { GREEN, GROUND_LIT, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { live, th } from "~/theme/theme";
+import { isLight, live, th } from "~/theme/theme";
 /**
  * One caixinha, up close.
  *
@@ -86,8 +86,8 @@ function Progress({ progress, color }: { progress: number; color: string }) {
   }, [progress, drawn]);
   const fill = useAnimatedStyle(() => ({ width: `${drawn.get() * 100}%` }));
   return (
-    <View style={{ height: 6, borderRadius: 3, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.10)", "bg") }}>
-      <Animated.View style={[{ height: 6, borderRadius: 3, backgroundColor: th(color, "bg") }, fill]} />
+    <View style={{ height: 6, borderRadius: 3, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.16)" }}>
+      <Animated.View style={[{ height: 6, borderRadius: 3, backgroundColor: color }, fill]} />
     </View>
   );
 }
@@ -342,61 +342,57 @@ export default function MetaDetalhe() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ══ Its picture, edge to edge, melting into the page under what is kept ══ */}
-        <View style={{ height: heroH }}>
+        {/* ══ Its picture, edge to edge, darkening under what is kept: a dark veil in both
+              themes, so the words on it are always white. In the dark theme it melts into
+              the page; in the light one it ends in a soft rounded edge. ══ */}
+        <View style={{ height: heroH, overflow: "hidden", borderBottomLeftRadius: isLight() ? 30 : 0, borderBottomRightRadius: isLight() ? 30 : 0, borderCurve: "continuous", backgroundColor: "#0D0E10" }}>
           <CaixinhaCover goal={goal} height={heroH} glyph={280} glyphTop={insets.top + 50} />
+          <LinearGradient colors={["rgba(0,0,0,0.45)", "rgba(0,0,0,0)"]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 120 }} />
           <LinearGradient
-            colors={th(["rgba(0,0,0,0.45)", "rgba(0,0,0,0)"], "grad")}
-            style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 120 }}
+            colors={isLight() ? ["rgba(8,9,10,0)", "rgba(8,9,10,0.6)", "rgba(8,9,10,0.88)", "rgba(8,9,10,0.95)"] : ["rgba(13,14,16,0)", "rgba(13,14,16,0.6)", "rgba(13,14,16,0.92)", GROUND_LIT]}
+            locations={[0, 0.4, 0.75, 1]}
+            style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: Math.round(heroH * 0.7) }}
           />
-          <LinearGradient
-            colors={th(["rgba(13,14,16,0)", "rgba(13,14,16,0.5)", "rgba(13,14,16,0.9)", GROUND_LIT], "grad")}
-            locations={[0, 0.38, 0.72, 1]}
-            style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: Math.round(heroH * 0.66) }}
-          />
+
+          {/* ══ What it is and what is kept, written on the veil ══ */}
+          <Animated.View entering={FadeInDown.duration(460)} style={{ position: "absolute", left: 22, right: 22, bottom: 22 }}>
+            {(earns(goal) || (hasTarget && !isComplete && goal.deadline) || isComplete || !hasTarget) && (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+                {isComplete ? (
+                  <GlassPill tone={GREEN} label="Meta concluída" />
+                ) : hasTarget && goal.deadline ? (
+                  <GlassPill label={pace.late ? "Prazo vencido" : `Até ${monthYear(goal.deadline)}`} tone={pace.late ? "#FF8A8A" : undefined} />
+                ) : !hasTarget ? (
+                  <GlassPill label="Sem valor definido" />
+                ) : null}
+                {earns(goal) && <GlassPill tone={GREEN} label={`Rende ${Number(goal.yield_percent)}% do CDI`} />}
+              </View>
+            )}
+            <Text numberOfLines={2} style={{ fontSize: 17, fontWeight: "600", color: "rgba(255,255,255,0.82)" }}>{goal.name}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{ marginTop: 2, fontSize: 52, fontWeight: "800", letterSpacing: -2.4, color: isComplete ? GREEN : "#fff" }}>
+              {money(goal.current_amount)}
+            </Text>
+            {hasTarget ? (
+              <View style={{ marginTop: 14 }}>
+                <Progress progress={progress} color={isComplete ? GREEN : preset.hex} />
+                <View style={{ marginTop: 9, flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ fontSize: 13.5, color: "rgba(255,255,255,0.7)" }}>
+                    <Text style={{ fontWeight: "700", color: isComplete ? GREEN : "#fff" }}>{percent}%</Text> de {money(goal.target_amount)}
+                  </Text>
+                  {!isComplete && (
+                    <Text style={{ fontSize: 13.5, color: "rgba(255,255,255,0.7)" }}>
+                      faltam <Text style={{ fontWeight: "700", color: "#fff" }}>{money(remaining)}</Text>
+                    </Text>
+                  )}
+                </View>
+              </View>
+            ) : null}
+          </Animated.View>
         </View>
 
-        {/* ══ What it is and what is kept, written on the fade ══ */}
-        <Animated.View entering={FadeInDown.duration(460)} style={{ marginTop: -190, paddingHorizontal: 22 }}>
-          {(earns(goal) || (hasTarget && !isComplete && goal.deadline) || isComplete || !hasTarget) && (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
-              {isComplete ? (
-                <GlassPill tone={GREEN} label="Meta concluída" />
-              ) : hasTarget && goal.deadline ? (
-                <GlassPill label={pace.late ? "Prazo vencido" : `Até ${monthYear(goal.deadline)}`} tone={pace.late ? RED : undefined} />
-              ) : !hasTarget ? (
-                <GlassPill label="Sem valor definido" />
-              ) : null}
-              {earns(goal) && <GlassPill tone={GREEN} label={`Rende ${Number(goal.yield_percent)}% do CDI`} />}
-            </View>
-          )}
-          <Text numberOfLines={2} style={{ fontSize: 17, fontWeight: "600", color: th("rgba(255,255,255,0.8)") }}>{goal.name}</Text>
-          <Text
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
-            style={{ marginTop: 2, fontSize: 52, fontWeight: "800", letterSpacing: -2.4, color: th(isComplete ? GREEN : "#fff") }}
-          >
-            {money(goal.current_amount)}
-          </Text>
-          {hasTarget ? (
-            <View style={{ marginTop: 14 }}>
-              <Progress progress={progress} color={isComplete ? GREEN : preset.hex} />
-              <View style={{ marginTop: 9, flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ fontSize: 13.5, color: th(INK.soft) }}>
-                  <Text style={{ fontWeight: "700", color: th(isComplete ? GREEN : "#fff") }}>{percent}%</Text> de {money(goal.target_amount)}
-                </Text>
-                {!isComplete && (
-                  <Text style={{ fontSize: 13.5, color: th(INK.soft) }}>
-                    faltam <Text style={{ fontWeight: "700", color: th("#fff") }}>{money(remaining)}</Text>
-                  </Text>
-                )}
-              </View>
-            </View>
-          ) : null}
-
+        <Animated.View entering={FadeInDown.delay(60).duration(460)} style={{ marginTop: 14, paddingHorizontal: 22 }}>
           {/* ══ Willo, saying the plan: written on the fade like the rest, no box around it ══ */}
-          <View style={{ marginTop: hasTarget ? 16 : 10, flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <View style={{ marginLeft: -7 }}>
               <ParticleOrb size={34} density={130} />
             </View>
@@ -743,20 +739,10 @@ function HeroButton({
 /** A small label in glass, for the two or three things worth knowing at a glance. */
 function GlassPill({ label, tone }: { label: string; tone?: string }) {
   return (
-    <View
-      style={{
-        height: 28,
-        paddingHorizontal: 12,
-        borderRadius: 14,
-        overflow: "hidden",
-        justifyContent: "center",
-        borderWidth: 1,
-        borderColor: th(tone ? `${tone}66` : "rgba(255,255,255,0.28)", "line"),
-      }}
-    >
-      <BlurView intensity={30} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14 }} />
-      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14, backgroundColor: th(tone ? `${tone}22` : "rgba(255,255,255,0.12)", "bg") }} />
-      <Text style={{ zIndex: 1, fontSize: 12.5, fontWeight: "700", color: th(tone ?? "#fff") }}>{label}</Text>
+    <View style={{ height: 28, paddingHorizontal: 12, borderRadius: 14, overflow: "hidden", justifyContent: "center", borderWidth: 1, borderColor: tone ? `${tone}77` : "rgba(255,255,255,0.26)" }}>
+      <BlurView intensity={30} tint="dark" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14 }} />
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 14, backgroundColor: tone ? `${tone}26` : "rgba(255,255,255,0.12)" }} />
+      <Text style={{ zIndex: 1, fontSize: 12.5, fontWeight: "700", color: tone ?? "#fff" }}>{label}</Text>
     </View>
   );
 }

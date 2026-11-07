@@ -18,7 +18,7 @@ import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
 import { showToast } from "~/lib/toast";
 import { DIFFICULTY_LABEL, abandonChallenge, calendarOf, estimateSavings, loadOne, restartChallenge, savedSoFar, setChallengeCover, tickToday, type Running, type Tx } from "~/lib/challenges";
-import { th } from "~/theme/theme";
+import { isLight, th } from "~/theme/theme";
 import { GREEN, GROUND_LIT, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
@@ -164,11 +164,11 @@ export default function DesafioPage() {
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 48 }} showsVerticalScrollIndicator={false}>
         {/* ══ Its picture, edge to edge, under a dark veil in both themes, with what it is
               and where it stands written on the veil ══ */}
-        <View style={{ height: heroH, borderBottomLeftRadius: 34, borderBottomRightRadius: 34, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#0D0E10" }}>
+        <View style={{ height: heroH, borderBottomLeftRadius: isLight() ? 30 : 0, borderBottomRightRadius: isLight() ? 30 : 0, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#0D0E10" }}>
           <ChallengeCover template={r.template} cover={r.cover} width={width} height={heroH} />
           <LinearGradient colors={["rgba(0,0,0,0.45)", "rgba(0,0,0,0)"]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 120 }} />
           <LinearGradient
-            colors={["rgba(8,9,10,0)", "rgba(8,9,10,0.62)", "rgba(8,9,10,0.9)", "rgba(8,9,10,0.96)"]}
+            colors={isLight() ? ["rgba(8,9,10,0)", "rgba(8,9,10,0.6)", "rgba(8,9,10,0.88)", "rgba(8,9,10,0.95)"] : ["rgba(13,14,16,0)", "rgba(13,14,16,0.6)", "rgba(13,14,16,0.92)", GROUND_LIT]}
             locations={[0, 0.4, 0.75, 1]}
             style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: Math.round(heroH * 0.7) }}
           />
