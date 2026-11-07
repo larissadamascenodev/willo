@@ -3,14 +3,14 @@ import { Image, StyleSheet, useWindowDimensions, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming, type SharedValue } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { GROUND } from "~/theme/tokens";
-import { loadIntroSound } from "~/lib/introSounds";
 
 /**
  * What plays when the app opens, over the app while it gets ready underneath.
  *
- * The name comes first, alone in the middle of the dark screen. Three points of light —
- * orange, teal, violet — come out around it, each with a comet's tail, and circle the
- * name, closer and faster, until the name gives way and they meet. Where they meet, the
+ * Three points of light — orange, teal, violet — spin close together in the middle of
+ * the dark screen, and as they open out the name writes itself out between them, from
+ * the left. They circle the name, each with a comet's tail, closer and faster, until
+ * the name gives way and they meet. Where they meet, the
  * three cards rise, opened like a hand of cards. The wallet comes up from below and the
  * cards drop into it one after another, back card first, the wallet giving a little as
  * it takes each one. Willo rises out of it, his eyes come on, he looks to one side and
@@ -25,19 +25,21 @@ import { loadIntroSound } from "~/lib/introSounds";
  * moment, and a fade.
  */
 
-const NAME_IN = [120, 760] as const; // the name, alone
-const ORBIT = [700, 2000] as const; // the points circle the name and close in
-const NAME_OUT = [1700, 1980] as const; // the name gives way to them
-const MEET = 1960; // where they meet, the cards rise
-const FAN = [1960, 480, 80] as const; // start, length, gap: each card into a fan
-const POCKET = [2480, 2980] as const; // the wallet comes up
-const DROP = [2760, 400, 150] as const; // start, length, gap: each card into the wallet
-const PEEK = [3500, 3840] as const; // Willo rises out of it
-const EYES_ON = [3780, 3980] as const; // his eyes come on
-const LOOK = [4000, 4560] as const; // a look to each side
-const PRINT = [3880, 4320] as const; // the name on the wallet
-const BLINK = [4620, 4780] as const;
-const OUT = [5150, 5600] as const; // the screen fades onto the app
+const SPIN = [0, 1100] as const; // the points appear, spinning close together in the middle
+const WRITE = [950, 1900] as const; // the name writes itself out as they open around it
+const SPREAD = [950, 1700] as const; // they open out round the name
+const CLOSE = [2150, 3150] as const; // and circle it, closing in
+const NAME_OUT = [2750, 3100] as const; // the name gives way to them
+const MEET = 3100; // where they meet, the cards rise
+const FAN = [3100, 580, 100] as const; // start, length, gap: each card into a fan
+const POCKET = [3750, 4350] as const; // the wallet comes up
+const DROP = [4080, 500, 180] as const; // start, length, gap: each card into the wallet
+const PEEK = [5000, 5420] as const; // Willo rises out of it
+const EYES_ON = [5350, 5600] as const; // his eyes come on
+const PRINT = [5480, 6020] as const; // the name on the wallet
+const LOOK = [5650, 6350] as const; // a look to each side
+const BLINK = [6420, 6620] as const;
+const OUT = [7000, 7550] as const; // the screen fades onto the app
 export const LAUNCH_INTRO_MS = OUT[1] + 20;
 const QUICK = [800, 1150] as const;
 
@@ -123,7 +125,6 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     const end = reduced ? QUICK[1] : LAUNCH_INTRO_MS;
     t.set(withTiming(end, { duration: end, easing: Easing.linear }));
-    const sound = reduced ? null : loadIntroSound();
     const tap = (style: Haptics.ImpactFeedbackStyle) => () => void Haptics.impactAsync(style).catch(() => undefined);
     const timers = reduced
       ? []
@@ -131,13 +132,11 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
           setTimeout(tap(Haptics.ImpactFeedbackStyle.Medium), MEET + 20),
           setTimeout(tap(Haptics.ImpactFeedbackStyle.Soft), POCKET[0] + 260),
           ...[0, 1, 2].map((i) => setTimeout(tap(Haptics.ImpactFeedbackStyle.Light), landing(i) - 30)),
-          ...(sound ? [setTimeout(sound.play, BLINK[0])] : []),
         ];
     const done = setTimeout(onDone, end + 30);
     return () => {
       timers.forEach(clearTimeout);
       clearTimeout(done);
-      if (sound) setTimeout(sound.release, 1500);
     };
     // The intro plays once, as it mounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,12 +149,17 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
     return { opacity: 1 - inOutCubic(out) };
   });
 
-  /* The name, alone: it rises into view, then draws in and goes as the points meet. */
+  /* The name: written out from the left as the points open round it, then drawn in
+     and gone as they meet. */
+  const wordClip = useAnimatedStyle(() => {
+    const v = inOutCubic(span(reduced ? 0 : t.get(), WRITE[0], WRITE[1]));
+    return { width: wordW * v };
+  });
   const word = useAnimatedStyle(() => {
     const now = reduced ? 0 : t.get();
-    const inn = outCubic(span(now, NAME_IN[0], NAME_IN[1]));
+    const inn = span(now, WRITE[0], WRITE[0] + 260);
     const out = inCubic(span(now, NAME_OUT[0], NAME_OUT[1]));
-    return { opacity: inn * (1 - out), transform: [{ translateY: (1 - inn) * 12 }, { scale: mix(0.94, 1, inn) * mix(1, 0.7, out) }] };
+    return { opacity: inn * (1 - out), transform: [{ scale: mix(1, 0.7, out) }] };
   });
 
   /* The tile and the wallet come up from below together, and give as each card lands. */
@@ -207,7 +211,9 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: GROUND, zIndex: 100, overflow: "hidden" }, shell]}>
       {/* The name, alone, first. */}
       <Animated.View style={[{ position: "absolute", left: cx - wordW / 2, top: cy - wordH / 2, width: wordW, height: wordH }, word]}>
-        <Image source={WORD} style={{ width: wordW, height: wordH }} resizeMode="contain" />
+        <Animated.View style={[{ height: wordH, overflow: "hidden" }, wordClip]}>
+          <Image source={WORD} style={{ width: wordW, height: wordH }} resizeMode="contain" />
+        </Animated.View>
       </Animated.View>
 
       {/* The points of light around it, with their tails. */}
@@ -255,17 +261,20 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
 function Spark({ i, lag, color, core, t, cx, cy, rx, ry }: { i: number; lag: number; color: string; core: string; t: SharedValue<number>; cx: number; cy: number; rx: number; ry: number }) {
   const size = lag === 0 ? 10 : Math.max(2.5, 8 - lag * 0.8);
   const style = useAnimatedStyle(() => {
-    const now = t.get() - lag * 15;
-    const v = span(now, ORBIT[0], ORBIT[1]);
-    /* Around the name, faster and closer as they go, until they meet in the middle. */
-    const turn = inCubic(v) * 0.5 + v * 0.5;
-    const angle = (i * 2 * Math.PI) / 3 + turn * Math.PI * 4.5 - Math.PI / 2;
-    const close = 1 - inCubic(span(now, ORBIT[0] + 500, ORBIT[1]));
-    const appear = outCubic(span(t.get(), ORBIT[0] + i * 110, ORBIT[0] + 380 + i * 110));
+    const now = t.get() - lag * 16;
+    /* One continuous turning, quick at first, steadier as they circle the name. */
+    const angle = (i * 2 * Math.PI) / 3 + (now / 1000) * Math.PI * 2.1 * (1 + 0.6 * span(now, CLOSE[0], CLOSE[1])) - Math.PI / 2;
+    /* Close together in the middle, opened out round the name, then closing in. */
+    const tight = rx * 0.16;
+    const open = inOutCubic(span(now, SPREAD[0], SPREAD[1]));
+    const close = 1 - inCubic(span(now, CLOSE[0], CLOSE[1]));
+    const ax = mix(tight, rx, open) * close;
+    const ay = mix(tight, ry, open) * close;
+    const appear = outCubic(span(t.get(), SPIN[0] + 60 + i * 100, SPIN[0] + 460 + i * 100));
     const gone = span(t.get(), MEET - 40, MEET + 60);
     return {
       opacity: appear * (1 - gone) * (lag === 0 ? 1 : 0.6 - lag * 0.065),
-      transform: [{ translateX: Math.cos(angle) * rx * close }, { translateY: Math.sin(angle) * ry * close }],
+      transform: [{ translateX: Math.cos(angle) * ax }, { translateY: Math.sin(angle) * ay }],
     };
   });
   return (
