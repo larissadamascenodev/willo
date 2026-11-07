@@ -135,7 +135,6 @@ function Door() {
       first.current = false;
       return;
     }
-    console.log(`[THEMEDBG] drawn in ${mode} reveal=${!!revealAt} shot=${!!themeShot.ready}`);
     if (revealAt) {
       /* The screens are drawn again under the photograph; a frame, then it opens. */
       holeX.set(revealAt.x);
@@ -143,11 +142,12 @@ function Door() {
       hole.set(0);
       const reachOut = Math.hypot(Math.max(revealAt.x, W - revealAt.x), Math.max(revealAt.y, H - revealAt.y)) + 8;
       requestAnimationFrame(() => {
-        hole.set(withTiming(reachOut, { duration: 540, easing: Easing.inOut(Easing.cubic) }));
+        /* Unhurried: it starts softly from the finger, opens, and settles. */
+        hole.set(withTiming(reachOut, { duration: 950, easing: Easing.bezier(0.42, 0, 0.25, 1) }));
         setTimeout(() => {
           endThemeReveal();
           hole.set(0);
-        }, 580);
+        }, 1000);
       });
     } else {
       /* The screens are drawn again in place under the circle; a frame, then it clears off them. */

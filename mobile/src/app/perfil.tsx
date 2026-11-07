@@ -75,12 +75,8 @@ export default function Perfil() {
   useFocusEffect(
     useCallback(() => {
       const a = setTimeout(() => void prepareThemeShot(), 700);
-      const b = setTimeout(() => void prepareThemeShot(), 1800);
-      return () => {
-        clearTimeout(a);
-        clearTimeout(b);
-      };
-    }, [theme]),
+      return () => clearTimeout(a);
+    }, []),
   );
   const light = isLight();
   const photo = useSkyPhoto();

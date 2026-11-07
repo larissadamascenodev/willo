@@ -138,7 +138,9 @@ export function useThemeReveal() {
 /** The photograph has loaded: it may be used at the next touch. */
 export const markShotReady = (uri: string) => {
   if (shot.uri !== uri) return;
-  console.log(`[THEMEDBG] shot ready in ${pref}`);
+  const waiting = readyWaiters;
+  readyWaiters = [];
+  setTimeout(() => waiting.forEach((w) => w()), 0);
   shot = { ...shot, ready: uri };
   emitShot();
 };
@@ -147,35 +149,64 @@ export const endThemeReveal = () => {
   reveal = null;
   shot = { uri: null, ready: null };
   emitShot();
+  /* The next photograph at once, so a change straight back has its effect too. */
+  setTimeout(() => void prepareThemeShot(), 150);
 };
 
-let taking = false;
+/* Waiting for a photograph to be on screen-ready, for a change tapped while it loads. */
+let readyWaiters: (() => void)[] = [];
+let taking: Promise<void> | null = null;
+
 /** Photographs the screen as it is now, for the next change of theme. */
-export async function prepareThemeShot() {
-  if (taking || reveal || cover) return;
-  taking = true;
-  try {
-    const t0 = Date.now();
-    const uri = await captureScreen({ format: "jpg", quality: 0.85, result: "tmpfile", width: Math.round(Dimensions.get("window").width * 2) });
-    console.log(`[THEMEDBG] shot taken in ${pref} after ${Date.now() - t0}ms`);
-    if (!reveal && !cover) {
-      shot = { ...shot, uri };
-      emitShot();
+export function prepareThemeShot(): Promise<void> {
+  if (taking) return taking;
+  if (reveal || cover) return Promise.resolve();
+  taking = (async () => {
+    try {
+      const uri = await captureScreen({ format: "jpg", quality: 0.85, result: "tmpfile", width: Math.round(Dimensions.get("window").width * 2) });
+      if (!reveal && !cover) {
+        shot = { ...shot, uri };
+        emitShot();
+      }
+    } catch {
+      /* No photograph: the circle of colour does the change instead. */
+    } finally {
+      taking = null;
     }
-  } catch (e) {
-    console.log(`[THEMEDBG] shot failed in ${pref}: ${String(e)}`);
-    /* No photograph: the circle of colour does the change instead. */
-  } finally {
-    taking = false;
-  }
+  })();
+  return taking;
 }
 
+/** Resolves once a photograph is ready, or after `ms` without one. */
+const whenReady = (ms: number) =>
+  new Promise<void>((resolve) => {
+    if (shot.ready) return resolve();
+    readyWaiters.push(resolve);
+    setTimeout(resolve, ms);
+  });
+
+let changing = false;
+
 /** Changes the theme from a screen, coming back to `route` once it is drawn again. */
-export function switchTheme(next: ThemeMode, route: string, from?: { x: number; y: number }) {
-  if (next === pref || cover || reveal) return;
+export async function switchTheme(next: ThemeMode, route: string, from?: { x: number; y: number }, tries = 0): Promise<void> {
+  if (next === pref) return;
+  /* Tapped while a change is still running: it waits for that one to finish and then
+     runs, with its own effect, instead of being lost. */
+  if (cover || reveal || changing) {
+    if (tries > 30) return;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    return switchTheme(next, route, from, tries + 1);
+  }
+  changing = true;
   const { width, height } = Dimensions.get("window");
   const at = { x: from?.x ?? width / 2, y: from?.y ?? height * 0.4 };
-  console.log(`[THEMEDBG] switch ${pref}->${next} ready=${!!shot.ready} uri=${!!shot.uri} taking=${taking}`);
+  /* Tapped before the photograph was ready (changing back and forth quickly): take it
+     now and wait for it — a tenth of a second — rather than change without the effect. */
+  if (!shot.ready) {
+    await prepareThemeShot();
+    await whenReady(450);
+  }
+  changing = false;
   if (shot.ready) {
     /* The photograph goes over the screen and the theme changes under it, in one go. */
     reveal = at;
