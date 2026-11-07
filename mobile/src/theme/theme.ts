@@ -96,13 +96,29 @@ export const clearThemeSnapshot = () => setSnapshot(null);
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
 /** Changes the theme from a screen, coming back to `route` once it is drawn again. */
+/* Resolved once the picture of the screen is actually painted over it. */
+let snapshotPainted: (() => void) | null = null;
+export const markSnapshotPainted = () => {
+  snapshotPainted?.();
+  snapshotPainted = null;
+};
+
 export async function switchTheme(next: ThemeMode, route: string) {
   if (next === pref) return;
   try {
     const { captureScreen } = await import("react-native-view-shot");
-    setSnapshot(await captureScreen({ format: "jpg", quality: 0.92, result: "tmpfile" }));
-    /* Let the picture be on screen before anything under it changes. */
-    await nextFrame();
+    const { Dimensions } = await import("react-native");
+    /* Taken at the screen's size in points, not its pixels: a third of the work, and
+       the picture is gone in under a second anyway. */
+    const uri = await captureScreen({ format: "jpg", quality: 0.85, result: "tmpfile", width: Dimensions.get("window").width * 2 });
+    /* Nothing under it changes until the picture is really on screen: swapping before it
+       has loaded is the blink between the two themes. */
+    const painted = new Promise<void>((resolve) => {
+      snapshotPainted = resolve;
+      setTimeout(resolve, 700);
+    });
+    setSnapshot(uri);
+    await painted;
     await nextFrame();
   } catch {
     setSnapshot(null);

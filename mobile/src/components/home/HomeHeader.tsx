@@ -1,4 +1,8 @@
-import { Image, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import { Image } from "expo-image";
+
+/* The last picture shown, kept while the profile loads again (as it does after the theme changes), so the circle is never empty. */
+let lastAvatar: string | null = null;
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, withTiming, type EntryExitAnimationFunction } from "react-native-reanimated";
 import { Bell, User } from "~/components/icons";
@@ -30,6 +34,7 @@ export default function HomeHeader({
   /** Opens the notifications. */
   onBell?: () => void;
 }) {
+  if (avatarUrl) lastAvatar = avatarUrl;
   const th = useGroundTh();
   const insets = useSafeAreaInsets();
   const firstName = name?.trim().split(" ")[0] ?? "";
@@ -94,8 +99,8 @@ export default function HomeHeader({
           opacity: pressed ? 0.7 : 1,
         })}
       >
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={{ width: "100%", height: "100%" }} />
+        {(avatarUrl ?? lastAvatar) ? (
+          <Image source={{ uri: (avatarUrl ?? lastAvatar) as string }} cachePolicy="memory-disk" transition={0} style={{ width: "100%", height: "100%" }} />
         ) : initial ? (
           <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff") }}>{initial}</Text>
         ) : (

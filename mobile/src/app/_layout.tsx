@@ -7,6 +7,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { installShims, hydrateShims } from "~/lib/shims";
 import { loadChatFonts } from "~/lib/chatFont";
+import { warmWilloBot } from "~/components/willo/WilloBot";
 import { AuthProvider, useAuth } from "~/lib/auth";
 import { useApplyOnboarding } from "~/lib/onboarding";
 import { MonthProvider } from "@/contexts/MonthContext";
@@ -15,7 +16,7 @@ import LaunchIntro from "~/components/LaunchIntro";
 import { markIntroDone } from "~/lib/launchIntro";
 import NotificationBridge from "~/lib/NotificationBridge";
 import { GREEN, GROUND } from "~/theme/tokens";
-import { LIGHT_GROUND, clearThemeSnapshot, setActiveTheme, takeReturnRoute, th, useThemePref, useThemeSnapshot } from "~/theme/theme";
+import { LIGHT_GROUND, clearThemeSnapshot, markSnapshotPainted, setActiveTheme, takeReturnRoute, th, useThemePref, useThemeSnapshot } from "~/theme/theme";
 
 /* Before any shared module is imported for real, the handful of browser things it
    expects have to exist. */
@@ -63,6 +64,8 @@ function Shell() {
 
   useEffect(() => {
     void loadChatFonts();
+    /* Willo's pictures, both themes, ready before he is first drawn. */
+    void warmWilloBot();
     hydrateShims().finally(() => setReady(true));
   }, []);
 
@@ -218,6 +221,7 @@ function Door() {
       <Animated.Image
         pointerEvents="none"
         source={{ uri: snapshot }}
+        onLoad={() => requestAnimationFrame(markSnapshotPainted)}
         resizeMode="cover"
         style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }, shotStyle]}
       />

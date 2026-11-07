@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Image, PanResponder, View } from "react-native";
 import Animated, {
   ReduceMotion,
@@ -47,6 +47,28 @@ const LIGHT_LAYERS = {
   HEAD: require("../../../assets/images/bot/head_light.png"),
 };
 const DARK_LAYERS = { BODY, ARM_LEFT, ARM_RIGHT, LEG_LEFT, LEG_RIGHT, HEAD };
+
+/*
+ * He is six pictures. Drawn as they arrive, he shows up in pieces — a face with no head,
+ * arms with no body — most of all right after the theme changes, when every screen is
+ * drawn again. So he is shown only once every piece he needs has loaded, and all of them,
+ * in both themes, are loaded once when the app opens (warmWilloBot), so that after that
+ * he is whole from the first frame.
+ */
+const loaded = new Set<number>();
+const ALL_LAYERS = [...Object.values(DARK_LAYERS), ...Object.values(LIGHT_LAYERS)] as number[];
+export async function warmWilloBot() {
+  await Promise.all(
+    ALL_LAYERS.map(async (src) => {
+      try {
+        const uri = Image.resolveAssetSource(src)?.uri;
+        if (uri && (await Image.prefetch(uri))) loaded.add(src);
+      } catch {
+        /* Not warmed: he waits for it on screen instead. */
+      }
+    }),
+  );
+}
 
 /* Where things are on the square, as shares of its side. */
 const EYES = [
@@ -122,6 +144,24 @@ export default function WilloBot({
   const reduce = useReducedMotion();
   const layers = isLight() ? LIGHT_LAYERS : DARK_LAYERS;
   const whole = size >= FULL_BODY_FROM;
+  /* The pieces this size needs; shown only once all of them are in. */
+  const needed: number[] = whole ? [layers.BODY, layers.ARM_LEFT, layers.ARM_RIGHT, layers.LEG_LEFT, layers.LEG_RIGHT, layers.HEAD] : [layers.HEAD];
+  const [ready, setWhole] = useState(() => needed.every((n) => loaded.has(n)));
+  const shown = useSharedValue(ready ? 1 : 0);
+  const onPiece = (src: number) => () => {
+    loaded.add(src);
+    if (!ready && needed.every((n) => loaded.has(n))) setWhole(true);
+  };
+  useEffect(() => {
+    if (ready) {
+      shown.set(withTiming(1, { duration: 220 }));
+      return;
+    }
+    /* Never stay hidden: if a piece is slow to say it loaded, he shows anyway. */
+    const id = setTimeout(() => setWhole(true), 1800);
+    return () => clearTimeout(id);
+  }, [ready, shown]);
+  const appear = useAnimatedStyle(() => ({ opacity: shown.get() }));
   const side = whole ? size : size / HEAD_ONLY.span;
   const left = whole ? 0 : size / 2 - HEAD_ONLY.x * side;
   const top = whole ? 0 : size / 2 - HEAD_ONLY.y * side;
@@ -434,7 +474,7 @@ export default function WilloBot({
   return (
     <Animated.View {...(onPress ? responder.panHandlers : {})} style={[{ width: size, height: size }, figure]} accessibilityRole={onPress ? "button" : undefined}>
       <View pointerEvents="none" style={{ width: size, height: size }}>
-        <View style={{ position: "absolute", left, top, width: side, height: side }}>
+        <Animated.View style={[{ position: "absolute", left, top, width: side, height: side }, appear]}>
           {/* The light he stands in, cold and faint. */}
           <Animated.View style={[layer, aura]}>
             <Svg width={side} height={side}>
@@ -454,14 +494,14 @@ export default function WilloBot({
             </Svg>
           </Animated.View>
 
-          {whole && <Animated.Image source={layers.LEG_LEFT} style={[layer, pivot(HIP_LEFT), legLeft]} fadeDuration={0} />}
-          {whole && <Animated.Image source={layers.LEG_RIGHT} style={[layer, pivot(HIP_RIGHT), legRight]} fadeDuration={0} />}
-          {whole && <Animated.Image source={layers.ARM_LEFT} style={[layer, pivot(SHOULDER_LEFT), armLeft]} fadeDuration={0} />}
-          {whole && <Animated.Image source={layers.ARM_RIGHT} style={[layer, pivot(SHOULDER_RIGHT), armRight]} fadeDuration={0} />}
-          {whole && <Image source={layers.BODY} style={layer} fadeDuration={0} />}
+          {whole && <Animated.Image source={layers.LEG_LEFT} onLoad={onPiece(layers.LEG_LEFT)} style={[layer, pivot(HIP_LEFT), legLeft]} fadeDuration={0} />}
+          {whole && <Animated.Image source={layers.LEG_RIGHT} onLoad={onPiece(layers.LEG_RIGHT)} style={[layer, pivot(HIP_RIGHT), legRight]} fadeDuration={0} />}
+          {whole && <Animated.Image source={layers.ARM_LEFT} onLoad={onPiece(layers.ARM_LEFT)} style={[layer, pivot(SHOULDER_LEFT), armLeft]} fadeDuration={0} />}
+          {whole && <Animated.Image source={layers.ARM_RIGHT} onLoad={onPiece(layers.ARM_RIGHT)} style={[layer, pivot(SHOULDER_RIGHT), armRight]} fadeDuration={0} />}
+          {whole && <Image source={layers.BODY} onLoad={onPiece(layers.BODY)} style={layer} fadeDuration={0} />}
 
           <Animated.View style={[layer, pivot(NECK), headMove]}>
-            <Image source={layers.HEAD} style={layer} fadeDuration={0} />
+            <Image source={layers.HEAD} onLoad={onPiece(layers.HEAD)} style={layer} fadeDuration={0} />
             {EYES.map((e) => (
               <Animated.View key={e.x} style={[{ position: "absolute", left: e.x * side - w / 2, top: e.y * side - h / 2, width: w, height: h, alignItems: "center", justifyContent: "center" }, eyes]}>
                 <Animated.View style={[{ width: w, height: h, alignItems: "center", justifyContent: "center" }, pill]}>
@@ -496,7 +536,7 @@ export default function WilloBot({
             </Animated.View>
           </Animated.View>
 
-        </View>
+        </Animated.View>
       </View>
     </Animated.View>
   );
