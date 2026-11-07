@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, View, useWindowDimensions } from "react-native";
-import { Stack, useNavigationContainerRef, useRouter } from "expo-router";
+import { Stack } from "expo-router";
 import Animated, { Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
 import Svg, { ClipPath, Defs, Image as SvgImage, Path } from "react-native-svg";
@@ -98,13 +98,6 @@ function Splash() {
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-/** The route on top of the stack: what the person is looking at. */
-type NavState = { index?: number; routes: { name: string; state?: NavState }[] } | undefined;
-function topRoute(state: NavState): string | null {
-  if (!state?.routes?.length) return null;
-  const r = state.routes[state.index ?? state.routes.length - 1];
-  return r.name === "__root" && r.state ? topRoute(r.state) : r.name;
-}
 
 function Door() {
   const { session, loading } = useAuth();
@@ -120,11 +113,8 @@ function Door() {
      the finger until it covers the screen (on the UI thread, so nothing delays it); the
      screens are drawn again under it; then it clears off them. The person is put back
      on the profile, where the choice was made. */
-  const router = useRouter();
-  const nav = useNavigationContainerRef();
   const coverTo = useThemeCover();
   const first = useRef(true);
-  const [quiet, setQuiet] = useState(false);
   const { width: W, height: H } = useWindowDimensions();
   const grow = useSharedValue(0);
   const clear = useSharedValue(1);
@@ -165,22 +155,10 @@ function Door() {
         setTimeout(liftThemeCover, 280);
       });
     }
-    const back = takeReturnRoute();
-    if (back) {
-      setQuiet(true);
-      /* The new navigator usually comes back already on the profile; only when it did
-         not is the profile opened again — never a second copy over the first, which
-         made Back land on the profile once more. */
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          if (topRoute(nav.getRootState?.()) !== back.replace(/^\//, "")) router.push(back as never);
-        }),
-      );
-      const id = setTimeout(() => setQuiet(false), 700);
-      return () => clearTimeout(id);
-    }
+    /* The screens stay where they are now (drawn again in place), so nothing is reopened. */
+    takeReturnRoute();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, router]);
+  }, [mode]);
   const circleStyle = useAnimatedStyle(() => ({ opacity: clear.get(), transform: [{ scale: Math.max(0.001, grow.get()) }] }));
   /* The whole screen, less a circle: drawn with the even-odd rule, the circle is a hole. */
   const holeProps = useAnimatedProps(() => {
@@ -221,7 +199,7 @@ function Door() {
         <Stack.Screen name="fluxo-de-caixa" />
         <Stack.Screen name="analytics/categorias" />
         <Stack.Screen name="analytics/categoria/[nome]" />
-        <Stack.Screen name="perfil" options={{ animation: quiet ? "none" : "default" }} />
+        <Stack.Screen name="perfil" />
         <Stack.Screen name="fundo-foto" options={{ animation: "slide_from_bottom" }} />
         <Stack.Screen name="notificacoes" />
         <Stack.Screen name="notificacoes-ajustes" />
