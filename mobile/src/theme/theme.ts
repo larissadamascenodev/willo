@@ -1,4 +1,5 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useReducer, useRef, useSyncExternalStore } from "react";
+import { useIsFocused } from "expo-router";
 import { Dimensions } from "react-native";
 import { captureScreen } from "react-native-view-shot";
 import { onHydrated } from "~/lib/shims";
@@ -238,7 +239,37 @@ export function takeReturnRoute() {
  * takes a moment rather than the time to load every screen afresh.
  */
 export function useThemeRedraw() {
-  useSyncExternalStore(subscribe, () => pref, () => pref);
+  /* Only the screen in view is drawn again at the moment of the change; the ones hidden
+     behind it wait until the change has played out (or until they come back into view),
+     so the change itself has only one screen to draw and never stalls. */
+  const focused = useIsFocused();
+  const [, redraw] = useReducer((n: number) => n + 1, 0);
+  const drawnIn = useRef(pref);
+  const inView = useRef(focused);
+  inView.current = focused;
+  useEffect(
+    () =>
+      subscribe(() => {
+        if (drawnIn.current === pref) return;
+        if (inView.current) {
+          drawnIn.current = pref;
+          redraw();
+          return;
+        }
+        setTimeout(() => {
+          if (drawnIn.current === pref) return;
+          drawnIn.current = pref;
+          redraw();
+        }, 1400);
+      }),
+    [],
+  );
+  useEffect(() => {
+    if (focused && drawnIn.current !== pref) {
+      drawnIn.current = pref;
+      redraw();
+    }
+  }, [focused]);
 }
 
 export function useThemePref() {
