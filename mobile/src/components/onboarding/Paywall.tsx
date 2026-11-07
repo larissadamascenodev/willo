@@ -7,7 +7,7 @@ import LegalSheet from "~/components/auth/LegalSheet";
 import { AskDemo, DURATIONS, NotifyDemo, ReceiptDemo, VoiceDemo } from "~/components/welcome/Demos";
 import { Check, X } from "~/components/icons";
 import { Aura, C, Cta, tap } from "./kit";
-import { PhoneFront } from "./Device";
+import QuickTap, { QUICK_MS } from "./QuickTap";
 import { PLANS, TRIAL_DAYS, brl, startTrial, type PlanId } from "~/lib/plans";
 import type { GoalId } from "~/lib/onboardingProfile";
 
@@ -25,15 +25,15 @@ const LOGO = require("../../../assets/images/willo-logo-white.png") as number;
  * "Alterar plano" that opens the year and the month and closes again on a choice.
  */
 
-const SLIDES: { key: keyof typeof DURATIONS; label: string; Demo: ComponentType<{ active: boolean }> }[] = [
-  { key: "notify", label: "Willo Copilot", Demo: NotifyDemo },
-  { key: "voice", label: "Fale, ele anota", Demo: VoiceDemo },
-  { key: "receipt", label: "Foto do comprovante", Demo: ReceiptDemo },
-  { key: "ask", label: "Pergunte qualquer coisa", Demo: AskDemo },
+const SLIDES: { label: string; ms: number; Demo: ComponentType<{ active: boolean }> }[] = [
+  { label: "Willo Copilot", ms: DURATIONS.notify, Demo: NotifyDemo },
+  { label: "Dois toques atrás do celular", ms: QUICK_MS, Demo: QuickTap },
+  { label: "Fale, ele anota", ms: DURATIONS.voice, Demo: VoiceDemo },
+  { label: "Foto do comprovante", ms: DURATIONS.receipt, Demo: ReceiptDemo },
+  { label: "Pergunte qualquer coisa", ms: DURATIONS.ask, Demo: AskDemo },
 ];
 
-const PHONE_W = 178;
-/* The demonstrations are laid out at this size, and shrunk onto the phone's screen. */
+/* The demonstrations are laid out at this size, and shrunk to the room there is. */
 const DEMO_W = 340;
 const DEMO_H = 440;
 
@@ -49,15 +49,13 @@ export default function Paywall({ name, goal, onClose, onStart }: { name: string
 
   /* One feature after another, each for as long as its demonstration runs. */
   useEffect(() => {
-    const t = setTimeout(() => setSlide((v) => (v + 1) % SLIDES.length), DURATIONS[SLIDES[slide].key] + 500);
+    const t = setTimeout(() => setSlide((v) => (v + 1) % SLIDES.length), SLIDES[slide].ms + 600);
     return () => clearTimeout(t);
   }, [slide]);
 
   const now = SLIDES[slide];
-  const left = SLIDES[(slide + SLIDES.length - 1) % SLIDES.length];
-  const right = SLIDES[(slide + 1) % SLIDES.length];
-  const screenW = PHONE_W * 0.91;
-  const scale = screenW / DEMO_W;
+  const [room, setRoom] = useState({ w: 0, h: 0 });
+  const scale = room.h > 0 ? Math.min(1, (room.h - 34) / DEMO_H, (room.w - 32) / DEMO_W) : 1;
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -84,27 +82,25 @@ export default function Paywall({ name, goal, onClose, onStart }: { name: string
         </Animated.View>
       </View>
 
-      {/* The phones, showing what it does. */}
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-        <View style={{ position: "absolute", left: -PHONE_W * 0.38, opacity: 0.35, transform: [{ scale: 0.82 }] }}>
-          <PhoneFront width={PHONE_W}>
-            <Still label={left.label} />
-          </PhoneFront>
-        </View>
-        <View style={{ position: "absolute", right: -PHONE_W * 0.38, opacity: 0.35, transform: [{ scale: 0.82 }] }}>
-          <PhoneFront width={PHONE_W}>
-            <Still label={right.label} />
-          </PhoneFront>
-        </View>
-        <PhoneFront width={PHONE_W}>
-          <Animated.View key={now.key} entering={FadeIn.duration(500)} exiting={FadeOut.duration(250)} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ position: "absolute", top: 40, fontSize: 9.5, fontWeight: "800", letterSpacing: 1.2, color: "rgba(255,255,255,0.6)" }}>{now.label.toUpperCase()}</Text>
-            <View style={{ width: DEMO_W, height: DEMO_H, alignItems: "center", justifyContent: "center", transform: [{ scale }], marginTop: 22 }}>
-              <now.Demo active />
+      {/* What it does, playing on the ground itself, one feature after another. */}
+      <View onLayout={(e) => setRoom({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })} style={{ flex: 1, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+        {room.h > 0 && (
+          <Animated.View key={slide} entering={FadeIn.duration(500)} exiting={FadeOut.duration(250)} style={{ alignItems: "center" }}>
+            <View style={{ width: DEMO_W, height: DEMO_H * scale, alignItems: "center", justifyContent: "center" }}>
+              <View style={{ width: DEMO_W, height: DEMO_H, alignItems: "center", justifyContent: "center", transform: [{ scale }] }}>
+                <now.Demo active />
+              </View>
             </View>
           </Animated.View>
-        </PhoneFront>
-        <LinearGradient pointerEvents="none" colors={["rgba(13,14,16,0)", C.bg]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 70 }} />
+        )}
+        <View style={{ position: "absolute", bottom: 6, flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 1.4, color: "rgba(255,255,255,0.6)" }}>{now.label.toUpperCase()}</Text>
+          <View style={{ flexDirection: "row", gap: 4 }}>
+            {SLIDES.map((_, n) => (
+              <View key={n} style={{ width: n === slide ? 16 : 5, height: 4, borderRadius: 2, backgroundColor: n === slide ? "#fff" : "rgba(255,255,255,0.25)" }} />
+            ))}
+          </View>
+        </View>
       </View>
 
       {/* The plan, short, at the foot. */}
@@ -154,16 +150,18 @@ export default function Paywall({ name, goal, onClose, onStart }: { name: string
           </Animated.View>
         )}
 
-        <Cta
-          label={busy ? "Um instante…" : `Começar ${TRIAL_DAYS} dias grátis`}
-          disabled={busy}
-          onPress={async () => {
-            setBusy(true);
-            const r = await startTrial(plan);
-            setBusy(false);
-            if (r.ok) onStart(plan);
-          }}
-        />
+        {!picking && (
+          <Cta
+            label={busy ? "Um instante…" : `Começar ${TRIAL_DAYS} dias grátis`}
+            disabled={busy}
+            onPress={async () => {
+              setBusy(true);
+              const r = await startTrial(plan);
+              setBusy(false);
+              if (r.ok) onStart(plan);
+            }}
+          />
+        )}
 
         {!picking && (
           <Pressable
@@ -196,18 +194,6 @@ export default function Paywall({ name, goal, onClose, onStart }: { name: string
         </View>
       </View>
       <LegalSheet which={legal} onClose={() => setLegal(null)} />
-    </View>
-  );
-}
-
-/** A side phone's screen: the feature's name over the app's dark ground. */
-function Still({ label }: { label: string }) {
-  return (
-    <View style={{ flex: 1, paddingTop: 54, paddingHorizontal: 14, gap: 10 }}>
-      <Text style={{ fontSize: 10, fontWeight: "800", letterSpacing: 1.2, color: "rgba(255,255,255,0.6)" }}>{label.toUpperCase()}</Text>
-      {[0.9, 0.7, 0.8].map((w, n) => (
-        <View key={n} style={{ height: 46, width: `${w * 100}%`, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.07)" }} />
-      ))}
     </View>
   );
 }

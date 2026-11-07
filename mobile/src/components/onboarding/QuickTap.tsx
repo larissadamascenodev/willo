@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Text, View } from "react-native";
+import { Image, Text, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import Animated, { Easing, FadeInDown, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { Camera, Car, Check, Mic } from "~/components/icons";
 import { C, IconTile } from "./kit";
-import { PhoneBack } from "./Device";
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const IPHONE = require("../../../assets/images/onboarding/iphone-back.png") as number;
 
 /**
  * Two taps on the back of the phone, and the quick entry rises.
@@ -18,11 +21,14 @@ import { PhoneBack } from "./Device";
 
 const BOX_W = 340;
 const BOX_H = 440;
-const PHONE_W = 196;
-const LOOP = 8200;
+const PHONE_W = 210;
+const PHONE_H = PHONE_W * (492 / 288);
+/** How long one round of the demonstration lasts. */
+export const QUICK_MS = 8200;
+const LOOP = QUICK_MS;
 const TYPED = "uber 18,40";
 
-export default function QuickTap() {
+export default function QuickTap({ active = true }: { active?: boolean }) {
   const knock = useSharedValue(0);
   const press = useSharedValue(0);
   const phone = useSharedValue(1);
@@ -57,10 +63,13 @@ export default function QuickTap() {
       at(6900, () => sheet.set(withTiming(0, { duration: 480, easing: Easing.in(Easing.cubic) })));
       at(LOOP, play);
     };
-    play();
+    if (active) play();
     const list = timers.current;
-    return () => list.forEach(clearTimeout);
-  }, [knock, press, phone, sheet]);
+    return () => {
+      list.forEach(clearTimeout);
+      timers.current = [];
+    };
+  }, [active, knock, press, phone, sheet]);
 
   const phoneStyle = useAnimatedStyle(() => ({ opacity: phone.get(), transform: [{ scale: 0.86 + phone.get() * 0.14 }, { translateY: (1 - phone.get()) * -20 }] }));
   const finger = useAnimatedStyle(() => ({ opacity: phone.get() * (0.55 + press.get() * 0.45), transform: [{ scale: 1 - press.get() * 0.18 }] }));
@@ -70,16 +79,16 @@ export default function QuickTap() {
   const rise = useAnimatedStyle(() => ({ opacity: Math.min(1, sheet.get() * 1.6), transform: [{ translateY: (1 - sheet.get()) * 260 }] }));
 
   const tapX = PHONE_W / 2;
-  const tapY = PHONE_W * 2.06 * 0.56;
+  const tapY = PHONE_H * 0.64;
 
   return (
     <View style={{ width: BOX_W, height: BOX_H, alignItems: "center", justifyContent: "center" }}>
-      <Animated.View style={[{ width: PHONE_W, height: PHONE_W * 2.06 }, phoneStyle]}>
-        <PhoneBack width={PHONE_W}>
+      <Animated.View style={[{ width: PHONE_W, height: PHONE_H }, phoneStyle]}>
+        <Image source={IPHONE} resizeMode="contain" style={{ position: "absolute", width: PHONE_W, height: PHONE_H }} />
+        <LinearGradient pointerEvents="none" colors={["rgba(13,14,16,0)", "#0D0E10"]} style={{ position: "absolute", left: -10, right: -10, bottom: -2, height: 90 }} />
           <Animated.View pointerEvents="none" style={[{ position: "absolute", left: tapX - 40, top: tapY - 40, width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: "rgba(255,255,255,0.9)" }, ring]} />
           <Animated.View pointerEvents="none" style={[{ position: "absolute", left: tapX - 40, top: tapY - 40, width: 80, height: 80, borderRadius: 40, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.6)" }, ring2]} />
           <Animated.View pointerEvents="none" style={[{ position: "absolute", left: tapX - 17, top: tapY - 17, width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(255,255,255,0.85)", borderWidth: 2, borderColor: "#fff" }, finger]} />
-        </PhoneBack>
       </Animated.View>
       <Animated.View pointerEvents="none" style={[{ position: "absolute", right: 8, top: BOX_H * 0.5, height: 30, paddingHorizontal: 13, borderRadius: 15, justifyContent: "center", backgroundColor: "#fff" }, toc]}>
         <Text style={{ fontSize: 13, fontWeight: "800", color: "#0B0B0B" }}>toc toc</Text>

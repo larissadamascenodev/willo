@@ -48,6 +48,37 @@ export async function readOnboardingAnswers<T = Record<string, unknown>>(): Prom
   }
 }
 
+const DONE_KEY = "willo:onboarding-done";
+
+/**
+ * Whether this phone has been through the onboarding. Once it has, the app opens on the
+ * profile it made (and the plans) instead of asking again; only a fresh install — which
+ * empties the phone's storage — starts the questions over. Signing in clears it.
+ */
+export async function markOnboarded() {
+  try {
+    await AsyncStorage.setItem(DONE_KEY, "1");
+  } catch {
+    /* At worst the questions come again. */
+  }
+}
+
+export async function isOnboarded(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(DONE_KEY)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export async function clearOnboarded() {
+  try {
+    await AsyncStorage.removeItem(DONE_KEY);
+  } catch {
+    /* Nothing to undo. */
+  }
+}
+
 export async function savePendingOnboarding(p: PendingOnboarding) {
   try {
     await AsyncStorage.setItem(KEY, JSON.stringify({ ...p, email: p.email.trim().toLowerCase() }));
@@ -80,6 +111,8 @@ export function useApplyOnboarding() {
     let alive = true;
 
     void (async () => {
+      /* Signed in: the onboarding is behind them on this phone. */
+      void clearOnboarded();
       const pending = await readPending();
       if (!pending || pending.email !== user.email!.toLowerCase()) return;
       try {

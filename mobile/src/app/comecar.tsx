@@ -1,4 +1,4 @@
-import { useRef, useState, type ComponentRef } from "react";
+import { useEffect, useRef, useState, type ComponentRef } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -13,7 +13,8 @@ import Provider from "~/components/auth/Provider";
 import { AppleMark, GoogleMark } from "~/components/auth/BrandIcons";
 import { AlertTriangle, Check, ChevronLeft, Info, Mail } from "~/components/icons";
 import Funnel from "~/components/onboarding/Funnel";
-import { savePendingOnboarding, saveOnboardingAnswers } from "~/lib/onboarding";
+import { isOnboarded, markOnboarded, readOnboardingAnswers, savePendingOnboarding, saveOnboardingAnswers } from "~/lib/onboarding";
+import type { OnboardingAnswers } from "~/lib/onboardingProfile";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { useThemeRedraw } from "~/theme/theme";
 
@@ -42,6 +43,14 @@ export default function Comecar() {
   const insets = useSafeAreaInsets();
 
   const [funnel, setFunnel] = useState(true);
+  /* Answers from before, if this phone has been through the onboarding: then it opens on the profile. */
+  const [resume, setResume] = useState<OnboardingAnswers | null | undefined>(undefined);
+  useEffect(() => {
+    void (async () => {
+      const done = await isOnboarded();
+      setResume(done ? await readOnboardingAnswers<OnboardingAnswers>() : null);
+    })();
+  }, []);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState<string | null>(null);
   const [form, setForm] = useState(false);
@@ -124,8 +133,15 @@ export default function Comecar() {
   };
 
   const funnelView = (
-    <View style={funnel ? { flex: 1 } : { display: "none" }}>
+    <View style={funnel ? { flex: 1, backgroundColor: "#0D0E10" } : { display: "none" }}>
+      {resume !== undefined && (
       <Funnel
+        resume={resume}
+        onSaved={(answers) => {
+          void saveOnboardingAnswers(answers);
+          void markOnboarded();
+        }}
+        onLogin={() => router.replace("/login" as never)}
         onExit={() => (router.canGoBack() ? router.back() : router.replace("/bem-vindo" as never))}
         onDone={(answers, plan) => {
           setName(answers.name.trim());
@@ -134,6 +150,7 @@ export default function Comecar() {
           setFunnel(false);
         }}
       />
+      )}
     </View>
   );
 

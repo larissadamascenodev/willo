@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, FadeIn, FadeInDown, FadeInRight, ZoomIn, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
@@ -143,15 +143,41 @@ export const HABITS: { id: string; label: string; Icon: IconC; hex: string; watc
 
 const MONTH_ABBR = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 function marksFor(months: number, now = new Date()) {
-  return [0, 0.25, 0.5, 0.75, 1].map((f) => MONTH_ABBR[new Date(now.getFullYear(), now.getMonth() + Math.round(months * f), 1).getMonth()]);
+  return [0, 0.25, 0.5, 0.75, 1].map((f) => {
+    const d = new Date(now.getFullYear(), now.getMonth() + Math.round(months * f), 1);
+    const m = MONTH_ABBR[d.getMonth()];
+    return months > 12 ? `${m}/${String(d.getFullYear()).slice(2)}` : m;
+  });
 }
 
-export default function Funnel({ onDone, onExit }: { onDone: (a: OnboardingAnswers, plan: PlanId | null) => void; onExit: () => void }) {
+/** "nov/2028" — short enough for a small card. */
+function monthShort(months: number, now = new Date()) {
+  const d = new Date(now.getFullYear(), now.getMonth() + months, 1);
+  return `${MONTH_ABBR[d.getMonth()]}/${d.getFullYear()}`;
+}
+
+export default function Funnel({
+  onDone,
+  onExit,
+  onSaved,
+  onLogin,
+  resume,
+}: {
+  onDone: (a: OnboardingAnswers, plan: PlanId | null) => void;
+  onExit: () => void;
+  /** The profile is made: keep it, so the app opens on it next time. */
+  onSaved: (a: OnboardingAnswers) => void;
+  /** "Já tenho conta", from the profile. */
+  onLogin: () => void;
+  /** Answers from before: open straight on their profile. */
+  resume?: OnboardingAnswers | null;
+}) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const tileW = Math.floor((width - 40 - 20) / 3);
-  const [a, setA] = useState<OnboardingAnswers>(EMPTY_ANSWERS);
+  const [a, setA] = useState<OnboardingAnswers>(resume ?? EMPTY_ANSWERS);
   const [i, setI] = useState(0);
+  const [opened, setOpened] = useState(!resume);
   /* The income only counts as answered once something is typed — zero included. */
   const [incomeTyped, setIncomeTyped] = useState(false);
   const set = (patch: Partial<OnboardingAnswers>) => setA((v) => ({ ...v, ...patch }));
@@ -171,6 +197,22 @@ export default function Funnel({ onDone, onExit }: { onDone: (a: OnboardingAnswe
   const first = a.name.trim().split(" ")[0];
 
   const next = () => setI((v) => Math.min(steps.length - 1, v + 1));
+
+  /* Back with answers from before: straight to their profile. */
+  useEffect(() => {
+    if (resume && !opened) {
+      setI(steps.indexOf("result"));
+      setOpened(true);
+    }
+    // Once, on opening.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  /* The profile is made: keep it. */
+  useEffect(() => {
+    if (step === "result") onSaved(a);
+    // Only when arriving on the profile.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
   const back = () => (i === 0 ? onExit() : setI((v) => v - 1));
 
   /* What each step needs before it lets you on. */
@@ -200,8 +242,9 @@ export default function Funnel({ onDone, onExit }: { onDone: (a: OnboardingAnswe
   })();
 
   if (step === "building") return <Building a={a} onDone={next} />;
-  if (step === "result") return <Result a={a} onNext={next} />;
-  if (step === "paywall") return <Paywall name={first} goal={a.goal} onClose={() => onDone(a, null)} onStart={(plan) => onDone(a, plan)} />;
+  if (!opened) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
+  if (step === "result") return <Result a={a} onNext={next} onLogin={onLogin} />;
+  if (step === "paywall") return <Paywall name={first} goal={a.goal} onClose={() => setI(steps.indexOf("result"))} onStart={(plan) => onDone(a, plan)} />;
 
   const body = (() => {
     switch (step) {
@@ -492,21 +535,43 @@ function DreamDetail({ a, set }: { a: OnboardingAnswers; set: (p: Partial<Onboar
       <MoneyInput value={dream.amount} onChange={(v) => put({ amount: v })} />
       {dream.amount > 0 && (
         <Animated.Text entering={FadeIn.duration(260)} style={{ marginTop: 9, fontSize: 13, color: C.soft }}>
-          São {brl(dream.amount / Math.max(1, dream.months))} por mês até {dream.months === 12 ? "daqui a 1 ano" : dream.months === 24 ? "daqui a 2 anos" : `daqui a ${dream.months} meses`}.
+          São {brl(dream.amount / Math.max(1, dream.months))} por mês até {dream.months % 12 === 0 ? `daqui a ${dream.months / 12} ${dream.months === 12 ? "ano" : "anos"}` : `daqui a ${dream.months} meses`}.
         </Animated.Text>
       )}
       <View style={{ marginTop: 22 }}>
         <Label>Para quando?</Label>
         <Segments
-          value={dream.months}
-          onChange={(m) => put({ months: m })}
+          value={[3, 6, 12, 24].includes(dream.months) ? dream.months : -1}
+          onChange={(m) => put({ months: m === -1 ? 36 : m })}
           options={[
-            { id: 3, label: "3 meses" },
-            { id: 6, label: "6 meses" },
+            { id: 3, label: "3 m" },
+            { id: 6, label: "6 m" },
             { id: 12, label: "1 ano" },
             { id: 24, label: "2 anos" },
+            { id: -1, label: "Outro" },
           ]}
         />
+        {![3, 6, 12, 24].includes(dream.months) && (
+          <Animated.View entering={FadeInDown.duration(300)} style={{ marginTop: 12, gap: 10 }}>
+            <View style={{ height: 56, borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.4)", backgroundColor: C.fill, paddingHorizontal: 18, flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Text style={{ fontSize: 15, color: C.softer }}>Em</Text>
+              <TextInput
+                value={dream.months > 0 ? String(dream.months) : ""}
+                onChangeText={(t) => put({ months: Math.min(240, Number(t.replace(/\D/g, "") || "0")) })}
+                keyboardType="number-pad"
+                autoFocus
+                selectionColor="#fff"
+                style={{ minWidth: 40, fontSize: 22, fontWeight: "800", color: "#fff", padding: 0 }}
+              />
+              <Text style={{ flex: 1, fontSize: 15, color: C.softer }}>meses</Text>
+            </View>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {[36, 48, 60].map((m) => (
+                <Chip key={m} label={`${m / 12} anos`} on={dream.months === m} onPress={() => put({ months: m })} />
+              ))}
+            </View>
+          </Animated.View>
+        )}
       </View>
     </Ask>
   );
@@ -590,7 +655,7 @@ function GoalDemo({ a }: { a: OnboardingAnswers }) {
           <Evolution dir="up" from="R$ 0" to={brl(a.dream.amount)} marks={marksFor(plan.months)} accent={g.hex === "#fff" ? C.green : g.hex} />
           <View style={{ flexDirection: "row", gap: 12 }}>
             <Stat label="POR MÊS" value={brl(plan.monthly)} delay={1500} />
-            <Stat label="PRONTO EM" value={plan.ready} accent={C.green} delay={1650} />
+            <Stat label="PRONTO EM" value={monthShort(plan.months)} delay={1650} />
           </View>
         </View>
       </View>
@@ -619,9 +684,11 @@ function Stat({ label, value, accent = "#fff", delay = 0 }: { label: string; val
   return (
     <View style={{ flex: 1 }}>
       <Pop delay={delay}>
-        <Card style={{ padding: 14, gap: 4 }}>
+        <Card style={{ height: 82, paddingHorizontal: 16, paddingVertical: 14, justifyContent: "space-between" }}>
           <Eyebrow>{label}</Eyebrow>
-          <Text style={{ fontSize: 19, fontWeight: "800", letterSpacing: -0.4, color: accent }}>{value}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{ fontSize: 21, fontWeight: "800", letterSpacing: -0.5, color: accent }}>
+            {value}
+          </Text>
         </Card>
       </Pop>
     </View>
@@ -832,7 +899,7 @@ function Rule() {
   return <View style={{ height: 1, marginVertical: 26, backgroundColor: "rgba(255,255,255,0.08)" }} />;
 }
 
-function Result({ a, onNext }: { a: OnboardingAnswers; onNext: () => void }) {
+function Result({ a, onNext, onLogin }: { a: OnboardingAnswers; onNext: () => void; onLogin: () => void }) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const prof = profileOf(a);
@@ -864,9 +931,11 @@ function Result({ a, onNext }: { a: OnboardingAnswers; onNext: () => void }) {
       <Aura hex="#8FA4C8" top={-180} />
       <ScrollView onScroll={(e) => look(e.nativeEvent.contentOffset.y)} scrollEventThrottle={64} contentContainerStyle={{ paddingTop: insets.top + 24, paddingHorizontal: 24, paddingBottom: 130 }} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.duration(500)} style={{ alignItems: "center", gap: 16 }}>
-          <View style={{ width: 64, height: 64 }}>
-            <WilloBot size={64} />
-          </View>
+          <Pop>
+            <View style={{ width: 62, height: 62, borderRadius: 31, borderWidth: 2, borderColor: C.green, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(103,205,103,0.08)" }}>
+              <Check size={30} color={C.green} strokeWidth={2.8} />
+            </View>
+          </Pop>
           <Text style={{ fontSize: 27, lineHeight: 33, fontWeight: "300", letterSpacing: -0.5, color: "#fff", textAlign: "center" }}>
             {first}, seu perfil{"\n"}
             <Text style={{ fontWeight: "800" }}>financeiro está pronto.</Text>
@@ -885,7 +954,7 @@ function Result({ a, onNext }: { a: OnboardingAnswers; onNext: () => void }) {
                   <Text style={{ fontSize: 13.5, color: "rgba(255,255,255,0.78)" }}>{t.label}</Text>
                   <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#fff" }}>{t.word}</Text>
                 </View>
-                <Fill to={t.value} hex="#fff" delay={500 + n * 140} height={4} />
+                <Fill to={t.value} hex={t.value >= 0.7 ? C.green : t.value >= 0.45 ? "#fff" : C.orange} delay={500 + n * 140} height={4} />
               </View>
             ))}
           </View>
@@ -1004,6 +1073,11 @@ function Result({ a, onNext }: { a: OnboardingAnswers; onNext: () => void }) {
       </ScrollView>
       <LinearGradient colors={["rgba(13,14,16,0)", C.bg]} locations={[0, 0.4]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 30, paddingBottom: insets.bottom + 12 }}>
         <Cta label="Vamos começar!" onPress={onNext} />
+        <Pressable onPress={onLogin} hitSlop={8} style={({ pressed }) => ({ alignSelf: "center", marginTop: 12, opacity: pressed ? 0.5 : 1 })}>
+          <Text style={{ fontSize: 13.5, color: C.soft }}>
+            Já tenho conta · <Text style={{ fontWeight: "700", color: "#fff" }}>Entrar</Text>
+          </Text>
+        </Pressable>
       </LinearGradient>
     </View>
   );

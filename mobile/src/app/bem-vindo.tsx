@@ -5,7 +5,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { cancelAnimation, Easing, FadeIn, useAnimatedStyle, useSharedValue, withSequence, withTiming, type SharedValue } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Room from "~/components/Room";
-import { AskDemo, DURATIONS, ForecastDemo, NotifyDemo, QuickDemo, RadarDemo, ReceiptDemo, VoiceDemo } from "~/components/welcome/Demos";
+import { AskDemo, DURATIONS, ForecastDemo, NotifyDemo, RadarDemo, ReceiptDemo, VoiceDemo } from "~/components/welcome/Demos";
+import QuickTap, { QUICK_MS } from "~/components/onboarding/QuickTap";
+import { isOnboarded } from "~/lib/onboarding";
 import { INK } from "~/theme/tokens";
 import { isIntroDone, onIntroDone } from "~/lib/launchIntro";
 import { useThemeRedraw } from "~/theme/theme";
@@ -42,7 +44,7 @@ interface Slide {
 const SLIDES: Slide[] = [
   { tag: "WILLO COPILOT", title: "Você compra, ele anota.", line: "O Willo lê o aviso de compra do banco\ne registra sozinho. Você só confere.", Demo: NotifyDemo, ms: DURATIONS.notify },
   { tag: "VOZ", title: "Fale. O Willo anota.", line: "Diga do seu jeito: ele entende o valor,\na categoria, a conta e o dia.", Demo: VoiceDemo, ms: DURATIONS.voice },
-  { tag: "REGISTRO RÁPIDO", title: "Dois toques e pronto.", line: "Dois toques atrás do celular e\no registro rápido já abre.", Demo: QuickDemo, ms: DURATIONS.quick },
+  { tag: "REGISTRO RÁPIDO", title: "Dois toques e pronto.", line: "Dois toques atrás do celular e\no registro rápido já abre.", Demo: QuickTap, ms: QUICK_MS },
   { tag: "COMPROVANTE", title: "Fotografe. Ele lê.", line: "Local, valor, pagamento e data saem\nda foto direto para o registro.", Demo: ReceiptDemo, ms: DURATIONS.receipt },
   { tag: "RADAR FINANCEIRO", title: "Seu dinheiro, explicado.", line: "Consumo, hábitos, compromissos, futuro\ne saúde, cada um numa frase.", Demo: RadarDemo, ms: DURATIONS.radar },
   { tag: "PREVISÃO", title: "O mês, antes do fim.", line: "Veja quanto sobra no dia 30 e simule\num gasto antes de fazer.", Demo: ForecastDemo, ms: DURATIONS.forecast },
@@ -62,6 +64,13 @@ export default function BemVindo() {
   /* Drawn again in place when the theme changes. */
   useThemeRedraw();
   const router = useRouter();
+  /* Someone who has already answered the onboarding on this phone goes straight back to
+     the profile it made, not through the slides again. */
+  useEffect(() => {
+    void isOnboarded().then((done) => done && router.replace("/comecar" as never));
+    // Checked once, as the screen opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const pager = useRef<ComponentRef<typeof ScrollView>>(null);
