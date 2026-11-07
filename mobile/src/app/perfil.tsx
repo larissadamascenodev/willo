@@ -1,7 +1,7 @@
-import { useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { useProfile } from "@/hooks/useProfile";
@@ -22,7 +22,7 @@ import { showToast } from "~/lib/toast";
 import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { LIGHT_GROUND, isLight, switchTheme, th, useThemePref, type ThemeMode, useThemeRedraw } from "~/theme/theme";
+import { LIGHT_GROUND, isLight, switchTheme, th, useThemePref, type ThemeMode, useThemeRedraw, prepareThemeShot } from "~/theme/theme";
 import { GROUND } from "~/theme/tokens";
 /**
  * The profile.
@@ -70,6 +70,18 @@ export default function Perfil() {
   const [sky, setSky] = useSkyModel();
   const [lightSky, setLightSky] = useLightSkyModel();
   const [theme] = useThemePref();
+  /* A photograph of the page, ready for the next change of theme: taken once it has
+     settled, again when it has scrolled, and again after each change. */
+  useFocusEffect(
+    useCallback(() => {
+      const a = setTimeout(() => void prepareThemeShot(), 700);
+      const b = setTimeout(() => void prepareThemeShot(), 1800);
+      return () => {
+        clearTimeout(a);
+        clearTimeout(b);
+      };
+    }, [theme]),
+  );
   const light = isLight();
   const photo = useSkyPhoto();
 
@@ -173,7 +185,8 @@ export default function Perfil() {
         contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 48, paddingHorizontal: PAD }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-      >
+        onMomentumScrollEnd={() => void prepareThemeShot()}
+        onScrollEndDrag={() => setTimeout(() => void prepareThemeShot(), 120)}>
         <View style={{ height: 44, flexDirection: "row", alignItems: "center" }}>
           <BackButton />
         </View>

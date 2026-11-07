@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { Dimensions } from "react-native";
+import { captureScreen } from "react-native-view-shot";
 import { onHydrated } from "~/lib/shims";
 
 /**
@@ -105,11 +106,80 @@ export const liftThemeCover = () => setCover(null);
 /** How long the circle takes to cover the screen. */
 export const COVER_GROW_MS = 380;
 
+/*
+ * The better change, when it can be had: a photograph of the screen taken beforehand,
+ * while the person is only looking at it (prepareThemeShot), so it is ready at the touch.
+ * At the touch the photograph is laid over the screen — identical to it — the theme
+ * changes underneath, and a circle opens in the photograph from the finger, showing
+ * the new theme inside it until it has all of it. No flat colour at any moment.
+ */
+interface Shot {
+  /** The last one taken, perhaps still loading. */
+  uri: string | null;
+  /** The last one known to be on screen-ready, used at the touch. */
+  ready: string | null;
+}
+let shot: Shot = { uri: null, ready: null };
+let reveal: { x: number; y: number } | null = null;
+const shotListeners = new Set<() => void>();
+const emitShot = () => shotListeners.forEach((l) => l());
+const subscribeShot = (l: () => void) => {
+  shotListeners.add(l);
+  return () => {
+    shotListeners.delete(l);
+  };
+};
+export function useThemeShot() {
+  return useSyncExternalStore(subscribeShot, () => shot, () => shot);
+}
+export function useThemeReveal() {
+  return useSyncExternalStore(subscribeShot, () => reveal, () => reveal);
+}
+/** The photograph has loaded: it may be used at the next touch. */
+export const markShotReady = (uri: string) => {
+  if (shot.uri !== uri) return;
+  shot = { ...shot, ready: uri };
+  emitShot();
+};
+/** The reveal is over: the photograph, now of the old theme, is thrown away. */
+export const endThemeReveal = () => {
+  reveal = null;
+  shot = { uri: null, ready: null };
+  emitShot();
+};
+
+let taking = false;
+/** Photographs the screen as it is now, for the next change of theme. */
+export async function prepareThemeShot() {
+  if (taking || reveal || cover) return;
+  taking = true;
+  try {
+    const uri = await captureScreen({ format: "jpg", quality: 0.85, result: "tmpfile", width: Math.round(Dimensions.get("window").width * 2) });
+    if (!reveal && !cover) {
+      shot = { ...shot, uri };
+      emitShot();
+    }
+  } catch {
+    /* No photograph: the circle of colour does the change instead. */
+  } finally {
+    taking = false;
+  }
+}
+
 /** Changes the theme from a screen, coming back to `route` once it is drawn again. */
 export function switchTheme(next: ThemeMode, route: string, from?: { x: number; y: number }) {
-  if (next === pref || cover) return;
+  if (next === pref || cover || reveal) return;
   const { width, height } = Dimensions.get("window");
-  setCover({ to: next, x: from?.x ?? width / 2, y: from?.y ?? height * 0.4 });
+  const at = { x: from?.x ?? width / 2, y: from?.y ?? height * 0.4 };
+  if (shot.ready) {
+    /* The photograph goes over the screen and the theme changes under it, in one go. */
+    reveal = at;
+    emitShot();
+    returnRoute = route;
+    setThemePref(next);
+    return;
+  }
+  setCover({ to: next, x: at.x, y: at.y });
   /* The screens are drawn again once the circle has covered them. */
   setTimeout(() => {
     returnRoute = route;
