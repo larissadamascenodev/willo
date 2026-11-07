@@ -1,10 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ActivityIndicator, View, useWindowDimensions } from "react-native";
 import { Stack, useNavigationContainerRef, useRouter } from "expo-router";
-import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
-import RNMaskedView from "@react-native-masked-view/masked-view";
-import Svg, { Path } from "react-native-svg";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { installShims, hydrateShims } from "~/lib/shims";
@@ -18,7 +16,7 @@ import LaunchIntro from "~/components/LaunchIntro";
 import { markIntroDone } from "~/lib/launchIntro";
 import NotificationBridge from "~/lib/NotificationBridge";
 import { GREEN, GROUND } from "~/theme/tokens";
-import { clearThemeSnapshot, markSnapshotPainted, themeOrigin, setActiveTheme, takeReturnRoute, th, useThemePref, useThemeSnapshot } from "~/theme/theme";
+import { COVER_GROW_MS, LIGHT_GROUND, liftThemeCover, setActiveTheme, takeReturnRoute, th, useThemeCover, useThemePref } from "~/theme/theme";
 
 /* Before any shared module is imported for real, the handful of browser things it
    expects have to exist. */
@@ -97,10 +95,6 @@ function Splash() {
   );
 }
 
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-/* Its class type predates the React types in use; it is used as a plain component. */
-const MaskedView = RNMaskedView as unknown as React.ComponentType<{ style?: object; pointerEvents?: "none"; maskElement: React.ReactElement; children?: React.ReactNode }>;
-
 /** The route on top of the stack: what the person is looking at. */
 type NavState = { index?: number; routes: { name: string; state?: NavState }[] } | undefined;
 function topRoute(state: NavState): string | null {
@@ -119,61 +113,36 @@ function Door() {
   const mode = !loading && session ? pref : "dark";
   setActiveTheme(mode);
 
-  /* Changing the theme draws the screens again from scratch. A photograph of the screen
-     as it was lies over the swap and dissolves into the new screens underneath, so one
-     theme turns into the other on the screen itself. The person is put back on the
-     profile, where the choice was made. */
+  /* Changing the theme: the moment a theme is tapped, a circle in its ground grows from
+     the finger until it covers the screen (on the UI thread, so nothing delays it); the
+     screens are drawn again under it; then it clears off them. The person is put back
+     on the profile, where the choice was made. */
   const router = useRouter();
   const nav = useNavigationContainerRef();
-  const snapshot = useThemeSnapshot();
-  const snapshotRef = useRef(snapshot);
-  snapshotRef.current = snapshot;
+  const coverTo = useThemeCover();
   const first = useRef(true);
   const [quiet, setQuiet] = useState(false);
-  const swapped = useRef(false);
-  const shotLoaded = useRef(false);
-  /* The reveal: the photograph of the old screen with a hole in it, the hole growing
-     from where the finger was until the new screen shows through all of it — the new
-     theme spreading out in a circle, as Telegram does it. */
   const { width: W, height: H } = useWindowDimensions();
-  const hole = useSharedValue(0);
-  const cx = useSharedValue(W / 2);
-  const cy = useSharedValue(H / 2);
-  const dissolve = () => {
-    if (!swapped.current) return;
-    swapped.current = false;
-    shotLoaded.current = false;
-    const mine = snapshotRef.current;
-    const o = themeOrigin() ?? { x: W / 2, y: H * 0.4 };
-    cx.set(o.x);
-    cy.set(o.y);
-    /* Far enough to reach the farthest corner. */
-    const reach = Math.hypot(Math.max(o.x, W - o.x), Math.max(o.y, H - o.y)) + 8;
-    requestAnimationFrame(() => {
-      hole.set(withTiming(reach, { duration: 520, easing: Easing.inOut(Easing.cubic) }));
-      setTimeout(() => clearThemeSnapshot(mine), 560);
-    });
-  };
+  const grow = useSharedValue(0);
+  const clear = useSharedValue(1);
   useLayoutEffect(() => {
-    if (snapshot) {
-      hole.set(0);
-      shotLoaded.current = false;
-    }
-  }, [snapshot, hole]);
+    if (!coverTo) return;
+    clear.set(1);
+    grow.set(0);
+    grow.set(withTiming(1, { duration: COVER_GROW_MS, easing: Easing.inOut(Easing.cubic) }));
+  }, [coverTo, grow, clear]);
   useLayoutEffect(() => {
     if (first.current) {
       first.current = false;
       return;
     }
-    /* The photograph dissolves only once both have happened: the new screens are on, and
-       the photograph itself is on screen over them. Whichever comes second starts it, so
-       the dissolve is never run before there is anything to see. */
-    swapped.current = true;
-    if (shotLoaded.current || !snapshot) dissolve();
-    /* Never left covering the app: if the photograph never says it loaded, it goes anyway. */
-    setTimeout(() => {
-      if (swapped.current) dissolve();
-    }, 600);
+    /* The new screens are on under the circle: two frames, then it clears off them. */
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        clear.set(withTiming(0, { duration: 300, easing: Easing.out(Easing.quad) }));
+        setTimeout(liftThemeCover, 320);
+      }),
+    );
     const back = takeReturnRoute();
     if (back) {
       setQuiet(true);
@@ -190,13 +159,11 @@ function Door() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, router]);
-  /* The whole screen, less a circle: drawn with the even-odd rule, the circle is a hole. */
-  const holeProps = useAnimatedProps(() => {
-    const r = hole.get();
-    const x = cx.get();
-    const y = cy.get();
-    return { d: `M0 0H${W}V${H}H0Z M${x - r} ${y} a${r} ${r} 0 1 0 ${2 * r} 0 a${r} ${r} 0 1 0 ${-2 * r} 0Z` };
-  });
+  const circleStyle = useAnimatedStyle(() => ({ opacity: clear.get(), transform: [{ scale: Math.max(0.001, grow.get()) }] }));
+  /* Far enough from the finger to reach the farthest corner. */
+  const cx = coverTo?.x ?? W / 2;
+  const cy = coverTo?.y ?? H / 2;
+  const reach = Math.hypot(Math.max(cx, W - cx), Math.max(cy, H - cy)) + 12;
 
   if (loading) return <Splash />;
   const signedIn = !!session;
@@ -251,30 +218,14 @@ function Door() {
         <Stack.Screen name="login" />
       </Stack.Protected>
     </Stack>
-    {snapshot && (
-      <MaskedView
+    {coverTo && (
+      <Animated.View
         pointerEvents="none"
-        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-        maskElement={
-          <Svg width={W} height={H}>
-            <AnimatedPath animatedProps={holeProps} fill="#000" fillRule="evenodd" />
-          </Svg>
-        }
-      >
-        <Animated.Image
-          source={{ uri: snapshot }}
-          fadeDuration={0}
-          onLoad={() =>
-            requestAnimationFrame(() => {
-              shotLoaded.current = true;
-              markSnapshotPainted();
-              if (swapped.current) dissolve();
-            })
-          }
-          resizeMode="cover"
-          style={{ position: "absolute", top: 0, left: 0, width: W, height: H }}
-        />
-      </MaskedView>
+        style={[
+          { position: "absolute", left: cx - reach, top: cy - reach, width: reach * 2, height: reach * 2, borderRadius: reach, backgroundColor: coverTo.to === "light" ? LIGHT_GROUND : GROUND },
+          circleStyle,
+        ]}
+      />
     )}
     </>
   );

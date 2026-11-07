@@ -1,6 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { Dimensions, Image, PixelRatio } from "react-native";
-import { captureScreen } from "react-native-view-shot";
+import { Dimensions } from "react-native";
 import { onHydrated } from "~/lib/shims";
 
 /**
@@ -73,74 +72,49 @@ const subscribe = (l: () => void) => {
 let returnRoute: string | null = null;
 
 /*
- * The change itself: the screen as it is, photographed, laid over everything; the
- * screens drawn again in the new theme under it; the photograph dissolving into them.
- * The person sees their own screen turn from one theme into the other — no veil, no
- * colour in between.
- *
- * The camera is imported up front. Fetched on demand, in development it pulled a
- * second copy of the app's native layer over the network: seconds of waiting, and a
- * crash. Should the photograph fail, the theme simply changes at once.
+ * The change itself, at the touch: a circle in the new theme's ground is born under the
+ * finger and grows until it covers the screen; the screens are drawn again in the new
+ * theme under it; and it clears off them. Nothing is photographed or waited for, so it
+ * starts the instant the theme is tapped, and it happens every time.
  */
-let snapshot: string | null = null;
-const snapshotListeners = new Set<() => void>();
-const setSnapshot = (uri: string | null) => {
-  snapshot = uri;
-  snapshotListeners.forEach((l) => l());
+export interface ThemeCover {
+  to: ThemeMode;
+  x: number;
+  y: number;
+}
+let cover: ThemeCover | null = null;
+const coverListeners = new Set<() => void>();
+const setCover = (next: ThemeCover | null) => {
+  cover = next;
+  coverListeners.forEach((l) => l());
 };
-export function useThemeSnapshot() {
+export function useThemeCover() {
   return useSyncExternalStore(
     (l) => {
-      snapshotListeners.add(l);
+      coverListeners.add(l);
       return () => {
-        snapshotListeners.delete(l);
+        coverListeners.delete(l);
       };
     },
-    () => snapshot,
-    () => snapshot,
+    () => cover,
+    () => cover,
   );
 }
-/** Takes the photograph away — only this one, never a newer one taken since. */
-export const clearThemeSnapshot = (uri?: string | null) => {
-  if (uri === undefined || snapshot === uri) setSnapshot(null);
-};
+export const liftThemeCover = () => setCover(null);
 
-/* Resolved once the photograph is actually on screen. */
-let painted: (() => void) | null = null;
-export const markSnapshotPainted = () => {
-  painted?.();
-  painted = null;
-};
-
-let switching = false;
+/** How long the circle takes to cover the screen. */
+export const COVER_GROW_MS = 380;
 
 /** Changes the theme from a screen, coming back to `route` once it is drawn again. */
-/* Where the finger was: the new theme spreads from there. */
-let origin: { x: number; y: number } | null = null;
-export const themeOrigin = () => origin;
-
-export async function switchTheme(next: ThemeMode, route: string, from?: { x: number; y: number }) {
-  if (next === pref || switching) return;
-  switching = true;
-  origin = from ?? null;
-  try {
-    /* Small and quick: at the screen's size in points, it is a photograph that is gone in
-       half a second, and a small one is taken and decoded in a few milliseconds. */
-    const uri = await captureScreen({ format: "jpg", quality: 0.8, result: "tmpfile", width: Math.round(Dimensions.get("window").width * Math.min(2, PixelRatio.get())) });
-    /* Decoded before it is shown, so it is on screen the moment it is put there. */
-    await Image.prefetch(uri).catch(() => false);
-    const shown = new Promise<void>((resolve) => {
-      painted = resolve;
-      setTimeout(resolve, 450);
-    });
-    setSnapshot(uri);
-    await shown;
-  } catch {
-    setSnapshot(null);
-  }
-  returnRoute = route;
-  setThemePref(next);
-  switching = false;
+export function switchTheme(next: ThemeMode, route: string, from?: { x: number; y: number }) {
+  if (next === pref || cover) return;
+  const { width, height } = Dimensions.get("window");
+  setCover({ to: next, x: from?.x ?? width / 2, y: from?.y ?? height * 0.4 });
+  /* The screens are drawn again once the circle has covered them. */
+  setTimeout(() => {
+    returnRoute = route;
+    setThemePref(next);
+  }, COVER_GROW_MS);
 }
 
 export function takeReturnRoute() {
