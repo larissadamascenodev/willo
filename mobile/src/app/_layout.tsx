@@ -126,6 +126,8 @@ function Door() {
   const router = useRouter();
   const nav = useNavigationContainerRef();
   const snapshot = useThemeSnapshot();
+  const snapshotRef = useRef(snapshot);
+  snapshotRef.current = snapshot;
   const first = useRef(true);
   const [quiet, setQuiet] = useState(false);
   const swapped = useRef(false);
@@ -138,19 +140,19 @@ function Door() {
   const cx = useSharedValue(W / 2);
   const cy = useSharedValue(H / 2);
   const dissolve = () => {
+    if (!swapped.current) return;
     swapped.current = false;
     shotLoaded.current = false;
+    const mine = snapshotRef.current;
     const o = themeOrigin() ?? { x: W / 2, y: H * 0.4 };
     cx.set(o.x);
     cy.set(o.y);
     /* Far enough to reach the farthest corner. */
     const reach = Math.hypot(Math.max(o.x, W - o.x), Math.max(o.y, H - o.y)) + 8;
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        hole.set(withTiming(reach, { duration: 560, easing: Easing.inOut(Easing.cubic) }));
-        setTimeout(clearThemeSnapshot, 600);
-      }),
-    );
+    requestAnimationFrame(() => {
+      hole.set(withTiming(reach, { duration: 520, easing: Easing.inOut(Easing.cubic) }));
+      setTimeout(() => clearThemeSnapshot(mine), 560);
+    });
   };
   useLayoutEffect(() => {
     if (snapshot) {
@@ -171,7 +173,7 @@ function Door() {
     /* Never left covering the app: if the photograph never says it loaded, it goes anyway. */
     setTimeout(() => {
       if (swapped.current) dissolve();
-    }, 1000);
+    }, 600);
     const back = takeReturnRoute();
     if (back) {
       setQuiet(true);

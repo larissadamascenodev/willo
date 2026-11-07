@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { Dimensions, PixelRatio } from "react-native";
+import { Dimensions, Image, PixelRatio } from "react-native";
 import { captureScreen } from "react-native-view-shot";
 import { onHydrated } from "~/lib/shims";
 
@@ -100,7 +100,10 @@ export function useThemeSnapshot() {
     () => snapshot,
   );
 }
-export const clearThemeSnapshot = () => setSnapshot(null);
+/** Takes the photograph away — only this one, never a newer one taken since. */
+export const clearThemeSnapshot = (uri?: string | null) => {
+  if (uri === undefined || snapshot === uri) setSnapshot(null);
+};
 
 /* Resolved once the photograph is actually on screen. */
 let painted: (() => void) | null = null;
@@ -121,10 +124,14 @@ export async function switchTheme(next: ThemeMode, route: string, from?: { x: nu
   switching = true;
   origin = from ?? null;
   try {
-    const uri = await captureScreen({ format: "jpg", quality: 0.9, result: "tmpfile", width: Dimensions.get("window").width * PixelRatio.get() });
+    /* Small and quick: at the screen's size in points, it is a photograph that is gone in
+       half a second, and a small one is taken and decoded in a few milliseconds. */
+    const uri = await captureScreen({ format: "jpg", quality: 0.8, result: "tmpfile", width: Math.round(Dimensions.get("window").width * Math.min(2, PixelRatio.get())) });
+    /* Decoded before it is shown, so it is on screen the moment it is put there. */
+    await Image.prefetch(uri).catch(() => false);
     const shown = new Promise<void>((resolve) => {
       painted = resolve;
-      setTimeout(resolve, 900);
+      setTimeout(resolve, 450);
     });
     setSnapshot(uri);
     await shown;
