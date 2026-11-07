@@ -62,7 +62,7 @@ function Eyebrow({ children }: { children: string }) {
 
 /** The one figure the picture is about. */
 function Lead({ children, color = "#fff" }: { children: string; color?: string }) {
-  return <Text style={{ marginTop: 6, fontSize: 28, letterSpacing: -0.9, ...face(800), ...NUMS, color }}>{children}</Text>;
+  return <Text style={{ marginTop: 6, fontSize: 28, letterSpacing: -0.9, ...face(800), ...NUMS, color: th(color) }}>{children}</Text>;
 }
 
 function Rule({ share, color, delay = 0 }: { share: number; color: string; delay?: number }) {

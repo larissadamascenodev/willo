@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useNavigationContainerRef, useRouter } from "expo-router";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -92,6 +92,14 @@ function Splash() {
   );
 }
 
+/** The route on top of the stack: what the person is looking at. */
+type NavState = { index?: number; routes: { name: string; state?: NavState }[] } | undefined;
+function topRoute(state: NavState): string | null {
+  if (!state?.routes?.length) return null;
+  const r = state.routes[state.index ?? state.routes.length - 1];
+  return r.name === "__root" && r.state ? topRoute(r.state) : r.name;
+}
+
 function Door() {
   const { session, loading } = useAuth();
   useApplyOnboarding();
@@ -108,6 +116,7 @@ function Door() {
      where the choice was made. Without a picture (it could not be taken), a quick
      veil in the new ground does the covering. */
   const router = useRouter();
+  const nav = useNavigationContainerRef();
   const snapshot = useThemeSnapshot();
   const shot = useSharedValue(snapshot ? 1 : 0);
   const veil = useSharedValue(0);
@@ -123,8 +132,8 @@ function Door() {
     }
     if (snapshot) {
       shot.set(1);
-      shot.set(withDelay(320, withTiming(0, { duration: 520, easing: Easing.inOut(Easing.cubic) })));
-      setTimeout(clearThemeSnapshot, 900);
+      shot.set(withDelay(520, withTiming(0, { duration: 560, easing: Easing.inOut(Easing.cubic) })));
+      setTimeout(clearThemeSnapshot, 1200);
     } else {
       veil.set(1);
       veil.set(withDelay(200, withTiming(0, { duration: 420, easing: Easing.out(Easing.cubic) })));
@@ -132,7 +141,14 @@ function Door() {
     const back = takeReturnRoute();
     if (back) {
       setQuiet(true);
-      requestAnimationFrame(() => router.push(back as never));
+      /* The new navigator usually comes back already on the profile; only when it did
+         not is the profile opened again — never a second copy over the first, which
+         made Back land on the profile once more. */
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          if (topRoute(nav.getRootState?.()) !== back.replace(/^\//, "")) router.push(back as never);
+        }),
+      );
       const id = setTimeout(() => setQuiet(false), 700);
       return () => clearTimeout(id);
     }

@@ -111,7 +111,7 @@ function Rich({ text, shown }: { text: string; shown: number }) {
         const seen = p.t.slice(0, Math.max(0, left));
         const unseen = p.t.slice(seen.length);
         left -= p.t.length;
-        const style = p.bold ? { ...face(800), color: "#fff" } : undefined;
+        const style = p.bold ? { ...face(800), color: th("#fff") } : undefined;
         return (
           <Text key={i} style={style}>
             {seen}

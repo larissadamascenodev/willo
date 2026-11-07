@@ -14,7 +14,7 @@ export function splitReply(reply: string): string[] {
       continue;
     }
     let current = "";
-    for (const sentence of paragraph.match(/[^.!?]+[.!?]*(?:\s+|$)/g) ?? [paragraph]) {
+    for (const sentence of sentencesOf(paragraph)) {
       if (current && (current + sentence).length > MOST) {
         parts.push(current.trim());
         current = "";
@@ -24,6 +24,17 @@ export function splitReply(reply: string): string[] {
     if (current.trim()) parts.push(current.trim());
   }
   return parts.length ? parts : [reply];
+}
+
+/**
+ * A paragraph's sentences, every character kept. A sentence ends at . ! or ? followed
+ * by a space or the end — never at the point inside a number, so "R$ 2.585,10" stays
+ * whole. Should the pieces ever fail to add back up to the paragraph, it stays whole:
+ * a figure must never lose a digit on its way to the screen.
+ */
+export function sentencesOf(paragraph: string): string[] {
+  const found = paragraph.match(/(?:[^.!?]|[.!?](?!\s|$))+[.!?]*(?:\s+|$)/g) ?? [];
+  return found.join("") === paragraph ? found : [paragraph];
 }
 
 /** Where each word ends: the text comes a word at a time, not a letter. */

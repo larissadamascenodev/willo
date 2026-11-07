@@ -59,7 +59,7 @@ export default function Desafios() {
   const { width: screenW } = useWindowDimensions();
   const half = Math.floor((screenW - 32 - 12) / 2);
   /* A little wider than half, so the next card shows at the edge and says the row goes on. */
-  const carouselW = Math.floor((screenW - 32) * 0.46);
+  const carouselW = Math.floor((screenW - 32) * 0.56);
   const { user } = useAuth();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("desafios");
@@ -244,7 +244,7 @@ export default function Desafios() {
                       template={t}
                       cover={data.covers[t.key]}
                       width={half}
-                      saves={savingsOf(t) > 0 ? `Economiza ${money(savingsOf(t))}` : undefined}
+                      saves={savingsOf(t) > 0 ? money(savingsOf(t)) : undefined}
                       onPress={() => setPicked(t)}
                     />
                   ))}
