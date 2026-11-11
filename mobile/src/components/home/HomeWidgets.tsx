@@ -83,7 +83,7 @@ export function renderHomeWidget(
       return <ProximosEventos events={ctx.events} />;
 
     case "cartoes":
-      return <CartoesResumoCard />;
+      return <CartoesResumoCard size={size} />;
 
     case "parcelamentos":
       return <ParcelamentosTile size={size} />;

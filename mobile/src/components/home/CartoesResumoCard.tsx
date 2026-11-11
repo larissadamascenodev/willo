@@ -21,7 +21,7 @@ import { th } from "~/theme/theme";
  * to be paid — rather than the limit or the spend. One bar splits the total by card,
  * in each card's own colour, so the shape of the debt is read before any figure is.
  */
-export default function CartoesResumoCard() {
+export default function CartoesResumoCard({ size = "full" }: { size?: "half" | "full" } = {}) {
   const router = useRouter();
   const { user } = useAuth();
   const { cards, invoices, loading } = useCardsOverview();
@@ -74,6 +74,51 @@ export default function CartoesResumoCard() {
   if (rows.length === 0) return null;
 
   const total = rows.reduce((s, r) => s + r.owed, 0);
+
+  if (size === "half") {
+    /* Compact, the whole card used: the cards' marks at the top, what the open invoices
+       ask for large in the middle, and at the foot the bill split by card with the limit
+       still free. */
+    const free = rows.reduce((s, r) => s + r.available, 0);
+    return (
+      <Surface onPress={() => router.push("/cartoes")} style={{ flex: 1, padding: 14 }}>
+        <View style={{ flex: 1, justifyContent: "space-between" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Text numberOfLines={1} style={[T.cardLabel, { flex: 1, fontSize: 13 }]}>Cartões de crédito</Text>
+            <ChevronRight size={14} color={th(INK.faint)} />
+          </View>
+
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {rows.slice(0, 3).map((r, i) => (
+              <View key={r.card.id} style={{ marginLeft: i === 0 ? 0 : -10, borderRadius: 999, borderWidth: 2, borderColor: th("#1A1B20", "bg"), zIndex: 3 - i }}>
+                <BankMark name={r.card.name} hex={r.hex} size={34} />
+              </View>
+            ))}
+            {rows.length > 3 && <Text style={{ marginLeft: 8, fontSize: 12.5, fontWeight: "600", color: th(INK.soft) }}>+{rows.length - 3}</Text>}
+          </View>
+
+          <View>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.7, color: th("#fff"), fontVariant: ["tabular-nums"] }}>
+              {money(total)}
+            </Text>
+            <Text style={{ marginTop: 1, fontSize: 12.5, color: th(INK.soft) }}>em faturas abertas</Text>
+          </View>
+
+          <View>
+            <View style={{ height: 7, flexDirection: "row", gap: 3, borderRadius: 999, overflow: "hidden", backgroundColor: total > 0 ? "transparent" : th("rgba(255,255,255,0.07)", "bg") }}>
+              {total > 0 &&
+                rows
+                  .filter((r) => r.owed > 0)
+                  .map((r) => <View key={r.card.id} style={{ flex: r.owed / total, minWidth: 6, borderRadius: 999, backgroundColor: th(r.hex, "bg") }} />)}
+            </View>
+            <Text numberOfLines={1} style={{ marginTop: 7, fontSize: 12, color: th(INK.soft) }}>
+              <Text style={{ fontWeight: "700", color: th("#fff") }}>{money(free)}</Text> livres
+            </Text>
+          </View>
+        </View>
+      </Surface>
+    );
+  }
 
   return (
     <Surface
