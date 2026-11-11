@@ -570,20 +570,57 @@ export function MetasCard({
   const overall = objetivo > 0 ? Math.min(guardado / objetivo, 1) : 0;
 
   if (size !== "full") {
+    /* Compact, the whole card is used: the caixinhas' own covers overlapping at the top,
+       what is put away large in the middle, and how far along at the foot. */
+    const covers = [...goals].sort((a, b) => (Number(b.current_amount) || 0) - (Number(a.current_amount) || 0)).slice(0, 3);
     return (
-      <Surface onPress={open} style={{ flex: 1, padding: 16 }}>
-        <Header title="Caixinhas" />
-        <Lead value={money(guardado)} compact />
-        {objetivo > 0 && (
-          <>
-            <View style={{ marginTop: 12 }}>
-              <Track share={overall} color={GREEN} height={5} />
-            </View>
-            <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 12, color: th(INK.soft) }}>
-              {Math.round(overall * 100)}% de {money(objetivo)}
+      <Surface onPress={open} style={{ flex: 1, padding: 14 }}>
+        <View style={{ flex: 1, justifyContent: "space-between" }}>
+          <Header title="Caixinhas" />
+
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {covers.map((g, i) => (
+              <View
+                key={g.id}
+                style={{
+                  marginLeft: i === 0 ? 0 : -12,
+                  borderRadius: 14,
+                  borderWidth: 2,
+                  borderColor: th("#1A1B20", "bg"),
+                  overflow: "hidden",
+                  zIndex: covers.length - i,
+                }}
+              >
+                <CaixinhaCover goal={g} width={38} height={38} radius={12} glyph={19} />
+              </View>
+            ))}
+            {goals.length > covers.length && (
+              <Text style={{ marginLeft: 8, fontSize: 12.5, fontWeight: "600", color: th(INK.soft) }}>+{goals.length - covers.length}</Text>
+            )}
+          </View>
+
+          <View>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { fontSize: 24, fontWeight: "800", letterSpacing: -0.8, color: th("#fff") }]}>
+              {money(guardado)}
             </Text>
-          </>
-        )}
+            <Text style={{ marginTop: 1, fontSize: 12.5, color: th(INK.soft) }}>
+              guardados em {goals.length} {goals.length === 1 ? "caixinha" : "caixinhas"}
+            </Text>
+          </View>
+
+          <View>
+            {objetivo > 0 ? (
+              <>
+                <Track share={overall} color={GREEN} height={6} />
+                <Text numberOfLines={1} style={[nums, { marginTop: 7, fontSize: 12, color: th(INK.soft) }]}>
+                  <Text style={{ fontWeight: "700", color: th("#fff") }}>{Math.round(overall * 100)}%</Text> de {money(objetivo)}
+                </Text>
+              </>
+            ) : (
+              <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.softer) }}>Sem meta definida</Text>
+            )}
+          </View>
+        </View>
       </Surface>
     );
   }
