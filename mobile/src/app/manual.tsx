@@ -45,6 +45,7 @@ export default function Manual() {
         <ManualEntryFlow
           cardId={cartao ?? null}
           preset={preset}
+          onScan={() => leave(() => router.push("/scanner" as never))}
           onClose={() => leave()}
           onSeeTransactions={() => leave(() => router.push("/(tabs)/transacoes" as never))}
           onSeeCard={(cardId) => leave(() => router.push(`/fatura/${cardId}` as never))}

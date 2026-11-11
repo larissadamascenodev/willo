@@ -9,7 +9,7 @@ import BankMark from "~/components/BankMark";
 import CategoryPicker from "~/components/CategoryPicker";
 import EntryForm, { todayIso, type EntryValues } from "~/components/registro/EntryForm";
 import { CategoryButton, Choice, EntryCard, GLASS, StepHeader, Primary, SavedView, dayLabel, nums, type Account, type Card } from "~/components/registro/entryParts";
-import { ChevronLeft, CreditCard, Landmark } from "~/components/icons";
+import { ChevronLeft, CreditCard, Landmark, ScanLine } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { suggestCategory } from "~/lib/categorize";
 import { money } from "~/lib/money";
@@ -48,9 +48,12 @@ export default function ManualEntryFlow({
   onSeeCard,
   onStep,
   preset,
+  onScan,
 }: {
   /** Started inside this card. */
   cardId?: string | null;
+  /** Reads a receipt with the camera instead: the reader fills every field, and only the check is left. */
+  onScan?: () => void;
   /** Started from the wallet's fixed entries: income or expense, repeating every month. */
   preset?: { type: "receita" | "despesa"; fixa: boolean } | null;
   onClose: () => void;
@@ -284,13 +287,43 @@ export default function ManualEntryFlow({
               {income ? "Quanto você recebeu?" : locked ? "Qual o valor da compra?" : "Quanto você gastou?"}
             </Text>
             {locked && picked ? <Text style={{ marginTop: 4, fontSize: 14, color: th(INK.soft) }}>No cartão {picked.name}</Text> : null}
+            <View style={{ marginTop: 14 }}>
             <TextInput
               autoFocus
               value={money(v.cents / 100)}
               onChangeText={(t) => set({ cents: Math.min(Number(t.replace(/\D/g, "") || "0"), 99999999) })}
               keyboardType="number-pad"
-              style={[nums, { marginTop: 14, height: 64, borderRadius: 20, paddingHorizontal: 18, fontSize: 34, fontWeight: "800", letterSpacing: -1, color: th(income ? INCOME : "#fff"), backgroundColor: th("rgba(255,255,255,0.06)", "bg"), borderWidth: 1, borderColor: th(v.cents > 0 ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)", "line") }]}
+              style={[nums, { height: 64, borderRadius: 20, paddingLeft: 18, paddingRight: onScan && !locked ? 70 : 18, fontSize: 34, fontWeight: "800", letterSpacing: -1, color: th(income ? INCOME : "#fff"), backgroundColor: th("rgba(255,255,255,0.06)", "bg"), borderWidth: 1, borderColor: th(v.cents > 0 ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.10)", "line") }]}
             />
+            {/* Or the camera: the reader fills it all in, and only the check is left. */}
+            {onScan && !locked && (
+              <Pressable
+                onPress={() => {
+                  Keyboard.dismiss();
+                  onScan();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Escanear comprovante"
+                hitSlop={6}
+                style={({ pressed }) => ({
+                  position: "absolute",
+                  right: 10,
+                  top: 10,
+                  width: 44,
+                  height: 44,
+                  borderRadius: 14,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: th("rgba(255,255,255,0.10)", "bg"),
+                  borderWidth: 1,
+                  borderColor: th("rgba(255,255,255,0.14)", "line"),
+                  opacity: pressed ? 0.6 : 1,
+                })}
+              >
+                <ScanLine size={22} color={th("#fff")} strokeWidth={2.2} />
+              </Pressable>
+            )}
+            </View>
             <Primary
               label="Continuar"
               disabled={v.cents <= 0}

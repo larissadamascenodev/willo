@@ -109,3 +109,4 @@ export { default as Gauge } from "lucide-react-native/icons/gauge";
 export { default as Smartphone } from "lucide-react-native/icons/smartphone";
 export { default as Star } from "lucide-react-native/icons/star";
 export { default as Scale } from "lucide-react-native/icons/scale";
+export { default as ScanLine } from "lucide-react-native/icons/scan-line";
