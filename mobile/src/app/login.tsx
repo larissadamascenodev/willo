@@ -92,10 +92,17 @@ export default function Login() {
     void Haptics.selectionAsync().catch(() => undefined);
     setNote(null);
     setBusy(true);
-    const res = way === "apple" ? await signInWithApple() : await signInWithGoogle();
+    const res = way === "apple" ? await signInWithApple("entrar") : await signInWithGoogle("entrar");
     /* On success the auth listener swaps the screen; busy stays on until it does. */
     if (res.ok) return;
     setBusy(false);
+    /* No account behind that Apple or Google: here is only for entering, so off to make one. */
+    if (res.noAccount) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
+      setNote({ tone: "info", text: "Você ainda não tem conta no Willo. Vamos criar a sua." });
+      setTimeout(() => router.replace("/comecar" as never), 1400);
+      return;
+    }
     if (!res.cancelled && res.message) refuse(res.message);
   };
 

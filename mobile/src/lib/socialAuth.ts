@@ -22,7 +22,57 @@ import { supabase } from "@/integrations/supabase/client";
  * it failed, in words for the person.
  */
 
-export type SocialResult = { ok: true } | { ok: false; cancelled?: boolean; message?: string };
+export type SocialResult = { ok: true } | { ok: false; cancelled?: boolean; message?: string; noAccount?: boolean };
+
+/**
+ * "Já tenho conta" only lets in accounts that exist. Apple and Google create an account
+ * the first time they are used, so on that screen the account that comes back is
+ * checked: made just now, with nothing but this one way in, it is new — it is removed at
+ * once, signed out, and the person is told there is no account yet.
+ *
+ * Meanwhile the auth listener must not open the app on it: it waits on this gate, and
+ * lets the session through only if the gate says so.
+ */
+let gate: Promise<boolean> | null = null;
+export const loginGate = () => gate;
+
+/** Created moments ago and never signed in before: a new account. */
+function isBrandNew(user: { created_at?: string; last_sign_in_at?: string | null; identities?: unknown[] | null } | null | undefined) {
+  if (!user?.created_at) return false;
+  const made = new Date(user.created_at).getTime();
+  const signed = user.last_sign_in_at ? new Date(user.last_sign_in_at).getTime() : made;
+  return Date.now() - made < 2 * 60_000 && Math.abs(signed - made) < 15_000 && (user.identities?.length ?? 1) <= 1;
+}
+
+/** Runs a sign-in; on the login screen, refuses an account that did not exist before. */
+async function guarded(mode: Mode, run: () => Promise<SocialResult>): Promise<SocialResult> {
+  if (mode !== "entrar") return run();
+  let open!: (pass: boolean) => void;
+  gate = new Promise<boolean>((r) => (open = r));
+  try {
+    const res = await run();
+    if (!res.ok) {
+      open(false);
+      return res;
+    }
+    const { data } = await supabase.auth.getUser();
+    if (isBrandNew(data.user)) {
+      await supabase.functions.invoke("delete-account").catch(() => undefined);
+      await supabase.auth.signOut().catch(() => undefined);
+      open(false);
+      return { ok: false, noAccount: true, message: "Você ainda não tem conta no Willo. Vamos criar a sua?" };
+    }
+    open(true);
+    return res;
+  } catch {
+    open(false);
+    return { ok: false, message: "Não foi possível entrar agora. Tente de novo." };
+  } finally {
+    gate = null;
+  }
+}
+
+export type Mode = "entrar" | "criar";
 
 export async function appleAvailable(): Promise<boolean> {
   if (Platform.OS !== "ios") return false;
@@ -33,7 +83,11 @@ export async function appleAvailable(): Promise<boolean> {
   }
 }
 
-export async function signInWithApple(): Promise<SocialResult> {
+export function signInWithApple(mode: Mode = "criar"): Promise<SocialResult> {
+  return guarded(mode, appleOnce);
+}
+
+async function appleOnce(): Promise<SocialResult> {
   try {
     if (!(await appleAvailable())) return { ok: false, message: "Entrar com a Apple funciona no app do iPhone." };
     /* Apple gets the hash; Supabase gets the nonce itself and checks they match. */
@@ -75,7 +129,11 @@ function readReturn(url: string) {
   return out;
 }
 
-export async function signInWithGoogle(): Promise<SocialResult> {
+export function signInWithGoogle(mode: Mode = "criar"): Promise<SocialResult> {
+  return guarded(mode, googleOnce);
+}
+
+async function googleOnce(): Promise<SocialResult> {
   try {
     /* willo://auth in the app; exp://…/--/auth in Expo Go. */
     const redirectTo = ExpoLinking.createURL("auth");

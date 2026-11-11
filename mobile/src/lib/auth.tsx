@@ -3,6 +3,7 @@ import { AppState } from "react-native";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "~/supabase/client";
 import { cachedAccounts, warmHome, warmHomeWithin } from "~/lib/warmHome";
+import { loginGate } from "~/lib/socialAuth";
 
 /**
  * Who is signed in.
@@ -53,6 +54,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!alive) return;
       /* Just signed in: the home's numbers are fetched first, so it opens filled in
          rather than with empty cards. The login keeps its spinner meanwhile. */
+      /* Signing in from "Já tenho conta" with Apple or Google: wait until the account is
+         known to have existed; a brand-new one is undone there and never opens the app. */
+      const pending = event === "SIGNED_IN" ? loginGate() : null;
+      if (pending) {
+        void pending.then((pass) => {
+          if (!alive || !pass) return;
+          if (next?.user) void warmHomeWithin(next.user.id).then(() => alive && (setSession(next), setLoading(false)));
+        });
+        return;
+      }
       if (event === "SIGNED_IN" && next?.user && !cachedAccounts(next.user.id)) {
         void warmHomeWithin(next.user.id).then(() => {
           if (!alive) return;

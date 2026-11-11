@@ -86,7 +86,7 @@ export default function Comecar() {
     setNote(null);
     setBusy(true);
     await savePendingOnboarding({ email: "", name: name.trim(), goal, bank: null, balance: 0 });
-    const res = way === "apple" ? await signInWithApple() : await signInWithGoogle();
+    const res = way === "apple" ? await signInWithApple("criar") : await signInWithGoogle("criar");
     if (res.ok) return;
     setBusy(false);
     if (!res.cancelled && res.message) refuse(res.message);
