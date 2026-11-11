@@ -119,11 +119,10 @@ export default function TransactionsSummary({
           <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.4)", "bg") }} />
           <View style={{ paddingHorizontal: 14, paddingVertical: 12, gap: 10 }}>
             <Text style={{ fontSize: 12.5, lineHeight: 18, color: th("rgba(255,255,255,0.78)") }}>
-              É quanto deve sobrar no fim de {here}: o que está previsto para sobrar em {before}, somado ao balanço de {here} (tudo o que
-              entra menos tudo o que sai no mês).
+              O que deve sobrar de {before}, mais o que entra e sai em {here}.
             </Text>
             {[
-              { label: `Previsto para sobrar em ${before}`, value: abertura },
+              { label: `Sobra de ${before}`, value: abertura },
               { label: `Balanço de ${here}`, value: saldoPrevisto - abertura },
             ].map((r) => (
               <View key={r.label} style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
