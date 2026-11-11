@@ -47,9 +47,12 @@ export default function ManualEntryFlow({
   onSeeTransactions,
   onSeeCard,
   onStep,
+  preset,
 }: {
   /** Started inside this card. */
   cardId?: string | null;
+  /** Started from the wallet's fixed entries: income or expense, repeating every month. */
+  preset?: { type: "receita" | "despesa"; fixa: boolean } | null;
   onClose: () => void;
   onSeeTransactions: () => void;
   onSeeCard: (cardId: string) => void;
@@ -59,13 +62,13 @@ export default function ManualEntryFlow({
   const locked = !!cardId;
   const [step, setStep] = useState<ManualStep>("value");
   const [v, setV] = useState<EntryValues>({
-    type: "despesa",
+    type: preset?.type ?? "despesa",
     cents: 0,
     name: "",
     category: null,
     method: locked ? "cartao" : null,
     whereId: cardId ?? null,
-    repeat: "unica",
+    repeat: preset?.fixa ? "fixa" : "unica",
     parts: null,
     date: todayIso(),
     status: "pendente",

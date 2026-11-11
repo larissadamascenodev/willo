@@ -14,7 +14,9 @@ export default function Manual() {
   /* Drawn again in place when the theme changes. */
   useThemeRedraw();
   const router = useRouter();
-  const { cartao, editar, mes, ano } = useLocalSearchParams<{ cartao?: string; editar?: string; mes?: string; ano?: string }>();
+  const { cartao, editar, mes, ano, tipo, fixa } = useLocalSearchParams<{ cartao?: string; editar?: string; mes?: string; ano?: string; tipo?: string; fixa?: string }>();
+  /* Opened from the wallet's fixed entries: already income or expense, already every month. */
+  const preset = tipo === "receita" || tipo === "despesa" ? { type: tipo as "receita" | "despesa", fixa: fixa === "1" } : null;
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<ManualStep>("value");
   const now = new Date();
@@ -42,6 +44,7 @@ export default function Manual() {
       ) : (
         <ManualEntryFlow
           cardId={cartao ?? null}
+          preset={preset}
           onClose={() => leave()}
           onSeeTransactions={() => leave(() => router.push("/(tabs)/transacoes" as never))}
           onSeeCard={(cardId) => leave(() => router.push(`/fatura/${cardId}` as never))}
