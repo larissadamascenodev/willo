@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from "react";
-import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -18,15 +18,17 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
-  ZoomIn,
 } from "react-native-reanimated";
-import { createTransaction, getAccounts } from "@/services/transactionService";
+import { createTransaction, getAccounts, getCreditCards } from "@/services/transactionService";
 import { resolveReceiptDate } from "@/lib/receiptDate";
 import ScanResultCard, { type ScanAccount, type ScanItem } from "~/components/scan/ScanResultCard";
-import { Camera, Check, ImageIcon, PenLine, X } from "~/components/icons";
+import BottomSheet from "~/components/BottomSheet";
+import { SavedView, type Card } from "~/components/registro/entryParts";
+import type { ReceiptLine } from "~/components/registro/ReceiptCard";
+import { Camera, ImageIcon, PenLine, X } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
 import { processScanPhoto, type PickedPhoto } from "~/lib/scanUpload";
-import { GREEN, INK } from "~/theme/tokens";
+import { INK } from "~/theme/tokens";
 
 import { th as themed, thIn, useThemeRedraw, type Role } from "~/theme/theme";
 
@@ -64,7 +66,9 @@ export default function Scanner() {
   const [confirming, setConfirming] = useState(false);
   const [accounts, setAccounts] = useState<ScanAccount[]>([]);
   const [accountId, setAccountId] = useState<string | null>(null);
-  const [savedCount, setSavedCount] = useState(0);
+  const [cards, setCards] = useState<Card[]>([]);
+  /* What was written, as the receipt shows it, and when. */
+  const [saved, setSaved] = useState<{ lines: ReceiptLine[]; at: Date } | null>(null);
   /* A reading the person walked away from must not land on the next photo. */
   const attempt = useRef(0);
 
@@ -75,6 +79,9 @@ export default function Scanner() {
         setAccounts(usable);
         setAccountId((usable.find((a) => a.is_default) ?? usable[0])?.id ?? null);
       })
+      .catch(() => undefined);
+    getCreditCards()
+      .then((c) => setCards(c as unknown as Card[]))
       .catch(() => undefined);
   }, []);
 
@@ -132,6 +139,7 @@ export default function Scanner() {
     setPhoto(null);
     setItems([]);
     setFailure("");
+    setSaved(null);
     setPhase("camera");
   };
 
@@ -141,17 +149,19 @@ export default function Scanner() {
     setConfirming(true);
     try {
       for (const item of chosen) {
+        const credit = item.type !== "receita" && item.payment_method === "cartao" && !!item.credit_card_id;
         await createTransaction(
           {
-            name: item.description,
+            name: item.merchant || item.description,
             type: (item.type as "receita" | "despesa") || "despesa",
             amount: item.amount,
             category: item.category || "outros",
             date: resolveReceiptDate(item.date),
             time: item.time || null,
-            status: "pago",
-            account_id: item.account_id || accountId,
-            payment_method: "conta",
+            status: credit ? "pendente" : (item.status ?? "pago"),
+            account_id: credit ? null : item.account_id || accountId,
+            credit_card_id: credit ? item.credit_card_id : null,
+            payment_method: credit ? "cartao" : "conta",
             recurrence_type: item.is_recurring
               ? "fixa"
               : item.installment_total && item.installment_total > 1
@@ -164,7 +174,27 @@ export default function Scanner() {
         );
       }
       window.dispatchEvent(new CustomEvent("transaction-created"));
-      setSavedCount(chosen.length);
+      setSaved({
+        at: new Date(),
+        lines: chosen.map((item, i) => {
+          const credit = item.type !== "receita" && item.payment_method === "cartao" && !!item.credit_card_id;
+          const where = credit
+            ? cards.find((c) => c.id === item.credit_card_id)?.name
+            : accounts.find((a) => a.id === (item.account_id || accountId))?.name;
+          return {
+            id: String(i),
+            name: item.merchant || item.description,
+            category: item.category || "Outros",
+            amount: item.amount,
+            type: item.type === "receita" ? "receita" : "despesa",
+            method: where ? (item.type === "receita" ? where : `${credit ? "Crédito" : "Débito"} · ${where}`) : null,
+            installments: item.installment_total && item.installment_total > 1 ? item.installment_total : null,
+            day: resolveReceiptDate(item.date),
+            repeat: item.is_recurring ? "fixa" : item.installment_total && item.installment_total > 1 ? "parcelado" : "unica",
+            scheduled: !credit && item.status === "pendente",
+          };
+        }),
+      });
       setPhase("saved");
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
     } catch (err) {
@@ -204,7 +234,11 @@ export default function Scanner() {
       )}
 
       {(phase === "reading" || (phase === "camera" && granted)) && (
-        <Brackets top={insets.top + 86} bottom={insets.bottom + 210} sweep={phase === "reading"} />
+        <Brackets
+          top={insets.top + 66}
+          bottom={phase === "reading" ? insets.bottom + 28 : insets.bottom + 128}
+          sweep={phase === "reading"}
+        />
       )}
 
       {/* ── Top: what to do, and the way out ── */}
@@ -289,28 +323,6 @@ export default function Scanner() {
       {/* ── Camera controls ── */}
       {phase === "camera" && (
         <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 24, paddingBottom: insets.bottom + 26 }}>
-          <View style={{ alignItems: "center" }}>
-            <Pressable
-              onPress={() => router.replace("/manual" as never)}
-              style={({ pressed }) => ({
-                marginBottom: 24,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 8,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: th("rgba(255,255,255,0.15)", "line"),
-                backgroundColor: th("rgba(0,0,0,0.55)", "bg"),
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                opacity: pressed ? 0.75 : 1,
-              })}
-            >
-              <PenLine size={16} color={th("#fff")} strokeWidth={2.2} />
-              <Text style={{ fontSize: 14, fontWeight: "600", color: th("#fff") }}>Adicionar manualmente</Text>
-            </Pressable>
-          </View>
-
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <Pressable
               onPress={() => void pick()}
@@ -349,8 +361,25 @@ export default function Scanner() {
               <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: th("#fff", "bg") }} />
             </Pressable>
 
-            {/* Balances the gallery button so the shutter sits dead centre. */}
-            <View style={{ width: 52, height: 52 }} />
+            {/* Typed by hand instead: across from the gallery, so the shutter sits dead centre
+                and the frame can run down to it. */}
+            <Pressable
+              onPress={() => router.replace("/manual" as never)}
+              accessibilityLabel="Adicionar manualmente"
+              style={({ pressed }) => ({
+                width: 52,
+                height: 52,
+                borderRadius: 18,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: th("rgba(255,255,255,0.15)", "line"),
+                backgroundColor: th("rgba(0,0,0,0.45)", "bg"),
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <PenLine size={21} color={th("#fff")} strokeWidth={2.1} />
+            </Pressable>
           </View>
         </View>
       )}
@@ -413,79 +442,39 @@ export default function Scanner() {
         </Animated.View>
       )}
 
-      {/* ── What it found, to check before it is written ── */}
-      {phase === "result" && (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={{ position: "absolute", left: 0, right: 0, bottom: 0, maxHeight: "88%" }}
-          pointerEvents="box-none"
-        >
-          <Animated.View
-            entering={SlideInDown.springify().damping(30).stiffness(260)}
-            style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: themed("#000", "bg"), overflow: "hidden" }}
-          >
-            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: insets.bottom }}>
-              <ScanResultCard
-                items={items}
-                onItemsChange={setItems}
-                accounts={accounts}
-                accountId={accountId}
-                onAccountChange={setAccountId}
-                lowConfidence={confidence > 0 && confidence < 0.7}
-                confirming={confirming}
-                onConfirm={() => void confirm()}
-              />
-            </ScrollView>
-          </Animated.View>
-        </KeyboardAvoidingView>
-      )}
+      {/* ── What it found, to check before it is written: the app's own sheet, rising softly
+          over the photo. Pulled down, it goes back to the camera. ── */}
+      <BottomSheet open={phase === "result"} onClose={again}>
+        <ScanResultCard
+          items={items}
+          onItemsChange={setItems}
+          accounts={accounts}
+          cards={cards}
+          accountId={accountId}
+          onAccountChange={setAccountId}
+          lowConfidence={confidence > 0 && confidence < 0.7}
+          confirming={confirming}
+          onConfirm={() => void confirm()}
+        />
+      </BottomSheet>
 
-      {/* ── Written ── */}
-      {phase === "saved" && (
-        <Animated.View
-          entering={FadeIn.duration(220)}
-          style={[StyleSheet.absoluteFill, { backgroundColor: th("rgba(0,0,0,0.72)", "bg"), alignItems: "center", justifyContent: "center", gap: 14, paddingHorizontal: 32 }]}
-        >
-          <Animated.View
-            entering={ZoomIn.springify().damping(12).stiffness(420)}
-            style={{ width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center", backgroundColor: th(GREEN, "bg") }}
-          >
-            <Check size={32} color={th("#0B0B0B")} strokeWidth={3.4} />
-          </Animated.View>
-          <Text style={{ fontSize: 20, fontWeight: "700", color: th("#fff") }}>
-            {savedCount > 1 ? `${savedCount} lançamentos salvos` : "Salvo no Willo"}
-          </Text>
-          <View style={{ marginTop: 10, width: "100%", gap: 10 }}>
-            <Pressable
-              onPress={() => router.back()}
-              style={({ pressed }) => ({
-                height: 52,
-                borderRadius: 999,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: th("#fff", "bg"),
-                opacity: pressed ? 0.82 : 1,
-              })}
-            >
-              <Text style={{ fontSize: 15, fontWeight: "700", color: th("#0B0B0B") }}>Concluir</Text>
-            </Pressable>
-            <Pressable
-              onPress={again}
-              style={({ pressed }) => ({
-                height: 48,
-                borderRadius: 999,
-                alignItems: "center",
-                justifyContent: "center",
-                borderWidth: 1,
-                borderColor: th("rgba(255,255,255,0.18)", "line"),
-                opacity: pressed ? 0.7 : 1,
-              })}
-            >
-              <Text style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>Ler outro comprovante</Text>
-            </Pressable>
+      {/* ── Written: the receipt, as every entry gets one ── */}
+      <BottomSheet open={phase === "saved" && !!saved} onClose={() => router.back()}>
+        {saved && saved.lines[0] && (
+          <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 }}>
+            <SavedView
+              line={saved.lines[0]}
+              lines={saved.lines}
+              savedAt={saved.at}
+              title={saved.lines.length > 1 ? `${saved.lines.length} lançamentos registrados` : undefined}
+              onClose={() => router.back()}
+              onSee={() => router.replace("/(tabs)/transacoes" as never)}
+              seeLabel="Ver transações"
+              more={{ label: "Escanear outro comprovante", onPress: again }}
+            />
           </View>
-        </Animated.View>
-      )}
+        )}
+      </BottomSheet>
     </View>
   );
 }

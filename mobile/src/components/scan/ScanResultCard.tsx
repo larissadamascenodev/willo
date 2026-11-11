@@ -1,9 +1,23 @@
 import { useState, type ReactNode } from "react";
-import { ActivityIndicator, Platform, Pressable, ScrollView, Text, TextInput, View, type TextStyle } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+  type TextStyle,
+} from "react-native";
 import Animated, { FadeIn, FadeInLeft } from "react-native-reanimated";
-import { categoryHex, DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "@/lib/categoryData";
-import { AlertTriangle, Check, ChevronDown, Pencil } from "~/components/icons";
-import { categoryIcon } from "~/lib/categoryIcon";
+import { categoryHex } from "@/lib/categoryData";
+import CategoryPicker from "~/components/CategoryPicker";
+import EntryForm, {
+  todayIso,
+  type EntryValues,
+} from "~/components/registro/EntryForm";
+import type { Account, Card } from "~/components/registro/entryParts";
+import { AlertTriangle, Check, Pencil } from "~/components/icons";
 import { money } from "~/lib/money";
 import { AMBER, INK } from "~/theme/tokens";
 
@@ -16,6 +30,10 @@ import { th } from "~/theme/theme";
  * amount large at the foot. Several read item by item, each with a tick to leave it
  * out. The pencil turns the same card into its own editor rather than opening a
  * second one, because what needs fixing is almost always one word or one figure.
+ *
+ * Editing one purchase is the same check the guided entry ends on: out or in, the
+ * amount, the words, whether it is settled, the category from the full list, how it
+ * was paid, whether it repeats, the day. The two places change an entry alike.
  */
 
 export interface ScanItem {
@@ -31,11 +49,16 @@ export interface ScanItem {
   installment_total?: number | null;
   installment_current?: number | null;
   account_id?: string | null;
+  /** Set when it is changed by hand: debit from an account, or credit on a card. */
+  payment_method?: "conta" | "cartao";
+  credit_card_id?: string | null;
+  status?: "pago" | "pendente";
 }
 
 export interface ScanAccount {
   id: string;
   name: string;
+  color?: string | null;
   is_default?: boolean;
 }
 
@@ -48,7 +71,11 @@ const nums: TextStyle = Platform.select({
   default: {},
 }) as TextStyle;
 
-const plain = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const plain = (v: number) =>
+  v.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 const fromDigits = (s: string) => {
   const digits = s.replace(/\D/g, "");
   return digits ? Number(digits) / 100 : 0;
@@ -60,38 +87,79 @@ function formatDate(date?: string | null, time?: string | null) {
   if (Number.isNaN(d.getTime())) return date;
   const otherYear = d.getFullYear() !== new Date().getFullYear();
   const label = d
-    .toLocaleDateString("pt-BR", { day: "2-digit", month: "short", ...(otherYear ? { year: "numeric" } : {}) })
+    .toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "short",
+      ...(otherYear ? { year: "numeric" } : {}),
+    })
     .replace(/\./g, "")
     .replace(/ de /g, " ");
   return time ? `${label} · ${time}` : label;
 }
 
-/** dd/mm/aaaa as typed, back to the yyyy-mm-dd the books keep — or null if not a date yet. */
-function parseTyped(s: string): string | null {
-  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (!m) return null;
-  const [, d, mo, y] = m;
-  const iso = `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
-  return Number.isNaN(new Date(`${iso}T12:00:00`).getTime()) ? null : iso;
+/** One purchase as the shared check sees it: the whole amount, and how it was paid. */
+function toEntry(item: ScanItem, accountId: string | null): EntryValues {
+  const parts =
+    item.installment_total && item.installment_total > 1
+      ? item.installment_total
+      : null;
+  const method =
+    item.type === "receita" ? "conta" : (item.payment_method ?? "conta");
+  return {
+    type: item.type === "receita" ? "receita" : "despesa",
+    /* In instalments the reader gives one instalment; the check edits the whole. */
+    cents: Math.round(item.amount * (parts ?? 1) * 100),
+    name: item.merchant || item.description,
+    category: item.category || null,
+    method,
+    whereId:
+      method === "cartao"
+        ? (item.credit_card_id ?? null)
+        : (item.account_id ?? accountId),
+    repeat: item.is_recurring ? "fixa" : parts ? "parcelado" : "unica",
+    parts,
+    date: item.date || todayIso(),
+    status: item.status ?? "pago",
+    note: "",
+  };
 }
-const toTyped = (iso?: string | null) => {
-  if (!iso) return "";
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y}`;
-};
+
+/** And back. */
+function fromEntry(v: EntryValues): Partial<ScanItem> {
+  const parts =
+    v.repeat === "parcelado" && v.parts && v.parts > 1 ? v.parts : null;
+  return {
+    type: v.type,
+    amount: parts ? Math.round(v.cents / parts) / 100 : v.cents / 100,
+    description: v.name,
+    merchant: null,
+    category: v.category ?? "Outros",
+    payment_method: v.method ?? "conta",
+    credit_card_id: v.method === "cartao" ? v.whereId : null,
+    account_id: v.method === "cartao" ? null : v.whereId,
+    is_recurring: v.repeat === "fixa",
+    installment_total: parts,
+    installment_current: parts ? 1 : null,
+    date: v.date,
+    status: v.method === "cartao" ? "pendente" : v.status,
+  };
+}
 
 /** Receipts from another month land in that month, not in this one. */
 function isOtherMonth(date?: string | null) {
   if (!date) return false;
   const d = new Date(`${date}T12:00:00`);
   const now = new Date();
-  return d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear();
+  return (
+    d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()
+  );
 }
 
 export default function ScanResultCard({
   items,
   onItemsChange,
   accounts,
+  cards = [],
   accountId,
   onAccountChange,
   lowConfidence,
@@ -101,6 +169,8 @@ export default function ScanResultCard({
   items: ScanItem[];
   onItemsChange: (items: ScanItem[]) => void;
   accounts: ScanAccount[];
+  /** The cards, so a purchase read from a receipt can be put on one. */
+  cards?: Card[];
   accountId: string | null;
   onAccountChange: (id: string) => void;
   lowConfidence?: boolean;
@@ -109,7 +179,6 @@ export default function ScanResultCard({
 }) {
   const [editing, setEditing] = useState(false);
   const [pickingCategory, setPickingCategory] = useState(false);
-  const [typedDate, setTypedDate] = useState(() => toTyped(items[0]?.date));
 
   const active = items.filter((i) => i.selected !== false);
   const single = items.length === 1 ? items[0] : null;
@@ -117,22 +186,38 @@ export default function ScanResultCard({
   const isIncome = single?.type === "receita";
 
   const update = (index: number, patch: Partial<ScanItem>) =>
-    onItemsChange(items.map((it, i) => (i === index ? { ...it, ...patch } : it)));
+    onItemsChange(
+      items.map((it, i) => (i === index ? { ...it, ...patch } : it)),
+    );
 
-  const merchant = single ? single.merchant || single.description : items.find((i) => i.merchant)?.merchant;
+  const merchant = single
+    ? single.merchant || single.description
+    : items.find((i) => i.merchant)?.merchant;
   const title = merchant || `${items.length} lançamentos`;
-  const shownAccount = accounts.find((a) => a.id === accountId)?.name;
+  const credit =
+    !!single && single.type !== "receita" && single.payment_method === "cartao";
+  const shownAccount = credit
+    ? cards.find((c) => c.id === single?.credit_card_id)?.name
+    : accounts.find((a) => a.id === (single?.account_id ?? accountId))?.name;
+  const entry = single ? toEntry(single, accountId) : null;
 
   const rows: { label: string; value: string; hex?: string }[] = single
     ? [
-        ...(single.merchant && single.merchant !== single.description ? [{ label: "Descrição", value: single.description }] : []),
-        { label: "Categoria", value: single.category || "Outros", hex: categoryHex(single.category || "Outros") },
+        ...(single.merchant && single.merchant !== single.description
+          ? [{ label: "Descrição", value: single.description }]
+          : []),
+        {
+          label: "Categoria",
+          value: single.category || "Outros",
+          hex: categoryHex(single.category || "Outros"),
+        },
         { label: "Data", value: formatDate(single.date, single.time) },
-        ...(shownAccount ? [{ label: "Conta", value: shownAccount }] : []),
+        ...(shownAccount
+          ? [{ label: credit ? "Cartão" : "Conta", value: shownAccount }]
+          : []),
       ]
     : [];
 
-  const categoryOptions = isIncome ? DEFAULT_INCOME_CATEGORIES : DEFAULT_EXPENSE_CATEGORIES;
   const statusLabel = editing
     ? "Editando"
     : lowConfidence
@@ -144,10 +229,29 @@ export default function ScanResultCard({
   return (
     <View style={{ paddingHorizontal: 20, paddingTop: 22, paddingBottom: 18 }}>
       {/* ── Status, and the pencil ── */}
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <Animated.View entering={FadeInLeft.duration(260)} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+        }}
+      >
+        <Animated.View
+          entering={FadeInLeft.duration(260)}
+          style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+        >
           {!editing && !lowConfidence ? (
-            <View style={{ width: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: th(TEAL, "bg") }}>
+            <View
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: 9,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: th(TEAL, "bg"),
+              }}
+            >
               <Check size={12} color={th("#0B0B0B")} strokeWidth={3.5} />
             </View>
           ) : editing ? (
@@ -161,7 +265,13 @@ export default function ScanResultCard({
               fontWeight: "700",
               letterSpacing: 2.2,
               textTransform: "uppercase",
-              color: th(editing ? "rgba(255,255,255,0.8)" : lowConfidence ? AMBER : TEAL),
+              color: th(
+                editing
+                  ? "rgba(255,255,255,0.8)"
+                  : lowConfidence
+                    ? AMBER
+                    : TEAL,
+              ),
             }}
           >
             {statusLabel}
@@ -179,27 +289,35 @@ export default function ScanResultCard({
             borderRadius: 18,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: th(editing ? "#fff" : "rgba(255,255,255,0.08)", "bg"),
+            backgroundColor: th(
+              editing ? "#fff" : "rgba(255,255,255,0.08)",
+              "bg",
+            ),
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          {editing ? <Check size={16} color={th("#0B0B0B")} strokeWidth={3} /> : <Pencil size={16} color={th("#fff")} />}
+          {editing ? (
+            <Check size={16} color={th("#0B0B0B")} strokeWidth={3} />
+          ) : (
+            <Pencil size={16} color={th("#fff")} />
+          )}
         </Pressable>
       </View>
 
       {/* ── Title ── */}
-      {editing && single ? (
-        <TextInput
-          value={single.merchant || single.description}
-          onChangeText={(v) => update(0, single.merchant ? { merchant: v } : { description: v })}
-          multiline
-          scrollEnabled={false}
-          submitBehavior="blurAndSubmit"
-          style={{ marginTop: 12, fontSize: 22, fontWeight: "800", letterSpacing: -0.3, textTransform: "uppercase", color: th("#fff") }}
-          accessibilityLabel="Nome"
-        />
-      ) : (
-        <Text numberOfLines={2} style={{ marginTop: 12, fontSize: 22, fontWeight: "800", letterSpacing: -0.3, lineHeight: 26, textTransform: "uppercase", color: th("#fff") }}>
+      {editing && single ? null : (
+        <Text
+          numberOfLines={2}
+          style={{
+            marginTop: 12,
+            fontSize: 22,
+            fontWeight: "800",
+            letterSpacing: -0.3,
+            lineHeight: 26,
+            textTransform: "uppercase",
+            color: th("#fff"),
+          }}
+        >
           {title}
         </Text>
       )}
@@ -221,12 +339,41 @@ export default function ScanResultCard({
                     borderTopColor: th(RULE, "line"),
                   }}
                 >
-                  <Text numberOfLines={1} style={{ fontSize: 16, color: th("rgba(255,255,255,0.74)") }}>
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      fontSize: 16,
+                      color: th("rgba(255,255,255,0.74)"),
+                    }}
+                  >
                     {row.label}
                   </Text>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 1 }}>
-                    {row.hex && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(row.hex, "bg") }} />}
-                    <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "500", color: th("#fff") }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      flexShrink: 1,
+                    }}
+                  >
+                    {row.hex && (
+                      <View
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: th(row.hex, "bg"),
+                        }}
+                      />
+                    )}
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        fontSize: 16,
+                        fontWeight: "500",
+                        color: th("#fff"),
+                      }}
+                    >
                       {row.value}
                     </Text>
                   </View>
@@ -246,14 +393,33 @@ export default function ScanResultCard({
                     opacity: item.selected === false ? 0.4 : 1,
                   }}
                 >
-                  <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 16, color: th("rgba(255,255,255,0.74)") }}>
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      fontSize: 16,
+                      color: th("rgba(255,255,255,0.74)"),
+                    }}
+                  >
                     {item.description}
                   </Text>
-                  <Text style={[nums, { fontSize: 16, fontWeight: "500", color: th("#fff") }]}>{money(item.amount)}</Text>
+                  <Text
+                    style={[
+                      nums,
+                      { fontSize: 16, fontWeight: "500", color: th("#fff") },
+                    ]}
+                  >
+                    {money(item.amount)}
+                  </Text>
                 </View>
               ))}
           {!single && items.length > 5 && (
-            <Text style={{ paddingVertical: 8, fontSize: 13, color: th(INK.soft) }}>+{items.length - 5} itens</Text>
+            <Text
+              style={{ paddingVertical: 8, fontSize: 13, color: th(INK.soft) }}
+            >
+              +{items.length - 5} itens
+            </Text>
           )}
           {single && isOtherMonth(single.date) && (
             <View
@@ -269,138 +435,55 @@ export default function ScanResultCard({
               }}
             >
               <AlertTriangle size={14} color={th(AMBER)} />
-              <Text style={{ flex: 1, fontSize: 12, lineHeight: 17, color: th("#FDE68A") }}>
-                Comprovante de outro mês: ele entra no histórico dessa data e não muda o saldo deste mês. Toque no lápis
-                para alterar a data.
+              <Text
+                style={{
+                  flex: 1,
+                  fontSize: 12,
+                  lineHeight: 17,
+                  color: th("#FDE68A"),
+                }}
+              >
+                Comprovante de outro mês: ele entra no histórico dessa data e
+                não muda o saldo deste mês. Toque no lápis para alterar a data.
               </Text>
             </View>
           )}
         </View>
-      ) : single ? (
-        <View style={{ marginTop: 6 }}>
-          <EditRow label="Tipo">
-            <View style={{ flexDirection: "row", borderRadius: 999, backgroundColor: th("rgba(255,255,255,0.06)", "bg"), padding: 2 }}>
-              {(["despesa", "receita"] as const).map((t) => {
-                const on = (isIncome ? "receita" : "despesa") === t;
-                return (
-                  <Pressable
-                    key={t}
-                    onPress={() => update(0, { type: t })}
-                    style={{ height: 32, paddingHorizontal: 14, borderRadius: 999, justifyContent: "center", backgroundColor: th(on ? "#fff" : "transparent", "bg") }}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: "600", color: th(on ? "#0B0B0B" : "rgba(255,255,255,0.7)") }}>
-                      {t === "despesa" ? "Despesa" : "Receita"}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </EditRow>
-
-          {single.merchant ? (
-            <EditRow label="Descrição">
-              <TextInput
-                value={single.description}
-                onChangeText={(v) => update(0, { description: v })}
-                style={{ flex: 1, minWidth: 0, textAlign: "right", fontSize: 16, fontWeight: "500", color: th("#fff") }}
-              />
-            </EditRow>
-          ) : null}
-
-          <View style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: th(RULE, "line") }}>
-            <Pressable
-              onPress={() => setPickingCategory((v) => !v)}
-              style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-            >
-              <Text style={{ fontSize: 16, color: th("rgba(255,255,255,0.74)") }}>Categoria</Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(categoryHex(single.category || "Outros"), "bg") }} />
-                <Text style={{ fontSize: 16, fontWeight: "500", color: th("#fff") }}>{single.category || "Escolher"}</Text>
-                <ChevronDown size={16} color={th(INK.soft)} style={{ transform: [{ rotate: pickingCategory ? "180deg" : "0deg" }] }} />
-              </View>
-            </Pressable>
-            {pickingCategory && (
-              <Animated.View entering={FadeIn.duration(180)}>
-                <ScrollView style={{ maxHeight: 160, marginTop: 12 }} nestedScrollEnabled>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingBottom: 4 }}>
-                    {categoryOptions.map((cat) => {
-                      const Icon = categoryIcon(cat);
-                      const on = cat === single.category;
-                      return (
-                        <Pressable
-                          key={cat}
-                          onPress={() => {
-                            update(0, { category: cat });
-                            setPickingCategory(false);
-                          }}
-                          style={{
-                            height: 36,
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 6,
-                            paddingHorizontal: 12,
-                            borderRadius: 999,
-                            borderWidth: 1,
-                            borderColor: th(on ? "#fff" : "rgba(255,255,255,0.08)", "line"),
-                            backgroundColor: th(on ? "#fff" : "rgba(255,255,255,0.04)", "bg"),
-                          }}
-                        >
-                          <Icon size={14} color={th(on ? "#0B0B0B" : categoryHex(cat))} />
-                          <Text style={{ fontSize: 13, color: th(on ? "#0B0B0B" : "rgba(255,255,255,0.8)") }}>{cat}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </ScrollView>
-              </Animated.View>
-            )}
-          </View>
-
-          <EditRow label="Data">
-            <TextInput
-              value={typedDate}
-              onChangeText={(v) => {
-                setTypedDate(v);
-                const iso = parseTyped(v);
-                if (iso) update(0, { date: iso });
-              }}
-              placeholder="dd/mm/aaaa"
-              placeholderTextColor={th(INK.faint)}
-              keyboardType="numbers-and-punctuation"
-              style={[nums, { flex: 1, minWidth: 0, textAlign: "right", fontSize: 16, fontWeight: "500", color: th("#fff") }]}
-            />
-          </EditRow>
-
-          {accounts.length > 0 && (
-            <View style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: th(RULE, "line") }}>
-              <Text style={{ fontSize: 16, color: th("rgba(255,255,255,0.74)") }}>Conta</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingTop: 8 }}>
-                {accounts.map((a) => {
-                  const on = a.id === accountId;
-                  return (
-                    <Pressable
-                      key={a.id}
-                      onPress={() => onAccountChange(a.id)}
-                      style={{
-                        height: 36,
-                        justifyContent: "center",
-                        paddingHorizontal: 14,
-                        borderRadius: 999,
-                        borderWidth: 1,
-                        borderColor: th(on ? "#fff" : "rgba(255,255,255,0.08)", "line"),
-                        backgroundColor: th(on ? "#fff" : "rgba(255,255,255,0.04)", "bg"),
-                      }}
-                    >
-                      <Text style={{ fontSize: 13, fontWeight: "500", color: th(on ? "#0B0B0B" : "rgba(255,255,255,0.8)") }}>{a.name}</Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
+      ) : single && entry ? (
+        <View style={{ marginTop: 2 }}>
+          <EntryForm
+            values={entry}
+            onChange={(patch) => {
+              const next = fromEntry({ ...entry, ...patch });
+              update(0, next);
+              if (next.account_id) onAccountChange(next.account_id);
+            }}
+            accounts={
+              accounts.map((a) => ({
+                id: a.id,
+                name: a.name,
+                color: a.color ?? null,
+              })) as Account[]
+            }
+            cards={cards}
+            onPickCategory={() => setPickingCategory(true)}
+          />
+          <CategoryPicker
+            open={pickingCategory}
+            type={entry.type}
+            value={entry.category ?? ""}
+            onPick={(c) => {
+              setPickingCategory(false);
+              update(0, { category: c });
+            }}
+            onClose={() => setPickingCategory(false)}
+          />
         </View>
       ) : (
-        <ScrollView style={{ marginTop: 6, maxHeight: 280 }} nestedScrollEnabled>
+        <ScrollView
+          style={{ marginTop: 6, maxHeight: 280 }}
+          nestedScrollEnabled
+        >
           {items.map((item, i) => {
             const on = item.selected !== false;
             return (
@@ -431,18 +514,34 @@ export default function ScanResultCard({
                     backgroundColor: th(on ? "#fff" : "transparent", "bg"),
                   }}
                 >
-                  {on && <Check size={14} color={th("#0B0B0B")} strokeWidth={3} />}
+                  {on && (
+                    <Check size={14} color={th("#0B0B0B")} strokeWidth={3} />
+                  )}
                 </Pressable>
                 <TextInput
                   value={item.description}
                   onChangeText={(v) => update(i, { description: v })}
-                  style={{ flex: 1, minWidth: 0, fontSize: 15, color: th("#fff") }}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    fontSize: 15,
+                    color: th("#fff"),
+                  }}
                 />
                 <TextInput
                   value={plain(item.amount)}
                   onChangeText={(v) => update(i, { amount: fromDigits(v) })}
                   keyboardType="number-pad"
-                  style={[nums, { width: 96, textAlign: "right", fontSize: 15, fontWeight: "600", color: th("#fff") }]}
+                  style={[
+                    nums,
+                    {
+                      width: 96,
+                      textAlign: "right",
+                      fontSize: 15,
+                      fontWeight: "600",
+                      color: th("#fff"),
+                    },
+                  ]}
                 />
               </View>
             );
@@ -450,32 +549,59 @@ export default function ScanResultCard({
         </ScrollView>
       )}
 
-      {/* ── The amount ── */}
-      <View style={{ marginTop: 18 }}>
-        <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 2.6, textTransform: "uppercase", color: th("rgba(255,255,255,0.62)") }}>
-          {single ? (isIncome ? "Receita" : "Despesa") : "Total"}
-        </Text>
-        <View style={{ marginTop: 4, flexDirection: "row", alignItems: "baseline", gap: 6 }}>
-          <Text style={{ fontSize: 15, fontWeight: "700", letterSpacing: 1.5, color: th("rgba(255,255,255,0.66)") }}>R$</Text>
-          {editing && single ? (
-            <TextInput
-              value={plain(single.amount)}
-              onChangeText={(v) => update(0, { amount: fromDigits(v) })}
-              keyboardType="number-pad"
-              accessibilityLabel="Valor"
-              style={[nums, { flex: 1, minWidth: 0, fontSize: 44, fontWeight: "800", letterSpacing: -1.2, color: th("#fff") }]}
-            />
-          ) : (
+      {/* ── The amount ── (the check shows its own while editing one) */}
+      {!(editing && single) && (
+        <View style={{ marginTop: 18 }}>
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: "700",
+              letterSpacing: 2.6,
+              textTransform: "uppercase",
+              color: th("rgba(255,255,255,0.62)"),
+            }}
+          >
+            {single ? (isIncome ? "Receita" : "Despesa") : "Total"}
+          </Text>
+          <View
+            style={{
+              marginTop: 4,
+              flexDirection: "row",
+              alignItems: "baseline",
+              gap: 6,
+            }}
+          >
             <Text
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              style={[nums, { flexShrink: 1, fontSize: plain(total).length <= 8 ? 48 : 40, fontWeight: "800", letterSpacing: -1.4, color: th("#fff") }]}
+              style={{
+                fontSize: 15,
+                fontWeight: "700",
+                letterSpacing: 1.5,
+                color: th("rgba(255,255,255,0.66)"),
+              }}
             >
-              {plain(total)}
+              R$
             </Text>
-          )}
+            {
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                style={[
+                  nums,
+                  {
+                    flexShrink: 1,
+                    fontSize: plain(total).length <= 8 ? 48 : 40,
+                    fontWeight: "800",
+                    letterSpacing: -1.4,
+                    color: th("#fff"),
+                  },
+                ]}
+              >
+                {plain(total)}
+              </Text>
+            }
+          </View>
         </View>
-      </View>
+      )}
 
       <Pressable
         onPress={onConfirm}
@@ -487,36 +613,30 @@ export default function ScanResultCard({
           alignItems: "center",
           justifyContent: "center",
           backgroundColor: th("#fff", "bg"),
-          opacity: confirming || active.length === 0 || total <= 0 ? 0.45 : pressed ? 0.82 : 1,
+          opacity:
+            confirming || active.length === 0 || total <= 0
+              ? 0.45
+              : pressed
+                ? 0.82
+                : 1,
         })}
       >
         {confirming ? (
           <ActivityIndicator color={th("#0B0B0B")} />
         ) : (
-          <Text style={{ fontSize: 16, fontWeight: "700", color: th("#0B0B0B") }}>
-            {single ? (isIncome ? "Confirmar receita" : "Confirmar gasto") : `Confirmar ${active.length}`}
+          <Text
+            style={{ fontSize: 16, fontWeight: "700", color: th("#0B0B0B") }}
+          >
+            {single
+              ? isIncome
+                ? "Confirmar receita"
+                : single.status === "pendente" && !credit
+                  ? "Agendar gasto"
+                  : "Confirmar gasto"
+              : `Confirmar ${active.length}`}
           </Text>
         )}
       </Pressable>
-    </View>
-  );
-}
-
-function EditRow({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 16,
-        paddingVertical: 10,
-        borderTopWidth: 1,
-        borderTopColor: th(RULE, "line"),
-      }}
-    >
-      <Text style={{ fontSize: 16, color: th("rgba(255,255,255,0.74)") }}>{label}</Text>
-      {children}
     </View>
   );
 }

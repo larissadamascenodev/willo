@@ -451,14 +451,20 @@ export function Secondary({ icon, label, onPress }: { icon: React.ReactNode; lab
  */
 export function SavedView({
   line,
+  lines,
   savedAt,
   title,
   onLanded,
   onClose,
   onSee,
   seeLabel,
+  more,
 }: {
   line: ReceiptLine;
+  /** Several written at once, as one receipt; the first stands for them in the title and the share. */
+  lines?: ReceiptLine[];
+  /** One more way on, under "see": "Escanear outro comprovante". */
+  more?: { label: string; onPress: () => void };
   savedAt: Date;
   /** "Gasto registrado", "Gasto agendado"… */
   title?: string;
@@ -479,7 +485,7 @@ export function SavedView({
         </View>
       </View>
       <View ref={receiptRef} collapsable={false} style={{ marginTop: 10, paddingTop: 2, paddingBottom: 4 }}>
-        <ReceiptCard when={savedAt} onLanded={onLanded} lines={[line]} />
+        <ReceiptCard when={savedAt} onLanded={onLanded} lines={lines && lines.length > 0 ? lines : [line]} />
       </View>
 
       <View style={{ marginTop: 14, flexDirection: "row", gap: 10 }}>
@@ -502,6 +508,11 @@ export function SavedView({
       <Pressable onPress={onSee} style={({ pressed }) => ({ marginTop: 2, height: 40, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
         <Text style={{ fontSize: 15, fontWeight: "600", color: th(INK.soft) }}>{seeLabel}</Text>
       </Pressable>
+      {more && (
+        <Pressable onPress={more.onPress} style={({ pressed }) => ({ height: 40, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
+          <Text style={{ fontSize: 15, fontWeight: "600", color: th(INK.soft) }}>{more.label}</Text>
+        </Pressable>
+      )}
     </Animated.View>
   );
 }
