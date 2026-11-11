@@ -44,26 +44,54 @@ let introPlayed = false;
    of the phone opens willo://rapido): the home sits under it, ready to go back to. */
 export const unstable_settings = { initialRouteName: "(tabs)" };
 
-export default function RootLayout() {
-  const [intro, setIntro] = useState(!introPlayed);
+/** A link that names a screen (willo://rapido, or Expo Go's exp://…/--/rapido). */
+const namesScreen = (url: string | null | undefined) => {
+  if (!url) return false;
+  try {
+    return (ExpoLinking.parse(url).path ?? "").replace(/^\/+|\/+$/g, "") !== "";
+  } catch {
+    return false;
+  }
+};
 
+export default function RootLayout() {
   /* Opened by a link into a screen — Registro rápido from the back of the phone — the
-     opening is skipped: whoever taps twice wants to note something, now. */
+     opening never starts: whoever taps twice wants to note something, now. Read at once,
+     before the first frame, so not even a flash of it plays under the sheet. */
+  const [intro, setIntro] = useState(() => {
+    if (introPlayed) return false;
+    let url: string | null = null;
+    try {
+      url = ExpoLinking.getLinkingURL();
+    } catch {
+      url = null;
+    }
+    if (namesScreen(url)) {
+      introPlayed = true;
+      markIntroDone();
+      return false;
+    }
+    return true;
+  });
+
   useEffect(() => {
-    if (introPlayed) return;
+    if (!intro) return;
+    const skip = () => {
+      introPlayed = true;
+      markIntroDone();
+      setIntro(false);
+    };
+    /* The link can also land a moment after launch, while the opening has begun. */
     void Linking.getInitialURL()
       .then((url) => {
-        if (!url) return;
-        /* The screen the link names, whatever the scheme (willo://, or Expo Go's exp://…/--/). */
-        const path = ExpoLinking.parse(url).path ?? "";
-        if (path.replace(/^\/+|\/+$/g, "") !== "") {
-          introPlayed = true;
-          markIntroDone();
-          setIntro(false);
-        }
+        if (namesScreen(url)) skip();
       })
       .catch(() => undefined);
-  }, []);
+    const sub = Linking.addEventListener("url", ({ url }) => {
+      if (namesScreen(url)) skip();
+    });
+    return () => sub.remove();
+  }, [intro]);
 
   return (
     <View style={{ flex: 1, backgroundColor: th(GROUND, "bg") }}>

@@ -2,32 +2,132 @@ import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Share, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeIn } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 import { supabase } from "@/integrations/supabase/client";
 import Room from "~/components/Room";
 import RoundButton from "~/components/RoundButton";
 import Surface from "~/components/Surface";
-import { ChevronLeft, CreditCard, Zap } from "~/components/icons";
-import { Primary } from "~/components/registro/entryParts";
+import { AlertTriangle, Check, ChevronLeft, ChevronRight, Compass, Copy, CreditCard, Link2, Play, Zap } from "~/components/icons";
 import { showToast } from "~/lib/toast";
 import { GREEN, INK } from "~/theme/tokens";
-import { type as T } from "~/theme/type";
 
 import { th, useThemeRedraw } from "~/theme/theme";
 
 /**
- * The two shortcuts the iPhone can give Willo, set up step by step.
+ * The two shortcuts the iPhone can give Willo, taught the way the Shortcuts app looks.
  *
  * - Two taps on the back of the phone open Registro rápido (willo://rapido).
  * - Every purchase with a card in the Wallet goes into Willo Copilot, to confirm later.
- *   The shortcut needs the person's own Copilot code, which this screen hands over.
+ *
+ * One tab each. Every step has a title that says what to do, a line that says where,
+ * and, where it helps, a small drawing of what the person should see on their screen —
+ * the action block, the address to copy, the path in Ajustes. The one mistake people
+ * make (the "URL" action instead of "Abrir URLs") is drawn too, crossed out.
  */
 
 const FUNCTION_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/copilot`;
+const RAPIDO_URL = "willo://rapido";
+const SHORTCUT_NAME = "Registro rápido Willo";
+
+/* The blue of the Shortcuts app, so the drawings read as its screens. */
+const SHORTCUT_BLUE = "#3B82F6";
+const AMBER = "#F5B544";
+
+type Tab = "costas" | "carteira";
 
 export default function Atalhos() {
   useThemeRedraw();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [tab, setTab] = useState<Tab>("costas");
+
+  return (
+    <Room>
+      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 48, paddingHorizontal: 16 }} showsVerticalScrollIndicator={false}>
+        <View style={{ height: 44, flexDirection: "row", alignItems: "center" }}>
+          <RoundButton label="Voltar" onPress={() => (router.canGoBack() ? router.back() : router.replace("/" as never))}>
+            <ChevronLeft size={20} color={th("rgba(255,255,255,0.9)")} strokeWidth={2.4} />
+          </RoundButton>
+        </View>
+
+        <Text style={{ marginTop: 14, fontSize: 28, fontWeight: "800", letterSpacing: -0.8, color: th("#fff") }}>Atalhos do iPhone</Text>
+        <Text style={{ marginTop: 6, fontSize: 15, lineHeight: 21, color: th(INK.soft) }}>
+          Anote sem procurar o app. Você configura uma vez só, no app Atalhos do iPhone, e leva uns 2 minutos.
+        </Text>
+
+        <Segment tab={tab} onChange={setTab} />
+
+        <Animated.View key={tab} entering={FadeIn.duration(220)}>
+          {tab === "costas" ? <BackTap /> : <WalletCopilot />}
+        </Animated.View>
+      </ScrollView>
+    </Room>
+  );
+}
+
+/* ───────────── Two taps on the back ───────────── */
+
+function BackTap() {
+  return (
+    <View>
+      <Lead icon={<Zap size={18} color={th(GREEN)} strokeWidth={2.4} />} title="Dois toques atrás do iPhone" text="O Willo abre direto no Registro rápido, mesmo com o app fechado." />
+
+      <Step n={1} title="Crie um atalho novo">
+        Abra o app <B>Atalhos</B> e toque no <B>+</B>, no canto de cima.
+      </Step>
+
+      <Step n={2} title="Adicione a ação Abrir URLs">
+        Toque em <B>Buscar</B>, embaixo, digite <B>Abrir URLs</B> e toque nela.
+        <Figure>
+          <ActionBlock icon={<Compass size={16} color="#fff" strokeWidth={2.4} />} tint={SHORTCUT_BLUE} words={["Abrir"]} token={RAPIDO_URL} />
+          <Caption ok>É assim que ela fica.</Caption>
+        </Figure>
+        <Figure warn>
+          <ActionBlock icon={<Link2 size={16} color="#fff" strokeWidth={2.4} />} tint="#6B7280" token={RAPIDO_URL} crossed />
+          <Caption>
+            Não use a ação <B>URL</B>, com o ícone de corrente. Ela só guarda o endereço e o app não abre.
+          </Caption>
+        </Figure>
+      </Step>
+
+      <Step n={3} title="Coloque o endereço do Willo">
+        Toque no campo azul da ação, onde está escrito <B>URL</B>, e cole o endereço:
+        <CopyField value={RAPIDO_URL} />
+      </Step>
+
+      <Step n={4} title="Dê um nome e teste">
+        No topo, toque no nome do atalho e chame de <B>{SHORTCUT_NAME}</B>. Depois toque no <B>▶</B>, embaixo à direita.
+        <Figure>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.1)", "bg") }}>
+              <Play size={15} color={th("#fff")} fill={th("#fff")} />
+            </View>
+            <ChevronRight size={16} color={th(INK.softer)} />
+            <View style={{ paddingHorizontal: 12, height: 34, borderRadius: 17, justifyContent: "center", backgroundColor: SHORTCUT_BLUE }}>
+              <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#fff" }}>Sempre permitir</Text>
+            </View>
+          </View>
+          <Caption>
+            Se o iPhone perguntar se pode abrir o Willo, toque em <B>Sempre permitir</B>. Sem isso, o toque nas costas só mostra um aviso e não abre nada.
+          </Caption>
+        </Figure>
+      </Step>
+
+      <Step n={5} title="Ligue nas costas do iPhone" last>
+        Feche o Atalhos, abra os <B>Ajustes</B> e siga:
+        <Path steps={["Acessibilidade", "Toque", "Tocar Atrás", "Toque Duplo"]} />
+        Na lista, escolha <B>{SHORTCUT_NAME}</B>.
+      </Step>
+
+      <Done text="Pronto. Dê dois toques firmes atrás do iPhone, perto da câmera, e o Registro rápido abre." />
+    </View>
+  );
+}
+
+/* ───────────── Wallet purchases into Copilot ───────────── */
+
+function WalletCopilot() {
   const [busy, setBusy] = useState(false);
 
   /* The person's Copilot code, handed over through the share sheet so it can be copied. */
@@ -45,94 +145,262 @@ export default function Atalhos() {
   };
 
   return (
-    <Room>
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 40, paddingHorizontal: 16 }} showsVerticalScrollIndicator={false}>
-        <View style={{ height: 44, flexDirection: "row", alignItems: "center" }}>
-          <RoundButton label="Voltar" onPress={() => (router.canGoBack() ? router.back() : router.replace("/" as never))}>
-            <ChevronLeft size={20} color={th("rgba(255,255,255,0.9)")} strokeWidth={2.4} />
-          </RoundButton>
-        </View>
-        <Text style={{ marginTop: 14, fontSize: 26, fontWeight: "800", letterSpacing: -0.7, color: th("#fff") }}>Atalhos do iPhone</Text>
-        <Text style={{ marginTop: 4, fontSize: 14, lineHeight: 20, color: th(INK.soft) }}>
-          Dois jeitos de anotar sem abrir o app. Configure uma vez, no app Atalhos do iPhone.
-        </Text>
+    <View>
+      <Lead
+        icon={<CreditCard size={18} color={th(GREEN)} strokeWidth={2.4} />}
+        title="Compras da Carteira no Copilot"
+        text="Cada compra por aproximação com o iPhone chega no Willo Copilot e espera você confirmar."
+      />
 
-        {/* ── Two taps on the back ── */}
-        <Section icon={<Zap size={18} color={th(GREEN)} strokeWidth={2.4} />} title="Toque duplo nas costas" note="Dois toques atrás do iPhone abrem o Registro rápido.">
-          <Step n={1}>No app <B>Atalhos</B>, toque em <B>+</B>, busque e escolha a ação <B>Abrir URLs</B> (não a ação <B>URL</B> sozinha).</Step>
-          <Step n={2}>
-            No endereço, escreva <B>willo://rapido</B>. Dê o nome <B>Registro rápido Willo</B> ao atalho.
-          </Step>
-          <Step n={3}>
-            Rode o atalho uma vez tocando nele no app <B>Atalhos</B>. Quando o iPhone perguntar se pode abrir o Willo, toque em <B>Sempre permitir</B>. Sem isso, o toque nas costas só mostra o aviso e não abre nada.
-          </Step>
-          <Step n={4}>
-            Vá em <B>Ajustes › Acessibilidade › Toque › Toque traseiro › Toque duplo</B> e escolha o atalho <B>Registro rápido Willo</B>.
-          </Step>
-          <Step n={5} last>Pronto: dois toques nas costas do iPhone e o Willo abre direto no Registro rápido.</Step>
-        </Section>
-
-        {/* ── Wallet purchases into Copilot ── */}
-        <Section
-          icon={<CreditCard size={18} color={th(GREEN)} strokeWidth={2.4} />}
-          title="Compras da Carteira no Copilot"
-          note="Cada compra com cartão da Carteira (por aproximação) vai para o Willo Copilot, esperando você confirmar."
+      <Step n={1} title="Copie o seu código">
+        É ele que diz ao Willo que a compra é sua. Toque no botão e escolha <B>Copiar</B>. Não compartilhe com ninguém.
+        <Pressable
+          onPress={() => void shareCode()}
+          disabled={busy}
+          style={({ pressed }) => ({ marginTop: 12, height: 46, borderRadius: 23, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: th("#fff", "bg"), opacity: pressed || busy ? 0.8 : 1 })}
         >
-          <Step n={1}>
-            Toque em <B>Copiar meu código</B> aqui embaixo e escolha <B>Copiar</B>. É o seu código pessoal: não compartilhe.
-          </Step>
-          <Step n={2}>
-            No app <B>Atalhos</B>, aba <B>Automação</B> › <B>+</B> › <B>Transação</B>. Marque os seus cartões, escolha <B>Executar imediatamente</B> e toque em <B>Seguinte</B> › <B>Novo atalho em branco</B>.
-          </Step>
-          <Step n={3}>
-            Adicione a ação <B>Obter conteúdo do URL</B>. No URL, cole: <B>{FUNCTION_URL}</B>
-          </Step>
-          <Step n={4}>
-            Toque em <B>Mostrar mais</B>: Método <B>POST</B>, Corpo da solicitação <B>JSON</B>, e adicione os campos de texto:
-            {"\n"}• <B>code</B> = o seu código colado
-            {"\n"}• <B>amount</B> = Entrada do atalho › <B>Valor</B>
-            {"\n"}• <B>merchant</B> = Entrada do atalho › <B>Comerciante</B>
-            {"\n"}• <B>card</B> = Entrada do atalho › <B>Cartão ou Passe</B>
-          </Step>
-          <Step n={5} last>Pronto. A próxima compra com o iPhone aparece no card Willo Copilot, na tela inicial.</Step>
-          <View style={{ marginTop: 6 }}>
-            <Primary label={busy ? "Gerando…" : "Copiar meu código"} onPress={() => void shareCode()} busy={busy} disabled={busy} />
-          </View>
-          {busy && <ActivityIndicator style={{ marginTop: 8 }} color={th(INK.soft)} />}
-        </Section>
+          {busy ? <ActivityIndicator color={th("#0B0B0B")} /> : <Copy size={16} color={th("#0B0B0B")} strokeWidth={2.4} />}
+          <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#0B0B0B") }}>{busy ? "Gerando…" : "Copiar meu código"}</Text>
+        </Pressable>
+      </Step>
 
-        <Text style={{ marginTop: 18, fontSize: 12.5, lineHeight: 18, color: th(INK.softer) }}>
-          Pix não passa pela Carteira: ele não entra sozinho. Para um Pix, use a câmera do Registro rápido com o comprovante.
+      <Step n={2} title="Crie a automação">
+        No app <B>Atalhos</B>, vá na aba <B>Automação</B>, embaixo, e siga:
+        <Path steps={["+", "Transação"]} root="Automação" />
+        Marque os seus cartões, escolha <B>Executar Imediatamente</B> e toque em <B>Seguinte</B> e depois em <B>Novo Atalho em Branco</B>.
+      </Step>
+
+      <Step n={3} title="Adicione Obter Conteúdo do URL">
+        Toque em <B>Buscar</B>, digite <B>Obter conteúdo</B> e escolha <B>Obter Conteúdo do URL</B>. No campo azul, cole este endereço:
+        <CopyField value={FUNCTION_URL} small />
+      </Step>
+
+      <Step n={4} title="Diga o que mandar">
+        Toque na setinha da ação. Em <B>Método</B>, escolha <B>POST</B>. Em <B>Corpo da Solicitação</B>, escolha <B>JSON</B>. Depois toque em <B>Adicionar novo campo</B> › <B>Texto</B>, quatro vezes:
+        <Fields
+          rows={[
+            ["code", "o código que você copiou"],
+            ["amount", "Entrada do Atalho › Valor"],
+            ["merchant", "Entrada do Atalho › Comerciante"],
+            ["card", "Entrada do Atalho › Cartão ou Passe"],
+          ]}
+        />
+        Nos três de baixo, toque no valor, escolha <B>Entrada do Atalho</B> e depois o item da lista.
+      </Step>
+
+      <Step n={5} title="Teste com uma compra" last>
+        Na próxima compra por aproximação com o iPhone, ela aparece no card <B>Willo Copilot</B>, na tela inicial, esperando você confirmar.
+      </Step>
+
+      <View style={{ marginTop: 16, flexDirection: "row", gap: 10, padding: 14, borderRadius: 18, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }}>
+        <AlertTriangle size={16} color={AMBER} strokeWidth={2.4} style={{ marginTop: 1 }} />
+        <Text style={{ flex: 1, fontSize: 13, lineHeight: 18, color: th(INK.soft) }}>
+          Pix não passa pela Carteira, então não entra sozinho. Para um Pix, use a câmera do Registro rápido com o comprovante.
         </Text>
-      </ScrollView>
-    </Room>
+      </View>
+    </View>
   );
 }
 
-function Section({ icon, title, note, children }: { icon: ReactNode; title: string; note: string; children: ReactNode }) {
+/* ───────────── Pieces ───────────── */
+
+function Segment({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
+  const item = (id: Tab, label: string) => {
+    const on = tab === id;
+    return (
+      <Pressable
+        key={id}
+        onPress={() => {
+          if (on) return;
+          void Haptics.selectionAsync().catch(() => undefined);
+          onChange(id);
+        }}
+        style={{ flex: 1, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: on ? th("rgba(255,255,255,0.12)", "bg") : "transparent" }}
+      >
+        <Text style={{ fontSize: 14, fontWeight: on ? "700" : "600", color: th(on ? "#fff" : INK.soft) }}>{label}</Text>
+      </Pressable>
+    );
+  };
   return (
-    <Surface radius={24} style={{ marginTop: 18, padding: 16 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(103,205,103,0.14)", "bg") }}>{icon}</View>
-        <Text style={[T.cardLabel, { flex: 1, fontSize: 16, fontWeight: "700", color: th("#fff") }]}>{title}</Text>
+    <View style={{ marginTop: 20, flexDirection: "row", padding: 4, borderRadius: 23, backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
+      {item("costas", "Toque nas costas")}
+      {item("carteira", "Compras da Carteira")}
+    </View>
+  );
+}
+
+function Lead({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
+  return (
+    <Surface radius={22} style={{ marginTop: 16, padding: 16, flexDirection: "row", gap: 12, alignItems: "center" }}>
+      <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(103,205,103,0.14)", "bg") }}>{icon}</View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 16, fontWeight: "700", color: th("#fff") }}>{title}</Text>
+        <Text style={{ marginTop: 2, fontSize: 13.5, lineHeight: 19, color: th(INK.soft) }}>{text}</Text>
       </View>
-      <Text style={{ marginTop: 8, fontSize: 13.5, lineHeight: 19, color: th(INK.soft) }}>{note}</Text>
-      <View style={{ marginTop: 12 }}>{children}</View>
     </Surface>
   );
 }
 
-function Step({ n, last, children }: { n: number; last?: boolean; children: ReactNode }) {
+/** One step: the number on a rail that runs down to the next, a title that says what to do. */
+function Step({ n, title, last, children }: { n: number; title: string; last?: boolean; children: ReactNode }) {
+  /* Text runs and drawings come mixed; the text is gathered into paragraphs between drawings. */
+  const parts: ReactNode[] = [];
+  let run: ReactNode[] = [];
+  const flush = () => {
+    if (run.length) {
+      parts.push(
+        <Text key={`t${parts.length}`} style={{ marginTop: parts.length ? 10 : 4, fontSize: 14.5, lineHeight: 21, color: th(INK.soft) }}>
+          {run}
+        </Text>,
+      );
+      run = [];
+    }
+  };
+  const list = Array.isArray(children) ? children : [children];
+  list.forEach((c, i) => {
+    if (typeof c === "string" || (c && typeof c === "object" && "type" in c && c.type === B)) run.push(typeof c === "string" ? c : <B key={i}>{(c as { props: { children: ReactNode } }).props.children}</B>);
+    else if (c) {
+      flush();
+      parts.push(<View key={`f${i}`}>{c}</View>);
+    }
+  });
+  flush();
+
   return (
-    <View style={{ flexDirection: "row", gap: 12, paddingVertical: 10, borderBottomWidth: last ? 0 : 1, borderBottomColor: th("rgba(255,255,255,0.06)", "line") }}>
-      <View style={{ width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
-        <Text style={{ fontSize: 12, fontWeight: "800", color: th("#fff") }}>{n}</Text>
+    <View style={{ flexDirection: "row", gap: 14, marginTop: 22 }}>
+      <View style={{ alignItems: "center" }}>
+        <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg") }}>
+          <Text style={{ fontSize: 13.5, fontWeight: "800", color: th("#0B0B0B") }}>{n}</Text>
+        </View>
+        {!last && <View style={{ flex: 1, width: 2, marginTop: 6, marginBottom: -16, borderRadius: 1, backgroundColor: th("rgba(255,255,255,0.08)", "line") }} />}
       </View>
-      <Text style={{ flex: 1, fontSize: 14, lineHeight: 20, color: th(INK.soft) }}>{children}</Text>
+      <View style={{ flex: 1, paddingTop: 3 }}>
+        <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.2, color: th("#fff") }}>{title}</Text>
+        {parts}
+      </View>
     </View>
   );
 }
 
 function B({ children }: { children: ReactNode }) {
   return <Text style={{ fontWeight: "700", color: th("#fff") }}>{children}</Text>;
+}
+
+/** A small drawing of the screen, framed. */
+function Figure({ warn, children }: { warn?: boolean; children: ReactNode }) {
+  return (
+    <View
+      style={{
+        marginTop: 12,
+        padding: 12,
+        borderRadius: 18,
+        gap: 10,
+        borderWidth: 1,
+        borderColor: warn ? "rgba(245,181,68,0.28)" : th("rgba(255,255,255,0.07)", "line"),
+        backgroundColor: warn ? "rgba(245,181,68,0.06)" : th("rgba(255,255,255,0.03)", "bg"),
+      }}
+    >
+      {children}
+    </View>
+  );
+}
+
+function Caption({ ok, children }: { ok?: boolean; children: ReactNode }) {
+  return (
+    <View style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+      {ok ? <Check size={15} color={th(GREEN)} strokeWidth={3} style={{ marginTop: 2 }} /> : <AlertTriangle size={15} color={AMBER} strokeWidth={2.4} style={{ marginTop: 2 }} />}
+      <Text style={{ flex: 1, fontSize: 13.5, lineHeight: 19, color: th(INK.soft) }}>{children}</Text>
+    </View>
+  );
+}
+
+/** An action as the Shortcuts app draws it: icon, words, the blue token. */
+function ActionBlock({ icon, tint, words = [], token, crossed }: { icon: ReactNode; tint: string; words?: string[]; token: string; crossed?: boolean }) {
+  return (
+    <View style={{ opacity: crossed ? 0.75 : 1 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, height: 50, borderRadius: 16, backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
+        <View style={{ width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: tint }}>{icon}</View>
+        {words.map((w) => (
+          <Text key={w} style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>
+            {w}
+          </Text>
+        ))}
+        <View style={{ paddingHorizontal: 8, height: 28, borderRadius: 8, justifyContent: "center", backgroundColor: "rgba(59,130,246,0.18)" }}>
+          <Text style={{ fontSize: 15, fontWeight: "600", color: SHORTCUT_BLUE }}>{token}</Text>
+        </View>
+      </View>
+      {crossed && <View pointerEvents="none" style={{ position: "absolute", left: 10, right: 10, top: 24, height: 2, borderRadius: 1, backgroundColor: AMBER, transform: [{ rotate: "-4deg" }] }} />}
+    </View>
+  );
+}
+
+/** An address to paste, with the share sheet's Copiar a tap away. */
+function CopyField({ value, small }: { value: string; small?: boolean }) {
+  return (
+    <Pressable
+      onPress={() => void Share.share({ message: value }).catch(() => undefined)}
+      style={({ pressed }) => ({
+        marginTop: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        paddingLeft: 14,
+        paddingRight: 6,
+        height: 50,
+        borderRadius: 16,
+        backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <Text selectable numberOfLines={1} ellipsizeMode="middle" style={{ flex: 1, fontSize: small ? 13 : 16, fontWeight: "600", color: SHORTCUT_BLUE, fontVariant: ["tabular-nums"] }}>
+        {value}
+      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, height: 38, borderRadius: 12, backgroundColor: th("#fff", "bg") }}>
+        <Copy size={14} color={th("#0B0B0B")} strokeWidth={2.4} />
+        <Text style={{ fontSize: 13.5, fontWeight: "700", color: th("#0B0B0B") }}>Copiar</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+/** Where to go in Ajustes (or Atalhos), as a row of chips. */
+function Path({ steps, root = "Ajustes" }: { steps: string[]; root?: string }) {
+  const all = [root, ...steps];
+  return (
+    <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", alignItems: "center", rowGap: 8, columnGap: 6 }}>
+      {all.map((s, i) => (
+        <View key={`${s}${i}`} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <View style={{ paddingHorizontal: 11, height: 32, borderRadius: 10, justifyContent: "center", backgroundColor: i === all.length - 1 ? th("rgba(103,205,103,0.16)", "bg") : th("rgba(255,255,255,0.07)", "bg") }}>
+            <Text style={{ fontSize: 13.5, fontWeight: "700", color: i === all.length - 1 ? th(GREEN) : th("#fff") }}>{s}</Text>
+          </View>
+          {i < all.length - 1 && <ChevronRight size={14} color={th(INK.softer)} strokeWidth={2.4} />}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** The JSON fields of the request, as the Shortcuts sheet lists them. */
+function Fields({ rows }: { rows: [string, string][] }) {
+  return (
+    <View style={{ marginTop: 12, borderRadius: 16, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
+      {rows.map(([k, v], i) => (
+        <View key={k} style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 14, minHeight: 46, paddingVertical: 8, gap: 12, borderTopWidth: i ? 1 : 0, borderTopColor: th("rgba(255,255,255,0.06)", "line") }}>
+          <Text style={{ width: 74, fontSize: 14, fontWeight: "700", color: th("#fff") }}>{k}</Text>
+          <Text style={{ flex: 1, fontSize: 13.5, lineHeight: 18, color: SHORTCUT_BLUE, fontWeight: "600" }}>{v}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function Done({ text }: { text: string }) {
+  return (
+    <View style={{ marginTop: 24, flexDirection: "row", gap: 10, alignItems: "center", padding: 14, borderRadius: 18, backgroundColor: th("rgba(103,205,103,0.1)", "bg") }}>
+      <View style={{ width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: th(GREEN) }}>
+        <Check size={15} color="#0B0B0B" strokeWidth={3} />
+      </View>
+      <Text style={{ flex: 1, fontSize: 14, lineHeight: 20, color: th("#fff") }}>{text}</Text>
+    </View>
+  );
 }

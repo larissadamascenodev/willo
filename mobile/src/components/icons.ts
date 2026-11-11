@@ -110,3 +110,8 @@ export { default as Smartphone } from "lucide-react-native/icons/smartphone";
 export { default as Star } from "lucide-react-native/icons/star";
 export { default as Scale } from "lucide-react-native/icons/scale";
 export { default as ScanLine } from "lucide-react-native/icons/scan-line";
+export { default as Link2 } from "lucide-react-native/icons/link";
+export { default as Play } from "lucide-react-native/icons/play";
+export { default as Copy } from "lucide-react-native/icons/copy";
+export { default as Settings } from "lucide-react-native/icons/settings";
+export { default as Compass } from "lucide-react-native/icons/compass";
