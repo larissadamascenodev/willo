@@ -474,6 +474,7 @@ export default function Fatura() {
                   setYear(y);
                 }}
                 closingDay={card?.closing_day}
+                dueDay={card?.due_day}
                 hex={hex}
               />
             </View>

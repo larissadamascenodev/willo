@@ -5,7 +5,7 @@ import { shade } from "@/lib/tone";
 import type { Invoice } from "@/services/invoiceService";
 import { Check } from "~/components/icons";
 import { money } from "~/lib/money";
-import { INK } from "~/theme/tokens";
+import { AMBER, INK, RED } from "~/theme/tokens";
 
 import { th } from "~/theme/theme";
 /**
@@ -15,6 +15,10 @@ import { th } from "~/theme/theme";
  * billed yet, and that is already known, because every instalment of every plan is
  * already written into a future invoice. So the strip opens on the invoice that is
  * open — always, on every visit — and runs forward from there.
+ *
+ * Except when an invoice before it is still unpaid: then the strip opens on that one,
+ * because it is still owed. It wears its own colour — amber once closed, red once past
+ * its due day — until it is paid, and the open invoice keeps the card's colour.
  *
  * The months before it are still there, to the left, for when you want them. You
  * reach them by pulling the strip back, and the next time you arrive it has returned
@@ -27,7 +31,7 @@ const MONTH_SHORT = [
   "Jul", "Ago", "Set", "Out", "Nov", "Dez",
 ];
 
-type Status = "paga" | "aberta" | "futura";
+type Status = "paga" | "aberta" | "futura" | "fechada" | "vencida";
 
 /** How far back the strip can be pulled. */
 const PAST_MONTHS = 12;
@@ -41,6 +45,7 @@ export default function InvoiceForecastChart({
   selectedYear,
   onSelect,
   closingDay,
+  dueDay,
   hex,
 }: {
   invoices: Invoice[];
@@ -49,13 +54,15 @@ export default function InvoiceForecastChart({
   onSelect: (month: number, year: number) => void;
   /** Closing day, so "open" follows the billing cycle and not the calendar. */
   closingDay?: number | null;
+  /** Due day, so a closed invoice left unpaid past it shows as overdue. */
+  dueDay?: number | null;
   /** The card's own colour: this strip is about one card, so it wears it. */
   hex: string;
 }) {
   const scroller = useRef<ComponentRef<typeof ScrollView>>(null);
   const parked = useRef(false);
 
-  const { bars, openPeriod, committed, lastLabel } = useMemo(() => {
+  const { bars, openPeriod, startPeriod, committed, lastLabel } = useMemo(() => {
     const now = new Date();
     const currentPeriod = now.getFullYear() * 12 + now.getMonth();
     /* Past the closing day, this month's invoice is shut and the open one is the
@@ -81,34 +88,55 @@ export default function InvoiceForecastChart({
 
     const list: { period: number; month: number; year: number; amount: number; status: Status }[] = [];
     let total = 0;
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    /* Closed and still owed: due on its due day, in its own month. */
+    const owedStatus = (p: number): Status => {
+      const y = Math.floor(p / 12);
+      const m = p % 12;
+      const last = new Date(y, m + 1, 0).getDate();
+      const due = new Date(y, m, Math.min(dueDay ?? last, last));
+      return today > due ? "vencida" : "fechada";
+    };
+
+    /* The strip opens on the oldest invoice still owed, or on the open one. */
+    let start = open;
+    for (let p = open - PAST_MONTHS; p < open; p++) {
+      const { amount, isPaid } = at(p);
+      if (!isPaid && amount > 0) {
+        start = p;
+        break;
+      }
+    }
+
     for (let p = open - PAST_MONTHS; p <= end; p++) {
       const { amount, isPaid } = at(p);
-      if (p >= open) total += amount;
+      if (p >= start && !isPaid) total += amount;
       list.push({
         period: p,
         month: (p % 12) + 1,
         year: Math.floor(p / 12),
         amount,
-        status: isPaid ? "paga" : p > open ? "futura" : "aberta",
+        status: isPaid ? "paga" : p > open ? "futura" : p === open ? "aberta" : amount > 0 ? owedStatus(p) : "aberta",
       });
     }
 
     /* The past only goes back as far as the app was there for. A run of empty months
        is not history, it is the time before you started, and pulling the strip into
        it says the card spent nothing when in truth nobody was looking. */
-    while (list.length > 1 && list[0].period < open && list[0].amount <= 0) list.shift();
+    while (list.length > 1 && list[0].period < start && list[0].amount <= 0) list.shift();
 
     /* The horizon is where the plans actually end, not where the window does. */
     const lastPaying = [...list].reverse().find((b) => b.amount > 0);
     return {
       bars: list,
       openPeriod: open,
+      startPeriod: start,
       committed: total,
       lastLabel: lastPaying
         ? `${MONTH_SHORT[lastPaying.month - 1]}/${String(lastPaying.year).slice(2)}`
         : null,
     };
-  }, [invoices, closingDay]);
+  }, [invoices, closingDay, dueDay]);
 
   const max = useMemo(() => Math.max(...bars.map((b) => b.amount), 1), [bars]);
 
@@ -117,7 +145,7 @@ export default function InvoiceForecastChart({
      under the finger dragging it. */
   const parkAtOpen = () => {
     if (parked.current || bars.length === 0) return;
-    const index = bars.findIndex((b) => b.period === openPeriod);
+    const index = bars.findIndex((b) => b.period === startPeriod);
     if (index < 0) return;
     scroller.current?.scrollTo({ x: index * (BAR_W + GAP), animated: false });
     parked.current = true;
@@ -151,7 +179,8 @@ export default function InvoiceForecastChart({
       >
         {bars.map((bar) => {
           const selected = bar.month === selectedMonth && bar.year === selectedYear;
-          const past = bar.period < openPeriod;
+          const owed = bar.status === "fechada" || bar.status === "vencida";
+          const past = bar.period < openPeriod && !owed;
           const height = bar.amount > 0 ? Math.max(16, (bar.amount / max) * TRACK) : 5;
           return (
             <Pressable
@@ -168,7 +197,10 @@ export default function InvoiceForecastChart({
                     /* Settled and open invoices are the card's colour at full
                        strength; the ones still to come are the same colour, lighter.
                        One hue, so any bank's card reads the same way. */
-                    backgroundColor: th(bar.status === "futura" ? shade(hex, 0.55) : hex, "bg"),
+                    backgroundColor: th(
+                      bar.status === "vencida" ? RED : bar.status === "fechada" ? AMBER : bar.status === "futura" ? shade(hex, 0.55) : hex,
+                      "bg",
+                    ),
                     opacity: selected ? 1 : past ? 0.45 : 0.72,
                   }}
                 />
@@ -206,7 +238,9 @@ export default function InvoiceForecastChart({
         })}
       </ScrollView>
 
-      <View style={{ marginTop: 12, flexDirection: "row", alignItems: "center", gap: 16 }}>
+      <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 16, rowGap: 8 }}>
+        {bars.some((b) => b.status === "vencida") && <Legend hex={RED} label="Vencida" />}
+        {bars.some((b) => b.status === "fechada") && <Legend hex={AMBER} label="Fechada" />}
         <Legend hex={hex} label="Paga" tick />
         <Legend hex={hex} label="Em aberto" />
         <Legend hex={shade(hex, 0.55)} label="A vencer" />
