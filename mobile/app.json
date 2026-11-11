@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "willo",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/app-icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#08090A",
     "ios": {
