@@ -111,7 +111,7 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         {/* The two places and Registrar, in one piece of glass. */}
-        <View style={{ flex: 1, alignItems: "center" }}>
+        <View style={{ flex: 1, alignItems: "center", paddingLeft: 28 }}>
           <Glass
             radius={SIZE / 2}
             style={{
