@@ -20,7 +20,7 @@ import { th } from "~/theme/theme";
 /**
  * The row at the foot of the screen.
  *
- * Início and Transações side by side at the left, then the way to Willo — a long
+ * Início and Transações together in one piece of glass at the left, then the way to Willo — a long
  * pill with the sphere, small, in a disc at its left, and an invitation — and at the
  * right a plus, which opens Adicionar manualmente straight away in its sheet. The sphere is the same one that turns on the home
  * and listens in Willo's own screen, only small.
@@ -36,8 +36,9 @@ import { th } from "~/theme/theme";
 
 const SIZE = 52;
 const GAP = 8;
-/** The two places sit closer to each other than to the rest: they are one group. */
-const PAIR_GAP = 5;
+/** How far the two places sit inside the glass they share. */
+const INSET = 3;
+const INNER = SIZE - INSET * 2;
 
 /* Only the two things the bar actually reads. Typed here rather than imported,
    because the navigator ships inside expo-router and its package is not a dependency
@@ -65,10 +66,11 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
       style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingBottom: insets.bottom + 14 }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: GAP }}>
-        <View style={{ flexDirection: "row", gap: PAIR_GAP }}>
+        {/* The two places, in one piece of glass. */}
+        <Glass radius={SIZE / 2} interactive style={{ height: SIZE, flexDirection: "row", alignItems: "center", padding: INSET, gap: 2 }}>
           <NavCircle label="Início" icon={House} on={active === "index"} onPress={() => open("index")} />
           <NavCircle label="Transações" icon={ArrowLeftRight} on={active === "transacoes"} onPress={() => open("transacoes")} />
-        </View>
+        </Glass>
 
         {/* Willo. */}
         <Pressable
@@ -182,10 +184,10 @@ function NavCircle({
       accessibilityState={{ selected: on }}
       style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.94 : 1 }] })}
     >
-      <Glass radius={SIZE / 2} interactive style={{ width: SIZE, height: SIZE, alignItems: "center", justifyContent: "center" }}>
+      <View style={{ width: INNER + 4, height: INNER, alignItems: "center", justifyContent: "center" }}>
         <Animated.View
           pointerEvents="none"
-          style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: SIZE / 2, borderWidth: 1 }, shell]}
+          style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: INNER / 2, borderWidth: 1 }, shell]}
         />
         <Animated.View style={glyph}>
           <Animated.View style={soft}>
@@ -195,8 +197,8 @@ function NavCircle({
             <Icon size={24} color={th("#fff")} strokeWidth={2.5} />
           </Animated.View>
         </Animated.View>
-        <Animated.View style={[{ position: "absolute", bottom: 7, width: 4, height: 4, borderRadius: 2, backgroundColor: th("#fff", "bg") }, point]} />
-      </Glass>
+        <Animated.View style={[{ position: "absolute", bottom: 5, width: 4, height: 4, borderRadius: 2, backgroundColor: th("#fff", "bg") }, point]} />
+      </View>
     </Pressable>
   );
 }
