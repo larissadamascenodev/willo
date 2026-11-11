@@ -27,6 +27,7 @@ import { SavedView, type Card } from "~/components/registro/entryParts";
 import type { ReceiptLine } from "~/components/registro/ReceiptCard";
 import { Camera, ImageIcon, PenLine, X } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
+import { sparkle } from "~/lib/sparkles";
 import { processScanPhoto, type PickedPhoto } from "~/lib/scanUpload";
 import { INK } from "~/theme/tokens";
 
@@ -204,6 +205,9 @@ export default function Scanner() {
       setConfirming(false);
     }
   };
+
+  /* Done: everything closes and the home is what is left. */
+  const finish = () => router.dismissTo("/" as never);
 
   const granted = permission?.granted ?? false;
 
@@ -442,37 +446,38 @@ export default function Scanner() {
         </Animated.View>
       )}
 
-      {/* ── What it found, to check before it is written: the app's own sheet, rising softly
-          over the photo. Pulled down, it goes back to the camera. ── */}
-      <BottomSheet open={phase === "result"} onClose={again}>
-        <ScanResultCard
-          items={items}
-          onItemsChange={setItems}
-          accounts={accounts}
-          cards={cards}
-          accountId={accountId}
-          onAccountChange={setAccountId}
-          lowConfidence={confidence > 0 && confidence < 0.7}
-          confirming={confirming}
-          onConfirm={() => void confirm()}
-        />
-      </BottomSheet>
-
-      {/* ── Written: the receipt, as every entry gets one ── */}
-      <BottomSheet open={phase === "saved" && !!saved} onClose={() => router.back()}>
-        {saved && saved.lines[0] && (
+      {/* ── What it found, to check before it is written, and then the receipt: one sheet,
+          the app's own, rising softly over the photo. One, not two: the phone will not
+          bring up a second sheet while the first is still leaving, so the receipt never
+          came and the screen was left stuck on the photo. Pulled down while checking, it
+          goes back to the camera; once written, it is done. ── */}
+      <BottomSheet open={phase === "result" || (phase === "saved" && !!saved)} onClose={phase === "saved" ? finish : again}>
+        {phase === "saved" && saved && saved.lines[0] ? (
           <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 }}>
             <SavedView
               line={saved.lines[0]}
               lines={saved.lines}
               savedAt={saved.at}
               title={saved.lines.length > 1 ? `${saved.lines.length} lançamentos registrados` : undefined}
-              onClose={() => router.back()}
-              onSee={() => router.replace("/(tabs)/transacoes" as never)}
+              onLanded={sparkle}
+              onClose={finish}
+              onSee={() => router.dismissTo("/transacoes" as never)}
               seeLabel="Ver transações"
               more={{ label: "Escanear outro comprovante", onPress: again }}
             />
           </View>
+        ) : (
+          <ScanResultCard
+            items={items}
+            onItemsChange={setItems}
+            accounts={accounts}
+            cards={cards}
+            accountId={accountId}
+            onAccountChange={setAccountId}
+            lowConfidence={confidence > 0 && confidence < 0.7}
+            confirming={confirming}
+            onConfirm={() => void confirm()}
+          />
         )}
       </BottomSheet>
     </View>
