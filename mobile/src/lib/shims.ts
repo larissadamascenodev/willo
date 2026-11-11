@@ -37,6 +37,24 @@ const storage = {
   },
 };
 
+/* Something was written: the reads kept for a few minutes (the cards, the accounts, the
+   month) are out of date. Forgotten before any screen hears of it, so every screen that
+   reloads gets today's figures — a paid invoice gives its limit back at once, not after
+   the app is opened again. The web clears them where it writes; the phone's screens
+   only send the event, so the clearing lives here, where every event passes. */
+const FRESH = new Set(["finance-data-changed", "transaction-created"]);
+function forgetCachedReads() {
+  try {
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    require("@/services/transactionService").clearFinanceQueryCache();
+    require("@/services/dashboardData").clearDashboardCache();
+    require("@/lib/financeEngine").clearMaterializedCache();
+    /* eslint-enable @typescript-eslint/no-require-imports */
+  } catch {
+    /* not loaded yet: nothing kept to forget */
+  }
+}
+
 /** One listener list, standing in for the page that used to carry them. */
 type Listener = (event: { type: string; detail?: unknown }) => void;
 const listeners = new Map<string, Set<Listener>>();
@@ -50,6 +68,7 @@ const events = {
     listeners.get(type)?.delete(fn);
   },
   dispatchEvent: (event: { type: string; detail?: unknown }) => {
+    if (FRESH.has(event.type)) forgetCachedReads();
     listeners.get(event.type)?.forEach((fn) => {
       try {
         fn(event);

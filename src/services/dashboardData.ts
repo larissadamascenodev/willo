@@ -1,3 +1,4 @@
+import { supabase } from "@/integrations/supabase/client";
 import { getFinancialSummary, computeDailyBehavior, fetchHistoricalAverages } from "@/lib/financeEngine";
 import type { DashboardData, FinanceEvent, Transaction } from "@/types/finance";
 
@@ -108,10 +109,25 @@ export async function buildDashboardData(
 
   const { summary, transactions: rawTxs, events: rawEvents, creditCards, invoicesDetail: invoicesForMonth, invoiceAdvances } = await getFinancialSummary(month, year, { includeHistorical, userId: options?.userId });
 
+  /* Paid towards this month's invoices in an earlier month: it left then, as its own line. */
+  const monthStart = `${year}-${String(month + 1).padStart(2, "0")}-01T00:00:00`;
+  const invoiceIds = (invoicesForMonth as any[]).map((inv: any) => inv.id).filter(Boolean);
+  const { data: paidBefore } = invoiceIds.length
+    ? await (supabase.from("invoice_payments" as any) as any).select("amount, invoice_id").in("invoice_id", invoiceIds).lt("paid_at", monthStart)
+    : { data: [] };
+  const earlyByInvoice = new Map<string, number>();
+  for (const pay of (paidBefore ?? []) as any[]) earlyByInvoice.set(pay.invoice_id, (earlyByInvoice.get(pay.invoice_id) ?? 0) + Number(pay.amount));
+
   const invoiceByCard = new Map(
     (invoicesForMonth as any[]).map((inv: any) => [
       inv.credit_card_id,
-      { total: Number(inv.total_amount), isPaid: inv.is_paid, paidAmount: Number(inv.paid_amount ?? 0), paidAt: inv.paid_at as string | null },
+      {
+        total: Number(inv.total_amount),
+        isPaid: inv.is_paid,
+        paidAmount: Number(inv.paid_amount ?? 0),
+        paidAt: inv.paid_at as string | null,
+        early: earlyByInvoice.get(inv.id) ?? 0,
+      },
     ])
   );
 
@@ -160,6 +176,9 @@ export async function buildDashboardData(
       }
 
       const outstanding = Math.max(0, inv.total - inv.paidAmount);
+      /* Paid in full: the line is what settled it. Whatever was paid towards it in an
+         earlier month already left as its own line there. */
+      const settled = Math.max(0, inv.total - (inv.early ?? 0)) || inv.total;
       const entry: Transaction = {
         id: `fatura-${cardId}-${month}-${year}`,
         name: `Fatura ${cardName}`,
@@ -170,7 +189,7 @@ export async function buildDashboardData(
           ? new Date(inv.paidAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false })
           : null,
         paidAt: paidAtValue,
-        amount: outstanding > 0 ? outstanding : inv.total,
+        amount: outstanding > 0 ? outstanding : settled,
         type: "despesa" as const,
         status: inv.isPaid ? "pago" : "pendente",
         isFatura: true,

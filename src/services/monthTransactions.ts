@@ -76,7 +76,7 @@ export async function loadMonthTransactions(
     getCreditCards(),
     supabase
       .from("invoices")
-      .select("credit_card_id, total_amount, is_paid, paid_amount")
+      .select("id, credit_card_id, total_amount, is_paid, paid_amount")
       .eq("month", month + 1)
       .eq("year", year),
     getCustomCategories(),
@@ -92,6 +92,38 @@ export async function loadMonthTransactions(
       .filter((invoice) => Number(invoice.total_amount) > 0)
       .map((invoice) => [invoice.credit_card_id, invoice]),
   );
+
+  /* Invoice payments the month's lines depend on. Paid in an earlier month towards one of
+     this month's invoices: that money left then, as its own line there, so this month's
+     invoice line is only what was paid after it — once paid, the amount that settled it,
+     not the whole bill again. And paid this month towards a later invoice: money that left
+     now, so it is a line of this month. The finance engine already counts both this way;
+     the list now says the same. */
+  const invoiceIds = invoices.map((inv: any) => inv.id).filter(Boolean);
+  const [{ data: paidBefore }, { data: paidNow }] = await Promise.all([
+    invoiceIds.length
+      ? (supabase.from("invoice_payments" as any) as any)
+          .select("amount, invoice_id")
+          .in("invoice_id", invoiceIds)
+          .lt("paid_at", `${start}T00:00:00`)
+      : Promise.resolve({ data: [] }),
+    (supabase.from("invoice_payments" as any) as any)
+      .select("id, amount, paid_at, account_id, invoices!inner(month, year, credit_card_id)")
+      .gte("paid_at", `${start}T00:00:00`)
+      .lte("paid_at", `${end}T23:59:59`),
+  ]);
+  const earlyByInvoice = new Map<string, number>();
+  for (const pay of (paidBefore ?? []) as any[]) {
+    earlyByInvoice.set(pay.invoice_id, (earlyByInvoice.get(pay.invoice_id) ?? 0) + Number(pay.amount));
+  }
+  /* What still stood on the invoice when this month began, and what the line shows. */
+  const invoiceLineAmount = (invoice: any) => {
+    const total = Number(invoice.total_amount);
+    const early = earlyByInvoice.get(invoice.id) ?? 0;
+    const outstanding = Math.max(0, total - Number(invoice.paid_amount ?? 0));
+    if (outstanding > 0) return outstanding;
+    return Math.max(0, total - early) || total;
+  };
 
   /* A fixed entry can be struck off a single month without being deleted. */
   const fixaIds = baseTxs.filter((t) => t.recurrence_type === "fixa").map((t) => t.id);
@@ -151,16 +183,13 @@ export async function loadMonthTransactions(
 
     const cardName = info.card?.name || "Cartão";
     const dueDay = info.card?.due_day || 1;
-    const invoiceTotal = Number(invoice.total_amount);
-    const invoicePaid = Number((invoice as any).paid_amount ?? 0);
-    const outstanding = Math.max(0, invoiceTotal - invoicePaid);
 
     faturaEntries.push({
       id: `fatura-${cardId}-${month}-${year}`,
       name: `Fatura ${cardName}`,
       category: "Cartão de Crédito",
       date: `${year}-${pad(month + 1)}-${pad(dueDay)}`,
-      amount: outstanding > 0 ? outstanding : invoiceTotal,
+      amount: invoiceLineAmount(invoice),
       type: "despesa",
       status: invoice.is_paid ? "pago" : "pendente",
       payment_method: "cartao",
@@ -184,9 +213,7 @@ export async function loadMonthTransactions(
       name: `Fatura ${card.name}`,
       category: "Cartão de Crédito",
       date: `${year}-${pad(month + 1)}-${pad(card.due_day || 1)}`,
-      amount:
-        Math.max(0, Number(invoice.total_amount) - Number((invoice as any).paid_amount ?? 0)) ||
-        Number(invoice.total_amount),
+      amount: invoiceLineAmount(invoice),
       type: "despesa",
       status: invoice.is_paid ? "pago" : "pendente",
       payment_method: "cartao",
@@ -198,6 +225,30 @@ export async function loadMonthTransactions(
       credit_card_id: card.id,
     });
   }
+
+  /* Paid this month towards a later invoice. */
+  const period = year * 12 + month;
+  const advanceEntries: TransactionRow[] = ((paidNow ?? []) as any[])
+    .filter((pay) => pay.invoices && pay.invoices.year * 12 + (pay.invoices.month - 1) > period)
+    .map((pay) => {
+      const card = cardMap.get(pay.invoices.credit_card_id);
+      return {
+        id: `adiantamento-${pay.id}`,
+        name: `Pagamento antecipado · Fatura ${card?.name ?? "do cartão"}`,
+        category: "Cartão de Crédito",
+        date: new Date(pay.paid_at).toISOString().split("T")[0],
+        amount: Number(pay.amount),
+        type: "despesa",
+        status: "pago",
+        payment_method: "cartao",
+        recurrence_type: "unica",
+        installment_current: null,
+        installments: null,
+        observation: null,
+        account_id: pay.account_id ?? null,
+        credit_card_id: pay.invoices.credit_card_id,
+      } as TransactionRow;
+    });
 
   const regularRecurring = materializedRecurring.filter((t) => t.payment_method !== "cartao");
 
@@ -228,7 +279,7 @@ export async function loadMonthTransactions(
     }));
 
   return {
-    transactions: [...initialBalanceEntries, ...regularTxs, ...faturaEntries, ...regularRecurring],
+    transactions: [...initialBalanceEntries, ...regularTxs, ...faturaEntries, ...advanceEntries, ...regularRecurring],
     accounts: accRes as AccountRow[],
     creditCards: creditCardsRes as any[],
     customCategories: customCats,

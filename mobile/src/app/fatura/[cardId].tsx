@@ -158,8 +158,15 @@ export default function Fatura() {
   const total = current ? Number(current.total_amount) : 0;
   const paid = current ? Number((current as any).paid_amount ?? 0) : 0;
   const outstanding = Math.max(0, total - paid);
-  /* What the invoice asks for today. A payment already made is gone from it. */
-  const headline = outstanding > 0 ? outstanding : total;
+  /* Paid before the invoice closed: that money already left, as its own line. */
+  const early = useMemo(() => {
+    if (!card) return 0;
+    const closingAt = new Date(year, month - 1, Math.min(card.closing_day, new Date(year, month, 0).getDate()));
+    return payments.filter((pay) => new Date(pay.paid_at) < closingAt).reduce((sum, pay) => sum + Number(pay.amount), 0);
+  }, [payments, card, year, month]);
+  /* What the invoice asks for today. A payment already made is gone from it; once it is
+     paid, what settled it after it closed — not the whole bill again. */
+  const headline = outstanding > 0 ? outstanding : Math.max(0, total - early) || total;
 
   const limitTotal = card ? Number(card.limit) : 0;
   const usedLimit = card ? Number(card.used_limit) : 0;
@@ -338,6 +345,7 @@ export default function Fatura() {
               {cycle && (
                 <Text style={{ marginTop: 10, fontSize: 13, color: th(cycle.overdue ? RED : INK.soft) }}>
                   {cycle.line}
+                  {outstanding <= 0 && total > 0 && early > 0 ? ` · ${money(early)} pago antecipado` : ""}
                 </Text>
               )}
             </Animated.View>

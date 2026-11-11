@@ -505,12 +505,20 @@ export function SavedView({
         />
       </View>
       <Primary label="Concluir" onPress={onClose} tight />
-      <Pressable onPress={onSee} style={({ pressed }) => ({ marginTop: 2, height: 40, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
-        <Text style={{ fontSize: 15, fontWeight: "600", color: th(INK.soft) }}>{seeLabel}</Text>
-      </Pressable>
-      {more && (
-        <Pressable onPress={more.onPress} style={({ pressed }) => ({ height: 40, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
-          <Text style={{ fontSize: 15, fontWeight: "600", color: th(INK.soft) }}>{more.label}</Text>
+      {more ? (
+        /* Two ways on, side by side: a second line under the first pushed the receipt out of the sheet. */
+        <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center" }}>
+          <Pressable onPress={onSee} style={({ pressed }) => ({ flex: 1, height: 40, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ fontSize: 14.5, fontWeight: "600", color: th(INK.soft) }}>{seeLabel}</Text>
+          </Pressable>
+          <View style={{ width: 1, height: 16, backgroundColor: th("rgba(255,255,255,0.14)", "bg") }} />
+          <Pressable onPress={more.onPress} style={({ pressed }) => ({ flex: 1, height: 40, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ fontSize: 14.5, fontWeight: "600", color: th(INK.soft) }}>{more.label}</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <Pressable onPress={onSee} style={({ pressed }) => ({ marginTop: 2, height: 40, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
+          <Text style={{ fontSize: 15, fontWeight: "600", color: th(INK.soft) }}>{seeLabel}</Text>
         </Pressable>
       )}
     </Animated.View>

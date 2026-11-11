@@ -428,7 +428,7 @@ export async function getFinancialSummary(
     supabase.from("credit_cards").select("*").order("name"),
     supabase
       .from("invoices")
-      .select("credit_card_id, total_amount, is_paid, paid_amount, paid_at")
+      .select("id, credit_card_id, total_amount, is_paid, paid_amount, paid_at")
       .eq("month", dbMonth)
       .eq("year", year)
       .then(({ data }) => ({ data })),

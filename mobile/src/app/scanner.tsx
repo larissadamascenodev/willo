@@ -451,7 +451,7 @@ export default function Scanner() {
           bring up a second sheet while the first is still leaving, so the receipt never
           came and the screen was left stuck on the photo. Pulled down while checking, it
           goes back to the camera; once written, it is done. ── */}
-      <BottomSheet open={phase === "result" || (phase === "saved" && !!saved)} onClose={phase === "saved" ? finish : again}>
+      <BottomSheet open={phase === "result" || (phase === "saved" && !!saved)} full={phase === "saved"} onClose={phase === "saved" ? finish : again}>
         {phase === "saved" && saved && saved.lines[0] ? (
           <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 }}>
             <SavedView
@@ -463,7 +463,7 @@ export default function Scanner() {
               onClose={finish}
               onSee={() => router.dismissTo("/transacoes" as never)}
               seeLabel="Ver transações"
-              more={{ label: "Escanear outro comprovante", onPress: again }}
+              more={{ label: "Escanear outro", onPress: again }}
             />
           </View>
         ) : (
