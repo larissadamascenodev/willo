@@ -68,20 +68,41 @@ export default function BottomSheet({
   const scrollY = useSharedValue(0);
   const anchor = useSharedValue(-1);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /* The rise waits for the sheet to be laid out: started before, it ran while nothing
+     was on screen yet and the sheet simply appeared in place. */
+  const laidOut = useRef(false);
+  const waiting = useRef(false);
+  const riseUp = () => shown.set(withSpring(1, { duration: 520, dampingRatio: 0.94, reduceMotion: ReduceMotion.System }));
 
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     if (open) {
       setMounted(true);
       drag.set(0);
-      shown.set(withSpring(1, { duration: 520, dampingRatio: 0.94, reduceMotion: ReduceMotion.System }));
+      if (laidOut.current) riseUp();
+      else {
+        waiting.current = true;
+        /* Should the layout never be reported, it rises anyway. */
+        timer.current = setTimeout(() => {
+          if (waiting.current) {
+            waiting.current = false;
+            riseUp();
+          }
+        }, 160);
+      }
     } else {
+      waiting.current = false;
       shown.set(withTiming(0, { duration: EXIT_MS, easing: Easing.in(Easing.cubic), reduceMotion: ReduceMotion.System }));
-      timer.current = setTimeout(() => setMounted(false), EXIT_MS + 20);
+      timer.current = setTimeout(() => {
+        laidOut.current = false;
+        setMounted(false);
+      }, EXIT_MS + 20);
     }
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
+    // riseUp only sets the shared value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, shown, drag]);
 
   useEffect(() => {
@@ -146,7 +167,15 @@ export default function BottomSheet({
 
       <GestureDetector gesture={pull}>
       <Animated.View
-        onLayout={(e) => setTall(e.nativeEvent.layout.height)}
+        onLayout={(e) => {
+          setTall(e.nativeEvent.layout.height);
+          laidOut.current = true;
+          if (waiting.current) {
+            waiting.current = false;
+            /* One more frame, so the first drawn position is the low one. */
+            requestAnimationFrame(riseUp);
+          }
+        }}
         style={[
           {
             position: "absolute",
