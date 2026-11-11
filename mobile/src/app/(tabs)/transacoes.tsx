@@ -352,14 +352,18 @@ export default function Transacoes() {
               {held?.recurrence_type === "fixa"
                 ? "Ela se repete todo mês. Tirar só deste mês ou dela em diante?"
                 : (held?.installments ?? 0) > 1
-                  ? "Isso remove a compra inteira, com todas as parcelas."
+                  ? `É a parcela ${held?.installment_current ?? 1} de ${held?.installments}. Tirar só esta ou esta e as próximas?`
                   : "Isso não pode ser desfeito."}
             </Text>
-            {held?.recurrence_type === "fixa" && (
-              <HoldButton label="Só deste mês" onPress={() => void removeHeld("month")} disabled={removing} />
+            {(held?.recurrence_type === "fixa" || (held?.installments ?? 0) > 1) && (
+              <HoldButton
+                label={held?.recurrence_type === "fixa" ? "Só deste mês" : "Só esta parcela"}
+                onPress={() => void removeHeld("month")}
+                disabled={removing}
+              />
             )}
             <HoldButton
-              label={held?.recurrence_type === "fixa" ? "Deste mês em diante" : "Excluir"}
+              label={held?.recurrence_type === "fixa" ? "Deste mês em diante" : (held?.installments ?? 0) > 1 ? "Esta e as próximas" : "Excluir"}
               danger
               loading={removing}
               onPress={() => void removeHeld("all")}

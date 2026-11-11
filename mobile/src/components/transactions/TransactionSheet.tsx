@@ -4,8 +4,8 @@ import { ActivityIndicator, Platform, Pressable, Text, View, type TextStyle } fr
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { categoryHex } from "@/lib/categoryData";
-import { deleteTransaction, updateTransaction } from "@/services/transactionService";
-import { excludeRecurringForMonth, excludeRecurringFromMonthOnward, setOccurrenceStatus } from "@/services/recurringService";
+import { setOccurrenceStatus } from "@/services/recurringService";
+import { deleteInSeries } from "@/services/seriesActions";
 import type { TransactionRow as Row } from "@/services/monthTransactions";
 import type { CustomCategory } from "@/services/categoryService";
 import { BlurView } from "expo-blur";
@@ -65,41 +65,20 @@ const nums: TextStyle = Platform.select({
   default: {},
 }) as TextStyle;
 
-const pad = (n: number) => String(n).padStart(2, "0");
-
 /**
- * Takes a movement out of the books, the way the web does.
+ * Takes a movement out of the books.
  *
- * A fixed entry struck off one month: in its own month it moves to the next and
- * waits, which is what reverses its effect on the balance; in a later month that
- * month is excluded. "From here on" deletes it outright when it starts here, and
- * otherwise excludes every month from this one. Anything else is simply deleted —
- * a parcelled purchase with all its instalments.
+ * A fixed entry or one instalment of a purchase is asked first: only this one, or this
+ * one and the ones after. What that does to the rows is decided in one place
+ * (seriesPlan) and nothing is moved to another date to make it disappear.
  */
 export async function removeTransaction(
-  tx: Pick<Row, "id" | "date" | "recurrence_type">,
+  tx: Pick<Row, "id">,
   scope: "month" | "all",
   where: { month: number; year: number; userId?: string },
 ) {
-  const { month, year, userId } = where;
-  if (tx.recurrence_type === "fixa") {
-    if (!userId) throw new Error("Entre na sua conta de novo.");
-    const [y, m] = tx.date.split("-").map(Number);
-    if (scope === "month") {
-      if (m - 1 === month && y === year) {
-        const orig = new Date(`${tx.date}T12:00:00`);
-        const next = new Date(orig.getFullYear(), orig.getMonth() + 1, Math.min(orig.getDate(), 28));
-        await updateTransaction(tx.id, { date: `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`, status: "pendente" });
-      } else {
-        await excludeRecurringForMonth(tx.id, month, year, userId);
-      }
-      return;
-    }
-    if (y * 12 + (m - 1) >= year * 12 + month) await deleteTransaction(tx.id);
-    else await excludeRecurringFromMonthOnward(tx.id, month, year, userId);
-    return;
-  }
-  await deleteTransaction(tx.id);
+  if (!where.userId) throw new Error("Entre na sua conta de novo.");
+  await deleteInSeries(tx.id, scope, { month: where.month, year: where.year, userId: where.userId });
 }
 
 export default function TransactionSheet({
@@ -376,13 +355,15 @@ export default function TransactionSheet({
                 {isFixed
                   ? "Essa transação se repete todo mês. Quer tirar só deste mês ou dela em diante?"
                   : isParcelled
-                    ? `Isso remove a compra inteira, com as ${tx.installments} parcelas.`
+                    ? `É a parcela ${tx.installment_current ?? 1} de ${tx.installments}. Quer tirar só esta ou esta e as próximas?`
                     : "Essa transação será excluída e não dá para desfazer."}
               </Text>
             </View>
-            {isFixed && <Wide label="Só deste mês" onPress={() => void removeThisMonth()} disabled={busy} />}
+            {(isFixed || isParcelled) && (
+              <Wide label={isFixed ? "Só deste mês" : "Só esta parcela"} onPress={() => void removeThisMonth()} disabled={busy} />
+            )}
             <Wide
-              label={isFixed ? "Deste mês em diante" : "Excluir"}
+              label={isFixed ? "Deste mês em diante" : isParcelled ? "Esta e as próximas" : "Excluir"}
               danger
               onPress={() => void removeAll()}
               disabled={busy}

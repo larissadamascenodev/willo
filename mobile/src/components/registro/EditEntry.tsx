@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { createTransaction, getAccounts, getCreditCards, getTransactionById, updateTransaction } from "@/services/transactionService";
-import { excludeRecurringForMonth, excludeRecurringFromMonthOnward } from "@/services/recurringService";
+import { getAccounts, getCreditCards, getTransactionById, updateTransaction } from "@/services/transactionService";
+import { editInSeries } from "@/services/seriesActions";
 import CategoryPicker from "~/components/CategoryPicker";
 import EntryForm, { isoOf, type EntryValues, type Repeat } from "~/components/registro/EntryForm";
 import { Chip, Primary, type Account, type Card } from "~/components/registro/entryParts";
@@ -16,10 +16,9 @@ import { th } from "~/theme/theme";
  * everything on it changeable — out or in, amount, words, category, how it was paid,
  * repetition and instalments, when, whether it is settled, a note.
  *
- * A recurring one asks where the change goes: only the month being looked at — that
- * month leaves the series and gets an entry of its own — or this month and the ones
- * after — from here on the series is the changed one. One instalment of a purchase
- * keeps the purchase's plan.
+ * A fixed entry or an instalment asks where the change goes: only the one being looked
+ * at — nothing else moves — or this one and the ones after — all of them alike, the ones
+ * before as they were. An instalment is shown as itself and keeps the purchase's plan.
  */
 
 interface Tx {
@@ -69,14 +68,13 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
         if (!alive) return;
         const t = row as unknown as Tx;
         const parcel = t.recurrence_type === "parcelado" && (t.installments ?? 0) > 1;
-        const child = !!t.parent_transaction_id;
         setTx(t);
         setAccounts((accs as unknown as Account[]).filter((a) => a.type !== "investment"));
         setCards(cs as unknown as Card[]);
         setV({
           type: t.type,
-          /* A purchase in instalments is shown whole, as it was entered; one instalment on its own, as itself. */
-          cents: Math.round(Number(t.amount) * 100) * (parcel && !child ? (t.installments ?? 1) : 1),
+          /* An instalment, the first included, is shown as itself. */
+          cents: Math.round(Number(t.amount) * 100),
           name: t.name,
           category: t.category || null,
           method: t.type === "receita" ? "conta" : (t.payment_method ?? "conta"),
@@ -107,9 +105,9 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
     );
   }
 
-  const child = !!tx.parent_transaction_id;
-  const recurring = tx.recurrence_type === "fixa";
-  const startsHere = Number(tx.date.slice(0, 4)) * 12 + Number(tx.date.slice(5, 7)) - 1 >= year * 12 + month;
+  const parcel = tx.recurrence_type === "parcelado" && (tx.installments ?? 0) > 1;
+  const child = !!tx.parent_transaction_id || parcel;
+  const recurring = tx.recurrence_type === "fixa" || parcel;
 
   const save = async (scope?: "month" | "all") => {
     if (!user || !v.name.trim() || v.cents <= 0 || !v.whereId) return;
@@ -141,22 +139,8 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
             }),
       };
 
-      if (recurring && scope === "month") {
-        /* This month leaves the series and gets an entry of its own. */
-        if (startsHere) {
-          const next = new Date(year, month + 1, 1);
-          /* It arrives in the next month waiting: carried over as received, it went on
-             counting in the accounts with nothing on screen to explain it. */
-          await updateTransaction(tx.id, { date: inMonth(tx.date, next.getMonth(), next.getFullYear()), status: "pendente" });
-        } else await excludeRecurringForMonth(tx.id, month, year, user.id);
-        await createTransaction({ ...fields, recurrence_type: "unica", installments: null, installment_current: null } as never, user.id);
-      } else if (recurring && scope === "all" && !startsHere) {
-        /* From this month on, the series is the changed one. */
-        await excludeRecurringFromMonthOnward(tx.id, month, year, user.id);
-        await createTransaction(fields as never, user.id);
-      } else {
-        await updateTransaction(tx.id, fields);
-      }
+      if (recurring && scope) await editInSeries(tx.id, scope, fields, { month, year, userId: user.id });
+      else await updateTransaction(tx.id, fields);
       window.dispatchEvent(new CustomEvent("transaction-created"));
       showToast("Lançamento atualizado");
       onDone();
@@ -191,10 +175,12 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
         {asking ? (
           <Animated.View entering={FadeIn.duration(200)} style={{ marginTop: 16 }}>
             <Text style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>Aplicar a mudança em:</Text>
-            <Text style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>É um lançamento recorrente.</Text>
+            <Text style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>
+              {parcel ? `É a parcela ${tx.installment_current ?? 1} de ${tx.installments}.` : "Ele se repete todo mês."}
+            </Text>
             <View style={{ marginTop: 12, flexDirection: "row", gap: 8 }}>
-              <Chip label="Só este mês" on={false} onPress={() => void save("month")} />
-              <Chip label="Este e os próximos" on={false} onPress={() => void save("all")} />
+              <Chip label={parcel ? "Só esta parcela" : "Só este mês"} on={false} onPress={() => void save("month")} />
+              <Chip label={parcel ? "Esta e as próximas" : "Este e os próximos"} on={false} onPress={() => void save("all")} />
             </View>
             {saving && <ActivityIndicator style={{ marginTop: 12 }} color={th("#fff")} />}
           </Animated.View>
