@@ -526,6 +526,7 @@ function WidgetFrame({
 
   /* A touch, while editing, opens the card's menu. Recognised by the same system as the
      hold, so the two never fight over the finger: the hold wins if the finger stays. */
+  const heldFeel = () => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
   const openMenu = () => {
     void measureNow().then((r) => r && onMenu({ top: r.y, bottom: r.y + r.h, left: r.x, width: r.w }));
   };
@@ -535,7 +536,16 @@ function WidgetFrame({
     .onEnd((_e, ok) => {
       if (ok) runOnJS(openMenu)();
     });
-  const gestures = Gesture.Exclusive(carry, tap);
+  /* Outside editing, holding the card opens its menu. Through the gesture system: the card
+     itself is a button, and a hold read by a wrapper around it never reached the wrapper. */
+  const hold = Gesture.LongPress()
+    .enabled(!editing)
+    .minDuration(380)
+    .onStart(() => {
+      runOnJS(heldFeel)();
+      runOnJS(openMenu)();
+    });
+  const gestures = Gesture.Race(hold, Gesture.Exclusive(carry, tap));
 
   /* The tremble of a board being edited, as the phone's own home screen does it. */
   const wobble = useSharedValue(0);
@@ -562,17 +572,7 @@ function WidgetFrame({
         onLayout={measure}
         style={[{ width: width ?? (half ? "48%" : "100%"), position: "relative", opacity: hidden ? 0 : 1 }, tremble]}
       >
-        {/* Outside editing, holding the card opens its menu beside it, as before. */}
-        <Pressable
-          disabled={editing}
-          delayLongPress={380}
-          onLongPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
-            openMenu();
-          }}
-        >
-          <View pointerEvents={editing ? "none" : "auto"}>{children}</View>
-        </Pressable>
+        <View pointerEvents={editing ? "none" : "auto"}>{children}</View>
 
       </Animated.View>
     </GestureDetector>

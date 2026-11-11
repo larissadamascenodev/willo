@@ -66,6 +66,12 @@ export default function GastosPorCategoria({
   const router = useRouter();
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
+  /* A category picked out lights alone for a moment, then all of them light again. */
+  useEffect(() => {
+    if (!selected) return;
+    const t = setTimeout(() => setSelected(null), 3500);
+    return () => clearTimeout(t);
+  }, [selected]);
 
   useEffect(() => {
     let alive = true;
