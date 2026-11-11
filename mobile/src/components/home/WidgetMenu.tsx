@@ -1,17 +1,20 @@
-import { Pressable, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import AnchoredMenu, { MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
-import { Eye, EyeOff, Pencil, RectangleHorizontal, Square, Trash2 } from "~/components/icons";
-import { useHiddenValues, setHiddenValues } from "@/hooks/useHiddenValues";
+import { EyeOff, RectangleHorizontal, Square } from "~/components/icons";
 import type { WidgetSize } from "@/lib/homeWidgets";
-import { GREEN } from "~/theme/tokens";
+import { GREEN, INK } from "~/theme/tokens";
 
 import { th } from "~/theme/theme";
-/** What can be done to the card you are holding, opened beside it. */
+
+/**
+ * What can be done to a card while the board is being edited, opened beside it with a
+ * touch: take it off the board, or choose its size — Compacto, half a row (the Radar's
+ * size), or Grande, the whole row. The size changes at once.
+ */
 
 export interface WidgetMenuTarget {
   id: string;
   label: string;
-  description: string;
   size: WidgetSize;
   resizable: boolean;
   rect: AnchorRect;
@@ -20,66 +23,35 @@ export interface WidgetMenuTarget {
 export default function WidgetMenu({
   target,
   onClose,
-  onEdit,
   onResize,
   onRemove,
 }: {
   target: WidgetMenuTarget | null;
   onClose: () => void;
-  onEdit: () => void;
   onResize: (size: WidgetSize) => void;
   onRemove: () => void;
 }) {
-  const hidden = useHiddenValues();
-
   return (
     <AnchoredMenu open={!!target} anchor={target?.rect} onClose={onClose}>
-      <MenuRow
-        icon={hidden ? Eye : EyeOff}
-        label={hidden ? "Mostrar dados" : "Ocultar dados"}
-        onPress={() => {
-          setHiddenValues(!hidden);
-          onClose();
-        }}
-      />
-      <MenuRow icon={Pencil} label="Editar widgets" onPress={onEdit} />
-      <MenuRow icon={Trash2} label="Remover" danger onPress={onRemove} last={!target?.resizable} />
-
       {target?.resizable && (
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            borderTopWidth: 1,
-            borderTopColor: th("rgba(255,255,255,0.08)", "line"),
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-          }}
-        >
-          <SizeButton
-            icon={Square}
-            active={target.size === "half"}
-            onPress={() => onResize("half")}
-          />
-          <SizeButton
-            icon={RectangleHorizontal}
-            active={target.size === "full"}
-            onPress={() => onResize("full")}
-          />
+        <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 10 }}>
+          <SizeButton icon={Square} label="Compacto" active={target.size === "half"} onPress={() => onResize("half")} />
+          <SizeButton icon={RectangleHorizontal} label="Grande" active={target.size === "full"} onPress={() => onResize("full")} />
         </View>
       )}
+      <MenuRow icon={EyeOff} label="Ocultar da tela" danger onPress={onRemove} last />
     </AnchoredMenu>
   );
 }
 
 function SizeButton({
   icon: Icon,
+  label,
   active,
   onPress,
 }: {
   icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+  label: string;
   active: boolean;
   onPress: () => void;
 }) {
@@ -88,17 +60,19 @@ function SizeButton({
       onPress={onPress}
       style={({ pressed }) => ({
         flex: 1,
-        height: 44,
+        height: 64,
         alignItems: "center",
         justifyContent: "center",
-        borderRadius: 14,
+        gap: 5,
+        borderRadius: 16,
         borderWidth: 1,
-        borderColor: th(active ? "rgba(200,243,109,0.6)" : "rgba(255,255,255,0.10)", "line"),
-        backgroundColor: th(active ? "rgba(200,243,109,0.12)" : "rgba(255,255,255,0.04)", "bg"),
+        borderColor: th(active ? "rgba(103,205,103,0.6)" : "rgba(255,255,255,0.10)", "line"),
+        backgroundColor: th(active ? "rgba(103,205,103,0.12)" : "rgba(255,255,255,0.04)", "bg"),
         opacity: pressed ? 0.7 : 1,
       })}
     >
       <Icon size={20} color={th(active ? GREEN : "rgba(255,255,255,0.7)")} strokeWidth={1.8} />
+      <Text style={{ fontSize: 12.5, fontWeight: "600", color: th(active ? GREEN : INK.soft) }}>{label}</Text>
     </Pressable>
   );
 }

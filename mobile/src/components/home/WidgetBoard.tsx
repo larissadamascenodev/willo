@@ -23,7 +23,8 @@ import { loadPhoneLayout } from "~/lib/phoneLayout";
 import { PHONE_WIDGETS, phoneWidgetById } from "~/lib/phoneWidgets";
 import { dismissedIds, saveLayout, setDismissed, type WidgetSize, type WidgetSlot } from "@/lib/homeWidgets";
 import BottomSheet from "~/components/BottomSheet";
-import { ChevronsLeftRight, ChevronsRightLeft, Minus, Plus } from "~/components/icons";
+import { Minus, Plus } from "~/components/icons";
+import WidgetMenu, { type WidgetMenuTarget } from "~/components/home/WidgetMenu";
 import { INK } from "~/theme/tokens";
 
 import { th } from "~/theme/theme";
@@ -73,6 +74,8 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
   const followIds = pinned ? (Array.isArray(pinned.after) ? pinned.after : [pinned.after]) : [];
   const [slots, setSlots] = useState<WidgetSlot[]>(() => loadPhoneLayout(userId));
   const [adding, setAdding] = useState(false);
+  /* A card touched while editing: its menu — hide it, or choose its size. */
+  const [menu, setMenu] = useState<WidgetMenuTarget | null>(null);
   const board = useRef<ComponentRef<typeof View>>(null);
 
   useEffect(() => {
@@ -283,13 +286,13 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
         {pinned && !followed && pinned.node}
         {rows.map((row, ri) => (
           <Fragment key={row.map((s) => s.id).join("+") + ri}>
-            <Animated.View layout={SEAT_CHANGE} style={row.length === 2 ? { flexDirection: "row", gap } : undefined}>
+            <Animated.View layout={SEAT_CHANGE} style={row[0].size === "half" ? { flexDirection: "row", gap } : undefined}>
               {row.map((slot, i) => (
                 <WidgetFrame
                   key={slot.id}
                   slot={slot}
                   editing={editing}
-                  half={row.length === 2}
+                  half={slot.size === "half"}
                   phase={(ri * 2 + i) % 3}
                   hidden={carried?.id === slot.id}
                   tx={tx}
@@ -301,11 +304,17 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
                   onCarryEnd={endCarry}
                   onResize={(size) => setSize(slot.id, size)}
                   onRemove={() => remove(slot.id)}
+                  onMenu={(rect) => {
+                    const def = phoneWidgetById(slot.id);
+                    if (def) setMenu({ id: slot.id, label: def.label, size: slot.size, resizable: def.resizable, rect });
+                  }}
                   registerFrame={registerFrame}
                 >
                   {render(slot.id, slot.size)}
                 </WidgetFrame>
               ))}
+              {/* Compact and alone on its row: the other half stays empty, for another compact one. */}
+              {row.length === 1 && row[0].size === "half" && <View style={{ flex: 1 }} pointerEvents="none" />}
             </Animated.View>
             {pinned && followed && row.some((s) => s.id === followed) && pinned.node}
           </Fragment>
@@ -352,6 +361,19 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
           </Animated.View>
         )}
       </View>
+
+      <WidgetMenu
+        target={menu}
+        onClose={() => setMenu(null)}
+        onResize={(size) => {
+          if (menu) setSize(menu.id, size);
+          setMenu(null);
+        }}
+        onRemove={() => {
+          if (menu) remove(menu.id);
+          setMenu(null);
+        }}
+      />
 
       {/* The ones currently off the board. */}
       <BottomSheet open={adding} onClose={() => setAdding(false)} full>
@@ -412,8 +434,9 @@ function WidgetFrame({
   onCarryStart,
   onCarryTo,
   onCarryEnd,
-  onResize,
+  onResize: _onResize,
   onRemove,
+  onMenu,
   registerFrame,
 }: {
   slot: WidgetSlot;
@@ -433,6 +456,7 @@ function WidgetFrame({
   onCarryEnd: () => void;
   onResize: (size: WidgetSize) => void;
   onRemove: () => void;
+  onMenu: (rect: { top: number; bottom: number; left: number; width: number }) => void;
   registerFrame: (id: string, box: Rect | null, measure?: () => Promise<Rect | null>) => void;
 }) {
   const box = useRef<ComponentRef<typeof View>>(null);
@@ -544,32 +568,15 @@ function WidgetFrame({
           </Animated.View>
         )}
 
-        {/* Whole, or its small version: a button in the opposite corner to the "−". */}
-        {editing && drawn && def?.resizable && (
-          <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)} style={{ position: "absolute", top: -8, right: -8, zIndex: 30 }}>
-            <Pressable
-              onPress={() => onResize(slot.size === "full" ? "half" : "full")}
-              hitSlop={10}
-              accessibilityLabel={slot.size === "full" ? "Versão menor" : "Versão maior"}
-              style={({ pressed }) => ({
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: th("#3A3B41", "bg"),
-                borderWidth: 1,
-                borderColor: th("rgba(255,255,255,0.18)", "line"),
-                transform: [{ scale: pressed ? 0.88 : 1 }],
-              })}
-            >
-              {slot.size === "full" ? (
-                <ChevronsRightLeft size={14} color={th("#fff")} strokeWidth={2.6} />
-              ) : (
-                <ChevronsLeftRight size={14} color={th("#fff")} strokeWidth={2.6} />
-              )}
-            </Pressable>
-          </Animated.View>
+        {/* While editing, a touch on the card opens its menu: hide it, or choose its size. */}
+        {editing && drawn && (
+          <Pressable
+            accessibilityLabel={`Opções de ${def?.label ?? "widget"}`}
+            onPress={() => {
+              void measureNow().then((r) => r && onMenu({ top: r.y, bottom: r.y + r.h, left: r.x, width: r.w }));
+            }}
+            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 10 }}
+          />
         )}
       </Animated.View>
     </GestureDetector>
