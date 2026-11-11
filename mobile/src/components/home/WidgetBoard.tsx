@@ -295,7 +295,7 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
         >
           {shown.map((slot, i) => (
             <WidgetFrame
-              key={slot.id}
+              key={`${slot.id}:${slot.size}`}
               slot={slot}
               editing={editing}
               half={slot.size === "half"}
