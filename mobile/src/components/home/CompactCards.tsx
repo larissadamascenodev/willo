@@ -180,13 +180,28 @@ export function CategoriasCompact({ categories }: { categories: CategoryExpense[
   }, [sorted, total]);
   return (
     <Surface onPress={() => router.push("/analytics/categorias" as never)} style={{ height: HEIGHT, paddingHorizontal: 14, paddingVertical: 12 }}>
-      <Head label="Por categoria" />
+      <Head label="Gastos por categoria" />
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <Ring size={146} stroke={15} parts={parts}>
-          <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Gastos</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { maxWidth: 104, fontSize: 19, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }]}>
-            {short(total)}
-          </Text>
+        <Ring size={144} stroke={17} parts={parts}>
+          {/* A soft pane inside the ring, so the figure sits on something. */}
+          <View
+            style={{
+              width: 92,
+              height: 92,
+              borderRadius: 46,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: th("rgba(255,255,255,0.045)", "bg"),
+            }}
+          >
+            <Text style={{ fontSize: 11, color: th(INK.softer) }}>Gastos</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { maxWidth: 84, fontSize: 18, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }]}>
+              {short(total)}
+            </Text>
+            <Text style={{ marginTop: 1, fontSize: 10.5, color: th(INK.softer) }}>
+              {sorted.length} {sorted.length === 1 ? "categoria" : "categorias"}
+            </Text>
+          </View>
         </Ring>
       </View>
     </Surface>
