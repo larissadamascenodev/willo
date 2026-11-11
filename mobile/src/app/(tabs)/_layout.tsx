@@ -20,9 +20,10 @@ export default function TabsLayout() {
         screenOptions={{
           headerShown: false,
           sceneStyle: { backgroundColor: "transparent" },
-          /* One screen dissolves into the next instead of cutting to it. */
-          animation: "fade",
-          transitionSpec: { animation: "timing", config: { duration: 260 } },
+          /* One screen gives way to the next sideways — Transações from the right of
+             Início, Início from the left — dissolving as it moves, on a spring. */
+          animation: "shift",
+          transitionSpec: { animation: "spring", config: { stiffness: 260, damping: 30, mass: 1 } },
         }}
       >
         <Tabs.Screen name="index" options={{ title: "Início" }} />

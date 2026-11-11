@@ -1,8 +1,6 @@
-import { useEffect } from "react";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Pressable, View } from "react-native";
 import Animated, {
-  interpolateColor,
   ReduceMotion,
   useAnimatedStyle,
   useSharedValue,
@@ -21,22 +19,26 @@ import { th } from "~/theme/theme";
 /**
  * The row at the foot of the screen.
  *
- * Two pieces of glass: one long piece with Início, Transações and Willo — his
- * sphere, small, where the others have a glyph — and at the right a plus that opens
- * Adicionar manualmente in its sheet.
+ * Two pieces of glass, side by side in the middle: a long one with Início,
+ * Transações and a plus that opens Adicionar manualmente in its sheet, and a round
+ * one, apart, with Willo's sphere.
  *
- * Each piece is the system's liquid glass where the phone has it (see Glass), a blur
- * where it does not. The place you are is shown by the button itself — it lights, its
- * glyph firms up and pops, and a point comes up under it — not by a colour.
+ * The place you are is a lit capsule inside the long glass. Moving between Início and
+ * Transações the capsule slides across on a spring, stretching a little on the way,
+ * and the glyph it arrives at firms up and pops while the one it left goes soft.
  *
  * Willo's screen sits over the tabs rather than among them, because it has a bar of
  * its own to type into and two bars at the foot would be one too many.
  */
 
-const SIZE = 58;
-/** How far the two places sit inside the glass they share. */
+const SIZE = 50;
 const INSET = 3;
 const INNER = SIZE - INSET * 2;
+/** One button in the long glass, and the space between two of them. */
+const SLOT = INNER + 14;
+const SLOT_GAP = 2;
+
+const SPRING = { duration: 480, dampingRatio: 0.78, reduceMotion: ReduceMotion.System } as const;
 
 /* Only the two things the bar actually reads. Typed here rather than imported,
    because the navigator ships inside expo-router and its package is not a dependency
@@ -47,10 +49,22 @@ interface TabBarProps {
   navigateToTab: (routeKey: string) => void;
 }
 
+const PLACES = ["index", "transacoes"];
+
 export default function BottomNav({ state, navigateToTab }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const active = state.routes[state.index]?.name ?? "index";
+  const at = Math.max(0, PLACES.indexOf(active));
+
+  /* The capsule under the place you are, sliding to the next one. */
+  const x = useSharedValue(at * (SLOT + SLOT_GAP));
+  const stretch = useSharedValue(1);
+  useEffect(() => {
+    x.set(withSpring(at * (SLOT + SLOT_GAP), SPRING));
+    stretch.set(withSequence(withTiming(1.16, { duration: 130 }), withSpring(1, SPRING)));
+  }, [at, x, stretch]);
+  const capsule = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }, { scaleX: stretch.get() }] }));
 
   const open = (name: string) => {
     void Haptics.selectionAsync().catch(() => undefined);
@@ -58,68 +72,75 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
     if (key && name !== active) navigateToTab(key);
   };
 
+  const go = (path: string) => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    router.push(path as never);
+  };
+
   return (
     <View
       pointerEvents="box-none"
-      style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingBottom: insets.bottom + 14 }}
+      style={{ position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center", paddingBottom: insets.bottom + 14 }}
     >
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
-        {/* The two places and Willo, in one piece of glass. */}
-        <Glass radius={SIZE / 2} style={{ flex: 1, marginRight: 10, height: SIZE, flexDirection: "row", alignItems: "center", justifyContent: "space-around", padding: INSET }}>
-          <NavCircle label="Início" icon={House} on={active === "index"} onPress={() => open("index")} />
-          <NavCircle label="Transações" icon={ArrowLeftRight} on={active === "transacoes"} onPress={() => open("transacoes")} />
-          <NavCircle
-            label="Converse com o Willo"
-            on={false}
-            onPress={() => {
-              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
-              router.push("/registro" as never);
-            }}
-            glyph={
-              <View style={{ width: 34, height: 34, borderRadius: 17, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
-                <ParticleOrb size={32} density={120} />
-              </View>
-            }
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        {/* The two places and Registrar, in one piece of glass. */}
+        <Glass radius={SIZE / 2} style={{ height: SIZE, flexDirection: "row", alignItems: "center", padding: INSET, gap: SLOT_GAP }}>
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              {
+                position: "absolute",
+                top: INSET,
+                left: INSET,
+                width: SLOT,
+                height: INNER,
+                borderRadius: INNER / 2,
+                borderCurve: "continuous",
+                borderWidth: 1,
+                borderColor: th("rgba(255,255,255,0.28)", "line"),
+                backgroundColor: th("rgba(255,255,255,0.16)", "bg"),
+              },
+              capsule,
+            ]}
           />
+          <NavButton label="Início" on={active === "index"} onPress={() => open("index")} icon={House} />
+          <NavButton label="Transações" on={active === "transacoes"} onPress={() => open("transacoes")} icon={ArrowLeftRight} />
+          <NavButton label="Registrar" on={false} onPress={() => go("/manual")} drawn={<Plus size={25} color={th("rgba(255,255,255,0.78)")} strokeWidth={2.4} />} />
         </Glass>
-        {/* A new entry, typed by hand. */}
+
+        {/* Willo, apart. */}
         <Pressable
-          onPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
-            router.push("/manual" as never);
-          }}
+          onPress={() => go("/registro")}
           accessibilityRole="button"
-          accessibilityLabel="Registrar"
+          accessibilityLabel="Converse com o Willo"
           style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.92 : 1 }] })}
         >
           <Glass radius={SIZE / 2} style={{ width: SIZE, height: SIZE, alignItems: "center", justifyContent: "center" }}>
-            <Plus size={28} color={th("#fff")} strokeWidth={2.4} />
+            <View style={{ width: SIZE - 8, height: SIZE - 8, borderRadius: (SIZE - 8) / 2, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
+              <ParticleOrb size={SIZE - 12} density={130} />
+            </View>
           </Glass>
         </Pressable>
-
       </View>
     </View>
   );
 }
 
 /**
- * A round button that knows whether it is where you are.
- *
- * Selected, its glass fills with white at a fifth, its rim brightens, its glyph goes
- * from soft to full and firmer, and it pops — down a little and up past where it
- * rests — as it arrives; a small point comes up beneath. Pressing it presses it in.
+ * One button in the long glass. Where you are, its glyph goes from soft to full and
+ * firmer, and pops as the capsule arrives under it.
  */
-function NavCircle({
+function NavButton({
   label,
   icon: Icon,
-  glyph: drawn,
+  drawn,
   on,
   onPress,
 }: {
   label: string;
   icon?: typeof House;
-  /** Drawn instead of a glyph: Willo's sphere. */
-  glyph?: ReactNode;
+  /** Drawn as it is, instead of a glyph that lights: Registrar's plus. */
+  drawn?: ReactNode;
   on: boolean;
   onPress: () => void;
 }) {
@@ -127,25 +148,13 @@ function NavCircle({
   const pop = useSharedValue(1);
 
   useEffect(() => {
-    lit.set(withSpring(on ? 1 : 0, { duration: 420, dampingRatio: 0.82, reduceMotion: ReduceMotion.System }));
-    if (on) pop.set(withSequence(withTiming(0.82, { duration: 90 }), withSpring(1, { duration: 520, dampingRatio: 0.45, reduceMotion: ReduceMotion.System })));
+    lit.set(withTiming(on ? 1 : 0, { duration: 260 }));
+    if (on) pop.set(withSequence(withTiming(0.84, { duration: 110 }), withSpring(1, { duration: 520, dampingRatio: 0.45, reduceMotion: ReduceMotion.System })));
   }, [on, lit, pop]);
 
-  /* The glass stays the glass; being here lays a white light over it. */
-  /* The theme's colours are worked out here, on the JavaScript side: the animation
-     runs on the UI thread, where only "worklet" functions may be called. */
-  const fillOff = th("rgba(255,255,255,0)", "bg");
-  const fillOn = th("rgba(255,255,255,0.16)", "bg");
-  const edgeOff = th("rgba(255,255,255,0)", "line");
-  const edgeOn = th("rgba(255,255,255,0.30)", "line");
-  const shell = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(lit.get(), [0, 1], [fillOff, fillOn]),
-    borderColor: interpolateColor(lit.get(), [0, 1], [edgeOff, edgeOn]),
-  }));
-  const glyph = useAnimatedStyle(() => ({ transform: [{ scale: pop.get() * (1 + lit.get() * 0.08) }] }));
+  const glyph = useAnimatedStyle(() => ({ transform: [{ scale: pop.get() * (1 + lit.get() * 0.06) }] }));
   const soft = useAnimatedStyle(() => ({ opacity: 1 - lit.get() }));
   const full = useAnimatedStyle(() => ({ opacity: lit.get() }));
-  const point = useAnimatedStyle(() => ({ opacity: lit.get(), transform: [{ scale: 0.4 + lit.get() * 0.6 }] }));
 
   return (
     <Pressable
@@ -153,24 +162,20 @@ function NavCircle({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected: on }}
-      style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.94 : 1 }] })}
+      style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.92 : 1 }] })}
     >
-      <View style={{ width: INNER + 20, height: INNER, alignItems: "center", justifyContent: "center" }}>
-        <Animated.View
-          pointerEvents="none"
-          style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: INNER / 2, borderWidth: 1 }, shell]}
-        />
-        {drawn ?? (Icon && (
-        <Animated.View style={glyph}>
-          <Animated.View style={soft}>
-            <Icon size={27} color={th("rgba(255,255,255,0.58)")} strokeWidth={2} />
-          </Animated.View>
-          <Animated.View style={[{ position: "absolute", top: 0, left: 0 }, full]}>
-            <Icon size={27} color={th("#fff")} strokeWidth={2.5} />
-          </Animated.View>
-        </Animated.View>
-        ))}
-        <Animated.View style={[{ position: "absolute", bottom: 5, width: 4, height: 4, borderRadius: 2, backgroundColor: th("#fff", "bg") }, point]} />
+      <View style={{ width: SLOT, height: INNER, alignItems: "center", justifyContent: "center" }}>
+        {drawn ??
+          (Icon && (
+            <Animated.View style={glyph}>
+              <Animated.View style={soft}>
+                <Icon size={23} color={th("rgba(255,255,255,0.58)")} strokeWidth={2} />
+              </Animated.View>
+              <Animated.View style={[{ position: "absolute", top: 0, left: 0 }, full]}>
+                <Icon size={23} color={th("#fff")} strokeWidth={2.5} />
+              </Animated.View>
+            </Animated.View>
+          ))}
       </View>
     </Pressable>
   );
