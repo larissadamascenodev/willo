@@ -10,6 +10,9 @@ import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 import { th } from "~/theme/theme";
+/** What a month leaves — or, when it ends short, what it lacks. */
+const leftLabel = (value: number, month: string) => (value < 0 ? `Falta em ${month}` : `Sobra de ${month}`);
+
 const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
 /**
@@ -119,11 +122,11 @@ export default function TransactionsSummary({
           <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.4)", "bg") }} />
           <View style={{ paddingHorizontal: 14, paddingVertical: 12, gap: 10 }}>
             <Text style={{ fontSize: 12.5, lineHeight: 18, color: th("rgba(255,255,255,0.78)") }}>
-              Sobra de {before} + balanço de {here}.
+              {leftLabel(abertura, before)} + {leftLabel(saldoPrevisto - abertura, here).toLowerCase()}.
             </Text>
             {[
-              { label: `Sobra de ${before}`, value: abertura },
-              { label: `Balanço de ${here}`, value: saldoPrevisto - abertura },
+              { label: leftLabel(abertura, before), value: abertura },
+              { label: leftLabel(saldoPrevisto - abertura, here), value: saldoPrevisto - abertura },
             ].map((r) => (
               <View key={r.label} style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                 <Text style={{ flexShrink: 1, fontSize: 12.5, color: th(INK.soft) }}>{r.label}</Text>
