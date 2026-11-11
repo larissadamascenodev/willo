@@ -70,6 +70,8 @@ export default function Scanner() {
   const [accounts, setAccounts] = useState<ScanAccount[]>([]);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
+  const cardsRef = useRef<Card[]>([]);
+  cardsRef.current = cards;
   /* What was written, as the receipt shows it, and when. */
   const [saved, setSaved] = useState<{ lines: ReceiptLine[]; at: Date } | null>(null);
   /* A reading the person walked away from must not land on the next photo. */
@@ -100,7 +102,13 @@ export default function Scanner() {
         date: resolveReceiptDate(item.date),
         selected: true,
         ...(cartao ? { type: "despesa", payment_method: "cartao" as const, credit_card_id: cartao, status: "pendente" as const } : {}),
-      }));
+      })).map((item) => {
+        /* A purchase in instalments is on a card. Opened from one, it is that card; otherwise
+           the first card, to change in the check if it was another. */
+        if (cartao || !(item.installment_total && item.installment_total > 1) || item.payment_method === "cartao") return item;
+        const first = cardsRef.current[0]?.id ?? null;
+        return { ...item, type: "despesa", payment_method: first ? ("cartao" as const) : item.payment_method, credit_card_id: first, status: "pendente" as const };
+      });
       if (found.length === 0) {
         setFailure("Não encontramos nenhum valor nesse comprovante. Tente outra foto.");
         setPhase("failed");

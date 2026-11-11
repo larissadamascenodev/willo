@@ -213,6 +213,21 @@ Para cada item extraído, retorne:
 - date: data da transação no formato YYYY-MM-DD. Detecte: DD/MM/YYYY, DD/MM/YY, DD/MM HH:mm. Se não tiver ano, use ${new Date().getFullYear()}.
 - installment_current: número da parcela atual se parcelado, senão null
 - installment_total: total de parcelas se parcelado, senão null
+- installment_amount: valor de UMA parcela quando a compra é parcelada, senão null
+- total_amount: valor total da compra parcelada (todas as parcelas somadas), senão null
+
+COMPRA PARCELADA NO COMPROVANTE (muito comum em apps de banco, ex.: Nubank):
+- Sinais: "em 12x de R$ 57,38", "12x de", "Compra parcelada", "Parcelas: 0 de 12 pagas",
+  "parcelado em 10 vezes", "10x sem juros", "Parcela 1 de 6".
+- Quando houver QUALQUER desses sinais, a compra É parcelada, mesmo que o valor grande no
+  topo seja o total. Exemplo: "R$ 688,54 em 12x de R$ 57,38" →
+  amount = 57.38 (o valor de UMA parcela), installment_amount = 57.38, total_amount = 688.54,
+  installment_total = 12, installment_current = 1.
+- Se só aparecer o total e o número de parcelas ("R$ 600,00 em 10x"), calcule a parcela:
+  amount = installment_amount = 60.00, total_amount = 600.00, installment_total = 10.
+- Num comprovante de compra nova, installment_current é 1 ("0 de 12 pagas" também é 1).
+- Compra parcelada é sempre no cartão de crédito: type = "despesa".
+
 - category: ver lista abaixo
 - type: "despesa" para gastos/pagamentos ou "receita" para recebimentos/depósitos/transferências recebidas
   * Palavras que indicam RECEITA: "recebido", "pix recebido", "entrada", "depósito", "crédito", "salário", "transferência recebida"
@@ -640,7 +655,20 @@ ${csvText}` }];
       .filter((item: any) => !isNonPurchase(String(item.description)))
       .map((item: any) => {
         const total = item.installment_total ? Number(item.installment_total) : null;
-        const current = item.installment_current ? Number(item.installment_current) : null;
+        /* A receipt of a purchase just made names no instalment yet ("0 de 12 pagas"): it is the first. */
+        const current = item.installment_current
+          ? Number(item.installment_current)
+          : context === "transaction" && total && total > 1
+            ? 1
+            : null;
+        /* The receipt shows the total large and the instalment under it; the books keep one
+           instalment in amount. Whichever the reader put in amount, the instalment wins. */
+        const each = Number(item.installment_amount);
+        const whole = Number(item.total_amount);
+        if (total && total > 1) {
+          if (Number.isFinite(each) && each > 0) item.amount = each;
+          else if (Number.isFinite(whole) && whole > 0 && Math.abs(Number(item.amount) - whole) < 0.01) item.amount = whole / total;
+        }
         // "1/1" is not a real instalment plan, and a current above the total is a misread
         const isPlan = !!total && total > 1 && !!current && current >= 1 && current <= total;
         const amount = Math.round(Number(item.amount) * 100) / 100;

@@ -183,6 +183,9 @@ export default function ScanResultCard({
   const active = items.filter((i) => i.selected !== false);
   const single = items.length === 1 ? items[0] : null;
   const total = active.reduce((s, i) => s + i.amount, 0);
+  /* A purchase in instalments shows its whole price, as the receipt does; each instalment under it. */
+  const parts = items.length === 1 && items[0].installment_total && items[0].installment_total > 1 ? items[0].installment_total : null;
+  const shownTotal = parts ? Math.round(items[0].amount * parts * 100) / 100 : total;
   const isIncome = single?.type === "receita";
 
   const update = (index: number, patch: Partial<ScanItem>) =>
@@ -212,6 +215,10 @@ export default function ScanResultCard({
           hex: categoryHex(single.category || "Outros"),
         },
         { label: "Data", value: formatDate(single.date, single.time) },
+        /* In instalments: how many, and each, as the receipt said it. */
+        ...(single.installment_total && single.installment_total > 1
+          ? [{ label: "Parcelas", value: `${single.installment_total}x de ${money(single.amount)}` }]
+          : []),
         ...(shownAccount
           ? [{ label: credit ? "Cartão" : "Conta", value: shownAccount }]
           : []),
@@ -561,7 +568,7 @@ export default function ScanResultCard({
               color: th("rgba(255,255,255,0.62)"),
             }}
           >
-            {single ? (isIncome ? "Receita" : "Despesa") : "Total"}
+            {single ? (isIncome ? "Receita" : parts ? "Compra parcelada" : "Despesa") : "Total"}
           </Text>
           <View
             style={{
@@ -589,17 +596,22 @@ export default function ScanResultCard({
                   nums,
                   {
                     flexShrink: 1,
-                    fontSize: plain(total).length <= 8 ? 48 : 40,
+                    fontSize: plain(shownTotal).length <= 8 ? 48 : 40,
                     fontWeight: "800",
                     letterSpacing: -1.4,
                     color: th("#fff"),
                   },
                 ]}
               >
-                {plain(total)}
+                {plain(shownTotal)}
               </Text>
             }
           </View>
+          {parts ? (
+            <Text style={[nums, { marginTop: 2, fontSize: 14, fontWeight: "600", color: th("rgba(255,255,255,0.7)") }]}>
+              em {parts}x de {money(single?.amount ?? 0)}
+            </Text>
+          ) : null}
         </View>
       )}
 
