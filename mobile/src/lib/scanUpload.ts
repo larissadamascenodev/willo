@@ -1,4 +1,3 @@
-import { FunctionsFetchError, FunctionsHttpError } from "@supabase/supabase-js";
 import { File } from "expo-file-system";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,33 +66,55 @@ async function send(file: { uri: string; name: string; type: string }, context: 
   let image_base64: string;
   try {
     image_base64 = await new File(file.uri).base64();
+  } catch (e) {
+    console.warn("scan: read file", e);
+    throw new Error(`Não foi possível abrir o arquivo. (${detail(e)})`);
+  }
+
+  /* Straight to the function with the signed-in session, no client layer in between:
+     through supabase.functions.invoke the request never reached the server, and the
+     error it gave back said nothing about why. */
+  const { data: auth } = await supabase.auth.getSession();
+  const token = auth.session?.access_token;
+  if (!token) throw new Error("Sua sessão expirou. Entre de novo e tente outra vez.");
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SCAN_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/process-invoice`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        apikey: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "",
+      },
+      body: JSON.stringify({ image_base64, mime_type: file.type, context }),
+      signal: controller.signal,
+    });
+  } catch (e) {
+    console.warn("scan: request", e);
+    if (controller.signal.aborted) throw new Error("A leitura demorou demais. Tente novamente.");
+    throw new Error(`Sem conexão com o leitor. Confira a internet e tente novamente. (${detail(e)})`);
+  } finally {
+    clearTimeout(timer);
+  }
+
+  let body: (ScanResult & { error?: string }) | null = null;
+  try {
+    body = await res.json();
   } catch {
-    throw new Error("Não foi possível abrir o arquivo. Tente outro.");
+    /* not JSON: the status says enough */
   }
-
-  const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error("A leitura demorou demais. Tente novamente.")), SCAN_TIMEOUT_MS),
-  );
-  const { data, error } = await Promise.race([
-    supabase.functions.invoke("process-invoice", { body: { image_base64, mime_type: file.type, context } }),
-    timeout,
-  ]);
-
-  if (error) {
-    let message = "Não foi possível ler o comprovante. Tente novamente.";
-    if (error instanceof FunctionsHttpError) {
-      try {
-        const body = await error.context.json();
-        if (body?.error) message = body.error;
-      } catch {
-        /* keep the plain message */
-      }
-    } else if (error instanceof FunctionsFetchError) {
-      message = "Sem conexão com o leitor. Confira a internet e tente novamente.";
-    }
-    console.warn("process-invoice", error);
-    throw new Error(message);
+  if (!res.ok || body?.error) {
+    console.warn("scan: reply", res.status, body);
+    throw new Error(body?.error || `Não foi possível ler o comprovante. (erro ${res.status})`);
   }
-  if (data?.error) throw new Error(data.error);
-  return data as ScanResult;
+  return (body ?? {}) as ScanResult;
+}
+
+/** A short reason to show with a failure, so the next one says what actually went wrong. */
+function detail(e: unknown): string {
+  if (e instanceof Error) return `${e.name}: ${e.message}`.slice(0, 120);
+  return String(e).slice(0, 120);
 }
