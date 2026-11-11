@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { Pressable, Text, View } from "react-native";
+import type { ReactNode } from "react";
+import { Pressable, View } from "react-native";
 import Animated, {
   interpolateColor,
   ReduceMotion,
@@ -20,9 +21,9 @@ import { th } from "~/theme/theme";
 /**
  * The row at the foot of the screen.
  *
- * Two pieces of glass: at the left a plus that opens Adicionar manualmente in its
- * sheet; then one long piece with Início, Transações and Willo — his sphere, small,
- * with his name beside it.
+ * Two pieces of glass: one long piece with Início, Transações and Willo — his
+ * sphere, small, where the others have a glyph — and at the right a plus that opens
+ * Adicionar manualmente in its sheet.
  *
  * Each piece is the system's liquid glass where the phone has it (see Glass), a blur
  * where it does not. The place you are is shown by the button itself — it lights, its
@@ -63,6 +64,24 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
       style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingBottom: insets.bottom + 14 }}
     >
       <View style={{ flexDirection: "row", alignItems: "center" }}>
+        {/* The two places and Willo, in one piece of glass. */}
+        <Glass radius={SIZE / 2} style={{ flex: 1, marginRight: 10, height: SIZE, flexDirection: "row", alignItems: "center", justifyContent: "space-around", padding: INSET }}>
+          <NavCircle label="Início" icon={House} on={active === "index"} onPress={() => open("index")} />
+          <NavCircle label="Transações" icon={ArrowLeftRight} on={active === "transacoes"} onPress={() => open("transacoes")} />
+          <NavCircle
+            label="Converse com o Willo"
+            on={false}
+            onPress={() => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+              router.push("/registro" as never);
+            }}
+            glyph={
+              <View style={{ width: 34, height: 34, borderRadius: 17, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
+                <ParticleOrb size={32} density={120} />
+              </View>
+            }
+          />
+        </Glass>
         {/* A new entry, typed by hand. */}
         <Pressable
           onPress={() => {
@@ -78,46 +97,6 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
           </Glass>
         </Pressable>
 
-        {/* The two places and Willo, in one piece of glass. */}
-        <Glass radius={SIZE / 2} style={{ flex: 1, marginLeft: 10, height: SIZE, flexDirection: "row", alignItems: "center", padding: INSET, gap: 2 }}>
-          <NavCircle label="Início" icon={House} on={active === "index"} onPress={() => open("index")} />
-          <NavCircle label="Transações" icon={ArrowLeftRight} on={active === "transacoes"} onPress={() => open("transacoes")} />
-          <Pressable
-            onPress={() => {
-              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
-              router.push("/registro" as never);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Converse com o Willo"
-            style={({ pressed }) => ({
-              flex: 1,
-              height: INNER,
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              paddingRight: 6,
-              transform: [{ scale: pressed ? 0.96 : 1 }],
-            })}
-          >
-            <View
-              style={{
-                width: INNER - 6,
-                height: INNER - 6,
-                borderRadius: (INNER - 6) / 2,
-                overflow: "hidden",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: th("rgba(255,255,255,0.10)", "bg"),
-              }}
-            >
-              <ParticleOrb size={INNER - 10} density={150} />
-            </View>
-            <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
-              Willo
-            </Text>
-          </Pressable>
-        </Glass>
       </View>
     </View>
   );
@@ -133,11 +112,14 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
 function NavCircle({
   label,
   icon: Icon,
+  glyph: drawn,
   on,
   onPress,
 }: {
   label: string;
-  icon: typeof House;
+  icon?: typeof House;
+  /** Drawn instead of a glyph: Willo's sphere. */
+  glyph?: ReactNode;
   on: boolean;
   onPress: () => void;
 }) {
@@ -173,11 +155,12 @@ function NavCircle({
       accessibilityState={{ selected: on }}
       style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.94 : 1 }] })}
     >
-      <View style={{ width: INNER + 12, height: INNER, alignItems: "center", justifyContent: "center" }}>
+      <View style={{ width: INNER + 20, height: INNER, alignItems: "center", justifyContent: "center" }}>
         <Animated.View
           pointerEvents="none"
           style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: INNER / 2, borderWidth: 1 }, shell]}
         />
+        {drawn ?? (Icon && (
         <Animated.View style={glyph}>
           <Animated.View style={soft}>
             <Icon size={27} color={th("rgba(255,255,255,0.58)")} strokeWidth={2} />
@@ -186,6 +169,7 @@ function NavCircle({
             <Icon size={27} color={th("#fff")} strokeWidth={2.5} />
           </Animated.View>
         </Animated.View>
+        ))}
         <Animated.View style={[{ position: "absolute", bottom: 5, width: 4, height: 4, borderRadius: 2, backgroundColor: th("#fff", "bg") }, point]} />
       </View>
     </Pressable>

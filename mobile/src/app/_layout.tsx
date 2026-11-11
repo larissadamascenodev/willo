@@ -238,7 +238,8 @@ function Door() {
         <Stack.Screen name="novo" options={{ animation: "slide_from_bottom" }} />
         {/* Registro rápido and the receipt camera come up the same way: they are
             where the add button leads, and both hand over to the form. */}
-        <Stack.Screen name="registro" options={{ animation: "slide_from_bottom" }} />
+        {/* Willo comes in the way Início and Transações change places: a short dissolve, its content rising into it. */}
+        <Stack.Screen name="registro" options={{ animation: "fade", animationDuration: 260 }} />
         <Stack.Screen name="rapido" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />
         <Stack.Screen name="manual" options={{ presentation: "transparentModal", animation: "none", contentStyle: { backgroundColor: "transparent" } }} />
         <Stack.Screen name="scanner" options={{ animation: "fade", contentStyle: { backgroundColor: th("#000", "bg") } }} />
