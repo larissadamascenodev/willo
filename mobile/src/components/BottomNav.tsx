@@ -21,8 +21,8 @@ import { th } from "~/theme/theme";
  * The row at the foot of the screen.
  *
  * Início and Transações together in one piece of glass at the left, then the way to Willo — a long
- * pill with the sphere, small, in a disc at its left, and an invitation — and at the
- * right a plus, which opens Adicionar manualmente straight away in its sheet. The sphere is the same one that turns on the home
+ * pill with the sphere, small, in a disc at its left, and an invitation — and, at the
+ * pill's own right end, a plus, which opens Adicionar manualmente straight away in its sheet. The sphere is the same one that turns on the home
  * and listens in Willo's own screen, only small.
  *
  * Each piece is the system's liquid glass where the phone has it (see Glass), a blur
@@ -72,17 +72,17 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
           <NavCircle label="Transações" icon={ArrowLeftRight} on={active === "transacoes"} onPress={() => open("transacoes")} />
         </Glass>
 
-        {/* Willo. */}
-        <Pressable
-          onPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
-            router.push("/registro" as never);
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Converse com o Willo"
-          style={({ pressed }) => ({ flex: 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}
-        >
-          <Glass radius={SIZE / 2} interactive style={{ height: SIZE, flexDirection: "row", alignItems: "center", paddingLeft: 7, paddingRight: 10, gap: 8 }}>
+        {/* Willo, and inside the same glass at its right end, the plus for a new entry typed by hand. */}
+        <Glass radius={SIZE / 2} interactive style={{ flex: 1, height: SIZE, flexDirection: "row", alignItems: "center", paddingLeft: 7, paddingRight: INSET + 2 }}>
+          <Pressable
+            onPress={() => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+              router.push("/registro" as never);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Converse com o Willo"
+            style={({ pressed }) => ({ flex: 1, minWidth: 0, height: SIZE, flexDirection: "row", alignItems: "center", gap: 8, opacity: pressed ? 0.7 : 1 })}
+          >
             <View
               style={{
                 width: 38,
@@ -96,39 +96,26 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
             >
               <ParticleOrb size={33} density={140} />
             </View>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ flex: 1, minWidth: 0, fontSize: 14, color: th("rgba(255,255,255,0.66)") }}>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={{ flex: 1, minWidth: 0, fontSize: 14, color: th("rgba(255,255,255,0.66)") }}>
               Converse com o Willo
             </Text>
-          </Glass>
-        </Pressable>
+          </Pressable>
 
-        {/* A new entry, typed by hand. */}
-        <Pressable
-          onPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
-            router.push("/manual" as never);
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Adicionar manualmente"
-          style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.92 : 1 }] })}
-        >
-          <View
-            style={{
-              width: SIZE,
-              height: SIZE,
-              borderRadius: SIZE / 2,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: th("#fff", "bg"),
-              shadowColor: "#000",
-              shadowOpacity: 0.22,
-              shadowRadius: 12,
-              shadowOffset: { width: 0, height: 5 },
+          <Pressable
+            onPress={() => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+              router.push("/manual" as never);
             }}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar manualmente"
+            hitSlop={{ top: 6, bottom: 6, left: 4, right: 6 }}
+            style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.9 : 1 }] })}
           >
-            <Plus size={26} color={th("#0B0B0B")} strokeWidth={2.6} />
-          </View>
-        </Pressable>
+            <View style={{ width: INNER - 4, height: INNER - 4, borderRadius: (INNER - 4) / 2, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg") }}>
+              <Plus size={22} color={th("#0B0B0B")} strokeWidth={2.6} />
+            </View>
+          </Pressable>
+        </Glass>
       </View>
     </View>
   );
