@@ -61,8 +61,6 @@ const HINT = 0;
 const CAPTION = 106;
 /** Under that: how to talk to him, or the way out of listening. */
 const FOOT = 28;
-/** Beside him, what he says: up to four short lines and the line under them. */
-const SIDE_CAPTION = 96;
 /** Standing: the sphere, and the pad of light it stands on. */
 const STAND_ORB = 124;
 const STAND_W = 146;
@@ -168,12 +166,13 @@ export default function OrbHero({ slides, lines = false }: { slides: InsightSlid
         </Stand>
 
         {/* Beside him: who is speaking, what he says, and how to talk to him. */}
-        <View style={{ flex: 1, minWidth: 0, height: STAND_H, justifyContent: "center" }}>
+        <View style={{ flex: 1, minWidth: 0, height: STAND_H, paddingTop: 4 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: themeTh(listening ? "#FF6B6B" : GREEN, "bg") }} />
             <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 2.2, color: th(INK.softer) }}>WILLO · {status.toUpperCase()}</Text>
           </View>
-          <View style={{ marginTop: 8, height: SIDE_CAPTION, overflow: "hidden" }}>
+          {/* What he says takes whatever height the status line and the hint leave. */}
+          <View style={{ marginTop: 8, flex: 1, overflow: "hidden" }}>
             {listening ? (
               <Animated.View entering={FadeIn.duration(220)}>
                 <Text style={{ fontSize: 18, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>Estou ouvindo…</Text>
@@ -199,16 +198,21 @@ export default function OrbHero({ slides, lines = false }: { slides: InsightSlid
               />
             )}
           </View>
-          <View style={{ marginTop: 6, height: 22, flexDirection: "row", alignItems: "center", gap: 5 }}>
+          {/* At the foot, always whole: how to talk to him, or the way out of listening. */}
+          <View style={{ marginTop: 8, height: 28, justifyContent: "center" }}>
             {listening ? (
-              <Pressable onPress={() => void entry.cancel()} hitSlop={10} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-                <Text style={{ fontSize: 13.5, fontWeight: "600", color: th("rgba(255,255,255,0.7)") }}>Cancelar</Text>
+              <Pressable
+                onPress={() => void entry.cancel()}
+                hitSlop={10}
+                style={({ pressed }) => ({ alignSelf: "flex-start", height: 28, paddingHorizontal: 12, borderRadius: 14, justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.10)", "bg"), opacity: pressed ? 0.6 : 1 })}
+              >
+                <Text style={{ fontSize: 12.5, fontWeight: "600", color: th("rgba(255,255,255,0.85)") }}>Cancelar</Text>
               </Pressable>
             ) : !reading ? (
-              <>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                 <Mic size={12} color={th(INK.softer)} strokeWidth={2.2} />
-                <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 12, color: th(INK.softer) }}>Segure o Willo para falar</Text>
-              </>
+                <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.softer) }}>Segure o Willo para falar</Text>
+              </View>
             ) : null}
           </View>
         </View>

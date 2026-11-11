@@ -1,7 +1,20 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Pressable, Text, View, useWindowDimensions } from "react-native";
-import Animated, { Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
-import { greetings, layOut, longestUnsaid, markSaid, type Greeting } from "~/lib/greeting";
+import Animated, {
+  Easing,
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
+import {
+  greetings,
+  layOut,
+  longestUnsaid,
+  markSaid,
+  type Greeting,
+} from "~/lib/greeting";
 import { face } from "~/lib/chatFont";
 import { INK } from "~/theme/tokens";
 
@@ -12,20 +25,51 @@ import { useGroundTh } from "~/theme/groundInk";
  */
 
 const HOLD_MS = 7000;
+/** Beside the sphere: the readings short enough to be read whole there. */
+const SHORT_TITLE = 52;
 const WORD_MS = 75;
 const TITLE = 20;
 const SUB = 14;
 
-function Word({ text, delay, size }: { text: string; delay: number; size: number }) {
+function Word({
+  text,
+  delay,
+  size,
+}: {
+  text: string;
+  delay: number;
+  size: number;
+}) {
   const th = useGroundTh();
   const shown = useSharedValue(0);
   useEffect(() => {
-    shown.set(withDelay(delay, withTiming(1, { duration: 380, easing: Easing.out(Easing.cubic), reduceMotion: ReduceMotion.System })));
+    shown.set(
+      withDelay(
+        delay,
+        withTiming(1, {
+          duration: 380,
+          easing: Easing.out(Easing.cubic),
+          reduceMotion: ReduceMotion.System,
+        }),
+      ),
+    );
   }, [shown, delay]);
-  const style = useAnimatedStyle(() => ({ opacity: shown.get(), transform: [{ translateY: (1 - shown.get()) * 7 }] }));
+  const style = useAnimatedStyle(() => ({
+    opacity: shown.get(),
+    transform: [{ translateY: (1 - shown.get()) * 7 }],
+  }));
   return (
     <Animated.View style={style}>
-      <Text style={{ fontSize: size, ...face(700), letterSpacing: -0.4, color: th("#fff") }}>{text}</Text>
+      <Text
+        style={{
+          fontSize: size,
+          ...face(700),
+          letterSpacing: -0.4,
+          color: th("#fff"),
+        }}
+      >
+        {text}
+      </Text>
     </Animated.View>
   );
 }
@@ -33,7 +77,12 @@ function Word({ text, delay, size }: { text: string; delay: number; size: number
 function Rising({ delay, children }: { delay: number; children: ReactNode }) {
   const shown = useSharedValue(0);
   useEffect(() => {
-    shown.set(withDelay(delay, withTiming(1, { duration: 420, reduceMotion: ReduceMotion.System })));
+    shown.set(
+      withDelay(
+        delay,
+        withTiming(1, { duration: 420, reduceMotion: ReduceMotion.System }),
+      ),
+    );
   }, [shown, delay]);
   const style = useAnimatedStyle(() => ({ opacity: shown.get() }));
   return <Animated.View style={style}>{children}</Animated.View>;
@@ -76,47 +125,72 @@ export default function GreetingLine({
   }, [name, chosen]);
   /* Their order is settled once: lines must not swap places while one is on show. */
   const titles = readings.map((r) => r.title).join("|");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const noticed = useMemo(() => longestUnsaid(readings).slice(0, 6), [titles]);
+  const noticed = useMemo(
+    () =>
+      longestUnsaid(
+        align === "left"
+          ? readings.filter((r) => r.title.length <= SHORT_TITLE)
+          : readings,
+      ).slice(0, 6),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [titles, align],
+  );
 
   /* The hello, then what he has noticed with something to ask after every two. */
-  const lines: Greeting[] = [];
-  if (chosen) {
+  const lines = useMemo(() => {
+    const out: Greeting[] = [];
+    if (!chosen) return out;
     const asks = chosen.slice(1);
-    lines.push(chosen[0]);
+    out.push(chosen[0]);
     noticed.forEach((r, n) => {
-      lines.push(r);
-      if (n % 2 === 1 && asks.length) lines.push(asks.shift()!);
+      out.push(r);
+      if (n % 2 === 1 && asks.length) out.push(asks.shift()!);
     });
-    lines.push(...asks);
-  }
+    out.push(...asks);
+    return out;
+  }, [chosen, noticed]);
+  /* The line on show is held as itself, not as a place in the list: the list grows when the
+     readings arrive, and a place in it then pointed at another line — the sentence being
+     typed was swapped mid-word for a different one. The list is only consulted when it is
+     time for the next. */
+  const [current, setCurrent] = useState<Greeting | null>(null);
   const [at, setAt] = useState(0);
+  const latest = useRef(lines);
+  latest.current = lines;
   const out = useSharedValue(1);
   const { width } = useWindowDimensions();
 
   useEffect(() => {
-    if (lines.length === 0) return;
+    if (!current && lines.length) setCurrent(lines[0]);
+  }, [current, lines]);
+
+  useEffect(() => {
+    if (!current) return;
     let swap: ReturnType<typeof setTimeout>;
     const t = setTimeout(() => {
-      out.set(withTiming(0, { duration: 260 }));
+      out.set(withTiming(0, { duration: 320 }));
       swap = setTimeout(() => {
-        setAt((n) => (n + 1) % lines.length);
-        out.set(1);
-      }, 280);
+        const list = latest.current;
+        if (list.length) {
+          const here = list.findIndex((l) => l.title === current.title);
+          setCurrent(list[(here + 1) % list.length]);
+        }
+        setAt((n) => n + 1);
+        out.set(withTiming(1, { duration: 200 }));
+      }, 340);
     }, HOLD_MS);
     return () => {
       clearTimeout(t);
       clearTimeout(swap);
     };
-  }, [at, lines.length, out]);
+  }, [current, out]);
   const fading = useAnimatedStyle(() => ({ opacity: out.get() }));
 
-  const shownTitle = lines.length ? lines[at % lines.length].title : null;
+  const shownTitle = current?.title ?? null;
   useEffect(() => {
     if (shownTitle) markSaid(shownTitle);
   }, [shownTitle]);
 
-  const current = lines.length ? lines[at % lines.length] : null;
   const reportLine = useRef(onLine);
   reportLine.current = onLine;
   useEffect(() => {
@@ -129,32 +203,101 @@ export default function GreetingLine({
   /* Bold at this size runs about half its size a letter; the sub line, a little less. */
   const left = align === "left";
   const room = roomProp ?? width - 44;
-  const title = layOut(line.title, Math.floor(room / (titleSize * 0.58)), titleSize);
+  /* Beside the sphere the words have a narrow column and a fixed height: a long sentence
+     is set smaller so it keeps to three lines, and the line under it then gets one line
+     instead of two — nothing is cut off at the foot. */
+  const fit = (() => {
+    if (!left) return { size: titleSize, subLines: 2, subFits: true };
+    const perLine = (size: number) => Math.floor(room / (size * 0.56));
+    let size = titleSize;
+    while (
+      size > 14.5 &&
+      Math.ceil((line.title.length * 1.12) / perLine(size)) > 3
+    )
+      size -= 0.5;
+    const rows = Math.ceil((line.title.length * 1.12) / perLine(size));
+    const subLines = rows >= 3 ? 1 : 2;
+    /* The line under it shows whole or not at all: half a sentence ending in dots reads as a fault. */
+    const subFits =
+      !!line.sub &&
+      line.sub.length * 1.1 <= subLines * Math.floor(room / (13 * 0.52));
+    return { size, subLines, subFits };
+  })();
+  const title = layOut(
+    line.title,
+    Math.floor(room / (titleSize * 0.58)),
+    titleSize,
+  );
   const sub = layOut(line.sub, Math.floor(room / (SUB * 0.54)), SUB);
   let spoken = 0;
   return (
     <Animated.View key={at} style={[{ alignSelf: "stretch" }, fading]}>
-      <Pressable onPress={() => onPick?.(line)} accessibilityRole={onPick ? "button" : undefined} style={{ alignItems: left ? "flex-start" : "center", paddingHorizontal: left ? 0 : 22 }}>
-      {left ? (
-        /* Beside the sphere the column is narrow: the words flow on as many lines as they
+      <Pressable
+        onPress={() => onPick?.(line)}
+        accessibilityRole={onPick ? "button" : undefined}
+        style={{
+          alignItems: left ? "flex-start" : "center",
+          paddingHorizontal: left ? 0 : 22,
+        }}
+      >
+        {left ? (
+          /* Beside the sphere the column is narrow: the words flow on as many lines as they
            need, at one size, instead of being squeezed into two. */
-        <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: titleSize * 0.25, rowGap: 1 }}>
-          {line.title.split(" ").map((w, i) => (
-            <Word key={i} text={w} delay={spoken++ * WORD_MS} size={titleSize} />
-          ))}
-        </View>
-      ) : (
-        title.lines.map((text) => (
-          <View key={text} style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", columnGap: title.size * 0.25 }}>
-            {text.split(" ").map((w, i) => (
-              <Word key={i} text={w} delay={spoken++ * WORD_MS} size={title.size} />
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              columnGap: fit.size * 0.25,
+            }}
+          >
+            {line.title.split(" ").map((w, i) => (
+              <Word
+                key={i}
+                text={w}
+                delay={spoken++ * WORD_MS}
+                size={fit.size}
+              />
             ))}
           </View>
-        ))
-      )}
-      <Rising delay={line.title.split(" ").length * WORD_MS + 120}>
-        <Text numberOfLines={left ? 2 : undefined} style={{ marginTop: 4, fontSize: sub.size, lineHeight: sub.size * 1.36, ...face(500), color: th(INK.soft), textAlign: left ? "left" : "center" }}>{left ? line.sub : sub.lines.join("\n")}</Text>
-      </Rising>
+        ) : (
+          title.lines.map((text) => (
+            <View
+              key={text}
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                columnGap: title.size * 0.25,
+              }}
+            >
+              {text.split(" ").map((w, i) => (
+                <Word
+                  key={i}
+                  text={w}
+                  delay={spoken++ * WORD_MS}
+                  size={title.size}
+                />
+              ))}
+            </View>
+          ))
+        )}
+        {(!left || fit.subFits) && (
+          <Rising delay={line.title.split(" ").length * WORD_MS + 120}>
+            <Text
+              numberOfLines={left ? fit.subLines : undefined}
+              style={{
+                marginTop: 4,
+                fontSize: left ? 13 : sub.size,
+                lineHeight: left ? 17.5 : sub.size * 1.36,
+                ...face(500),
+                color: th(INK.soft),
+                textAlign: left ? "left" : "center",
+              }}
+            >
+              {left ? line.sub : sub.lines.join("\n")}
+            </Text>
+          </Rising>
+        )}
       </Pressable>
     </Animated.View>
   );
