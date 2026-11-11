@@ -15,6 +15,8 @@ import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
 import { ChevronRight } from "~/components/icons";
 import CaixinhaCover from "~/components/accounts/CaixinhaCover";
+import { categoryIcon } from "~/lib/categoryIcon";
+import { chipFill, chipInk } from "~/lib/chip";
 import { goalPreset } from "~/lib/goalIcon";
 import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
@@ -196,37 +198,61 @@ export function ParcelamentosCard({
       : "Última parcela este mês";
 
   if (!full) {
-    /* Compact, the whole card is used: how much of it is already paid as a ring, what it
-       costs a month beside it, and at the foot when it ends and what is still owed. */
+    /* Compact, the whole card used, as the caixinhas and the cards are: the heaviest
+       purchases' marks at the top, what the instalments cost a month large in the middle,
+       and at the foot how much of it is already paid, and what is still owed. */
+    const marks = [...items].sort((x, y) => y.amount - x.amount).slice(0, 3);
     return (
       <Surface onPress={open} style={{ flex: 1, padding: 14 }}>
         <View style={{ flex: 1, justifyContent: "space-between" }}>
           <Header title="Parcelamentos" />
 
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <View style={{ width: 62, height: 62, alignItems: "center", justifyContent: "center" }}>
-              <View style={{ position: "absolute" }}>
-                <Ring share={paid} color={GREEN} size={62} stroke={6} />
-              </View>
-              <Text style={[nums, { fontSize: 13.5, fontWeight: "800", color: th("#fff") }]}>{Math.round(paid * 100)}%</Text>
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>já pago</Text>
-              <Text style={[nums, { marginTop: 1, fontSize: 13, fontWeight: "700", color: th("#fff") }]}>
-                {items.length} {items.length === 1 ? "compra" : "compras"}
-              </Text>
-            </View>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {marks.map((item, i) => {
+              const hex = categoryHex(item.category, customCats);
+              const Icon = categoryIcon(item.category, customCats);
+              return (
+                <View
+                  key={item.id}
+                  style={{
+                    marginLeft: i === 0 ? 0 : -10,
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: 2,
+                    borderColor: th("#1A1B20", "bg"),
+                    backgroundColor: th(chipFill(hex), "bg"),
+                    zIndex: 3 - i,
+                  }}
+                >
+                  <Icon size={16} color={th(chipInk(hex))} strokeWidth={2.1} />
+                </View>
+              );
+            })}
+            {items.length > marks.length && (
+              <Text style={{ marginLeft: 8, fontSize: 12.5, fontWeight: "600", color: th(INK.soft) }}>+{items.length - marks.length}</Text>
+            )}
           </View>
 
           <View>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { fontSize: 22, fontWeight: "800", letterSpacing: -0.7, color: th("#fff") }]}>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { fontSize: 24, fontWeight: "800", letterSpacing: -0.8, color: th("#fff") }]}>
               {money(totals.totalMensal)}
-              <Text style={{ fontSize: 12.5, fontWeight: "500", letterSpacing: 0, color: th(INK.soft) }}> /mês</Text>
             </Text>
-            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: th(INK.soft) }}>
-              {totals.monthsUntilFree > 0 ? `Livre em ${totals.monthsUntilFree} ${totals.monthsUntilFree === 1 ? "mês" : "meses"}` : "Termina este mês"}
-              <Text style={{ color: th(INK.softer) }}> · falta {money(totals.totalRestante)}</Text>
+            <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12.5, color: th(INK.soft) }}>
+              por mês · {totals.monthsUntilFree > 0 ? `até ${monthYear(totals.lastEndDate)}` : "acaba este mês"}
             </Text>
+          </View>
+
+          <View>
+            <Track share={paid} color={GREEN} height={6} />
+            <View style={{ marginTop: 7, flexDirection: "row", justifyContent: "space-between", gap: 6 }}>
+              <Text numberOfLines={1} style={[nums, { fontSize: 12, color: th(INK.soft) }]}>
+                <Text style={{ fontWeight: "700", color: th("#fff") }}>{Math.round(paid * 100)}%</Text> pago
+              </Text>
+              <Text numberOfLines={1} style={[nums, { flexShrink: 1, fontSize: 12, color: th(INK.softer) }]}>falta {money(totals.totalRestante)}</Text>
+            </View>
           </View>
         </View>
       </Surface>
