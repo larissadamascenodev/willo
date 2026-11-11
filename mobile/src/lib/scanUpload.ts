@@ -60,7 +60,7 @@ export async function processScanPhoto(photo: PickedPhoto, context: "transaction
    Pix received. A card statement keeps what the reader gave: there a Pix on credit is real. */
 async function fit(result: ScanResult, context: "transaction" | "invoice"): Promise<ScanResult> {
   if (context !== "transaction" || !result.items?.length) return result;
-  return { ...result, items: await fitReceiptCategories(result.items as { type?: string; category?: string }[]) };
+  return { ...result, items: fitReceiptCategories(result.items as { type?: string; category?: string }[]) };
 }
 
 /** A file picked from the phone — a statement PDF, most often — sent as it is. */
