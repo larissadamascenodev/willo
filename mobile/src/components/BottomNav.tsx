@@ -31,13 +31,13 @@ import { th } from "~/theme/theme";
  * its own to type into and two bars at the foot would be one too many.
  */
 
-const SIZE = 50;
+const SIZE = 54;
 const INSET = 3;
 const INNER = SIZE - INSET * 2;
 /** Buttons in the long glass, which shares the row's width between them. */
 const BUTTONS = 3;
 /** How wide one of them is: close enough that the three read as one group. */
-const SLOT = 70;
+const SLOT = 74;
 
 const SPRING = {
   duration: 480,
@@ -105,7 +105,8 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
         left: 0,
         right: 0,
         bottom: 0,
-        paddingHorizontal: 20,
+        paddingLeft: 20,
+        paddingRight: 28,
         paddingBottom: insets.bottom + 14,
       }}
     >
@@ -162,7 +163,7 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
                 onPress={() => go("/manual")}
                 drawn={
                   <Plus
-                    size={26}
+                    size={27}
                     color={th("rgba(255,255,255,0.78)")}
                     strokeWidth={2.4}
                   />
@@ -274,7 +275,7 @@ function NavButton({
             <Animated.View style={glyph}>
               <Animated.View style={soft}>
                 <Icon
-                  size={25}
+                  size={26}
                   color={th("rgba(255,255,255,0.58)")}
                   strokeWidth={2}
                 />
@@ -282,7 +283,7 @@ function NavButton({
               <Animated.View
                 style={[{ position: "absolute", top: 0, left: 0 }, full]}
               >
-                <Icon size={25} color={th("#fff")} strokeWidth={2.5} />
+                <Icon size={26} color={th("#fff")} strokeWidth={2.5} />
               </Animated.View>
             </Animated.View>
           ))}
