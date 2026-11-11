@@ -6,6 +6,8 @@ import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 import { th } from "~/theme/theme";
+const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
 /**
  * The month, read out on the page itself.
  *
@@ -13,35 +15,63 @@ import { th } from "~/theme/theme";
  * screen, and a panel behind it only adds an edge for the eye to stop at. The two
  * flows sit under it on one shared scale, so which side is bigger is answered before
  * either number is read.
+ *
+ * What the big figure is depends on where the month stands:
+ * - a month gone by shows what was left at its end;
+ * - this month shows the money in the accounts now, with where it is heading;
+ * - a month to come shows what it should end with — what it will bring in and pay
+ *   out, on top of what this month is expected to hand over — and says how much of
+ *   that comes from the month before.
  */
 export default function TransactionsSummary({
+  month,
+  kind,
   saldoAtual,
   saldoPrevisto,
+  abertura,
+  balanco,
   receitas,
   despesas,
 }: {
+  month: number;
+  kind: "past" | "current" | "future";
   saldoAtual: number;
   saldoPrevisto: number;
+  /** What the month started with. */
+  abertura: number;
+  /** What actually happened in the month, in minus out. */
+  balanco: number;
   receitas: number;
   despesas: number;
 }) {
   const scale = Math.max(receitas, despesas, 1);
+  const before = MONTHS[(month + 11) % 12];
+  const big = kind === "past" ? abertura + balanco : kind === "future" ? saldoPrevisto : saldoAtual;
+  const label = kind === "past" ? "Saldo ao fim do mês" : kind === "future" ? "Saldo previsto" : "Saldo em contas";
+  const note =
+    kind === "current"
+      ? saldoPrevisto !== saldoAtual
+        ? { text: "Previsto no fim do mês:", value: saldoPrevisto }
+        : null
+      : kind === "future"
+        ? { text: `Vem de ${before}:`, value: abertura }
+        : null;
 
   return (
     <View style={{ paddingHorizontal: 4 }}>
-      <Text style={[T.eyebrow, { fontSize: 11 }]}>Saldo em contas</Text>
+      <Text style={[T.eyebrow, { fontSize: 11 }]}>{label}</Text>
       <Text
         numberOfLines={1}
-        style={[T.figureBig, { marginTop: 6 }, saldoAtual < 0 && { color: th(RED) }]}
+        style={[T.figureBig, { marginTop: 6 }, big < 0 && { color: th(RED) }]}
       >
-        {money(saldoAtual)}
+        {money(big)}
       </Text>
 
-      {saldoPrevisto !== saldoAtual && (
+      {note && (
         <Text numberOfLines={1} style={[T.note, { marginTop: 10 }]}>
-          Previsto no fim do mês:{" "}
+          {note.text}{" "}
           <Text style={{ fontWeight: "600", color: th("rgba(255,255,255,0.8)") }}>
-            {money(saldoPrevisto)}
+            {money(note.value)}
           </Text>
         </Text>
       )}

@@ -145,7 +145,9 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
         /* This month leaves the series and gets an entry of its own. */
         if (startsHere) {
           const next = new Date(year, month + 1, 1);
-          await updateTransaction(tx.id, { date: inMonth(tx.date, next.getMonth(), next.getFullYear()) });
+          /* It arrives in the next month waiting: carried over as received, it went on
+             counting in the accounts with nothing on screen to explain it. */
+          await updateTransaction(tx.id, { date: inMonth(tx.date, next.getMonth(), next.getFullYear()), status: "pendente" });
         } else await excludeRecurringForMonth(tx.id, month, year, user.id);
         await createTransaction({ ...fields, recurrence_type: "unica", installments: null, installment_current: null } as never, user.id);
       } else if (recurring && scope === "all" && !startsHere) {

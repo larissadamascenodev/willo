@@ -237,6 +237,10 @@ export default function Transacoes() {
 
         <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 18 }}>
           <TransactionsSummary
+            month={month}
+            kind={isThisMonth ? "current" : year * 12 + month < today.getFullYear() * 12 + today.getMonth() ? "past" : "future"}
+            abertura={finance.previousMonthEndingBalance ?? 0}
+            balanco={finance.balanco}
             saldoAtual={finance.saldoAtual}
             saldoPrevisto={finance.saldoPrevisto}
             receitas={finance.receitas}

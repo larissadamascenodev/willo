@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getRecurringForMonth } from "@/services/recurringService";
 import { dayOfMonth } from "@/lib/dateOnly";
 import { chargeStartsAfterMonth } from "@/lib/installments";
+import { openingBalance, sumPaidAhead, type MonthFlow } from "@/lib/monthCarry";
 
 export interface FinancialSummary {
   income: number;
@@ -208,6 +209,27 @@ async function fetchTotalAccountBalance(month?: number, year?: number): Promise<
 }
 
 /**
+ * Money marked as happened for a date after the current month. It is in the accounts
+ * already, but it is counted in its own month; see monthCarry.
+ */
+async function fetchPaidAhead(): Promise<number> {
+  const now = new Date();
+  const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const end = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, "0")}-${String(last.getDate()).padStart(2, "0")}`;
+  const [{ data: rows }, { data: accounts }] = await Promise.all([
+    supabase
+      .from("transactions")
+      .select("amount, type, payment_method, account_id")
+      .eq("status", "pago")
+      .gt("date", end)
+      .in("type", ["receita", "despesa"])
+      .not("account_id", "is", null),
+    supabase.from("accounts").select("id").neq("type", "investment"),
+  ]);
+  return sumPaidAhead((rows ?? []) as any[], new Set((accounts ?? []).map((a: any) => a.id)));
+}
+
+/**
  * Aggregate ALL transactions for income/expense totals,
  * but only PAID transactions for balance.
  * Credit card transactions are EXCLUDED — their impact is handled via invoices.
@@ -395,7 +417,7 @@ export async function getFinancialSummary(
   // Fetch initial balances from accounts created in this month (they count as income)
   const { start: monthStart, end: monthEnd } = getMonthRange(month, year);
 
-  const [transactions, events, accountBalance, invoiceTotals, historical, { data: creditCardsData }, { data: invoicesDetailData }, { data: accountsCreatedThisMonth }] = await Promise.all([
+  const [transactions, events, accountBalance, invoiceTotals, historical, { data: creditCardsData }, { data: invoicesDetailData }, { data: accountsCreatedThisMonth }, paidAhead] = await Promise.all([
     fetchMonthTransactions(month, year, { userId }),
     fetchMonthEvents(month, year),
     fetchTotalAccountBalance(month, year),
@@ -417,6 +439,7 @@ export async function getFinancialSummary(
       .gte("created_at", monthStart + "T00:00:00")
       .lte("created_at", monthEnd + "T23:59:59")
       .neq("type", "investment"),
+    fetchPaidAhead().catch(() => 0),
   ]);
 
   // Sum initial balances from accounts created this month — this is "money the user already had"
@@ -450,11 +473,20 @@ export async function getFinancialSummary(
   const dailyAverageIncome = elapsedDays > 0 ? paidIncome / elapsedDays : 0;
 
   let previousMonthEndingBalance = 0;
+  const target: MonthFlow = { income, expense, paidIncome, paidExpense };
+  const flowOf = (txs: RawTransaction[], inv: InvoiceTotals): MonthFlow => {
+    const a = aggregate(txs);
+    return {
+      income: a.income,
+      expense: a.expense + inv.invoiceExpense,
+      paidIncome: a.paidIncome,
+      paidExpense: a.paidExpense + inv.invoicePaidExpense,
+    };
+  };
 
   if (isCurrentMonth) {
-    previousMonthEndingBalance = accountBalance - balance;
+    previousMonthEndingBalance = openingBalance({ kind: "current", accountBalance, paidAhead, target });
   } else if (isFutureMonth) {
-    let accumulated = accountBalance;
     const chainPeriods: { m: number; y: number }[] = [];
 
     if (!(currentCalendarMonth === month && currentCalendarYear === year)) {
@@ -486,22 +518,18 @@ export async function getFinancialSummary(
         )
       );
 
-      const [currentTxs, currentInv] = chainResults[0];
-      if (!(currentCalendarMonth === month && currentCalendarYear === year)) {
-        const currentAgg = aggregate(currentTxs);
-        const pendingIncome = currentAgg.income - currentAgg.paidIncome;
-        const pendingExpense = (currentAgg.expense + currentInv.invoiceExpense) - (currentAgg.paidExpense + currentInv.invoicePaidExpense);
-        accumulated += pendingIncome - pendingExpense;
-      }
-
-      for (let i = (!(currentCalendarMonth === month && currentCalendarYear === year) ? 1 : 0); i < chainResults.length; i++) {
-        const [intTxs, intInv] = chainResults[i];
-        const intAgg = aggregate(intTxs);
-        accumulated += intAgg.income - (intAgg.expense + intInv.invoiceExpense);
-      }
+      const flows = chainResults.map(([txs, inv]) => flowOf(txs, inv));
+      previousMonthEndingBalance = openingBalance({
+        kind: "future",
+        accountBalance,
+        paidAhead,
+        target,
+        current: flows[0],
+        between: flows.slice(1),
+      });
+    } else {
+      previousMonthEndingBalance = openingBalance({ kind: "future", accountBalance, paidAhead, target });
     }
-
-    previousMonthEndingBalance = accumulated;
   } else {
     const pastPeriods: { m: number; y: number }[] = [];
     let cm = month + 1;
@@ -519,7 +547,7 @@ export async function getFinancialSummary(
       }
     }
 
-    let paidAfter = 0;
+    let after: MonthFlow[] = [];
     if (pastPeriods.length > 0) {
       const pastResults = await Promise.all(
         pastPeriods.map(({ m, y }) =>
@@ -529,13 +557,10 @@ export async function getFinancialSummary(
           ])
         )
       );
-      for (const [futureTxs, futInv] of pastResults) {
-        const futAgg = aggregate(futureTxs);
-        paidAfter += futAgg.paidIncome - (futAgg.paidExpense + futInv.invoicePaidExpense);
-      }
+      after = pastResults.map(([txs, inv]) => flowOf(txs, inv));
     }
 
-    previousMonthEndingBalance = (accountBalance - paidAfter) - balance;
+    previousMonthEndingBalance = openingBalance({ kind: "past", accountBalance, paidAhead, target, after });
   }
 
   const monthFullBalance = income - expense;
