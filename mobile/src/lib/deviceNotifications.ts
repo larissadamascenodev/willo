@@ -122,13 +122,32 @@ const atHour = (iso: string, hour: number, daysBefore = 0) => {
   return d;
 };
 const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+const WEEKDAYS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+
+/**
+ * When something falls due, said the way a person says it, counted from the moment the
+ * notice arrives: "hoje", "amanhã", "quinta", "dia 14".
+ */
+function whenSaid(dueIso: string, from: Date) {
+  const due = new Date(`${dueIso}T00:00:00`);
+  const start = new Date(from);
+  start.setHours(0, 0, 0, 0);
+  const days = Math.round((due.getTime() - start.getTime()) / 86_400_000);
+  if (days <= 0) return "hoje";
+  if (days === 1) return "amanhã";
+  if (days < 7) return WEEKDAYS[due.getDay()];
+  return `dia ${due.getDate()}`;
+}
+
+/* Notices of one kind stack together in the notification centre. */
+type Thread = "contas" | "faturas" | "metas" | "voltar" | "plano" | "semana";
 
 interface Planned {
   date: Date;
   title: string;
   body: string;
   url: string;
+  thread: Thread;
 }
 
 let running: Promise<void> | null = null;
@@ -191,9 +210,11 @@ async function run(userId: string | undefined | null) {
   /* Bills: a few days ahead (as set), and on the day. */
   for (const b of (bills.data ?? []) as { id: string; name: string; date: string; amount: number }[]) {
     const amount = money(Number(b.amount));
-    if (before > 0)
-      planned.push({ date: atHour(b.date, MORNING, before), title: `${b.name} vence em ${before} ${plural(before, "dia", "dias")}`, body: amount, url: "/transacoes" });
-    planned.push({ date: atHour(b.date, MORNING), title: `${b.name} vence hoje`, body: amount, url: "/transacoes" });
+    if (before > 0) {
+      const at = atHour(b.date, MORNING, before);
+      planned.push({ date: at, title: `${b.name} vence ${whenSaid(b.date, at)}`, body: `${amount}. Já está no seu mês, é só não esquecer.`, url: "/transacoes", thread: "contas" });
+    }
+    planned.push({ date: atHour(b.date, MORNING), title: `${b.name} vence hoje`, body: `${amount}. Pagou? Toque para marcar como paga.`, url: "/transacoes", thread: "contas" });
   }
 
   /* Invoices: their due day comes from the card. */
@@ -209,8 +230,11 @@ async function run(userId: string | undefined | null) {
       if (due < today || due > until) continue;
       const amount = money(Number(inv.total_amount));
       const url = `/fatura/${card.id}`;
-      if (before > 0) planned.push({ date: atHour(due, MORNING, before), title: `Fatura ${card.name} vence em ${before} ${plural(before, "dia", "dias")}`, body: amount, url });
-      planned.push({ date: atHour(due, MORNING), title: `Fatura ${card.name} vence hoje`, body: amount, url });
+      if (before > 0) {
+        const at = atHour(due, MORNING, before);
+        planned.push({ date: at, title: `Fatura ${card.name} vence ${whenSaid(due, at)}`, body: `${amount}. Toque para ver o que entrou nela.`, url, thread: "faturas" });
+      }
+      planned.push({ date: atHour(due, MORNING), title: `Fatura ${card.name} vence hoje`, body: `${amount}. Pagou? Toque para registrar o pagamento.`, url, thread: "faturas" });
     }
   }
 
@@ -218,7 +242,8 @@ async function run(userId: string | undefined | null) {
   for (const g of (goals.data ?? []) as { id: string; name: string; deadline: string; current_amount: number; target_amount: number }[]) {
     if (Number(g.current_amount) >= Number(g.target_amount)) continue;
     const left = money(Number(g.target_amount) - Number(g.current_amount));
-    planned.push({ date: atHour(g.deadline, 10, 3), title: `Meta "${g.name}" termina em 3 dias`, body: `Faltam ${left} para chegar lá`, url: `/metas/${g.id}` });
+    const at = atHour(g.deadline, 10, 3);
+    planned.push({ date: at, title: `${g.name}: o prazo é ${whenSaid(g.deadline, at)}`, body: `Faltam ${left} para chegar lá. Dá para guardar mais um pouco?`, url: `/metas/${g.id}`, thread: "metas" });
   }
 
   /* Coming back: set ahead every time the app opens, so they only reach someone who
@@ -228,7 +253,7 @@ async function run(userId: string | undefined | null) {
       const d = new Date(now);
       d.setDate(d.getDate() + days);
       d.setHours(hour, 0, 0, 0);
-      planned.push({ date: d, title, body, url: "/registro" });
+      planned.push({ date: d, title, body, url: "/registro", thread: "voltar" });
     };
     nudge(2, 20, "Teve algum gasto hoje?", "Anota em dois toques e o Willo organiza o resto.");
     nudge(6, 19, "Seu mês continua andando", "Abre o Willo e veja quanto ainda sobra até o fim do mês.");
@@ -251,13 +276,13 @@ async function run(userId: string | undefined | null) {
           const evening = new Date(now);
           if (evening.getHours() >= 20) evening.setDate(evening.getDate() + 1);
           evening.setHours(20, 0, 0, 0);
-          planned.push({ date: evening, title: slip.title, body: slip.body, url: "/plano" });
+          planned.push({ date: evening, title: slip.title, body: slip.body, url: "/plano", thread: "plano" });
         }
         const monday = new Date(now);
         monday.setDate(monday.getDate() + ((8 - monday.getDay()) % 7 || 7));
         monday.setHours(9, 0, 0, 0);
         if (monday.getMonth() === now.getMonth())
-          planned.push({ date: monday, title: `Seu plano ${plan.label} esta semana`, body: `Dá para gastar até ${money(status.perDay)} por dia e continuar dentro do plano.`, url: "/plano" });
+          planned.push({ date: monday, title: `Seu plano ${plan.label} esta semana`, body: `Dá para gastar até ${money(status.perDay)} por dia e continuar dentro do plano.`, url: "/plano", thread: "plano" });
       }
     } catch {
       /* No plan alerts this time. */
@@ -272,7 +297,7 @@ async function run(userId: string | undefined | null) {
   for (const p of later) {
     try {
       await N.scheduleNotificationAsync({
-        content: { title: p.title, body: p.body, data: { kind: TAG, url: p.url } },
+        content: { title: p.title, body: p.body, data: { kind: TAG, url: p.url }, threadIdentifier: `willo-${p.thread}` },
         trigger: { type: N.SchedulableTriggerInputTypes.DATE, date: p.date },
       });
     } catch {
@@ -284,7 +309,7 @@ async function run(userId: string | undefined | null) {
   if (settings.weekly_summary) {
     try {
       await N.scheduleNotificationAsync({
-        content: { title: "Sua semana no Willo", body: "Veja o que entrou, o que saiu e como o mês está fechando.", data: { kind: TAG, url: "/" } },
+        content: { title: "Sua semana no Willo", body: "Abre que eu te mostro o que entrou, o que saiu e como o mês está fechando.", data: { kind: TAG, url: "/" }, threadIdentifier: "willo-semana" },
         trigger: { type: N.SchedulableTriggerInputTypes.WEEKLY, weekday: 1, hour: 19, minute: 0 },
       });
     } catch {

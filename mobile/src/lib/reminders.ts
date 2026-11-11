@@ -18,19 +18,19 @@ export async function scheduleReminder(name: string, amount: number | null, iso:
     const { granted } = await Notifications.requestPermissionsAsync();
     if (!granted) return false;
 
-    const body = amount ? money(amount) : "Lembrete do Willo";
+    const value = amount ? `${money(amount)}. ` : "";
     const day = new Date(`${iso}T00:00:00`);
     day.setHours(AT_HOUR);
     const before = new Date(day);
     before.setDate(before.getDate() - 1);
 
     const times = [
-      { date: before, title: `${name} vence amanhã` },
-      { date: day, title: `${name} vence hoje` },
+      { date: before, title: `${name} vence amanhã`, body: `${value}Já está no seu mês, é só não esquecer.` },
+      { date: day, title: `${name} vence hoje`, body: `${value}Pagou? Toque para marcar como paga.` },
     ].filter((t) => t.date.getTime() > Date.now());
     for (const t of times) {
       await Notifications.scheduleNotificationAsync({
-        content: { title: t.title, body },
+        content: { title: t.title, body: t.body, threadIdentifier: "willo-contas" },
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: t.date },
       });
     }
