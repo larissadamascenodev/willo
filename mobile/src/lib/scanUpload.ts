@@ -1,6 +1,7 @@
 import { File } from "expo-file-system";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { supabase } from "@/integrations/supabase/client";
+import { fitReceiptCategories } from "~/lib/receiptCategory";
 
 /**
  * Sends a photo of a receipt to the reader — the phone's half of the web's
@@ -52,7 +53,14 @@ async function prepare(photo: PickedPhoto): Promise<string> {
 
 export async function processScanPhoto(photo: PickedPhoto, context: "transaction" | "invoice" = "transaction") {
   const uri = await prepare(photo);
-  return send({ uri, name: "comprovante.jpg", type: "image/jpeg" }, context);
+  return fit(await send({ uri, name: "comprovante.jpg", type: "image/jpeg" }, context), context);
+}
+
+/* A receipt goes under one of the person's own categories, never "Pix no crédito" for a
+   Pix received. A card statement keeps what the reader gave: there a Pix on credit is real. */
+async function fit(result: ScanResult, context: "transaction" | "invoice"): Promise<ScanResult> {
+  if (context !== "transaction" || !result.items?.length) return result;
+  return { ...result, items: await fitReceiptCategories(result.items as { type?: string; category?: string }[]) };
 }
 
 /** A file picked from the phone — a statement PDF, most often — sent as it is. */
