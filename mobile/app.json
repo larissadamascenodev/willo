@@ -12,7 +12,8 @@
       "bundleIdentifier": "com.larissadamasceno.willo",
       "supportsTablet": false,
       "infoPlist": {
-        "UIViewControllerBasedStatusBarAppearance": false
+        "UIViewControllerBasedStatusBarAppearance": false,
+        "ITSAppUsesNonExemptEncryption": false
       },
       "config": {
         "usesNonExemptEncryption": false
