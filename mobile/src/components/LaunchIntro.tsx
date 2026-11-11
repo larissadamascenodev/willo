@@ -1,27 +1,34 @@
 import { useEffect } from "react";
 import { Image, StyleSheet, useWindowDimensions } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming, type SharedValue } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { GROUND } from "~/theme/tokens";
 
 /**
  * What plays when the app opens, over the app while it gets ready underneath — short.
  *
- * The three cards come up stacked, as a hand of cards does, at the start of where the name
- * will be. They run across and pull the name out behind them, "willo" written as they
- * pass. At its end they draw together, shrink, and become the logo's own point — the green
- * one after the name. A moment on the finished logo, and the screen fades onto the app.
+ * The three cards come up one after another, each on a soft spring, growing a touch and
+ * straightening as they settle into a hand at the start of where the name will be. They
+ * run across, leaning into the run, each a beat behind the one ahead, and pull the name
+ * out behind them — written with a soft leading edge rather than cut. At its end they
+ * draw in one by one, shrinking and turning square, and become the logo's own point: the
+ * green one after the name, which lands with a little give. A moment on the logo, which
+ * grows a hair as the screen fades onto the app.
  *
  * One clock; every step is a window of it. With reduced motion it is the finished logo, a
  * moment, and the fade.
  */
 
-const RISE = [80, 620] as const; // the cards come up, one after another
-const RISE_GAP = 70;
-const PULL = [640, 1440] as const; // they run across, the name written behind them
-const MERGE = [1440, 1880] as const; // at its end they shrink into the point
-const POINT = [1780, 2080] as const; // the point settles, green
-const OUT = [2550, 3000] as const; // the screen fades onto the app
+const RISE = [60, 760] as const; // the cards come up, one after another
+const RISE_EACH = 520;
+const RISE_GAP = 90;
+const PULL = [700, 1560] as const; // they run across, the name written behind them
+const LAG = 55; // each card a beat behind the one ahead
+const MERGE = [1520, 1980] as const; // at its end they draw into the point, one by one
+const MERGE_GAP = 60;
+const POINT = [1880, 2240] as const; // the point lands, green
+const OUT = [2620, 3080] as const; // the logo grows a hair as the screen fades onto the app
 export const LAUNCH_INTRO_MS = OUT[1] + 20;
 const QUICK = [700, 1050] as const;
 
@@ -40,6 +47,8 @@ const WORD_PY = 222;
 const TEXT_END = 640;
 const DOT = { x: 640, y: 162, w: 81, h: 54 };
 const GREEN = "#67CD67";
+/** The soft leading edge the name is written with. */
+const FEATHER = 34;
 
 function clamp01(v: number) {
   "worklet";
@@ -57,7 +66,18 @@ function inOutCubic(v: number) {
   "worklet";
   return v < 0.5 ? 4 * v * v * v : 1 - (-2 * v + 2) ** 3 / 2;
 }
-function backOut(v: number, s = 1.5) {
+function inOutQuint(v: number) {
+  "worklet";
+  return v < 0.5 ? 16 * v ** 5 : 1 - (-2 * v + 2) ** 5 / 2;
+}
+/** A soft spring: past the mark a little, and back. */
+function spring(v: number) {
+  "worklet";
+  if (v <= 0) return 0;
+  if (v >= 1) return 1;
+  return 1 - Math.exp(-6.2 * v) * Math.cos(7.4 * v);
+}
+function backOut(v: number, s = 1.7) {
   "worklet";
   const c = s + 1;
   return 1 + c * (v - 1) ** 3 + s * (v - 1) ** 2;
@@ -79,8 +99,7 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
   const left = (width - wordW) / 2;
   const top = (height - wordH) / 2 - height * 0.02;
   const textW = TEXT_END * u;
-  /* The point, on the screen. */
-  const dot = { x: left + DOT.x * u, y: top + DOT.y * u, w: DOT.w * u, h: DOT.h * u };
+  const dot = { x: DOT.x * u, y: DOT.y * u, w: DOT.w * u, h: DOT.h * u };
 
   useEffect(() => {
     const end = reduced ? QUICK[1] : LAUNCH_INTRO_MS;
@@ -88,7 +107,7 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
     const tap = (style: Haptics.ImpactFeedbackStyle) => () => void Haptics.impactAsync(style).catch(() => undefined);
     const timers = reduced
       ? []
-      : [setTimeout(tap(Haptics.ImpactFeedbackStyle.Light), RISE[1] - 40), setTimeout(tap(Haptics.ImpactFeedbackStyle.Medium), POINT[0] + 40)];
+      : [setTimeout(tap(Haptics.ImpactFeedbackStyle.Soft), RISE[0] + RISE_EACH * 0.6), setTimeout(tap(Haptics.ImpactFeedbackStyle.Medium), POINT[0] + 60)];
     const done = setTimeout(onDone, end + 30);
     return () => {
       timers.forEach(clearTimeout);
@@ -100,46 +119,54 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
 
   const shell = useAnimatedStyle(() => {
     const now = t.get();
-    const out = reduced ? span(now, QUICK[0], QUICK[1]) : span(now, OUT[0], OUT[1]);
+    const out = reduced ? span(now, QUICK[0], QUICK[1]) : inOutCubic(span(now, OUT[0], OUT[1]));
     return { opacity: 1 - out };
   });
 
-  /* The name, written behind the cards as they run: a window opening left to right. */
+  /* The logo as one: settling a hair as the point lands, growing a hair on the way out. */
+  const logo = useAnimatedStyle(() => {
+    const now = t.get();
+    const land = reduced ? 1 : span(now, POINT[0], POINT[1]);
+    const out = reduced ? 0 : inOutCubic(span(now, OUT[0], OUT[1]));
+    const settle = 1 + Math.sin(land * Math.PI) * 0.018;
+    return { transform: [{ scale: settle * (1 + out * 0.06) }] };
+  });
+
+  /* The name, written behind the cards: a window opening left to right, its edge feathered. */
   const written = useAnimatedStyle(() => {
-    const v = reduced ? 1 : inOutCubic(span(t.get(), PULL[0], PULL[1]));
+    const v = reduced ? 1 : inOutQuint(span(t.get(), PULL[0], PULL[1]));
+    /* The soft edge sits inside what is written, always under the cards, never ahead of them. */
     return { width: textW * v };
   });
-
-  /* The point: there once the cards have become it, green, settling with a little give. */
-  const point = useAnimatedStyle(() => {
-    const v = reduced ? 1 : span(t.get(), POINT[0], POINT[1]);
-    return { opacity: v > 0 ? 1 : 0, transform: [{ scale: v === 0 ? 0 : mix(0.4, 1, backOut(v)) }] };
+  const edge = useAnimatedStyle(() => {
+    const v = reduced ? 1 : span(t.get(), PULL[0], PULL[1]);
+    return { opacity: v > 0 && v < 1 ? 1 : 0 };
   });
 
-  const cardW = wordH * 0.62;
+  /* The point: there once the cards have become it, green, landing with a little give. */
+  const point = useAnimatedStyle(() => {
+    const v = reduced ? 1 : span(t.get(), POINT[0], POINT[1]);
+    return { opacity: clamp01(v * 3), transform: [{ scale: v === 0 ? 0 : mix(0.2, 1, backOut(v)) }] };
+  });
+
+  const cardW = wordH * 0.64;
   const cardH = cardW * (560 / 680);
 
   return (
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: GROUND, zIndex: 100, overflow: "hidden" }, shell]}>
-      {/* The name, white, without its point: the point is the cards' to make. */}
-      <Animated.View style={[{ position: "absolute", left, top, height: wordH, overflow: "hidden" }, written]}>
-        <Image source={WORD} style={{ width: wordW, height: wordH }} resizeMode="stretch" />
-      </Animated.View>
+      <Animated.View style={[{ position: "absolute", left, top, width: wordW, height: wordH }, logo]}>
+        {/* The name, white, without its point: the point is the cards' to make. */}
+        <Animated.View style={[{ position: "absolute", left: 0, top: 0, height: wordH, overflow: "hidden" }, written]}>
+          <Image source={WORD} style={{ width: wordW, height: wordH }} resizeMode="stretch" />
+          <Animated.View style={[{ position: "absolute", right: 0, top: 0, bottom: 0, width: FEATHER }, edge]}>
+            <LinearGradient colors={[`${GROUND}00`, GROUND]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ flex: 1 }} />
+          </Animated.View>
+        </Animated.View>
 
-      <Animated.View
-        style={[
-          {
-            position: "absolute",
-            left: dot.x,
-            top: dot.y,
-            width: dot.w,
-            height: dot.h,
-            borderRadius: dot.h / 2,
-            backgroundColor: GREEN,
-          },
-          point,
-        ]}
-      />
+        <Animated.View
+          style={[{ position: "absolute", left: dot.x, top: dot.y, width: dot.w, height: dot.h, borderRadius: dot.h / 2, backgroundColor: GREEN }, point]}
+        />
+      </Animated.View>
 
       {!reduced &&
         CARDS.map((src, i) => (
@@ -150,10 +177,10 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
             t={t}
             w={cardW}
             h={cardH}
-            startX={left - cardW * 0.35}
-            endX={left + textW - cardW * 0.2}
+            startX={left - cardW * 0.15}
+            endX={left + textW - cardW * 0.15}
             midY={top + wordH * 0.48}
-            dot={dot}
+            dot={{ x: left + dot.x, y: top + dot.y, w: dot.w, h: dot.h }}
           />
         ))}
     </Animated.View>
@@ -161,8 +188,8 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
 }
 
 /**
- * One card: up from below into the stack, along the line pulling the name, then drawn
- * into the point, small and green-tinted, gone as the point appears.
+ * One card: up into the hand on a soft spring, along the line leaning into the run, then
+ * drawn into the point — its turn and its size going at once.
  */
 function Card({
   i,
@@ -186,30 +213,34 @@ function Card({
   dot: { x: number; y: number; w: number; h: number };
 }) {
   /* Stacked as a hand: the back card a touch higher and turned the other way. */
-  const offY = (1 - i) * h * 0.16;
-  const turn = (i - 1) * 7;
+  const offY = (1 - i) * h * 0.17;
+  const turn = (i - 1) * 8;
 
   const style = useAnimatedStyle(() => {
     const now = t.get();
     const a = RISE[0] + i * RISE_GAP;
-    const rise = outCubic(span(now, a, a + (RISE[1] - RISE[0]) - RISE_GAP * 2));
-    /* Each card lags the one ahead a little as they run, so they pull rather than slide. */
-    const pull = inOutCubic(span(now, PULL[0] + (2 - i) * 40, PULL[1] + (2 - i) * 40));
-    const merge = inOutCubic(span(now, MERGE[0], MERGE[1]));
+    const r = span(now, a, a + RISE_EACH);
+    const rise = spring(r);
+    /* The front card leads the run; the ones behind follow a beat later. */
+    const p = span(now, PULL[0] + (2 - i) * LAG, PULL[1] + (2 - i) * LAG);
+    const pull = inOutQuint(p);
+    const m0 = MERGE[0] + (2 - i) * MERGE_GAP;
+    const merge = inOutCubic(span(now, m0, m0 + (MERGE[1] - MERGE[0])));
 
     const x = mix(startX, endX, pull);
-    const yRun = midY - h / 2 + offY + mix(160, 0, rise);
-    /* Into the point: centred on it, as small as it is. */
+    const yRun = midY - h / 2 + offY + mix(140, 0, rise);
+    /* Leaning into the run: most at its fastest, upright at either end. */
+    const lean = -Math.sin(p * Math.PI) * 7;
     const toX = dot.x + dot.w / 2 - w / 2;
     const toY = dot.y + dot.h / 2 - h / 2;
-    const scale = mix(1, dot.h / h, merge);
+    const restScale = mix(0.82, 1, outCubic(r));
     return {
-      opacity: rise * (1 - span(now, POINT[0], POINT[0] + 160)),
+      opacity: clamp01(r * 2.4) * (1 - span(now, POINT[0] + 20, POINT[0] + 180)),
       transform: [
         { translateX: mix(x, toX, merge) },
         { translateY: mix(yRun, toY, merge) },
-        { rotate: `${mix(turn + mix(-14, 0, rise), 0, merge) - pull * (1 - merge) * 4 * Math.sin(pull * Math.PI)}deg` },
-        { scale },
+        { rotate: `${mix(mix(turn - 18, turn, rise) + lean, 0, merge)}deg` },
+        { scale: mix(restScale, dot.h / h, merge) },
       ],
     };
   });
