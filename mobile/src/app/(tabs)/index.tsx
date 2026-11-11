@@ -20,6 +20,7 @@ import ScrollEdge from "~/components/ScrollEdge";
 import HomeHeader from "~/components/home/HomeHeader";
 import OrbHero, { LINES_HERO_BODY, ORB_HERO_BODY, WilloGlow } from "~/components/home/OrbHero";
 import { useHomeHero } from "~/lib/homeHero";
+import PanelHero, { PANEL_BODY } from "~/components/home/PanelHero";
 import WidgetBoard from "~/components/home/WidgetBoard";
 import ShortcutPair from "~/components/home/ShortcutPair";
 import EditBar from "~/components/home/EditBar";
@@ -110,7 +111,8 @@ export default function Home() {
   /* The words on the photo follow its veil: always dark in the dark theme, either in the light. */
   const groundMode = onPhoto ? (isLight() ? photoLook.tone : "dark") : null;
   const orbHero = hero === "orb";
-  const travel = orbHero ? ORB_TRAVEL : LINES_TRAVEL;
+  const panelHero = hero === "panel";
+  const travel = panelHero ? PANEL_BODY : orbHero ? ORB_TRAVEL : LINES_TRAVEL;
 
   /* ── How far into the recession we are, and everything that reads off it ── */
   const scrollY = useSharedValue(0);
@@ -214,14 +216,14 @@ export default function Home() {
   /* Where the readings sit, and therefore where the first card starts. */
   /* Under the header, so neither the sphere nor the readings touch its icons. */
   const pinnedTop = insets.top + 72;
-  const pinnedHeight = pinnedTop + (orbHero ? ORB_HERO_BODY : LINES_HERO_BODY);
+  const pinnedHeight = pinnedTop + (panelHero ? PANEL_BODY : orbHero ? ORB_HERO_BODY : LINES_HERO_BODY);
 
   return (
     <Room lit sky home>
       <GroundInkProvider mode={groundMode}>
       {/* Willo's light, behind everything, so the cards rise through it. Editing is about the
           board, so the top stands down for it. */}
-      {!editing && (
+      {!editing && !panelHero && (
         <Animated.View pointerEvents="none" style={[{ position: "absolute", top: 0, left: 0, right: 0 }, glowStyle]}>
           <WilloGlow height={pinnedHeight + 220} />
         </Animated.View>
@@ -247,7 +249,24 @@ export default function Home() {
         {/* Holds the room the pinned block would have taken, so the first card
             starts where it would have — and travels up over it from there. */}
         {/* Holds the room of the block on top, so the first card starts below it. */}
-        <View style={{ height: editing ? insets.top + 86 : pinnedHeight }} pointerEvents="none" />
+        {panelHero && !editing ? (
+          <>
+            {/* The panel is part of the page, held in place, so the cards pass over it and it still answers to the finger. */}
+            <PanelHero
+              top={pinnedTop}
+              scrollY={scrollY}
+              hidden={hidden}
+              saldoPrevisto={data.saldoPrevisto}
+              receitas={data.receitas}
+              despesas={data.despesas}
+              cards={cards}
+              invoices={invoices}
+            />
+            <View style={{ height: 14 }} pointerEvents="none" />
+          </>
+        ) : (
+          <View style={{ height: editing ? insets.top + 86 : pinnedHeight }} pointerEvents="none" />
+        )}
 
 
         <WidgetBoard
@@ -262,7 +281,7 @@ export default function Home() {
 
       {/* The sphere is above the page, not under it: the scroller would take the tap.
           Whatever it does not cover still reaches the page. */}
-      {!editing && (
+      {!editing && !panelHero && (
         <Animated.View
           pointerEvents={collapsed ? "none" : "box-none"}
           style={[{ position: "absolute", left: 0, right: 0, top: pinnedTop - 8, paddingHorizontal: 16 }, orbStyle]}
