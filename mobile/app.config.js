@@ -5,9 +5,11 @@
  * names Expo Go's own runtime — the SDK's — so that is what `eas update` stamps on
  * it. A build made for the stores is different: its native code is its own, and an
  * update must only reach a build it can run on, which is what the app version
- * answers. EAS sets EAS_BUILD while it compiles, so the same project does both.
+ * answers. The build profiles in eas.json set WILLO_STORE_BUILD, and EAS applies it both
+ * on this machine and on its servers — EAS_BUILD is only set on the servers, so the two
+ * worked out different runtimes and the first build stopped on the mismatch.
  */
 module.exports = ({ config }) => ({
   ...config,
-  runtimeVersion: process.env.EAS_BUILD ? { policy: "appVersion" } : { policy: "sdkVersion" },
+  runtimeVersion: process.env.WILLO_STORE_BUILD ? { policy: "appVersion" } : { policy: "sdkVersion" },
 });

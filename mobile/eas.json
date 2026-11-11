@@ -7,12 +7,18 @@
     "production": {
       "autoIncrement": true,
       "channel": "production",
-      "environment": "production"
+      "environment": "production",
+      "env": {
+        "WILLO_STORE_BUILD": "1"
+      }
     },
     "preview": {
       "distribution": "internal",
       "channel": "preview",
-      "environment": "preview"
+      "environment": "preview",
+      "env": {
+        "WILLO_STORE_BUILD": "1"
+      }
     }
   },
   "submit": {
