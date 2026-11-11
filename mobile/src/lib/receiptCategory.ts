@@ -17,7 +17,7 @@ import { categoryNames } from "~/lib/taxonomy";
 
 interface Read {
   type?: string;
-  category?: string;
+  category?: string | null;
   description?: string;
   merchant?: string | null;
 }
@@ -56,7 +56,7 @@ const OLD_NAMES: Record<string, string> = {
 
 export function fitReceiptCategories<T extends Read>(items: T[]): T[] {
   const lists = { receita: categoryNames("receita"), despesa: categoryNames("despesa") };
-  const find = (list: string[], name?: string) => {
+  const find = (list: string[], name?: string | null) => {
     if (!name) return undefined;
     const n = plain(name);
     return list.find((c) => plain(c) === n) ?? (OLD_NAMES[n] && list.includes(OLD_NAMES[n]) ? OLD_NAMES[n] : undefined);

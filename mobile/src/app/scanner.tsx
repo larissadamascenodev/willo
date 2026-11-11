@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
@@ -55,6 +55,8 @@ export default function Scanner() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  /* Opened from a card: what is read is a purchase on it. */
+  const { cartao } = useLocalSearchParams<{ cartao?: string }>();
   const [permission, requestPermission] = useCameraPermissions();
   const camera = useRef<ComponentRef<typeof CameraView>>(null);
 
@@ -97,6 +99,7 @@ export default function Scanner() {
         ...item,
         date: resolveReceiptDate(item.date),
         selected: true,
+        ...(cartao ? { type: "despesa", payment_method: "cartao" as const, credit_card_id: cartao, status: "pendente" as const } : {}),
       }));
       if (found.length === 0) {
         setFailure("Não encontramos nenhum valor nesse comprovante. Tente outra foto.");
@@ -112,7 +115,7 @@ export default function Scanner() {
       setFailure(err instanceof Error ? err.message : "Não foi possível ler o comprovante.");
       setPhase("failed");
     }
-  }, []);
+  }, [cartao]);
 
   const shoot = async () => {
     if (!camera.current || shooting) return;
@@ -207,7 +210,7 @@ export default function Scanner() {
   };
 
   /* Done: everything closes and the home is what is left. */
-  const finish = () => router.dismissTo("/" as never);
+  const finish = () => (cartao ? router.back() : router.dismissTo("/" as never));
 
   const granted = permission?.granted ?? false;
 
@@ -368,7 +371,7 @@ export default function Scanner() {
             {/* Typed by hand instead: across from the gallery, so the shutter sits dead centre
                 and the frame can run down to it. */}
             <Pressable
-              onPress={() => router.replace("/manual" as never)}
+              onPress={() => router.replace((cartao ? `/manual?cartao=${cartao}` : "/manual") as never)}
               accessibilityLabel="Adicionar manualmente"
               style={({ pressed }) => ({
                 width: 52,
@@ -461,8 +464,8 @@ export default function Scanner() {
               title={saved.lines.length > 1 ? `${saved.lines.length} lançamentos registrados` : undefined}
               onLanded={sparkle}
               onClose={finish}
-              onSee={() => router.dismissTo("/transacoes" as never)}
-              seeLabel="Ver transações"
+              onSee={() => (cartao ? router.replace(`/fatura/${cartao}/lancamentos` as never) : router.dismissTo("/transacoes" as never))}
+              seeLabel={cartao ? "Ver na fatura" : "Ver transações"}
               more={{ label: "Escanear outro", onPress: again }}
             />
           </View>

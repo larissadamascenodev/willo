@@ -539,7 +539,7 @@ export default function Fatura() {
 
       <AddToCardSheet
         open={adding}
-        card={card ? { id: card.id, dueDay: card.due_day } : null}
+        card={card ? { id: card.id, dueDay: card.due_day, name: card.name } : null}
         month={month}
         year={year}
         onClose={() => setAdding(false)}
