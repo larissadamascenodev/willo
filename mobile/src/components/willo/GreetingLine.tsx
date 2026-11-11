@@ -44,6 +44,9 @@ export default function GreetingLine({
   readings = [],
   onPick,
   onLine,
+  align = "center",
+  room: roomProp,
+  titleSize = TITLE,
 }: {
   name: string | null;
   /** What he has noticed in the numbers, mixed in. */
@@ -52,6 +55,11 @@ export default function GreetingLine({
   onPick?: (line: Greeting) => void;
   /** The line on show changed, for a screen that takes the touch itself. */
   onLine?: (line: Greeting) => void;
+  /** Centred under the sphere, or set beside it, flush left. */
+  align?: "center" | "left";
+  /** The width the words have, when it is not the screen's. */
+  room?: number;
+  titleSize?: number;
 }) {
   const th = useGroundTh();
   /* Chosen once, when the name is known, so the hello does not change under the reader's
@@ -119,22 +127,33 @@ export default function GreetingLine({
   if (!current) return null;
   const line = current;
   /* Bold at this size runs about half its size a letter; the sub line, a little less. */
-  const room = width - 44;
-  const title = layOut(line.title, Math.floor(room / (TITLE * 0.58)), TITLE);
+  const left = align === "left";
+  const room = roomProp ?? width - 44;
+  const title = layOut(line.title, Math.floor(room / (titleSize * 0.58)), titleSize);
   const sub = layOut(line.sub, Math.floor(room / (SUB * 0.54)), SUB);
   let spoken = 0;
   return (
     <Animated.View key={at} style={[{ alignSelf: "stretch" }, fading]}>
-      <Pressable onPress={() => onPick?.(line)} accessibilityRole={onPick ? "button" : undefined} style={{ alignItems: "center", paddingHorizontal: 22 }}>
-      {title.lines.map((text) => (
-        <View key={text} style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", columnGap: title.size * 0.25 }}>
-          {text.split(" ").map((w, i) => (
-            <Word key={i} text={w} delay={spoken++ * WORD_MS} size={title.size} />
+      <Pressable onPress={() => onPick?.(line)} accessibilityRole={onPick ? "button" : undefined} style={{ alignItems: left ? "flex-start" : "center", paddingHorizontal: left ? 0 : 22 }}>
+      {left ? (
+        /* Beside the sphere the column is narrow: the words flow on as many lines as they
+           need, at one size, instead of being squeezed into two. */
+        <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: titleSize * 0.25, rowGap: 1 }}>
+          {line.title.split(" ").map((w, i) => (
+            <Word key={i} text={w} delay={spoken++ * WORD_MS} size={titleSize} />
           ))}
         </View>
-      ))}
+      ) : (
+        title.lines.map((text) => (
+          <View key={text} style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", columnGap: title.size * 0.25 }}>
+            {text.split(" ").map((w, i) => (
+              <Word key={i} text={w} delay={spoken++ * WORD_MS} size={title.size} />
+            ))}
+          </View>
+        ))
+      )}
       <Rising delay={line.title.split(" ").length * WORD_MS + 120}>
-        <Text style={{ marginTop: 4, fontSize: sub.size, lineHeight: sub.size * 1.36, ...face(500), color: th(INK.soft), textAlign: "center" }}>{sub.lines.join("\n")}</Text>
+        <Text numberOfLines={left ? 2 : undefined} style={{ marginTop: 4, fontSize: sub.size, lineHeight: sub.size * 1.36, ...face(500), color: th(INK.soft), textAlign: left ? "left" : "center" }}>{left ? line.sub : sub.lines.join("\n")}</Text>
       </Rising>
       </Pressable>
     </Animated.View>

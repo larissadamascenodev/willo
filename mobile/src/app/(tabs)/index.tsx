@@ -38,7 +38,7 @@ import { countUnread, generateNotifications } from "@/services/notificationServi
 /** How far the page travels before the block on top has gone. */
 const LINES_TRAVEL = 190;
 /** The robot is taller, so he takes longer to go. */
-const ORB_TRAVEL = 270;
+const ORB_TRAVEL = 160;
 
 /**
  * The home.
@@ -223,7 +223,7 @@ export default function Home() {
           board, so the top stands down for it. */}
       {!editing && (
         <Animated.View pointerEvents="none" style={[{ position: "absolute", top: 0, left: 0, right: 0 }, glowStyle]}>
-          <WilloGlow height={pinnedHeight + 220} />
+          <WilloGlow height={pinnedHeight + 160} cx={orbHero ? "24%" : "50%"} />
         </Animated.View>
       )}
 
