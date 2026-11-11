@@ -1,4 +1,8 @@
-import { Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
+import { BlurView } from "expo-blur";
+import { Info } from "~/components/icons";
 import Bar from "~/components/Bar";
 import SegmentedTabs from "~/components/SegmentedTabs";
 import { money } from "~/lib/money";
@@ -45,7 +49,9 @@ export default function TransactionsSummary({
   despesas: number;
 }) {
   const scale = Math.max(receitas, despesas, 1);
+  const [why, setWhy] = useState(false);
   const before = MONTHS[(month + 11) % 12];
+  const here = MONTHS[month];
   const big = kind === "past" ? abertura + balanco : kind === "future" ? saldoPrevisto : saldoAtual;
   const label = kind === "past" ? "Saldo ao fim do mês" : kind === "future" ? "Saldo previsto" : "Saldo em contas";
   const note =
@@ -59,7 +65,28 @@ export default function TransactionsSummary({
 
   return (
     <View style={{ paddingHorizontal: 4 }}>
-      <Text style={[T.eyebrow, { fontSize: 11 }]}>{label}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Text style={[T.eyebrow, { fontSize: 11 }]}>{label}</Text>
+        {/* A forecast says where it comes from, one tap away. */}
+        {kind === "future" && (
+          <Pressable
+            accessibilityLabel="Como o saldo previsto é calculado"
+            onPress={() => setWhy((v) => !v)}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              width: 20,
+              height: 20,
+              borderRadius: 10,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: th(why ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.07)", "bg"),
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <Info size={12} color={th(INK.soft)} strokeWidth={2.2} />
+          </Pressable>
+        )}
+      </View>
       <Text
         numberOfLines={1}
         style={[T.figureBig, { marginTop: 6 }, big < 0 && { color: th(RED) }]}
@@ -74,6 +101,46 @@ export default function TransactionsSummary({
             {money(note.value)}
           </Text>
         </Text>
+      )}
+
+      {kind === "future" && why && (
+        <Animated.View
+          entering={FadeIn.duration(220)}
+          style={{
+            marginTop: 12,
+            borderRadius: 18,
+            borderCurve: "continuous",
+            borderWidth: 1,
+            borderColor: th("rgba(255,255,255,0.14)", "line"),
+            overflow: "hidden",
+          }}
+        >
+          <BlurView intensity={50} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.4)", "bg") }} />
+          <View style={{ paddingHorizontal: 14, paddingVertical: 12, gap: 10 }}>
+            <Text style={{ fontSize: 12.5, lineHeight: 18, color: th("rgba(255,255,255,0.78)") }}>
+              É quanto deve sobrar no fim de {here}: o que está previsto para sobrar em {before}, somado ao balanço de {here} (tudo o que
+              entra menos tudo o que sai no mês).
+            </Text>
+            {[
+              { label: `Previsto para sobrar em ${before}`, value: abertura },
+              { label: `Balanço de ${here}`, value: saldoPrevisto - abertura },
+            ].map((r) => (
+              <View key={r.label} style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+                <Text style={{ flexShrink: 1, fontSize: 12.5, color: th(INK.soft) }}>{r.label}</Text>
+                <Text style={{ fontSize: 12.5, fontWeight: "600", color: th(r.value < 0 ? RED : "#fff") }}>
+                  {r.value > 0 ? "+" : ""}
+                  {money(r.value)}
+                </Text>
+              </View>
+            ))}
+            <View style={{ height: 1, backgroundColor: th("rgba(255,255,255,0.1)", "bg") }} />
+            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
+              <Text style={{ fontSize: 12.5, fontWeight: "600", color: th("#fff") }}>Saldo previsto</Text>
+              <Text style={{ fontSize: 12.5, fontWeight: "700", color: th(saldoPrevisto < 0 ? RED : "#fff") }}>{money(saldoPrevisto)}</Text>
+            </View>
+          </View>
+        </Animated.View>
       )}
 
       <View style={{ marginTop: 20, gap: 14 }}>
