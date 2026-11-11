@@ -82,8 +82,7 @@ function Track({ share, color = "#fff", height = 6, delay = 0.1 }: { share: numb
 }
 
 /** A small ring for how far along one thing is. */
-function Ring({ share, color, size = 30 }: { share: number; color: string; size?: number }) {
-  const stroke = 3;
+function Ring({ share, color, size = 30, stroke = 3 }: { share: number; color: string; size?: number; stroke?: number }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   return (
@@ -197,16 +196,39 @@ export function ParcelamentosCard({
       : "Última parcela este mês";
 
   if (!full) {
+    /* Compact, the whole card is used: how much of it is already paid as a ring, what it
+       costs a month beside it, and at the foot when it ends and what is still owed. */
     return (
-      <Surface onPress={open} style={{ flex: 1, padding: 16 }}>
-        <Header title="Parcelamentos" />
-        <Lead value={money(totals.totalMensal)} unit="/mês" compact />
-        <View style={{ marginTop: 12 }}>
-          <Track share={paid} height={5} />
+      <Surface onPress={open} style={{ flex: 1, padding: 14 }}>
+        <View style={{ flex: 1, justifyContent: "space-between" }}>
+          <Header title="Parcelamentos" />
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View style={{ width: 62, height: 62, alignItems: "center", justifyContent: "center" }}>
+              <View style={{ position: "absolute" }}>
+                <Ring share={paid} color={GREEN} size={62} stroke={6} />
+              </View>
+              <Text style={[nums, { fontSize: 13.5, fontWeight: "800", color: th("#fff") }]}>{Math.round(paid * 100)}%</Text>
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>já pago</Text>
+              <Text style={[nums, { marginTop: 1, fontSize: 13, fontWeight: "700", color: th("#fff") }]}>
+                {items.length} {items.length === 1 ? "compra" : "compras"}
+              </Text>
+            </View>
+          </View>
+
+          <View>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { fontSize: 22, fontWeight: "800", letterSpacing: -0.7, color: th("#fff") }]}>
+              {money(totals.totalMensal)}
+              <Text style={{ fontSize: 12.5, fontWeight: "500", letterSpacing: 0, color: th(INK.soft) }}> /mês</Text>
+            </Text>
+            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: th(INK.soft) }}>
+              {totals.monthsUntilFree > 0 ? `Livre em ${totals.monthsUntilFree} ${totals.monthsUntilFree === 1 ? "mês" : "meses"}` : "Termina este mês"}
+              <Text style={{ color: th(INK.softer) }}> · falta {money(totals.totalRestante)}</Text>
+            </Text>
+          </View>
         </View>
-        <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 12, color: th(INK.soft) }}>
-          {totals.monthsUntilFree > 0 ? `Livre em ${totals.monthsUntilFree} meses` : "Termina este mês"}
-        </Text>
       </Surface>
     );
   }
