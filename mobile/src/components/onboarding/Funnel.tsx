@@ -916,6 +916,8 @@ function Result({ a, onNext, onLogin }: { a: OnboardingAnswers; onNext: () => vo
   /* The charts play when they are scrolled to, not before. */
   const tops = useRef<Record<string, number>>({});
   const [seen, setSeen] = useState<Record<string, boolean>>({});
+  /* The page ends clear of the button and the line under it, whatever their height on this phone. */
+  const [footH, setFootH] = useState(200);
   const look = (y: number) => {
     const fresh: Record<string, boolean> = {};
     for (const [k, top] of Object.entries(tops.current)) if (!seen[k] && y + height * 0.82 > top) fresh[k] = true;
@@ -929,7 +931,7 @@ function Result({ a, onNext, onLogin }: { a: OnboardingAnswers; onNext: () => vo
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <Aura hex="#8FA4C8" top={-180} />
-      <ScrollView onScroll={(e) => look(e.nativeEvent.contentOffset.y)} scrollEventThrottle={64} contentContainerStyle={{ paddingTop: insets.top + 24, paddingHorizontal: 24, paddingBottom: 130 }} showsVerticalScrollIndicator={false}>
+      <ScrollView onScroll={(e) => look(e.nativeEvent.contentOffset.y)} scrollEventThrottle={64} contentContainerStyle={{ paddingTop: insets.top + 24, paddingHorizontal: 24, paddingBottom: footH + 16 }} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.duration(500)} style={{ alignItems: "center", gap: 16 }}>
           <Pop>
             <View style={{ width: 62, height: 62, borderRadius: 31, borderWidth: 2, borderColor: C.green, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(103,205,103,0.08)" }}>
@@ -1071,7 +1073,7 @@ function Result({ a, onNext, onLogin }: { a: OnboardingAnswers; onNext: () => vo
           ))}
         </View>
       </ScrollView>
-      <LinearGradient colors={["rgba(13,14,16,0)", C.bg]} locations={[0, 0.4]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 30, paddingBottom: insets.bottom + 12 }}>
+      <LinearGradient onLayout={(e) => setFootH(e.nativeEvent.layout.height)} colors={["rgba(13,14,16,0)", C.bg]} locations={[0, 0.4]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 30, paddingBottom: insets.bottom + 12 }}>
         <Cta label="Vamos começar!" onPress={onNext} />
         <Pressable onPress={onLogin} hitSlop={8} style={({ pressed }) => ({ alignSelf: "center", marginTop: 12, opacity: pressed ? 0.5 : 1 })}>
           <Text style={{ fontSize: 13.5, color: C.soft }}>
