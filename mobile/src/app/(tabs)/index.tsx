@@ -256,7 +256,7 @@ export default function Home() {
           onEditingChange={setEditing}
           render={(id, size) => renderHomeWidget(id, size, widgetContext)}
           skip={skipWidget}
-          pinned={editing ? undefined : { after: "fluxo", node: <ShortcutPair /> }}
+          pinned={editing ? undefined : { after: ["categorias", "fluxo"], node: <ShortcutPair /> }}
         />
       </Animated.ScrollView>
 

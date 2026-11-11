@@ -61,7 +61,7 @@ interface Props {
   onEditingChange: (editing: boolean) => void;
   /** A row of its own that follows one card wherever it is (the Radar and the
       challenges follow Receitas e despesas); at the top if that card is off. */
-  pinned?: { after: string; node: ReactNode };
+  pinned?: { after: string | string[]; node: ReactNode };
 }
 
 /* On the phone the goals are caixinhas; the shared list still says Metas for the web. */
@@ -69,6 +69,8 @@ const phoneLabel = (id: string, label: string) => (id === "metas" ? "Caixinhas" 
 const phoneDescription = (id: string, description: string) => (id === "metas" ? "Quanto está guardado em cada caixinha" : description);
 
 export default function WidgetBoard({ userId, render, skip, gap = 16, editing, onEditingChange, pinned }: Props) {
+  /* The card the pinned row follows: the first of those named that is on the board. */
+  const followIds = pinned ? (Array.isArray(pinned.after) ? pinned.after : [pinned.after]) : [];
   const [slots, setSlots] = useState<WidgetSlot[]>(() => loadPhoneLayout(userId));
   const [held, setHeld] = useState<WidgetMenuTarget | null>(null);
   const [adding, setAdding] = useState(false);
@@ -198,13 +200,14 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
     if (row.length) out.push(row);
     return out;
   }, [slots, skip]);
+  const followed = followIds.find((id) => rows.some((row) => row.some((s) => s.id === id)));
 
   const missing = WIDGETS.filter((w) => !slots.some((s) => s.id === w.id) && (w.id !== "plano" || FEATURES.plano));
 
   return (
     <>
       <View style={{ gap }}>
-        {pinned && !rows.some((row) => row.some((s) => s.id === pinned.after)) && pinned.node}
+        {pinned && !followed && pinned.node}
         {rows.map((row, ri) => (
           <Fragment key={row.map((s) => s.id).join("+") + ri}>
           <Animated.View
@@ -244,7 +247,7 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
               );
             })}
           </Animated.View>
-          {pinned && row.some((s) => s.id === pinned.after) && pinned.node}
+          {pinned && followed && row.some((s) => s.id === followed) && pinned.node}
           </Fragment>
         ))}
 
