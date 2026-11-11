@@ -1,4 +1,5 @@
 import { loadLayout, saveLayout, type WidgetSlot } from "@/lib/homeWidgets";
+import { PHONE_WIDGETS } from "~/lib/phoneWidgets";
 
 /**
  * The home layout as the phone opens it.
@@ -37,12 +38,36 @@ function categoriesUnderFlows(userId: string | undefined, slots: WidgetSlot[]): 
   }
 }
 
+const paired = (userId?: string) => `willo.home.widgets.phone-radar-pair-v1.${userId ?? "anon"}`;
+
+/**
+ * The Radar and Conquistas used to be a fixed row under the flows; they are cards now.
+ * Once, they are seated where that row was — side by side under Gastos por categoria
+ * (or under Receitas e despesas) — and after that they move like any other.
+ */
+function radarPairInPlace(userId: string | undefined, slots: WidgetSlot[]): WidgetSlot[] {
+  try {
+    if (localStorage.getItem(paired(userId))) return slots;
+    localStorage.setItem(paired(userId), "1");
+    const pair = slots.filter((s) => s.id === "radar" || s.id === "conquistas");
+    if (pair.length === 0) return slots;
+    const rest = slots.filter((s) => s.id !== "radar" && s.id !== "conquistas");
+    const anchor = Math.max(rest.findIndex((s) => s.id === "categorias"), rest.findIndex((s) => s.id === "fluxo"));
+    const where = anchor < 0 ? 0 : anchor + 1;
+    const next = [...rest.slice(0, where), ...pair.map((s) => ({ ...s, size: "half" as const })), ...rest.slice(where)];
+    saveLayout(userId, next);
+    return next;
+  } catch {
+    return slots;
+  }
+}
+
 export function loadPhoneLayout(userId?: string): WidgetSlot[] {
-  return categoriesUnderFlows(userId, widened(userId));
+  return radarPairInPlace(userId, categoriesUnderFlows(userId, widened(userId)));
 }
 
 function widened(userId?: string): WidgetSlot[] {
-  const slots = loadLayout(userId);
+  const slots = loadLayout(userId, PHONE_WIDGETS);
   try {
     if (localStorage.getItem(moved(userId))) return slots;
     const next = slots.map((s) => (WIDE_ON_PHONE.has(s.id) ? { ...s, size: "full" as const } : s));

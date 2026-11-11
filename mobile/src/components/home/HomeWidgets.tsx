@@ -15,6 +15,8 @@ import GastosFixosCard from "~/components/home/GastosFixosCard";
 import GastosPorCategoria from "~/components/home/GastosPorCategoria";
 import TransacoesRecentes from "~/components/home/TransacoesRecentes";
 import { AssinaturasTile, MetasTile, ParcelamentosTile } from "~/components/home/Tiles";
+import { CategoriasCompact, EventosCompact, FluxoCompact } from "~/components/home/CompactCards";
+import { ConquistasWidget, RadarWidget } from "~/components/home/ShortcutPair";
 
 /**
  * Which card a widget id draws.
@@ -65,6 +67,7 @@ export function renderHomeWidget(
       return <PlanoCard />;
 
     case "fluxo":
+      if (size === "half") return <FluxoCompact receitas={ctx.receitas} despesas={ctx.despesas} />;
       return (
         <FluxoCard
           receitas={ctx.receitas}
@@ -75,6 +78,7 @@ export function renderHomeWidget(
       );
 
     case "eventos":
+      if (size === "half") return <EventosCompact events={ctx.events} />;
       return <ProximosEventos events={ctx.events} />;
 
     case "cartoes":
@@ -113,7 +117,14 @@ export function renderHomeWidget(
       );
 
     case "categorias":
+      if (size === "half") return <CategoriasCompact categories={ctx.categories} />;
       return <GastosPorCategoria categories={ctx.categories} month={ctx.month} />;
+
+    case "radar":
+      return <RadarWidget />;
+
+    case "conquistas":
+      return <ConquistasWidget />;
 
     case "recentes":
       return <TransacoesRecentes transactions={ctx.transactions} />;

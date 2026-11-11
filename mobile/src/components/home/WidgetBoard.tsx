@@ -1,49 +1,51 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type ComponentRef } from "react";
 import { Pressable, Text, View } from "react-native";
 import Animated, {
+  Easing,
   FadeIn,
   FadeOut,
   LinearTransition,
+  ReduceMotion,
+  ZoomOut,
+  cancelAnimation,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
+  withSequence,
   withSpring,
+  withTiming,
+  type SharedValue,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import * as Haptics from "expo-haptics";
 import { loadPhoneLayout } from "~/lib/phoneLayout";
-import {
-  WIDGETS,
-  saveLayout,
-  setDismissed,
-  widgetById,
-  type WidgetSize,
-  type WidgetSlot,
-} from "@/lib/homeWidgets";
+import { PHONE_WIDGETS, phoneWidgetById } from "~/lib/phoneWidgets";
+import { saveLayout, setDismissed, type WidgetSize, type WidgetSlot } from "@/lib/homeWidgets";
 import BottomSheet from "~/components/BottomSheet";
-import WidgetMenu, { type WidgetMenuTarget } from "~/components/home/WidgetMenu";
-import { Plus } from "~/components/icons";
+import { Minus, Plus } from "~/components/icons";
 import ResizeGrip, { GRIP_OFFSET } from "~/components/home/ResizeGrip";
 import { INK } from "~/theme/tokens";
 
 import { th } from "~/theme/theme";
 import { FEATURES } from "~/lib/features";
+
 /**
- * The home screen, arranged by the person using it.
+ * The home screen, arranged by the person using it — the way an iPhone's is.
  *
- * Holding a card opens what can be done to it; editing turns the whole board into
- * something you can rearrange, where a card is moved by hand and resized by the grip
- * in its corner. A card taken off the board is not deleted, only set aside — the add
- * screen is the same list with the ones currently off it.
+ * Hold any card and the board goes into editing: every card trembles a little, carries
+ * a "−" to take it off and, where it has a small version, a grip in its corner to swap
+ * between the two. The card held comes up off the board and follows the finger; the
+ * others open a space for it one seat at a time as it passes over them, and when it is
+ * let go it settles into the space. A card taken off is only set aside — "Adicionar
+ * widgets" lists the ones off the board, to put back.
  *
- * Which widgets exist, what order they are in and how wide each one is all live in
- * the shared registry, stored under the same key the web uses. The layout does not
- * travel between the two, because it is kept in each app's own storage, but the
- * rules for it are one set.
+ * The card under the finger is a copy floating above the board; its own place in the
+ * list is an empty seat that moves through the others. Moving the card itself made it
+ * jump: each time its seat changed, the seat's move was added to the finger's.
  */
 
-/** How a card settles into a seat it has just been given. A duration makes the
-    whole board arrive at once, which reads as a redraw; a spring lets each card
-    find its place, which is what rearranging an app looks like. */
+/** How a card settles into a seat it has just been given: a spring, card by card. */
 const SEAT_CHANGE = LinearTransition.springify().damping(19).stiffness(170).mass(0.55);
 
 interface Props {
@@ -55,25 +57,22 @@ interface Props {
   /** Space between cards, and between the halves of a row. */
   gap?: number;
   /* Edit mode is held by the screen rather than here, because the bar that says
-     the board is being edited has to stay put while the board scrolls under it —
-     and inside a scroller nothing stays put. */
+     the board is being edited has to stay put while the board scrolls under it. */
   editing: boolean;
   onEditingChange: (editing: boolean) => void;
-  /** A row of its own that follows one card wherever it is (the Radar and the
-      challenges follow Receitas e despesas); at the top if that card is off. */
+  /** A card is being carried: the page should not scroll under it. */
+  onCarrying?: (carrying: boolean) => void;
+  /** A row of its own that follows one card wherever it is; at the top if those are off. */
   pinned?: { after: string | string[]; node: ReactNode };
 }
 
-/* On the phone the goals are caixinhas; the shared list still says Metas for the web. */
-const phoneLabel = (id: string, label: string) => (id === "metas" ? "Caixinhas" : label);
-const phoneDescription = (id: string, description: string) => (id === "metas" ? "Quanto está guardado em cada caixinha" : description);
+type Rect = { x: number; y: number; w: number; h: number };
 
-export default function WidgetBoard({ userId, render, skip, gap = 16, editing, onEditingChange, pinned }: Props) {
-  /* The card the pinned row follows: the first of those named that is on the board. */
+export default function WidgetBoard({ userId, render, skip, gap = 16, editing, onEditingChange, onCarrying, pinned }: Props) {
   const followIds = pinned ? (Array.isArray(pinned.after) ? pinned.after : [pinned.after]) : [];
   const [slots, setSlots] = useState<WidgetSlot[]>(() => loadPhoneLayout(userId));
-  const [held, setHeld] = useState<WidgetMenuTarget | null>(null);
   const [adding, setAdding] = useState(false);
+  const board = useRef<ComponentRef<typeof View>>(null);
 
   useEffect(() => {
     setSlots(loadPhoneLayout(userId));
@@ -87,81 +86,117 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
     [userId],
   );
 
-  /* Where each card is right now, so a dragged one knows what it is over. */
-  const frames = useRef(new Map<string, { x: number; y: number; w: number; h: number }>());
-  const registerFrame = useCallback(
-    (id: string, box: { x: number; y: number; w: number; h: number } | null) => {
-      if (box) frames.current.set(id, box);
-      else frames.current.delete(id);
+  /* Where each card is right now, and how to ask it again. */
+  const frames = useRef(new Map<string, Rect>());
+  const measurers = useRef(new Map<string, () => Promise<Rect | null>>());
+  const registerFrame = useCallback((id: string, box: Rect | null, measure?: () => Promise<Rect | null>) => {
+    if (box) frames.current.set(id, box);
+    else frames.current.delete(id);
+    if (measure) measurers.current.set(id, measure);
+    else if (!box) measurers.current.delete(id);
+  }, []);
+
+  /* ── The card being carried ── */
+  const [carried, setCarried] = useState<{ id: string; size: WidgetSize; from: Rect; at: Rect } | null>(null);
+  const tx = useSharedValue(0);
+  const ty = useSharedValue(0);
+  const lift = useSharedValue(0);
+  /* The seats as they were when the card was picked up: a seat is judged against where
+     the cards were, not against a board that is already moving under the finger. */
+  const snapshot = useRef<{ order: string[]; seats: { id: string; cx: number; cy: number }[] } | null>(null);
+
+  const beginCarry = useCallback(
+    (id: string) => {
+      const slot = slots.find((s) => s.id === id);
+      const from = frames.current.get(id);
+      if (!slot || !from) return;
+      if (!editing) onEditingChange(true);
+      onCarrying?.(true);
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
+      snapshot.current = {
+        order: slots.map((s) => s.id),
+        seats: slots
+          .map((s) => {
+            const r = frames.current.get(s.id);
+            return r ? { id: s.id, cx: r.x + r.w / 2, cy: r.y + r.h / 2 } : null;
+          })
+          .filter((x): x is { id: string; cx: number; cy: number } => x !== null),
+      };
+      board.current?.measureInWindow((bx, by) => {
+        setCarried({ id, size: slot.size, from, at: { x: from.x - bx, y: from.y - by, w: from.w, h: from.h } });
+      });
+    },
+    [slots, editing, onEditingChange, onCarrying],
+  );
+
+  /* The seat nearest the finger, among the seats as they were; the one it is in has to
+     be beaten by a clear margin, or a card held between two flickers back and forth. */
+  const carryTo = useCallback(
+    (id: string, x: number, y: number) => {
+      const snap = snapshot.current;
+      if (!snap) return;
+      let to = -1;
+      let best = Number.POSITIVE_INFINITY;
+      snap.seats.forEach((seat) => {
+        const d = Math.hypot((seat.cx - x) * 0.6, seat.cy - y);
+        if (d < best) {
+          best = d;
+          to = snap.order.indexOf(seat.id);
+        }
+      });
+      if (to < 0) return;
+      setSlots((current) => {
+        const at = current.findIndex((s) => s.id === id);
+        if (at < 0 || at === to) return current;
+        const here = snap.seats.find((s) => s.id === snap.order[at]);
+        if (here && Math.hypot((here.cx - x) * 0.6, here.cy - y) - best < 28) return current;
+        const next = [...current];
+        const [moved] = next.splice(at, 1);
+        next.splice(Math.min(to, next.length), 0, moved);
+        void Haptics.selectionAsync().catch(() => undefined);
+        return next;
+      });
     },
     [],
   );
 
-  /* Where the cards were when the drag began, and in what order. Everything about
-     the move is judged against this rather than against the board as it moves:
-     reading live frames meant that the moment one swap landed, the next frame of
-     the gesture measured a board that had already changed under it and swapped
-     again, and again — which is why a card nudged upwards shot to the top. */
-  const snapshot = useRef<{ order: string[]; seats: { id: string; cy: number }[] } | null>(null);
-
-  const beginDrag = useCallback(() => {
-    const seats = slots
-      .map((slot) => {
-        const r = frames.current.get(slot.id);
-        return r ? { id: slot.id, cy: r.y + r.h / 2 } : null;
-      })
-      .filter((x): x is { id: string; cy: number } => x !== null);
-    snapshot.current = { order: slots.map((s) => s.id), seats };
-  }, [slots]);
-
-  const endDrag = useCallback(() => {
+  /* Let go: the copy flies to wherever its seat has ended up, and the card is back. */
+  const endCarry = useCallback(() => {
     snapshot.current = null;
-  }, []);
-
-  /* Dragging moves the order, not the card. The seat the finger is over is found in
-     the snapshot, and the card takes that seat — one place at a time, because the
-     seats it passes are the ones it was sitting next to when it set off. */
-  const dragTo = useCallback(
-    (id: string, _x: number, y: number) => {
-      const snap = snapshot.current;
-      if (!snap) return;
-
-      const from = snap.order.indexOf(id);
-      if (from < 0) return;
-
-      /* The nearest seat to the finger, measured from where the seats were. The
-         one it is already in has to be beaten by a clear margin, or a card held
-         halfway between two of them flickers back and forth all the way up. */
-      let to = from;
-      let best = Number.POSITIVE_INFINITY;
-      snap.seats.forEach((seat, i) => {
-        const d = Math.abs(seat.cy - y);
-        if (d < best) {
-          best = d;
-          to = i;
+    onCarrying?.(false);
+    setSlots((current) => {
+      saveLayout(userId, current);
+      return current;
+    });
+    const done = () => {
+      setCarried(null);
+      tx.set(0);
+      ty.set(0);
+    };
+    setTimeout(() => {
+      const c = carriedRef.current;
+      const measure = c ? measurers.current.get(c.id) : undefined;
+      if (!c || !measure) {
+        lift.set(withTiming(0, { duration: 160 }));
+        done();
+        return;
+      }
+      void measure().then((rect) => {
+        if (rect) {
+          tx.set(withSpring(rect.x - c.from.x, { damping: 22, stiffness: 240 }));
+          ty.set(withSpring(rect.y - c.from.y, { damping: 22, stiffness: 240 }));
         }
+        lift.set(withTiming(0, { duration: 220 }));
+        setTimeout(done, 260);
       });
-      if (to === from) return;
-      const hereSeat = snap.seats[from];
-      if (hereSeat && Math.abs(hereSeat.cy - y) - best < 24) return;
-
-      setSlots((current) => {
-        const at = current.findIndex((s) => s.id === id);
-        if (at < 0 || at === to) return current;
-        const next = [...current];
-        const [moved] = next.splice(at, 1);
-        next.splice(Math.min(to, next.length), 0, moved);
-        saveLayout(userId, next);
-        return next;
-      });
-    },
-    [userId],
-  );
+    }, 60);
+  }, [userId, onCarrying, tx, ty, lift]);
+  const carriedRef = useRef(carried);
+  carriedRef.current = carried;
 
   const remove = (id: string) => {
     setDismissed(userId, id, true);
     commit(slots.filter((s) => s.id !== id));
-    setHeld(null);
   };
 
   const setSize = (id: string, size: WidgetSize) => {
@@ -169,15 +204,13 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
   };
 
   const add = (id: string) => {
-    const def = widgetById(id);
+    const def = phoneWidgetById(id);
     if (!def) return;
     setDismissed(userId, id, false);
     commit([...slots, { id, size: def.defaultSize }]);
   };
 
-  /* Consecutive halves share a row; a full takes one of its own. Done here rather
-     than with a grid so a lone half at the end keeps its width instead of
-     stretching to fill a row it is the only thing in. */
+  /* Consecutive halves share a row; a full takes one of its own. */
   const rows = useMemo(() => {
     const out: WidgetSlot[][] = [];
     let row: WidgetSlot[] = [];
@@ -202,52 +235,43 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
   }, [slots, skip]);
   const followed = followIds.find((id) => rows.some((row) => row.some((s) => s.id === id)));
 
-  const missing = WIDGETS.filter((w) => !slots.some((s) => s.id === w.id) && (w.id !== "plano" || FEATURES.plano));
+  const missing = PHONE_WIDGETS.filter((w) => !slots.some((s) => s.id === w.id) && (w.id !== "plano" || FEATURES.plano));
+
+  const floating = useAnimatedStyle(() => ({
+    transform: [{ translateX: tx.get() }, { translateY: ty.get() }, { scale: 1 + lift.get() * 0.05 }],
+    shadowOpacity: 0.3 * lift.get(),
+  }));
 
   return (
     <>
-      <View style={{ gap }}>
+      <View ref={board} style={{ gap }}>
         {pinned && !followed && pinned.node}
         {rows.map((row, ri) => (
           <Fragment key={row.map((s) => s.id).join("+") + ri}>
-          <Animated.View
-            layout={SEAT_CHANGE}
-            style={row.length === 2 ? { flexDirection: "row", gap } : undefined}
-          >
-            {row.map((slot) => {
-              const content = render(slot.id, slot.size);
-              return (
-              <WidgetFrame
-                key={slot.id}
-                slot={slot}
-                editing={editing}
-                half={row.length === 2}
-                onHold={(rect) => {
-                  if (editing) return;
-                  const def = widgetById(slot.id);
-                  if (!def) return;
-                  setHeld({
-                    id: slot.id,
-                    label: phoneLabel(def.id, def.label),
-                    description: phoneDescription(def.id, def.description),
-                    size: slot.size,
-                    resizable: def.resizable,
-                    rect,
-                  });
-                }}
-                onDragTo={dragTo}
-                onDragStart={beginDrag}
-                onDragEnd={endDrag}
-                onResize={(size) => setSize(slot.id, size)}
-                onRemove={() => remove(slot.id)}
-                registerFrame={registerFrame}
-              >
-                {content}
-              </WidgetFrame>
-              );
-            })}
-          </Animated.View>
-          {pinned && followed && row.some((s) => s.id === followed) && pinned.node}
+            <Animated.View layout={SEAT_CHANGE} style={row.length === 2 ? { flexDirection: "row", gap } : undefined}>
+              {row.map((slot, i) => (
+                <WidgetFrame
+                  key={slot.id}
+                  slot={slot}
+                  editing={editing}
+                  half={row.length === 2}
+                  phase={(ri * 2 + i) % 3}
+                  hidden={carried?.id === slot.id}
+                  tx={tx}
+                  ty={ty}
+                  lift={lift}
+                  onCarryStart={beginCarry}
+                  onCarryTo={carryTo}
+                  onCarryEnd={endCarry}
+                  onResize={(size) => setSize(slot.id, size)}
+                  onRemove={() => remove(slot.id)}
+                  registerFrame={registerFrame}
+                >
+                  {render(slot.id, slot.size)}
+                </WidgetFrame>
+              ))}
+            </Animated.View>
+            {pinned && followed && row.some((s) => s.id === followed) && pinned.node}
           </Fragment>
         ))}
 
@@ -267,37 +291,38 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
           })}
         >
           <Plus size={18} color={th("rgba(255,255,255,0.8)")} strokeWidth={2.4} />
-          <Text style={{ fontSize: 14, fontWeight: "600", color: th("rgba(255,255,255,0.8)") }}>
-            Adicionar widgets
-          </Text>
+          <Text style={{ fontSize: 14, fontWeight: "600", color: th("rgba(255,255,255,0.8)") }}>Adicionar widgets</Text>
         </Pressable>
-      </View>
 
-      {/* Held: a menu beside the card, not a sheet from the foot of the screen. */}
-      <WidgetMenu
-        target={held}
-        onClose={() => setHeld(null)}
-        onEdit={() => {
-          setHeld(null);
-          onEditingChange(true);
-        }}
-        onResize={(size) => {
-          if (held) setSize(held.id, size);
-          setHeld(null);
-        }}
-        onRemove={() => held && remove(held.id)}
-      />
+        {/* The card being carried, above everything, under the finger. */}
+        {carried && (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              {
+                position: "absolute",
+                left: carried.at.x,
+                top: carried.at.y,
+                width: carried.at.w,
+                zIndex: 50,
+                shadowColor: "#000",
+                shadowRadius: 22,
+                shadowOffset: { width: 0, height: 14 },
+              },
+              floating,
+            ]}
+          >
+            {render(carried.id, carried.size)}
+          </Animated.View>
+        )}
+      </View>
 
       {/* The ones currently off the board. */}
       <BottomSheet open={adding} onClose={() => setAdding(false)} full>
         <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
-          <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>
-            Adicionar widgets
-          </Text>
+          <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>Adicionar widgets</Text>
           <Text style={{ marginTop: 4, fontSize: 13, lineHeight: 18, color: th("rgba(255,255,255,0.62)") }}>
-            {missing.length > 0
-              ? "Tudo que não está na sua tela agora."
-              : "Todos os widgets já estão na sua tela."}
+            {missing.length > 0 ? "Tudo que não está na sua tela agora." : "Todos os widgets já estão na sua tela."}
           </Text>
 
           <View style={{ marginTop: 20, gap: 10 }}>
@@ -318,22 +343,12 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
                 }}
               >
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>
-                    {phoneLabel(w.id, w.label)}
-                  </Text>
-                  <Text numberOfLines={1} style={{ fontSize: 12.5, color: th(INK.softer) }}>
-                    {phoneDescription(w.id, w.description)}
-                  </Text>
+                  <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>{w.label}</Text>
+                  <Text numberOfLines={1} style={{ fontSize: 12.5, color: th(INK.softer) }}>{w.description}</Text>
                 </View>
                 <Pressable
                   onPress={() => add(w.id)}
-                  style={({ pressed }) => ({
-                    borderRadius: 999,
-                    backgroundColor: th("#fff", "bg"),
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                    opacity: pressed ? 0.8 : 1,
-                  })}
+                  style={({ pressed }) => ({ borderRadius: 999, backgroundColor: th("#fff", "bg"), paddingHorizontal: 16, paddingVertical: 8, opacity: pressed ? 0.8 : 1 })}
                 >
                   <Text style={{ fontSize: 13, fontWeight: "700", color: th("#0B0B0B") }}>Adicionar</Text>
                 </Pressable>
@@ -346,30 +361,20 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
   );
 }
 
-/** What a card looks like while its corner is being pulled: the shape it is taking,
-    with nothing in it to read. */
-function Ghost() {
-  return (
-    <View
-      style={{
-        minHeight: 150,
-        borderRadius: 22,
-        backgroundColor: th("rgba(255,255,255,0.09)", "bg"),
-      }}
-    />
-  );
-}
-
-/** One card on the board: held to open its menu, and in edit mode, moved by hand. */
+/** One card on the board: held to pick it up, trembling while the board is edited. */
 function WidgetFrame({
   slot,
   editing,
   half,
+  phase,
+  hidden,
+  tx,
+  ty,
+  lift,
   children,
-  onHold,
-  onDragTo,
-  onDragStart,
-  onDragEnd,
+  onCarryStart,
+  onCarryTo,
+  onCarryEnd,
   onResize,
   onRemove,
   registerFrame,
@@ -377,37 +382,42 @@ function WidgetFrame({
   slot: WidgetSlot;
   editing: boolean;
   half: boolean;
+  /** Which way round it trembles, so neighbours do not move in step. */
+  phase: number;
+  /** Being carried: its seat stays, empty, while the copy follows the finger. */
+  hidden: boolean;
+  tx: SharedValue<number>;
+  ty: SharedValue<number>;
+  lift: SharedValue<number>;
   children: ReactNode;
-  onHold: (rect: { top: number; bottom: number; left: number; width: number }) => void;
-  onDragTo: (id: string, x: number, y: number) => void;
-  onDragStart: () => void;
-  onDragEnd: () => void;
+  onCarryStart: (id: string) => void;
+  onCarryTo: (id: string, x: number, y: number) => void;
+  onCarryEnd: () => void;
   onResize: (size: WidgetSize) => void;
   onRemove: () => void;
-  registerFrame: (id: string, box: { x: number; y: number; w: number; h: number } | null) => void;
+  registerFrame: (id: string, box: Rect | null, measure?: () => Promise<Rect | null>) => void;
 }) {
   const box = useRef<ComponentRef<typeof View>>(null);
-  const def = widgetById(slot.id);
-  /* A widget decides for itself whether it has anything to say, and several answer
-     by drawing nothing at all. The board cannot read that from the element it was
-     handed, so it reads it from the height: a frame with no card in it must not
-     carry controls, or they stack on top of the card below. */
+  const def = phoneWidgetById(slot.id);
+  /* A widget with nothing to say draws nothing; a frame with nothing in it carries no controls. */
   const [drawn, setDrawn] = useState(false);
-  const [resizing, setResizing] = useState(false);
 
-  /* The card travels under the finger; the order is what actually changes, and the
-     layout animation carries everything else to its new seat. It springs back to
-     wherever the board has since put it, so the card never keeps the offset. */
-  const dx = useSharedValue(0);
-  const dy = useSharedValue(0);
-  const lifted = useSharedValue(0);
+  const measureNow = useCallback(
+    () =>
+      new Promise<Rect | null>((resolve) => {
+        if (!box.current) return resolve(null);
+        box.current.measureInWindow((x, y, w, h) => resolve({ x, y, w, h }));
+      }),
+    [],
+  );
 
   const measure = useCallback(() => {
-    box.current?.measureInWindow((x, y, w, h) => {
-      registerFrame(slot.id, { x, y, w, h });
-      setDrawn(h > 8);
+    void measureNow().then((r) => {
+      if (!r) return;
+      registerFrame(slot.id, r, measureNow);
+      setDrawn(r.h > 8);
     });
-  }, [registerFrame, slot.id]);
+  }, [registerFrame, slot.id, measureNow]);
 
   useEffect(() => {
     const t = setTimeout(measure, 220);
@@ -417,27 +427,33 @@ function WidgetFrame({
     };
   }, [measure, registerFrame, slot.id]);
 
-  const drag = Gesture.Pan()
-    .enabled(editing)
+  /* Re-measured whenever the board settles, so the seats picked up from are where the cards are. */
+  useEffect(() => {
+    const t = setTimeout(measure, 380);
+    return () => clearTimeout(t);
+  }, [editing, measure]);
+
+  /* Held: picked up, and the board goes into editing. One hold time either way: changing it
+     while a finger is down would cancel the gesture under it. */
+  const carry = Gesture.Pan()
+    .activateAfterLongPress(340)
     .onStart(() => {
-      lifted.value = withSpring(1, { damping: 18 });
-      runOnJS(onDragStart)();
+      tx.set(0);
+      ty.set(0);
+      lift.set(withSpring(1, { damping: 16, stiffness: 220 }));
+      runOnJS(onCarryStart)(slot.id);
     })
     .onUpdate((e) => {
-      dx.value = e.translationX;
-      dy.value = e.translationY;
-      runOnJS(onDragTo)(slot.id, e.absoluteX, e.absoluteY);
+      tx.set(e.translationX);
+      ty.set(e.translationY);
+      runOnJS(onCarryTo)(slot.id, e.absoluteX, e.absoluteY);
     })
-    .onFinalize(() => {
-      dx.value = withSpring(0, { damping: 20, stiffness: 220 });
-      dy.value = withSpring(0, { damping: 20, stiffness: 220 });
-      lifted.value = withSpring(0, { damping: 18 });
-      runOnJS(onDragEnd)();
+    .onFinalize((_e, success) => {
+      if (success) runOnJS(onCarryEnd)();
     });
 
-  /* Pulled outwards for the whole row, inwards for half of it. The card shows the
-     size it is taking while the finger is still down, as a plain shape — what it
-     will hold is not the question being asked. */
+  /* Pulled outwards for the whole row, inwards for the small version. */
+  const [resizing, setResizing] = useState(false);
   const resize = Gesture.Pan()
     .onUpdate((e) => {
       const next = e.translationX > 26 ? "full" : e.translationX < -26 ? "half" : null;
@@ -448,59 +464,77 @@ function WidgetFrame({
       runOnJS(setResizing)(false);
     });
 
-  const carried = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: dx.value },
-      { translateY: dy.value },
-      { scale: 1 + lifted.value * 0.04 },
-    ],
-    zIndex: lifted.value > 0 ? 40 : 0,
-  }));
+  /* The tremble of a board being edited, as the phone's own home screen does it. */
+  const wobble = useSharedValue(0);
+  useEffect(() => {
+    if (!editing) {
+      cancelAnimation(wobble);
+      wobble.set(withTiming(0, { duration: 120 }));
+      return;
+    }
+    const swing = withSequence(
+      withTiming(phase === 1 ? -1 : 1, { duration: 130 + phase * 12, easing: Easing.inOut(Easing.quad) }),
+      withTiming(phase === 1 ? 1 : -1, { duration: 130 + phase * 12, easing: Easing.inOut(Easing.quad) }),
+    );
+    wobble.set(withRepeat(swing, -1, true, undefined, ReduceMotion.System));
+  }, [editing, phase, wobble]);
+  const tremble = useAnimatedStyle(() => ({ transform: [{ rotate: `${wobble.get() * (half ? 0.7 : 0.35)}deg` }] }));
 
   return (
-    <GestureDetector gesture={drag}>
-    <Animated.View
-      ref={box}
-      layout={SEAT_CHANGE}
-      onLayout={measure}
-      style={[{ flex: half ? 1 : undefined, position: "relative" }, carried]}
-    >
-      <Pressable
-        onLongPress={() => {
-          box.current?.measureInWindow((x, y, w, h) =>
-            onHold({ top: y, bottom: y + h, left: x, width: w }),
-          );
-        }}
-        delayLongPress={420}
-        disabled={editing}
-        /* In edit mode the card is a handle, not a thing you can press into. */
-        style={editing ? { opacity: 0.92 } : undefined}
+    <GestureDetector gesture={carry}>
+      <Animated.View
+        ref={box}
+        layout={SEAT_CHANGE}
+        exiting={ZoomOut.duration(180)}
+        onLayout={measure}
+        style={[{ flex: half ? 1 : undefined, position: "relative", opacity: hidden ? 0 : 1 }, tremble]}
       >
-        <View pointerEvents={editing ? "none" : "auto"}>
-          {resizing ? <Ghost /> : children}
-        </View>
-      </Pressable>
+        <View pointerEvents={editing ? "none" : "auto"}>{resizing ? <Ghost /> : children}</View>
 
-      {/* The grip, in the corner a card is resized from. Removing a card is not here:
-          it is in the menu you get by holding one, which is where the reference
-          keeps it and where it belongs — a cross on every card turns editing into a
-          field of things to delete. */}
-      {editing && drawn && def?.resizable && (
-        <Animated.View
-          entering={FadeIn.duration(200)}
-          exiting={FadeOut.duration(140)}
-          /* Pushed out by the corner's radius, so the grip's own centre of turn
-             lands on the one the card's corner turns around. */
-          style={{ position: "absolute", bottom: -GRIP_OFFSET, right: -GRIP_OFFSET, zIndex: 20 }}
-        >
-          <GestureDetector gesture={resize}>
-            <View accessibilityLabel={slot.size === "full" ? "Deixar menor" : "Ocupar a linha"}>
-              <ResizeGrip />
-            </View>
-          </GestureDetector>
-        </Animated.View>
-      )}
-    </Animated.View>
+        {/* Taken off the board, to be put back from "Adicionar widgets". */}
+        {editing && drawn && (
+          <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)} style={{ position: "absolute", top: -8, left: -8, zIndex: 30 }}>
+            <Pressable
+              onPress={onRemove}
+              hitSlop={10}
+              accessibilityLabel={`Remover ${def?.label ?? "widget"}`}
+              style={({ pressed }) => ({
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: th("#3A3B41", "bg"),
+                borderWidth: 1,
+                borderColor: th("rgba(255,255,255,0.18)", "line"),
+                transform: [{ scale: pressed ? 0.88 : 1 }],
+              })}
+            >
+              <Minus size={15} color={th("#fff")} strokeWidth={3} />
+            </Pressable>
+          </Animated.View>
+        )}
+
+        {/* The grip, in the corner a card is resized from: whole, or its small version. */}
+        {editing && drawn && def?.resizable && (
+          <Animated.View
+            entering={FadeIn.duration(200)}
+            exiting={FadeOut.duration(140)}
+            style={{ position: "absolute", bottom: -GRIP_OFFSET, right: -GRIP_OFFSET, zIndex: 20 }}
+          >
+            <GestureDetector gesture={resize}>
+              <View accessibilityLabel={slot.size === "full" ? "Deixar menor" : "Ocupar a linha"}>
+                <ResizeGrip />
+              </View>
+            </GestureDetector>
+          </Animated.View>
+        )}
+      </Animated.View>
     </GestureDetector>
   );
+}
+
+/** What a card looks like while its corner is being pulled: the shape it is taking. */
+function Ghost() {
+  return <View style={{ minHeight: 150, borderRadius: 22, backgroundColor: th("rgba(255,255,255,0.09)", "bg") }} />;
 }

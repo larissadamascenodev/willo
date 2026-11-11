@@ -45,8 +45,8 @@ export interface WidgetSlot {
   size: WidgetSize;
 }
 
-export const defaultLayout = (): WidgetSlot[] =>
-  WIDGETS.map((w) => ({ id: w.id, size: w.defaultSize }));
+export const defaultLayout = (registry: WidgetDef[] = WIDGETS): WidgetSlot[] =>
+  registry.map((w) => ({ id: w.id, size: w.defaultSize }));
 
 const key = (userId?: string) => `willo.home.widgets.${userId ?? "anon"}`;
 
@@ -56,20 +56,21 @@ const key = (userId?: string) => `willo.home.widgets.${userId ?? "anon"}`;
  * have a layout saved, rather than being invisible to exactly the people using the
  * app the longest.
  */
-export function loadLayout(userId?: string): WidgetSlot[] {
+/* `registry` lets an app with its own list of cards (the phone's) read the same way. */
+export function loadLayout(userId?: string, registry: WidgetDef[] = WIDGETS): WidgetSlot[] {
   try {
     const raw = localStorage.getItem(key(userId));
-    if (!raw) return defaultLayout();
+    if (!raw) return defaultLayout(registry);
     const saved = JSON.parse(raw) as WidgetSlot[];
-    if (!Array.isArray(saved)) return defaultLayout();
+    if (!Array.isArray(saved)) return defaultLayout(registry);
 
-    const known = saved.filter((s) => widgetById(s.id));
+    const known = saved.filter((s) => registry.some((w) => w.id === s.id));
     const seen = new Set(known.map((s) => s.id));
-    const fresh = WIDGETS.filter((w) => !seen.has(w.id) && !isDismissed(userId, w.id))
+    const fresh = registry.filter((w) => !seen.has(w.id) && !isDismissed(userId, w.id))
       .map((w) => ({ id: w.id, size: w.defaultSize }));
     return [...known, ...fresh];
   } catch {
-    return defaultLayout();
+    return defaultLayout(registry);
   }
 }
 

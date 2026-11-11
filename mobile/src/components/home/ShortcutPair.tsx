@@ -479,3 +479,42 @@ function CheckinCard({ p, onDone, onOpen }: { p: PendingCheckin; onDone: () => v
     </View>
   );
 }
+
+/* ── As cards of their own ─────────────────────────────────────────────────── */
+
+/** The picture area for a tile as wide as it is: the dial, or the streak's pane. */
+function useArt() {
+  const [w, setW] = useState(0);
+  const onLayout = (e: { nativeEvent: { layout: { width: number } } }) => setW(e.nativeEvent.layout.width);
+  return { art: w > 0 ? Math.min(w - 28, 170) : 0, onLayout };
+}
+
+/** The Radar as a home card, half a row: moved, taken off and put back like the rest. */
+export function RadarWidget() {
+  const router = useRouter();
+  const { art, onLayout } = useArt();
+  return (
+    <View onLayout={onLayout}>
+      <RadarTile art={art} onPress={() => router.push("/radar" as never)} />
+    </View>
+  );
+}
+
+/** Conquistas as a home card, half a row. */
+export function ConquistasWidget() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { art, onLayout } = useArt();
+  const [wins, setWins] = useState<Conquistas | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      void loadConquistas(user.id).then(setWins).catch(() => undefined);
+    }, [user]),
+  );
+  return (
+    <View onLayout={onLayout}>
+      <ConquistasTile art={art} wins={wins} onPress={() => router.push("/conquistas" as never)} />
+    </View>
+  );
+}
