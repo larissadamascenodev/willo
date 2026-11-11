@@ -238,10 +238,11 @@ serve(async (req) => {
     }
     if (text) parts.push({ text });
 
-    /* Claude first for typed sentences; Gemini when Claude cannot, and always for audio. */
+    /* Gemini, until the secret WILLO_AI is "claude": then Claude first for typed sentences,
+       Gemini when Claude cannot, and always for audio. */
     const system = systemPrompt(today, categories);
     let result: any;
-    if (!audio?.data) {
+    if (!audio?.data && Deno.env.get("WILLO_AI") === "claude") {
       try {
         result = await callClaude(system, text, SCHEMA);
       } catch (err) {

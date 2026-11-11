@@ -829,14 +829,16 @@ serve(async (req) => {
       }
     };
 
-    /* Claude first; whatever stops it — no key, no credit, an outage — Gemini answers. */
+    /* Gemini answers, until the secret WILLO_AI is set to "claude": then Claude first and,
+       whatever stops it — no key, no credit, an outage — Gemini. */
     let reply: string;
     let motor = "claude";
     try {
+      if (Deno.env.get("WILLO_AI") !== "claude") throw new Error("gemini escolhido");
       reply = await askClaude(system, turns, run);
     } catch (err) {
       const why = err instanceof Error ? err.message : String(err);
-      console.error("willo-assistant claude:", why);
+      if (why !== "gemini escolhido") console.error("willo-assistant claude:", why);
       if (/401|403|api.?key|authentication|credit|billing/i.test(why)) claudeDownUntil = Date.now() + 10 * 60_000;
       motor = "gemini";
       used.clear();

@@ -15,8 +15,8 @@ import Anthropic from "npm:@anthropic-ai/sdk";
  * The list is the phone's (mobile/src/lib/taxonomy.ts), copied here; when one changes the
  * other has to.
  *
- * Claude answers first. Without its key, or when it fails, Gemini answers the same
- * question (the key that reads receipts), so the suggestion never just goes missing.
+ * Gemini answers, until the secret WILLO_AI is set to "claude": then Claude answers first
+ * and Gemini only when Claude fails.
  */
 
 const corsHeaders = {
@@ -188,10 +188,10 @@ serve(async (req) => {
     const allNames = [...new Set([...namesFor("despesa"), ...namesFor("receita")])];
     let picked: Map<number, string>;
     try {
-      if (!Deno.env.get("ANTHROPIC_API_KEY")) throw new Error("no anthropic key");
+      if (Deno.env.get("WILLO_AI") !== "claude" || !Deno.env.get("ANTHROPIC_API_KEY")) throw new Error("gemini chosen");
       picked = await withClaude(items, allNames);
     } catch (e) {
-      console.warn("categorize-transaction: claude failed, using gemini", e instanceof Error ? e.message : e);
+      if (!(e instanceof Error && e.message === "gemini chosen")) console.warn("categorize-transaction: claude failed, using gemini", e instanceof Error ? e.message : e);
       picked = await withGemini(items, allNames);
     }
 
