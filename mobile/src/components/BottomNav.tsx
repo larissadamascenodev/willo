@@ -6,30 +6,33 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Glass from "~/components/Glass";
 import ParticleOrb from "~/components/registro/ParticleOrb";
-import { ArrowLeftRight, House } from "~/components/icons";
+import { ArrowLeftRight, House, Plus } from "~/components/icons";
 
 import { th } from "~/theme/theme";
 
 /**
  * The row at the foot of the screen.
  *
- * One long piece of glass holding the places — Início, Transações — and, apart from
- * it, a round one with Willo's sphere. The place you are is a lit capsule inside the
- * long glass, with its glyph and its name; the others show their name alone. Moving
- * between them, the capsule slides across to the new one.
+ * One long piece of glass holding the places — Início, Transações — and Registrar,
+ * which is not a place but opens Adicionar manualmente in its sheet; apart from it, a
+ * round glass with Willo's sphere. The place you are is a lit capsule inside the long
+ * glass, with its glyph and its name; the others show their name alone. Moving between
+ * them, the capsule slides across to the new one.
  *
  * Willo's screen sits over the tabs rather than among them, because it has a bar of
  * its own to type into and two bars at the foot would be one too many.
  */
 
-const SIZE = 58;
-const INSET = 5;
-const GAP = 10;
+const SIZE = 52;
+const INSET = 4;
+const GAP = 9;
 
 const PLACES = [
   { name: "index", label: "Início", icon: House },
   { name: "transacoes", label: "Transações", icon: ArrowLeftRight },
 ] as const;
+/** Registrar sits beside the places, so the glass is cut in three. */
+const SLOTS = PLACES.length + 1;
 
 /* Only the two things the bar actually reads. Typed here rather than imported,
    because the navigator ships inside expo-router and its package is not a dependency
@@ -68,12 +71,12 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
   return (
     <View
       pointerEvents="box-none"
-      style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 18, paddingBottom: insets.bottom + 12 }}
+      style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 18, paddingBottom: insets.bottom + 14 }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: GAP }}>
         {/* The places. */}
         <Glass radius={SIZE / 2} style={{ flex: 1, height: SIZE, padding: INSET }}>
-          <View style={{ flex: 1, flexDirection: "row" }} onLayout={(e) => setSlot(e.nativeEvent.layout.width / PLACES.length)}>
+          <View style={{ flex: 1, flexDirection: "row" }} onLayout={(e) => setSlot(e.nativeEvent.layout.width / SLOTS)}>
             {slot > 0 && (
               <Animated.View
                 pointerEvents="none"
@@ -108,17 +111,42 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
                     flexDirection: "row",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: 7,
+                    gap: 5,
+                    paddingHorizontal: 6,
                     opacity: pressed ? 0.6 : 1,
                   })}
                 >
-                  {on && <Icon size={19} color={ink} strokeWidth={2.4} />}
-                  <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: on ? "700" : "600", letterSpacing: -0.2, color: on ? ink : soft }}>
+                  {on && <Icon size={16} color={ink} strokeWidth={2.4} />}
+                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ flexShrink: 1, fontSize: 14, fontWeight: on ? "700" : "600", letterSpacing: -0.2, color: on ? ink : soft }}>
                     {label}
                   </Text>
                 </Pressable>
               );
             })}
+
+            {/* A new entry, typed by hand. */}
+            <Pressable
+              onPress={() => {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+                router.push("/manual" as never);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Registrar"
+              style={({ pressed }) => ({
+                flex: 1,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 4,
+                paddingHorizontal: 6,
+                opacity: pressed ? 0.6 : 1,
+              })}
+            >
+              <Plus size={15} color={soft} strokeWidth={2.6} />
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ flexShrink: 1, fontSize: 14, fontWeight: "600", letterSpacing: -0.2, color: soft }}>
+                Registrar
+              </Text>
+            </Pressable>
           </View>
         </Glass>
 
@@ -134,7 +162,7 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
         >
           <Glass radius={SIZE / 2} style={{ width: SIZE, height: SIZE, alignItems: "center", justifyContent: "center" }}>
             <View style={{ width: SIZE - 10, height: SIZE - 10, borderRadius: (SIZE - 10) / 2, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
-              <ParticleOrb size={SIZE - 14} density={160} />
+              <ParticleOrb size={SIZE - 14} density={150} />
             </View>
           </Glass>
         </Pressable>
