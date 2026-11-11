@@ -131,19 +131,23 @@ export default function HomeHeader({
           borderRadius: 22,
           alignItems: "center",
           justifyContent: "center",
+          /* The same round glass as the avatar beside it, so the two ends of the row match. */
+          borderWidth: 1,
+          borderColor: th("rgba(255,255,255,0.34)", "line"),
+          backgroundColor: th("rgba(255,255,255,0.10)", "bg"),
           opacity: pressed ? 0.7 : 1,
         })}
       >
-        <Bell size={18} color={th("#fff")} />
+        <Bell size={21} color={th("#fff")} strokeWidth={2.1} />
         {unread > 0 && (
           <View
             style={{
               position: "absolute",
-              right: 11,
-              top: 11,
-              width: 8,
-              height: 8,
-              borderRadius: 4,
+              right: 10,
+              top: 10,
+              width: 10,
+              height: 10,
+              borderRadius: 5,
               backgroundColor: th(GREEN, "bg"),
               borderWidth: 2,
               borderColor: th("rgba(0,0,0,0.7)", "line"),

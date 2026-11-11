@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Text, View } from "react-native";
-import { ChevronRight } from "~/components/icons";
+import { Pressable, Text, View } from "react-native";
+import { Plus } from "~/components/icons";
 import { getAccounts } from "@/services/transactionService";
 import { colorFor } from "@/lib/banks";
 import BankMark from "~/components/BankMark";
@@ -8,7 +8,7 @@ import { useRouter } from "expo-router";
 import Surface from "~/components/Surface";
 import { FlexBar } from "~/components/Bar";
 import { money } from "~/lib/money";
-import { INK, RED } from "~/theme/tokens";
+import { RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 import { th } from "~/theme/theme";
@@ -79,7 +79,27 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
     <Surface onPress={() => router.push("/gestao")} style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <Text style={T.cardLabel}>Saldo em contas</Text>
-        <ChevronRight size={16} color={th(INK.faint)} />
+        {/* A new entry, typed by hand, from the card that shows the money it moves. */}
+        <Pressable
+          onPress={() => router.push("/manual" as never)}
+          accessibilityRole="button"
+          accessibilityLabel="Registrar lançamento"
+          hitSlop={8}
+          style={({ pressed }) => ({
+            height: 30,
+            paddingLeft: 9,
+            paddingRight: 12,
+            borderRadius: 15,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+            backgroundColor: th("#fff", "bg"),
+            transform: [{ scale: pressed ? 0.94 : 1 }],
+          })}
+        >
+          <Plus size={15} color={th("#0B0B0B")} strokeWidth={2.8} />
+          <Text style={{ fontSize: 13, fontWeight: "700", color: th("#0B0B0B") }}>Registrar</Text>
+        </Pressable>
       </View>
 
       <Text numberOfLines={1} style={[T.figure, { marginTop: 4 }, total < 0 && { color: th(RED) }]}>

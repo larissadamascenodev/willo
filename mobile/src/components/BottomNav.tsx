@@ -14,15 +14,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Glass from "~/components/Glass";
 import ParticleOrb from "~/components/registro/ParticleOrb";
-import { ArrowLeftRight, House, Plus } from "~/components/icons";
+import { ArrowLeftRight, House } from "~/components/icons";
 
 import { th } from "~/theme/theme";
 /**
  * The row at the foot of the screen.
  *
- * Início and Transações together in one piece of glass at the left, then the way to Willo — a long
- * pill with the sphere, small, in a disc at its left, and an invitation — and, at the
- * pill's own right end, a plus, which opens Adicionar manualmente straight away in its sheet. The sphere is the same one that turns on the home
+ * Three pieces of glass, side by side: Início at one end, Transações at the other,
+ * and between them the way to Willo — a long pill with the sphere, small, in a disc
+ * at its left, and an invitation. The sphere is the same one that turns on the home
  * and listens in Willo's own screen, only small.
  *
  * Each piece is the system's liquid glass where the phone has it (see Glass), a blur
@@ -35,10 +35,7 @@ import { th } from "~/theme/theme";
  */
 
 const SIZE = 52;
-const GAP = 8;
-/** How far the two places sit inside the glass they share. */
-const INSET = 3;
-const INNER = SIZE - INSET * 2;
+const GAP = 9;
 
 /* Only the two things the bar actually reads. Typed here rather than imported,
    because the navigator ships inside expo-router and its package is not a dependency
@@ -66,23 +63,19 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
       style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingBottom: insets.bottom + 14 }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: GAP }}>
-        {/* The two places, in one piece of glass. */}
-        <Glass radius={SIZE / 2} interactive style={{ height: SIZE, flexDirection: "row", alignItems: "center", padding: INSET, gap: 2 }}>
-          <NavCircle label="Início" icon={House} on={active === "index"} onPress={() => open("index")} />
-          <NavCircle label="Transações" icon={ArrowLeftRight} on={active === "transacoes"} onPress={() => open("transacoes")} />
-        </Glass>
+        <NavCircle label="Início" icon={House} on={active === "index"} onPress={() => open("index")} />
 
-        {/* Willo, and inside the same glass at its right end, the plus for a new entry typed by hand. */}
-        <Glass radius={SIZE / 2} interactive style={{ flex: 1, height: SIZE, flexDirection: "row", alignItems: "center", paddingLeft: 7, paddingRight: INSET + 2 }}>
-          <Pressable
-            onPress={() => {
-              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
-              router.push("/registro" as never);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Converse com o Willo"
-            style={({ pressed }) => ({ flex: 1, minWidth: 0, height: SIZE, flexDirection: "row", alignItems: "center", gap: 8, opacity: pressed ? 0.7 : 1 })}
-          >
+        {/* Willo. */}
+        <Pressable
+          onPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+            router.push("/registro" as never);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Converse com o Willo"
+          style={({ pressed }) => ({ flex: 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}
+        >
+          <Glass radius={SIZE / 2} interactive style={{ height: SIZE, flexDirection: "row", alignItems: "center", paddingLeft: 7, paddingRight: 12, gap: 9 }}>
             <View
               style={{
                 width: 38,
@@ -96,26 +89,13 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
             >
               <ParticleOrb size={33} density={140} />
             </View>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={{ flex: 1, minWidth: 0, fontSize: 14, color: th("rgba(255,255,255,0.66)") }}>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ flex: 1, minWidth: 0, fontSize: 14, color: th("rgba(255,255,255,0.66)") }}>
               Converse com o Willo
             </Text>
-          </Pressable>
+          </Glass>
+        </Pressable>
 
-          <Pressable
-            onPress={() => {
-              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
-              router.push("/manual" as never);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Adicionar manualmente"
-            hitSlop={{ top: 6, bottom: 6, left: 4, right: 6 }}
-            style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.9 : 1 }] })}
-          >
-            <View style={{ width: INNER - 4, height: INNER - 4, borderRadius: (INNER - 4) / 2, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg") }}>
-              <Plus size={22} color={th("#0B0B0B")} strokeWidth={2.6} />
-            </View>
-          </Pressable>
-        </Glass>
+        <NavCircle label="Transações" icon={ArrowLeftRight} on={active === "transacoes"} onPress={() => open("transacoes")} />
       </View>
     </View>
   );
@@ -171,10 +151,10 @@ function NavCircle({
       accessibilityState={{ selected: on }}
       style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.94 : 1 }] })}
     >
-      <View style={{ width: INNER + 4, height: INNER, alignItems: "center", justifyContent: "center" }}>
+      <Glass radius={SIZE / 2} interactive style={{ width: SIZE, height: SIZE, alignItems: "center", justifyContent: "center" }}>
         <Animated.View
           pointerEvents="none"
-          style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: INNER / 2, borderWidth: 1 }, shell]}
+          style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: SIZE / 2, borderWidth: 1 }, shell]}
         />
         <Animated.View style={glyph}>
           <Animated.View style={soft}>
@@ -184,8 +164,8 @@ function NavCircle({
             <Icon size={24} color={th("#fff")} strokeWidth={2.5} />
           </Animated.View>
         </Animated.View>
-        <Animated.View style={[{ position: "absolute", bottom: 5, width: 4, height: 4, borderRadius: 2, backgroundColor: th("#fff", "bg") }, point]} />
-      </View>
+        <Animated.View style={[{ position: "absolute", bottom: 7, width: 4, height: 4, borderRadius: 2, backgroundColor: th("#fff", "bg") }, point]} />
+      </Glass>
     </Pressable>
   );
 }
