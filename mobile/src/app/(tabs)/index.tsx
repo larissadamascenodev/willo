@@ -72,8 +72,6 @@ export default function Home() {
   const [carrying, setCarrying] = useState(false);
   /* Cancelar: the board puts back how it was when editing began. */
   const [revert, setRevert] = useState(0);
-  /* Preencher: the compact cards pair up. */
-  const [fill, setFill] = useState(0);
   const router = useRouter();
 
   const today = useMemo(() => new Date(), []);
@@ -264,7 +262,6 @@ export default function Home() {
           skip={skipWidget}
           onCarrying={setCarrying}
           revert={revert}
-          fill={fill}
         />
       </Animated.ScrollView>
 
@@ -292,7 +289,6 @@ export default function Home() {
       <EditBar
         open={editing}
         onDone={() => setEditing(false)}
-        onFill={() => setFill((n) => n + 1)}
         onCancel={() => {
           setRevert((n) => n + 1);
           setEditing(false);

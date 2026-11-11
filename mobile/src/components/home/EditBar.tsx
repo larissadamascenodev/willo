@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text } from "react-native";
+import { X } from "~/components/icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInUp, FadeOutUp } from "react-native-reanimated";
 import { GREEN, GROUND } from "~/theme/tokens";
@@ -18,14 +19,11 @@ export default function EditBar({
   open,
   onDone,
   onCancel,
-  onFill,
 }: {
   open: boolean;
   onDone: () => void;
   /** Back to how the board was. */
   onCancel?: () => void;
-  /** Pair the compact cards up, so no row is left half empty. */
-  onFill?: () => void;
 }) {
   const insets = useSafeAreaInsets();
   if (!open) return null;
@@ -50,18 +48,27 @@ export default function EditBar({
         gap: 12,
       }}
     >
-      <Pressable onPress={onCancel ?? onDone} hitSlop={8} style={({ pressed }) => ({ height: 44, justifyContent: "center", paddingHorizontal: 4, opacity: pressed ? 0.6 : 1 })}>
-        <Text style={{ fontSize: 16, fontWeight: "600", color: th("rgba(255,255,255,0.75)") }}>Cancelar</Text>
+      {/* The mode's name, whole, on the left; the two ways out on the right. */}
+      <Text numberOfLines={1} style={{ flex: 1, fontSize: 22, fontWeight: "800", letterSpacing: -0.6, color: th("#fff") }}>
+        Editar widgets
+      </Text>
+
+      <Pressable
+        onPress={onCancel ?? onDone}
+        accessibilityLabel="Cancelar"
+        hitSlop={8}
+        style={({ pressed }) => ({
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
+          opacity: pressed ? 0.7 : 1,
+        })}
+      >
+        <X size={19} color={th("rgba(255,255,255,0.85)")} strokeWidth={2.4} />
       </Pressable>
-
-      {/* The middle is left empty: with three buttons on the bar a title only fitted as its first letter. */}
-      <View style={{ flex: 1 }} />
-
-      {onFill && (
-        <Pressable onPress={onFill} hitSlop={6} style={({ pressed }) => ({ height: 44, justifyContent: "center", paddingHorizontal: 6, opacity: pressed ? 0.6 : 1 })}>
-          <Text style={{ fontSize: 15, fontWeight: "700", color: th(GREEN) }}>Preencher</Text>
-        </Pressable>
-      )}
 
       <Pressable
         onPress={onDone}
@@ -69,14 +76,13 @@ export default function EditBar({
           height: 44,
           justifyContent: "center",
           borderRadius: 999,
-          paddingHorizontal: 20,
+          paddingHorizontal: 18,
           backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
           opacity: pressed ? 0.7 : 1,
         })}
       >
         <Text style={{ fontSize: 16, fontWeight: "700", color: th(GREEN) }}>Concluído</Text>
       </Pressable>
-
     </Animated.View>
   );
 }
