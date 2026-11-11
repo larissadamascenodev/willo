@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Pressable, View } from "react-native";
 import Animated, {
   ReduceMotion,
@@ -19,9 +19,9 @@ import { th } from "~/theme/theme";
 /**
  * The row at the foot of the screen.
  *
- * Two pieces of glass, side by side in the middle: a long one with Início,
- * Transações and a plus that opens Adicionar manualmente in its sheet, and a round
- * one, apart, with Willo's sphere.
+ * Two pieces of glass across the foot: a long one with Início, Transações and a plus
+ * that opens Adicionar manualmente in its sheet, and in the right corner, apart, a
+ * round one with Willo's sphere.
  *
  * The place you are is a lit capsule inside the long glass. Moving between Início and
  * Transações the capsule slides across on a spring, stretching a little on the way,
@@ -34,11 +34,14 @@ import { th } from "~/theme/theme";
 const SIZE = 50;
 const INSET = 3;
 const INNER = SIZE - INSET * 2;
-/** One button in the long glass, and the space between two of them. */
-const SLOT = INNER + 14;
-const SLOT_GAP = 2;
+/** Buttons in the long glass, which shares the row's width between them. */
+const BUTTONS = 3;
 
-const SPRING = { duration: 480, dampingRatio: 0.78, reduceMotion: ReduceMotion.System } as const;
+const SPRING = {
+  duration: 480,
+  dampingRatio: 0.78,
+  reduceMotion: ReduceMotion.System,
+} as const;
 
 /* Only the two things the bar actually reads. Typed here rather than imported,
    because the navigator ships inside expo-router and its package is not a dependency
@@ -57,14 +60,27 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
   const active = state.routes[state.index]?.name ?? "index";
   const at = Math.max(0, PLACES.indexOf(active));
 
+  /* How wide one button is, once the glass has been laid out. */
+  const [slot, setSlot] = useState(0);
   /* The capsule under the place you are, sliding to the next one. */
-  const x = useSharedValue(at * (SLOT + SLOT_GAP));
+  const x = useSharedValue(0);
   const stretch = useSharedValue(1);
+  const [placed, setPlaced] = useState(false);
   useEffect(() => {
-    x.set(withSpring(at * (SLOT + SLOT_GAP), SPRING));
-    stretch.set(withSequence(withTiming(1.16, { duration: 130 }), withSpring(1, SPRING)));
-  }, [at, x, stretch]);
-  const capsule = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }, { scaleX: stretch.get() }] }));
+    if (!slot) return;
+    if (!placed) {
+      x.set(at * slot);
+      setPlaced(true);
+      return;
+    }
+    x.set(withSpring(at * slot, SPRING));
+    stretch.set(
+      withSequence(withTiming(1.12, { duration: 130 }), withSpring(1, SPRING)),
+    );
+  }, [at, slot, placed, x, stretch]);
+  const capsule = useAnimatedStyle(() => ({
+    transform: [{ translateX: x.get() }, { scaleX: stretch.get() }],
+  }));
 
   const open = (name: string) => {
     void Haptics.selectionAsync().catch(() => undefined);
@@ -73,39 +89,79 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
   };
 
   const go = (path: string) => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+      () => undefined,
+    );
     router.push(path as never);
   };
 
   return (
     <View
       pointerEvents="box-none"
-      style={{ position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center", paddingBottom: insets.bottom + 14 }}
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        paddingHorizontal: 20,
+        paddingBottom: insets.bottom + 14,
+      }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         {/* The two places and Registrar, in one piece of glass. */}
-        <Glass radius={SIZE / 2} style={{ height: SIZE, flexDirection: "row", alignItems: "center", padding: INSET, gap: SLOT_GAP }}>
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              {
-                position: "absolute",
-                top: INSET,
-                left: INSET,
-                width: SLOT,
-                height: INNER,
-                borderRadius: INNER / 2,
-                borderCurve: "continuous",
-                borderWidth: 1,
-                borderColor: th("rgba(255,255,255,0.28)", "line"),
-                backgroundColor: th("rgba(255,255,255,0.16)", "bg"),
-              },
-              capsule,
-            ]}
-          />
-          <NavButton label="Início" on={active === "index"} onPress={() => open("index")} icon={House} />
-          <NavButton label="Transações" on={active === "transacoes"} onPress={() => open("transacoes")} icon={ArrowLeftRight} />
-          <NavButton label="Registrar" on={false} onPress={() => go("/manual")} drawn={<Plus size={25} color={th("rgba(255,255,255,0.78)")} strokeWidth={2.4} />} />
+        <Glass
+          radius={SIZE / 2}
+          style={{ flex: 1, height: SIZE, padding: INSET }}
+        >
+          <View
+            style={{ flex: 1, flexDirection: "row", alignItems: "center" }}
+            onLayout={(e) => setSlot(e.nativeEvent.layout.width / BUTTONS)}
+          >
+            {slot > 0 && (
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  {
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: slot,
+                    height: INNER,
+                    borderRadius: INNER / 2,
+                    borderCurve: "continuous",
+                    borderWidth: 1,
+                    borderColor: th("rgba(255,255,255,0.28)", "line"),
+                    backgroundColor: th("rgba(255,255,255,0.16)", "bg"),
+                  },
+                  capsule,
+                ]}
+              />
+            )}
+            <NavButton
+              label="Início"
+              on={active === "index"}
+              onPress={() => open("index")}
+              icon={House}
+            />
+            <NavButton
+              label="Transações"
+              on={active === "transacoes"}
+              onPress={() => open("transacoes")}
+              icon={ArrowLeftRight}
+            />
+            <NavButton
+              label="Registrar"
+              on={false}
+              onPress={() => go("/manual")}
+              drawn={
+                <Plus
+                  size={26}
+                  color={th("rgba(255,255,255,0.78)")}
+                  strokeWidth={2.4}
+                />
+              }
+            />
+          </View>
         </Glass>
 
         {/* Willo, apart. */}
@@ -113,10 +169,29 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
           onPress={() => go("/registro")}
           accessibilityRole="button"
           accessibilityLabel="Converse com o Willo"
-          style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.92 : 1 }] })}
+          style={({ pressed }) => ({
+            transform: [{ scale: pressed ? 0.92 : 1 }],
+          })}
         >
-          <Glass radius={SIZE / 2} style={{ width: SIZE, height: SIZE, alignItems: "center", justifyContent: "center" }}>
-            <View style={{ width: SIZE - 8, height: SIZE - 8, borderRadius: (SIZE - 8) / 2, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
+          <Glass
+            radius={SIZE / 2}
+            style={{
+              width: SIZE,
+              height: SIZE,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <View
+              style={{
+                width: SIZE - 8,
+                height: SIZE - 8,
+                borderRadius: (SIZE - 8) / 2,
+                overflow: "hidden",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
               <ParticleOrb size={SIZE - 12} density={130} />
             </View>
           </Glass>
@@ -149,10 +224,22 @@ function NavButton({
 
   useEffect(() => {
     lit.set(withTiming(on ? 1 : 0, { duration: 260 }));
-    if (on) pop.set(withSequence(withTiming(0.84, { duration: 110 }), withSpring(1, { duration: 520, dampingRatio: 0.45, reduceMotion: ReduceMotion.System })));
+    if (on)
+      pop.set(
+        withSequence(
+          withTiming(0.84, { duration: 110 }),
+          withSpring(1, {
+            duration: 520,
+            dampingRatio: 0.45,
+            reduceMotion: ReduceMotion.System,
+          }),
+        ),
+      );
   }, [on, lit, pop]);
 
-  const glyph = useAnimatedStyle(() => ({ transform: [{ scale: pop.get() * (1 + lit.get() * 0.06) }] }));
+  const glyph = useAnimatedStyle(() => ({
+    transform: [{ scale: pop.get() * (1 + lit.get() * 0.06) }],
+  }));
   const soft = useAnimatedStyle(() => ({ opacity: 1 - lit.get() }));
   const full = useAnimatedStyle(() => ({ opacity: lit.get() }));
 
@@ -162,17 +249,32 @@ function NavButton({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected: on }}
-      style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.92 : 1 }] })}
+      style={({ pressed }) => ({
+        flex: 1,
+        transform: [{ scale: pressed ? 0.92 : 1 }],
+      })}
     >
-      <View style={{ width: SLOT, height: INNER, alignItems: "center", justifyContent: "center" }}>
+      <View
+        style={{
+          height: INNER,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         {drawn ??
           (Icon && (
             <Animated.View style={glyph}>
               <Animated.View style={soft}>
-                <Icon size={23} color={th("rgba(255,255,255,0.58)")} strokeWidth={2} />
+                <Icon
+                  size={25}
+                  color={th("rgba(255,255,255,0.58)")}
+                  strokeWidth={2}
+                />
               </Animated.View>
-              <Animated.View style={[{ position: "absolute", top: 0, left: 0 }, full]}>
-                <Icon size={23} color={th("#fff")} strokeWidth={2.5} />
+              <Animated.View
+                style={[{ position: "absolute", top: 0, left: 0 }, full]}
+              >
+                <Icon size={25} color={th("#fff")} strokeWidth={2.5} />
               </Animated.View>
             </Animated.View>
           ))}
