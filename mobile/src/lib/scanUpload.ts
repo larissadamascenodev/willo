@@ -1,4 +1,5 @@
-import { FunctionsHttpError } from "@supabase/supabase-js";
+import { FunctionsFetchError, FunctionsHttpError } from "@supabase/supabase-js";
+import { File } from "expo-file-system";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -8,8 +9,11 @@ import { supabase } from "@/integrations/supabase/client";
  *
  * The web redraws the picture on a canvas to shrink it and turn HEIC into JPEG
  * before sending; here the image manipulator does the same, so a 12-megapixel
- * photo goes up at the size the reader actually needs. The request is the same
- * multipart form the web sends, to the same function.
+ * photo goes up at the size the reader actually needs.
+ *
+ * The file goes up as base64 inside JSON, a shape the same function already reads.
+ * A multipart form with a { uri } part never left the phone: the request failed
+ * before reaching the server, and every photo and PDF came back "não foi possível ler".
  */
 
 const MAX_SIDE = 2000;
@@ -60,15 +64,20 @@ export async function processScanDocument(doc: { uri: string; name?: string | nu
 }
 
 async function send(file: { uri: string; name: string; type: string }, context: "transaction" | "invoice") {
-  const form = new FormData();
-  /* React Native's fetch reads a file part as { uri, name, type }. */
-  form.append("file", file as unknown as Blob);
-  form.append("context", context);
+  let image_base64: string;
+  try {
+    image_base64 = await new File(file.uri).base64();
+  } catch {
+    throw new Error("Não foi possível abrir o arquivo. Tente outro.");
+  }
 
   const timeout = new Promise<never>((_, reject) =>
     setTimeout(() => reject(new Error("A leitura demorou demais. Tente novamente.")), SCAN_TIMEOUT_MS),
   );
-  const { data, error } = await Promise.race([supabase.functions.invoke("process-invoice", { body: form }), timeout]);
+  const { data, error } = await Promise.race([
+    supabase.functions.invoke("process-invoice", { body: { image_base64, mime_type: file.type, context } }),
+    timeout,
+  ]);
 
   if (error) {
     let message = "Não foi possível ler o comprovante. Tente novamente.";
@@ -79,7 +88,10 @@ async function send(file: { uri: string; name: string; type: string }, context: 
       } catch {
         /* keep the plain message */
       }
+    } else if (error instanceof FunctionsFetchError) {
+      message = "Sem conexão com o leitor. Confira a internet e tente novamente.";
     }
+    console.warn("process-invoice", error);
     throw new Error(message);
   }
   if (data?.error) throw new Error(data.error);

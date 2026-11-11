@@ -28,7 +28,11 @@ import { useAuth } from "~/lib/auth";
 import { processScanPhoto, type PickedPhoto } from "~/lib/scanUpload";
 import { GREEN, INK } from "~/theme/tokens";
 
-import { th, useThemeRedraw } from "~/theme/theme";
+import { th as themed, thIn, useThemeRedraw, type Role } from "~/theme/theme";
+
+/* The camera is the same in either theme: a dark picture with white words on it.
+   Turning its words for the light theme made them dark on dark and unreadable. */
+const th = <T,>(color: T, role?: Role): T => thIn("dark", color, role);
 /**
  * A receipt, photographed and read — the phone's copy of the web's scanner.
  *
@@ -418,7 +422,7 @@ export default function Scanner() {
         >
           <Animated.View
             entering={SlideInDown.springify().damping(30).stiffness(260)}
-            style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: th("#000", "bg"), overflow: "hidden" }}
+            style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: themed("#000", "bg"), overflow: "hidden" }}
           >
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: insets.bottom }}>
               <ScanResultCard
