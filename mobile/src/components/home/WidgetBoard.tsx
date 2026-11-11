@@ -46,6 +46,9 @@ import { FEATURES } from "~/lib/features";
  */
 
 /** How a card settles into a seat it has just been given: a spring, card by card. */
+/** Every compact card is this tall, whatever it holds, so a row of two is even. */
+export const COMPACT_H = 208;
+
 const SEAT_CHANGE = LinearTransition.springify().damping(19).stiffness(170).mass(0.55);
 
 interface Props {
@@ -570,9 +573,11 @@ function WidgetFrame({
         layout={SEAT_CHANGE}
         exiting={ZoomOut.duration(180)}
         onLayout={measure}
-        style={[{ width: width ?? (half ? "48%" : "100%"), position: "relative", opacity: hidden ? 0 : 1 }, tremble]}
+        style={[{ width: width ?? (half ? "48%" : "100%"), height: half ? COMPACT_H : undefined, position: "relative", opacity: hidden ? 0 : 1 }, tremble]}
       >
-        <View pointerEvents={editing ? "none" : "auto"}>{children}</View>
+        <View pointerEvents={editing ? "none" : "auto"} style={half ? { flex: 1 } : undefined}>
+          {children}
+        </View>
 
       </Animated.View>
     </GestureDetector>

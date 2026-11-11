@@ -484,7 +484,7 @@ function CheckinCard({ p, onDone, onOpen }: { p: PendingCheckin; onDone: () => v
 function useArt() {
   const [w, setW] = useState(0);
   const onLayout = (e: { nativeEvent: { layout: { width: number } } }) => setW(e.nativeEvent.layout.width);
-  return { art: w > 0 ? Math.min(w - 28, 170) : 0, onLayout };
+  return { art: w > 0 ? Math.min(w - 28, 146) : 0, onLayout };
 }
 
 /** The Radar as a home card: half a row, the dial; whole, the dial beside the six areas. */
@@ -493,7 +493,7 @@ export function RadarWidget({ size = "half" }: { size?: "half" | "full" }) {
   const { art, onLayout } = useArt();
   if (size === "full") return <RadarWhole onPress={() => router.push("/radar" as never)} />;
   return (
-    <View onLayout={onLayout}>
+    <View onLayout={onLayout} style={{ flex: 1 }}>
       <RadarTile art={art} onPress={() => router.push("/radar" as never)} />
     </View>
   );
@@ -548,7 +548,7 @@ export function ConquistasWidget({ size = "half" }: { size?: "half" | "full" }) 
   );
   if (size === "full") return <ConquistasWhole wins={wins} onPress={() => router.push("/conquistas" as never)} />;
   return (
-    <View onLayout={onLayout}>
+    <View onLayout={onLayout} style={{ flex: 1 }}>
       <ConquistasTile art={art} wins={wins} onPress={() => router.push("/conquistas" as never)} />
     </View>
   );
