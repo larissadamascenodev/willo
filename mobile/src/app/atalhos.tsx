@@ -59,14 +59,17 @@ export default function Atalhos() {
 
         {/* ── Two taps on the back ── */}
         <Section icon={<Zap size={18} color={th(GREEN)} strokeWidth={2.4} />} title="Toque duplo nas costas" note="Dois toques atrás do iPhone abrem o Registro rápido.">
-          <Step n={1}>No app <B>Atalhos</B>, toque em <B>+</B> e escolha a ação <B>Abrir URL</B>.</Step>
+          <Step n={1}>No app <B>Atalhos</B>, toque em <B>+</B>, busque e escolha a ação <B>Abrir URLs</B> (não a ação <B>URL</B> sozinha).</Step>
           <Step n={2}>
             No endereço, escreva <B>willo://rapido</B>. Dê o nome <B>Registro rápido Willo</B> ao atalho.
           </Step>
           <Step n={3}>
+            Rode o atalho uma vez tocando nele no app <B>Atalhos</B>. Quando o iPhone perguntar se pode abrir o Willo, toque em <B>Sempre permitir</B>. Sem isso, o toque nas costas só mostra o aviso e não abre nada.
+          </Step>
+          <Step n={4}>
             Vá em <B>Ajustes › Acessibilidade › Toque › Toque traseiro › Toque duplo</B> e escolha o atalho <B>Registro rápido Willo</B>.
           </Step>
-          <Step n={4} last>Pronto: dois toques nas costas do iPhone e o Willo abre direto no Registro rápido.</Step>
+          <Step n={5} last>Pronto: dois toques nas costas do iPhone e o Willo abre direto no Registro rápido.</Step>
         </Section>
 
         {/* ── Wallet purchases into Copilot ── */}
