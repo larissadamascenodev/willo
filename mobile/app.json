@@ -11,6 +11,7 @@
     "ios": {
       "bundleIdentifier": "com.larissadamasceno.willo",
       "supportsTablet": false,
+      "usesAppleSignIn": true,
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
         "ITSAppUsesNonExemptEncryption": false
@@ -34,6 +35,7 @@
     "plugins": [
       "expo-router",
       "expo-asset",
+      "expo-apple-authentication",
       [
         "expo-splash-screen",
         {

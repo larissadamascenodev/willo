@@ -11,6 +11,7 @@ import Field, { PasswordField } from "~/components/auth/Field";
 import LegalSheet from "~/components/auth/LegalSheet";
 import Provider from "~/components/auth/Provider";
 import { AppleMark, GoogleMark } from "~/components/auth/BrandIcons";
+import { signInWithApple, signInWithGoogle } from "~/lib/socialAuth";
 import { AlertTriangle, Check, ChevronLeft, Info, Mail } from "~/components/icons";
 import Funnel from "~/components/onboarding/Funnel";
 import { isOnboarded, markOnboarded, readOnboardingAnswers, savePendingOnboarding, saveOnboardingAnswers } from "~/lib/onboarding";
@@ -77,9 +78,18 @@ export default function Comecar() {
     setTimeout(() => emailRef.current?.focus(), 380);
   };
 
-  const soon = (who: string) => {
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
-    setNote({ tone: "info", text: `Criar conta com ${who} chega em breve. Por enquanto, use o seu e-mail.` });
+  /* Apple or Google: the answers from the funnel are kept first, as the e-mail way does,
+     so the new account starts with them. */
+  const social = async (way: "apple" | "google") => {
+    if (busy) return;
+    void Haptics.selectionAsync().catch(() => undefined);
+    setNote(null);
+    setBusy(true);
+    await savePendingOnboarding({ email: "", name: name.trim(), goal, bank: null, balance: 0 });
+    const res = way === "apple" ? await signInWithApple() : await signInWithGoogle();
+    if (res.ok) return;
+    setBusy(false);
+    if (!res.cancelled && res.message) refuse(res.message);
   };
 
   const refuse = (text: string, field?: "email" | "password") => {
@@ -199,10 +209,10 @@ export default function Comecar() {
               </Animated.View>
 
               <Animated.View layout={transition} entering={FadeInDown.delay(160).duration(420)} style={{ marginTop: form ? 24 : 34, flexDirection: form ? "row" : "column", gap: form ? 10 : 12 }}>
-                <Provider compact={form} label="Continuar com Apple" short="Apple" onPress={() => soon("a Apple")}>
+                <Provider compact={form} label="Continuar com Apple" short="Apple" onPress={() => void social("apple")}>
                   <AppleMark size={form ? 16 : 20} />
                 </Provider>
-                <Provider compact={form} label="Continuar com Google" short="Google" onPress={() => soon("o Google")}>
+                <Provider compact={form} label="Continuar com Google" short="Google" onPress={() => void social("google")}>
                   <GoogleMark size={form ? 16 : 19} />
                 </Provider>
               </Animated.View>

@@ -114,7 +114,8 @@ export function useApplyOnboarding() {
       /* Signed in: the onboarding is behind them on this phone. */
       void clearOnboarded();
       const pending = await readPending();
-      if (!pending || pending.email !== user.email!.toLowerCase()) return;
+      /* Kept before an Apple or Google sign-in the address is not known yet: then it is theirs. */
+      if (!pending || (pending.email !== "" && pending.email !== user.email!.toLowerCase())) return;
       try {
         const existing = (await getAccounts()) as unknown[];
         if (existing.length === 0 && pending.bank) {

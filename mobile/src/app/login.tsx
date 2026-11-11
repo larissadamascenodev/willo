@@ -19,6 +19,7 @@ import Glass from "~/components/Glass";
 import Field, { PasswordField } from "~/components/auth/Field";
 import LegalSheet from "~/components/auth/LegalSheet";
 import { AppleMark, GoogleMark } from "~/components/auth/BrandIcons";
+import { signInWithApple, signInWithGoogle } from "~/lib/socialAuth";
 import Provider from "~/components/auth/Provider";
 import { AlertTriangle, ChevronLeft, CircleCheck, Info, Mail } from "~/components/icons";
 import { GREEN, INK, RED } from "~/theme/tokens";
@@ -33,9 +34,8 @@ import { useThemeRedraw } from "~/theme/theme";
  * of it, one glyph each, side by side, so the way in that was not chosen stays one
  * tap away without taking up the room the form needs.
  *
- * Apple and Google are drawn and answer a tap, but cannot sign anyone in yet: they
- * need the native build, and the Apple one needs the developer account that is not
- * there yet. The tap says so, and points at e-mail, rather than doing nothing.
+ * Apple opens the phone's own sheet; Google, the browser sheet inside the app
+ * (lib/socialAuth). Either way the session lands and the auth listener moves on.
  *
  * There is no "create an account" here: the welcome, one step back, is where that
  * lives, and offering it twice only gives someone who already has an account a
@@ -87,9 +87,16 @@ export default function Login() {
     setTimeout(() => emailRef.current?.focus(), 380);
   };
 
-  const soon = (who: string) => {
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
-    setNote({ tone: "info", text: `Entrar com ${who} chega em breve. Por enquanto, entre com o seu e-mail.` });
+  const social = async (way: "apple" | "google") => {
+    if (busy) return;
+    void Haptics.selectionAsync().catch(() => undefined);
+    setNote(null);
+    setBusy(true);
+    const res = way === "apple" ? await signInWithApple() : await signInWithGoogle();
+    /* On success the auth listener swaps the screen; busy stays on until it does. */
+    if (res.ok) return;
+    setBusy(false);
+    if (!res.cancelled && res.message) refuse(res.message);
   };
 
   const refuse = (text: string, field?: "email" | "password") => {
@@ -175,10 +182,10 @@ export default function Login() {
             entering={FadeInDown.delay(160).duration(420)}
             style={{ marginTop: form ? 24 : 38, flexDirection: form ? "row" : "column", gap: form ? 10 : 12 }}
           >
-            <Provider compact={form} label="Entrar com Apple" short="Apple" onPress={() => soon("a Apple")}>
+            <Provider compact={form} label="Entrar com Apple" short="Apple" onPress={() => void social("apple")}>
               <AppleMark size={form ? 16 : 20} />
             </Provider>
-            <Provider compact={form} label="Entrar com Google" short="Google" onPress={() => soon("o Google")}>
+            <Provider compact={form} label="Entrar com Google" short="Google" onPress={() => void social("google")}>
               <GoogleMark size={form ? 16 : 19} />
             </Provider>
           </Animated.View>
