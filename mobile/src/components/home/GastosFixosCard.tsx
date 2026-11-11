@@ -6,7 +6,7 @@ import { getCustomCategories, type CustomCategory } from "@/services/categorySer
 import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
 import SegmentedTabs from "~/components/SegmentedTabs";
-import { Check, ChevronDown, ChevronUp, Repeat } from "~/components/icons";
+import { Check, ChevronDown, ChevronUp, Plus, Repeat } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { useAuth } from "~/lib/auth";
@@ -40,7 +40,7 @@ const nums: TextStyle = Platform.select({
 
 const RULE = "rgba(255,255,255,0.07)";
 
-export default function GastosFixosCard() {
+export default function GastosFixosCard({ onAdd }: { /** Shown in the wallet: a way to add one of the kind on show. */ onAdd?: (kind: "despesa" | "receita") => void } = {}) {
   const { user } = useAuth();
   const { items, loading } = useRecorrentes();
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
@@ -57,11 +57,19 @@ export default function GastosFixosCard() {
 
   /* No session is not loading — it is nothing to show. */
   if (loading && user) return <Surface style={{ height: 220 }}><View /></Surface>;
-  return <GastosFixosView items={items} customCats={customCats} />;
+  return <GastosFixosView items={items} customCats={customCats} onAdd={onAdd} />;
 }
 
 /** The card itself, drawn from what it is handed. */
-export function GastosFixosView({ items, customCats }: { items: RecurringItem[]; customCats: CustomCategory[] }) {
+export function GastosFixosView({
+  items,
+  customCats,
+  onAdd,
+}: {
+  items: RecurringItem[];
+  customCats: CustomCategory[];
+  onAdd?: (kind: "despesa" | "receita") => void;
+}) {
   const [tab, setTab] = useState<"despesa" | "receita">("despesa");
   const [expanded, setExpanded] = useState(false);
 
@@ -80,7 +88,7 @@ export function GastosFixosView({ items, customCats }: { items: RecurringItem[];
   const despesaCount = items.filter((s) => s.txType === "despesa").length;
   const receitaCount = items.filter((s) => s.txType === "receita").length;
 
-  if (items.length === 0) {
+  if (items.length === 0 && !onAdd) {
     return (
       <Surface style={{ padding: 16 }}>
         <Text style={T.cardLabel}>Gastos e receitas fixas</Text>
@@ -132,7 +140,7 @@ export function GastosFixosView({ items, customCats }: { items: RecurringItem[];
         </View>
 
         {filtered.length === 0 ? (
-          <Text style={{ paddingVertical: 22, fontSize: 13.5, color: th(INK.soft) }}>
+          <Text style={{ paddingTop: 18, paddingBottom: onAdd ? 4 : 22, fontSize: 13.5, color: th(INK.soft) }}>
             Nenhuma {income ? "receita fixa" : "despesa fixa"} ainda.
           </Text>
         ) : (
@@ -186,6 +194,33 @@ export function GastosFixosView({ items, customCats }: { items: RecurringItem[];
             <FixedRow key={s.id} item={s} customCats={customCats} first={i === 0} />
           ))}
         </View>
+      )}
+
+      {/* In the wallet: one more of the kind on show, already set to repeat every month. */}
+      {onAdd && (
+        <Pressable
+          onPress={() => onAdd(tab)}
+          style={({ pressed }) => ({
+            marginTop: 12,
+            marginHorizontal: 16,
+            marginBottom: hasMore ? 0 : 10,
+            height: 46,
+            borderRadius: 23,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 7,
+            borderWidth: 1,
+            borderStyle: "dashed",
+            borderColor: th("rgba(255,255,255,0.18)", "line"),
+            opacity: pressed ? 0.6 : 1,
+          })}
+        >
+          <Plus size={16} color={th("#fff")} strokeWidth={2.6} />
+          <Text style={{ fontSize: 14, fontWeight: "600", color: th("#fff") }}>
+            {income ? "Adicionar receita fixa" : "Adicionar despesa fixa"}
+          </Text>
+        </Pressable>
       )}
 
       {hasMore ? (

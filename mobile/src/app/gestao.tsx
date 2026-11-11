@@ -13,7 +13,7 @@ import { ensureReserve } from "~/lib/ensureReserve";
 import { catchUpYields, earns, estimate, latestCdi, yieldEarned } from "~/lib/yields";
 import AccountSheet from "~/components/accounts/AccountSheet";
 import CaixinhaSheet from "~/components/accounts/CaixinhaSheet";
-import FixedEntries from "~/components/accounts/FixedEntries";
+import GastosFixosCard from "~/components/home/GastosFixosCard";
 import CaixinhaTile, { NewCaixinhaTile, TILE_W } from "~/components/accounts/CaixinhaTile";
 import Room from "~/components/Room";
 import RoundButton from "~/components/RoundButton";
@@ -336,8 +336,10 @@ export default function Gestao() {
               })}
             </Animated.View>
 
-            {/* ══ What comes in and goes out every month ══ */}
-            <FixedEntries />
+            {/* ══ What comes in and goes out every month: the home's own card, with a way to add one ══ */}
+            <Animated.View entering={FadeInDown.delay(80).duration(420)} style={{ marginTop: 30 }}>
+              <GastosFixosCard onAdd={(kind) => router.push(`/manual?tipo=${kind}&fixa=1` as never)} />
+            </Animated.View>
 
             {/* ══ Caixinhas: money set aside for something, still yours ══ */}
             <Animated.View entering={FadeInDown.delay(120).duration(420)} style={{ marginTop: 30 }}>
