@@ -36,6 +36,8 @@ const INSET = 3;
 const INNER = SIZE - INSET * 2;
 /** Buttons in the long glass, which shares the row's width between them. */
 const BUTTONS = 3;
+/** How wide one of them is: close enough that the three read as one group. */
+const SLOT = 70;
 
 const SPRING = {
   duration: 480,
@@ -109,60 +111,66 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         {/* The two places and Registrar, in one piece of glass. */}
-        <Glass
-          radius={SIZE / 2}
-          style={{ flex: 1, height: SIZE, padding: INSET }}
-        >
-          <View
-            style={{ flex: 1, flexDirection: "row", alignItems: "center" }}
-            onLayout={(e) => setSlot(e.nativeEvent.layout.width / BUTTONS)}
+        <View style={{ flex: 1, alignItems: "center" }}>
+          <Glass
+            radius={SIZE / 2}
+            style={{
+              width: BUTTONS * SLOT + INSET * 2,
+              height: SIZE,
+              padding: INSET,
+            }}
           >
-            {slot > 0 && (
-              <Animated.View
-                pointerEvents="none"
-                style={[
-                  {
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: slot,
-                    height: INNER,
-                    borderRadius: INNER / 2,
-                    borderCurve: "continuous",
-                    borderWidth: 1,
-                    borderColor: th("rgba(255,255,255,0.28)", "line"),
-                    backgroundColor: th("rgba(255,255,255,0.16)", "bg"),
-                  },
-                  capsule,
-                ]}
-              />
-            )}
-            <NavButton
-              label="Início"
-              on={active === "index"}
-              onPress={() => open("index")}
-              icon={House}
-            />
-            <NavButton
-              label="Transações"
-              on={active === "transacoes"}
-              onPress={() => open("transacoes")}
-              icon={ArrowLeftRight}
-            />
-            <NavButton
-              label="Registrar"
-              on={false}
-              onPress={() => go("/manual")}
-              drawn={
-                <Plus
-                  size={26}
-                  color={th("rgba(255,255,255,0.78)")}
-                  strokeWidth={2.4}
+            <View
+              style={{ flex: 1, flexDirection: "row", alignItems: "center" }}
+              onLayout={(e) => setSlot(e.nativeEvent.layout.width / BUTTONS)}
+            >
+              {slot > 0 && (
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    {
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: slot,
+                      height: INNER,
+                      borderRadius: INNER / 2,
+                      borderCurve: "continuous",
+                      borderWidth: 1,
+                      borderColor: th("rgba(255,255,255,0.28)", "line"),
+                      backgroundColor: th("rgba(255,255,255,0.16)", "bg"),
+                    },
+                    capsule,
+                  ]}
                 />
-              }
-            />
-          </View>
-        </Glass>
+              )}
+              <NavButton
+                label="Início"
+                on={active === "index"}
+                onPress={() => open("index")}
+                icon={House}
+              />
+              <NavButton
+                label="Transações"
+                on={active === "transacoes"}
+                onPress={() => open("transacoes")}
+                icon={ArrowLeftRight}
+              />
+              <NavButton
+                label="Registrar"
+                on={false}
+                onPress={() => go("/manual")}
+                drawn={
+                  <Plus
+                    size={26}
+                    color={th("rgba(255,255,255,0.78)")}
+                    strokeWidth={2.4}
+                  />
+                }
+              />
+            </View>
+          </Glass>
+        </View>
 
         {/* Willo, apart. */}
         <Pressable
