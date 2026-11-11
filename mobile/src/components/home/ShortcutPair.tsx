@@ -314,56 +314,57 @@ function ChallengesTile({ art, running, onPress }: { art: number; running: Pendi
  * dark picture, the last seven days as dots under it, and under the picture how many
  * medals are won — or, while today is still open on a live sequence, a word to keep it.
  */
-function ConquistasTile({ art, wins, onPress }: { art: number; wins: Conquistas | null; onPress: () => void }) {
-  const pic = Math.max(art, 120);
+function ConquistasTile({ wins, onPress }: { art: number; wins: Conquistas | null; onPress: () => void }) {
   const s = wins?.streak;
   const lit = (s?.current ?? 0) > 0;
+  const won = wins ? wins.medals.filter((m) => m.earned).length : 0;
 
-  /* The card's own glass all the way through: a pane a shade lighter, white marks on it,
-     the days done filled and the rest left as rings. Worked out here, not in an animation. */
-  const pane = th("rgba(255,255,255,0.05)", "bg");
-  const rim = th("rgba(255,255,255,0.10)", "line");
+  /* The whole card used, as the other compact ones: the name at the top, the run of days
+     large in the middle, the week day by day at the foot. White on the card's own glass. */
   const ink = th("#fff");
   const faint = th("rgba(255,255,255,0.45)");
-  const dotOff = th("rgba(255,255,255,0.14)", "bg");
+  const dotOff = th("rgba(255,255,255,0.10)", "bg");
   const dotOn = th("#fff", "bg");
 
   return (
-    <Surface onPress={onPress} style={{ flex: 1 }}>
-      <View style={{ flex: 1, padding: 14, gap: 12 }}>
-        <View style={{ height: pic, borderRadius: 18, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: rim, backgroundColor: pane, alignItems: "center", justifyContent: "center" }}>
-          {s && (
-            <>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Flame size={Math.round(pic * 0.2)} color={lit ? ink : faint} strokeWidth={2.2} />
-                <Text style={{ fontSize: Math.round(pic * 0.28), fontWeight: "800", letterSpacing: -1, color: ink, fontVariant: ["tabular-nums"] }}>{s.current}</Text>
-              </View>
-              <Text style={{ marginTop: 2, fontSize: 11.5, color: th(INK.soft) }}>{s.current === 1 ? "dia seguido" : "dias seguidos"}</Text>
-              <View style={{ marginTop: 12, flexDirection: "row", gap: 5 }}>
-                {s.week.map((d) => (
-                  <View
-                    key={d.iso}
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 4,
-                      backgroundColor: d.done ? dotOn : dotOff,
-                      borderWidth: d.today && !d.done ? 1 : 0,
-                      borderColor: faint,
-                    }}
-                  />
-                ))}
-              </View>
-            </>
-          )}
+    <Surface onPress={onPress} style={{ flex: 1, padding: 14 }}>
+      <View style={{ flex: 1, justifyContent: "space-between" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 13, color: th(INK.soft) }}>
+            Conquistas
+          </Text>
+          <ChevronRight size={14} color={th(INK.faint)} />
         </View>
+
         <View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-            <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15, fontWeight: "700", letterSpacing: -0.2, color: ink }}>
-              Conquistas
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Flame size={30} color={lit ? ink : faint} strokeWidth={2.2} />
+            <Text style={{ fontSize: 44, fontWeight: "800", letterSpacing: -1.6, lineHeight: 48, color: ink, fontVariant: ["tabular-nums"] }}>
+              {s ? s.current : " "}
             </Text>
-            <ChevronRight size={14} color={th(INK.faint)} />
           </View>
+          <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12.5, color: th(INK.soft) }}>
+            {s?.current === 1 ? "dia seguido" : "dias seguidos"}
+            {wins ? <Text style={{ color: th(INK.softer) }}> · {won} {won === 1 ? "medalha" : "medalhas"}</Text> : null}
+          </Text>
+        </View>
+
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          {(s?.week ?? []).map((d) => (
+            <View key={d.iso} style={{ alignItems: "center", gap: 4 }}>
+              <Text style={{ fontSize: 10, fontWeight: "600", color: th(d.today ? "#fff" : INK.softer) }}>{d.label}</Text>
+              <View
+                style={{
+                  width: 13,
+                  height: 13,
+                  borderRadius: 7,
+                  backgroundColor: d.done ? dotOn : dotOff,
+                  borderWidth: d.today && !d.done ? 1 : 0,
+                  borderColor: faint,
+                }}
+              />
+            </View>
+          ))}
         </View>
       </View>
     </Surface>
