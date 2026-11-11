@@ -63,7 +63,12 @@ function radarPairInPlace(userId: string | undefined, slots: WidgetSlot[]): Widg
 }
 
 export function loadPhoneLayout(userId?: string): WidgetSlot[] {
-  return radarPairInPlace(userId, categoriesUnderFlows(userId, widened(userId)));
+  const slots = radarPairInPlace(userId, categoriesUnderFlows(userId, widened(userId)));
+  /* Never the same card twice. */
+  const seen = new Set<string>();
+  const once = slots.filter((s) => (seen.has(s.id) ? false : (seen.add(s.id), true)));
+  if (once.length !== slots.length) saveLayout(userId, once);
+  return once;
 }
 
 function widened(userId?: string): WidgetSlot[] {

@@ -14,7 +14,7 @@ import { th } from "~/theme/theme";
  * It belongs to the screen rather than to the board: inside a scroller it would
  * scroll away with the cards, and a way out that leaves the screen is not one.
  */
-export default function EditBar({ open, onDone }: { open: boolean; onDone: () => void }) {
+export default function EditBar({ open, onDone, onCancel }: { open: boolean; onDone: () => void; /** Back to how the board was. */ onCancel?: () => void }) {
   const insets = useSafeAreaInsets();
   if (!open) return null;
 
@@ -38,7 +38,11 @@ export default function EditBar({ open, onDone }: { open: boolean; onDone: () =>
         gap: 12,
       }}
     >
-      <Text style={{ fontSize: 27, fontWeight: "800", letterSpacing: -0.7, color: th("#fff") }}>
+      <Pressable onPress={onCancel ?? onDone} hitSlop={8} style={({ pressed }) => ({ height: 44, justifyContent: "center", paddingHorizontal: 4, opacity: pressed ? 0.6 : 1 })}>
+        <Text style={{ fontSize: 16, fontWeight: "600", color: th("rgba(255,255,255,0.75)") }}>Cancelar</Text>
+      </Pressable>
+
+      <Text numberOfLines={1} style={{ flex: 1, textAlign: "center", fontSize: 18, fontWeight: "800", letterSpacing: -0.4, color: th("#fff") }}>
         Editar widgets
       </Text>
 
@@ -56,7 +60,6 @@ export default function EditBar({ open, onDone }: { open: boolean; onDone: () =>
         <Text style={{ fontSize: 16, fontWeight: "700", color: th(GREEN) }}>Concluído</Text>
       </Pressable>
 
-      <View />
     </Animated.View>
   );
 }

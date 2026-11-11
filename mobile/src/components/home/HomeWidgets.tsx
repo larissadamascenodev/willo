@@ -125,10 +125,10 @@ export function renderHomeWidget(
       return <CopilotCard size={size} />;
 
     case "radar":
-      return <RadarWidget />;
+      return <RadarWidget size={size} />;
 
     case "conquistas":
-      return <ConquistasWidget />;
+      return <ConquistasWidget size={size} />;
 
     case "recentes":
       return <TransacoesRecentes transactions={ctx.transactions} />;

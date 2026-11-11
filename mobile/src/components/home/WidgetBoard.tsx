@@ -21,10 +21,9 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import * as Haptics from "expo-haptics";
 import { loadPhoneLayout } from "~/lib/phoneLayout";
 import { PHONE_WIDGETS, phoneWidgetById } from "~/lib/phoneWidgets";
-import { saveLayout, setDismissed, type WidgetSize, type WidgetSlot } from "@/lib/homeWidgets";
+import { dismissedIds, saveLayout, setDismissed, type WidgetSize, type WidgetSlot } from "@/lib/homeWidgets";
 import BottomSheet from "~/components/BottomSheet";
-import { Minus, Plus } from "~/components/icons";
-import ResizeGrip, { GRIP_OFFSET } from "~/components/home/ResizeGrip";
+import { ChevronsLeftRight, ChevronsRightLeft, Minus, Plus } from "~/components/icons";
 import { INK } from "~/theme/tokens";
 
 import { th } from "~/theme/theme";
@@ -62,13 +61,15 @@ interface Props {
   onEditingChange: (editing: boolean) => void;
   /** A card is being carried: the page should not scroll under it. */
   onCarrying?: (carrying: boolean) => void;
+  /** Bumped by Cancelar: the board goes back to how it was when editing began. */
+  revert?: number;
   /** A row of its own that follows one card wherever it is; at the top if those are off. */
   pinned?: { after: string | string[]; node: ReactNode };
 }
 
 type Rect = { x: number; y: number; w: number; h: number };
 
-export default function WidgetBoard({ userId, render, skip, gap = 16, editing, onEditingChange, onCarrying, pinned }: Props) {
+export default function WidgetBoard({ userId, render, skip, gap = 16, editing, onEditingChange, onCarrying, revert = 0, pinned }: Props) {
   const followIds = pinned ? (Array.isArray(pinned.after) ? pinned.after : [pinned.after]) : [];
   const [slots, setSlots] = useState<WidgetSlot[]>(() => loadPhoneLayout(userId));
   const [adding, setAdding] = useState(false);
@@ -77,6 +78,28 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
   useEffect(() => {
     setSlots(loadPhoneLayout(userId));
   }, [userId]);
+
+  /* How the board was when editing began, for Cancelar to put back. */
+  const before = useRef<{ slots: WidgetSlot[]; dismissed: string[] } | null>(null);
+  const slotsRef = useRef(slots);
+  slotsRef.current = slots;
+  useEffect(() => {
+    if (editing && !before.current) before.current = { slots: slotsRef.current, dismissed: dismissedIds(userId) };
+    if (!editing && revertSeen.current === revert) before.current = null;
+  }, [editing, userId, revert]);
+  const revertSeen = useRef(revert);
+  useEffect(() => {
+    if (revert === revertSeen.current) return;
+    revertSeen.current = revert;
+    const was = before.current;
+    before.current = null;
+    if (!was) return;
+    const now = dismissedIds(userId);
+    for (const id of now) if (!was.dismissed.includes(id)) setDismissed(userId, id, false);
+    for (const id of was.dismissed) if (!now.includes(id)) setDismissed(userId, id, true);
+    setSlots(was.slots);
+    saveLayout(userId, was.slots);
+  }, [revert, userId]);
 
   const commit = useCallback(
     (next: WidgetSlot[]) => {
@@ -101,6 +124,10 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
   const lift = useSharedValue(0);
+  /* A carry under way, on the UI thread: however the gesture ends — let go, or cut off
+     by the page — the card is put down. Left to "ended normally" only, a cut-off carry
+     left its copy floating over the board. */
+  const active = useSharedValue(0);
   /* The seats as they were when the card was picked up: a seat is judged against where
      the cards were, not against a board that is already moving under the finger. */
   const snapshot = useRef<{ order: string[]; seats: { id: string; cx: number; cy: number }[] } | null>(null);
@@ -193,6 +220,14 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
   }, [userId, onCarrying, tx, ty, lift]);
   const carriedRef = useRef(carried);
   carriedRef.current = carried;
+  /* Should the gesture's end never arrive, the card is put down rather than left floating. */
+  useEffect(() => {
+    if (!carried) return;
+    const t = setInterval(() => {
+      if (active.get() === 0 && carriedRef.current) endCarry();
+    }, 900);
+    return () => clearInterval(t);
+  }, [carried, active, endCarry]);
 
   const remove = (id: string) => {
     setDismissed(userId, id, true);
@@ -260,6 +295,7 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
                   tx={tx}
                   ty={ty}
                   lift={lift}
+                  active={active}
                   onCarryStart={beginCarry}
                   onCarryTo={carryTo}
                   onCarryEnd={endCarry}
@@ -371,6 +407,7 @@ function WidgetFrame({
   tx,
   ty,
   lift,
+  active,
   children,
   onCarryStart,
   onCarryTo,
@@ -389,6 +426,7 @@ function WidgetFrame({
   tx: SharedValue<number>;
   ty: SharedValue<number>;
   lift: SharedValue<number>;
+  active: SharedValue<number>;
   children: ReactNode;
   onCarryStart: (id: string) => void;
   onCarryTo: (id: string, x: number, y: number) => void;
@@ -440,6 +478,7 @@ function WidgetFrame({
     .onStart(() => {
       tx.set(0);
       ty.set(0);
+      active.set(1);
       lift.set(withSpring(1, { damping: 16, stiffness: 220 }));
       runOnJS(onCarryStart)(slot.id);
     })
@@ -448,20 +487,10 @@ function WidgetFrame({
       ty.set(e.translationY);
       runOnJS(onCarryTo)(slot.id, e.absoluteX, e.absoluteY);
     })
-    .onFinalize((_e, success) => {
-      if (success) runOnJS(onCarryEnd)();
-    });
-
-  /* Pulled outwards for the whole row, inwards for the small version. */
-  const [resizing, setResizing] = useState(false);
-  const resize = Gesture.Pan()
-    .onUpdate((e) => {
-      const next = e.translationX > 26 ? "full" : e.translationX < -26 ? "half" : null;
-      if (next && next !== slot.size) runOnJS(onResize)(next);
-      if (Math.abs(e.translationX) > 6) runOnJS(setResizing)(true);
-    })
     .onFinalize(() => {
-      runOnJS(setResizing)(false);
+      if (active.get() !== 1) return;
+      active.set(0);
+      runOnJS(onCarryEnd)();
     });
 
   /* The tremble of a board being edited, as the phone's own home screen does it. */
@@ -489,7 +518,7 @@ function WidgetFrame({
         onLayout={measure}
         style={[{ flex: half ? 1 : undefined, position: "relative", opacity: hidden ? 0 : 1 }, tremble]}
       >
-        <View pointerEvents={editing ? "none" : "auto"}>{resizing ? <Ghost /> : children}</View>
+        <View pointerEvents={editing ? "none" : "auto"}>{children}</View>
 
         {/* Taken off the board, to be put back from "Adicionar widgets". */}
         {editing && drawn && (
@@ -515,26 +544,34 @@ function WidgetFrame({
           </Animated.View>
         )}
 
-        {/* The grip, in the corner a card is resized from: whole, or its small version. */}
+        {/* Whole, or its small version: a button in the opposite corner to the "−". */}
         {editing && drawn && def?.resizable && (
-          <Animated.View
-            entering={FadeIn.duration(200)}
-            exiting={FadeOut.duration(140)}
-            style={{ position: "absolute", bottom: -GRIP_OFFSET, right: -GRIP_OFFSET, zIndex: 20 }}
-          >
-            <GestureDetector gesture={resize}>
-              <View accessibilityLabel={slot.size === "full" ? "Deixar menor" : "Ocupar a linha"}>
-                <ResizeGrip />
-              </View>
-            </GestureDetector>
+          <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)} style={{ position: "absolute", top: -8, right: -8, zIndex: 30 }}>
+            <Pressable
+              onPress={() => onResize(slot.size === "full" ? "half" : "full")}
+              hitSlop={10}
+              accessibilityLabel={slot.size === "full" ? "Versão menor" : "Versão maior"}
+              style={({ pressed }) => ({
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: th("#3A3B41", "bg"),
+                borderWidth: 1,
+                borderColor: th("rgba(255,255,255,0.18)", "line"),
+                transform: [{ scale: pressed ? 0.88 : 1 }],
+              })}
+            >
+              {slot.size === "full" ? (
+                <ChevronsRightLeft size={14} color={th("#fff")} strokeWidth={2.6} />
+              ) : (
+                <ChevronsLeftRight size={14} color={th("#fff")} strokeWidth={2.6} />
+              )}
+            </Pressable>
           </Animated.View>
         )}
       </Animated.View>
     </GestureDetector>
   );
-}
-
-/** What a card looks like while its corner is being pulled: the shape it is taking. */
-function Ghost() {
-  return <View style={{ minHeight: 150, borderRadius: 22, backgroundColor: th("rgba(255,255,255,0.09)", "bg") }} />;
 }

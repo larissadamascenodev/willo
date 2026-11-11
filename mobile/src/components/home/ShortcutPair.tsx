@@ -201,7 +201,7 @@ function RadarTile({ art, onPress }: { art: number; onPress: () => void }) {
   );
 }
 
-function RadarReading({ size }: { size: number }) {
+function useBlips(): { blips: Blips; ready: boolean } {
   const data = useRaioX();
   const ready = !data.loading;
   const blips: Blips = ready
@@ -213,7 +213,11 @@ function RadarReading({ size }: { size: number }) {
         saude: { risk: data.report.pillars.filter((p) => p.tone === "critico").length, note: data.report.pillars.filter((p) => p.tone === "atencao").length },
       }
     : {};
+  return { blips, ready };
+}
 
+function RadarReading({ size }: { size: number }) {
+  const { blips } = useBlips();
   /* Only the dial and its name: the scores and the sentences are on the Radar's own screen. */
   return (
     <>
@@ -314,9 +318,6 @@ function ConquistasTile({ art, wins, onPress }: { art: number; wins: Conquistas 
   const pic = Math.max(art, 120);
   const s = wins?.streak;
   const lit = (s?.current ?? 0) > 0;
-  const won = wins ? wins.medals.filter((m) => m.earned).length : 0;
-  const keep = !!s && lit && !s.todayDone;
-  const line = !wins ? " " : keep ? "Anote algo hoje" : `${won} de ${wins.medals.length} medalhas`;
 
   /* The card's own glass all the way through: a pane a shade lighter, white marks on it,
      the days done filled and the rest left as rings. Worked out here, not in an animation. */
@@ -363,9 +364,6 @@ function ConquistasTile({ art, wins, onPress }: { art: number; wins: Conquistas 
             </Text>
             <ChevronRight size={14} color={th(INK.faint)} />
           </View>
-          <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>
-            {line}
-          </Text>
         </View>
       </View>
     </Surface>
@@ -489,10 +487,11 @@ function useArt() {
   return { art: w > 0 ? Math.min(w - 28, 170) : 0, onLayout };
 }
 
-/** The Radar as a home card, half a row: moved, taken off and put back like the rest. */
-export function RadarWidget() {
+/** The Radar as a home card: half a row, the dial; whole, the dial beside the six areas. */
+export function RadarWidget({ size = "half" }: { size?: "half" | "full" }) {
   const router = useRouter();
   const { art, onLayout } = useArt();
+  if (size === "full") return <RadarWhole onPress={() => router.push("/radar" as never)} />;
   return (
     <View onLayout={onLayout}>
       <RadarTile art={art} onPress={() => router.push("/radar" as never)} />
@@ -500,8 +499,43 @@ export function RadarWidget() {
   );
 }
 
-/** Conquistas as a home card, half a row. */
-export function ConquistasWidget() {
+/** The six areas by name, each with a light for how it stands: no scores, only where to look. */
+function RadarWhole({ onPress }: { onPress: () => void }) {
+  const { blips, ready } = useBlips();
+  const tone = (k: SectorKey) => {
+    const b = blips[k];
+    if (!ready) return th("rgba(255,255,255,0.18)", "bg");
+    if ((b?.risk ?? 0) > 0) return th(RISK, "bg");
+    if ((b?.note ?? 0) > 0) return th("#F9CE4E", "bg");
+    return th("#67CD67", "bg");
+  };
+  const NAMES: Record<SectorKey, string> = { consumo: "Consumo", habitos: "Hábitos", compromissos: "Compromissos", futuro: "Futuro", saude: "Saúde", simular: "Simular" };
+  return (
+    <Surface onPress={onPress}>
+      <Glow hex="#7CC4FF" />
+      <View style={{ padding: 16, flexDirection: "row", alignItems: "center", gap: 16 }}>
+        <MiniScope size={136} blips={blips} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 16, fontWeight: "700", letterSpacing: -0.2, color: th("#fff") }}>Radar financeiro</Text>
+            <ChevronRight size={14} color={th(INK.faint)} />
+          </View>
+          <View style={{ marginTop: 10, gap: 7 }}>
+            {SECTORS.filter((x) => x.key !== "simular").map((x) => (
+              <View key={x.key} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: tone(x.key) }} />
+                <Text numberOfLines={1} style={{ fontSize: 13.5, color: th(INK.soft) }}>{NAMES[x.key]}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+    </Surface>
+  );
+}
+
+/** Conquistas as a home card: half a row, the streak; whole, the streak, the week and the medals. */
+export function ConquistasWidget({ size = "half" }: { size?: "half" | "full" }) {
   const router = useRouter();
   const { user } = useAuth();
   const { art, onLayout } = useArt();
@@ -512,9 +546,63 @@ export function ConquistasWidget() {
       void loadConquistas(user.id).then(setWins).catch(() => undefined);
     }, [user]),
   );
+  if (size === "full") return <ConquistasWhole wins={wins} onPress={() => router.push("/conquistas" as never)} />;
   return (
     <View onLayout={onLayout}>
       <ConquistasTile art={art} wins={wins} onPress={() => router.push("/conquistas" as never)} />
     </View>
+  );
+}
+
+function ConquistasWhole({ wins, onPress }: { wins: Conquistas | null; onPress: () => void }) {
+  const s = wins?.streak;
+  const lit = (s?.current ?? 0) > 0;
+  const won = wins ? wins.medals.filter((m) => m.earned).length : 0;
+  const ink = th("#fff");
+  const faint = th("rgba(255,255,255,0.45)");
+  return (
+    <Surface onPress={onPress}>
+      <View style={{ padding: 16, flexDirection: "row", alignItems: "center", gap: 16 }}>
+        {/* The streak, on the card's own glass. */}
+        <View style={{ width: 112, height: 112, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: th("rgba(255,255,255,0.10)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg"), alignItems: "center", justifyContent: "center" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Flame size={22} color={lit ? ink : faint} strokeWidth={2.2} />
+            <Text style={{ fontSize: 34, fontWeight: "800", letterSpacing: -1, color: ink, fontVariant: ["tabular-nums"] }}>{s?.current ?? 0}</Text>
+          </View>
+          <Text style={{ marginTop: 2, fontSize: 11.5, color: th(INK.soft) }}>{s?.current === 1 ? "dia seguido" : "dias seguidos"}</Text>
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 16, fontWeight: "700", letterSpacing: -0.2, color: ink }}>Conquistas</Text>
+            <ChevronRight size={14} color={th(INK.faint)} />
+          </View>
+          {/* The week, day by day. */}
+          <View style={{ marginTop: 12, flexDirection: "row", justifyContent: "space-between" }}>
+            {(s?.week ?? []).map((d) => (
+              <View key={d.iso} style={{ alignItems: "center", gap: 5 }}>
+                <Text style={{ fontSize: 10.5, fontWeight: "600", color: th(d.today ? "#fff" : INK.softer) }}>{d.label}</Text>
+                <View
+                  style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: 9,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: d.done ? th("#fff", "bg") : th("rgba(255,255,255,0.08)", "bg"),
+                    borderWidth: d.today && !d.done ? 1 : 0,
+                    borderColor: faint,
+                  }}
+                >
+                  {d.done && <Check size={11} color={th("#0B0B0B")} strokeWidth={3} />}
+                </View>
+              </View>
+            ))}
+          </View>
+          <Text numberOfLines={1} style={{ marginTop: 12, fontSize: 12.5, color: th(INK.soft) }}>
+            {wins ? `${won} ${won === 1 ? "medalha ganha" : "medalhas ganhas"} · recorde de ${s?.best ?? 0} ${s?.best === 1 ? "dia" : "dias"}` : " "}
+          </Text>
+        </View>
+      </View>
+    </Surface>
   );
 }

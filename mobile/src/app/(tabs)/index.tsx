@@ -70,6 +70,8 @@ export default function Home() {
   const [editing, setEditing] = useState(false);
   /* A card is being carried: the page holds still under it. */
   const [carrying, setCarrying] = useState(false);
+  /* Cancelar: the board puts back how it was when editing began. */
+  const [revert, setRevert] = useState(0);
   const router = useRouter();
 
   const today = useMemo(() => new Date(), []);
@@ -259,6 +261,7 @@ export default function Home() {
           render={(id, size) => renderHomeWidget(id, size, widgetContext)}
           skip={skipWidget}
           onCarrying={setCarrying}
+          revert={revert}
         />
       </Animated.ScrollView>
 
@@ -283,7 +286,14 @@ export default function Home() {
         unread={unread}
         onBell={() => router.push("/notificacoes" as never)}
       />
-      <EditBar open={editing} onDone={() => setEditing(false)} />
+      <EditBar
+        open={editing}
+        onDone={() => setEditing(false)}
+        onCancel={() => {
+          setRevert((n) => n + 1);
+          setEditing(false);
+        }}
+      />
       </GroundInkProvider>
     </Room>
   );
