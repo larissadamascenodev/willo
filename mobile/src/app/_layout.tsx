@@ -19,6 +19,7 @@ import { markIntroDone } from "~/lib/launchIntro";
 import NotificationBridge from "~/lib/NotificationBridge";
 import { GREEN, GROUND } from "~/theme/tokens";
 import { COVER_GROW_MS, LIGHT_GROUND, endThemeReveal, liftThemeCover, markShotReady, setActiveTheme, takeReturnRoute, th, useThemeCover, useThemePref, useThemeReveal, useThemeShot } from "~/theme/theme";
+import { stageOf } from "~/lib/accountStage";
 
 /* Before any shared module is imported for real, the handful of browser things it
    expects have to exist. */
@@ -250,6 +251,10 @@ function Door() {
 
   if (loading) return <Splash />;
   const signedIn = !!session;
+  /* Signed in, but the questions or the welcome still ahead (lib/accountStage). */
+  const stage = signedIn ? stageOf(session?.user) : null;
+  const inApp = signedIn && stage === "app";
+  const home = (!signedIn ? "/bem-vindo" : stage === "funil" ? "/primeiros-passos" : stage === "boas-vindas" ? "/boas-vindas" : "/") as "/";
 
   return (
     <>
@@ -261,7 +266,7 @@ function Door() {
         contentStyle: { backgroundColor: th(GROUND, "bg") },
       }}
     >
-      <Stack.Protected guard={signedIn} redirectTo="/bem-vindo">
+      <Stack.Protected guard={inApp} redirectTo={home}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="eventos" />
         <Stack.Screen name="cartoes" />
@@ -297,7 +302,15 @@ function Door() {
         <Stack.Screen name="scanner" options={{ animation: "fade", contentStyle: { backgroundColor: th("#000", "bg") } }} />
       </Stack.Protected>
 
-      <Stack.Protected guard={!signedIn} redirectTo="/">
+      <Stack.Protected guard={signedIn && stage === "funil"} redirectTo={home}>
+        <Stack.Screen name="primeiros-passos" options={{ animation: "fade" }} />
+      </Stack.Protected>
+
+      <Stack.Protected guard={signedIn && stage === "boas-vindas"} redirectTo={home}>
+        <Stack.Screen name="boas-vindas" options={{ animation: "fade" }} />
+      </Stack.Protected>
+
+      <Stack.Protected guard={!signedIn} redirectTo={home}>
         <Stack.Screen name="bem-vindo" options={{ animation: "fade" }} />
         <Stack.Screen name="comecar" />
         <Stack.Screen name="login" />

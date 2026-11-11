@@ -109,7 +109,7 @@ export default function Comecar() {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { emailRedirectTo: APP_URL, data: { display_name: name.trim() } },
+      options: { emailRedirectTo: APP_URL, data: { display_name: name.trim(), willo_onboarding: "boas-vindas" } },
     });
 
     if (error) {

@@ -162,20 +162,23 @@ export default function Funnel({
   onSaved,
   onLogin,
   resume,
+  knownName,
 }: {
   onDone: (a: OnboardingAnswers, plan: PlanId | null) => void;
   onExit: () => void;
   /** The profile is made: keep it, so the app opens on it next time. */
   onSaved: (a: OnboardingAnswers) => void;
-  /** "Já tenho conta", from the profile. */
-  onLogin: () => void;
+  /** "Já tenho conta", from the profile. Left out once the person is signed in. */
+  onLogin?: () => void;
+  /** Signed in already, with a name: the first question is not asked. */
+  knownName?: string;
   /** Answers from before: open straight on their profile. */
   resume?: OnboardingAnswers | null;
 }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const tileW = Math.floor((width - 40 - 20) / 3);
-  const [a, setA] = useState<OnboardingAnswers>(resume ?? EMPTY_ANSWERS);
+  const [a, setA] = useState<OnboardingAnswers>(resume ?? (knownName ? { ...EMPTY_ANSWERS, name: knownName } : EMPTY_ANSWERS));
   const [i, setI] = useState(0);
   const [opened, setOpened] = useState(!resume);
   /* The income only counts as answered once something is typed — zero included. */
@@ -183,7 +186,7 @@ export default function Funnel({
   const set = (patch: Partial<OnboardingAnswers>) => setA((v) => ({ ...v, ...patch }));
 
   const steps = useMemo<StepId[]>(() => {
-    const out: StepId[] = ["name", "source", "copilot", "goal"];
+    const out: StepId[] = knownName ? ["source", "copilot", "goal"] : ["name", "source", "copilot", "goal"];
     if (a.goal && (GOALS_WITH_DREAM.includes(a.goal) || a.goal === "dividas")) out.push("detail");
     out.push("goalDemo", "income");
     if (a.income > 0) out.push("hour");
@@ -899,7 +902,7 @@ function Rule() {
   return <View style={{ height: 1, marginVertical: 26, backgroundColor: "rgba(255,255,255,0.08)" }} />;
 }
 
-function Result({ a, onNext, onLogin }: { a: OnboardingAnswers; onNext: () => void; onLogin: () => void }) {
+function Result({ a, onNext, onLogin }: { a: OnboardingAnswers; onNext: () => void; onLogin?: () => void }) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const prof = profileOf(a);
@@ -1075,11 +1078,13 @@ function Result({ a, onNext, onLogin }: { a: OnboardingAnswers; onNext: () => vo
       </ScrollView>
       <LinearGradient onLayout={(e) => setFootH(e.nativeEvent.layout.height)} colors={["rgba(13,14,16,0)", C.bg]} locations={[0, 0.4]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 30, paddingBottom: insets.bottom + 12 }}>
         <Cta label="Vamos começar!" onPress={onNext} />
-        <Pressable onPress={onLogin} hitSlop={8} style={({ pressed }) => ({ alignSelf: "center", marginTop: 12, opacity: pressed ? 0.5 : 1 })}>
-          <Text style={{ fontSize: 13.5, color: C.soft }}>
-            Já tenho conta · <Text style={{ fontWeight: "700", color: "#fff" }}>Entrar</Text>
-          </Text>
-        </Pressable>
+        {onLogin && (
+          <Pressable onPress={onLogin} hitSlop={8} style={({ pressed }) => ({ alignSelf: "center", marginTop: 12, opacity: pressed ? 0.5 : 1 })}>
+            <Text style={{ fontSize: 13.5, color: C.soft }}>
+              Já tenho conta · <Text style={{ fontWeight: "700", color: "#fff" }}>Entrar</Text>
+            </Text>
+          </Pressable>
+        )}
       </LinearGradient>
     </View>
   );

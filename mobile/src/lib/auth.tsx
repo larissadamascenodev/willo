@@ -58,9 +58,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
          known to have existed; a brand-new one is undone there and never opens the app. */
       const pending = event === "SIGNED_IN" ? loginGate() : null;
       if (pending) {
-        void pending.then((pass) => {
-          if (!alive || !pass) return;
-          if (next?.user) void warmHomeWithin(next.user.id).then(() => alive && (setSession(next), setLoading(false)));
+        void pending.then(async (pass) => {
+          if (!alive || !pass || !next?.user) return;
+          /* The stage may have been written on the account meanwhile: read it fresh. */
+          const { data } = await supabase.auth.getSession();
+          await warmHomeWithin(next.user.id);
+          if (!alive) return;
+          setSession(data.session ?? next);
+          setLoading(false);
         });
         return;
       }

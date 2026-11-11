@@ -4,6 +4,7 @@ import * as Crypto from "expo-crypto";
 import * as ExpoLinking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { supabase } from "@/integrations/supabase/client";
+import { setAccountStage } from "~/lib/accountStage";
 
 /**
  * Entering with Apple or Google.
@@ -22,16 +23,15 @@ import { supabase } from "@/integrations/supabase/client";
  * it failed, in words for the person.
  */
 
-export type SocialResult = { ok: true } | { ok: false; cancelled?: boolean; message?: string; noAccount?: boolean };
+export type SocialResult = { ok: true; fresh?: boolean } | { ok: false; cancelled?: boolean; message?: string };
 
 /**
- * "Já tenho conta" only lets in accounts that exist. Apple and Google create an account
- * the first time they are used, so on that screen the account that comes back is
- * checked: made just now, with nothing but this one way in, it is new — it is removed at
- * once, signed out, and the person is told there is no account yet.
- *
- * Meanwhile the auth listener must not open the app on it: it waits on this gate, and
- * lets the session through only if the gate says so.
+ * Apple and Google make an account the first time they are used. A brand-new one is
+ * kept either way; what changes is what comes next, marked on the account before the
+ * app is let open on it:
+ * - from "Já tenho conta" (the account came first): the questions, then the welcome;
+ * - from the end of the questions (they are answered): the welcome.
+ * The auth listener waits on this gate meanwhile, so the app never flashes in between.
  */
 let gate: Promise<boolean> | null = null;
 export const loginGate = () => gate;
@@ -46,7 +46,6 @@ function isBrandNew(user: { created_at?: string; last_sign_in_at?: string | null
 
 /** Runs a sign-in; on the login screen, refuses an account that did not exist before. */
 async function guarded(mode: Mode, run: () => Promise<SocialResult>): Promise<SocialResult> {
-  if (mode !== "entrar") return run();
   let open!: (pass: boolean) => void;
   gate = new Promise<boolean>((r) => (open = r));
   try {
@@ -56,14 +55,10 @@ async function guarded(mode: Mode, run: () => Promise<SocialResult>): Promise<So
       return res;
     }
     const { data } = await supabase.auth.getUser();
-    if (isBrandNew(data.user)) {
-      await supabase.functions.invoke("delete-account").catch(() => undefined);
-      await supabase.auth.signOut().catch(() => undefined);
-      open(false);
-      return { ok: false, noAccount: true, message: "Você ainda não tem conta no Willo. Vamos criar a sua?" };
-    }
+    const fresh = isBrandNew(data.user);
+    if (fresh) await setAccountStage(mode === "entrar" ? "funil" : "boas-vindas").catch(() => undefined);
     open(true);
-    return res;
+    return { ok: true, fresh };
   } catch {
     open(false);
     return { ok: false, message: "Não foi possível entrar agora. Tente de novo." };
