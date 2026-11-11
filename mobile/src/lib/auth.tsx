@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { AppState } from "react-native";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "~/supabase/client";
+import { cachedAccounts, warmHome, warmHomeWithin } from "~/lib/warmHome";
 
 /**
  * Who is signed in.
@@ -48,8 +49,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
       if (!alive) return;
+      /* Just signed in: the home's numbers are fetched first, so it opens filled in
+         rather than with empty cards. The login keeps its spinner meanwhile. */
+      if (event === "SIGNED_IN" && next?.user && !cachedAccounts(next.user.id)) {
+        void warmHomeWithin(next.user.id).then(() => {
+          if (!alive) return;
+          setSession(next);
+          setLoading(false);
+        });
+        return;
+      }
+      if (next?.user) void warmHome(next.user.id);
       setSession(next);
       setLoading(false);
     });

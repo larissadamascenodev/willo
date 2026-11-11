@@ -24,6 +24,8 @@ import { routeFor } from "~/lib/assistantAsk";
 import { useVoiceEntry } from "~/lib/voiceEntry";
 import { useTapOrDouble } from "~/lib/doubleTap";
 import { firstName } from "~/lib/greeting";
+import { useAuth } from "~/lib/auth";
+import { cachedName, rememberName } from "~/lib/warmHome";
 import { GREEN, INK } from "~/theme/tokens";
 import Svg, { Defs, Ellipse, LinearGradient as SvgLinear, Path, RadialGradient, Rect, Stop } from "react-native-svg";
 
@@ -76,6 +78,13 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { profile } = useProfile();
+  const { user } = useAuth();
+  /* Until the profile arrives: the name kept from last time, or the one on the account. */
+  const knownName =
+    cachedName(user?.id) ?? ((user?.user_metadata as { display_name?: string; full_name?: string } | undefined)?.display_name || (user?.user_metadata as { full_name?: string } | undefined)?.full_name || null);
+  useEffect(() => {
+    if (user?.id && profile?.display_name) rememberName(user.id, profile.display_name);
+  }, [user?.id, profile?.display_name]);
 
   const entry = useVoiceEntry({
     onQuestion: (said) => {
@@ -169,7 +178,7 @@ export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
             </Animated.View>
           ) : (
             <GreetingLine
-              name={firstName(profile?.display_name)}
+              name={firstName(profile?.display_name ?? knownName)}
               readings={readings}
               onPick={(line) => router.push(paramsForLine(line))}
               onLine={onLine}

@@ -12,6 +12,8 @@ import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 import { th } from "~/theme/theme";
+import { useAuth } from "~/lib/auth";
+import { cachedAccounts, rememberAccounts } from "~/lib/warmHome";
 /**
  * Where the money actually sits.
  *
@@ -37,14 +39,21 @@ const BUBBLE = 36;
 
 export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: number }) {
   const router = useRouter();
-  const [accounts, setAccounts] = useState<Account[] | null>(null);
+  const { user } = useAuth();
+  const uid = user?.id ?? null;
+  /* The last accounts kept on the phone first, refreshed under them. */
+  const [accounts, setAccounts] = useState<Account[] | null>(() => cachedAccounts(uid));
 
   useEffect(() => {
     let alive = true;
     const load = () =>
       getAccounts()
-        .then((a) => alive && setAccounts(a as unknown as Account[]))
-        .catch(() => alive && setAccounts([]));
+        .then((a) => {
+          if (!alive) return;
+          setAccounts(a as unknown as Account[]);
+          if (uid) rememberAccounts(uid, a as unknown as Account[]);
+        })
+        .catch(() => alive && setAccounts((had) => had ?? []));
     load();
     /* The same event the web app fires when anything financial changes — it exists
        here because the shim gave the shared services somewhere to fire it. */
@@ -56,7 +65,7 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
       window.removeEventListener("finance-data-changed", onChange);
       window.removeEventListener("transaction-created", onChange);
     };
-  }, []);
+  }, [uid]);
 
   const rows = useMemo(() => {
     if (!accounts) return [];
