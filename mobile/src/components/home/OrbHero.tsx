@@ -52,15 +52,6 @@ import { th as themeTh } from "~/theme/theme";
  * a single band instead of a column — the first card is close under it.
  */
 
-/* The sphere as large as the room allows, with everything else packed under it in
-   rows of fixed height — so that whatever is on show, a reading, an answer, the word
-   that he is listening, the page does not move and nothing is taller than the rest. */
-const ORB = 250;
-const HINT = 0;
-/** What he says: a line or two, and under it a line or two more. */
-const CAPTION = 106;
-/** Under that: how to talk to him, or the way out of listening. */
-const FOOT = 28;
 /** Standing: the sphere, and the pad of light it stands on. */
 const STAND_ORB = 124;
 const STAND_W = 146;
@@ -68,8 +59,6 @@ const PAD = 34;
 const STAND_H = STAND_ORB + PAD - 8;
 /** What this takes of the screen, for the home to leave room for. */
 export const ORB_HERO_BODY = STAND_H + 10;
-/** The same with no robot: only what he says, in the middle of the screen. */
-export const LINES_HERO_BODY = 14 + CAPTION + 4 + FOOT + 14;
 
 /** A reading's sentence is what he says; its quip, if any, goes under it. */
 export const readingsFrom = (slides: InsightSlide[]): Greeting[] =>
@@ -82,7 +71,7 @@ export const readingsFrom = (slides: InsightSlide[]): Greeting[] =>
 export const paramsForLine = (line: Greeting) =>
   ({ pathname: "/registro", params: line.ask ? { ask: line.ask } : { say: line.say ?? line.title } }) as never;
 
-export default function OrbHero({ slides, lines = false }: { slides: InsightSlide[]; /** His lines alone, with no robot: touching them does what touching him does. */ lines?: boolean }) {
+export default function OrbHero({ slides }: { slides: InsightSlide[] }) {
   const th = useGroundTh();
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -128,8 +117,8 @@ export default function OrbHero({ slides, lines = false }: { slides: InsightSlid
     stopSaying.current = setTimeout(() => setSaying(false), 500 + line.title.split(" ").length * 170);
   };
   const mode: OrbMode = listening ? "listening" : reading ? "thinking" : saying ? "speaking" : "idle";
-  /* With no robot the lines take the whole width; beside him, what is left of it. */
-  const orb = Math.min(ORB, width - 72);
+  /* Beside him, the words have what is left of the width. */
+  const [box, setBox] = useState(0);
   const column = width - 32 - STAND_W - 14;
 
   /* One tap opens the conversation; two open Registro rápido. Holding him is what listens. */
@@ -149,141 +138,65 @@ export default function OrbHero({ slides, lines = false }: { slides: InsightSlid
     if (entry.state === "listening") void entry.toggle();
   };
 
-  /* With no robot one tap has nothing else to open than what is being said. */
-  const tapLines = useTapOrDouble(
-    () => (lineOnShow.current ? router.push(paramsForLine(lineOnShow.current)) : router.push("/registro" as never)),
-    () => router.push("/rapido" as never),
-  );
-  const held = useRef(false);
-
   const status = listening ? "ouvindo" : reading ? "pensando" : saying ? "falando" : "online";
 
-  if (!lines) {
-    return (
-      <View style={{ height: ORB_HERO_BODY, flexDirection: "row", alignItems: "center", gap: 14 }}>
-        <Stand size={STAND_ORB} listening={listening}>
-          <ParticleOrb size={STAND_ORB} mode={mode} expanded={listening} loudness={entry.loudness} onPress={tap} onHold={hold} onHoldEnd={holdEnd} />
-        </Stand>
-
-        {/* Beside him: who is speaking, what he says, and how to talk to him. */}
-        <View style={{ flex: 1, minWidth: 0, height: STAND_H, paddingTop: 4 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: themeTh(listening ? "#FF6B6B" : GREEN, "bg") }} />
-            <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 2.2, color: th(INK.softer) }}>WILLO · {status.toUpperCase()}</Text>
-          </View>
-          {/* What he says takes whatever height the status line and the hint leave. */}
-          <View style={{ marginTop: 8, flex: 1, overflow: "hidden" }}>
-            {listening ? (
-              <Animated.View entering={FadeIn.duration(220)}>
-                <Text style={{ fontSize: 18, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>Estou ouvindo…</Text>
-                <Text style={{ marginTop: 3, fontSize: 13, color: th(INK.soft) }}>Pode falar. Eu paro quando você parar.</Text>
-              </Animated.View>
-            ) : reading ? (
-              <Animated.View entering={FadeIn.duration(220)}>
-                <Text style={{ fontSize: 18, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>Pensando…</Text>
-              </Animated.View>
-            ) : entry.message ? (
-              <Animated.View entering={FadeIn.duration(220)}>
-                <Text numberOfLines={4} style={{ fontSize: 14, lineHeight: 19, color: th("#F9CE4E") }}>{entry.message}</Text>
-              </Animated.View>
-            ) : (
-              <GreetingLine
-                name={firstName(profile?.display_name)}
-                readings={readings}
-                onPick={(line) => router.push(paramsForLine(line))}
-                onLine={onLine}
-                align="left"
-                room={column}
-                titleSize={17.5}
-              />
-            )}
-          </View>
-          {/* At the foot, always whole: how to talk to him, or the way out of listening. */}
-          <View style={{ marginTop: 8, height: 28, justifyContent: "center" }}>
-            {listening ? (
-              <Pressable
-                onPress={() => void entry.cancel()}
-                hitSlop={10}
-                style={({ pressed }) => ({ alignSelf: "flex-start", height: 28, paddingHorizontal: 12, borderRadius: 14, justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.10)", "bg"), opacity: pressed ? 0.6 : 1 })}
-              >
-                <Text style={{ fontSize: 12.5, fontWeight: "600", color: th("rgba(255,255,255,0.85)") }}>Cancelar</Text>
-              </Pressable>
-            ) : !reading ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                <Mic size={12} color={th(INK.softer)} strokeWidth={2.2} />
-                <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.softer) }}>Segure o Willo para falar</Text>
-              </View>
-            ) : null}
-          </View>
-        </View>
-
-        <VoiceEntrySheet entry={entry} />
-      </View>
-    );
-  }
-
   return (
-    <View style={{ alignItems: "center", paddingTop: lines ? 14 : 4 }}>
+    <View style={{ height: ORB_HERO_BODY, flexDirection: "row", alignItems: "center", gap: 14 }}>
+      <Stand size={STAND_ORB} listening={listening}>
+        <ParticleOrb size={STAND_ORB} mode={mode} expanded={listening} loudness={entry.loudness} onPress={tap} onHold={hold} onHoldEnd={holdEnd} />
+      </Stand>
 
-      {/* What he has to say, or, while listening, that he is. With no robot, this is what is touched. */}
-      <Pressable
-        disabled={!lines}
-        onPress={() => {
-          if (held.current) return;
-          if (entry.state === "idle") tapLines();
-          else void entry.toggle();
-        }}
-        onLongPress={() => {
-          held.current = true;
-          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
-          hold();
-        }}
-        onPressOut={() => {
-          if (!held.current) return;
-          held.current = false;
-          holdEnd();
-        }}
-        delayLongPress={320}
-        style={{ height: CAPTION, marginTop: lines ? 0 : 6, alignSelf: "stretch", alignItems: "center", justifyContent: lines ? "center" : "flex-start", overflow: "hidden" }}
-      >
-        {listening ? (
-          /* Swollen, the sphere reaches further down: the words keep clear of it. */
-          <Animated.View entering={FadeIn.duration(220)} style={{ alignItems: "center", marginTop: lines ? 0 : orb * 0.09 }}>
-            <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>Estou ouvindo…</Text>
-            <Text style={{ marginTop: 3, fontSize: 13.5, color: th(INK.soft), textAlign: "center" }}>Pode falar. Eu paro quando você parar.</Text>
-          </Animated.View>
-        ) : reading ? (
-          <Animated.View entering={FadeIn.duration(220)} style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>Pensando…</Text>
-          </Animated.View>
-        ) : entry.message ? (
-          <Animated.View entering={FadeIn.duration(220)} style={{ paddingHorizontal: 12 }}>
-            <Text numberOfLines={3} style={{ fontSize: 14.5, lineHeight: 20, color: th("#F9CE4E"), textAlign: "center" }}>{entry.message}</Text>
-          </Animated.View>
-        ) : (
-          <View pointerEvents={lines ? "none" : "auto"} style={{ alignSelf: "stretch" }}>
+      {/* Beside him: who is speaking, what he says, and how to talk to him. */}
+      <View style={{ flex: 1, minWidth: 0, height: STAND_H, paddingTop: 4 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: themeTh(listening ? "#FF6B6B" : GREEN, "bg") }} />
+          <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 2.2, color: th(INK.softer) }}>WILLO · {status.toUpperCase()}</Text>
+        </View>
+        {/* What he says takes whatever height the status line and the hint leave. */}
+        <View style={{ marginTop: 8, flex: 1, overflow: "hidden" }} onLayout={(e) => setBox(e.nativeEvent.layout.height)}>
+          {listening ? (
+            <Animated.View entering={FadeIn.duration(220)}>
+              <Text style={{ fontSize: 18, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>Estou ouvindo…</Text>
+              <Text style={{ marginTop: 3, fontSize: 13, color: th(INK.soft) }}>Pode falar. Eu paro quando você parar.</Text>
+            </Animated.View>
+          ) : reading ? (
+            <Animated.View entering={FadeIn.duration(220)}>
+              <Text style={{ fontSize: 18, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>Pensando…</Text>
+            </Animated.View>
+          ) : entry.message ? (
+            <Animated.View entering={FadeIn.duration(220)}>
+              <Text numberOfLines={4} style={{ fontSize: 14, lineHeight: 19, color: th("#F9CE4E") }}>{entry.message}</Text>
+            </Animated.View>
+          ) : (
             <GreetingLine
               name={firstName(profile?.display_name)}
               readings={readings}
               onPick={(line) => router.push(paramsForLine(line))}
               onLine={onLine}
+              align="left"
+              room={column}
+              titleSize={17.5}
+              maxHeight={box || undefined}
             />
-          </View>
-        )}
-      </Pressable>
-
-      {/* The foot: how to talk to him, or the way out of listening. */}
-      <View style={{ marginTop: 4, height: FOOT, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 }}>
-        {listening ? (
-          <Pressable onPress={() => void entry.cancel()} hitSlop={10} style={({ pressed }) => ({ paddingVertical: 4, paddingHorizontal: 14, opacity: pressed ? 0.6 : 1 })}>
-            <Text style={{ fontSize: 14, fontWeight: "600", color: th("rgba(255,255,255,0.7)") }}>Cancelar</Text>
-          </Pressable>
-        ) : !reading ? (
-          <>
-            <Mic size={12} color={th(INK.softer)} strokeWidth={2.2} />
-            <Text style={{ fontSize: 12.5, color: th(INK.softer) }}>{lines ? "Segure para falar · Dois toques para um gasto rápido" : "Segure para falar"}</Text>
-          </>
-        ) : null}
+          )}
+        </View>
+        {/* At the foot, always whole: how to talk to him, or the way out of listening. */}
+        <View style={{ marginTop: 8, height: 28, justifyContent: "center" }}>
+          {listening ? (
+            <Pressable
+              onPress={() => void entry.cancel()}
+              hitSlop={10}
+              style={({ pressed }) => ({ alignSelf: "flex-start", height: 28, paddingHorizontal: 12, borderRadius: 14, justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.10)", "bg"), opacity: pressed ? 0.6 : 1 })}
+            >
+              <Text style={{ fontSize: 12.5, fontWeight: "600", color: th("rgba(255,255,255,0.85)") }}>Cancelar</Text>
+            </Pressable>
+          ) : !reading ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <Mic size={12} color={th(INK.softer)} strokeWidth={2.2} />
+              <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.softer) }}>Segure o Willo para falar</Text>
+            </View>
+          ) : null}
+        </View>
       </View>
 
       <VoiceEntrySheet entry={entry} />

@@ -18,8 +18,7 @@ import { useCardsOverview, invoiceDueDate } from "@/hooks/useCardsOverview";
 import Room from "~/components/Room";
 import ScrollEdge from "~/components/ScrollEdge";
 import HomeHeader from "~/components/home/HomeHeader";
-import OrbHero, { LINES_HERO_BODY, ORB_HERO_BODY, WilloGlow } from "~/components/home/OrbHero";
-import { useHomeHero } from "~/lib/homeHero";
+import OrbHero, { ORB_HERO_BODY, WilloGlow } from "~/components/home/OrbHero";
 import WidgetBoard from "~/components/home/WidgetBoard";
 import EditBar from "~/components/home/EditBar";
 import { renderHomeWidget, widgetIsEmpty } from "~/components/home/HomeWidgets";
@@ -35,7 +34,6 @@ import { useLightSkyModel, usePhotoLook, useSkyModel, useSkyPhoto } from "~/lib/
 import { isLight } from "~/theme/theme";
 import { countUnread, generateNotifications } from "@/services/notificationService";
 /** How far the page travels before the block on top has gone. */
-const LINES_TRAVEL = 190;
 /** The robot is taller, so he takes longer to go. */
 const ORB_TRAVEL = 160;
 
@@ -101,7 +99,6 @@ export default function Home() {
   const name = profile?.display_name || user?.email?.split("@")[0] || "";
   const firstName = name.trim().split(" ")[0] ?? "";
 
-  const [hero] = useHomeHero();
 
   /* On a photo of one's own, the words outside the cards follow its veil — black on a
      light one, white on a dark one. */
@@ -112,8 +109,7 @@ export default function Home() {
   const onPhoto = !!skyPhoto && (isLight() ? lightSkyModel : skyModel) === "custom";
   /* The words on the photo follow its veil: always dark in the dark theme, either in the light. */
   const groundMode = onPhoto ? (isLight() ? photoLook.tone : "dark") : null;
-  const orbHero = hero === "orb";
-  const travel = orbHero ? ORB_TRAVEL : LINES_TRAVEL;
+  const travel = ORB_TRAVEL;
 
   /* ── How far into the recession we are, and everything that reads off it ── */
   const scrollY = useSharedValue(0);
@@ -217,7 +213,7 @@ export default function Home() {
   /* Where the readings sit, and therefore where the first card starts. */
   /* Under the header, so neither the sphere nor the readings touch its icons. */
   const pinnedTop = insets.top + 72;
-  const pinnedHeight = pinnedTop + (orbHero ? ORB_HERO_BODY : LINES_HERO_BODY);
+  const pinnedHeight = pinnedTop + ORB_HERO_BODY;
 
   return (
     <Room lit sky home>
@@ -226,7 +222,7 @@ export default function Home() {
           board, so the top stands down for it. */}
       {!editing && (
         <Animated.View pointerEvents="none" style={[{ position: "absolute", top: 0, left: 0, right: 0 }, glowStyle]}>
-          <WilloGlow height={pinnedHeight + 160} cx={orbHero ? "24%" : "50%"} />
+          <WilloGlow height={pinnedHeight + 160} cx="24%" />
         </Animated.View>
       )}
 
@@ -272,7 +268,7 @@ export default function Home() {
           pointerEvents={collapsed ? "none" : "box-none"}
           style={[{ position: "absolute", left: 0, right: 0, top: pinnedTop - 8, paddingHorizontal: 16 }, orbStyle]}
         >
-          <OrbHero slides={slides} lines={!orbHero} />
+          <OrbHero slides={slides} />
         </Animated.View>
       )}
 

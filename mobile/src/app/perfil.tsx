@@ -12,9 +12,8 @@ import BackButton from "~/components/BackButton";
 import ConfirmGlass from "~/components/ConfirmGlass";
 import Surface, { Hairline } from "~/components/Surface";
 import LegalSheet from "~/components/auth/LegalSheet";
-import { Bell, Bot, Camera, Check, ChevronRight, Crown, FileText, GalleryHorizontal, ImagePlus, LifeBuoy, LogOut, Pencil, Shield, Zap } from "~/components/icons";
+import { Bell, Camera, Check, ChevronRight, Crown, FileText, ImagePlus, LifeBuoy, LogOut, Pencil, Shield, Zap } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
-import { useHomeHero, type HomeHero } from "~/lib/homeHero";
 import { setSkyPhoto, useLightSkyModel, useSkyModel, useSkyPhoto, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
 import { PhotoError, pickAvatar, pickBackground } from "~/lib/profilePhotos";
 import { BACKDROPS, BACKDROP_KEYS, LIGHT_BACKDROPS, LIGHT_BACKDROP_KEYS } from "~/lib/backdrops";
@@ -40,11 +39,6 @@ import { GROUND } from "~/theme/tokens";
 
 const PAD = 16;
 
-const HEROES: { key: HomeHero; label: string; line: string; Icon: typeof Bot }[] = [
-  { key: "orb", label: "Robô", line: "O Willo fala com você", Icon: Bot },
-  { key: "stories", label: "Slides", line: "Leituras em sequência", Icon: GalleryHorizontal },
-];
-
 const LIGHT_BACKGROUNDS: { key: LightSkyModel; label: string }[] = [
   ...LIGHT_BACKDROP_KEYS.map((key) => ({ key, label: LIGHT_BACKDROPS[key].label })),
   { key: "custom", label: "Sua foto" },
@@ -66,7 +60,6 @@ export default function Perfil() {
   const { width: screenW, height: screenH } = useWindowDimensions();
   const { user, signOut } = useAuth();
   const { profile, refetch, updateDisplayName } = useProfile();
-  const [hero, setHero] = useHomeHero();
   const [sky, setSky] = useSkyModel();
   const [lightSky, setLightSky] = useLightSkyModel();
   const [theme] = useThemePref();
@@ -288,42 +281,6 @@ export default function Perfil() {
                   <Text style={{ fontSize: 15, fontWeight: on ? "600" : "500", color: th(on ? "#fff" : INK.soft) }}>{label}</Text>
                   <Tick on={on} />
                 </View>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* The top of the home. */}
-        <Eyebrow>Tela inicial</Eyebrow>
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          {HEROES.map(({ key, label, line, Icon }) => {
-            const on = hero === key;
-            return (
-              <Pressable
-                key={key}
-                onPress={() => {
-                  tick();
-                  setHero(key);
-                }}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: on }}
-                style={({ pressed }) => ({
-                  flex: 1,
-                  padding: 14,
-                  borderRadius: 22,
-                  borderCurve: "continuous",
-                  borderWidth: 1.5,
-                  borderColor: th(on ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.08)", "line"),
-                  backgroundColor: th(on ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.045)", "bg"),
-                  opacity: pressed ? 0.85 : 1,
-                })}
-              >
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <Icon size={22} color={th("#fff")} strokeWidth={1.8} />
-                  <Tick on={on} />
-                </View>
-                <Text style={{ marginTop: 18, fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>{label}</Text>
-                <Text style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>{line}</Text>
               </Pressable>
             );
           })}

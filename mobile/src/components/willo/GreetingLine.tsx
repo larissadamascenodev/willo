@@ -96,6 +96,7 @@ export default function GreetingLine({
   align = "center",
   room: roomProp,
   titleSize = TITLE,
+  maxHeight,
 }: {
   name: string | null;
   /** What he has noticed in the numbers, mixed in. */
@@ -109,6 +110,8 @@ export default function GreetingLine({
   /** The width the words have, when it is not the screen's. */
   room?: number;
   titleSize?: number;
+  /** Beside the sphere: the height there is. What does not fit is set smaller, never cut. */
+  maxHeight?: number;
 }) {
   const th = useGroundTh();
   /* Chosen once, when the name is known, so the hello does not change under the reader's
@@ -155,6 +158,9 @@ export default function GreetingLine({
      time for the next. */
   const [current, setCurrent] = useState<Greeting | null>(null);
   const [at, setAt] = useState(0);
+  /* How many steps smaller the line on show had to be set to fit; each new line starts over. */
+  const [shrink, setShrink] = useState(0);
+  useEffect(() => setShrink(0), [at]);
   const latest = useRef(lines);
   latest.current = lines;
   const out = useSharedValue(1);
@@ -200,6 +206,13 @@ export default function GreetingLine({
 
   if (!current) return null;
   const line = current;
+  /* The guess below is only a start: the line is measured once drawn, and while it
+     overflows the room it has, the line under it goes first, then the title gets smaller,
+     a step at a time. A word is never cut off. */
+  const onMeasured = (h: number) => {
+    if (align !== "left" || !maxHeight) return;
+    if (h > maxHeight + 0.5 && shrink < 10) setShrink((n) => n + 1);
+  };
   /* Bold at this size runs about half its size a letter; the sub line, a little less. */
   const left = align === "left";
   const room = roomProp ?? width - 44;
@@ -221,7 +234,11 @@ export default function GreetingLine({
     const subFits =
       !!line.sub &&
       line.sub.length * 1.1 <= subLines * Math.floor(room / (13 * 0.52));
-    return { size, subLines, subFits };
+    return {
+      size: Math.max(12.5, size - Math.max(0, shrink - 1)),
+      subLines,
+      subFits: subFits && shrink === 0,
+    };
   })();
   const title = layOut(
     line.title,
@@ -234,6 +251,7 @@ export default function GreetingLine({
     <Animated.View key={at} style={[{ alignSelf: "stretch" }, fading]}>
       <Pressable
         onPress={() => onPick?.(line)}
+        onLayout={(e) => onMeasured(e.nativeEvent.layout.height)}
         accessibilityRole={onPick ? "button" : undefined}
         style={{
           alignItems: left ? "flex-start" : "center",
@@ -284,7 +302,7 @@ export default function GreetingLine({
         {(!left || fit.subFits) && (
           <Rising delay={line.title.split(" ").length * WORD_MS + 120}>
             <Text
-              numberOfLines={left ? fit.subLines : undefined}
+              numberOfLines={undefined}
               style={{
                 marginTop: 4,
                 fontSize: left ? 13 : sub.size,
