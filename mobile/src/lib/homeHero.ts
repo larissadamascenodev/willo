@@ -2,9 +2,8 @@ import { useSyncExternalStore } from "react";
 import { onHydrated } from "~/lib/shims";
 
 /**
- * Which the top of the home is: the robot saying his lines, the same lines centred
- * with no robot, or the panel — a raised sheet with the balance, the accounts, the
- * cards and the caixinhas, one face at a time (on trial).
+ * Which of the two the top of the home is: the robot saying his lines, or the same
+ * lines centred with no robot.
  *
  * The choice is kept on the phone, in the same synchronous store the shared code
  * uses. That store is filled from disk only after this module has been imported, so
@@ -12,15 +11,14 @@ import { onHydrated } from "~/lib/shims";
  * the home opens on the one that was chosen, every time, until it is changed.
  */
 
-export type HomeHero = "orb" | "stories" | "panel";
+export type HomeHero = "orb" | "stories";
 
 const KEY = "home-hero";
 const listeners = new Set<() => void>();
 
 const read = (): HomeHero => {
   try {
-    const v = localStorage.getItem(KEY);
-    return v === "stories" || v === "panel" ? v : "orb";
+    return localStorage.getItem(KEY) === "stories" ? "stories" : "orb";
   } catch {
     return "orb";
   }

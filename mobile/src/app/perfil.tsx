@@ -12,7 +12,7 @@ import BackButton from "~/components/BackButton";
 import ConfirmGlass from "~/components/ConfirmGlass";
 import Surface, { Hairline } from "~/components/Surface";
 import LegalSheet from "~/components/auth/LegalSheet";
-import { Bell, Bot, Camera, Check, ChevronRight, Crown, FileText, GalleryHorizontal, ImagePlus, LifeBuoy, LogOut, Pencil, Shield, Wallet } from "~/components/icons";
+import { Bell, Bot, Camera, Check, ChevronRight, Crown, FileText, GalleryHorizontal, ImagePlus, LifeBuoy, LogOut, Pencil, Shield } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
 import { useHomeHero, type HomeHero } from "~/lib/homeHero";
 import { setSkyPhoto, useLightSkyModel, useSkyModel, useSkyPhoto, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
@@ -43,7 +43,6 @@ const PAD = 16;
 const HEROES: { key: HomeHero; label: string; line: string; Icon: typeof Bot }[] = [
   { key: "orb", label: "Robô", line: "O Willo fala com você", Icon: Bot },
   { key: "stories", label: "Slides", line: "Leituras em sequência", Icon: GalleryHorizontal },
-  { key: "panel", label: "Painel", line: "Saldo, contas e cartões", Icon: Wallet },
 ];
 
 const LIGHT_BACKGROUNDS: { key: LightSkyModel; label: string }[] = [
@@ -324,7 +323,7 @@ export default function Perfil() {
                   <Tick on={on} />
                 </View>
                 <Text style={{ marginTop: 18, fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>{label}</Text>
-                <Text numberOfLines={2} style={{ marginTop: 2, fontSize: 12, color: th(INK.soft) }}>{line}</Text>
+                <Text style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>{line}</Text>
               </Pressable>
             );
           })}
