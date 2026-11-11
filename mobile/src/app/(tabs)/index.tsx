@@ -20,7 +20,7 @@ import ScrollEdge from "~/components/ScrollEdge";
 import HomeHeader from "~/components/home/HomeHeader";
 import OrbHero, { LINES_HERO_BODY, ORB_HERO_BODY, WilloGlow } from "~/components/home/OrbHero";
 import { useHomeHero } from "~/lib/homeHero";
-import PanelHero, { PANEL_BODY } from "~/components/home/PanelHero";
+import PanelHero, { PANEL_BODY, PANEL_COVERS } from "~/components/home/PanelHero";
 import WidgetBoard from "~/components/home/WidgetBoard";
 import ShortcutPair from "~/components/home/ShortcutPair";
 import EditBar from "~/components/home/EditBar";
@@ -202,7 +202,11 @@ export default function Home() {
     [data, month, assinaturas, totalAssinaturas, ended, keepEnded, cancelEnded],
   );
 
-  const skipWidget = useCallback((id: string) => widgetIsEmpty(id, widgetContext), [widgetContext]);
+  /* What the panel already shows is not said twice below it. */
+  const skipWidget = useCallback(
+    (id: string) => (hero === "panel" && PANEL_COVERS.has(id)) || widgetIsEmpty(id, widgetContext),
+    [widgetContext, hero],
+  );
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -251,11 +255,12 @@ export default function Home() {
         {/* Holds the room of the block on top, so the first card starts below it. */}
         {panelHero && !editing ? (
           <>
-            {/* The panel is part of the page, held in place, so the cards pass over it and it still answers to the finger. */}
+            {/* The panel is the page's own top: its sheet leaves with the page and closes over what it holds. */}
             <PanelHero
               top={pinnedTop}
               scrollY={scrollY}
               hidden={hidden}
+              refreshing={refreshing}
               saldoPrevisto={data.saldoPrevisto}
               receitas={data.receitas}
               despesas={data.despesas}
