@@ -14,15 +14,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Glass from "~/components/Glass";
 import ParticleOrb from "~/components/registro/ParticleOrb";
-import { ArrowLeftRight, House } from "~/components/icons";
+import { ArrowLeftRight, House, Plus } from "~/components/icons";
 
 import { th } from "~/theme/theme";
 /**
  * The row at the foot of the screen.
  *
- * Three pieces of glass, side by side: Início at one end, Transações at the other,
- * and between them the way to Willo — a long pill with the sphere, small, in a disc
- * at its left, and an invitation. The sphere is the same one that turns on the home
+ * Início and Transações side by side at the left, then the way to Willo — a long
+ * pill with the sphere, small, in a disc at its left, and an invitation — and at the
+ * right a plus, which opens Adicionar manualmente straight away in its sheet. The sphere is the same one that turns on the home
  * and listens in Willo's own screen, only small.
  *
  * Each piece is the system's liquid glass where the phone has it (see Glass), a blur
@@ -35,7 +35,9 @@ import { th } from "~/theme/theme";
  */
 
 const SIZE = 52;
-const GAP = 9;
+const GAP = 8;
+/** The two places sit closer to each other than to the rest: they are one group. */
+const PAIR_GAP = 5;
 
 /* Only the two things the bar actually reads. Typed here rather than imported,
    because the navigator ships inside expo-router and its package is not a dependency
@@ -63,7 +65,10 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
       style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingBottom: insets.bottom + 14 }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: GAP }}>
-        <NavCircle label="Início" icon={House} on={active === "index"} onPress={() => open("index")} />
+        <View style={{ flexDirection: "row", gap: PAIR_GAP }}>
+          <NavCircle label="Início" icon={House} on={active === "index"} onPress={() => open("index")} />
+          <NavCircle label="Transações" icon={ArrowLeftRight} on={active === "transacoes"} onPress={() => open("transacoes")} />
+        </View>
 
         {/* Willo. */}
         <Pressable
@@ -75,7 +80,7 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
           accessibilityLabel="Converse com o Willo"
           style={({ pressed }) => ({ flex: 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}
         >
-          <Glass radius={SIZE / 2} interactive style={{ height: SIZE, flexDirection: "row", alignItems: "center", paddingLeft: 7, paddingRight: 12, gap: 9 }}>
+          <Glass radius={SIZE / 2} interactive style={{ height: SIZE, flexDirection: "row", alignItems: "center", paddingLeft: 7, paddingRight: 10, gap: 8 }}>
             <View
               style={{
                 width: 38,
@@ -95,7 +100,33 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
           </Glass>
         </Pressable>
 
-        <NavCircle label="Transações" icon={ArrowLeftRight} on={active === "transacoes"} onPress={() => open("transacoes")} />
+        {/* A new entry, typed by hand. */}
+        <Pressable
+          onPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+            router.push("/manual" as never);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Adicionar manualmente"
+          style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.92 : 1 }] })}
+        >
+          <View
+            style={{
+              width: SIZE,
+              height: SIZE,
+              borderRadius: SIZE / 2,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: th("#fff", "bg"),
+              shadowColor: "#000",
+              shadowOpacity: 0.22,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: 5 },
+            }}
+          >
+            <Plus size={26} color={th("#0B0B0B")} strokeWidth={2.6} />
+          </View>
+        </Pressable>
       </View>
     </View>
   );
