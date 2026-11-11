@@ -281,6 +281,7 @@ function Door() {
         <Stack.Screen name="notificacoes-ajustes" />
         <Stack.Screen name="desafios" />
         <Stack.Screen name="conquistas" />
+        <Stack.Screen name="jornada" />
         <Stack.Screen name="radar" />
         <Stack.Screen name="desafio/[id]" />
         {/* Comes up from the foot of the screen, but as a screen rather than a card:

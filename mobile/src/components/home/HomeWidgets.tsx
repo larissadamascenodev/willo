@@ -6,6 +6,7 @@ import type { EndedSubscription } from "~/lib/subscriptionCheck";
 import { upcoming } from "~/lib/events";
 import { FEATURES } from "~/lib/features";
 import SaldoContasCard from "~/components/home/SaldoContasCard";
+import JornadaCard from "~/components/home/JornadaCard";
 import FluxoCard from "~/components/home/FluxoCard";
 import PlanoCard from "~/components/home/PlanoCard";
 import ProximosEventos from "~/components/home/ProximosEventos";
@@ -16,7 +17,7 @@ import GastosPorCategoria from "~/components/home/GastosPorCategoria";
 import TransacoesRecentes from "~/components/home/TransacoesRecentes";
 import { AssinaturasTile, MetasTile, ParcelamentosTile } from "~/components/home/Tiles";
 import { CategoriasCompact, EventosCompact, FluxoCompact } from "~/components/home/CompactCards";
-import { ConquistasWidget, RadarWidget } from "~/components/home/ShortcutPair";
+import { RadarWidget } from "~/components/home/ShortcutPair";
 import CopilotCard from "~/components/home/CopilotCard";
 
 /**
@@ -127,8 +128,8 @@ export function renderHomeWidget(
     case "radar":
       return <RadarWidget size={size} />;
 
-    case "conquistas":
-      return <ConquistasWidget size={size} />;
+    case "jornada":
+      return <JornadaCard size={size} />;
 
     case "recentes":
       return <TransacoesRecentes transactions={ctx.transactions} />;

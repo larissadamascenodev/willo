@@ -62,8 +62,28 @@ function radarPairInPlace(userId: string | undefined, slots: WidgetSlot[]): Widg
   }
 }
 
+const journeyed = (userId?: string) => `willo.home.widgets.phone-jornada-v1.${userId ?? "anon"}`;
+
+/**
+ * Conquistas became Sua jornada. Once, the journey takes the top of the board, right
+ * under Saldo em contas, full width; after that it moves like any other card.
+ */
+function journeyInPlace(userId: string | undefined, slots: WidgetSlot[]): WidgetSlot[] {
+  try {
+    if (localStorage.getItem(journeyed(userId))) return slots;
+    localStorage.setItem(journeyed(userId), "1");
+    const rest = slots.filter((s) => s.id !== "jornada" && s.id !== "conquistas");
+    const where = rest.findIndex((s) => s.id === "saldo") + 1;
+    const next = [...rest.slice(0, where), { id: "jornada", size: "full" as const }, ...rest.slice(where)];
+    saveLayout(userId, next);
+    return next;
+  } catch {
+    return slots;
+  }
+}
+
 export function loadPhoneLayout(userId?: string): WidgetSlot[] {
-  const slots = radarPairInPlace(userId, categoriesUnderFlows(userId, widened(userId)));
+  const slots = journeyInPlace(userId, radarPairInPlace(userId, categoriesUnderFlows(userId, widened(userId))));
   /* Never the same card twice. */
   const seen = new Set<string>();
   const once = slots.filter((s) => (seen.has(s.id) ? false : (seen.add(s.id), true)));

@@ -4,8 +4,10 @@ import { WIDGETS, type WidgetDef } from "@/lib/homeWidgets";
  * The phone's own list of home cards.
  *
  * The shared list is the web's; the phone draws a few differently. Here:
- * - the Radar and Conquistas are cards like the rest, each half a row, so they can be
- *   moved, taken off and put back;
+ * - the Radar is a card like the rest, half a row, so it can be moved, taken off and
+ *   put back;
+ * - Sua jornada holds what Conquistas was (points, medals, the sequence) with the
+ *   stage and the mini-metas;
  * - "Saúde do mês" is not offered — the Radar answers the same question;
  * - Receitas e despesas, Gastos por categoria, Próximos eventos and the caixinhas each
  *   have a small version, half a row, as a dial or a single figure.
@@ -14,7 +16,7 @@ import { WIDGETS, type WidgetDef } from "@/lib/homeWidgets";
 const PHONE_ONLY: WidgetDef[] = [
   { id: "copilot", label: "Willo Copilot", description: "Compras captadas dos bancos, esperando sua confirmação", resizable: true, defaultSize: "half" },
   { id: "radar", label: "Radar financeiro", description: "As seis áreas do mês num radar", resizable: true, defaultSize: "half" },
-  { id: "conquistas", label: "Conquistas", description: "Sua sequência de dias e as medalhas", resizable: true, defaultSize: "half" },
+  { id: "jornada", label: "Sua jornada", description: "Sua etapa, as mini-metas, os pontos e as medalhas", resizable: true, defaultSize: "full" },
 ];
 
 const DROPPED = new Set(["raiox"]);
