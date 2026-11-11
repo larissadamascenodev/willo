@@ -64,24 +64,46 @@ interface Props {
   onCarrying?: (carrying: boolean) => void;
   /** Bumped by Cancelar: the board goes back to how it was when editing began. */
   revert?: number;
+  /** Bumped by Preencher: compact cards are paired up, so no row is left half empty. */
+  fill?: number;
   /** A row of its own that follows one card wherever it is; at the top if those are off. */
   pinned?: { after: string | string[]; node: ReactNode };
 }
 
 type Rect = { x: number; y: number; w: number; h: number };
 
-export default function WidgetBoard({ userId, render, skip, gap = 16, editing, onEditingChange, onCarrying, revert = 0, pinned }: Props) {
+export default function WidgetBoard({ userId, render, skip, gap = 16, editing, onEditingChange, onCarrying, revert = 0, fill = 0, pinned }: Props) {
   const [slots, setSlots] = useState<WidgetSlot[]>(() => loadPhoneLayout(userId));
   const [adding, setAdding] = useState(false);
   /* A card touched while editing: its menu — hide it, or choose its size. */
   const [menu, setMenu] = useState<WidgetMenuTarget | null>(null);
-  const editingRef = useRef(editing);
-  editingRef.current = editing;
   const board = useRef<ComponentRef<typeof View>>(null);
 
   useEffect(() => {
     setSlots(loadPhoneLayout(userId));
   }, [userId]);
+
+  /* Preencher: each compact card goes beside the first compact one still alone on its row. */
+  const fillSeen = useRef(fill);
+  useEffect(() => {
+    if (fill === fillSeen.current) return;
+    fillSeen.current = fill;
+    setSlots((current) => {
+      const rows: WidgetSlot[][] = [];
+      for (const slot of current) {
+        if (slot.size === "full" || skip?.(slot.id)) {
+          rows.push([slot]);
+          continue;
+        }
+        const open = rows.find((r) => r.length === 1 && r[0].size === "half" && !skip?.(r[0].id));
+        if (open) open.push(slot);
+        else rows.push([slot]);
+      }
+      const next = rows.flat();
+      saveLayout(userId, next);
+      return next;
+    });
+  }, [fill, skip, userId]);
 
   /* How the board was when editing began, for Cancelar to put back. */
   const before = useRef<{ slots: WidgetSlot[]; dismissed: string[] } | null>(null);
@@ -141,7 +163,6 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
       const slot = slots.find((s) => s.id === id);
       const from = frames.current.get(id);
       if (!slot || !from) return;
-      if (!editing) onEditingChange(true);
       onCarrying?.(true);
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
       snapshot.current = {
@@ -157,7 +178,7 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
         setCarried({ id, size: slot.size, from, at: { x: from.x - bx, y: from.y - by, w: from.w, h: from.h } });
       });
     },
-    [slots, editing, onEditingChange, onCarrying],
+    [slots, onCarrying],
   );
 
   /* The seat nearest the finger, among the seats as they were; the one it is in has to
@@ -296,7 +317,6 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
               onCarryTo={carryTo}
               onCarryEnd={endCarry}
               onMenu={(rect) => {
-                if (!editingRef.current) return;
                 const def = phoneWidgetById(slot.id);
                 if (def) setMenu({ id: slot.id, label: def.label, size: slot.size, resizable: def.resizable, rect });
               }}
@@ -351,7 +371,12 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
 
       <WidgetMenu
         target={menu}
+        editing={editing}
         onClose={() => setMenu(null)}
+        onEdit={() => {
+          setMenu(null);
+          onEditingChange(true);
+        }}
         onResize={(size) => {
           if (menu) setSize(menu.id, size);
           setMenu(null);
@@ -476,10 +501,11 @@ function WidgetFrame({
     return () => clearTimeout(t);
   }, [editing, measure]);
 
-  /* Held: picked up, and the board goes into editing. One hold time either way: changing it
-     while a finger is down would cancel the gesture under it. */
+  /* While editing, a short hold picks the card up. Editing only starts or ends from the
+     menu or the bar, never with a finger down, so the gesture is never changed under it. */
   const carry = Gesture.Pan()
-    .activateAfterLongPress(340)
+    .enabled(editing)
+    .activateAfterLongPress(180)
     .onStart(() => {
       tx.set(0);
       ty.set(0);
@@ -504,6 +530,7 @@ function WidgetFrame({
     void measureNow().then((r) => r && onMenu({ top: r.y, bottom: r.y + r.h, left: r.x, width: r.w }));
   };
   const tap = Gesture.Tap()
+    .enabled(editing)
     .maxDuration(300)
     .onEnd((_e, ok) => {
       if (ok) runOnJS(openMenu)();
@@ -535,7 +562,17 @@ function WidgetFrame({
         onLayout={measure}
         style={[{ width: width ?? (half ? "48%" : "100%"), position: "relative", opacity: hidden ? 0 : 1 }, tremble]}
       >
-        <View pointerEvents={editing ? "none" : "auto"}>{children}</View>
+        {/* Outside editing, holding the card opens its menu beside it, as before. */}
+        <Pressable
+          disabled={editing}
+          delayLongPress={380}
+          onLongPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
+            openMenu();
+          }}
+        >
+          <View pointerEvents={editing ? "none" : "auto"}>{children}</View>
+        </Pressable>
 
       </Animated.View>
     </GestureDetector>

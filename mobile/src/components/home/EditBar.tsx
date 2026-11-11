@@ -14,7 +14,19 @@ import { th } from "~/theme/theme";
  * It belongs to the screen rather than to the board: inside a scroller it would
  * scroll away with the cards, and a way out that leaves the screen is not one.
  */
-export default function EditBar({ open, onDone, onCancel }: { open: boolean; onDone: () => void; /** Back to how the board was. */ onCancel?: () => void }) {
+export default function EditBar({
+  open,
+  onDone,
+  onCancel,
+  onFill,
+}: {
+  open: boolean;
+  onDone: () => void;
+  /** Back to how the board was. */
+  onCancel?: () => void;
+  /** Pair the compact cards up, so no row is left half empty. */
+  onFill?: () => void;
+}) {
   const insets = useSafeAreaInsets();
   if (!open) return null;
 
@@ -45,6 +57,12 @@ export default function EditBar({ open, onDone, onCancel }: { open: boolean; onD
       <Text numberOfLines={1} style={{ flex: 1, textAlign: "center", fontSize: 18, fontWeight: "800", letterSpacing: -0.4, color: th("#fff") }}>
         Editar widgets
       </Text>
+
+      {onFill && (
+        <Pressable onPress={onFill} hitSlop={6} style={({ pressed }) => ({ height: 44, justifyContent: "center", paddingHorizontal: 6, opacity: pressed ? 0.6 : 1 })}>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: th(GREEN) }}>Preencher</Text>
+        </Pressable>
+      )}
 
       <Pressable
         onPress={onDone}
