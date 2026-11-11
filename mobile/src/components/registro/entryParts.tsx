@@ -335,13 +335,15 @@ export const REPEAT_NOTE: Record<Repeat, string> = { unica: "Só desta vez", par
 const REPEAT_ICON: Record<Repeat, typeof Banknote> = { unica: Banknote, parcelado: CalendarClock, fixa: RepeatIcon };
 
 /**
- * Once, in instalments or every month: one tile under the other, each with its mark,
- * what it is and what it means; the chosen one lit, with a tick.
+ * Once, in instalments or every month: side by side, each a small tile with its mark
+ * on top and a word under it, the chosen one lit with a tick in its corner.
  */
+export const REPEAT_SHORT: Record<Repeat, string> = { unica: "Só desta vez", parcelado: "Em parcelas", fixa: "Todo mês" };
+
 export function RepeatList({ value, income, onPick }: { value: Repeat | null; income: boolean; onPick: (r: Repeat) => void }) {
   const options: Repeat[] = income ? ["unica", "fixa"] : ["unica", "parcelado", "fixa"];
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ flexDirection: "row", gap: 8 }}>
       {options.map((r) => {
         const on = value === r;
         const Icon = REPEAT_ICON[r];
@@ -353,31 +355,35 @@ export function RepeatList({ value, income, onPick }: { value: Repeat | null; in
               onPick(r);
             }}
             style={({ pressed }) => ({
-              minHeight: 64,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 14,
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-              borderRadius: 20,
+              flex: 1,
+              minWidth: 0,
+              paddingHorizontal: 10,
+              paddingTop: 12,
+              paddingBottom: 12,
+              gap: 8,
+              borderRadius: 18,
               borderCurve: "continuous",
               borderWidth: on ? 1.5 : 1,
               borderColor: th(on ? "#fff" : "rgba(255,255,255,0.12)", "line"),
               backgroundColor: th(pressed ? "rgba(255,255,255,0.12)" : on ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.05)", "bg"),
-              transform: [{ scale: pressed ? 0.98 : 1 }],
+              transform: [{ scale: pressed ? 0.97 : 1 }],
             })}
           >
-            <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th(on ? "#fff" : "rgba(255,255,255,0.08)", "bg") }}>
-              <Icon size={19} color={th(on ? "#0B0B0B" : "#fff")} strokeWidth={2.1} />
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: th(on ? "#fff" : "rgba(255,255,255,0.08)", "bg") }}>
+                <Icon size={16} color={th(on ? "#0B0B0B" : "#fff")} strokeWidth={2.1} />
+              </View>
+              <View style={{ width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", borderWidth: on ? 0 : 1.5, borderColor: th("rgba(255,255,255,0.3)", "line"), backgroundColor: th(on ? "#fff" : "transparent", "bg") }}>
+                {on ? <Check size={12} color={th("#0B0B0B")} strokeWidth={3} /> : null}
+              </View>
             </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ fontSize: 16.5, fontWeight: "700", letterSpacing: -0.2, color: th("#fff") }}>{REPEAT_LABEL[r]}</Text>
-              <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: th(INK.soft) }}>
-                {REPEAT_NOTE[r]}
+            <View>
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ fontSize: 14.5, fontWeight: "700", letterSpacing: -0.2, color: th("#fff") }}>
+                {REPEAT_LABEL[r]}
               </Text>
-            </View>
-            <View style={{ width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", borderWidth: on ? 0 : 1.5, borderColor: th("rgba(255,255,255,0.3)", "line"), backgroundColor: th(on ? "#fff" : "transparent", "bg") }}>
-              {on ? <Check size={14} color={th("#0B0B0B")} strokeWidth={3} /> : null}
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ marginTop: 1, fontSize: 11.5, color: th(INK.soft) }}>
+                {REPEAT_SHORT[r]}
+              </Text>
             </View>
           </Pressable>
         );

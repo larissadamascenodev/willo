@@ -1,5 +1,6 @@
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { showToast } from "~/lib/toast";
+import { behind, showNow, type OptimisticChange } from "~/lib/optimistic";
 import { ActivityIndicator, Platform, Pressable, Text, View, type TextStyle } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
@@ -127,28 +128,24 @@ export default function TransactionSheet({
   const Icon = categoryIcon(tx.category, customCategories);
   const hex = categoryHex(tx.category, customCategories);
 
-  const run = async (fn: () => Promise<unknown>, said?: string) => {
-    setBusy(true);
-    setError(null);
-    try {
-      await fn();
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-      window.dispatchEvent(new CustomEvent("transaction-created"));
-      if (said) showToast(said);
-      onChanged();
-      onClose();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível concluir. Tente de novo.");
-    } finally {
-      setBusy(false);
-    }
+  /* Shown on the list at once and the sheet gone; the database catches up behind. */
+  const now = (change: OptimisticChange, fn: () => Promise<unknown>, said: string, failed: string) => {
+    showNow(change);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+    showToast(said);
+    onClose();
+    void behind(tx.id, fn, () => showToast(failed));
   };
 
-  const markPaid = () => run(() => setOccurrenceStatus(tx as never, "pago"), isReceita ? "Marcada como recebida" : "Marcada como paga");
-  const markPending = () => run(() => setOccurrenceStatus(tx as never, "pendente"), "Voltou para pendente");
+  const markPaid = () =>
+    now({ id: tx.id, row: { ...tx, status: "pago" } }, () => setOccurrenceStatus(tx as never, "pago"), isReceita ? "Marcada como recebida" : "Marcada como paga", "Não foi possível marcar. Tente de novo.");
+  const markPending = () =>
+    now({ id: tx.id, row: { ...tx, status: "pendente" } }, () => setOccurrenceStatus(tx as never, "pendente"), "Voltou para pendente", "Não foi possível mudar. Tente de novo.");
 
-  const removeThisMonth = () => run(() => removeTransaction(tx, "month", { month, year, userId }), `“${tx.name}” excluído`);
-  const removeAll = () => run(() => removeTransaction(tx, "all", { month, year, userId }), `“${tx.name}” excluído`);
+  const removeThisMonth = () =>
+    now({ id: tx.id, removed: true }, () => removeTransaction(tx, "month", { month, year, userId }), `“${tx.name}” excluído`, "Não foi possível excluir. Tente de novo.");
+  const removeAll = () =>
+    now({ id: tx.id, removed: true }, () => removeTransaction(tx, "all", { month, year, userId }), `“${tx.name}” excluído`, "Não foi possível excluir. Tente de novo.");
 
   return (
     <BottomSheet open={!!asked} onClose={onClose}>

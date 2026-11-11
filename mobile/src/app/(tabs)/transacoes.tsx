@@ -12,6 +12,7 @@ import { useFinanceData } from "@/hooks/useFinanceData";
 import Room from "~/components/Room";
 import ConfirmGlass from "~/components/ConfirmGlass";
 import { showToast } from "~/lib/toast";
+import { behind, listenOptimistic, overlay, showNow, type OptimisticChange } from "~/lib/optimistic";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import TransactionRow from "~/components/transactions/TransactionRow";
 import TransactionsSummary, { TransactionTabs } from "~/components/transactions/TransactionsSummary";
@@ -127,20 +128,19 @@ export default function Transacoes() {
     }
   };
 
-  const removeHeld = async (scope: "month" | "all") => {
-    if (!held || removing) return;
-    setRemoving(true);
+  /* Gone from the list at once; the database catches up behind. */
+  const removeHeld = (scope: "month" | "all") => {
+    if (!held) return;
+    const tx = held;
     setHoldError(null);
-    try {
-      await removeTransaction(held, scope, { month, year, userId: user?.id });
-      window.dispatchEvent(new CustomEvent("transaction-created"));
-      setHeld(null);
-      void load();
-    } catch {
-      setHoldError("Não foi possível excluir. Tente de novo.");
-    } finally {
-      setRemoving(false);
-    }
+    setHeld(null);
+    showNow({ id: tx.id, removed: true });
+    showToast(`“${tx.name}” excluído`);
+    void behind(
+      tx.id,
+      () => removeTransaction(tx, scope, { month, year, userId: user?.id }),
+      () => showToast("Não foi possível excluir. Tente de novo."),
+    );
   };
 
   const { data: finance } = useFinanceData(month, year);
@@ -179,6 +179,28 @@ export default function Transacoes() {
     };
   }, [load]);
 
+  /* Changes already shown, while the database is still writing them. */
+  const [changes, setChanges] = useState<Map<string, OptimisticChange>>(new Map());
+  useEffect(
+    () =>
+      listenOptimistic(
+        (c) => setChanges((prev) => new Map(prev).set(c.id, c)),
+        (id) => {
+          window.dispatchEvent(new CustomEvent("transaction-created"));
+          void load().then(() =>
+            setChanges((prev) => {
+              const next = new Map(prev);
+              next.delete(id);
+              return next;
+            }),
+          );
+        },
+      ),
+    [load],
+  );
+  const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
+  const shownRows = useMemo(() => overlay(transactions, changes, (d) => d.startsWith(monthPrefix)), [transactions, changes, monthPrefix]);
+
   const accountName = useMemo(() => {
     const map: Record<string, string> = {};
     for (const a of accounts) map[a.id] = a.name;
@@ -187,12 +209,12 @@ export default function Transacoes() {
 
   const filtered = useMemo(
     () =>
-      transactions.filter((tx) => {
+      shownRows.filter((tx) => {
         if (tab !== "todos" && tx.type !== tab) return false;
         if (search && !tx.name.toLowerCase().includes(search.toLowerCase())) return false;
         return true;
       }),
-    [transactions, tab, search],
+    [shownRows, tab, search],
   );
 
   /* Grouped by day, newest first, each day carrying what it did to the balance — and

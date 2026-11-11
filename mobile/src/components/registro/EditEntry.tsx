@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
-import Animated, { FadeIn } from "react-native-reanimated";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { getAccounts, getCreditCards, getTransactionById, updateTransaction } from "@/services/transactionService";
 import { editInSeries } from "@/services/seriesActions";
 import CategoryPicker from "~/components/CategoryPicker";
 import EntryForm, { isoOf, type EntryValues, type Repeat } from "~/components/registro/EntryForm";
-import { Chip, Primary, type Account, type Card } from "~/components/registro/entryParts";
+import { Primary, type Account, type Card } from "~/components/registro/entryParts";
+import { Repeat as RepeatIcon } from "~/components/icons";
 import { showToast } from "~/lib/toast";
+import { behind, showNow } from "~/lib/optimistic";
 import { useAuth } from "~/lib/auth";
-import { INK, RED } from "~/theme/tokens";
+import { AMBER, RED } from "~/theme/tokens";
 
 import { th } from "~/theme/theme";
 /**
@@ -139,11 +141,16 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
             }),
       };
 
-      if (recurring && scope) await editInSeries(tx.id, scope, fields, { month, year, userId: user.id });
-      else await updateTransaction(tx.id, fields);
-      window.dispatchEvent(new CustomEvent("transaction-created"));
+      /* The list shows the change at once; the database catches up behind. */
+      const userId = user.id;
+      showNow({ id: tx.id, row: { ...tx, ...fields, id: tx.id, date: fields.date } });
       showToast("Lançamento atualizado");
       onDone();
+      void behind(
+        tx.id,
+        () => (recurring && scope ? editInSeries(tx.id, scope, fields, { month, year, userId }) : updateTransaction(tx.id, fields as never)),
+        () => showToast("Não consegui salvar agora. Tente de novo."),
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não consegui salvar agora. Tente de novo.");
     } finally {
@@ -173,16 +180,32 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
 
         {/* A recurring one: where the change goes */}
         {asking ? (
-          <Animated.View entering={FadeIn.duration(200)} style={{ marginTop: 16 }}>
-            <Text style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>Aplicar a mudança em:</Text>
-            <Text style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>
-              {parcel ? `É a parcela ${tx.installment_current ?? 1} de ${tx.installments}.` : "Ele se repete todo mês."}
-            </Text>
-            <View style={{ marginTop: 12, flexDirection: "row", gap: 8 }}>
-              <Chip label={parcel ? "Só esta parcela" : "Só este mês"} on={false} onPress={() => void save("month")} />
-              <Chip label={parcel ? "Esta e as próximas" : "Este e os próximos"} on={false} onPress={() => void save("all")} />
+          <Animated.View entering={FadeInDown.duration(220)} style={{ marginTop: 18, gap: 10 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "flex-start",
+                gap: 10,
+                borderRadius: 18,
+                borderWidth: 1,
+                borderColor: th("rgba(249,206,78,0.24)", "line"),
+                backgroundColor: th("rgba(249,206,78,0.08)", "bg"),
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+              }}
+            >
+              <RepeatIcon size={16} color={th(AMBER)} />
+              <Text style={{ flex: 1, fontSize: 13, lineHeight: 18, color: th("rgba(255,255,255,0.82)") }}>
+                {parcel
+                  ? `É a parcela ${tx.installment_current ?? 1} de ${tx.installments}. Quer mudar só esta ou esta e as próximas?`
+                  : "Essa transação se repete todo mês. Quer mudar só deste mês ou dela em diante?"}
+              </Text>
             </View>
-            {saving && <ActivityIndicator style={{ marginTop: 12 }} color={th("#fff")} />}
+            <AskButton label={parcel ? "Só esta parcela" : "Só deste mês"} onPress={() => void save("month")} disabled={saving} />
+            <AskButton label={parcel ? "Esta e as próximas" : "Deste mês em diante"} strong onPress={() => void save("all")} disabled={saving} loading={saving} />
+            <Pressable onPress={() => setAsking(false)} disabled={saving} style={{ height: 44, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ fontSize: 14, color: th("rgba(255,255,255,0.7)") }}>Cancelar</Text>
+            </Pressable>
           </Animated.View>
         ) : (
           <Primary label={saving ? "Salvando…" : "Salvar alterações"} busy={saving} disabled={saving || v.cents <= 0 || !v.name.trim() || !v.whereId || (v.repeat === "parcelado" && !v.parts)} onPress={() => void save()} />
@@ -200,5 +223,31 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
         onClose={() => setPicking(false)}
       />
     </>
+  );
+}
+
+/** One answer to "where does the change go", full width so its words are never cut. */
+function AskButton({ label, strong, onPress, disabled, loading }: { label: string; strong?: boolean; onPress: () => void; disabled?: boolean; loading?: boolean }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => ({
+        height: 50,
+        borderRadius: 999,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: strong ? 0 : 1,
+        borderColor: th("rgba(255,255,255,0.08)", "line"),
+        backgroundColor: strong ? th("#fff", "bg") : th("rgba(255,255,255,0.04)", "bg"),
+        opacity: disabled && !loading ? 0.5 : pressed ? 0.8 : 1,
+      })}
+    >
+      {loading ? (
+        <ActivityIndicator color={th(strong ? "#0B0B0B" : "#fff")} />
+      ) : (
+        <Text style={{ fontSize: 14.5, fontWeight: strong ? "700" : "600", color: th(strong ? "#0B0B0B" : "#fff") }}>{label}</Text>
+      )}
+    </Pressable>
   );
 }
