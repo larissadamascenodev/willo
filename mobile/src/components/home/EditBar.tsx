@@ -54,9 +54,8 @@ export default function EditBar({
         <Text style={{ fontSize: 16, fontWeight: "600", color: th("rgba(255,255,255,0.75)") }}>Cancelar</Text>
       </Pressable>
 
-      <Text numberOfLines={1} style={{ flex: 1, textAlign: "center", fontSize: 18, fontWeight: "800", letterSpacing: -0.4, color: th("#fff") }}>
-        Editar widgets
-      </Text>
+      {/* The middle is left empty: with three buttons on the bar a title only fitted as its first letter. */}
+      <View style={{ flex: 1 }} />
 
       {onFill && (
         <Pressable onPress={onFill} hitSlop={6} style={({ pressed }) => ({ height: 44, justifyContent: "center", paddingHorizontal: 6, opacity: pressed ? 0.6 : 1 })}>
