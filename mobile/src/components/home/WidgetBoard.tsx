@@ -549,7 +549,8 @@ function WidgetFrame({
         }}
         style={[{ width: width ?? (half ? "48%" : "100%"), height: half ? COMPACT_H : undefined, position: "relative", opacity: hidden ? 0 : 1 }, tremble]}
       >
-        <View pointerEvents={editing ? "none" : "auto"} style={half ? { flex: 1 } : undefined}>
+        {/* A compact card keeps to its own space: while it changes size its content never spills onto the next. */}
+        <View pointerEvents={editing ? "none" : "auto"} style={half ? { flex: 1, overflow: "hidden", borderRadius: 22 } : undefined}>
           {children}
         </View>
 

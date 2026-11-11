@@ -7,6 +7,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import type { CategoryExpense, FinanceEvent } from "@/types/finance";
 import { categoryHex } from "@/lib/categoryData";
 import Surface from "~/components/Surface";
+import SpendRing from "~/components/analytics/SpendRing";
 import { ChevronRight } from "~/components/icons";
 import { dateOf, daysFrom, dueLabel, isIncome, isOverdue, monthShort, upcoming } from "~/lib/events";
 import { money } from "~/lib/money";
@@ -104,7 +105,7 @@ export function FluxoCompact({ receitas, despesas }: { receitas: number; despesa
   return (
     <Surface onPress={() => router.push("/fluxo-de-caixa" as never)} style={{ height: HEIGHT, padding: 14 }}>
       <View style={{ flex: 1, justifyContent: "space-between" }}>
-        <Head label="Receitas e despesas" />
+        <Head label="Fluxo do mês" />
 
         {/* Each figure with its own bar right under it, on one scale. */}
         <View style={{ gap: 10 }}>
@@ -171,23 +172,19 @@ export function CategoriasCompact({ categories }: { categories: CategoryExpense[
   const router = useRouter();
   const sorted = useMemo(() => [...categories].filter((c) => c.amount > 0).sort((a, b) => b.amount - a.amount), [categories]);
   const total = sorted.reduce((s, c) => s + c.amount, 0);
-  /* The five largest each get their colour; the rest share one grey stretch. */
-  const parts = useMemo(() => {
-    if (total <= 0) return [];
-    const top = sorted.slice(0, 5).map((c) => ({ share: c.amount / total, color: th(categoryHex(c.name), "bg") }));
-    const rest = sorted.slice(5).reduce((s, c) => s + c.amount, 0);
-    return rest > 0 ? [...top, { share: rest / total, color: th("rgba(255,255,255,0.28)", "bg") }] : top;
-  }, [sorted, total]);
+
   return (
     <Surface onPress={() => router.push("/analytics/categorias" as never)} style={{ height: HEIGHT, paddingHorizontal: 14, paddingVertical: 12 }}>
-      <Head label="Gastos por categoria" />
+      <Head label="Categorias" />
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        {/* Only the total in the middle: the ring says the rest. */}
-        <Ring size={146} stroke={16} parts={parts}>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { maxWidth: 100, fontSize: 20, fontWeight: "800", letterSpacing: -0.6, color: th("#fff") }]}>
-            {short(total)}
-          </Text>
-        </Ring>
+        {/* The categories page's own ring, smaller: the same arcs, colours and gaps. */}
+        <SpendRing
+          size={146}
+          stroke={14}
+          labelSize={19}
+          total={total}
+          segments={sorted.map((c) => ({ key: c.name, hex: categoryHex(c.name), amount: c.amount }))}
+        />
       </View>
     </Surface>
   );

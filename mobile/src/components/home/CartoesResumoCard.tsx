@@ -84,7 +84,7 @@ export default function CartoesResumoCard({ size = "full" }: { size?: "half" | "
       <Surface onPress={() => router.push("/cartoes")} style={{ flex: 1, padding: 14 }}>
         <View style={{ flex: 1, justifyContent: "space-between" }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-            <Text numberOfLines={1} style={[T.cardLabel, { flex: 1, fontSize: 13 }]}>Cartões de crédito</Text>
+            <Text numberOfLines={1} style={[T.cardLabel, { flex: 1, fontSize: 13 }]}>Cartões</Text>
             <ChevronRight size={14} color={th(INK.faint)} />
           </View>
 

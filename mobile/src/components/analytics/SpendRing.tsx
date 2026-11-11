@@ -17,10 +17,9 @@ import { th } from "~/theme/theme";
  * ring always reads as a whole month rather than a month with a piece missing.
  */
 
+/* The categories page's own size; the home's compact card draws the same ring smaller. */
 const SIZE = 248;
 const STROKE = 22;
-const R = (SIZE - STROKE) / 2;
-const C = 2 * Math.PI * R;
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -36,13 +35,19 @@ function Arc({
   offset,
   round,
   delay,
+  size,
+  stroke,
 }: {
   hex: string;
   dash: number;
   offset: number;
   round: boolean;
   delay: number;
+  size: number;
+  stroke: number;
 }) {
+  const R = (size - stroke) / 2;
+  const C = 2 * Math.PI * R;
   const drawn = useSharedValue(0);
 
   useEffect(() => {
@@ -56,12 +61,12 @@ function Arc({
 
   return (
     <AnimatedCircle
-      cx={SIZE / 2}
-      cy={SIZE / 2}
+      cx={size / 2}
+      cy={size / 2}
       r={R}
       fill="none"
       stroke={hex}
-      strokeWidth={STROKE}
+      strokeWidth={stroke}
       strokeLinecap={round ? "round" : "butt"}
       strokeDashoffset={-offset}
       animatedProps={animated}
@@ -73,13 +78,23 @@ export default function SpendRing({
   segments,
   total,
   caption,
+  size = SIZE,
+  stroke = STROKE,
+  labelSize = 30,
 }: {
   segments: RingSegment[];
   total: number;
-  caption: string;
+  /** Under the figure; left out on the home's small card. */
+  caption?: string;
+  size?: number;
+  stroke?: number;
+  labelSize?: number;
 }) {
+  const R = (size - stroke) / 2;
+  const C = 2 * Math.PI * R;
   const many = segments.length > 1;
-  const gap = many ? STROKE + 10 : 0;
+  /* The gap between arcs keeps its proportion to the ring at any size. */
+  const gap = many ? stroke + 10 * (size / SIZE) : 0;
 
   let running = 0;
   const arcs = segments.map((seg) => {
@@ -97,17 +112,17 @@ export default function SpendRing({
       : total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return (
-    <View style={{ width: SIZE, height: SIZE, alignSelf: "center" }}>
-      <Svg width={SIZE} height={SIZE}>
-        <G rotation={-90} origin={`${SIZE / 2}, ${SIZE / 2}`}>
+    <View style={{ width: size, height: size, alignSelf: "center" }}>
+      <Svg width={size} height={size}>
+        <G rotation={-90} origin={`${size / 2}, ${size / 2}`}>
           {segments.length === 0 && (
             <Circle
-              cx={SIZE / 2}
-              cy={SIZE / 2}
+              cx={size / 2}
+              cy={size / 2}
               r={R}
               fill="none"
               stroke={th("rgba(255,255,255,0.08)")}
-              strokeWidth={STROKE}
+              strokeWidth={stroke}
             />
           )}
           {arcs.map(({ seg, start, dash }, i) => (
@@ -118,6 +133,8 @@ export default function SpendRing({
               offset={start * fit + gap / 2}
               round={many}
               delay={i * 0.06}
+              size={size}
+              stroke={stroke}
             />
           ))}
         </G>
@@ -134,10 +151,10 @@ export default function SpendRing({
           justifyContent: "center",
         }}
       >
-        <Text numberOfLines={1} style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1, color: th("#fff") }}>
+        <Text numberOfLines={1} style={{ fontSize: labelSize, fontWeight: "800", letterSpacing: -labelSize / 30, color: th("#fff") }}>
           {label}
         </Text>
-        <Text style={{ marginTop: 2, fontSize: 14, color: th(INK.soft) }}>{caption}</Text>
+        {caption ? <Text style={{ marginTop: 2, fontSize: 14, color: th(INK.soft) }}>{caption}</Text> : null}
       </View>
     </View>
   );
