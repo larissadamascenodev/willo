@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ActivityIndicator, Image, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Image, Linking, View, useWindowDimensions } from "react-native";
 import { Stack } from "expo-router";
+import * as ExpoLinking from "expo-linking";
 import Animated, { Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
 import Svg, { ClipPath, Defs, Image as SvgImage, Path, Rect } from "react-native-svg";
@@ -39,8 +40,30 @@ installShims();
 /* Once per launch: coming back to the app from the background does not replay it. */
 let introPlayed = false;
 
+/* Opened from a shortcut or a link straight into a screen (the double tap on the back
+   of the phone opens willo://rapido): the home sits under it, ready to go back to. */
+export const unstable_settings = { initialRouteName: "(tabs)" };
+
 export default function RootLayout() {
   const [intro, setIntro] = useState(!introPlayed);
+
+  /* Opened by a link into a screen — Registro rápido from the back of the phone — the
+     opening is skipped: whoever taps twice wants to note something, now. */
+  useEffect(() => {
+    if (introPlayed) return;
+    void Linking.getInitialURL()
+      .then((url) => {
+        if (!url) return;
+        /* The screen the link names, whatever the scheme (willo://, or Expo Go's exp://…/--/). */
+        const path = ExpoLinking.parse(url).path ?? "";
+        if (path.replace(/^\/+|\/+$/g, "") !== "") {
+          introPlayed = true;
+          markIntroDone();
+          setIntro(false);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   return (
     <View style={{ flex: 1, backgroundColor: th(GROUND, "bg") }}>
