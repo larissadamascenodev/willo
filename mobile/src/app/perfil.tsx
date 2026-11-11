@@ -12,7 +12,7 @@ import BackButton from "~/components/BackButton";
 import ConfirmGlass from "~/components/ConfirmGlass";
 import Surface, { Hairline } from "~/components/Surface";
 import LegalSheet from "~/components/auth/LegalSheet";
-import { Bell, Bot, Camera, Check, ChevronRight, Crown, FileText, GalleryHorizontal, ImagePlus, LifeBuoy, LogOut, Pencil, Shield } from "~/components/icons";
+import { Bell, Bot, Camera, Check, ChevronRight, Crown, FileText, GalleryHorizontal, ImagePlus, LifeBuoy, LogOut, Pencil, Shield, Zap } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
 import { useHomeHero, type HomeHero } from "~/lib/homeHero";
 import { setSkyPhoto, useLightSkyModel, useSkyModel, useSkyPhoto, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
@@ -408,6 +408,17 @@ export default function Perfil() {
             onPress={() => {
               tick();
               router.push("/notificacoes-ajustes" as never);
+            }}
+            chevron
+          />
+          <Hairline style={{ marginLeft: 64 }} />
+          <Row
+            icon={<Zap size={17} color={th("#fff")} strokeWidth={1.9} />}
+            label="Atalhos do iPhone"
+            value="Toque duplo nas costas e compras da Carteira"
+            onPress={() => {
+              tick();
+              router.push("/atalhos" as never);
             }}
             chevron
           />

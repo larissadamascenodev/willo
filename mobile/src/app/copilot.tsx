@@ -125,6 +125,9 @@ export default function CopilotScreen() {
         <Text style={{ marginTop: 12, fontSize: 13.5, lineHeight: 19, color: th(INK.soft) }}>
           O que o Willo captou dos avisos dos seus bancos. Nada entra nas suas transações antes de você confirmar.
         </Text>
+        <Pressable onPress={() => router.push("/atalhos" as never)} hitSlop={6} style={({ pressed }) => ({ marginTop: 8, opacity: pressed ? 0.6 : 1 })}>
+          <Text style={{ fontSize: 13.5, fontWeight: "700", color: th("#67CD67") }}>Configurar compras da Carteira ›</Text>
+        </Pressable>
 
         <View style={{ marginTop: 18, gap: 10 }}>
           {list.map((item, i) => (
