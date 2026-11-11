@@ -14,6 +14,9 @@ import Anthropic from "npm:@anthropic-ai/sdk";
  *
  * The list is the phone's (mobile/src/lib/taxonomy.ts), copied here; when one changes the
  * other has to.
+ *
+ * Claude answers first. Without its key, or when it fails, Gemini answers the same
+ * question (the key that reads receipts), so the suggestion never just goes missing.
  */
 
 const corsHeaders = {
@@ -51,6 +54,108 @@ Escolha para cada um a categoria mais específica da lista do tipo dele. Use o q
 Um Pix ou transferência para uma pessoa sem outra pista é "Transferências para terceiros - PIX". Pagamento de fatura de cartão é "Pagamento de cartão de crédito".
 Se o nome não der nenhuma pista, use "Outros" para despesa e "Outras receitas" para receita. Nunca invente uma categoria fora da lista.`;
 
+const GEMINI_MODELS = ["gemini-3.5-flash-lite", "gemini-3.6-flash"];
+
+type Item = { i: number; name: string; amount: number; type: "despesa" | "receita" };
+
+const userText = (items: Item[]) => items.map((it) => `${it.i}. [${it.type}] ${it.name} — R$ ${it.amount.toFixed(2)}`).join("\n");
+const listsText = () => `# Categorias de despesa
+${listFor("despesa")}
+
+# Categorias de receita
+${listFor("receita")}`;
+
+async function withClaude(items: Item[], allNames: string[]): Promise<Map<number, string>> {
+  const anthropic = new Anthropic();
+  const response = await anthropic.messages.create({
+    model: "claude-haiku-5-5",
+    max_tokens: 4000,
+    system: [
+      { type: "text", text: SYSTEM },
+      { type: "text", text: listsText(), cache_control: { type: "ephemeral" } },
+    ],
+    tools: [
+      {
+        name: "categorizar",
+        description: "Registra a categoria escolhida para cada lançamento, pelo índice i.",
+        input_schema: {
+          type: "object",
+          properties: {
+            resultados: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: { i: { type: "integer" }, categoria: { type: "string", enum: allNames } },
+                required: ["i", "categoria"],
+              },
+            },
+          },
+          required: ["resultados"],
+        },
+      },
+    ],
+    tool_choice: { type: "tool", name: "categorizar" },
+    messages: [{ role: "user", content: userText(items) }],
+  });
+  const call = response.content.find((b) => b.type === "tool_use");
+  const picked = new Map<number, string>();
+  for (const r of ((call as any)?.input?.resultados ?? []) as { i: number; categoria: string }[]) {
+    picked.set(Number(r.i), String(r.categoria));
+  }
+  return picked;
+}
+
+async function withGemini(items: Item[], allNames: string[]): Promise<Map<number, string>> {
+  const apiKey = Deno.env.get("GEMINI_API_KEY");
+  if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
+  let lastError: unknown = null;
+  for (const model of GEMINI_MODELS) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 20_000);
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: `${SYSTEM}\n\n${listsText()}` }] },
+          contents: [{ role: "user", parts: [{ text: userText(items) }] }],
+          generationConfig: {
+            temperature: 0.1,
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                resultados: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: { i: { type: "INTEGER" }, categoria: { type: "STRING", enum: allNames } },
+                    required: ["i", "categoria"],
+                  },
+                },
+              },
+              required: ["resultados"],
+            },
+          },
+        }),
+      }).finally(() => clearTimeout(timer));
+      if (!res.ok) throw new Error(`gemini ${model} ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      const data = await res.json();
+      const text = (data.candidates?.[0]?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? "").join("");
+      const parsed = JSON.parse(text);
+      const picked = new Map<number, string>();
+      for (const r of (parsed?.resultados ?? []) as { i: number; categoria: string }[]) {
+        picked.set(Number(r.i), String(r.categoria));
+      }
+      return picked;
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError ?? new Error("gemini failed");
+}
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
@@ -58,7 +163,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    if (!Deno.env.get("ANTHROPIC_API_KEY")) return json({ error: "not_configured" }, 500);
+    if (!Deno.env.get("ANTHROPIC_API_KEY") && !Deno.env.get("GEMINI_API_KEY")) return json({ error: "not_configured" }, 500);
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "Unauthorized" }, 401);
@@ -81,51 +186,13 @@ serve(async (req) => {
     if (items.length === 0) return json({ results: [] });
 
     const allNames = [...new Set([...namesFor("despesa"), ...namesFor("receita")])];
-    const anthropic = new Anthropic();
-    const response = await anthropic.messages.create({
-      model: "claude-haiku-5-5",
-      max_tokens: 4000,
-      system: [
-        { type: "text", text: SYSTEM },
-        { type: "text", text: `# Categorias de despesa
-${listFor("despesa")}
-
-# Categorias de receita
-${listFor("receita")}`, cache_control: { type: "ephemeral" } },
-      ],
-      tools: [
-        {
-          name: "categorizar",
-          description: "Registra a categoria escolhida para cada lançamento, pelo índice i.",
-          input_schema: {
-            type: "object",
-            properties: {
-              resultados: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: { i: { type: "integer" }, categoria: { type: "string", enum: allNames } },
-                  required: ["i", "categoria"],
-                },
-              },
-            },
-            required: ["resultados"],
-          },
-        },
-      ],
-      tool_choice: { type: "tool", name: "categorizar" },
-      messages: [
-        {
-          role: "user",
-          content: items.map((it: any) => `${it.i}. [${it.type}] ${it.name} — R$ ${it.amount.toFixed(2)}`).join("\n"),
-        },
-      ],
-    });
-
-    const call = response.content.find((b) => b.type === "tool_use");
-    const picked = new Map<number, string>();
-    for (const r of ((call as any)?.input?.resultados ?? []) as { i: number; categoria: string }[]) {
-      picked.set(Number(r.i), String(r.categoria));
+    let picked: Map<number, string>;
+    try {
+      if (!Deno.env.get("ANTHROPIC_API_KEY")) throw new Error("no anthropic key");
+      picked = await withClaude(items, allNames);
+    } catch (e) {
+      console.warn("categorize-transaction: claude failed, using gemini", e instanceof Error ? e.message : e);
+      picked = await withGemini(items, allNames);
     }
 
     /* Only a name of the entry's own kind is kept; anything else falls back. */
