@@ -17,6 +17,7 @@ import TransacoesRecentes from "~/components/home/TransacoesRecentes";
 import { AssinaturasTile, MetasTile, ParcelamentosTile } from "~/components/home/Tiles";
 import { CategoriasCompact, EventosCompact, FluxoCompact } from "~/components/home/CompactCards";
 import { ConquistasWidget, RadarWidget } from "~/components/home/ShortcutPair";
+import CopilotCard from "~/components/home/CopilotCard";
 
 /**
  * Which card a widget id draws.
@@ -119,6 +120,9 @@ export function renderHomeWidget(
     case "categorias":
       if (size === "half") return <CategoriasCompact categories={ctx.categories} />;
       return <GastosPorCategoria categories={ctx.categories} month={ctx.month} />;
+
+    case "copilot":
+      return <CopilotCard size={size} />;
 
     case "radar":
       return <RadarWidget />;

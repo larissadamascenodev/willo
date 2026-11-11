@@ -12,6 +12,7 @@ import { WIDGETS, type WidgetDef } from "@/lib/homeWidgets";
  */
 
 const PHONE_ONLY: WidgetDef[] = [
+  { id: "copilot", label: "Willo Copilot", description: "Compras captadas dos bancos, esperando sua confirmação", resizable: true, defaultSize: "half" },
   { id: "radar", label: "Radar financeiro", description: "As seis áreas do mês num radar", resizable: false, defaultSize: "half" },
   { id: "conquistas", label: "Conquistas", description: "Sua sequência de dias e as medalhas", resizable: false, defaultSize: "half" },
 ];
