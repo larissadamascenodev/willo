@@ -31,6 +31,8 @@ const POINT = [1880, 2240] as const; // the point lands, green
 const OUT = [2620, 3080] as const; // the logo grows a hair as the screen fades onto the app
 export const LAUNCH_INTRO_MS = OUT[1] + 20;
 const QUICK = [700, 1050] as const;
+/** A breath on the plain ground before anything moves, once the app is built underneath. */
+const START_AFTER = 520;
 
 /* eslint-disable @typescript-eslint/no-require-imports -- the artwork, bundled */
 const CARDS = [
@@ -103,15 +105,26 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
 
   useEffect(() => {
     const end = reduced ? QUICK[1] : LAUNCH_INTRO_MS;
-    t.set(withTiming(end, { duration: end, easing: Easing.linear }));
-    const tap = (style: Haptics.ImpactFeedbackStyle) => () => void Haptics.impactAsync(style).catch(() => undefined);
-    const timers = reduced
-      ? []
-      : [setTimeout(tap(Haptics.ImpactFeedbackStyle.Soft), RISE[0] + RISE_EACH * 0.6), setTimeout(tap(Haptics.ImpactFeedbackStyle.Medium), POINT[0] + 60)];
-    const done = setTimeout(onDone, end + 30);
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let cancelled = false;
+    /* The clock starts only once the screen is free: while the phone's own launch screen
+       fades and the app is built underneath, frames are dropped, and a card caught
+       mid-rise stood still and then jumped. Until then the screen is the plain ground. */
+    const start = () => {
+      if (cancelled) return;
+      t.set(withTiming(end, { duration: end, easing: Easing.linear }));
+      const tap = (style: Haptics.ImpactFeedbackStyle) => () => void Haptics.impactAsync(style).catch(() => undefined);
+      if (!reduced) {
+        timers.push(setTimeout(tap(Haptics.ImpactFeedbackStyle.Soft), RISE[0] + RISE_EACH * 0.6));
+        timers.push(setTimeout(tap(Haptics.ImpactFeedbackStyle.Medium), POINT[0] + 60));
+      }
+      timers.push(setTimeout(onDone, end + 30));
+    };
+    /* Two frames drawn (the app's first paint has happened), then a breath. */
+    requestAnimationFrame(() => requestAnimationFrame(() => timers.push(setTimeout(start, START_AFTER))));
     return () => {
+      cancelled = true;
       timers.forEach(clearTimeout);
-      clearTimeout(done);
     };
     // Once, on open.
     // eslint-disable-next-line react-hooks/exhaustive-deps
