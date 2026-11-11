@@ -221,6 +221,20 @@ export default function Fatura() {
     }
   };
 
+  /* Something written elsewhere — a photo read onto this card, a statement imported —
+     shows here the moment this page is back in front. */
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
+  useEffect(() => {
+    const on = () => refreshRef.current();
+    window.addEventListener("finance-data-changed", on);
+    window.addEventListener("transaction-created", on);
+    return () => {
+      window.removeEventListener("finance-data-changed", on);
+      window.removeEventListener("transaction-created", on);
+    };
+  }, []);
+
   /* Where the bill stands, as a mark with its own colour and glyph: paid is green and
      ticked, overdue is red, closed is locked and waiting for its due day, open is still
      collecting purchases. */
