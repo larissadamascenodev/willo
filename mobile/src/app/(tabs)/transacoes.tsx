@@ -10,6 +10,7 @@ import MonthStrip from "~/components/MonthStrip";
 import type { CustomCategory } from "@/services/categoryService";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import Room from "~/components/Room";
+import SwipeHome from "~/components/SwipeHome";
 import ConfirmGlass from "~/components/ConfirmGlass";
 import { showToast } from "~/lib/toast";
 import { behind, listenOptimistic, overlay, showNow, type OptimisticChange } from "~/lib/optimistic";
@@ -60,6 +61,7 @@ export default function Transacoes() {
   const router = useRouter();
   const { user } = useAuth();
   const { report } = useNavChrome();
+  const goHome = useCallback(() => router.navigate("/" as never), [router]);
   const today = useMemo(() => new Date(), []);
 
   /* The month is the app's, not this screen's: chosen here, it is the month the
@@ -231,6 +233,8 @@ export default function Transacoes() {
 
   return (
     <Room>
+      {/* Pulled from the left edge, back to the start. */}
+      <SwipeHome from="left" onLeave={goHome}>
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top + 12,
@@ -361,6 +365,7 @@ export default function Transacoes() {
           </View>
         )}
       </ScrollView>
+      </SwipeHome>
 
       {/* Holding a row is the short way round: both answers act at once. */}
       <AnchoredMenu open={!!held} anchor={heldRect} onClose={() => setHeld(null)}>

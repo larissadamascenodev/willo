@@ -11,6 +11,7 @@ import { allowedCategories, categoriseAnswer, readEntry, todayISO } from "@/serv
 import { applyDefaults, answer as answerDraft, nextQuestion, statusFor } from "@/lib/quickEntry/resolve";
 import type { QuickDraft, QuickQuestion, QuickSetup } from "@/lib/quickEntry/types";
 import Room from "~/components/Room";
+import SwipeHome from "~/components/SwipeHome";
 import Glass from "~/components/Glass";
 import Notinha, { type NotinhaLine } from "~/components/registro/Notinha";
 import Confirmado from "~/components/registro/Confirmado";
@@ -334,6 +335,10 @@ export default function Registro() {
   const close = useCallback(() => {
     void entry.cancel();
     router.back();
+  }, [router, entry]);
+  const goHome = useCallback(() => {
+    void entry.cancel();
+    router.navigate("/" as never);
   }, [router, entry]);
 
   /* ---- writing ---- */
@@ -862,6 +867,8 @@ export default function Registro() {
 
   return (
     <Room lit sky>
+      {/* Pulled from the right edge, back to the start. */}
+      <SwipeHome from="right" onLeave={goHome}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         {/* ── The way out, which Willo you are looking at, and the conversations ── */}
         <View
@@ -1207,6 +1214,7 @@ export default function Registro() {
         {/* Over the field while he listens, as the phone's own assistant comes up. */}
         {view === "chat" && !stage && (listening || reading) && <ListeningDock reading={reading} bottom={insets.bottom} loudness={entry.loudness} onStop={() => void entry.toggle()} />}
       </KeyboardAvoidingView>
+      </SwipeHome>
 
       {/* What was heard, for a look before it is written. */}
       <VoiceEntrySheet
