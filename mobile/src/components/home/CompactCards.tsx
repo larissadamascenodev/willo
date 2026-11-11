@@ -1,7 +1,7 @@
 import { useEffect, useMemo, type ReactNode } from "react";
 import { Platform, Text, View, type TextStyle } from "react-native";
 import { useRouter } from "expo-router";
-import Animated, { Easing, ReduceMotion, useAnimatedProps, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
+import Animated, { Easing, ReduceMotion, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import Svg, { Circle } from "react-native-svg";
 import type { CategoryExpense, FinanceEvent } from "@/types/finance";
 import { categoryHex } from "@/lib/categoryData";
@@ -92,41 +92,65 @@ function Head({ label }: { label: string }) {
   );
 }
 
-/** Receitas e despesas, small: one ring shared between what came in and what went out. */
+/**
+ * Receitas e despesas, small: what came in and what went out, each large, then the two as
+ * thick bars on one scale, and the month's balance at the foot.
+ */
 export function FluxoCompact({ receitas, despesas }: { receitas: number; despesas: number }) {
   const router = useRouter();
-  const total = receitas + despesas;
   const flow = receitas - despesas;
-  const parts = total > 0 ? [{ share: receitas / total, color: th(GREEN, "bg") }, { share: despesas / total, color: th(RED, "bg") }] : [];
+  const scale = Math.max(receitas, despesas, 1);
   return (
-    <Surface onPress={() => router.push("/fluxo-de-caixa" as never)} style={{ height: HEIGHT, paddingHorizontal: 14, paddingVertical: 12 }}>
-      <Head label="Receitas e despesas" />
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <Ring size={128} stroke={14} parts={parts}>
-          <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Fluxo</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { maxWidth: 92, fontSize: 18, fontWeight: "800", letterSpacing: -0.5, color: th(flow < 0 ? RED : "#fff") }]}>
+    <Surface onPress={() => router.push("/fluxo-de-caixa" as never)} style={{ height: HEIGHT, padding: 14 }}>
+      <View style={{ flex: 1, justifyContent: "space-between" }}>
+        <Head label="Receitas e despesas" />
+
+        <View style={{ gap: 8 }}>
+          <Figure label="Entrou" value={short(receitas)} color={GREEN} />
+          <Figure label="Saiu" value={short(despesas)} color={RED} />
+        </View>
+
+        <View style={{ gap: 5 }}>
+          <Meter share={receitas / scale} color={GREEN} delay={0} />
+          <Meter share={despesas / scale} color={RED} delay={90} />
+        </View>
+
+        <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 6 }}>
+          <Text style={{ fontSize: 12, color: th(INK.soft) }}>Fluxo</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[nums, { flexShrink: 1, fontSize: 15, fontWeight: "800", color: th(flow < 0 ? RED : "#fff") }]}>
             {short(flow)}
           </Text>
-        </Ring>
-      </View>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 6 }}>
-        <Legend color={GREEN} label="Entrou" value={short(receitas)} />
-        <Legend color={RED} label="Saiu" value={short(despesas)} right />
+        </View>
       </View>
     </Surface>
   );
 }
 
-function Legend({ color, label, value, right }: { color: string; label: string; value: string; right?: boolean }) {
+function Figure({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <View style={{ flexShrink: 1, alignItems: right ? "flex-end" : "flex-start" }}>
+    <View>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
         <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: th(color, "bg") }} />
         <Text style={{ fontSize: 12, color: th(INK.soft) }}>{label}</Text>
       </View>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[nums, { marginTop: 1, fontSize: 14.5, fontWeight: "800", letterSpacing: -0.2, color: th("#fff") }]}>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { marginTop: 1, fontSize: 20, fontWeight: "800", letterSpacing: -0.6, color: th(color === RED ? RED : "#fff") }]}>
+        {color === RED ? "−" : ""}
         {value}
       </Text>
+    </View>
+  );
+}
+
+/** A thick bar that grows into its share when the card arrives. */
+function Meter({ share, color, delay }: { share: number; color: string; delay: number }) {
+  const grow = useSharedValue(0);
+  useEffect(() => {
+    grow.set(withDelay(delay, withTiming(Math.max(0, Math.min(share, 1)), { duration: 650, easing: Easing.out(Easing.cubic), reduceMotion: ReduceMotion.System })));
+  }, [grow, share, delay]);
+  const fill = useAnimatedStyle(() => ({ width: `${grow.get() * 100}%` }));
+  return (
+    <View style={{ height: 9, borderRadius: 999, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
+      <Animated.View style={[{ height: "100%", borderRadius: 999, backgroundColor: th(color, "bg") }, fill]} />
     </View>
   );
 }
@@ -143,27 +167,17 @@ export function CategoriasCompact({ categories }: { categories: CategoryExpense[
     const rest = sorted.slice(5).reduce((s, c) => s + c.amount, 0);
     return rest > 0 ? [...top, { share: rest / total, color: th("rgba(255,255,255,0.28)", "bg") }] : top;
   }, [sorted, total]);
-  const lead = sorted[0];
   return (
     <Surface onPress={() => router.push("/analytics/categorias" as never)} style={{ height: HEIGHT, paddingHorizontal: 14, paddingVertical: 12 }}>
       <Head label="Por categoria" />
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <Ring size={128} stroke={14} parts={parts}>
+        <Ring size={146} stroke={15} parts={parts}>
           <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Gastos</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { maxWidth: 92, fontSize: 18, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }]}>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { maxWidth: 104, fontSize: 19, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }]}>
             {short(total)}
           </Text>
         </Ring>
       </View>
-      <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.soft) }}>
-        {lead ? (
-          <>
-            Mais em <Text style={{ fontWeight: "700", color: th("#fff") }}>{lead.name}</Text>
-          </>
-        ) : (
-          "Nenhum gasto ainda"
-        )}
-      </Text>
     </Surface>
   );
 }
