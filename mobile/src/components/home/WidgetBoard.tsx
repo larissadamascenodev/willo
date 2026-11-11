@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type ComponentRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type ComponentRef } from "react";
 import { Pressable, Text, View } from "react-native";
 import Animated, {
   Easing,
@@ -23,7 +23,7 @@ import { loadPhoneLayout } from "~/lib/phoneLayout";
 import { PHONE_WIDGETS, phoneWidgetById } from "~/lib/phoneWidgets";
 import { dismissedIds, saveLayout, setDismissed, type WidgetSize, type WidgetSlot } from "@/lib/homeWidgets";
 import BottomSheet from "~/components/BottomSheet";
-import { Minus, Plus } from "~/components/icons";
+import { Plus } from "~/components/icons";
 import WidgetMenu, { type WidgetMenuTarget } from "~/components/home/WidgetMenu";
 import { INK } from "~/theme/tokens";
 
@@ -71,11 +71,12 @@ interface Props {
 type Rect = { x: number; y: number; w: number; h: number };
 
 export default function WidgetBoard({ userId, render, skip, gap = 16, editing, onEditingChange, onCarrying, revert = 0, pinned }: Props) {
-  const followIds = pinned ? (Array.isArray(pinned.after) ? pinned.after : [pinned.after]) : [];
   const [slots, setSlots] = useState<WidgetSlot[]>(() => loadPhoneLayout(userId));
   const [adding, setAdding] = useState(false);
   /* A card touched while editing: its menu — hide it, or choose its size. */
   const [menu, setMenu] = useState<WidgetMenuTarget | null>(null);
+  const editingRef = useRef(editing);
+  editingRef.current = editing;
   const board = useRef<ComponentRef<typeof View>>(null);
 
   useEffect(() => {
@@ -223,6 +224,12 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
   }, [userId, onCarrying, tx, ty, lift]);
   const carriedRef = useRef(carried);
   carriedRef.current = carried;
+  /* Leaving editing puts down anything still being carried. */
+  useEffect(() => {
+    if (editing || !carriedRef.current) return;
+    active.set(0);
+    endCarry();
+  }, [editing, active, endCarry]);
   /* Should the gesture's end never arrive, the card is put down rather than left floating. */
   useEffect(() => {
     if (!carried) return;
@@ -248,30 +255,14 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
     commit([...slots, { id, size: def.defaultSize }]);
   };
 
-  /* Consecutive halves share a row; a full takes one of its own. */
-  const rows = useMemo(() => {
-    const out: WidgetSlot[][] = [];
-    let row: WidgetSlot[] = [];
-    for (const slot of slots) {
-      if (skip?.(slot.id)) continue;
-      if (slot.size === "full") {
-        if (row.length) {
-          out.push(row);
-          row = [];
-        }
-        out.push([slot]);
-        continue;
-      }
-      row.push(slot);
-      if (row.length === 2) {
-        out.push(row);
-        row = [];
-      }
-    }
-    if (row.length) out.push(row);
-    return out;
-  }, [slots, skip]);
-  const followed = followIds.find((id) => rows.some((row) => row.some((s) => s.id === id)));
+  /* One flow of cards, wrapping: a compact card takes half the width and sits beside the
+     next compact one, or alone with its other half empty; a large one takes the whole
+     width. Every card stays a child of the same container wherever it goes — moved into
+     another row, a card used to be rebuilt mid-carry, its gesture cut off, and its copy
+     left floating over the board. */
+  const shown = useMemo(() => slots.filter((slot) => !skip?.(slot.id)), [slots, skip]);
+  const [width, setWidth] = useState(0);
+  const halfW = width > 0 ? (width - gap) / 2 : 0;
 
   const missing = PHONE_WIDGETS.filter((w) => !slots.some((s) => s.id === w.id) && (w.id !== "plano" || FEATURES.plano));
 
@@ -283,42 +274,38 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
   return (
     <>
       <View ref={board} style={{ gap }}>
-        {pinned && !followed && pinned.node}
-        {rows.map((row, ri) => (
-          <Fragment key={row.map((s) => s.id).join("+") + ri}>
-            <Animated.View layout={SEAT_CHANGE} style={row[0].size === "half" ? { flexDirection: "row", gap } : undefined}>
-              {row.map((slot, i) => (
-                <WidgetFrame
-                  key={slot.id}
-                  slot={slot}
-                  editing={editing}
-                  half={slot.size === "half"}
-                  phase={(ri * 2 + i) % 3}
-                  hidden={carried?.id === slot.id}
-                  tx={tx}
-                  ty={ty}
-                  lift={lift}
-                  active={active}
-                  onCarryStart={beginCarry}
-                  onCarryTo={carryTo}
-                  onCarryEnd={endCarry}
-                  onResize={(size) => setSize(slot.id, size)}
-                  onRemove={() => remove(slot.id)}
-                  onMenu={(rect) => {
-                    const def = phoneWidgetById(slot.id);
-                    if (def) setMenu({ id: slot.id, label: def.label, size: slot.size, resizable: def.resizable, rect });
-                  }}
-                  registerFrame={registerFrame}
-                >
-                  {render(slot.id, slot.size)}
-                </WidgetFrame>
-              ))}
-              {/* Compact and alone on its row: the other half stays empty, for another compact one. */}
-              {row.length === 1 && row[0].size === "half" && <View style={{ flex: 1 }} pointerEvents="none" />}
-            </Animated.View>
-            {pinned && followed && row.some((s) => s.id === followed) && pinned.node}
-          </Fragment>
-        ))}
+        {pinned && pinned.node}
+        <View
+          onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+          style={{ flexDirection: "row", flexWrap: "wrap", columnGap: gap, rowGap: gap }}
+        >
+          {shown.map((slot, i) => (
+            <WidgetFrame
+              key={slot.id}
+              slot={slot}
+              editing={editing}
+              half={slot.size === "half"}
+              width={slot.size === "half" ? halfW || undefined : width || undefined}
+              phase={i % 3}
+              hidden={carried?.id === slot.id}
+              tx={tx}
+              ty={ty}
+              lift={lift}
+              active={active}
+              onCarryStart={beginCarry}
+              onCarryTo={carryTo}
+              onCarryEnd={endCarry}
+              onMenu={(rect) => {
+                if (!editingRef.current) return;
+                const def = phoneWidgetById(slot.id);
+                if (def) setMenu({ id: slot.id, label: def.label, size: slot.size, resizable: def.resizable, rect });
+              }}
+              registerFrame={registerFrame}
+            >
+              {render(slot.id, slot.size)}
+            </WidgetFrame>
+          ))}
+        </View>
 
         <Pressable
           onPress={() => setAdding(true)}
@@ -424,6 +411,7 @@ function WidgetFrame({
   slot,
   editing,
   half,
+  width,
   phase,
   hidden,
   tx,
@@ -434,14 +422,14 @@ function WidgetFrame({
   onCarryStart,
   onCarryTo,
   onCarryEnd,
-  onResize: _onResize,
-  onRemove,
   onMenu,
   registerFrame,
 }: {
   slot: WidgetSlot;
   editing: boolean;
   half: boolean;
+  /** Its width in the flow, once the board has been measured. */
+  width?: number;
   /** Which way round it trembles, so neighbours do not move in step. */
   phase: number;
   /** Being carried: its seat stays, empty, while the copy follows the finger. */
@@ -454,16 +442,10 @@ function WidgetFrame({
   onCarryStart: (id: string) => void;
   onCarryTo: (id: string, x: number, y: number) => void;
   onCarryEnd: () => void;
-  onResize: (size: WidgetSize) => void;
-  onRemove: () => void;
   onMenu: (rect: { top: number; bottom: number; left: number; width: number }) => void;
   registerFrame: (id: string, box: Rect | null, measure?: () => Promise<Rect | null>) => void;
 }) {
   const box = useRef<ComponentRef<typeof View>>(null);
-  const def = phoneWidgetById(slot.id);
-  /* A widget with nothing to say draws nothing; a frame with nothing in it carries no controls. */
-  const [drawn, setDrawn] = useState(false);
-
   const measureNow = useCallback(
     () =>
       new Promise<Rect | null>((resolve) => {
@@ -477,7 +459,6 @@ function WidgetFrame({
     void measureNow().then((r) => {
       if (!r) return;
       registerFrame(slot.id, r, measureNow);
-      setDrawn(r.h > 8);
     });
   }, [registerFrame, slot.id, measureNow]);
 
@@ -517,6 +498,18 @@ function WidgetFrame({
       runOnJS(onCarryEnd)();
     });
 
+  /* A touch, while editing, opens the card's menu. Recognised by the same system as the
+     hold, so the two never fight over the finger: the hold wins if the finger stays. */
+  const openMenu = () => {
+    void measureNow().then((r) => r && onMenu({ top: r.y, bottom: r.y + r.h, left: r.x, width: r.w }));
+  };
+  const tap = Gesture.Tap()
+    .maxDuration(300)
+    .onEnd((_e, ok) => {
+      if (ok) runOnJS(openMenu)();
+    });
+  const gestures = Gesture.Exclusive(carry, tap);
+
   /* The tremble of a board being edited, as the phone's own home screen does it. */
   const wobble = useSharedValue(0);
   useEffect(() => {
@@ -534,50 +527,16 @@ function WidgetFrame({
   const tremble = useAnimatedStyle(() => ({ transform: [{ rotate: `${wobble.get() * (half ? 0.7 : 0.35)}deg` }] }));
 
   return (
-    <GestureDetector gesture={carry}>
+    <GestureDetector gesture={gestures}>
       <Animated.View
         ref={box}
         layout={SEAT_CHANGE}
         exiting={ZoomOut.duration(180)}
         onLayout={measure}
-        style={[{ flex: half ? 1 : undefined, position: "relative", opacity: hidden ? 0 : 1 }, tremble]}
+        style={[{ width: width ?? (half ? "48%" : "100%"), position: "relative", opacity: hidden ? 0 : 1 }, tremble]}
       >
         <View pointerEvents={editing ? "none" : "auto"}>{children}</View>
 
-        {/* Taken off the board, to be put back from "Adicionar widgets". */}
-        {editing && drawn && (
-          <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)} style={{ position: "absolute", top: -8, left: -8, zIndex: 30 }}>
-            <Pressable
-              onPress={onRemove}
-              hitSlop={10}
-              accessibilityLabel={`Remover ${def?.label ?? "widget"}`}
-              style={({ pressed }) => ({
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: th("#3A3B41", "bg"),
-                borderWidth: 1,
-                borderColor: th("rgba(255,255,255,0.18)", "line"),
-                transform: [{ scale: pressed ? 0.88 : 1 }],
-              })}
-            >
-              <Minus size={15} color={th("#fff")} strokeWidth={3} />
-            </Pressable>
-          </Animated.View>
-        )}
-
-        {/* While editing, a touch on the card opens its menu: hide it, or choose its size. */}
-        {editing && drawn && (
-          <Pressable
-            accessibilityLabel={`Opções de ${def?.label ?? "widget"}`}
-            onPress={() => {
-              void measureNow().then((r) => r && onMenu({ top: r.y, bottom: r.y + r.h, left: r.x, width: r.w }));
-            }}
-            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 10 }}
-          />
-        )}
       </Animated.View>
     </GestureDetector>
   );
