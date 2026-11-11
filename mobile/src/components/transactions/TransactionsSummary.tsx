@@ -119,7 +119,7 @@ export default function TransactionsSummary({
           <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.4)", "bg") }} />
           <View style={{ paddingHorizontal: 14, paddingVertical: 12, gap: 10 }}>
             <Text style={{ fontSize: 12.5, lineHeight: 18, color: th("rgba(255,255,255,0.78)") }}>
-              O que deve sobrar de {before}, mais o que entra e sai em {here}.
+              Sobra de {before} + balanço de {here}.
             </Text>
             {[
               { label: `Sobra de ${before}`, value: abertura },
