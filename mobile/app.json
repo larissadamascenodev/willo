@@ -9,7 +9,7 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#08090A",
     "ios": {
-      "bundleIdentifier": "com.willo.app",
+      "bundleIdentifier": "com.larissadamasceno.willo",
       "supportsTablet": false,
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false
@@ -19,7 +19,7 @@
       }
     },
     "android": {
-      "package": "com.willo.app",
+      "package": "com.larissadamasceno.willo",
       "adaptiveIcon": {
         "backgroundColor": "#08090A",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
