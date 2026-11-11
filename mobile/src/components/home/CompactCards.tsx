@@ -99,12 +99,12 @@ export function FluxoCompact({ receitas, despesas }: { receitas: number; despesa
   const flow = receitas - despesas;
   const parts = total > 0 ? [{ share: receitas / total, color: th(GREEN, "bg") }, { share: despesas / total, color: th(RED, "bg") }] : [];
   return (
-    <Surface onPress={() => router.push("/fluxo-de-caixa" as never)} style={{ height: HEIGHT, padding: 14 }}>
+    <Surface onPress={() => router.push("/fluxo-de-caixa" as never)} style={{ height: HEIGHT, paddingHorizontal: 14, paddingVertical: 12 }}>
       <Head label="Receitas e despesas" />
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <Ring size={112} stroke={11} parts={parts}>
-          <Text style={{ fontSize: 10.5, color: th(INK.softer) }}>Fluxo</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { maxWidth: 82, fontSize: 15, fontWeight: "800", letterSpacing: -0.4, color: th(flow < 0 ? RED : "#fff") }]}>
+        <Ring size={128} stroke={14} parts={parts}>
+          <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Fluxo</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { maxWidth: 92, fontSize: 18, fontWeight: "800", letterSpacing: -0.5, color: th(flow < 0 ? RED : "#fff") }]}>
             {short(flow)}
           </Text>
         </Ring>
@@ -122,9 +122,9 @@ function Legend({ color, label, value, right }: { color: string; label: string; 
     <View style={{ flexShrink: 1, alignItems: right ? "flex-end" : "flex-start" }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
         <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: th(color, "bg") }} />
-        <Text style={{ fontSize: 11, color: th(INK.softer) }}>{label}</Text>
+        <Text style={{ fontSize: 12, color: th(INK.soft) }}>{label}</Text>
       </View>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[nums, { marginTop: 1, fontSize: 12.5, fontWeight: "700", color: th("#fff") }]}>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[nums, { marginTop: 1, fontSize: 14.5, fontWeight: "800", letterSpacing: -0.2, color: th("#fff") }]}>
         {value}
       </Text>
     </View>
@@ -145,12 +145,12 @@ export function CategoriasCompact({ categories }: { categories: CategoryExpense[
   }, [sorted, total]);
   const lead = sorted[0];
   return (
-    <Surface onPress={() => router.push("/analytics/categorias" as never)} style={{ height: HEIGHT, padding: 14 }}>
+    <Surface onPress={() => router.push("/analytics/categorias" as never)} style={{ height: HEIGHT, paddingHorizontal: 14, paddingVertical: 12 }}>
       <Head label="Por categoria" />
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <Ring size={112} stroke={11} parts={parts}>
-          <Text style={{ fontSize: 10.5, color: th(INK.softer) }}>Gastos</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { maxWidth: 82, fontSize: 15, fontWeight: "800", letterSpacing: -0.4, color: th("#fff") }]}>
+        <Ring size={128} stroke={14} parts={parts}>
+          <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Gastos</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { maxWidth: 92, fontSize: 18, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }]}>
             {short(total)}
           </Text>
         </Ring>
