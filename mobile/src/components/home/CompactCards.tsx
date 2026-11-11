@@ -3,6 +3,7 @@ import { Platform, Text, View, type TextStyle } from "react-native";
 import { useRouter } from "expo-router";
 import Animated, { Easing, ReduceMotion, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import Svg, { Circle } from "react-native-svg";
+import { LinearGradient } from "expo-linear-gradient";
 import type { CategoryExpense, FinanceEvent } from "@/types/finance";
 import { categoryHex } from "@/lib/categoryData";
 import Surface from "~/components/Surface";
@@ -105,14 +106,16 @@ export function FluxoCompact({ receitas, despesas }: { receitas: number; despesa
       <View style={{ flex: 1, justifyContent: "space-between" }}>
         <Head label="Receitas e despesas" />
 
-        <View style={{ gap: 8 }}>
-          <Figure label="Entrou" value={short(receitas)} color={GREEN} />
-          <Figure label="Saiu" value={short(despesas)} color={RED} />
-        </View>
-
-        <View style={{ gap: 5 }}>
-          <Meter share={receitas / scale} color={GREEN} delay={0} />
-          <Meter share={despesas / scale} color={RED} delay={90} />
+        {/* Each figure with its own bar right under it, on one scale. */}
+        <View style={{ gap: 10 }}>
+          <View style={{ gap: 6 }}>
+            <Figure label="Entrou" value={short(receitas)} color={GREEN} />
+            <Meter share={receitas / scale} color={GREEN} delay={0} />
+          </View>
+          <View style={{ gap: 6 }}>
+            <Figure label="Saiu" value={short(despesas)} color={RED} />
+            <Meter share={despesas / scale} color={RED} delay={90} />
+          </View>
         </View>
 
         <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 6 }}>
@@ -149,8 +152,16 @@ function Meter({ share, color, delay }: { share: number; color: string; delay: n
   }, [grow, share, delay]);
   const fill = useAnimatedStyle(() => ({ width: `${grow.get() * 100}%` }));
   return (
-    <View style={{ height: 9, borderRadius: 999, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
-      <Animated.View style={[{ height: "100%", borderRadius: 999, backgroundColor: th(color, "bg") }, fill]} />
+    <View style={{ height: 8, borderRadius: 999, overflow: "hidden", backgroundColor: th(color === GREEN ? "rgba(103,205,103,0.14)" : "rgba(248,113,113,0.14)", "bg") }}>
+      <Animated.View style={[{ height: "100%", borderRadius: 999, overflow: "hidden" }, fill]}>
+        {/* The colour deepening towards its end, so the bar reads as filled, not painted. */}
+        <LinearGradient
+          colors={th(color === GREEN ? ["#4FB24F", "#67CD67", "#8BE08B"] : ["#E25555", "#F87171", "#FF9A9A"], "grad")}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={{ flex: 1 }}
+        />
+      </Animated.View>
     </View>
   );
 }
