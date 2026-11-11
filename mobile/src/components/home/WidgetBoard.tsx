@@ -138,28 +138,28 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
     [userId],
   );
 
-  /* Where each card is right now, and how to ask it again. */
+  /* Where each card sits in the flow — its laid-out place, not where an animation has it
+     at this instant. Measuring the screen while the cards were still settling from the last
+     move gave wrong places, and the next card picked up jumped to the top or the bottom. */
   const frames = useRef(new Map<string, Rect>());
-  const measurers = useRef(new Map<string, () => Promise<Rect | null>>());
-  const registerFrame = useCallback((id: string, box: Rect | null, measure?: () => Promise<Rect | null>) => {
+  const registerFrame = useCallback((id: string, box: Rect | null) => {
     if (box) frames.current.set(id, box);
     else frames.current.delete(id);
-    if (measure) measurers.current.set(id, measure);
-    else if (!box) measurers.current.delete(id);
   }, []);
+  const flow = useRef<ComponentRef<typeof View>>(null);
+  /* Where the flow is on the screen, taken when a card is picked up (the page holds still). */
+  const origin = useRef<{ x: number; y: number } | null>(null);
+  /* Right after a move the places are being laid out again: the next is held back a moment. */
+  const settling = useRef(0);
 
   /* ── The card being carried ── */
-  const [carried, setCarried] = useState<{ id: string; size: WidgetSize; from: Rect; at: Rect } | null>(null);
+  const [carried, setCarried] = useState<{ id: string; size: WidgetSize; from: Rect } | null>(null);
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
   const lift = useSharedValue(0);
   /* A carry under way, on the UI thread: however the gesture ends — let go, or cut off
-     by the page — the card is put down. Left to "ended normally" only, a cut-off carry
-     left its copy floating over the board. */
+     by the page — the card is put down. */
   const active = useSharedValue(0);
-  /* The seats as they were when the card was picked up: a seat is judged against where
-     the cards were, not against a board that is already moving under the finger. */
-  const snapshot = useRef<{ order: string[]; seats: { id: string; cx: number; cy: number }[] } | null>(null);
 
   const beginCarry = useCallback(
     (id: string) => {
@@ -167,57 +167,53 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
       const from = frames.current.get(id);
       if (!slot || !from) return;
       onCarrying?.(true);
+      origin.current = null;
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
-      snapshot.current = {
-        order: slots.map((s) => s.id),
-        seats: slots
-          .map((s) => {
-            const r = frames.current.get(s.id);
-            return r ? { id: s.id, cx: r.x + r.w / 2, cy: r.y + r.h / 2 } : null;
-          })
-          .filter((x): x is { id: string; cx: number; cy: number } => x !== null),
-      };
-      board.current?.measureInWindow((bx, by) => {
-        setCarried({ id, size: slot.size, from, at: { x: from.x - bx, y: from.y - by, w: from.w, h: from.h } });
+      flow.current?.measureInWindow((x, y) => {
+        origin.current = { x, y };
       });
+      setCarried({ id, size: slot.size, from });
     },
     [slots, onCarrying],
   );
 
-  /* The seat nearest the finger, among the seats as they were; the one it is in has to
-     be beaten by a clear margin, or a card held between two flickers back and forth. */
-  const carryTo = useCallback(
-    (id: string, x: number, y: number) => {
-      const snap = snapshot.current;
-      if (!snap) return;
-      let to = -1;
-      let best = Number.POSITIVE_INFINITY;
-      snap.seats.forEach((seat) => {
-        const d = Math.hypot((seat.cx - x) * 0.6, seat.cy - y);
-        if (d < best) {
-          best = d;
-          to = snap.order.indexOf(seat.id);
-        }
-      });
-      if (to < 0) return;
-      setSlots((current) => {
-        const at = current.findIndex((s) => s.id === id);
-        if (at < 0 || at === to) return current;
-        const here = snap.seats.find((s) => s.id === snap.order[at]);
-        if (here && Math.hypot((here.cx - x) * 0.6, here.cy - y) - best < 28) return current;
-        const next = [...current];
-        const [moved] = next.splice(at, 1);
-        next.splice(Math.min(to, next.length), 0, moved);
-        void Haptics.selectionAsync().catch(() => undefined);
-        return next;
-      });
-    },
-    [],
-  );
+  /* The card nearest the finger, among the cards as they sit now. The carried one takes its
+     place — one seat at a time, as the finger passes over each — and only when that card is
+     clearly nearer than the carried one's own seat, so it never flickers between two. */
+  const carryTo = useCallback((id: string, ax: number, ay: number) => {
+    const o = origin.current;
+    if (!o || Date.now() < settling.current) return;
+    const x = ax - o.x;
+    const y = ay - o.y;
+    const dist = (r: Rect) => Math.hypot((r.x + r.w / 2 - x) * 0.6, r.y + r.h / 2 - y);
+    let nearest: string | null = null;
+    let best = Number.POSITIVE_INFINITY;
+    frames.current.forEach((r, key) => {
+      const d = dist(r);
+      if (d < best) {
+        best = d;
+        nearest = key;
+      }
+    });
+    const own = frames.current.get(id);
+    if (!nearest || nearest === id || !own || dist(own) - best < 28) return;
+    const target: string = nearest;
+    setSlots((current) => {
+      const at = current.findIndex((s) => s.id === id);
+      const to = current.findIndex((s) => s.id === target);
+      if (at < 0 || to < 0 || at === to) return current;
+      const next = [...current];
+      const [moved] = next.splice(at, 1);
+      next.splice(to, 0, moved);
+      settling.current = Date.now() + 160;
+      void Haptics.selectionAsync().catch(() => undefined);
+      return next;
+    });
+  }, []);
 
   /* Let go: the copy flies to wherever its seat has ended up, and the card is back. */
   const endCarry = useCallback(() => {
-    snapshot.current = null;
+    origin.current = null;
     onCarrying?.(false);
     setSlots((current) => {
       saveLayout(userId, current);
@@ -230,21 +226,14 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
     };
     setTimeout(() => {
       const c = carriedRef.current;
-      const measure = c ? measurers.current.get(c.id) : undefined;
-      if (!c || !measure) {
-        lift.set(withTiming(0, { duration: 160 }));
-        done();
-        return;
+      const rect = c ? frames.current.get(c.id) : undefined;
+      if (c && rect) {
+        tx.set(withSpring(rect.x - c.from.x, { damping: 22, stiffness: 240 }));
+        ty.set(withSpring(rect.y - c.from.y, { damping: 22, stiffness: 240 }));
       }
-      void measure().then((rect) => {
-        if (rect) {
-          tx.set(withSpring(rect.x - c.from.x, { damping: 22, stiffness: 240 }));
-          ty.set(withSpring(rect.y - c.from.y, { damping: 22, stiffness: 240 }));
-        }
-        lift.set(withTiming(0, { duration: 220 }));
-        setTimeout(done, 260);
-      });
-    }, 60);
+      lift.set(withTiming(0, { duration: 220 }));
+      setTimeout(done, 260);
+    }, 90);
   }, [userId, onCarrying, tx, ty, lift]);
   const carriedRef = useRef(carried);
   carriedRef.current = carried;
@@ -300,6 +289,7 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
       <View ref={board} style={{ gap }}>
         {pinned && pinned.node}
         <View
+          ref={flow}
           onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
           style={{ flexDirection: "row", flexWrap: "wrap", columnGap: gap, rowGap: gap }}
         >
@@ -356,9 +346,9 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
             style={[
               {
                 position: "absolute",
-                left: carried.at.x,
-                top: carried.at.y,
-                width: carried.at.w,
+                left: carried.from.x,
+                top: carried.from.y,
+                width: carried.from.w,
                 zIndex: 50,
                 shadowColor: "#000",
                 shadowRadius: 22,
@@ -471,7 +461,7 @@ function WidgetFrame({
   onCarryTo: (id: string, x: number, y: number) => void;
   onCarryEnd: () => void;
   onMenu: (rect: { top: number; bottom: number; left: number; width: number }) => void;
-  registerFrame: (id: string, box: Rect | null, measure?: () => Promise<Rect | null>) => void;
+  registerFrame: (id: string, box: Rect | null) => void;
 }) {
   const box = useRef<ComponentRef<typeof View>>(null);
   const measureNow = useCallback(
@@ -483,26 +473,7 @@ function WidgetFrame({
     [],
   );
 
-  const measure = useCallback(() => {
-    void measureNow().then((r) => {
-      if (!r) return;
-      registerFrame(slot.id, r, measureNow);
-    });
-  }, [registerFrame, slot.id, measureNow]);
-
-  useEffect(() => {
-    const t = setTimeout(measure, 220);
-    return () => {
-      clearTimeout(t);
-      registerFrame(slot.id, null);
-    };
-  }, [measure, registerFrame, slot.id]);
-
-  /* Re-measured whenever the board settles, so the seats picked up from are where the cards are. */
-  useEffect(() => {
-    const t = setTimeout(measure, 380);
-    return () => clearTimeout(t);
-  }, [editing, measure]);
+  useEffect(() => () => registerFrame(slot.id, null), [registerFrame, slot.id]);
 
   /* While editing, a short hold picks the card up. Editing only starts or ends from the
      menu or the bar, never with a finger down, so the gesture is never changed under it. */
@@ -572,7 +543,10 @@ function WidgetFrame({
         ref={box}
         layout={SEAT_CHANGE}
         exiting={ZoomOut.duration(180)}
-        onLayout={measure}
+        onLayout={(e) => {
+          const l = e.nativeEvent.layout;
+          registerFrame(slot.id, { x: l.x, y: l.y, w: l.width, h: l.height });
+        }}
         style={[{ width: width ?? (half ? "48%" : "100%"), height: half ? COMPACT_H : undefined, position: "relative", opacity: hidden ? 0 : 1 }, tremble]}
       >
         <View pointerEvents={editing ? "none" : "auto"} style={half ? { flex: 1 } : undefined}>
