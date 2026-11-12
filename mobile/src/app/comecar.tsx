@@ -9,6 +9,7 @@ import Room from "~/components/Room";
 import Glass from "~/components/Glass";
 import Field, { PasswordField } from "~/components/auth/Field";
 import LegalSheet from "~/components/auth/LegalSheet";
+import LoginSheet from "~/components/auth/LoginSheet";
 import Provider from "~/components/auth/Provider";
 import { AppleMark, GoogleMark } from "~/components/auth/BrandIcons";
 import { signInWithApple, signInWithGoogle } from "~/lib/socialAuth";
@@ -41,6 +42,8 @@ export default function Comecar() {
   /* Drawn again in place when the theme changes. */
   useThemeRedraw();
   const router = useRouter();
+  /* "Já tenho conta" as a sheet over this page: null is closed; a string opens it, with the address when known. */
+  const [login, setLogin] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
 
   const [funnel, setFunnel] = useState(true);
@@ -151,7 +154,7 @@ export default function Comecar() {
           void saveOnboardingAnswers(answers);
           void markOnboarded();
         }}
-        onLogin={() => router.replace("/login" as never)}
+        onLogin={() => setLogin("")}
         onExit={() => (router.canGoBack() ? router.back() : router.replace("/bem-vindo" as never))}
         onDone={(answers, plan) => {
           setName(answers.name.trim());
@@ -164,7 +167,13 @@ export default function Comecar() {
     </View>
   );
 
-  if (funnel) return funnelView;
+  if (funnel)
+    return (
+      <>
+        {funnelView}
+        <LoginSheet open={login !== null} email={login ?? ""} onClose={() => setLogin(null)} />
+      </>
+    );
 
   const transition = LinearTransition.duration(340);
   const first = name.split(" ")[0];
@@ -192,7 +201,7 @@ export default function Comecar() {
                 Enviamos um link para <Text style={{ fontWeight: "700", color: "#fff" }}>{email.trim()}</Text>. Abra, confirme e volte aqui para entrar.
               </Text>
               <Pressable
-                onPress={() => router.replace({ pathname: "/login", params: { email: email.trim() } } as never)}
+                onPress={() => setLogin(email.trim())}
                 style={({ pressed }) => ({ marginTop: 28, alignSelf: "stretch", height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: "#fff", opacity: pressed ? 0.85 : 1 })}
               >
                 <Text style={{ fontSize: 16.5, fontWeight: "700", color: "#0B0B0B" }}>Já confirmei, entrar</Text>
@@ -222,7 +231,7 @@ export default function Comecar() {
                   <Pressable onPress={openForm} hitSlop={8} accessibilityRole="button" style={({ pressed }) => ({ marginTop: 14, paddingVertical: 12, paddingHorizontal: 12, opacity: pressed ? 0.6 : 1 })}>
                     <Text style={{ fontSize: 16, fontWeight: "700", color: "rgba(255,255,255,0.86)" }}>Continuar com e-mail</Text>
                   </Pressable>
-                  <Pressable onPress={() => router.replace("/login" as never)} hitSlop={8} accessibilityRole="button" style={({ pressed }) => ({ paddingVertical: 10, paddingHorizontal: 12, opacity: pressed ? 0.6 : 1 })}>
+                  <Pressable onPress={() => setLogin("")} hitSlop={8} accessibilityRole="button" style={({ pressed }) => ({ paddingVertical: 10, paddingHorizontal: 12, opacity: pressed ? 0.6 : 1 })}>
                     <Text style={{ fontSize: 15, color: INK.soft }}>
                       Já tenho conta · <Text style={{ fontWeight: "700", color: "#fff" }}>Entrar</Text>
                     </Text>
@@ -299,7 +308,7 @@ export default function Comecar() {
                   >
                     {busy ? <ActivityIndicator color="#0B0B0B" /> : <Text style={{ fontSize: 17, fontWeight: "700", color: "#0B0B0B" }}>Criar conta</Text>}
                   </Pressable>
-                  <Pressable onPress={() => router.replace("/login" as never)} hitSlop={8} style={({ pressed }) => ({ alignSelf: "center", marginTop: 8, paddingVertical: 12, paddingHorizontal: 12, opacity: pressed ? 0.6 : 1 })}>
+                  <Pressable onPress={() => setLogin("")} hitSlop={8} style={({ pressed }) => ({ alignSelf: "center", marginTop: 8, paddingVertical: 12, paddingHorizontal: 12, opacity: pressed ? 0.6 : 1 })}>
                     <Text style={{ fontSize: 15, fontWeight: "600", color: INK.soft }}>Já tenho conta</Text>
                   </Pressable>
                 </Animated.View>
@@ -322,6 +331,7 @@ export default function Comecar() {
           )}
         </KeyboardAvoidingView>
         <LegalSheet which={legal} onClose={() => setLegal(null)} />
+        <LoginSheet open={login !== null} email={login ?? ""} onClose={() => setLogin(null)} />
       </Room>
     </>
   );

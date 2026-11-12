@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { cancelAnimation, Easing, FadeIn, useAnimatedStyle, useSharedValue, withSequence, withTiming, type SharedValue } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Room from "~/components/Room";
+import LoginSheet from "~/components/auth/LoginSheet";
 import { AskDemo, DURATIONS, ForecastDemo, NotifyDemo, RadarDemo, ReceiptDemo, VoiceDemo } from "~/components/welcome/Demos";
 import QuickTap, { QUICK_MS } from "~/components/onboarding/QuickTap";
 import { isOnboarded } from "~/lib/onboarding";
@@ -64,6 +65,8 @@ export default function BemVindo() {
   /* Drawn again in place when the theme changes. */
   useThemeRedraw();
   const router = useRouter();
+  /* "Já tenho conta" rises as a sheet over the welcome. */
+  const [login, setLogin] = useState(false);
   /* Someone who has already answered the onboarding on this phone goes straight back to
      the profile it made, not through the slides again. */
   useEffect(() => {
@@ -187,7 +190,7 @@ export default function BemVindo() {
           {/* Not a second button: whoever has an account is a minority here, and two
               equal buttons would ask every new person to choose. */}
           <Pressable
-            onPress={() => router.push("/login" as never)}
+            onPress={() => setLogin(true)}
             accessibilityRole="button"
             hitSlop={8}
             style={({ pressed }) => ({ height: 48, marginTop: 4, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}
@@ -196,6 +199,7 @@ export default function BemVindo() {
           </Pressable>
         </View>
       </View>
+      <LoginSheet open={login} onClose={() => setLogin(false)} />
     </Room>
   );
 }
