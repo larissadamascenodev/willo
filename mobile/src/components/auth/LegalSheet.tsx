@@ -4,10 +4,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { LEGAL, OPERATOR, type LegalBlock } from "@/lib/legal";
+import { LEGAL, OPERATOR, type LegalBlock, type LegalDoc } from "@/lib/legal";
+import * as WebBrowser from "expo-web-browser";
 import GlowButton from "~/components/GlowButton";
 import RoundButton from "~/components/RoundButton";
-import { CircleCheck, X } from "~/components/icons";
+import { ChevronRight, CircleCheck, ExternalLink, X } from "~/components/icons";
 
 import { live, th } from "~/theme/theme";
 /**
@@ -78,25 +79,18 @@ export default function LegalSheet({ which, onClose, onAccept }: { which: "terms
 
         <View style={{ alignSelf: "center", width: 36, height: 4, borderRadius: 2, backgroundColor: th("rgba(255,255,255,0.18)", "bg"), marginTop: 9 }} />
 
-        {/* The way out, alone at the top right. */}
-        <View style={{ flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 16, paddingTop: 6 }}>
-          <RoundButton label="Fechar" onPress={onClose}>
-            <X size={18} color={th("#fff")} strokeWidth={2.2} />
-          </RoundButton>
+        {/* Its short name in the middle, the way out at the right. */}
+        <View style={{ paddingHorizontal: 16, paddingTop: 8, minHeight: 56, justifyContent: "center" }}>
+          <SheetTitle doc={doc} />
+          <View style={{ position: "absolute", right: 16, top: 8 }}>
+            <RoundButton label="Fechar" onPress={onClose}>
+              <X size={18} color={th("#fff")} strokeWidth={2.2} />
+            </RoundButton>
+          </View>
         </View>
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: GUTTER, paddingTop: 2, paddingBottom: 36 }} showsVerticalScrollIndicator={false}>
-          {/* Its name, on one line, and when it last changed. */}
-          <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 2.4, color: th("rgba(255,255,255,0.42)") }}>{doc.kicker}</Text>
-          <Text
-            style={{ marginTop: 8, fontSize: 26, lineHeight: 32, fontWeight: "700", letterSpacing: -0.9, color: th("#fff") }}
-          >
-            {doc.title}
-          </Text>
-
-          <View style={{ height: 1, marginTop: 22, marginBottom: 22, backgroundColor: th("rgba(255,255,255,0.07)", "bg") }} />
-
-          <Text style={{ fontSize: 16.5, lineHeight: 25, letterSpacing: -0.2, fontWeight: "500", color: th("rgba(255,255,255,0.92)") }}>{doc.intro}</Text>
+          <DocHead doc={doc} />
 
           {doc.sections.map((s) => (
             <View key={s.title} style={{ marginTop: 34 }}>
@@ -138,12 +132,10 @@ export function LegalDocument({ which }: { which: "terms" | "privacy" }) {
   const doc = LEGAL[which];
   return (
     <View>
-      <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 2.4, color: th("rgba(255,255,255,0.42)") }}>{doc.kicker}</Text>
-      <Text style={{ marginTop: 8, fontSize: 24, lineHeight: 30, fontWeight: "700", letterSpacing: -0.8, color: th("#fff") }}>
-        {doc.title}
-      </Text>
-      <View style={{ height: 1, marginTop: 18, marginBottom: 18, backgroundColor: th("rgba(255,255,255,0.07)", "bg") }} />
-      <Text style={{ fontSize: 15.5, lineHeight: 24, letterSpacing: -0.2, fontWeight: "500", color: th("rgba(255,255,255,0.92)") }}>{doc.intro}</Text>
+      <View style={{ marginTop: -44, marginBottom: 14, minHeight: 44, justifyContent: "center" }} pointerEvents="none">
+        <SheetTitle doc={doc} />
+      </View>
+      <DocHead doc={doc} />
       {doc.sections.map((s) => (
         <View key={s.title} style={{ marginTop: 28 }}>
           <Text style={{ fontSize: 16.5, lineHeight: 22, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>{s.title}</Text>
@@ -158,6 +150,49 @@ export function LegalDocument({ which }: { which: "terms" | "privacy" }) {
         {"\n"}
         {OPERATOR.city} · {OPERATOR.email}
       </Text>
+    </View>
+  );
+}
+
+/** The sheet's header: the document's short name, and what kind of document it is. */
+function SheetTitle({ doc }: { doc: LegalDoc }) {
+  return (
+    <View style={{ alignItems: "center" }}>
+      <Text style={{ fontSize: 19, fontWeight: "800", letterSpacing: -0.3, color: th("#fff") }}>{doc.short.toUpperCase()}</Text>
+      <Text style={{ marginTop: 2, fontSize: 11.5, fontWeight: "600", letterSpacing: 1.6, color: th("rgba(255,255,255,0.45)") }}>{doc.kicker}</Text>
+    </View>
+  );
+}
+
+/**
+ * Above the text: the always-current version on the site, a tap away; then the
+ * document's full name, its version and date, and what it is about.
+ */
+function DocHead({ doc }: { doc: LegalDoc }) {
+  const url = `${OPERATOR.site}${doc.path}`;
+  return (
+    <View>
+      <Pressable
+        onPress={() => void WebBrowser.openBrowserAsync(url).catch(() => undefined)}
+        accessibilityRole="link"
+        style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, padding: 10, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: th("rgba(255,255,255,0.08)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg"), opacity: pressed ? 0.7 : 1 })}
+      >
+        <View style={{ width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
+          <ExternalLink size={18} color={th("#fff")} strokeWidth={2} />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: "800", letterSpacing: 0.6, color: th("#fff") }}>VERSÃO SEMPRE ATUALIZADA</Text>
+          <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 13, color: th("rgba(255,255,255,0.5)") }}>{url.replace(/^https?:\/\//, "")}</Text>
+        </View>
+        <ChevronRight size={16} color={th("rgba(255,255,255,0.35)")} />
+      </Pressable>
+
+      <Text style={{ marginTop: 22, fontSize: 21, lineHeight: 27, fontWeight: "700", letterSpacing: -0.5, color: th("#fff") }}>{doc.title}</Text>
+      <Text style={{ marginTop: 8, fontSize: 12.5, letterSpacing: 0.2, color: th("rgba(255,255,255,0.4)"), fontVariant: ["tabular-nums"] }}>
+        Versão {doc.version}  ·  atualizada em {doc.updated}
+      </Text>
+      <View style={{ height: 1, marginTop: 18, marginBottom: 18, backgroundColor: th("rgba(255,255,255,0.07)", "bg") }} />
+      <Text style={{ fontSize: 15.5, lineHeight: 24, letterSpacing: -0.2, fontWeight: "500", color: th("rgba(255,255,255,0.92)") }}>{doc.intro}</Text>
     </View>
   );
 }

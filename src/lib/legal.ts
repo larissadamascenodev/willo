@@ -31,6 +31,8 @@ export interface LegalSection {
 }
 export interface LegalDoc {
   key: "terms" | "privacy";
+  /** The sheet's header, short: "Contrato de Uso", "Política de Dados". */
+  short: string;
   title: string;
   kicker: string;
   version: string;
@@ -44,6 +46,7 @@ const C = OPERATOR;
 
 export const TERMS: LegalDoc = {
   key: "terms",
+  short: "Contrato de Uso",
   title: "Termos de Uso, Isenção de Responsabilidade e Assunção de Risco",
   kicker: "TERMOS DE USO",
   version: "2.0",
@@ -253,6 +256,7 @@ export const TERMS: LegalDoc = {
 
 export const PRIVACY: LegalDoc = {
   key: "privacy",
+  short: "Política de Dados",
   title: "Política de Privacidade e Proteção de Dados",
   kicker: "PRIVACIDADE",
   version: "2.0",
