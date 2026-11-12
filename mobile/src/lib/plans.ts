@@ -1,7 +1,7 @@
 /**
  * Willo PRO: the two plans and the free trial.
  *
- * The trial is the App Store's own (confirmed with Face ID, nothing charged for three
+ * The trial is the App Store's own (confirmed with Face ID, nothing charged for seven
  * days, the subscription starts by itself unless cancelled). Buying goes through the
  * App Store once the app is built and listed; until then `startTrial` only carries the
  * person on to making their account, so the flow can be walked end to end.
@@ -22,10 +22,10 @@ export interface Plan {
   badge?: string;
 }
 
-export const TRIAL_DAYS = 3;
+export const TRIAL_DAYS = 7;
 
 export const PLANS: Record<PlanId, Plan> = {
-  anual: { id: "anual", productId: "willo.pro.anual", label: "Anual", price: 197, period: "ano", perMonth: 197 / 12, badge: `ECONOMIZE R$ ${Math.floor(19.9 * 12 - 197)}` },
+  anual: { id: "anual", productId: "willo.pro.anual", label: "Anual", price: 149.9, period: "ano", perMonth: 149.9 / 12, badge: `ECONOMIZE ${Math.round((1 - 149.9 / (19.9 * 12)) * 100)}%` },
   mensal: { id: "mensal", productId: "willo.pro.mensal", label: "Mensal", price: 19.9, period: "mês", perMonth: 19.9 },
 };
 
