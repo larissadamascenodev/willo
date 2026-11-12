@@ -46,8 +46,8 @@ export const TERMS: LegalDoc = {
   key: "terms",
   title: "Termos de Uso",
   kicker: "CONTRATO DE USO",
-  version: "1.1",
-  updated: "06/11/2026",
+  version: "1.2",
+  updated: "12/11/2026",
   path: "/termos-de-uso",
   intro: "Leia com atenção antes de usar. Ao criar sua conta ou continuar usando o Willo, você declara ter lido, compreendido e aceito estes Termos.",
   sections: [
@@ -55,7 +55,7 @@ export const TERMS: LegalDoc = {
       title: "1. Quem oferece o Willo",
       blocks: [
         { p: `1.1. O Willo é desenvolvido e operado por ${C.name}${C.document.startsWith("[") ? "" : `, ${C.document}`}, com sede em ${C.city}, doravante "Willo" ou "nós".` },
-        { p: "1.2. Fase do produto: o Willo está em fase de testes. Funções podem estar incompletas, mudar ou ser descontinuadas sem aviso prévio, e você reconhece esse estado ao usá-lo." },
+        { p: "1.2. O Willo é atualizado com frequência: funções podem ser melhoradas, mudar ou ser descontinuadas. Mudanças relevantes são avisadas no aplicativo." },
         { p: `1.3. Contato: ${C.email}. Respondemos em até 15 dias.` },
       ],
     },
@@ -145,11 +145,13 @@ export const TERMS: LegalDoc = {
     {
       title: "12. Assinatura e pagamento",
       blocks: [
-        { p: "12.1. Funções pagas, quando existirem, serão contratadas e cobradas pela App Store (Apple) ou pelo Google Play. Preço, período e eventual teste gratuito aparecem antes da confirmação da compra. O Willo não recebe nem guarda dados do seu cartão." },
+        { p: "12.1. O Willo é oferecido por assinatura, mensal ou anual, contratada e cobrada pela App Store (Apple) ou pelo Google Play. Preço, período e o teste gratuito, quando houver, aparecem antes da confirmação da compra. O Willo não recebe nem guarda dados do seu cartão." },
         { p: "12.2. A assinatura renova-se automaticamente ao fim de cada período, salvo cancelamento com pelo menos 24 horas de antecedência. No iPhone, cancele em Ajustes → [seu nome] → Assinaturas." },
         { p: "12.3. Reembolsos são pedidos à loja onde a compra foi feita (no iPhone, em reportaproblem.apple.com) e decididos por ela." },
         { p: "12.4. Direito de arrependimento: você pode desistir da contratação em até 7 dias (art. 49 do CDC), pela mesma loja em que contratou (Decreto 7.962/2013, art. 5º)." },
         { p: "12.5. Apagar o aplicativo ou excluir a conta não cancela a assinatura, que pertence à sua conta da Apple ou do Google." },
+        { p: "12.6. Teste gratuito: quando oferecido, começa na confirmação da assinatura e dura o período informado na tela de compra (por exemplo, 7 dias). Se você não cancelar até 24 horas antes do fim do teste, a cobrança do plano escolhido começa automaticamente." },
+        { p: "12.7. Sem assinatura ativa, você continua podendo consultar os dados que já registrou, mas não consegue registrar novos lançamentos nem usar as funções de inteligência artificial." },
       ],
     },
     {
@@ -196,8 +198,8 @@ export const PRIVACY: LegalDoc = {
   key: "privacy",
   title: "Política de Privacidade",
   kicker: "POLÍTICA DE DADOS",
-  version: "1.1",
-  updated: "06/11/2026",
+  version: "1.2",
+  updated: "12/11/2026",
   path: "/politica-privacidade",
   intro: "Como o Willo coleta, usa, compartilha e protege os seus dados, conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018). O Willo não vende os seus dados e não usa os seus dados financeiros para publicidade.",
   sections: [
@@ -240,7 +242,7 @@ export const PRIVACY: LegalDoc = {
     {
       title: "4. Inteligência artificial",
       blocks: [
-        { p: "4.1. Provedores: Anthropic, PBC (EUA), com o modelo Claude, é o provedor principal do assistente e da leitura de lançamentos. Google LLC (EUA), com o Gemini, é usado na leitura de áudios, de fotos e de faturas, na sugestão de categorias e quando o provedor principal falha." },
+        { p: "4.1. Provedores: Google LLC (EUA), com o modelo Gemini, e Anthropic, PBC (EUA), com o modelo Claude. Hoje o Gemini atende o assistente, a leitura de fotos, de áudios e de faturas e a sugestão de categorias; o Claude pode ser usado no lugar dele ou quando ele falhar." },
         { p: "4.2. O que é enviado: apenas o necessário para cada resposta, como o texto, a foto ou o áudio que você enviou e, no assistente, um resumo dos seus lançamentos, saldos e faturas. Não enviamos o seu e-mail nem a sua senha: o pedido é identificado por um código interno." },
         { p: "4.3. Os dados enviados aos provedores não são usados por nós para publicidade. Os provedores tratam esses dados conforme os seus termos comerciais e políticas: anthropic.com/legal/privacy e policies.google.com/privacy." },
         { p: "4.4. Consentimento: o envio de dados a provedores de IA, com transferência internacional para os EUA, depende do seu consentimento, pedido no aplicativo antes do primeiro uso dessas funções. Sem ele, as funções de IA não funcionam, e o restante do Willo continua funcionando." },
@@ -258,6 +260,7 @@ export const PRIVACY: LegalDoc = {
             "Apple: entrada com Apple e, quando houver, pagamentos e assinaturas.",
             "Expo (EUA): entrega de atualizações do aplicativo.",
             "Vercel (EUA): hospedagem da versão web e do site.",
+            "RevenueCat (EUA): gestão das assinaturas compradas na App Store ou no Google Play. Recebe o identificador interno da sua conta e o status da assinatura, nunca os dados do seu cartão.",
           ],
         },
         { p: "5.2. Não vendemos nem cedemos os seus dados a bancos, financeiras, seguradoras, birôs de crédito, anunciantes ou empregadores." },
