@@ -1,4 +1,4 @@
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -12,7 +12,10 @@ import BackButton from "~/components/BackButton";
 import ConfirmGlass from "~/components/ConfirmGlass";
 import Surface, { Hairline } from "~/components/Surface";
 import LegalSheet from "~/components/auth/LegalSheet";
-import { Bell, Camera, Check, ChevronRight, Crown, FileText, ImagePlus, LifeBuoy, LogOut, Pencil, Shield, Zap } from "~/components/icons";
+import { Bell, Camera, Check, ChevronRight, Crown, FileText, ImagePlus, LifeBuoy, LogOut, Moon, Pencil, Shield, Sun, Zap } from "~/components/icons";
+import BottomSheet from "~/components/BottomSheet";
+import DayNightToggle from "~/components/DayNightToggle";
+import { usePro } from "~/lib/purchases";
 import { useAuth } from "~/lib/auth";
 import { setSkyPhoto, useLightSkyModel, useSkyModel, useSkyPhoto, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
 import { PhotoError, pickAvatar, pickBackground } from "~/lib/profilePhotos";
@@ -21,8 +24,7 @@ import { showToast } from "~/lib/toast";
 import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
-import { LIGHT_GROUND, isLight, switchTheme, th, useThemePref, type ThemeMode, useThemeRedraw, prepareThemeShot } from "~/theme/theme";
-import { GROUND } from "~/theme/tokens";
+import { isLight, switchTheme, th, useThemeRedraw, prepareThemeShot } from "~/theme/theme";
 /**
  * The profile.
  *
@@ -38,6 +40,7 @@ import { GROUND } from "~/theme/tokens";
  */
 
 const PAD = 16;
+const SHEET_GAP = 10;
 
 const LIGHT_BACKGROUNDS: { key: LightSkyModel; label: string }[] = [
   ...LIGHT_BACKDROP_KEYS.map((key) => ({ key, label: LIGHT_BACKDROPS[key].label })),
@@ -62,7 +65,6 @@ export default function Perfil() {
   const { profile, refetch, updateDisplayName } = useProfile();
   const [sky, setSky] = useSkyModel();
   const [lightSky, setLightSky] = useLightSkyModel();
-  const [theme] = useThemePref();
   /* A photograph of the page, ready for the next change of theme: taken once it has
      settled, again when it has scrolled, and again after each change. */
   useFocusEffect(
@@ -81,6 +83,10 @@ export default function Perfil() {
   const [legal, setLegal] = useState<"terms" | "privacy" | null>(null);
   const [asking, setAsking] = useState<"leave" | "delete" | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pickingBg, setPickingBg] = useState(false);
+  const pro = usePro();
+  const [wantLight, setWantLight] = useState(light);
+  useEffect(() => setWantLight(light), [light]);
 
   const email = user?.email ?? "";
   const name = profile?.display_name?.trim() || (user?.user_metadata?.display_name as string | undefined) || email.split("@")[0] || "Você";
@@ -162,11 +168,20 @@ export default function Perfil() {
     }
   };
 
-  /* Each preview is the whole screen, drawn at full size and shrunk into its tile. */
-  /* Four and a bit show at once, so the row says it goes on. */
-  const tileW = Math.round((screenW - PAD * 2 - 10 * 3) / 4.3);
-  const tileH = Math.round(tileW * 1.72);
-  const shrink = tileW / screenW;
+  /* Each preview is the whole screen, drawn at full size and shrunk into its tile:
+     three to a row in the sheet. */
+  const sheetTileW = Math.floor((screenW - 40 - SHEET_GAP * 2) / 3);
+  const sheetTileH = Math.round(sheetTileW * 1.72);
+  const wornKey: SkyModel | LightSkyModel = light ? lightSky : sky;
+  const wornLabel = (light ? LIGHT_BACKGROUNDS : BACKGROUNDS).find((b) => b.key === wornKey)?.label ?? "";
+
+  /* The switch moves at once; the theme follows when the knob has crossed. */
+  const flipTheme = (x: number, y: number) => {
+    tick();
+    const next = !wantLight;
+    setWantLight(next);
+    setTimeout(() => void switchTheme(next ? "light" : "dark", "/perfil", { x, y }), 300);
+  };
 
   return (
     <Room>
@@ -245,115 +260,72 @@ export default function Perfil() {
           <Hairline style={{ marginLeft: 16 }} />
           <Row label="E-mail" value={email} />
           <Hairline style={{ marginLeft: 16 }} />
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14 }}>
+          <Pressable
+            onPress={() => {
+              tick();
+              void Linking.openURL("https://apps.apple.com/account/subscriptions").catch(() => undefined);
+            }}
+            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, opacity: pressed ? 0.7 : 1 })}
+          >
             <View style={{ width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
               <Crown size={17} color={th("#fff")} strokeWidth={1.9} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>Willo Beta</Text>
-              <Text style={{ marginTop: 2, fontSize: 13, color: th(INK.soft) }}>Gratuito durante a fase de testes</Text>
+              <Text style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>Willo PRO</Text>
+              <Text style={{ marginTop: 2, fontSize: 13, color: th(INK.soft) }}>{pro === false ? "Sem assinatura ativa" : "Gerenciar assinatura"}</Text>
             </View>
             <View style={{ paddingHorizontal: 10, height: 24, borderRadius: 12, justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
               <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 0.8, color: th("rgba(255,255,255,0.75)") }}>SEU PLANO</Text>
             </View>
-          </View>
+          </Pressable>
         </Surface>
 
-        {/* Dark or light, inside the app. */}
-        <Eyebrow>Tema</Eyebrow>
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          {THEMES.map(({ key, label }) => {
-            const on = theme === key;
-            return (
-              <Pressable
-                key={key}
-                onPress={(e) => {
-                  tick();
-                  void switchTheme(key, "/perfil", { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
-                }}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: on }}
-                accessibilityLabel={`Tema ${label.toLowerCase()}`}
-                style={({ pressed }) => ({ flex: 1, opacity: pressed ? 0.85 : 1 })}
-              >
-                <ThemeSample mode={key} on={on} />
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingHorizontal: 4 }}>
-                  <Text style={{ fontSize: 15, fontWeight: on ? "600" : "500", color: th(on ? "#fff" : INK.soft) }}>{label}</Text>
-                  <Tick on={on} />
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* What is behind every screen: the dark theme's or the light one's, each kept apart. */}
-        <Eyebrow>Fundo</Eyebrow>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ marginHorizontal: -PAD }}
-          contentContainerStyle={{ paddingHorizontal: PAD, gap: 10 }}
-        >
-          {(light ? LIGHT_BACKGROUNDS : BACKGROUNDS).map(({ key, label }) => {
-            const on = (light ? lightSky : sky) === key;
-            const empty = key === "custom" && !photo;
-            return (
-              <Pressable key={key} onPress={() => void chooseBackground(key)} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={label} style={{ width: tileW, alignItems: "center" }}>
-                {({ pressed }) => (
-                  <>
-                    <View
-                      style={{
-                        width: tileW,
-                        height: tileH,
-                        borderRadius: 18,
-                        borderCurve: "continuous",
-                        overflow: "hidden",
-                        borderWidth: 1.5,
-                        borderColor: th(on ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.08)", "line"),
-                        backgroundColor: th("rgba(255,255,255,0.04)", "bg"),
-                        opacity: pressed ? 0.85 : 1,
-                      }}
-                    >
-                      {empty ? (
-                        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                          <ImagePlus size={22} color={th("rgba(255,255,255,0.7)")} strokeWidth={1.8} />
-                        </View>
-                      ) : (
-                        <View pointerEvents="none" style={{ width: screenW, height: screenH, transformOrigin: "top left", transform: [{ scale: shrink }] }}>
-                          <Room preview={key} />
-                        </View>
-                      )}
-                      {on && (
-                        <View style={{ position: "absolute", top: 7, right: 7 }}>
-                          <Tick on />
-                        </View>
-                      )}
-                    </View>
-                    <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 12.5, fontWeight: on ? "600" : "500", color: th(on ? "#fff" : INK.soft) }}>
-                      {key === "custom" && on ? "Trocar foto" : label}
-                    </Text>
-                  </>
+        {/* How the app looks: the theme with one switch, and what is behind every screen
+            chosen in a sheet, where the previews have room. */}
+        <Eyebrow>Aparência</Eyebrow>
+        <Surface>
+          <Row
+            icon={wantLight ? <Sun size={17} color={th("#fff")} strokeWidth={1.9} /> : <Moon size={17} color={th("#fff")} strokeWidth={1.9} />}
+            label="Tema"
+            value={wantLight ? "Claro" : "Escuro"}
+            trailing={<DayNightToggle light={wantLight} onPress={(e) => flipTheme(e.nativeEvent.pageX, e.nativeEvent.pageY)} />}
+          />
+          <Hairline style={{ marginLeft: 64 }} />
+          <Row
+            icon={
+              <View style={{ width: 24, height: 36, borderRadius: 6, overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.25)", "line") }}>
+                {wornKey === "custom" && !photo ? null : (
+                  <View pointerEvents="none" style={{ width: screenW, height: screenH, transformOrigin: "top left", transform: [{ scale: 24 / screenW }] }}>
+                    <Room preview={wornKey} />
+                  </View>
                 )}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        {/* A photo of one's own is set on its preview: its veil, light or dark, and blur. */}
-        {(light ? lightSky : sky) === "custom" && !!photo && (
-          <Surface style={{ marginTop: 14 }}>
-            <Row
-              label="Ajustar a foto"
-              value={light ? "Só na tela inicial · véu claro ou escuro" : "Só na tela inicial · intensidade do véu"}
-              icon={<ImagePlus size={17} color={th("#fff")} strokeWidth={1.9} />}
-              onPress={() => {
-                tick();
-                router.push("/fundo-foto" as never);
-              }}
-              chevron
-            />
-          </Surface>
-        )}
+              </View>
+            }
+            label="Fundo"
+            value={wornLabel}
+            onPress={() => {
+              tick();
+              setPickingBg(true);
+            }}
+            chevron
+          />
+          {/* A photo of one's own is set on its preview: its veil, light or dark, and blur. */}
+          {wornKey === "custom" && !!photo && (
+            <>
+              <Hairline style={{ marginLeft: 64 }} />
+              <Row
+                label="Ajustar a foto"
+                value={light ? "Só na tela inicial · véu claro ou escuro" : "Só na tela inicial · intensidade do véu"}
+                icon={<ImagePlus size={17} color={th("#fff")} strokeWidth={1.9} />}
+                onPress={() => {
+                  tick();
+                  router.push("/fundo-foto" as never);
+                }}
+                chevron
+              />
+            </>
+          )}
+        </Surface>
 
         {/* What Willo tells the person, and where. */}
         <Eyebrow>Notificações</Eyebrow>
@@ -415,6 +387,70 @@ export default function Perfil() {
 
       <LegalSheet which={legal} onClose={() => setLegal(null)} />
 
+      <BottomSheet open={pickingBg} onClose={() => setPickingBg(false)}>
+        <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+          <Text style={{ fontSize: 22, fontWeight: "700", letterSpacing: -0.5, color: th("#fff") }}>Fundo</Text>
+          <Text style={{ marginTop: 4, fontSize: 14, color: th(INK.soft) }}>{light ? "O que fica atrás das telas no tema claro." : "O que fica atrás das telas no tema escuro."}</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: SHEET_GAP, marginTop: 18 }}>
+            {(light ? LIGHT_BACKGROUNDS : BACKGROUNDS).map(({ key, label }) => {
+              const on = wornKey === key;
+              const empty = key === "custom" && !photo;
+              return (
+                <Pressable
+                  key={key}
+                  onPress={() => {
+                    setPickingBg(false);
+                    /* A photo is picked once the sheet has gone. */
+                    if (key === "custom" && (!photo || on)) setTimeout(() => void chooseBackground(key), 320);
+                    else void chooseBackground(key);
+                  }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on }}
+                  accessibilityLabel={label}
+                  style={{ width: sheetTileW, alignItems: "center" }}
+                >
+                  {({ pressed }) => (
+                    <>
+                      <View
+                        style={{
+                          width: sheetTileW,
+                          height: sheetTileH,
+                          borderRadius: 18,
+                          borderCurve: "continuous",
+                          overflow: "hidden",
+                          borderWidth: on ? 2 : 1,
+                          borderColor: th(on ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.1)", "line"),
+                          backgroundColor: th("rgba(255,255,255,0.04)", "bg"),
+                          opacity: pressed ? 0.85 : 1,
+                        }}
+                      >
+                        {empty ? (
+                          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                            <ImagePlus size={24} color={th("rgba(255,255,255,0.7)")} strokeWidth={1.8} />
+                          </View>
+                        ) : (
+                          <View pointerEvents="none" style={{ width: screenW, height: screenH, transformOrigin: "top left", transform: [{ scale: sheetTileW / screenW }] }}>
+                            <Room preview={key} />
+                          </View>
+                        )}
+                        {on && (
+                          <View style={{ position: "absolute", top: 8, right: 8 }}>
+                            <Tick on />
+                          </View>
+                        )}
+                      </View>
+                      <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 13, fontWeight: on ? "600" : "500", color: th(on ? "#fff" : INK.soft) }}>
+                        {key === "custom" && on ? "Trocar foto" : label}
+                      </Text>
+                    </>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      </BottomSheet>
+
       <ConfirmGlass
         open={asking === "leave"}
         title="Sair da conta?"
@@ -439,41 +475,6 @@ export default function Perfil() {
         Lançamentos, contas, cartões, metas e a sua foto serão apagados para sempre, e isso não pode ser desfeito.
       </ConfirmGlass>
     </Room>
-  );
-}
-
-const THEMES: { key: ThemeMode; label: string }[] = [
-  { key: "dark", label: "Escuro" },
-  { key: "light", label: "Claro" },
-];
-
-/* A small page in each theme: a figure, a card and two lines, in that theme's own
-   colours whichever theme is on screen. */
-function ThemeSample({ mode, on }: { mode: ThemeMode; on: boolean }) {
-  const dark = mode === "dark";
-  const ink = dark ? "#FFFFFF" : "#111318";
-  const soft = dark ? "rgba(255,255,255,0.45)" : "rgba(17,19,24,0.45)";
-  const card = dark ? "rgba(255,255,255,0.07)" : "rgba(17,19,24,0.05)";
-  return (
-    <View
-      style={{
-        height: 112,
-        borderRadius: 20,
-        borderCurve: "continuous",
-        overflow: "hidden",
-        padding: 14,
-        backgroundColor: dark ? GROUND : LIGHT_GROUND,
-        borderWidth: 1.5,
-        borderColor: on ? th("rgba(255,255,255,0.9)", "line") : th("rgba(255,255,255,0.1)", "line"),
-      }}
-    >
-      <View style={{ width: 34, height: 6, borderRadius: 3, backgroundColor: soft }} />
-      <Text style={{ marginTop: 8, fontSize: 18, fontWeight: "700", letterSpacing: -0.4, color: ink }}>R$ 4.280</Text>
-      <View style={{ marginTop: 10, flex: 1, borderRadius: 12, backgroundColor: card, padding: 9, gap: 6 }}>
-        <View style={{ width: "70%", height: 5, borderRadius: 3, backgroundColor: soft }} />
-        <View style={{ width: "45%", height: 5, borderRadius: 3, backgroundColor: soft }} />
-      </View>
-    </View>
   );
 }
 

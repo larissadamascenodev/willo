@@ -94,6 +94,7 @@ export { default as Bus } from "lucide-react-native/icons/bus";
 export { default as Flag } from "lucide-react-native/icons/flag";
 export { default as Flame } from "lucide-react-native/icons/flame";
 export { default as Sun } from "lucide-react-native/icons/sun";
+export { default as Moon } from "lucide-react-native/icons/moon";
 export { default as Trophy } from "lucide-react-native/icons/trophy";
 export { default as Medal } from "lucide-react-native/icons/medal";
 export { default as Sunrise } from "lucide-react-native/icons/sunrise";
