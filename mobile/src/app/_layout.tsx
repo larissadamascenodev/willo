@@ -20,6 +20,8 @@ import NotificationBridge from "~/lib/NotificationBridge";
 import { GREEN, GROUND } from "~/theme/tokens";
 import { COVER_GROW_MS, LIGHT_GROUND, endThemeReveal, liftThemeCover, markShotReady, setActiveTheme, takeReturnRoute, th, useThemeCover, useThemePref, useThemeReveal, useThemeShot } from "~/theme/theme";
 import { stageOf } from "~/lib/accountStage";
+import { accountLegal, acceptLegal, localLegal, syncLegal } from "~/lib/legalConsent";
+import Consent from "~/components/onboarding/Consent";
 
 /* Before any shared module is imported for real, the handful of browser things it
    expects have to exist. */
@@ -154,6 +156,13 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 function Door() {
   const { session, loading } = useAuth();
   useApplyOnboarding();
+  /* A "yes" to the Terms given before the account existed goes onto it; asked here once if missing. */
+  const [legalNow, setLegalNow] = useState(false);
+  useEffect(() => {
+    void syncLegal(session?.user);
+    // Once per account.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id]);
 
   /* Light only inside the app: the welcome, sign-in and sign-up are always dark. Set
      before anything below draws, so every colour is read for the right theme. */
@@ -254,6 +263,8 @@ function Door() {
   /* Signed in, but the questions or the welcome still ahead (lib/accountStage). */
   const stage = signedIn ? stageOf(session?.user) : null;
   const inApp = signedIn && stage === "app";
+  /* In the app with no "yes" to the Terms on record, on the account or on this phone. */
+  const needsLegal = inApp && !legalNow && !accountLegal(session?.user) && !localLegal();
   const home = (!signedIn ? "/bem-vindo" : stage === "funil" ? "/primeiros-passos" : stage === "boas-vindas" ? "/boas-vindas" : "/") as "/";
 
   return (
@@ -347,6 +358,16 @@ function Door() {
           circleStyle,
         ]}
       />
+    )}
+    {needsLegal && (
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9000, elevation: 9000 }}>
+        <Consent
+          onAccept={() => {
+            setLegalNow(true);
+            void acceptLegal();
+          }}
+        />
+      </View>
     )}
     </>
   );

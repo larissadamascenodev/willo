@@ -242,10 +242,10 @@ export const PRIVACY: LegalDoc = {
     {
       title: "4. Inteligência artificial",
       blocks: [
-        { p: "4.1. Provedores: Google LLC (EUA), com o modelo Gemini, e Anthropic, PBC (EUA), com o modelo Claude. Hoje o Gemini atende o assistente, a leitura de fotos, de áudios e de faturas e a sugestão de categorias; o Claude pode ser usado no lugar dele ou quando ele falhar." },
+        { p: "4.1. Provedores: Anthropic, PBC (EUA), com o modelo Claude, é o provedor principal. Google LLC (EUA), com o modelo Gemini, é o provedor alternativo, usado em algumas funções, como a leitura de fotos, de áudios e de faturas, e quando o principal não está disponível." },
         { p: "4.2. O que é enviado: apenas o necessário para cada resposta, como o texto, a foto ou o áudio que você enviou e, no assistente, um resumo dos seus lançamentos, saldos e faturas. Não enviamos o seu e-mail nem a sua senha: o pedido é identificado por um código interno." },
         { p: "4.3. Os dados enviados aos provedores não são usados por nós para publicidade. Os provedores tratam esses dados conforme os seus termos comerciais e políticas: anthropic.com/legal/privacy e policies.google.com/privacy." },
-        { p: "4.4. Consentimento: o envio de dados a provedores de IA, com transferência internacional para os EUA, depende do seu consentimento, pedido no aplicativo antes do primeiro uso dessas funções. Sem ele, as funções de IA não funcionam, e o restante do Willo continua funcionando." },
+        { p: "4.4. Consentimento: o envio de dados a provedores de IA, com transferência internacional para os EUA, depende do seu consentimento, pedido no aplicativo antes de começar a usá-lo, na tela Antes de começar. Sem ele, as funções de IA não funcionam, e o restante do Willo continua funcionando." },
       ],
     },
     {

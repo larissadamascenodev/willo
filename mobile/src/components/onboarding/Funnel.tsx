@@ -7,6 +7,8 @@ import * as Haptics from "expo-haptics";
 import WilloBot from "~/components/willo/WilloBot";
 import { AskDemo, ForecastDemo, NotifyDemo } from "~/components/welcome/Demos";
 import QuickTap from "./QuickTap";
+import Consent from "./Consent";
+import { acceptLegal } from "~/lib/legalConsent";
 import {
   AlertTriangle,
   Bell,
@@ -69,6 +71,7 @@ import {
 
 type StepId =
   | "name"
+  | "consent"
   | "source"
   | "copilot"
   | "goal"
@@ -186,7 +189,7 @@ export default function Funnel({
   const set = (patch: Partial<OnboardingAnswers>) => setA((v) => ({ ...v, ...patch }));
 
   const steps = useMemo<StepId[]>(() => {
-    const out: StepId[] = knownName ? ["source", "copilot", "goal"] : ["name", "source", "copilot", "goal"];
+    const out: StepId[] = knownName ? ["consent", "source", "copilot", "goal"] : ["name", "consent", "source", "copilot", "goal"];
     if (a.goal && (GOALS_WITH_DREAM.includes(a.goal) || a.goal === "dividas")) out.push("detail");
     out.push("goalDemo", "income");
     if (a.income > 0) out.push("hour");
@@ -245,6 +248,18 @@ export default function Funnel({
   })();
 
   if (step === "building") return <Building a={a} onDone={next} />;
+  /* The Terms, the Privacy Policy and the AI providers, accepted before the questions go on. */
+  if (step === "consent")
+    return (
+      <Consent
+        progress={progress}
+        onBack={back}
+        onAccept={() => {
+          void acceptLegal();
+          next();
+        }}
+      />
+    );
   if (!opened) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
   if (step === "result") return <Result a={a} onNext={next} onLogin={onLogin} />;
   if (step === "paywall") return <Paywall name={first} goal={a.goal} onClose={() => setI(steps.indexOf("result"))} onStart={(plan) => onDone(a, plan)} />;
