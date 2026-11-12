@@ -37,13 +37,13 @@ export default function Consent({ progress, onBack, onAccept, busy }: { progress
         {onBack ? <Header section="ANTES DE COMEÇAR" progress={progress ?? 0} onBack={onBack} /> : <View style={{ height: 44 }} />}
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", paddingHorizontal: 24, paddingVertical: 24 }} showsVerticalScrollIndicator={false}>
           <Animated.View entering={FadeInDown.duration(480)}>
-            <Text style={{ fontSize: 36, lineHeight: 42, fontWeight: "300", letterSpacing: -0.8, color: "#fff" }}>
+            <Text style={{ fontSize: 28, lineHeight: 34, fontWeight: "300", letterSpacing: -0.6, color: "#fff" }}>
               Antes de começar,{"\n"}
               <Text style={{ fontWeight: "800" }}>só confirme:</Text>
             </Text>
           </Animated.View>
 
-          <View style={{ marginTop: 40, gap: 26 }}>
+          <View style={{ marginTop: 32, gap: 20 }}>
             <Line on={terms} onPress={() => setTerms((v) => !v)} delay={120}>
               Aceito os{" "}
               <Text onPress={() => setLegal("terms")} style={{ color: "#fff", textDecorationLine: "underline" }}>
@@ -53,10 +53,10 @@ export default function Consent({ progress, onBack, onAccept, busy }: { progress
               <Text onPress={() => setLegal("privacy")} style={{ color: "#fff", textDecorationLine: "underline" }}>
                 Política de Privacidade
               </Text>
-              , incluindo o envio dos meus dados à <Text style={{ color: "#fff" }}>Anthropic (Claude) e ao Google (Gemini)</Text>, com servidores nos EUA, para as funções de inteligência artificial.
+              , incluindo o envio dos meus dados à <Text style={{ color: "#fff" }}>Anthropic e ao Google Gemini</Text> (servidores nos EUA).
             </Line>
             <Line on={advice} onPress={() => setAdvice((v) => !v)} delay={220}>
-              Entendo que o Willo é uma <Text style={{ color: "#fff" }}>ferramenta de organização</Text>: ele não é banco nem consultoria financeira, e as <Text style={{ color: "#fff" }}>decisões sobre o meu dinheiro são minhas</Text>.
+              Entendo que o Willo <Text style={{ color: "#fff" }}>organiza</Text> minhas finanças e <Text style={{ color: "#fff" }}>não é consultoria financeira</Text>: as decisões são minhas.
             </Line>
           </View>
         </ScrollView>
@@ -79,16 +79,16 @@ function Line({ on, onPress, delay, children }: { on: boolean; onPress: () => vo
         }}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: on }}
-        style={{ flexDirection: "row", gap: 16, alignItems: "flex-start" }}
+        style={{ flexDirection: "row", gap: 14, alignItems: "flex-start" }}
       >
-        <View style={{ width: 28, height: 28, borderRadius: 14, marginTop: 1, alignItems: "center", justifyContent: "center", borderWidth: on ? 0 : 1.5, borderColor: "rgba(255,255,255,0.45)", backgroundColor: on ? C.green : "transparent" }}>
+        <View style={{ width: 24, height: 24, borderRadius: 12, marginTop: 0, alignItems: "center", justifyContent: "center", borderWidth: on ? 0 : 1.5, borderColor: "rgba(255,255,255,0.45)", backgroundColor: on ? C.green : "transparent" }}>
           {on && (
             <Animated.View entering={ZoomIn.duration(200)}>
-              <Check size={16} color="#0B0B0B" strokeWidth={3.2} />
+              <Check size={14} color="#0B0B0B" strokeWidth={3.2} />
             </Animated.View>
           )}
         </View>
-        <Text style={{ flex: 1, fontSize: 15.5, lineHeight: 23, color: C.soft }}>{children}</Text>
+        <Text style={{ flex: 1, fontSize: 13.5, lineHeight: 19.5, color: C.soft }}>{children}</Text>
       </Pressable>
     </Animated.View>
   );
