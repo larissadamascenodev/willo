@@ -81,7 +81,7 @@ function Line({ on, onPress, delay, children }: { on: boolean; onPress: () => vo
         accessibilityState={{ checked: on }}
         style={{ flexDirection: "row", gap: 14, alignItems: "flex-start" }}
       >
-        <View style={{ width: 24, height: 24, borderRadius: 12, marginTop: 0, alignItems: "center", justifyContent: "center", borderWidth: on ? 0 : 1.5, borderColor: "rgba(255,255,255,0.45)", backgroundColor: on ? C.green : "transparent" }}>
+        <View style={{ width: 24, height: 24, borderRadius: 12, marginTop: 0, alignItems: "center", justifyContent: "center", borderWidth: on ? 0 : 1.5, borderColor: "rgba(255,255,255,0.45)", backgroundColor: on ? "#fff" : "transparent" }}>
           {on && (
             <Animated.View entering={ZoomIn.duration(200)}>
               <Check size={14} color="#0B0B0B" strokeWidth={3.2} />
