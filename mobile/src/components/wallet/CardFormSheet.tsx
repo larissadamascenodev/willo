@@ -52,7 +52,9 @@ export default function CardFormSheet({
   const [four, setFour] = useState("");
   const [cents, setCents] = useState(0);
   const [closing, setClosing] = useState(1);
-  const [due, setDue] = useState(10);
+  const [due, setDue] = useState(8);
+  /* The due day follows the closing day, a week after, until it is set by hand. */
+  const [dueSet, setDueSet] = useState(false);
   const [lift, setLift] = useState(0);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -62,7 +64,8 @@ export default function CardFormSheet({
     setFour(initial?.last_four_digits ?? "");
     setCents(Math.round((initial?.limit ?? 0) * 100));
     setClosing(initial?.closing_day ?? 1);
-    setDue(initial?.due_day ?? 10);
+    setDue(initial?.due_day ?? 8);
+    setDueSet(!!initial);
     setProblem(null);
   }, [open, initial]);
 
@@ -216,8 +219,22 @@ export default function CardFormSheet({
           )}
 
           <View style={{ marginTop: 22, flexDirection: "row", gap: 12 }}>
-            <DayStepper label="Fecha dia" value={closing} onChange={setClosing} />
-            <DayStepper label="Vence dia" value={due} onChange={setDue} />
+            <DayStepper
+              label="Fecha dia"
+              value={closing}
+              onChange={(d) => {
+                setClosing(d);
+                if (!dueSet) setDue(dueAfter(d));
+              }}
+            />
+            <DayStepper
+              label="Vence dia"
+              value={due}
+              onChange={(d) => {
+                setDueSet(true);
+                setDue(d);
+              }}
+            />
           </View>
 
           {(problem || error) && <Text style={{ marginTop: 14, fontSize: 13, color: th(RED) }}>{problem ?? error}</Text>}
@@ -257,6 +274,9 @@ const field = live({
   fontSize: 16.5,
   color: "#fff",
 } as const);
+
+/** Most cards fall due about a week after the bill closes. */
+export const dueAfter = (closing: number) => ((closing - 1 + 7) % 31) + 1;
 
 /** A day of the month, one step at a time, wrapping from 31 back to 1. */
 function DayStepper({ label, value, onChange }: { label: string; value: number; onChange: (d: number) => void }) {
