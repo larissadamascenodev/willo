@@ -35,7 +35,17 @@ export default function ProximosEventos({ events }: { events: FinanceEvent[] }) 
   const today = useMemo(() => new Date(), []);
 
   const next = useMemo(() => upcoming(events, today), [events, today]);
-  if (next.length === 0) return null;
+  if (next.length === 0) {
+    return (
+      <Surface onPress={() => router.push("/eventos")} style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Text style={[T.cardLabel, { flex: 1 }]}>Próximos eventos</Text>
+          <ChevronRight size={16} color={th(INK.faint)} />
+        </View>
+        <Text style={{ marginTop: 10, fontSize: 13.5, lineHeight: 19, color: th(INK.soft) }}>Nada vencendo nos próximos dias. Contas e recebimentos com data aparecem aqui.</Text>
+      </Surface>
+    );
+  }
 
   const shown = next.slice(0, SHOWN);
   const rest = next.length - shown.length;

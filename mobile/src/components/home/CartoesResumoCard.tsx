@@ -71,7 +71,17 @@ export default function CartoesResumoCard({ size = "full" }: { size?: "half" | "
   /* The shared hook never settles without a session; that is not loading, it is
      nothing to show. */
   if (loading && user) return <Surface style={{ height: 196 }}><View /></Surface>;
-  if (rows.length === 0) return null;
+  if (rows.length === 0) {
+    return (
+      <Surface onPress={() => router.push("/cartoes")} style={{ flex: 1, padding: size === "half" ? 14 : 16 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Text numberOfLines={1} style={[T.cardLabel, { flex: 1 }, size === "half" && { fontSize: 13 }]}>{size === "half" ? "Cartões" : "Cartões de crédito"}</Text>
+          <ChevronRight size={16} color={th(INK.faint)} />
+        </View>
+        <Text style={{ marginTop: 10, fontSize: 13.5, lineHeight: 19, color: th(INK.soft) }}>Nenhum cartão ainda. Toque para adicionar o primeiro.</Text>
+      </Surface>
+    );
+  }
 
   const total = rows.reduce((s, r) => s + r.owed, 0);
 

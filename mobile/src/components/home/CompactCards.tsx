@@ -195,7 +195,14 @@ export function EventosCompact({ events }: { events: FinanceEvent[] }) {
   const router = useRouter();
   const today = useMemo(() => new Date(), []);
   const next = useMemo(() => upcoming(events, today), [events, today]);
-  if (next.length === 0) return null;
+  if (next.length === 0) {
+    return (
+      <Surface onPress={() => router.push("/eventos" as never)} style={{ height: HEIGHT, padding: 14 }}>
+        <Head label="Próximo evento" />
+        <Text style={{ marginTop: 10, fontSize: 13.5, lineHeight: 19, color: th(INK.soft) }}>Nada vencendo nos próximos dias.</Text>
+      </Surface>
+    );
+  }
   const e = next[0];
   const late = isOverdue(e, today);
   const income = isIncome(e);

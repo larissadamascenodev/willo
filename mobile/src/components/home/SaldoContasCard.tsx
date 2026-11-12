@@ -79,7 +79,19 @@ export default function SaldoContasCard({ saldoPrevisto }: { saldoPrevisto?: num
   }, [accounts]);
 
   if (!accounts) return <Surface style={{ height: 196 }}><View /></Surface>;
-  if (accounts.length === 0) return null;
+  /* No account yet: the card still stands, at zero, with the way to the first one. */
+  if (accounts.length === 0) {
+    return (
+      <Surface onPress={() => router.push("/gestao")} style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <Text style={T.cardLabel}>Saldo em contas</Text>
+          <ChevronRight size={16} color={th(INK.faint)} />
+        </View>
+        <Text numberOfLines={1} style={[T.figure, { marginTop: 4 }]}>{money(0)}</Text>
+        <Text style={{ marginTop: 10, fontSize: 13.5, lineHeight: 19, color: th(INK.soft) }}>Nenhuma conta ainda. Toque para adicionar a primeira.</Text>
+      </Surface>
+    );
+  }
 
   const total = rows.reduce((s, a) => s + a.balance, 0);
   const positive = rows.reduce((s, a) => s + Math.max(a.balance, 0), 0);

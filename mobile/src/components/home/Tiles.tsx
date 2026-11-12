@@ -375,7 +375,14 @@ export function AssinaturasTile({
   onCancel: (e: EndedSubscription) => void;
 }) {
   const router = useRouter();
-  if (assinaturas.length === 0 && ended.length === 0) return null;
+  if (assinaturas.length === 0 && ended.length === 0) {
+    return (
+      <Surface onPress={() => router.push("/transacoes")} style={{ flex: 1, padding: 16 }}>
+        <Header title="Assinaturas" />
+        <Empty text="Nenhuma assinatura ainda. O que se repete todo mês aparece aqui." />
+      </Surface>
+    );
+  }
   return (
     <AssinaturasCard
       assinaturas={assinaturas}
