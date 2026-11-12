@@ -1,4 +1,4 @@
-import { loadLayout, saveLayout, type WidgetSlot } from "@/lib/homeWidgets";
+import { loadLayout, saveLayout, setDismissed, type WidgetSlot } from "@/lib/homeWidgets";
 import { PHONE_WIDGETS } from "~/lib/phoneWidgets";
 
 /**
@@ -82,7 +82,44 @@ function journeyInPlace(userId: string | undefined, slots: WidgetSlot[]): Widget
   }
 }
 
+/**
+ * The board a new account opens on, in the order Larissa set (2026-11-12): what is
+ * in the accounts first, then the Copilot beside the cards, the month's flows and
+ * categories, the Radar, the next event beside the instalments, and the caixinhas
+ * beside the journey. Every card is there even with nothing in it yet; the fixed
+ * entries, the recent transactions and the subscriptions wait in "Adicionar widgets".
+ * After this first time the board is the person's to rearrange.
+ */
+const STARTING: WidgetSlot[] = [
+  { id: "saldo", size: "full" },
+  { id: "copilot", size: "half" },
+  { id: "cartoes", size: "half" },
+  { id: "fluxo", size: "full" },
+  { id: "categorias", size: "full" },
+  { id: "radar", size: "full" },
+  { id: "eventos", size: "half" },
+  { id: "parcelamentos", size: "half" },
+  { id: "metas", size: "half" },
+  { id: "jornada", size: "half" },
+  /* Hidden while the plan is switched off; it takes its place when it comes back. */
+  { id: "plano", size: "full" },
+];
+const WAITING = ["fixos", "recentes", "assinaturas"];
+
+/** A board never arranged before starts from STARTING, and the old one-time moves are marked done. */
+function firstBoard(userId: string | undefined) {
+  try {
+    if (localStorage.getItem(`willo.home.widgets.${userId ?? "anon"}`)) return;
+    saveLayout(userId, STARTING);
+    for (const id of WAITING) setDismissed(userId, id, true);
+    for (const k of [moved(userId), placed(userId), paired(userId), journeyed(userId)]) localStorage.setItem(k, "1");
+  } catch {
+    /* Without storage the shared default is used. */
+  }
+}
+
 export function loadPhoneLayout(userId?: string): WidgetSlot[] {
+  firstBoard(userId);
   const slots = journeyInPlace(userId, radarPairInPlace(userId, categoriesUnderFlows(userId, widened(userId))));
   /* Never the same card twice. */
   const seen = new Set<string>();
