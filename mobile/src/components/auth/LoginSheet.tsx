@@ -220,8 +220,9 @@ export default function LoginSheet({ open, onClose, email: knownEmail = "" }: { 
             .
           </Text>
         </View>
+        {/* Inside the sheet: on the iPhone a second modal opens only over the one it sits in. */}
+        <LegalSheet which={legal} onClose={() => setLegal(null)} />
       </BottomSheet>
-      <LegalSheet which={legal} onClose={() => setLegal(null)} />
     </>
   );
 }
