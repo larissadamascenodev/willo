@@ -536,7 +536,7 @@ export default function Setup() {
               <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 2, color: "rgba(255,255,255,0.8)" }}>CONTA CRIADA</Text>
             </View>
             <Text style={{ marginTop: 14, fontSize: compact ? 30 : 34, lineHeight: compact ? 35 : 40, fontWeight: "300", letterSpacing: -1, color: "#fff", textAlign: "center" }}>
-              {first ? "Bem-vinda ao Willo,\n" : "Bem-vindo ao\n"}
+              {first ? "Que bom ter você,\n" : "Que bom ter\n"}
               <Text style={{ fontWeight: "800" }}>{first ? `${first}.` : "você aqui."}</Text>
             </Text>
             <Text style={{ marginTop: 10, fontSize: 15, lineHeight: 21, color: C.soft, textAlign: "center", maxWidth: 300 }}>
