@@ -15,7 +15,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import Svg, { Circle, Path } from "react-native-svg";
+import Svg, { Circle, Defs, Path, RadialGradient, Rect, Stop } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { BANKS } from "@/lib/banks";
@@ -42,6 +42,13 @@ import type { OnboardingAnswers } from "~/lib/onboardingProfile";
  */
 
 type Section = "conta" | "fixas" | "receitas" | "cartao";
+/** Something set up in the guide: what it is, and its figure for the month preview. */
+interface Made {
+  section: Section;
+  label: string;
+  amount: number;
+  hex?: string;
+}
 type Screen =
   | "hello"
   | "accHave"
@@ -127,10 +134,10 @@ function DoneMark({ size = 112 }: { size?: number }) {
   const wave2 = useAnimatedStyle(() => ({ opacity: 0.25 * (1 - pulse.get()), transform: [{ scale: 1 + pulse.get() * 1.5 }] }));
   const glow = useAnimatedStyle(() => ({ opacity: tick.get() }));
   return (
-    <View style={{ width: size * 2.2, height: size * 1.7, alignItems: "center", justifyContent: "center" }}>
+    <View style={{ width: size * 2.2, height: size * 1.45, alignItems: "center", justifyContent: "center" }}>
       <Animated.View style={[{ position: "absolute", width: size, height: size, borderRadius: size / 2, borderWidth: 1, borderColor: "#fff" }, wave2]} />
       <Animated.View style={[{ position: "absolute", width: size, height: size, borderRadius: size / 2, borderWidth: 1.5, borderColor: "#fff" }, wave]} />
-      <Animated.View style={[{ position: "absolute", width: size, height: size, borderRadius: size / 2, backgroundColor: "rgba(255,255,255,0.07)" }, glow]} />
+      <Animated.View style={[{ position: "absolute", width: size, height: size, borderRadius: size / 2, backgroundColor: "rgba(255,255,255,0.08)", shadowColor: "#9C86FF", shadowOpacity: 0.7, shadowRadius: 24, shadowOffset: { width: 0, height: 0 } }, glow]} />
       <Svg width={size} height={size} viewBox="0 0 112 112">
         <Circle cx={56} cy={56} r={50} stroke="rgba(255,255,255,0.12)" strokeWidth={3} fill="none" />
         <AnimatedCircle cx={56} cy={56} r={50} stroke="#fff" strokeWidth={3} fill="none" strokeLinecap="round" strokeDasharray={[ARC, ARC]} animatedProps={ringProps} transform="rotate(-90 56 56)" />
@@ -140,19 +147,62 @@ function DoneMark({ size = 112 }: { size?: number }) {
   );
 }
 
-/** The deep light behind the welcome and the end: two slow glows drifting. */
-function Glow() {
+/** A soft light, the onboarding's Aura, as one round glow that can drift. */
+function Light({ hex, size, opacity }: { hex: string; size: number; opacity: number }) {
+  const id = `setup-light-${hex.replace(/[^a-z0-9]/gi, "")}`;
+  return (
+    <Svg width={size} height={size}>
+      <Defs>
+        <RadialGradient id={id} cx="0.5" cy="0.5" r="0.5">
+          <Stop offset="0" stopColor={hex} stopOpacity={opacity} />
+          <Stop offset="0.55" stopColor={hex} stopOpacity={opacity * 0.35} />
+          <Stop offset="1" stopColor={hex} stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+      <Rect x="0" y="0" width={size} height={size} fill={`url(#${id})`} />
+    </Svg>
+  );
+}
+
+const STARS = [
+  { x: 0.12, y: 0.08, s: 2, d: 0 },
+  { x: 0.82, y: 0.12, s: 1.6, d: 900 },
+  { x: 0.68, y: 0.3, s: 1.4, d: 1700 },
+  { x: 0.22, y: 0.34, s: 1.4, d: 2500 },
+  { x: 0.9, y: 0.42, s: 1.8, d: 400 },
+  { x: 0.06, y: 0.5, s: 1.2, d: 3100 },
+  { x: 0.48, y: 0.05, s: 1.2, d: 2100 },
+];
+
+function Star({ x, y, s, d, w, h }: { x: number; y: number; s: number; d: number; w: number; h: number }) {
+  const o = useSharedValue(0.15);
+  useEffect(() => {
+    o.set(withDelay(d, withRepeat(withSequence(withTiming(0.9, { duration: 1600, easing: Easing.inOut(Easing.sin) }), withTiming(0.15, { duration: 1600, easing: Easing.inOut(Easing.sin) })), -1, false)));
+  }, [o, d]);
+  const style = useAnimatedStyle(() => ({ opacity: o.get() }));
+  return <Animated.View style={[{ position: "absolute", left: x * w, top: y * h, width: s, height: s, borderRadius: s, backgroundColor: "#fff" }, style]} />;
+}
+
+/** Behind the welcome and the end: two soft lights drifting slowly, and a few stars. */
+function Nebula() {
+  const { width: w, height: h } = useWindowDimensions();
   const a = useSharedValue(0);
   useEffect(() => {
-    a.set(withRepeat(withSequence(withTiming(1, { duration: 6000, easing: Easing.inOut(Easing.sin) }), withTiming(0, { duration: 6000, easing: Easing.inOut(Easing.sin) })), -1, false));
+    a.set(withRepeat(withSequence(withTiming(1, { duration: 7000, easing: Easing.inOut(Easing.sin) }), withTiming(0, { duration: 7000, easing: Easing.inOut(Easing.sin) })), -1, false));
   }, [a]);
-  const one = useAnimatedStyle(() => ({ transform: [{ translateX: -40 + a.get() * 80 }, { translateY: a.get() * 30 }] }));
-  const two = useAnimatedStyle(() => ({ transform: [{ translateX: 40 - a.get() * 70 }, { translateY: -a.get() * 40 }] }));
+  const one = useAnimatedStyle(() => ({ transform: [{ translateX: -30 + a.get() * 60 }, { translateY: a.get() * 24 }] }));
+  const two = useAnimatedStyle(() => ({ transform: [{ translateX: 30 - a.get() * 50 }, { translateY: -a.get() * 30 }] }));
   return (
     <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, overflow: "hidden" }}>
-      <Animated.View style={[{ position: "absolute", top: -160, left: -80, width: 420, height: 420, borderRadius: 210, backgroundColor: "#5B3FE0", opacity: 0.32 }, one]} />
-      <Animated.View style={[{ position: "absolute", top: 40, right: -140, width: 360, height: 360, borderRadius: 180, backgroundColor: "#2F7BFF", opacity: 0.18 }, two]} />
-      <LinearGradient colors={["rgba(13,14,16,0)", "rgba(13,14,16,0.55)", C.bg]} locations={[0, 0.45, 0.8]} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
+      <Animated.View style={[{ position: "absolute", top: -w * 0.55, left: -w * 0.35 }, one]}>
+        <Light hex="#7C5CFF" size={w * 1.5} opacity={0.42} />
+      </Animated.View>
+      <Animated.View style={[{ position: "absolute", top: -w * 0.2, right: -w * 0.55 }, two]}>
+        <Light hex="#3C8DFF" size={w * 1.2} opacity={0.26} />
+      </Animated.View>
+      {STARS.map((st, i) => (
+        <Star key={i} {...st} w={w} h={h} />
+      ))}
     </View>
   );
 }
@@ -184,47 +234,60 @@ function Ask({ title, strong, line }: { title: string; strong: string; line?: st
   );
 }
 
-/** The banks as a compact grid of marks, three to a row, with "Outro banco" to close it. */
+/**
+ * The banks as a grid of marks, three across and four down with "Outro banco" last,
+ * each tile sized to the room the screen has so all of it shows without scrolling.
+ */
 function BankGrid({ value, onChange }: { value: string | null; onChange: (v: string) => void }) {
   const items = [...BANKS.map((b) => ({ name: b.name, hex: b.hex })), { name: OTHER, hex: "#3A3D46" }];
+  const [room, setRoom] = useState({ w: 0, h: 0 });
+  const GAP = 8;
+  const rows = Math.ceil(items.length / 3);
+  const tw = room.w ? (room.w - GAP * 2) / 3 : 0;
+  const th_ = room.h ? Math.min(84, (room.h - GAP * (rows - 1)) / rows) : 0;
+  const mark = th_ < 64 ? 24 : 28;
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-      {items.map((b) => {
-        const on = value === b.name;
-        return (
-          <Pressable
-            key={b.name}
-            onPress={() => {
-              tap();
-              onChange(b.name);
-            }}
-            style={({ pressed }) => ({
-              width: "31.9%",
-              height: 76,
-              borderRadius: 18,
-              borderCurve: "continuous",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              borderWidth: on ? 1.5 : 1,
-              borderColor: on ? "#fff" : C.line,
-              backgroundColor: on ? "rgba(255,255,255,0.1)" : C.fill,
-              transform: [{ scale: pressed ? 0.96 : 1 }],
-            })}
-          >
-            {b.name === OTHER ? (
-              <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" }}>
-                <Plus size={16} color="#fff" strokeWidth={2.4} />
-              </View>
-            ) : (
-              <BankMark name={b.name} hex={b.hex} size={28} />
-            )}
-            <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: on ? "700" : "600", color: "#fff", paddingHorizontal: 4 }}>
-              {b.name === OTHER ? "Outro banco" : b.name}
-            </Text>
-          </Pressable>
-        );
-      })}
+    <View style={{ flex: 1 }} onLayout={(e) => setRoom({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+      {tw > 0 && (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: GAP }}>
+          {items.map((b) => {
+            const on = value === b.name;
+            return (
+              <Pressable
+                key={b.name}
+                onPress={() => {
+                  tap();
+                  onChange(b.name);
+                }}
+                style={({ pressed }) => ({
+                  width: tw,
+                  height: th_,
+                  borderRadius: 18,
+                  borderCurve: "continuous",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: th_ < 64 ? 4 : 6,
+                  borderWidth: on ? 1.5 : 1,
+                  borderColor: on ? "#fff" : C.line,
+                  backgroundColor: on ? "rgba(255,255,255,0.1)" : C.fill,
+                  transform: [{ scale: pressed ? 0.96 : 1 }],
+                })}
+              >
+                {b.name === OTHER ? (
+                  <View style={{ width: mark, height: mark, borderRadius: mark / 2, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" }}>
+                    <Plus size={15} color="#fff" strokeWidth={2.4} />
+                  </View>
+                ) : (
+                  <BankMark name={b.name} hex={b.hex} size={mark} />
+                )}
+                <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: on ? "700" : "600", color: "#fff", paddingHorizontal: 4 }}>
+                  {b.name === OTHER ? "Outro banco" : b.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 }
@@ -337,7 +400,7 @@ export default function Setup() {
   const [due, setDue] = useState(dueAfter(1));
   const [dueSet, setDueSet] = useState(false);
   /* What was set up, for the end. */
-  const [made, setMade] = useState<{ section: Section; text: string }[]>([]);
+  const [made, setMade] = useState<Made[]>([]);
 
   useEffect(() => {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
@@ -400,7 +463,7 @@ export default function Setup() {
   };
 
   /** Saves a section, then moves past it; a failure stays put with a word about it. */
-  const save = async (work: () => Promise<{ section: Section; text: string }[]>) => {
+  const save = async (work: () => Promise<Made[]>) => {
     if (!user || busy) return;
     setBusy(true);
     setError(null);
@@ -421,12 +484,12 @@ export default function Setup() {
     save(async () => {
       const b = BANKS.find((x) => x.name === bank);
       await createAccount(user!.id, { name: accountName, type: "checking", initial_balance: balance, color: b?.accent ?? null });
-      return [{ section: "conta", text: `${accountName} · ${money(balance)}` }];
+      return [{ section: "conta", label: accountName, amount: balance, hex: b?.hex }];
     });
 
   const saveBills = () =>
     save(async () => {
-      const out: { section: Section; text: string }[] = [];
+      const out: Made[] = [];
       for (const id of chosen) {
         const b = BILLS.find((x) => x.id === id)!;
         const v = bills[id];
@@ -435,7 +498,7 @@ export default function Setup() {
           { name: b.label, type: "despesa", amount: v.amount, category: b.category, date: nextOn(v.day), status: "pendente", payment_method: "conta", recurrence_type: "fixa" } as never,
           user!.id,
         );
-        out.push({ section: "fixas", text: `${b.label} · ${money(v.amount)} todo dia ${v.day}` });
+        out.push({ section: "fixas", label: b.label, amount: v.amount });
       }
       return out;
     });
@@ -447,7 +510,7 @@ export default function Setup() {
         { name: incomeDef!.label, type: "receita", amount: incomeAmount, category: incomeDef!.category, date: nextOn(payday), status: "pendente", payment_method: "conta", recurrence_type: "fixa" } as never,
         user!.id,
       );
-      return [{ section: "receitas", text: `${incomeDef!.label} · ${money(incomeAmount)} todo dia ${payday}` }];
+      return [{ section: "receitas", label: incomeDef!.label, amount: incomeAmount }];
     });
 
   const cardTitle = cardBank === OTHER ? cardName.trim() : cardBank ?? "";
@@ -455,52 +518,53 @@ export default function Setup() {
     save(async () => {
       const b = BANKS.find((x) => x.name === cardBank);
       await createCreditCard({ name: cardTitle, limit, closing_day: closing, due_day: due, color: b?.hex ?? null }, user!.id);
-      return [{ section: "cartao", text: `${cardTitle} · fecha dia ${closing}, vence dia ${due}` }];
+      return [{ section: "cartao", label: cardTitle, amount: limit, hex: b?.hex }];
     });
 
   /* ─────────────── The welcome ─────────────── */
   if (screen === "hello") {
     return (
       <View style={{ flex: 1, backgroundColor: C.bg }}>
-        <Glow />
-        <View style={{ flex: 1, paddingTop: insets.top + (compact ? 4 : 20), paddingHorizontal: 24 }}>
+        <Nebula />
+        <View style={{ flex: 1, paddingTop: insets.top + 8, paddingHorizontal: 24, justifyContent: "center" }}>
           <View style={{ alignItems: "center" }}>
-            <DoneMark size={compact ? 92 : 108} />
+            <DoneMark size={compact ? 76 : 92} />
           </View>
-          <Animated.View entering={FadeInDown.delay(900).duration(560)} style={{ alignItems: "center" }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <View style={{ width: 18, height: 1, backgroundColor: "rgba(255,255,255,0.35)" }} />
-              <Text style={{ fontSize: 11.5, fontWeight: "800", letterSpacing: 2.6, color: "rgba(255,255,255,0.65)" }}>CONTA CRIADA</Text>
-              <View style={{ width: 18, height: 1, backgroundColor: "rgba(255,255,255,0.35)" }} />
+          <Animated.View entering={FadeInDown.delay(900).duration(560)} style={{ alignItems: "center", marginTop: compact ? 0 : 4 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, height: 26, borderRadius: 13, backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }}>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.green }} />
+              <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 2, color: "rgba(255,255,255,0.8)" }}>CONTA CRIADA</Text>
             </View>
-            <Text style={{ marginTop: 12, fontSize: compact ? 30 : 34, lineHeight: compact ? 36 : 40, fontWeight: "300", letterSpacing: -1, color: "#fff", textAlign: "center" }}>
-              {"Tudo pronto,\n"}
-              <Text style={{ fontWeight: "800" }}>{first ? `${first}.` : "vamos começar."}</Text>
+            <Text style={{ marginTop: 14, fontSize: compact ? 30 : 34, lineHeight: compact ? 35 : 40, fontWeight: "300", letterSpacing: -1, color: "#fff", textAlign: "center" }}>
+              {first ? "Bem-vinda ao Willo,\n" : "Bem-vindo ao\n"}
+              <Text style={{ fontWeight: "800" }}>{first ? `${first}.` : "você aqui."}</Text>
             </Text>
-            <Text style={{ marginTop: 10, fontSize: 15, lineHeight: 22, color: C.soft, textAlign: "center", maxWidth: 320 }}>
-              Em 2 minutos o Willo fica com a sua cara. Tudo pode ficar para depois.
+            <Text style={{ marginTop: 10, fontSize: 15, lineHeight: 21, color: C.soft, textAlign: "center", maxWidth: 300 }}>
+              Vamos montar o seu mês em 4 passos rápidos.
             </Text>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(1150).duration(500)} style={{ marginTop: compact ? 18 : 28, borderRadius: 24, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(22,24,29,0.72)", paddingVertical: 6, paddingHorizontal: 16 }}>
-            {SECTIONS.map(({ id, Icon, label, line }, n) => (
-              <Animated.View key={id} entering={FadeInDown.delay(1250 + n * 100).duration(400)} style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: compact ? 10 : 13, borderTopWidth: n ? 1 : 0, borderTopColor: "rgba(255,255,255,0.06)" }}>
-                <View style={{ width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.07)" }}>
-                  <Icon size={18} color="#fff" strokeWidth={2} />
+          {/* The four steps, two by two: what is coming, at a glance. */}
+          <View style={{ marginTop: compact ? 20 : 30, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            {SECTIONS.map(({ id, Icon, label }, n) => (
+              <Animated.View key={id} entering={FadeInDown.delay(1150 + n * 90).duration(420)} style={{ width: "48.4%" }}>
+                <View style={{ height: compact ? 64 : 72, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(255,255,255,0.05)", paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.08)" }}>
+                    <Icon size={17} color="#fff" strokeWidth={2} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ fontSize: 11, fontWeight: "700", letterSpacing: 1, color: "rgba(255,255,255,0.4)", fontVariant: ["tabular-nums"] }}>PASSO {n + 1}</Text>
+                    <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 14.5, fontWeight: "700", color: "#fff" }}>{label}</Text>
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>{label}</Text>
-                  <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: C.softer }}>{line}</Text>
-                </View>
-                <Text style={{ fontSize: 12, fontWeight: "700", color: "rgba(255,255,255,0.35)", fontVariant: ["tabular-nums"] }}>{n + 1}</Text>
               </Animated.View>
             ))}
-          </Animated.View>
+          </View>
         </View>
 
-        <Animated.View entering={FadeIn.delay(1600).duration(500)} style={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 10, gap: 6 }}>
+        <Animated.View entering={FadeIn.delay(1500).duration(500)} style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: insets.bottom + 8, gap: 4 }}>
           {error && <Text style={{ textAlign: "center", fontSize: 13, color: C.red }}>{error}</Text>}
-          <Cta label="Configurar agora" onPress={() => go(order[0])} disabled={busy || accounts === null} />
+          <Cta label="Começar" onPress={() => go(order[0])} disabled={busy || accounts === null} />
           <Pressable onPress={() => void enter()} disabled={busy} hitSlop={8} style={({ pressed }) => ({ alignSelf: "center", paddingVertical: 10, flexDirection: "row", gap: 8, alignItems: "center", opacity: pressed ? 0.5 : 1 })}>
             {busy && <ActivityIndicator color="#fff" size="small" />}
             <Text style={{ fontSize: 14, color: "rgba(255,255,255,0.7)" }}>Fazer depois e entrar</Text>
@@ -512,40 +576,88 @@ export default function Setup() {
 
   /* ─────────────── The end ─────────────── */
   if (screen === "done") {
-    const shown = compact ? 4 : 6;
+    const sumOf = (sec: Section) => made.filter((m) => m.section === sec).reduce((t, m) => t + m.amount, 0);
+    const startBalance = (accounts ?? []).reduce((t, a) => t + (Number(a.current_balance) || 0), 0) + sumOf("conta");
+    const inflow = sumOf("receitas");
+    const outflow = sumOf("fixas");
+    const left = inflow - outflow;
+    const share = inflow > 0 ? Math.min(outflow / inflow, 1) : outflow > 0 ? 1 : 0;
+    const anything = made.length > 0;
+    const chips = made.slice(0, compact ? 4 : 6);
     return (
       <View style={{ flex: 1, backgroundColor: C.bg }}>
-        <Glow />
-        <View style={{ flex: 1, paddingTop: insets.top + (compact ? 4 : 20), paddingHorizontal: 24 }}>
-          <View style={{ alignItems: "center" }}>
-            <DoneMark size={compact ? 84 : 100} />
-          </View>
-          <Animated.View entering={FadeInDown.delay(800).duration(520)} style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: compact ? 28 : 32, lineHeight: compact ? 34 : 38, fontWeight: "300", letterSpacing: -0.9, color: "#fff", textAlign: "center" }}>
-              {"Seu Willo está\n"}
-              <Text style={{ fontWeight: "800" }}>do seu jeito.</Text>
-            </Text>
-            <Text style={{ marginTop: 10, fontSize: 15, lineHeight: 22, color: C.soft, textAlign: "center", maxWidth: 320 }}>
-              {made.length ? "Isto já está no app. O resto você adiciona quando quiser." : "Você pode configurar tudo depois, de dentro do app."}
+        <Nebula />
+        <View style={{ flex: 1, paddingTop: insets.top + 8, paddingHorizontal: 22, justifyContent: "center" }}>
+          <Animated.View entering={FadeInDown.duration(520)} style={{ alignItems: "center" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, height: 26, borderRadius: 13, backgroundColor: "rgba(103,205,103,0.14)" }}>
+              <Check size={13} color={C.green} strokeWidth={3.2} />
+              <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 2, color: C.green }}>TUDO CONFIGURADO</Text>
+            </View>
+            <Text style={{ marginTop: 14, fontSize: compact ? 29 : 33, lineHeight: compact ? 34 : 39, fontWeight: "300", letterSpacing: -1, color: "#fff", textAlign: "center" }}>
+              {anything ? "Seu mês já está\n" : "Tudo certo para\n"}
+              <Text style={{ fontWeight: "800" }}>{anything ? "no Willo." : "começar."}</Text>
             </Text>
           </Animated.View>
-          {made.length > 0 && (
-            <Animated.View entering={FadeInDown.delay(1050).duration(480)} style={{ marginTop: 24, borderRadius: 24, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.09)", backgroundColor: "rgba(22,24,29,0.72)", paddingVertical: 4, paddingHorizontal: 16 }}>
-              {made.slice(0, shown).map((m, n) => {
-                const Icon = SECTIONS.find((s) => s.id === m.section)!.Icon;
-                return (
-                  <View key={n} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderTopWidth: n ? 1 : 0, borderTopColor: "rgba(255,255,255,0.06)" }}>
-                    <Icon size={17} color="#fff" strokeWidth={2} />
-                    <Text numberOfLines={1} style={{ flex: 1, fontSize: 14.5, fontWeight: "600", color: "#fff" }}>{m.text}</Text>
-                    <Check size={15} color={C.green} strokeWidth={3} />
+
+          {anything ? (
+            <Animated.View
+              entering={FadeInDown.delay(250).duration(560)}
+              style={{ marginTop: compact ? 18 : 26, borderRadius: 28, borderCurve: "continuous", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", backgroundColor: "rgba(22,24,29,0.78)", padding: 18, overflow: "hidden" }}
+            >
+              <LinearGradient colors={["rgba(124,92,255,0.22)", "rgba(124,92,255,0)"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
+              <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 1.8, color: "rgba(255,255,255,0.5)" }}>PRÉVIA DO SEU MÊS</Text>
+
+              <Text style={{ marginTop: 10, fontSize: 13, color: C.soft }}>Saldo em conta hoje</Text>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={{ marginTop: 2, fontSize: compact ? 30 : 34, fontWeight: "800", letterSpacing: -1.2, color: "#fff", fontVariant: ["tabular-nums"] }}>{money(startBalance)}</Text>
+
+              <View style={{ marginTop: 14, flexDirection: "row", gap: 8 }}>
+                {[
+                  { k: "Entra", v: inflow, c: C.green },
+                  { k: "Sai fixo", v: outflow, c: "#FF8A8A" },
+                  { k: "Sobra", v: left, c: "#fff" },
+                ].map((x) => (
+                  <View key={x.k} style={{ flex: 1, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.05)", paddingVertical: 10, paddingHorizontal: 10 }}>
+                    <Text style={{ fontSize: 11.5, color: C.softer }}>{x.k}</Text>
+                    <Text numberOfLines={1} adjustsFontSizeToFit style={{ marginTop: 3, fontSize: 15, fontWeight: "800", color: x.c, fontVariant: ["tabular-nums"] }}>{money(x.v)}</Text>
                   </View>
-                );
-              })}
-              {made.length > shown && <Text style={{ paddingBottom: 12, fontSize: 13, color: C.softer }}>e mais {made.length - shown}</Text>}
+                ))}
+              </View>
+
+              {inflow > 0 && (
+                <View style={{ marginTop: 12 }}>
+                  <View style={{ height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                    <View style={{ width: `${share * 100}%`, height: 6, borderRadius: 3, backgroundColor: "#FF8A8A" }} />
+                  </View>
+                  <Text style={{ marginTop: 6, fontSize: 12, color: C.softer }}>
+                    {Math.round(share * 100)}% do que entra já tem destino nos gastos fixos
+                  </Text>
+                </View>
+              )}
+
+              <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.07)", flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                {chips.map((m, i) => {
+                  const Icon = SECTIONS.find((x) => x.id === m.section)!.Icon;
+                  return (
+                    <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 6, height: 30, paddingLeft: 8, paddingRight: 11, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.07)" }}>
+                      {m.hex ? <BankMark name={m.label} hex={m.hex} size={18} /> : <Icon size={13} color="#fff" strokeWidth={2.2} />}
+                      <Text style={{ fontSize: 12.5, fontWeight: "600", color: "#fff" }}>{m.label}</Text>
+                    </View>
+                  );
+                })}
+                {made.length > chips.length && (
+                  <View style={{ height: 30, paddingHorizontal: 11, borderRadius: 15, justifyContent: "center", backgroundColor: "rgba(255,255,255,0.07)" }}>
+                    <Text style={{ fontSize: 12.5, fontWeight: "600", color: C.soft }}>+{made.length - chips.length}</Text>
+                  </View>
+                )}
+              </View>
             </Animated.View>
+          ) : (
+            <Animated.Text entering={FadeInDown.delay(250).duration(500)} style={{ marginTop: 12, fontSize: 15, lineHeight: 22, color: C.soft, textAlign: "center" }}>
+              Contas, cartões e gastos fixos você cadastra quando quiser, de dentro do app.
+            </Animated.Text>
           )}
         </View>
-        <Animated.View entering={FadeIn.delay(1300).duration(500)} style={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 16, gap: 8 }}>
+        <Animated.View entering={FadeIn.delay(700).duration(500)} style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: insets.bottom + 16, gap: 8 }}>
           {error && <Text style={{ textAlign: "center", fontSize: 13, color: C.red }}>{error}</Text>}
           <Cta label={busy ? "Abrindo…" : "Entrar no Willo"} onPress={() => void enter()} disabled={busy} />
         </Animated.View>
@@ -589,7 +701,7 @@ export default function Setup() {
     body = (
       <>
         <Ask title="Onde fica o seu" strong="dinheiro hoje?" line="O banco da sua conta principal." />
-        <View style={{ marginTop: 20 }}>
+        <View style={{ flex: 1, marginTop: 18, marginBottom: 6 }}>
           <BankGrid value={bank} onChange={setBank} />
         </View>
       </>
@@ -709,7 +821,7 @@ export default function Setup() {
     body = (
       <>
         <Ask title="De qual banco é" strong="o seu cartão?" line="O que você mais usa. Outros entram depois." />
-        <View style={{ marginTop: 20 }}>
+        <View style={{ flex: 1, marginTop: 18, marginBottom: 6 }}>
           <BankGrid value={cardBank} onChange={setCardBank} />
         </View>
       </>
