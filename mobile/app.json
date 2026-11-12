@@ -4,7 +4,10 @@
     "slug": "willo",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "willo",
+    "scheme": [
+      "willo",
+      "com.googleusercontent.apps.1042118205958-t1i69e3mmliurcqi2h8op2p729leluus"
+    ],
     "icon": "./assets/images/app-icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#08090A",

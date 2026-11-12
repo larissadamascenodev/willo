@@ -3,6 +3,8 @@ import * as AppleAuthentication from "expo-apple-authentication";
 import * as Crypto from "expo-crypto";
 import * as ExpoLinking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
+import * as AuthSession from "expo-auth-session";
+import Constants from "expo-constants";
 import { supabase } from "@/integrations/supabase/client";
 import { setAccountStage } from "~/lib/accountStage";
 
@@ -13,10 +15,12 @@ import { setAccountStage } from "~/lib/accountStage";
  * by Apple, with a nonce we chose, and Supabase trades it for a session. Apple tells
  * the name only the first time, so it is kept on the account then.
  *
- * Google goes through the browser sheet the system draws inside the app. Supabase
- * sends the person to Google and back to willo://auth with the session in the
- * address; the session is taken from there. The address must be on the project's
- * list of allowed redirects (Supabase › Authentication › URL Configuration).
+ * Google, in the iPhone app, talks to Google directly with Willo's own iOS client: the
+ * system sheet opens Google's page, it comes back to the app's own scheme (never through
+ * the Supabase address, so Google shows Willo and not a technical domain), the code is
+ * traded for an ID token with a nonce we chose, and Supabase trades that for a session.
+ * Elsewhere (Expo Go, which cannot carry the app's scheme) it falls back to the
+ * Supabase web flow back to willo://auth.
  *
  * Both end the same way as e-mail: a session appears and the auth listener moves
  * the screen. What comes back here is only whether it worked, was cancelled, or why
@@ -125,7 +129,48 @@ function readReturn(url: string) {
 }
 
 export function signInWithGoogle(mode: Mode = "criar"): Promise<SocialResult> {
-  return guarded(mode, googleOnce);
+  return guarded(mode, canGoNative() ? googleNative : googleOnce);
+}
+
+/* Willo's iOS client on Google Cloud (project willo-514419). Public, not a secret. */
+const GOOGLE_IOS_CLIENT = "1042118205958-t1i69e3mmliurcqi2h8op2p729leluus.apps.googleusercontent.com";
+/* Google's own way back for an iOS client: its id, reversed, as the app's scheme. */
+const GOOGLE_IOS_REDIRECT = "com.googleusercontent.apps.1042118205958-t1i69e3mmliurcqi2h8op2p729leluus:/oauthredirect";
+const GOOGLE = { authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth", tokenEndpoint: "https://oauth2.googleapis.com/token" };
+
+/** The store app on an iPhone: it carries the scheme Google comes back to. */
+const canGoNative = () => Platform.OS === "ios" && Constants.appOwnership !== "expo";
+
+async function googleNative(): Promise<SocialResult> {
+  try {
+    /* Google gets the hash; Supabase gets the nonce itself and checks they match. */
+    const nonce = Crypto.randomUUID();
+    const hashed = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, nonce);
+    const request = new AuthSession.AuthRequest({
+      clientId: GOOGLE_IOS_CLIENT,
+      redirectUri: GOOGLE_IOS_REDIRECT,
+      scopes: ["openid", "email", "profile"],
+      responseType: AuthSession.ResponseType.Code,
+      usePKCE: true,
+      extraParams: { nonce: hashed, prompt: "select_account" },
+    });
+    const res = await request.promptAsync(GOOGLE);
+    if (res.type !== "success") return { ok: false, cancelled: res.type === "cancel" || res.type === "dismiss" };
+    const code = res.params.code;
+    if (!code) return { ok: false, message: "O Google não devolveu a entrada. Tente de novo." };
+
+    const tokens = await AuthSession.exchangeCodeAsync(
+      { clientId: GOOGLE_IOS_CLIENT, code, redirectUri: GOOGLE_IOS_REDIRECT, extraParams: { code_verifier: request.codeVerifier ?? "" } },
+      GOOGLE,
+    );
+    if (!tokens.idToken) return { ok: false, message: "O Google não confirmou a entrada. Tente de novo." };
+
+    const { error } = await supabase.auth.signInWithIdToken({ provider: "google", token: tokens.idToken, nonce });
+    if (error) return { ok: false, message: friendly(error.message) };
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "Não foi possível entrar com o Google agora. Tente de novo." };
+  }
 }
 
 async function googleOnce(): Promise<SocialResult> {
