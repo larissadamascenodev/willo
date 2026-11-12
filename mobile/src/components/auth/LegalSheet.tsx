@@ -139,6 +139,38 @@ export default function LegalSheet({ which, onClose, onAccept }: { which: "terms
   );
 }
 
+/** A document's own content, for a page that already scrolls (the login sheet). */
+export function LegalDocument({ which }: { which: "terms" | "privacy" }) {
+  const doc = LEGAL[which];
+  return (
+    <View>
+      <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 2.4, color: th("rgba(255,255,255,0.42)") }}>{doc.kicker}</Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{ marginTop: 8, fontSize: 26, lineHeight: 32, fontWeight: "700", letterSpacing: -0.8, color: th("#fff") }}>
+        {doc.title}
+      </Text>
+      <Text style={{ marginTop: 6, fontSize: 12.5, letterSpacing: 0.2, color: th("rgba(255,255,255,0.4)"), fontVariant: ["tabular-nums"] }}>
+        Versão {doc.version}  ·  atualizada em {doc.updated}
+      </Text>
+      <View style={{ height: 1, marginTop: 18, marginBottom: 18, backgroundColor: th("rgba(255,255,255,0.07)", "bg") }} />
+      <Text style={{ fontSize: 15.5, lineHeight: 24, letterSpacing: -0.2, fontWeight: "500", color: th("rgba(255,255,255,0.92)") }}>{doc.intro}</Text>
+      {doc.sections.map((s) => (
+        <View key={s.title} style={{ marginTop: 28 }}>
+          <Text style={{ fontSize: 16.5, lineHeight: 22, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>{s.title}</Text>
+          {s.blocks.map((blk, i) => (
+            <Fragment key={i}>{renderBlock(blk)}</Fragment>
+          ))}
+        </View>
+      ))}
+      <View style={{ height: 1, marginTop: 30, marginBottom: 14, backgroundColor: th("rgba(255,255,255,0.07)", "bg") }} />
+      <Text style={{ fontSize: 12.5, lineHeight: 19, color: th("rgba(255,255,255,0.38)") }}>
+        {OPERATOR.name} · {OPERATOR.document}
+        {"\n"}
+        {OPERATOR.city} · {OPERATOR.email}
+      </Text>
+    </View>
+  );
+}
+
 function renderBlock(b: LegalBlock) {
   if ("p" in b) return <Text style={[BODY, { marginTop: 12 }]}>{b.p}</Text>;
   if ("list" in b)

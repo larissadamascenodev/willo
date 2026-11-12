@@ -5,11 +5,12 @@ import * as Haptics from "expo-haptics";
 import { supabase } from "~/supabase/client";
 import BottomSheet from "~/components/BottomSheet";
 import Field, { PasswordField } from "~/components/auth/Field";
-import LegalSheet from "~/components/auth/LegalSheet";
+import { LegalDocument } from "~/components/auth/LegalSheet";
+import RoundButton from "~/components/RoundButton";
 import Provider from "~/components/auth/Provider";
 import { AppleMark, GoogleMark } from "~/components/auth/BrandIcons";
 import { signInWithApple, signInWithGoogle } from "~/lib/socialAuth";
-import { AlertTriangle, CircleCheck, Info, Mail } from "~/components/icons";
+import { AlertTriangle, ChevronLeft, CircleCheck, Info, Mail } from "~/components/icons";
 import { GREEN, INK, RED } from "~/theme/tokens";
 
 /**
@@ -44,6 +45,7 @@ export default function LoginSheet({ open, onClose, email: knownEmail = "" }: { 
     setPassword("");
     setNote(null);
     setBusy(false);
+    setLegal(null);
   }, [open, knownEmail]);
 
   const openForm = () => {
@@ -105,7 +107,18 @@ export default function LoginSheet({ open, onClose, email: knownEmail = "" }: { 
 
   return (
     <>
-      <BottomSheet open={open} onClose={onClose}>
+      <BottomSheet open={open} onClose={onClose} full={!!legal}>
+        {/* A document opens in the sheet itself, grown tall, with the way back to the login. */}
+        {legal ? (
+          <Animated.View key={legal} entering={FadeIn.duration(220)} style={{ paddingHorizontal: 22, paddingBottom: 6 }}>
+            <View style={{ height: 44, justifyContent: "center", marginBottom: 6 }}>
+              <RoundButton label="Voltar" onPress={() => setLegal(null)}>
+                <ChevronLeft size={20} color="#fff" strokeWidth={2.4} />
+              </RoundButton>
+            </View>
+            <LegalDocument which={legal} />
+          </Animated.View>
+        ) : (
         <View style={{ paddingHorizontal: 22, paddingTop: 4, paddingBottom: 6 }}>
           <Animated.View layout={transition}>
             <Text style={{ fontSize: 26, fontWeight: "300", letterSpacing: -0.6, color: "#fff" }}>
@@ -220,8 +233,7 @@ export default function LoginSheet({ open, onClose, email: knownEmail = "" }: { 
             .
           </Text>
         </View>
-        {/* Inside the sheet: on the iPhone a second modal opens only over the one it sits in. */}
-        <LegalSheet which={legal} onClose={() => setLegal(null)} />
+        )}
       </BottomSheet>
     </>
   );
