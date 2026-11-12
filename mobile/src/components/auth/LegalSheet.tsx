@@ -89,15 +89,9 @@ export default function LegalSheet({ which, onClose, onAccept }: { which: "terms
           {/* Its name, on one line, and when it last changed. */}
           <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 2.4, color: th("rgba(255,255,255,0.42)") }}>{doc.kicker}</Text>
           <Text
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
-            style={{ marginTop: 8, fontSize: 30, lineHeight: 36, fontWeight: "700", letterSpacing: -0.9, color: th("#fff") }}
+            style={{ marginTop: 8, fontSize: 26, lineHeight: 32, fontWeight: "700", letterSpacing: -0.9, color: th("#fff") }}
           >
             {doc.title}
-          </Text>
-          <Text style={{ marginTop: 8, fontSize: 12.5, letterSpacing: 0.2, color: th("rgba(255,255,255,0.4)"), fontVariant: ["tabular-nums"] }}>
-            Versão {doc.version}  ·  atualizada em {doc.updated}
           </Text>
 
           <View style={{ height: 1, marginTop: 22, marginBottom: 22, backgroundColor: th("rgba(255,255,255,0.07)", "bg") }} />
@@ -145,11 +139,8 @@ export function LegalDocument({ which }: { which: "terms" | "privacy" }) {
   return (
     <View>
       <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 2.4, color: th("rgba(255,255,255,0.42)") }}>{doc.kicker}</Text>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{ marginTop: 8, fontSize: 26, lineHeight: 32, fontWeight: "700", letterSpacing: -0.8, color: th("#fff") }}>
+      <Text style={{ marginTop: 8, fontSize: 24, lineHeight: 30, fontWeight: "700", letterSpacing: -0.8, color: th("#fff") }}>
         {doc.title}
-      </Text>
-      <Text style={{ marginTop: 6, fontSize: 12.5, letterSpacing: 0.2, color: th("rgba(255,255,255,0.4)"), fontVariant: ["tabular-nums"] }}>
-        Versão {doc.version}  ·  atualizada em {doc.updated}
       </Text>
       <View style={{ height: 1, marginTop: 18, marginBottom: 18, backgroundColor: th("rgba(255,255,255,0.07)", "bg") }} />
       <Text style={{ fontSize: 15.5, lineHeight: 24, letterSpacing: -0.2, fontWeight: "500", color: th("rgba(255,255,255,0.92)") }}>{doc.intro}</Text>
