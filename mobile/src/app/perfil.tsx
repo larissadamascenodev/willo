@@ -12,9 +12,9 @@ import BackButton from "~/components/BackButton";
 import ConfirmGlass from "~/components/ConfirmGlass";
 import Surface, { Hairline } from "~/components/Surface";
 import LegalSheet from "~/components/auth/LegalSheet";
-import { Bell, Camera, Check, ChevronRight, Crown, FileText, ImagePlus, LifeBuoy, LogOut, Moon, Pencil, Shield, Sun, Zap } from "~/components/icons";
+import { Bell, Camera, Check, ChevronRight, Crown, FileText, ImagePlus, LifeBuoy, LogOut, Pencil, Shield, Zap } from "~/components/icons";
 import BottomSheet from "~/components/BottomSheet";
-import DayNightToggle from "~/components/DayNightToggle";
+import ThemeTile from "~/components/ThemeTile";
 import { usePro } from "~/lib/purchases";
 import { useAuth } from "~/lib/auth";
 import { setSkyPhoto, useLightSkyModel, useSkyModel, useSkyPhoto, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
@@ -41,6 +41,7 @@ import { isLight, switchTheme, th, useThemeRedraw, prepareThemeShot } from "~/th
 
 const PAD = 16;
 const SHEET_GAP = 10;
+const APPEARANCE_H = 156;
 
 const LIGHT_BACKGROUNDS: { key: LightSkyModel; label: string }[] = [
   ...LIGHT_BACKDROP_KEYS.map((key) => ({ key, label: LIGHT_BACKDROPS[key].label })),
@@ -84,6 +85,7 @@ export default function Perfil() {
   const [asking, setAsking] = useState<"leave" | "delete" | null>(null);
   const [busy, setBusy] = useState(false);
   const [pickingBg, setPickingBg] = useState(false);
+  const [bgTileW, setBgTileW] = useState(0);
   const pro = usePro();
   const [wantLight, setWantLight] = useState(light);
   useEffect(() => setWantLight(light), [light]);
@@ -283,49 +285,53 @@ export default function Perfil() {
         {/* How the app looks: the theme with one switch, and what is behind every screen
             chosen in a sheet, where the previews have room. */}
         <Eyebrow>Aparência</Eyebrow>
-        <Surface>
-          <Row
-            icon={wantLight ? <Sun size={17} color={th("#fff")} strokeWidth={1.9} /> : <Moon size={17} color={th("#fff")} strokeWidth={1.9} />}
-            label="Tema"
-            value={wantLight ? "Claro" : "Escuro"}
-            trailing={<DayNightToggle light={wantLight} onPress={(e) => flipTheme(e.nativeEvent.pageX, e.nativeEvent.pageY)} />}
-          />
-          <Hairline style={{ marginLeft: 64 }} />
-          <Row
-            icon={
-              <View style={{ width: 24, height: 36, borderRadius: 6, overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.25)", "line") }}>
-                {wornKey === "custom" && !photo ? null : (
-                  <View pointerEvents="none" style={{ width: screenW, height: screenH, transformOrigin: "top left", transform: [{ scale: 24 / screenW }] }}>
-                    <Room preview={wornKey} />
-                  </View>
-                )}
-              </View>
-            }
-            label="Fundo"
-            value={wornLabel}
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <ThemeTile light={wantLight} height={APPEARANCE_H} onPress={(e) => flipTheme(e.nativeEvent.pageX, e.nativeEvent.pageY)} />
+          {/* The background worn now, filling the card; the choice opens in a sheet. */}
+          <Pressable
             onPress={() => {
               tick();
               setPickingBg(true);
             }}
-            chevron
-          />
-          {/* A photo of one's own is set on its preview: its veil, light or dark, and blur. */}
-          {wornKey === "custom" && !!photo && (
-            <>
-              <Hairline style={{ marginLeft: 64 }} />
-              <Row
-                label="Ajustar a foto"
-                value={light ? "Só na tela inicial · véu claro ou escuro" : "Só na tela inicial · intensidade do véu"}
-                icon={<ImagePlus size={17} color={th("#fff")} strokeWidth={1.9} />}
-                onPress={() => {
-                  tick();
-                  router.push("/fundo-foto" as never);
-                }}
-                chevron
-              />
-            </>
-          )}
-        </Surface>
+            accessibilityRole="button"
+            accessibilityLabel={`Fundo: ${wornLabel}. Trocar`}
+            style={{ flex: 1 }}
+          >
+            {({ pressed }) => (
+              <View
+                onLayout={(e) => setBgTileW(e.nativeEvent.layout.width)}
+                style={{ height: APPEARANCE_H, borderRadius: 26, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.10)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg"), transform: [{ scale: pressed ? 0.97 : 1 }] }}
+              >
+                {bgTileW > 0 && !(wornKey === "custom" && !photo) && (
+                  <View pointerEvents="none" style={{ position: "absolute", left: 0, top: (APPEARANCE_H - screenH * (bgTileW / screenW)) / 2, width: screenW, height: screenH, transformOrigin: "top left", transform: [{ scale: bgTileW / screenW }] }}>
+                    <Room preview={wornKey} />
+                  </View>
+                )}
+                <View style={{ flex: 1, alignItems: "center", justifyContent: "flex-end", paddingBottom: 14, gap: 4 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, height: 30, borderRadius: 15, backgroundColor: "rgba(0,0,0,0.45)" }}>
+                    <ImagePlus size={14} color="#fff" strokeWidth={2} />
+                    <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>Fundo · {wornLabel}</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          </Pressable>
+        </View>
+        {/* A photo of one's own is set on its preview: its veil, light or dark, and blur. */}
+        {wornKey === "custom" && !!photo && (
+          <Surface style={{ marginTop: 12 }}>
+            <Row
+              label="Ajustar a foto"
+              value={light ? "Só na tela inicial · véu claro ou escuro" : "Só na tela inicial · intensidade do véu"}
+              icon={<ImagePlus size={17} color={th("#fff")} strokeWidth={1.9} />}
+              onPress={() => {
+                tick();
+                router.push("/fundo-foto" as never);
+              }}
+              chevron
+            />
+          </Surface>
+        )}
 
         {/* What Willo tells the person, and where. */}
         <Eyebrow>Notificações</Eyebrow>
