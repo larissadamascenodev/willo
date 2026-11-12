@@ -38,7 +38,7 @@ const SLIDES: { label: string; ms: number; Demo: ComponentType<{ active: boolean
 const DEMO_W = 340;
 const DEMO_H = 440;
 
-export default function Paywall({ name, goal, onClose, onStart }: { name: string; goal: GoalId | null; onClose: () => void; onStart: (plan: PlanId) => void }) {
+export default function Paywall({ name, goal, onClose, onStart, renew = false }: { name: string; goal: GoalId | null; onClose: () => void; onStart: (plan: PlanId) => void; /** Shown again after the free week or the subscription ended: no free week offered. */ renew?: boolean }) {
   const insets = useSafeAreaInsets();
   const [plan, setPlan] = useState<PlanId>("anual");
   const [picking, setPicking] = useState(false);
@@ -46,6 +46,8 @@ export default function Paywall({ name, goal, onClose, onStart }: { name: string
   const [legal, setLegal] = useState<"terms" | "privacy" | null>(null);
   const [slide, setSlide] = useState(0);
   const chosen = PLANS[plan];
+  /* The free week is the annual plan's, and only for someone who has not had it. */
+  const trial = plan === "anual" && !renew;
   const reach = goal === "dividas" ? "Saia das dívidas mais rápido." : goal === "controlar" || goal === "organizar" ? "Tome conta do seu mês." : "Chegue lá mais rápido.";
 
   /* One feature after another, each for as long as its demonstration runs. */
@@ -75,10 +77,10 @@ export default function Paywall({ name, goal, onClose, onStart }: { name: string
           </View>
         </View>
         <Animated.View entering={FadeIn.duration(600)} style={{ alignItems: "center", marginTop: 12, gap: 4 }}>
-          <Text style={{ fontSize: 13.5, color: C.soft }}>{name ? `${name}, seu perfil está pronto.` : "Seu perfil está pronto."}</Text>
+          <Text style={{ fontSize: 13.5, color: C.soft }}>{renew ? "Seu acesso ao Willo PRO terminou." : name ? `${name}, seu perfil está pronto.` : "Seu perfil está pronto."}</Text>
           <Text style={{ fontSize: 27, lineHeight: 32, fontWeight: "300", letterSpacing: -0.6, color: "#fff", textAlign: "center" }}>
-            Desbloqueie o Willo.{"\n"}
-            <Text style={{ fontWeight: "800" }}>{reach}</Text>
+            {renew ? "Assine para continuar." : "Desbloqueie o Willo."}{"\n"}
+            <Text style={{ fontWeight: "800" }}>{renew ? "Seus dados continuam aqui." : reach}</Text>
           </Text>
         </Animated.View>
       </View>
@@ -141,7 +143,7 @@ export default function Paywall({ name, goal, onClose, onStart }: { name: string
         ) : (
           <Animated.View key={plan} entering={FadeIn.duration(320)} style={{ alignItems: "center", gap: 2 }}>
             <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 1.6, color: "rgba(255,255,255,0.55)" }}>
-              {plan === "anual" ? `PLANO ANUAL · ${TRIAL_DAYS} DIAS GRÁTIS` : "PLANO MENSAL"}
+              {trial ? `PLANO ANUAL · ${TRIAL_DAYS} DIAS GRÁTIS` : plan === "anual" ? "PLANO ANUAL" : "PLANO MENSAL"}
             </Text>
             <Text style={{ fontSize: 44, fontWeight: "800", letterSpacing: -1.8, color: "#fff" }}>
               {brl(chosen.perMonth)}
@@ -153,7 +155,7 @@ export default function Paywall({ name, goal, onClose, onStart }: { name: string
 
         {!picking && (
           <Cta
-            label={busy ? "Um instante…" : plan === "anual" ? `Começar ${TRIAL_DAYS} dias grátis` : `Assinar por ${brl(chosen.price)}/mês`}
+            label={busy ? "Um instante…" : trial ? `Começar ${TRIAL_DAYS} dias grátis` : `Assinar por ${brl(chosen.price)}/${chosen.period}`}
             disabled={busy}
             onPress={async () => {
               setBusy(true);
@@ -180,9 +182,7 @@ export default function Paywall({ name, goal, onClose, onStart }: { name: string
 
         <View style={{ alignItems: "center", gap: 6 }}>
           <Text style={{ fontSize: 11.5, lineHeight: 16, color: C.softer, textAlign: "center" }}>
-            {plan === "anual"
-              ? `Grátis por ${TRIAL_DAYS} dias, depois ${brl(PLANS.anual.price)} por ano.`
-              : `${brl(PLANS.mensal.price)} por mês.`}{" "}
+            {trial ? `Grátis por ${TRIAL_DAYS} dias, depois ${brl(PLANS.anual.price)} por ano.` : `${brl(chosen.price)} por ${chosen.period}.`}{" "}
             Renova automaticamente. Cancele quando quiser nos Ajustes do iPhone.
           </Text>
           <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>

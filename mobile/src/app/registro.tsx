@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef, type ComponentType, type ReactNode } from "react";
+import { withPro } from "~/components/onboarding/RenewGate";
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -164,7 +165,7 @@ const spoken = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(2).re
 const tapSaved = () => void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
 const tapAsked = () => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
 
-export default function Registro() {
+function Registro() {
   /* Drawn again in place when the theme changes. */
   useThemeRedraw();
   const router = useRouter();
@@ -1361,3 +1362,5 @@ function RadarFeed({ onData }: { onData: (data: RaioXData) => void }) {
   }, [data, onData]);
   return null;
 }
+
+export default withPro(Registro);

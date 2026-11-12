@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { withPro } from "~/components/onboarding/RenewGate";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import ParticleOrb from "~/components/registro/ParticleOrb";
@@ -11,7 +12,7 @@ import { useThemeRedraw } from "~/theme/theme";
  * screen. The sheet leaves first; the screen behind it is already there. While he listens,
  * Willo stands above the sheet, covering none of it.
  */
-export default function Rapido() {
+function Rapido() {
   /* Drawn again in place when the theme changes. */
   useThemeRedraw();
   const router = useRouter();
@@ -58,3 +59,5 @@ export default function Rapido() {
     </BottomSheet>
   );
 }
+
+export default withPro(Rapido);

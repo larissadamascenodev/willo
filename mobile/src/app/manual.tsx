@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { withPro } from "~/components/onboarding/RenewGate";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import BottomSheet from "~/components/BottomSheet";
 import EditEntry from "~/components/registro/EditEntry";
@@ -10,7 +11,7 @@ import { useThemeRedraw } from "~/theme/theme";
  * sheet to change an entry already written (`editar`). Opened inside a card (`cartao`) it
  * is a purchase on that card. The sheet leaves first; the screen behind it is already there.
  */
-export default function Manual() {
+function Manual() {
   /* Drawn again in place when the theme changes. */
   useThemeRedraw();
   const router = useRouter();
@@ -55,3 +56,5 @@ export default function Manual() {
     </BottomSheet>
   );
 }
+
+export default withPro(Manual);

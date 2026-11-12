@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from "react";
+import { withPro } from "~/components/onboarding/RenewGate";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -49,7 +50,7 @@ const th = <T,>(color: T, role?: Role): T => thIn("dark", color, role);
 
 type Phase = "camera" | "reading" | "result" | "failed" | "saved";
 
-export default function Scanner() {
+function Scanner() {
   /* Drawn again in place when the theme changes. */
   useThemeRedraw();
   const router = useRouter();
@@ -594,3 +595,5 @@ function StatusPill({ label }: { label: string }) {
     </Animated.View>
   );
 }
+
+export default withPro(Scanner);

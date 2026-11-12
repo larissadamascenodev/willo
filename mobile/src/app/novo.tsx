@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { withPro } from "~/components/onboarding/RenewGate";
 import { showToast } from "~/lib/toast";
 import {
   ActivityIndicator,
@@ -111,7 +112,7 @@ interface Card {
   used_limit?: number | null;
 }
 
-export default function Novo() {
+function Novo() {
   /* Drawn again in place when the theme changes. */
   useThemeRedraw();
   const router = useRouter();
@@ -793,3 +794,5 @@ function DayChip({ label, on, onPress, icon: Icon }: { label: string; on: boolea
     </Pressable>
   );
 }
+
+export default withPro(Novo);

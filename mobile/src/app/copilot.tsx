@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { withPro } from "~/components/onboarding/RenewGate";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -56,7 +57,7 @@ const fromValues = (item: CopilotItem, v: EntryValues): CopilotItem => ({
   occurred_at: v.date === item.occurred_at.slice(0, 10) ? item.occurred_at : `${v.date}T12:00:00`,
 });
 
-export default function CopilotScreen() {
+function CopilotScreen() {
   useThemeRedraw();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -239,3 +240,5 @@ function Round({ label, solid, onPress, children }: { label: string; solid?: boo
     </Pressable>
   );
 }
+
+export default withPro(CopilotScreen);

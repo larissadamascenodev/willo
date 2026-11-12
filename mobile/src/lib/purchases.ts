@@ -15,7 +15,7 @@ import { Platform } from "react-native";
 import type { CustomerInfo, PurchasesPackage } from "react-native-purchases";
 
 /** The App Store app's public key in RevenueCat. Public by design: it only identifies the app. */
-const IOS_KEY = "";
+const IOS_KEY = "appl_yXBQHaHFsggjWyxuTYystRSXjOs";
 
 /** What a subscription unlocks, as named in RevenueCat. */
 export const ENTITLEMENT = "pro";
