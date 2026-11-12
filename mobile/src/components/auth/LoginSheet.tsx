@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, type ComponentRef } from "react";
-import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
-import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from "react-native-reanimated";
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import Animated, { Easing, FadeIn, FadeInDown, FadeOut, LinearTransition, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { supabase } from "~/supabase/client";
 import BottomSheet from "~/components/BottomSheet";
 import Field, { PasswordField } from "~/components/auth/Field";
-import { LegalDocument } from "~/components/auth/LegalSheet";
+import { LegalDocument, SheetTitle } from "~/components/auth/LegalSheet";
+import { LEGAL } from "@/lib/legal";
 import RoundButton from "~/components/RoundButton";
 import Provider from "~/components/auth/Provider";
 import { AppleMark, GoogleMark } from "~/components/auth/BrandIcons";
@@ -105,21 +107,66 @@ export default function LoginSheet({ open, onClose, email: knownEmail = "" }: { 
 
   const transition = LinearTransition.duration(320);
 
+  /* The sheet grows to the document and back to the login smoothly: the content is held
+     at an animated height while it changes, then let go. */
+  const { height: screenH } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const docH = Math.min(screenH * 0.92, screenH - insets.top - 16) - 10 - 16 - (insets.bottom + 16);
+  const loginH = useRef(0);
+  const h = useSharedValue(0);
+  const held = useSharedValue(0);
+  const [holding, setHolding] = useState(false);
+  const ease = Easing.bezier(0.22, 1, 0.36, 1);
+  const release = () => {
+    held.set(0);
+    setHolding(false);
+  };
+  const openDoc = (which: "terms" | "privacy") => {
+    if (loginH.current > 0) {
+      h.set(loginH.current);
+      held.set(1);
+      setHolding(true);
+      h.set(withTiming(docH, { duration: 520, easing: ease }));
+    }
+    setLegal(which);
+  };
+  const closeDoc = () => {
+    setLegal(null);
+    if (loginH.current > 0) {
+      h.set(withTiming(loginH.current, { duration: 460, easing: ease }, (done) => {
+        if (done) runOnJS(release)();
+      }));
+    } else release();
+  };
+  const sized = useAnimatedStyle(() => (held.get() ? { height: h.get(), overflow: "hidden" } : {}));
+
   return (
     <>
-      <BottomSheet open={open} onClose={onClose} full={!!legal}>
+      <BottomSheet open={open} onClose={onClose} full={!!legal || holding}>
+        <Animated.View style={sized}>
         {/* A document opens in the sheet itself, grown tall, with the way back to the login. */}
         {legal ? (
-          <Animated.View key={legal} entering={FadeIn.duration(220)} style={{ paddingHorizontal: 22, paddingBottom: 6 }}>
-            <View style={{ height: 44, justifyContent: "center", marginBottom: 6 }}>
-              <RoundButton label="Voltar" onPress={() => setLegal(null)}>
-                <ChevronLeft size={20} color="#fff" strokeWidth={2.4} />
-              </RoundButton>
+          <Animated.View key={legal} entering={FadeIn.delay(120).duration(320)} style={{ height: docH, paddingHorizontal: 22 }}>
+            <View style={{ height: 52, justifyContent: "center", marginBottom: 12 }}>
+              <SheetTitle doc={LEGAL[legal]} />
+              <View style={{ position: "absolute", left: 0, top: 4 }}>
+                <RoundButton label="Voltar" onPress={closeDoc}>
+                  <ChevronLeft size={20} color="#fff" strokeWidth={2.4} />
+                </RoundButton>
+              </View>
             </View>
-            <LegalDocument which={legal} />
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 12 }} showsVerticalScrollIndicator={false}>
+              <LegalDocument which={legal} />
+            </ScrollView>
           </Animated.View>
         ) : (
-        <View style={{ paddingHorizontal: 22, paddingTop: 4, paddingBottom: 6 }}>
+        <Animated.View
+          entering={holding ? FadeIn.delay(140).duration(320) : undefined}
+          onLayout={(e) => {
+            if (!holding) loginH.current = e.nativeEvent.layout.height;
+          }}
+          style={{ paddingHorizontal: 22, paddingTop: 4, paddingBottom: 6 }}
+        >
           <Animated.View layout={transition}>
             <Text style={{ fontSize: 26, fontWeight: "300", letterSpacing: -0.6, color: "#fff" }}>
               Bem-vindo <Text style={{ fontWeight: "800" }}>de volta.</Text>
@@ -223,17 +270,18 @@ export default function LoginSheet({ open, onClose, email: knownEmail = "" }: { 
 
           <Text style={{ marginTop: 14, paddingHorizontal: 8, fontSize: 12.5, lineHeight: 18, color: INK.faint, textAlign: "center" }}>
             Ao continuar, você concorda com os{" "}
-            <Text onPress={() => setLegal("terms")} style={{ fontWeight: "700", color: INK.soft, textDecorationLine: "underline" }}>
+            <Text onPress={() => openDoc("terms")} style={{ fontWeight: "700", color: INK.soft, textDecorationLine: "underline" }}>
               Termos de Uso
             </Text>{" "}
             e{" "}
-            <Text onPress={() => setLegal("privacy")} style={{ fontWeight: "700", color: INK.soft, textDecorationLine: "underline" }}>
+            <Text onPress={() => openDoc("privacy")} style={{ fontWeight: "700", color: INK.soft, textDecorationLine: "underline" }}>
               Política de Privacidade
             </Text>
             .
           </Text>
-        </View>
+        </Animated.View>
         )}
+        </Animated.View>
       </BottomSheet>
     </>
   );

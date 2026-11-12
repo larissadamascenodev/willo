@@ -132,9 +132,6 @@ export function LegalDocument({ which }: { which: "terms" | "privacy" }) {
   const doc = LEGAL[which];
   return (
     <View>
-      <View style={{ marginTop: -44, marginBottom: 14, minHeight: 44, justifyContent: "center" }} pointerEvents="none">
-        <SheetTitle doc={doc} />
-      </View>
       <DocHead doc={doc} />
       {doc.sections.map((s) => (
         <View key={s.title} style={{ marginTop: 28 }}>
@@ -155,7 +152,7 @@ export function LegalDocument({ which }: { which: "terms" | "privacy" }) {
 }
 
 /** The sheet's header: the document's short name, and what kind of document it is. */
-function SheetTitle({ doc }: { doc: LegalDoc }) {
+export function SheetTitle({ doc }: { doc: LegalDoc }) {
   return (
     <View style={{ alignItems: "center" }}>
       <Text style={{ fontSize: 19, fontWeight: "800", letterSpacing: -0.3, color: th("#fff") }}>{doc.short.toUpperCase()}</Text>
