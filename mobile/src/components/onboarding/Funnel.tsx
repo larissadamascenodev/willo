@@ -173,7 +173,7 @@ export default function Funnel({
   onSaved: (a: OnboardingAnswers) => void;
   /** "Já tenho conta", from the profile. Left out once the person is signed in. */
   onLogin?: () => void;
-  /** Signed in already, with a name: the first question is not asked. */
+  /** Signed in already, with a name: the first question comes with it filled in. */
   knownName?: string;
   /** Answers from before: open straight on their profile. */
   resume?: OnboardingAnswers | null;
@@ -189,7 +189,8 @@ export default function Funnel({
   const set = (patch: Partial<OnboardingAnswers>) => setA((v) => ({ ...v, ...patch }));
 
   const steps = useMemo<StepId[]>(() => {
-    const out: StepId[] = knownName ? ["consent", "source", "copilot", "goal"] : ["name", "consent", "source", "copilot", "goal"];
+    /* The name is always asked: one already known comes filled in, to keep or change. */
+    const out: StepId[] = ["name", "consent", "source", "copilot", "goal"];
     if (a.goal && (GOALS_WITH_DREAM.includes(a.goal) || a.goal === "dividas")) out.push("detail");
     out.push("goalDemo", "income");
     if (a.income > 0) out.push("hour");
