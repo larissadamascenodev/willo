@@ -1,5 +1,5 @@
 import { useEffect, useState, type ComponentType } from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Alert, Image, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
@@ -9,6 +9,7 @@ import { Check, X } from "~/components/icons";
 import { Aura, C, Cta, tap } from "./kit";
 import QuickTap, { QUICK_MS } from "./QuickTap";
 import { PLANS, TRIAL_DAYS, brl, startTrial, type PlanId } from "~/lib/plans";
+import { restore } from "~/lib/purchases";
 import type { GoalId } from "~/lib/onboardingProfile";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -140,7 +141,7 @@ export default function Paywall({ name, goal, onClose, onStart }: { name: string
         ) : (
           <Animated.View key={plan} entering={FadeIn.duration(320)} style={{ alignItems: "center", gap: 2 }}>
             <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 1.6, color: "rgba(255,255,255,0.55)" }}>
-              {plan === "anual" ? "PLANO ANUAL" : "PLANO MENSAL"} · {TRIAL_DAYS} DIAS GRÁTIS
+              {plan === "anual" ? `PLANO ANUAL · ${TRIAL_DAYS} DIAS GRÁTIS` : "PLANO MENSAL"}
             </Text>
             <Text style={{ fontSize: 44, fontWeight: "800", letterSpacing: -1.8, color: "#fff" }}>
               {brl(chosen.perMonth)}
@@ -152,13 +153,14 @@ export default function Paywall({ name, goal, onClose, onStart }: { name: string
 
         {!picking && (
           <Cta
-            label={busy ? "Um instante…" : `Começar ${TRIAL_DAYS} dias grátis`}
+            label={busy ? "Um instante…" : plan === "anual" ? `Começar ${TRIAL_DAYS} dias grátis` : `Assinar por ${brl(chosen.price)}/mês`}
             disabled={busy}
             onPress={async () => {
               setBusy(true);
               const r = await startTrial(plan);
               setBusy(false);
               if (r.ok) onStart(plan);
+              else if (!r.cancelled) Alert.alert("Não deu certo", r.message ?? "Tente de novo em instantes.");
             }}
           />
         )}
@@ -177,9 +179,24 @@ export default function Paywall({ name, goal, onClose, onStart }: { name: string
         )}
 
         <View style={{ alignItems: "center", gap: 6 }}>
-          <Text style={{ fontSize: 11.5, color: C.softer }}>Renova automaticamente. Cancele quando quiser.</Text>
+          <Text style={{ fontSize: 11.5, lineHeight: 16, color: C.softer, textAlign: "center" }}>
+            {plan === "anual"
+              ? `Grátis por ${TRIAL_DAYS} dias, depois ${brl(PLANS.anual.price)} por ano.`
+              : `${brl(PLANS.mensal.price)} por mês.`}{" "}
+            Renova automaticamente. Cancele quando quiser nos Ajustes do iPhone.
+          </Text>
           <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-            <Pressable onPress={() => void startTrial(plan)} hitSlop={6}>
+            <Pressable
+              disabled={busy}
+              onPress={async () => {
+                setBusy(true);
+                const r = await restore();
+                setBusy(false);
+                if (r.active) onStart(plan);
+                else Alert.alert(r.ok ? "Nenhuma assinatura encontrada" : "Não deu certo", r.ok ? "Este Apple ID não tem uma assinatura do Willo PRO ativa." : "Não foi possível falar com a App Store agora. Tente de novo em instantes.");
+              }}
+              hitSlop={6}
+            >
               <Text style={{ fontSize: 11.5, color: C.softer }}>Restaurar</Text>
             </Pressable>
             <Text style={{ fontSize: 11.5, color: C.softer }}>·</Text>

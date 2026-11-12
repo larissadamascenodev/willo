@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { syncPurchasesUser } from "./purchases";
 import { AppState } from "react-native";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "~/supabase/client";
@@ -87,6 +88,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sub.subscription.unsubscribe();
     };
   }, []);
+
+  /* RevenueCat follows the signed-in account, so a subscription belongs to it. */
+  const uid = session?.user?.id ?? null;
+  useEffect(() => {
+    if (!loading) void syncPurchasesUser(uid);
+  }, [uid, loading]);
 
   return (
     <AuthContext.Provider

@@ -1,11 +1,12 @@
 /**
  * Willo PRO: the two plans and the free trial.
  *
- * The trial is the App Store's own (confirmed with Face ID, nothing charged for seven
- * days, the subscription starts by itself unless cancelled). Buying goes through the
- * App Store once the app is built and listed; until then `startTrial` only carries the
- * person on to making their account, so the flow can be walked end to end.
+ * The free week comes with the annual plan only, and is the App Store's own (confirmed
+ * with Face ID, nothing charged for seven days, the year starts by itself unless
+ * cancelled). Buying goes through RevenueCat (see purchases.ts); in Expo Go it succeeds
+ * at once, so the flow can be walked end to end.
  */
+import { buy } from "./purchases";
 
 export type PlanId = "anual" | "mensal";
 
@@ -31,7 +32,8 @@ export const PLANS: Record<PlanId, Plan> = {
 
 export const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-/** Starts the free trial of a plan. Until the App Store purchase is wired, it succeeds at once. */
-export async function startTrial(plan: PlanId): Promise<{ ok: boolean; plan: PlanId }> {
-  return { ok: true, plan };
+/** Buys a plan: the annual one starts with the free week, the monthly one is charged at once. */
+export async function startTrial(plan: PlanId): Promise<{ ok: boolean; plan: PlanId; cancelled?: boolean; message?: string }> {
+  const r = await buy(PLANS[plan].productId);
+  return r.ok ? { ok: true, plan } : { ok: false, plan, cancelled: r.cancelled, message: r.message };
 }
