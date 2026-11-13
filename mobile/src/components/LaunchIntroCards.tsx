@@ -7,9 +7,10 @@ import { GROUND } from "~/theme/tokens";
 /**
  * The cards become the name — the logo's own marks are the cards.
  *
- * In the dark one small card pops up spinning and deals itself into the icon's three —
- * purple, green, orange — fanned like a hand. They shuffle twice, the end one hopping over
- * in an arc, each landing with a little squash. Then they fly to the name's own marks: two
+ * In the dark one card comes up and slides out into the icon's three — purple, green,
+ * orange — side by side. Then the move of Uber's opening: orange passes straight over
+ * green, then over purple, a little larger going over while the one beneath slips back.
+ * Then they fly to the name's own marks: two
  * stretch up into the l's and one rounds into the point, cooling to white as they land
  * with a little give. Out from behind the first l comes "wi" to the left, and from behind
  * the second, "o" to the right — "willo." is whole, and every distinctive piece of it was
@@ -19,18 +20,20 @@ import { GROUND } from "~/theme/tokens";
  * the fade.
  */
 
-const POP = [0, 340] as const; // one card pops up, spinning
-const DEAL = [300, 700] as const; // dealt into three, fanned
-const SWAP1 = [760, 1080] as const; // shuffled once
-const SWAP2 = [1110, 1430] as const; // and once more
-const FLY = [1500, 1940] as const; // to the l's and the point, turning white
-const PUSH = [1760, 2180] as const; // "wi" and "o" pushed out from behind the l's
-const OUT = [2560, 3020] as const; // the logo sinks back as the dark lifts
+const POP = [0, 320] as const; // one card comes up in the middle
+const DEAL = [280, 640] as const; // the three slide out side by side
+const SWAP1 = [720, 1080] as const; // orange passes over green
+const SWAP2 = [1140, 1500] as const; // and over purple
+const FLY = [1580, 2020] as const; // to the l's and the point, turning white
+const PUSH = [1840, 2260] as const; // "wi" and "o" pushed out from behind the l's
+const OUT = [2640, 3100] as const; // the logo sinks back as the dark lifts
 export const CARDS_INTRO_MS = OUT[1] + 20;
 const QUICK = [500, 900] as const;
 const START_AFTER = 300;
 
 const COLORS = ["#8A4DFF", "#25D39B", "#FF8A3D"] as const; // the icon's cards
+/* Where each ends after the two passes: orange first, then purple, then green — l, l, point. */
+const FINAL_SLOT = [1, 2, 0] as const;
 const WHITE = "#FFFFFF";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -103,9 +106,10 @@ export default function LaunchIntroCards({ onDone }: { onDone: () => void }) {
     { x: left + POINT.x * u, y: top + POINT.y * u, w: POINT.w * u, h: POINT.h * u, r: (POINT.h * u) / 2 },
   ];
 
-  /* The cards: small rounded squares in the middle of the screen. */
-  const size = Math.round(Math.min(width * 0.07, 28));
-  const step = size * 1.5;
+  /* The cards: a card's own proportions (85.6 × 54 mm), small, in the middle. */
+  const cw = Math.round(Math.min(width * 0.11, 44));
+  const ch = Math.round(cw / 1.586);
+  const step = cw * 1.22;
   const cx = width / 2;
   const cy = top + wordH * 0.5;
 
@@ -196,7 +200,7 @@ export default function LaunchIntroCards({ onDone }: { onDone: () => void }) {
 
         {!reduced &&
           COLORS.map((color, i) => (
-            <Card key={color} i={i} color={color} t={t} size={size} step={step} cx={cx} cy={cy} target={targets[(i + 2) % 3]} />
+            <Card key={color} i={i} color={color} t={t} cw={cw} ch={ch} step={step} cx={cx} cy={cy} target={targets[FINAL_SLOT[i]]} />
           ))}
       </Animated.View>
     </Animated.View>
@@ -204,49 +208,43 @@ export default function LaunchIntroCards({ onDone }: { onDone: () => void }) {
 }
 
 /**
- * One card. Its place in the row is 0, 1 or 2; each shuffle moves every card one place to
- * the right, the end one hopping round to the start over the others. After the second
- * shuffle it flies to its mark — an l or the point — and becomes it.
+ * One card, a real card's shape. It comes up in the middle, slides out to its place in the
+ * row, and then the Uber move: the orange card passes over the green, then over the
+ * purple — straight across, a little larger as it goes over, the one underneath a little
+ * smaller and dimmer as it slips back. Then it flies to its mark, an l or the point, and
+ * becomes it.
  */
-function Card({ i, color, t, size, step, cx, cy, target }: { i: number; color: string; t: SharedValue<number>; size: number; step: number; cx: number; cy: number; target: Rect }) {
+function Card({ i, color, t, cw, ch, step, cx, cy, target }: { i: number; color: string; t: SharedValue<number>; cw: number; ch: number; step: number; cx: number; cy: number; target: Rect }) {
   const style = useAnimatedStyle(() => {
     const now = t.get();
-    const pop = span(now, POP[0], POP[1]);
-    const grow = backOut(pop);
-    const dealt = backOut(span(now, DEAL[0], DEAL[1]), 1.4);
-    const slotAt = (n: number) => (i + n) % 3;
-    const xOf = (slot: number) => (slot - 1) * step;
-    /* Fanned like a hand: the ends tilted out and a touch lower. */
-    const fanTurn = (slot: number) => (slot - 1) * 10;
-    const fanY = (slot: number) => Math.abs(slot - 1) * size * 0.18;
+    const pop = outCubic(span(now, POP[0], POP[1]));
+    const dealt = inOutCubic(span(now, DEAL[0], DEAL[1]));
     const s1 = inOutCubic(span(now, SWAP1[0], SWAP1[1]));
     const s2 = inOutCubic(span(now, SWAP2[0], SWAP2[1]));
-    const hop = (from: number, to: number, v: number) => -Math.sin(v * Math.PI) * (to < from ? step * 1.15 : step * 0.25);
-    /* A little squash as a shuffle lands. */
-    const land = (v: number) => (v > 0.8 && v < 1 ? Math.sin(((v - 0.8) / 0.2) * Math.PI) * 0.14 : 0);
 
-    let slot = slotAt(0);
-    let x = mix(0, xOf(slot), dealt);
-    let y = mix(0, fanY(slot), dealt);
-    let turn = mix(-40, 0, outCubic(pop)) + mix(0, fanTurn(slot), dealt);
-    let squash = 0;
-    if (s1 > 0) {
-      const a = slotAt(0);
-      const b = slotAt(1);
-      x = mix(xOf(a), xOf(b), s1);
-      y = mix(fanY(a), fanY(b), s1) + hop(a, b, s1);
-      turn = mix(fanTurn(a), fanTurn(b), s1) + (b < a ? (-s1 * 360) % 360 : 0);
-      squash = land(s1);
-      slot = b;
+    /* Places: purple 0, green 1, orange 2. Swap 1: orange (over) and green (under)
+       exchange 2 and 1. Swap 2: orange (over) and purple (under) exchange 1 and 0. */
+    const xOf = (slot: number) => (slot - 1) * step;
+    let slot = i;
+    let x = mix(0, xOf(i), dealt);
+    let lift = 0; // + over, - under
+    if (i === 2 || i === 1) {
+      const from = i === 2 ? 2 : 1;
+      const to = i === 2 ? 1 : 2;
+      if (s1 > 0) {
+        x = mix(xOf(from), xOf(to), s1);
+        lift = Math.sin(s1 * Math.PI) * (i === 2 ? 1 : -1);
+        slot = to;
+      }
     }
-    if (s2 > 0) {
-      const a = slotAt(1);
-      const b = slotAt(2);
-      x = mix(xOf(a), xOf(b), s2);
-      y = mix(fanY(a), fanY(b), s2) + hop(a, b, s2);
-      turn = mix(fanTurn(a), fanTurn(b), s2) + (b < a ? (-s2 * 360) % 360 : 0);
-      squash = land(s2);
-      slot = b;
+    if (i === 2 || i === 0) {
+      const from = i === 2 ? 1 : 0;
+      const to = i === 2 ? 0 : 1;
+      if (s2 > 0) {
+        x = mix(xOf(from), xOf(to), s2);
+        lift = Math.sin(s2 * Math.PI) * (i === 2 ? 1 : -1);
+        slot = to;
+      }
     }
 
     /* To its mark, a beat apart from one another: stretching into it, turning white. */
@@ -254,27 +252,22 @@ function Card({ i, color, t, size, step, cx, cy, target }: { i: number; color: s
     const fv = span(now, f0, f0 + (FLY[1] - FLY[0]));
     const f = spring(fv);
     const lit = inOutCubic(fv);
-    const w = mix(size, target.w, clamp01(f));
-    const h = mix(size, target.h, f);
-    const startX = cx + x - size / 2;
-    const startY = cy + y - size / 2;
+    const w = mix(cw, target.w, clamp01(f));
+    const h = mix(ch, target.h, f);
+    const startX = cx + x - cw / 2;
+    const startY = cy - ch / 2;
     const toX = target.x + (target.w - w) / 2;
     const toY = target.y + target.h - h; // grown up from the line
+    const scale = mix(0.6, 1, pop) * (1 + lift * 0.12);
     return {
-      opacity: clamp01(pop * 3) * (i === 1 ? 1 : span(now, DEAL[0], DEAL[0] + 80)),
+      opacity: clamp01(pop * 2) * (i === 1 ? 1 : span(now, DEAL[0], DEAL[0] + 80)) * (lift < 0 ? 1 + lift * 0.35 : 1),
       width: w,
       height: h,
-      borderRadius: mix(size * 0.26, target.r, lit),
+      borderRadius: mix(ch * 0.2, target.r, lit),
       backgroundColor: interpolateColor(lit, [0, 1], [color, WHITE]),
-      transform: [
-        { translateX: mix(startX, toX, inOutCubic(fv)) },
-        { translateY: mix(startY, toY, inOutCubic(fv)) },
-        /* Upright early in the flight, the short way round, so it never lies across the name. */
-        { rotate: `${mix(((((turn + 180) % 360) + 360) % 360) - 180, 0, outCubic(clamp01(fv * 2.2)))}deg` },
-        { scaleX: mix(0.3, 1, grow) * (1 + squash) },
-        { scaleY: mix(0.3, 1, grow) * (1 - squash) },
-      ],
+      transform: [{ translateX: mix(startX, toX, inOutCubic(fv)) }, { translateY: mix(startY, toY, inOutCubic(fv)) }, { scale: mix(scale, 1, lit) }],
     };
   });
-  return <Animated.View style={[{ position: "absolute", left: 0, top: 0, zIndex: i === 1 ? 2 : 1 }, style]} />;
+  /* Orange is drawn last, so it is the one that passes over. */
+  return <Animated.View style={[{ position: "absolute", left: 0, top: 0, zIndex: i + 1 }, style]} />;
 }
