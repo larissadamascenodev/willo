@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { ActivityIndicator, Linking, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Image } from "expo-image";
@@ -12,16 +12,18 @@ import BackButton from "~/components/BackButton";
 import ConfirmGlass from "~/components/ConfirmGlass";
 import Surface, { Hairline } from "~/components/Surface";
 import LegalSheet from "~/components/auth/LegalSheet";
-import { Bell, Camera, Check, ChevronRight, Crown, FileText, ImagePlus, LifeBuoy, LogOut, Pencil, Shield, Zap } from "~/components/icons";
+import { Bell, Camera, Check, ChevronRight, FileText, ImagePlus, LifeBuoy, LogOut, Mail, Pencil, Shield, User, Zap } from "~/components/icons";
 import BottomSheet from "~/components/BottomSheet";
 import ThemeTile from "~/components/ThemeTile";
-import { usePro } from "~/lib/purchases";
+import ProMark from "~/components/ProMark";
+import Paywall from "~/components/onboarding/Paywall";
+import { usePlanInfo, type PlanInfo } from "~/lib/purchases";
 import { useAuth } from "~/lib/auth";
 import { setSkyPhoto, useLightSkyModel, useSkyModel, useSkyPhoto, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
 import { PhotoError, pickAvatar, pickBackground } from "~/lib/profilePhotos";
 import { BACKDROPS, BACKDROP_KEYS, LIGHT_BACKDROPS, LIGHT_BACKDROP_KEYS } from "~/lib/backdrops";
 import { showToast } from "~/lib/toast";
-import { INK, RED } from "~/theme/tokens";
+import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 import { isLight, switchTheme, th, useThemeRedraw, prepareThemeShot } from "~/theme/theme";
@@ -41,7 +43,6 @@ import { isLight, switchTheme, th, useThemeRedraw, prepareThemeShot } from "~/th
 
 const PAD = 16;
 const SHEET_GAP = 10;
-const APPEARANCE_H = 156;
 
 const LIGHT_BACKGROUNDS: { key: LightSkyModel; label: string }[] = [
   ...LIGHT_BACKDROP_KEYS.map((key) => ({ key, label: LIGHT_BACKDROPS[key].label })),
@@ -85,8 +86,8 @@ export default function Perfil() {
   const [asking, setAsking] = useState<"leave" | "delete" | null>(null);
   const [busy, setBusy] = useState(false);
   const [pickingBg, setPickingBg] = useState(false);
-  const [bgTileW, setBgTileW] = useState(0);
-  const pro = usePro();
+  const [paywall, setPaywall] = useState(false);
+  const plan = usePlanInfo();
   const [wantLight, setWantLight] = useState(light);
   useEffect(() => setWantLight(light), [light]);
 
@@ -223,11 +224,26 @@ export default function Perfil() {
           {!!email && <Text style={{ marginTop: 4, fontSize: 14, color: th(INK.soft) }}>{email}</Text>}
         </View>
 
+        {/* The plan. */}
+        <PlanCard
+          plan={plan}
+          onManage={() => {
+            tick();
+            void Linking.openURL("https://apps.apple.com/account/subscriptions").catch(() => undefined);
+          }}
+          onSubscribe={() => {
+            tick();
+            setPaywall(true);
+          }}
+        />
+
         {/* The account. */}
         <Eyebrow>Conta</Eyebrow>
         <Surface>
           {!editingName ? (
             <Row
+              icon={<User size={17} color={th("#fff")} strokeWidth={1.9} />}
+              caption
               label="Nome"
               value={name}
               onPress={() => {
@@ -238,7 +254,7 @@ export default function Perfil() {
               trailing={<Pencil size={15} color={th(INK.faint)} strokeWidth={2} />}
             />
           ) : (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingLeft: 16, paddingRight: 8, minHeight: 56 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingLeft: 16, paddingRight: 8, minHeight: 58 }}>
               <TextInput
                 value={draft}
                 onChangeText={setDraft}
@@ -260,87 +276,60 @@ export default function Perfil() {
               </Pressable>
             </View>
           )}
-          <Hairline style={{ marginLeft: 16 }} />
-          <Row label="E-mail" value={email} />
-          <Hairline style={{ marginLeft: 16 }} />
-          <Pressable
-            onPress={() => {
-              tick();
-              void Linking.openURL("https://apps.apple.com/account/subscriptions").catch(() => undefined);
-            }}
-            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14, opacity: pressed ? 0.7 : 1 })}
-          >
-            <View style={{ width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
-              <Crown size={17} color={th("#fff")} strokeWidth={1.9} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>Willo PRO</Text>
-              <Text style={{ marginTop: 2, fontSize: 13, color: th(INK.soft) }}>{pro === false ? "Sem assinatura ativa" : "Gerenciar assinatura"}</Text>
-            </View>
-            <View style={{ paddingHorizontal: 10, height: 24, borderRadius: 12, justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
-              <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 0.8, color: th("rgba(255,255,255,0.75)") }}>SEU PLANO</Text>
-            </View>
-          </Pressable>
+          <Hairline style={{ marginLeft: 64 }} />
+          <Row icon={<Mail size={17} color={th("#fff")} strokeWidth={1.9} />} caption label="E-mail" value={email} />
         </Surface>
 
-        {/* How the app looks: the theme with one switch, and what is behind every screen
-            chosen in a sheet, where the previews have room. */}
+        {/* How the app looks: the theme is one switch; the background opens a sheet
+            where the previews have room. */}
         <Eyebrow>Aparência</Eyebrow>
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <ThemeTile light={wantLight} height={APPEARANCE_H} onPress={(e) => flipTheme(e.nativeEvent.pageX, e.nativeEvent.pageY)} />
-          {/* The background worn now, filling the card; the choice opens in a sheet. */}
-          <Pressable
+        <Surface>
+          <ThemeTile light={wantLight} onPress={(e) => flipTheme(e.nativeEvent.pageX, e.nativeEvent.pageY)} />
+          <Hairline style={{ marginLeft: 64 }} />
+          <Row
+            icon={
+              <View style={{ width: 36, height: 36, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.12)", "line") }}>
+                {!(wornKey === "custom" && !photo) && (
+                  <View pointerEvents="none" style={{ position: "absolute", left: 0, top: (36 - screenH * (36 / screenW)) / 2, width: screenW, height: screenH, transformOrigin: "top left", transform: [{ scale: 36 / screenW }] }}>
+                    <Room preview={wornKey} />
+                  </View>
+                )}
+              </View>
+            }
+            bare
+            label="Fundo"
+            value={wornLabel}
             onPress={() => {
               tick();
               setPickingBg(true);
             }}
-            accessibilityRole="button"
-            accessibilityLabel={`Fundo: ${wornLabel}. Trocar`}
-            style={{ flex: 1 }}
-          >
-            {({ pressed }) => (
-              <View
-                onLayout={(e) => setBgTileW(e.nativeEvent.layout.width)}
-                style={{ height: APPEARANCE_H, borderRadius: 26, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.10)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg"), transform: [{ scale: pressed ? 0.97 : 1 }] }}
-              >
-                {bgTileW > 0 && !(wornKey === "custom" && !photo) && (
-                  <View pointerEvents="none" style={{ position: "absolute", left: 0, top: (APPEARANCE_H - screenH * (bgTileW / screenW)) / 2, width: screenW, height: screenH, transformOrigin: "top left", transform: [{ scale: bgTileW / screenW }] }}>
-                    <Room preview={wornKey} />
-                  </View>
-                )}
-                <View style={{ flex: 1, alignItems: "center", justifyContent: "flex-end", paddingBottom: 14, gap: 4 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, height: 30, borderRadius: 15, backgroundColor: "rgba(0,0,0,0.45)" }}>
-                    <ImagePlus size={14} color="#fff" strokeWidth={2} />
-                    <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>Fundo · {wornLabel}</Text>
-                  </View>
-                </View>
-              </View>
-            )}
-          </Pressable>
-        </View>
-        {/* A photo of one's own is set on its preview: its veil, light or dark, and blur. */}
-        {wornKey === "custom" && !!photo && (
-          <Surface style={{ marginTop: 12 }}>
-            <Row
-              label="Ajustar a foto"
-              value={light ? "Só na tela inicial · véu claro ou escuro" : "Só na tela inicial · intensidade do véu"}
-              icon={<ImagePlus size={17} color={th("#fff")} strokeWidth={1.9} />}
-              onPress={() => {
-                tick();
-                router.push("/fundo-foto" as never);
-              }}
-              chevron
-            />
-          </Surface>
-        )}
+            chevron
+          />
+          {/* A photo of one's own is set on its preview: its veil, light or dark, and blur. */}
+          {wornKey === "custom" && !!photo && (
+            <>
+              <Hairline style={{ marginLeft: 64 }} />
+              <Row
+                label="Ajustar a foto"
+                value={light ? "Véu claro ou escuro, na tela inicial" : "Intensidade do véu, na tela inicial"}
+                icon={<ImagePlus size={17} color={th("#fff")} strokeWidth={1.9} />}
+                onPress={() => {
+                  tick();
+                  router.push("/fundo-foto" as never);
+                }}
+                chevron
+              />
+            </>
+          )}
+        </Surface>
 
-        {/* What Willo tells the person, and where. */}
-        <Eyebrow>Notificações</Eyebrow>
+        {/* What Willo tells the person, and the iPhone's own ways in. */}
+        <Eyebrow>Notificações e atalhos</Eyebrow>
         <Surface>
           <Row
             icon={<Bell size={17} color={th("#fff")} strokeWidth={1.9} />}
             label="Notificações"
-            value="Contas, faturas, metas e avisos no celular"
+            value="Contas, faturas, metas e avisos"
             onPress={() => {
               tick();
               router.push("/notificacoes-ajustes" as never);
@@ -351,7 +340,7 @@ export default function Perfil() {
           <Row
             icon={<Zap size={17} color={th("#fff")} strokeWidth={1.9} />}
             label="Atalhos do iPhone"
-            value="Toque duplo nas costas e compras da Carteira"
+            value="Toque duplo e compras da Carteira"
             onPress={() => {
               tick();
               router.push("/atalhos" as never);
@@ -360,13 +349,9 @@ export default function Perfil() {
           />
         </Surface>
 
-        {/* The papers, and help. */}
-        <Eyebrow>Sobre</Eyebrow>
+        {/* Help, and the papers. */}
+        <Eyebrow>Ajuda e sobre</Eyebrow>
         <Surface>
-          <Row icon={<FileText size={17} color={th("#fff")} strokeWidth={1.9} />} label="Termos de Uso" onPress={() => { tick(); setLegal("terms"); }} chevron />
-          <Hairline style={{ marginLeft: 64 }} />
-          <Row icon={<Shield size={17} color={th("#fff")} strokeWidth={1.9} />} label="Política de Privacidade" onPress={() => { tick(); setLegal("privacy"); }} chevron />
-          <Hairline style={{ marginLeft: 64 }} />
           <Row
             icon={<LifeBuoy size={17} color={th("#fff")} strokeWidth={1.9} />}
             label="Falar com o suporte"
@@ -377,10 +362,14 @@ export default function Perfil() {
             }}
             chevron
           />
+          <Hairline style={{ marginLeft: 64 }} />
+          <Row icon={<FileText size={17} color={th("#fff")} strokeWidth={1.9} />} label="Termos de Uso" onPress={() => { tick(); setLegal("terms"); }} chevron />
+          <Hairline style={{ marginLeft: 64 }} />
+          <Row icon={<Shield size={17} color={th("#fff")} strokeWidth={1.9} />} label="Política de Privacidade" onPress={() => { tick(); setLegal("privacy"); }} chevron />
         </Surface>
 
         {/* Leaving. */}
-        <Surface style={{ marginTop: 24 }}>
+        <Surface style={{ marginTop: 30 }}>
           <Row icon={<LogOut size={17} color={th(RED)} strokeWidth={1.9} />} label="Sair da conta" danger onPress={() => { tick(); setAsking("leave"); }} />
         </Surface>
 
@@ -393,6 +382,12 @@ export default function Perfil() {
       </ScrollView>
 
       <LegalSheet which={legal} onClose={() => setLegal(null)} />
+
+      {/* Subscribing from here: the same plans as anywhere else; it closes by itself
+          once the App Store confirms. */}
+      <Modal visible={paywall && plan.active !== true} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setPaywall(false)}>
+        <Paywall renew name="" goal={null} onClose={() => setPaywall(false)} onStart={() => setPaywall(false)} />
+      </Modal>
 
       <BottomSheet open={pickingBg} onClose={() => setPickingBg(false)}>
         <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
@@ -516,6 +511,8 @@ function Row({
   trailing,
   chevron = false,
   danger = false,
+  caption = false,
+  bare = false,
 }: {
   icon?: ReactNode;
   label: string;
@@ -524,16 +521,21 @@ function Row({
   trailing?: ReactNode;
   chevron?: boolean;
   danger?: boolean;
+  /** The label small above the value, as in a form. */
+  caption?: boolean;
+  /** The icon is drawn as given, without the round tile behind it. */
+  bare?: boolean;
 }) {
   const body = (
     <>
-      {icon && (
+      {icon && bare && icon}
+      {icon && !bare && (
         <View style={{ width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: th(danger ? "rgba(248,113,113,0.12)" : "rgba(255,255,255,0.07)", "bg") }}>
           {icon}
         </View>
       )}
       <View style={{ flex: 1, minWidth: 0 }}>
-        {value !== undefined && !icon ? (
+        {caption ? (
           <>
             <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>{label}</Text>
             <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 15.5, fontWeight: "500", color: th("#fff") }}>
@@ -563,5 +565,75 @@ function Row({
     <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => [row, pressed && { backgroundColor: th("rgba(255,255,255,0.04)", "bg") }]}>
       {body}
     </Pressable>
+  );
+}
+
+const MONTHS = ["jan.", "fev.", "mar.", "abr.", "maio", "jun.", "jul.", "ago.", "set.", "out.", "nov.", "dez."];
+const day = (iso: string) => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : `${d.getDate()} de ${MONTHS[d.getMonth()]} de ${d.getFullYear()}`;
+};
+
+/**
+ * The plan, on a card of its own at the top: Willo PRO's mark, whether it is on, which
+ * plan it is and when it renews or ends; managed in the App Store, or taken from here.
+ */
+function PlanCard({ plan, onManage, onSubscribe }: { plan: PlanInfo; onManage: () => void; onSubscribe: () => void }) {
+  const on = plan.active === true;
+  const kind = plan.period === "anual" ? "Plano anual" : plan.period === "mensal" ? "Plano mensal" : null;
+  const when = plan.until ? day(plan.until) : "";
+  const chip =
+    plan.active === null ? null : !on ? { text: "Inativo", fg: th(INK.soft), bg: th("rgba(255,255,255,0.08)", "bg") } : plan.trial ? { text: "Semana grátis", fg: GREEN, bg: "rgba(103,205,103,0.16)" } : !plan.renews && when ? { text: "Cancelado", fg: th(INK.soft), bg: th("rgba(255,255,255,0.08)", "bg") } : { text: "Ativo", fg: GREEN, bg: "rgba(103,205,103,0.16)" };
+  const detail =
+    plan.active === null
+      ? "Verificando a assinatura…"
+      : !on
+        ? "Seus dados continuam aqui. Assine para registrar, ler comprovantes e conversar com o Willo."
+        : plan.trial && when
+          ? `Grátis até ${when}${kind ? ` · depois, ${kind.toLowerCase()}` : ""}`
+          : kind && when
+            ? `${kind} · ${plan.renews ? "renova em" : "termina em"} ${when}`
+            : kind ?? "Todos os recursos liberados";
+
+  return (
+    <Surface style={{ marginTop: 28 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 16 }}>
+        <ProMark size={52} muted={plan.active === false} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text style={{ fontSize: 18, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>Willo PRO</Text>
+            {chip && (
+              <View style={{ paddingHorizontal: 8, height: 22, borderRadius: 11, justifyContent: "center", backgroundColor: chip.bg }}>
+                <Text style={{ fontSize: 11.5, fontWeight: "700", color: chip.fg }}>{chip.text}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={{ marginTop: 4, fontSize: 13.5, lineHeight: 18, color: th(INK.soft) }}>{detail}</Text>
+        </View>
+      </View>
+      {on ? (
+        <>
+          <Hairline style={{ marginLeft: 16 }} />
+          <Pressable
+            onPress={onManage}
+            accessibilityRole="button"
+            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, height: 50, backgroundColor: pressed ? th("rgba(255,255,255,0.04)", "bg") : "transparent" })}
+          >
+            <Text style={{ flex: 1, fontSize: 15, fontWeight: "500", color: th("#fff") }}>Gerenciar assinatura</Text>
+            <ChevronRight size={17} color={th(INK.faint)} strokeWidth={2} />
+          </Pressable>
+        </>
+      ) : plan.active === false ? (
+        <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+          <Pressable
+            onPress={onSubscribe}
+            accessibilityRole="button"
+            style={({ pressed }) => ({ height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.85 : 1 })}
+          >
+            <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#0B0B0B") }}>Conhecer o Willo PRO</Text>
+          </Pressable>
+        </View>
+      ) : null}
+    </Surface>
   );
 }

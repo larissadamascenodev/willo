@@ -126,3 +126,54 @@ export function usePro(): boolean | null {
   }, []);
   return pro;
 }
+
+/** What the profile says about the subscription. */
+export type PlanInfo = {
+  /** null while it is not known yet. */
+  active: boolean | null;
+  /** "anual" or "mensal", when the App Store says which. */
+  period: "anual" | "mensal" | null;
+  /** In the free week. */
+  trial: boolean;
+  /** When it renews or ends, as an ISO date. */
+  until: string | null;
+  /** False once it was cancelled: it ends on `until` instead of renewing. */
+  renews: boolean;
+};
+
+const readPlan = (info: CustomerInfo): PlanInfo => {
+  const e = info.entitlements.active[ENTITLEMENT];
+  if (!e) return { active: false, period: null, trial: false, until: null, renews: false };
+  const id = e.productIdentifier ?? "";
+  return {
+    active: true,
+    period: /anual|annual|year/i.test(id) ? "anual" : /mensal|month/i.test(id) ? "mensal" : null,
+    trial: e.periodType === "TRIAL",
+    until: e.expirationDate ?? null,
+    renews: !!e.willRenew,
+  };
+};
+
+/** The subscription in detail, kept up to date. In Expo Go: active, with no details. */
+export function usePlanInfo(): PlanInfo {
+  const [plan, setPlan] = useState<PlanInfo>(
+    purchasesLive() ? { active: null, period: null, trial: false, until: null, renews: false } : { active: true, period: null, trial: false, until: null, renews: true },
+  );
+  useEffect(() => {
+    const P = sdk();
+    if (!P) return;
+    let alive = true;
+    const listener = (info: CustomerInfo) => {
+      if (alive) setPlan(readPlan(info));
+    };
+    P.getCustomerInfo()
+      .then(listener)
+      .catch(() => undefined);
+    P.addCustomerInfoUpdateListener(listener);
+    return () => {
+      alive = false;
+      P.removeCustomerInfoUpdateListener(listener);
+    };
+  }, []);
+  return plan;
+}
