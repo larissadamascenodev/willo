@@ -11,6 +11,8 @@ import RoundButton from "~/components/RoundButton";
 import Surface from "~/components/Surface";
 import { AlertTriangle, Check, ChevronLeft, ChevronRight, Compass, Copy, CreditCard, Link2, Play, Zap } from "~/components/icons";
 import { showToast } from "~/lib/toast";
+import Walkthrough from "~/components/atalhos/Walkthrough";
+import { CardIcon, MockAddShortcut, MockList, MockPlus, MockScreen, MockSearch, MockTabs, MockWilloAction, WilloTile } from "~/components/atalhos/IOSMocks";
 import { GREEN, INK } from "~/theme/tokens";
 
 import { th, useThemeRedraw } from "~/theme/theme";
@@ -89,33 +91,108 @@ function BackTap() {
       </View>
     );
   }
+  const g = (icon: ReactNode) => icon;
   return (
     <View>
-      <Lead icon={<Zap size={18} color={th(GREEN)} strokeWidth={2.4} />} title="Dois toques atrás do iPhone" text="O Willo abre direto no Registro rápido, mesmo com o app fechado. São dois passos." />
-
-      <Step n={1} title="Instale o atalho do Willo">
-        Toque no botão abaixo. O app <B>Atalhos</B> abre com o atalho pronto: é só tocar em <B>Adicionar Atalho</B>.
-        <Pressable
-          onPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
-            void Linking.openURL(RAPIDO_SHORTCUT_LINK).catch(() => showToast("Não consegui abrir o app Atalhos."));
-          }}
-          style={({ pressed }) => ({ marginTop: 12, height: 50, borderRadius: 25, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.85 : 1 })}
-        >
-          <Zap size={17} color={th("#0B0B0B")} strokeWidth={2.4} />
-          <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#0B0B0B") }}>Instalar atalho</Text>
-        </Pressable>
-      </Step>
-
-      <Step n={2} title="Ligue nas costas do iPhone" last>
-        Abra os <B>Ajustes</B> do iPhone e siga:
-        <Path steps={["Acessibilidade", "Toque", "Tocar Atrás", "Toque Duplo"]} />
-        Na lista, escolha <B>{SHORTCUT_NAME}</B>.
-      </Step>
-
-      <Done text="Pronto. Dê dois toques firmes atrás do iPhone, perto da câmera, e o Registro rápido abre." />
-
-      <Pressable onPress={() => setByHand(true)} style={{ marginTop: 14, alignSelf: "center", padding: 8 }}>
+      <Lead icon={<Zap size={18} color={th(GREEN)} strokeWidth={2.4} />} title="Dois toques atrás do iPhone" text="O Willo abre direto no Registro rápido, mesmo com o app fechado. Leva menos de 1 minuto." />
+      <Walkthrough
+        finish="Pronto. Dê dois toques firmes atrás do iPhone, perto da câmera, e o Registro rápido abre na hora."
+        steps={[
+          {
+            title: "Instale o atalho do Willo",
+            text: (
+              <>
+                Toque em <B>Instalar atalho</B>. O app Atalhos abre com ele pronto: toque em <B>Adicionar Atalho</B> e volte para cá.
+              </>
+            ),
+            screen: <MockAddShortcut name={SHORTCUT_NAME} />,
+            action: {
+              label: "Instalar atalho",
+              icon: <Zap size={17} color={th("#0B0B0B")} strokeWidth={2.4} />,
+              onPress: () => void Linking.openURL(RAPIDO_SHORTCUT_LINK).catch(() => showToast("Não consegui abrir o app Atalhos.")),
+            },
+          },
+          {
+            title: "Abra os Ajustes",
+            text: (
+              <>
+                Saia do Willo, abra os <B>Ajustes</B> do iPhone e toque em <B>Acessibilidade</B>.
+              </>
+            ),
+            screen: (
+              <MockScreen title="Ajustes">
+                <MockList
+                  rows={[
+                    { label: "Geral", tint: "#8E8E93", icon: g(<View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#fff" }} />) },
+                    { label: "Central de Controle", tint: "#8E8E93", icon: g(<View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: "#fff" }} />) },
+                    { label: "Tela e Brilho", tint: "#0A84FF", icon: g(<Text style={{ fontSize: 10, fontWeight: "800", color: "#fff" }}>AA</Text>) },
+                    { label: "Acessibilidade", tint: "#0A84FF", touch: true, icon: g(<Text style={{ fontSize: 12, color: "#fff" }}>♿︎</Text>) },
+                    { label: "Papel de Parede", tint: "#30B0C7", icon: g(<View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: "#fff" }} />) },
+                  ]}
+                />
+              </MockScreen>
+            ),
+          },
+          {
+            title: "Toque em Toque",
+            text: (
+              <>
+                Desça até a parte <B>Físico e Motor</B> e toque em <B>Toque</B>.
+              </>
+            ),
+            screen: (
+              <MockScreen title="Acessibilidade" back="Ajustes">
+                <MockList
+                  header="Físico e Motor"
+                  rows={[
+                    { label: "Toque", tint: "#0A84FF", touch: true, icon: g(<Text style={{ fontSize: 11, color: "#fff" }}>☝︎</Text>) },
+                    { label: "Face ID e Atenção", tint: "#34C759", icon: g(<View style={{ width: 10, height: 10, borderRadius: 3, borderWidth: 1.5, borderColor: "#fff" }} />) },
+                    { label: "Controle Assistivo", tint: "#0A84FF", icon: g(<View style={{ width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: "#fff" }} />) },
+                    { label: "Controle por Voz", tint: "#0A84FF", icon: g(<View style={{ width: 4, height: 10, borderRadius: 2, backgroundColor: "#fff" }} />) },
+                  ]}
+                />
+              </MockScreen>
+            ),
+          },
+          {
+            title: "Toque em Tocar Atrás",
+            text: (
+              <>
+                É a última opção da tela. Toque em <B>Tocar Atrás</B>.
+              </>
+            ),
+            screen: (
+              <MockScreen title="Toque" back="Acessibilidade">
+                <MockList
+                  rows={[
+                    { label: "AssistiveTouch", value: "Não" },
+                    { label: "Toque Duplo para Acordar", value: "Sim" },
+                    { label: "Agitar para Desfazer", value: "Sim" },
+                    { label: "Vibração", value: "Sim" },
+                    { label: "Tocar Atrás", value: "Não", touch: true },
+                  ]}
+                />
+              </MockScreen>
+            ),
+          },
+          {
+            title: `Escolha ${SHORTCUT_NAME}`,
+            text: (
+              <>
+                Toque em <B>Toque Duplo</B>, desça até <B>Atalhos</B> e escolha <B>{SHORTCUT_NAME}</B>.
+              </>
+            ),
+            screen: (
+              <MockScreen title="Toque Duplo" back="Tocar Atrás">
+                <MockList rows={[{ label: "Nenhum", chevron: false }, { label: "Captura de Tela", chevron: false }, { label: "Lanterna", chevron: false }]} />
+                <View style={{ height: 10 }} />
+                <MockList header="Atalhos" rows={[{ label: SHORTCUT_NAME, check: true, touch: true, chevron: false }]} />
+              </MockScreen>
+            ),
+          },
+        ]}
+      />
+      <Pressable onPress={() => setByHand(true)} style={{ marginTop: 18, alignSelf: "center", padding: 8 }}>
         <Text style={{ fontSize: 13.5, fontWeight: "600", color: th(INK.soft) }}>Prefiro montar o atalho por conta própria</Text>
       </Pressable>
     </View>
@@ -191,24 +268,95 @@ function WalletCopilotAction() {
       <Lead
         icon={<CreditCard size={18} color={th(GREEN)} strokeWidth={2.4} />}
         title="Compras da Carteira no Copilot"
-        text="Cada compra por aproximação com o iPhone chega no Willo Copilot e espera você confirmar."
+        text="Cada compra por aproximação com o iPhone chega no Willo Copilot e espera você confirmar. Configura uma vez só."
       />
-
-      <Step n={1} title="Crie a automação">
-        No app <B>Atalhos</B>, vá na aba <B>Automação</B>, embaixo, e siga:
-        <Path steps={["+", "Transação"]} root="Automação" />
-        Marque os seus cartões, escolha <B>Executar Imediatamente</B> e toque em <B>Seguinte</B> e depois em <B>Novo Atalho em Branco</B>.
-      </Step>
-
-      <Step n={2} title="Escolha a ação do Willo">
-        Toque em <B>Buscar</B>, digite <B>Willo</B> e escolha <B>Registrar compra no Willo</B>.
-      </Step>
-
-      <Step n={3} title="Ligue a compra à ação" last>
-        Toque em <B>Valor</B> e, na faixa acima do teclado, toque no botão azul <B>Transação</B>; toque nele de novo e escolha <B>Valor</B>. Faça o mesmo em <B>Comerciante</B> (escolhendo <B>Comerciante</B>) e, tocando na setinha, em <B>Cartão</B> (escolhendo <B>Cartão ou Passe</B>). Se já vierem preenchidos, é só conferir.
-      </Step>
-
-      <Done text="Pronto. Na próxima compra por aproximação, ela aparece no card Willo Copilot, na tela inicial, esperando você confirmar." />
+      <Walkthrough
+        finish="Pronto. Na próxima compra por aproximação, ela aparece no card Willo Copilot, na tela inicial, esperando você confirmar."
+        steps={[
+          {
+            title: "Abra a aba Automação",
+            text: (
+              <>
+                Abra o app <B>Atalhos</B>, toque em <B>Automação</B>, embaixo, e depois no <B>+</B>, em cima.
+              </>
+            ),
+            screen: (
+              <MockScreen title="Automação" right={<MockPlus />}>
+                <Text style={{ marginTop: 40, textAlign: "center", fontSize: 12, color: "#8E8E93" }}>Nenhuma automação ainda</Text>
+                <MockTabs on="Automação" />
+              </MockScreen>
+            ),
+          },
+          {
+            title: "Escolha Transação",
+            text: (
+              <>
+                Na lista do que dispara a automação, toque em <B>Transação</B>, a da Carteira.
+              </>
+            ),
+            screen: (
+              <MockScreen title="Nova Automação" back="Automação">
+                <MockList
+                  rows={[
+                    { label: "Hora do Dia", tint: "#0A84FF", icon: <View style={{ width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: "#fff" }} /> },
+                    { label: "Alarme", tint: "#FF9F0A", icon: <View style={{ width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: "#fff" }} /> },
+                    { label: "Transação", tint: "#1C1C1E", touch: true, icon: <CardIcon color="#FF9F0A" /> },
+                    { label: "E-mail", tint: "#0A84FF", icon: <View style={{ width: 11, height: 8, borderRadius: 2, borderWidth: 1.5, borderColor: "#fff" }} /> },
+                  ]}
+                />
+              </MockScreen>
+            ),
+          },
+          {
+            title: "Marque seus cartões",
+            text: (
+              <>
+                Marque os cartões da Carteira que você usa, escolha <B>Executar Imediatamente</B> e toque em <B>Seguinte</B>.
+              </>
+            ),
+            screen: (
+              <MockScreen title="Transação" back="Voltar" right={<Text style={{ fontSize: 12.5, fontWeight: "700", color: "#0A84FF" }}>Seguinte</Text>}>
+                <MockList
+                  header="Quando eu toco em"
+                  rows={[
+                    { label: "Nubank", check: true, chevron: false, tint: "#820AD1", icon: <CardIcon color="#fff" /> },
+                    { label: "Outro cartão", check: true, chevron: false, tint: "#3A3A3C", icon: <CardIcon color="#fff" /> },
+                  ]}
+                />
+                <View style={{ height: 10 }} />
+                <MockList rows={[{ label: "Executar Imediatamente", check: true, touch: true, chevron: false }, { label: "Confirmar Antes de Executar", chevron: false }]} />
+              </MockScreen>
+            ),
+          },
+          {
+            title: "Escolha a ação do Willo",
+            text: (
+              <>
+                Toque em <B>Novo Atalho em Branco</B>, depois em <B>Buscar</B>, digite <B>Willo</B> e escolha <B>Registrar compra no Willo</B>.
+              </>
+            ),
+            screen: (
+              <MockScreen title="Ações" back="Voltar">
+                <MockSearch text="Willo" />
+                <MockList rows={[{ label: "Registrar compra no Willo", touch: true, icon: <WilloTile />, tint: "transparent", chevron: false }, { label: "Registro rápido do Willo", icon: <WilloTile />, tint: "transparent", chevron: false }]} />
+              </MockScreen>
+            ),
+          },
+          {
+            title: "Ligue a compra à ação",
+            text: (
+              <>
+                Toque em <B>Valor</B> e escolha <B>Transação</B>; toque de novo e escolha <B>Valor</B>. Faça o mesmo em <B>Comerciante</B> e em <B>Cartão</B> (escolhendo <B>Cartão ou Passe</B>). Toque em <B>OK</B>.
+              </>
+            ),
+            screen: (
+              <MockScreen title="Nova Automação" right={<Text style={{ fontSize: 12.5, fontWeight: "700", color: "#0A84FF" }}>OK</Text>}>
+                <MockWilloAction />
+              </MockScreen>
+            ),
+          },
+        ]}
+      />
     </View>
   );
 }
