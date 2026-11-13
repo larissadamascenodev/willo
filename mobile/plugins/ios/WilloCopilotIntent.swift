@@ -15,7 +15,9 @@ struct WilloLogPurchaseIntent: AppIntent {
   static let description = IntentDescription("Manda a compra para o Willo Copilot. Você confirma no app.")
   static let openAppWhenRun: Bool = false
 
-  @Parameter(title: "Valor")
+  /* Connected by itself to what the automation hands over (the purchase), so the person
+     adds the action and is done — nothing to pick. */
+  @Parameter(title: "Valor", inputConnectionBehavior: .connectToPreviousIntentResult)
   var amount: String?
 
   @Parameter(title: "Comerciante")
@@ -73,7 +75,8 @@ struct WilloLogBankNoticeIntent: AppIntent {
   static let description = IntentDescription("Lê o aviso de compra ou Pix do seu banco e manda para o Willo Copilot. Você confirma no app.")
   static let openAppWhenRun: Bool = false
 
-  @Parameter(title: "Aviso")
+  /* Connected by itself to the notification the automation hands over. */
+  @Parameter(title: "Aviso", inputConnectionBehavior: .connectToPreviousIntentResult)
   var notice: String?
 
   @Parameter(title: "App do banco")

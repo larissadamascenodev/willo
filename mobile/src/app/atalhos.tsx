@@ -275,10 +275,10 @@ function WalletCopilotAction() {
         steps={[
           ...automationStart("carteira"),
           {
-            title: "Adicione a ação do Willo",
+            title: "Adicione o Willo",
             text: (
               <>
-                Toque em <B>Buscar</B>, digite <B>Willo</B> e escolha <B>Registrar compra no Willo</B>.
+                Deixe <B>Qualquer Cartão</B>. Embaixo, toque em <B>Buscar</B>, digite <B>Willo</B> e toque em <B>Registrar compra no Willo</B>. A compra já vai junto, sozinha.
               </>
             ),
             screen: (
@@ -289,10 +289,10 @@ function WalletCopilotAction() {
             ),
           },
           {
-            title: "Ligue a compra",
+            title: "Salve",
             text: (
               <>
-                Toque em <B>Valor</B> e escolha <B>Entrada do Atalho</B>. Só isso: o Willo lê sozinho o valor, a loja e o cartão. Toque em <B>✓</B> para salvar.
+                Toque em <B>✓</B>, em cima. Pronto. (Se o campo <B>Valor</B> aparecer vazio, toque nele e escolha <B>Entrada do Atalho</B>.)
               </>
             ),
             screen: (
@@ -337,7 +337,7 @@ function BankNotices() {
             title: "Adicione a ação do Willo",
             text: (
               <>
-                Toque em <B>Buscar</B>, digite <B>Willo</B> e escolha <B>Registrar aviso do banco no Willo</B>.
+                Embaixo, toque em <B>Buscar</B>, digite <B>Willo</B> e toque em <B>Registrar aviso do banco no Willo</B>. O aviso já vai junto, sozinho.
               </>
             ),
             screen: (
@@ -348,10 +348,10 @@ function BankNotices() {
             ),
           },
           {
-            title: "Ligue o aviso",
+            title: "Salve",
             text: (
               <>
-                Toque em <B>Aviso</B> e escolha <B>Entrada do Atalho</B>. Toque em <B>✓</B> para salvar.
+                Toque em <B>✓</B>, em cima. Pronto. (Se o campo <B>Aviso</B> aparecer vazio, toque nele e escolha <B>Entrada do Atalho</B>.)
               </>
             ),
             screen: (
@@ -532,25 +532,19 @@ function automationStart(trigger: "carteira" | "notificacao") {
         </MockScreen>
       ),
     },
-    trigger === "carteira"
-      ? {
-          title: "Deixe Qualquer Cartão",
-          text: (
-            <>
-              Deixe <B>Qualquer Cartão</B>. Toque na setinha <B>›</B> e, se aparecer, escolha <B>Executar Imediatamente</B> — assim ela roda sozinha, sem perguntar.
-            </>
-          ),
-          screen: <MockTrigger kind="carteira" />,
-        }
-      : {
-          title: "Escolha o app do banco",
-          text: (
-            <>
-              Toque no app e escolha o do seu banco — <B>Nubank</B>, Itaú, Inter… Usa mais de um? Marque todos. Na setinha <B>›</B>, escolha <B>Executar Imediatamente</B>.
-            </>
-          ),
-          screen: <MockTrigger kind="notificacao" />,
-        },
+    ...(trigger === "notificacao"
+      ? [
+          {
+            title: "Escolha o app do banco",
+            text: (
+              <>
+                Toque no app e escolha o do seu banco — <B>Nubank</B>, Itaú, Inter… Usa mais de um? Marque todos.
+              </>
+            ),
+            screen: <MockTrigger kind="notificacao" />,
+          },
+        ]
+      : []),
   ];
 }
 
