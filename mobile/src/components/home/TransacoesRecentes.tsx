@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import SubLogo from "~/components/SubLogo";
+import { knownSub } from "~/lib/subscriptionLogos";
 import { Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -124,7 +126,14 @@ function TxRow({ tx, customCategories }: { tx: Transaction; customCategories: Cu
           backgroundColor: th(chipFill(hex), "bg"),
         }}
       >
-        <Icon size={18} color={th(chipInk(hex))} />
+        {/* A known shop's own logo over its category's mark. */}
+        {!tx.isFatura && knownSub(tx.name) ? (
+          <View style={{ position: "absolute", left: 0, top: 0 }}>
+            <SubLogo name={tx.name} size={44} round />
+          </View>
+        ) : (
+          <Icon size={18} color={th(chipInk(hex))} />
+        )}
         {isPending && (
           <View
             style={{

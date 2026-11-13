@@ -87,3 +87,18 @@ export function useCopilot() {
   }, [reload]);
   return { items, reload };
 }
+
+export interface CopilotPast extends CopilotItem {
+  status: "confirmado" | "descartado";
+}
+
+/** What came in before and was already answered: confirmed or discarded, newest first. */
+export async function listHistory(limit = 40): Promise<CopilotPast[]> {
+  const { data, error } = await table()
+    .select("id, name, amount, type, category, payment_method, account_id, credit_card_id, occurred_at, source, raw, status")
+    .in("status", ["confirmado", "descartado"])
+    .order("occurred_at", { ascending: false })
+    .limit(limit);
+  if (error) return [];
+  return ((data ?? []) as CopilotPast[]).map((r) => ({ ...r, amount: Number(r.amount) }));
+}

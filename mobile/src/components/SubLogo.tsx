@@ -13,10 +13,10 @@ import { th } from "~/theme/theme";
 const PALETTE = ["#B48CFF", "#7CC4FF", "#F5C26B", "#3FE0B8", "#FF8FA3", "#9EE493"];
 const colourOf = (name: string) => PALETTE[[...name].reduce((t, c) => t + c.charCodeAt(0), 0) % PALETTE.length];
 
-export default function SubLogo({ name, size = 40, ring = false }: { name: string; size?: number; ring?: boolean }) {
+export default function SubLogo({ name, size = 40, ring = false, round = false }: { name: string; size?: number; ring?: boolean; /** A circle, for the lists whose marks are round. */ round?: boolean }) {
   const known = knownSub(name);
   const [failed, setFailed] = useState(false);
-  const radius = Math.round(size * 0.28);
+  const radius = round ? size / 2 : Math.round(size * 0.28);
   const border = ring ? { borderWidth: 2, borderColor: th("#121315", "line") } : null;
 
   if (known && !failed) {

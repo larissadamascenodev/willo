@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import SubLogo from "~/components/SubLogo";
+import { knownSub } from "~/lib/subscriptionLogos";
 import { Pressable, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { readInvoice, type InvoiceLine } from "@/lib/invoice/readModel";
@@ -107,9 +109,13 @@ export function InvoiceLineRow({ line, onPress }: { line: InvoiceLine; onPress?:
       onPress={onPress}
       style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}
     >
-      <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
-        <Icon size={20} color={th(chipInk(hex))} strokeWidth={2} />
-      </View>
+      {!isRefund && !isEarly && knownSub(line.name) ? (
+        <SubLogo name={line.name} size={46} round />
+      ) : (
+        <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+          <Icon size={20} color={th(chipInk(hex))} strokeWidth={2} />
+        </View>
+      )}
 
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>{line.name}</Text>

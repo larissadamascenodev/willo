@@ -17,13 +17,13 @@ const plain = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerC
 
 /** Words that leave no doubt about the category, by the category's name. */
 const KEYWORDS: Record<string, string[]> = {
-  Transporte: ["uber", "99", "taxi", "onibus", "metro", "passagem de onibus", "bilhete unico", "cabify"],
-  Combustível: ["gasolina", "combustivel", "etanol", "posto", "abastecer", "diesel"],
-  Supermercado: ["mercado", "supermercado", "atacadao", "assai", "carrefour", "feira", "hortifruti"],
-  Restaurante: ["restaurante", "almoco", "jantar", "rodizio"],
-  Delivery: ["ifood", "delivery", "rappi", "ze delivery"],
+  Transporte: ["uber", "uber trip", "99", "99 pop", "taxi", "onibus", "metro", "passagem de onibus", "bilhete unico", "cabify", "indrive"],
+  Combustível: ["gasolina", "combustivel", "etanol", "posto", "abastecer", "diesel", "shell", "ipiranga", "petrobras", "br mania"],
+  Supermercado: ["mercado", "supermercado", "atacadao", "assai", "carrefour", "feira", "hortifruti", "pao de acucar", "extra", "dia", "oxxo", "st marche", "zaffari", "guanabara", "mambo", "sams club", "makro"],
+  Restaurante: ["restaurante", "almoco", "jantar", "rodizio", "mcdonalds", "mc donalds", "burger king", "outback", "subway", "bobs", "habibs", "madero", "coco bambu"],
+  Delivery: ["ifood", "delivery", "rappi", "ze delivery", "ze", "aiqfome"],
   Cafeteria: ["cafe", "cafeteria", "starbucks", "padaria", "pao"],
-  Farmácia: ["farmacia", "remedio", "drogaria", "droga raia", "drogasil"],
+  Farmácia: ["farmacia", "remedio", "drogaria", "droga raia", "drogasil", "raia", "pague menos", "panvel"],
   Streaming: ["netflix", "spotify", "disney", "prime video", "hbo", "max", "youtube premium", "globoplay", "deezer"],
   Academia: ["academia", "smartfit", "smart fit", "crossfit", "pilates"],
   Estacionamento: ["estacionamento", "zona azul", "valet"],
@@ -82,6 +82,14 @@ function categoryFor(name: string, type: "despesa" | "receita", allowed: Set<str
     if (words.some((w) => key === w || key.startsWith(`${w} `) || key.endsWith(` ${w}`) || key.includes(` ${w} `))) return kept;
   }
   return null;
+}
+
+/**
+ * A category for a name on its own — a shop's name from a bank notice, say: from what the
+ * person filed before under that name, then from the words that leave no doubt.
+ */
+export function guessCategory(name: string, type: "despesa" | "receita", allowed: Iterable<string>, history: Record<string, string> = {}): string | null {
+  return categoryFor(name, type, new Set(allowed), history);
 }
 
 /** One piece of the sentence, "uber 18" or "recebi 200 de freela", or null if unclear. */

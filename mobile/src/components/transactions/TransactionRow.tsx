@@ -1,4 +1,6 @@
 import { useRef, type ComponentRef } from "react";
+import SubLogo from "~/components/SubLogo";
+import { knownSub } from "~/lib/subscriptionLogos";
 import { Pressable, Text, View } from "react-native";
 import { categoryHex } from "@/lib/categoryData";
 import { categoryIcon } from "~/lib/categoryIcon";
@@ -89,18 +91,23 @@ export default function TransactionRow({
         backgroundColor: th(pressed ? "#0A0B0D" : "transparent", "bg"),
       })}
     >
-      <View
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 22,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: th(chipFill(discHex), "bg"),
-        }}
-      >
-        <Icon size={18} color={th(chipInk(discHex))} />
-      </View>
+      {/* A known shop's own logo; otherwise its category's mark. */}
+      {!isFatura && !isInitialBalance && knownSub(tx.name) ? (
+        <SubLogo name={tx.name} size={44} round />
+      ) : (
+        <View
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: th(chipFill(discHex), "bg"),
+          }}
+        >
+          <Icon size={18} color={th(chipInk(discHex))} />
+        </View>
+      )}
 
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
