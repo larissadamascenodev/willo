@@ -171,7 +171,7 @@ function WalletCopilot() {
       </Step>
 
       <Step n={3} title="Adicione Obter Conteúdo do URL">
-        Toque em <B>Buscar</B>, digite <B>Obter conteúdo</B> e escolha <B>Obter Conteúdo do URL</B>. No campo azul, cole este endereço:
+        Toque em <B>Buscar</B>, digite <B>Obter conteúdo</B> e escolha <B>Obter Conteúdo do URL</B>. O Atalhos já coloca <B>Transação</B> no campo azul: toque nele e apague, até o campo ficar vazio. Depois toque no campo, segure e escolha <B>Colar</B> com este endereço copiado — o campo tem que mostrar o endereço escrito, não um botão azul de “Área de Transferência”:
         <CopyField value={FUNCTION_URL} small />
       </Step>
 
@@ -189,7 +189,7 @@ function WalletCopilot() {
       </Step>
 
       <Step n={5} title="Teste com uma compra" last>
-        Na próxima compra por aproximação com o iPhone, ela aparece no card <B>Willo Copilot</B>, na tela inicial, esperando você confirmar.
+        Toque em <B>▶︎</B> embaixo. Se o iPhone perguntar se pode enviar para o endereço do Willo, toque em <B>Permitir Sempre</B>. A resposta “Valor não encontrado” quer dizer que está tudo certo (sem uma compra, não há valor). Na próxima compra por aproximação com o iPhone, ela aparece no card <B>Willo Copilot</B>, na tela inicial, esperando você confirmar.
       </Step>
 
       <View style={{ marginTop: 16, flexDirection: "row", gap: 10, padding: 14, borderRadius: 18, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }}>
