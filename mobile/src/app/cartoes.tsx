@@ -7,7 +7,7 @@ import { useCardsOverview, monthKey, type OverviewCard } from "@/hooks/useCardsO
 import { getInvoiceStatusLabel, type CreditCardItem } from "@/lib/invoiceCycle";
 import { colorFor } from "@/lib/banks";
 import Room from "~/components/Room";
-import BackButton from "~/components/BackButton";
+import PageHeader from "~/components/PageHeader";
 import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
@@ -154,10 +154,8 @@ export default function Cartoes() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ height: 44, justifyContent: "center" }}>
-          {/* Cartões is a page off the dashboard, and that is where back goes. */}
-          <BackButton to="/" />
-        </View>
+        {/* Cartões is a page off the dashboard, and that is where back goes. */}
+        <PageHeader title="Cartões de crédito" back="/" />
 
         {/* The shared hook never settles without a session; that is not loading, it
             is nothing to show. */}

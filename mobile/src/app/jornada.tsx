@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import Room from "~/components/Room";
-import BackButton from "~/components/BackButton";
+import PageHeader from "~/components/PageHeader";
 import Surface from "~/components/Surface";
 import { MedalArt } from "~/components/desafios/Medal3D";
 import { AlertTriangle, Check, ChevronRight, Clock, Flame, TrendingUp } from "~/components/icons";
@@ -71,10 +71,7 @@ export default function JornadaScreen() {
           />
         }
       >
-        <View style={{ height: 44, justifyContent: "center" }}>
-          <BackButton />
-        </View>
-        <Text style={{ marginTop: 8, paddingHorizontal: 4, fontSize: 28, fontWeight: "800", letterSpacing: -0.8, color: th("#fff") }}>Sua jornada</Text>
+        <PageHeader title="Sua jornada" />
 
         <Pill tab={tab} onChange={setTab} />
 

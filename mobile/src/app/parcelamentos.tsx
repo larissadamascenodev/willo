@@ -13,7 +13,7 @@ import {
 } from "@/services/activeInstallments";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import Room from "~/components/Room";
-import BackButton from "~/components/BackButton";
+import PageHeader from "~/components/PageHeader";
 import { FlexBar } from "~/components/Bar";
 import InstallmentList from "~/components/installments/InstallmentList";
 import CountUp from "~/components/CountUp";
@@ -144,9 +144,7 @@ export function ParcelamentosView({
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ height: 44, justifyContent: "center" }}>
-          <BackButton to="/" />
-        </View>
+        <PageHeader title="Parcelamentos" back="/" />
 
         {items === null ? (
           <View style={{ marginTop: 16, gap: 14, paddingHorizontal: 4 }}>
@@ -156,7 +154,6 @@ export function ParcelamentosView({
           </View>
         ) : !stats ? (
           <>
-            <Text style={[T.title, { marginTop: 8, paddingHorizontal: 4 }]}>Parcelamentos</Text>
             <View style={{ marginTop: 40, alignItems: "center", paddingHorizontal: 32 }}>
               <CalendarClock size={30} color={th(INK.softer)} strokeWidth={1.6} />
               <Text style={{ marginTop: 16, fontSize: 17, fontWeight: "600", color: th("#fff") }}>Nenhum parcelamento ativo</Text>
@@ -169,18 +166,8 @@ export function ParcelamentosView({
           <>
             {/* ══ What they take, and when they stop ══ */}
             <View style={{ paddingHorizontal: 4 }}>
-              <Text style={[T.title, { marginTop: 8 }]}>Parcelamentos</Text>
-              <Text style={{ marginTop: 2, fontSize: 14, color: th(INK.soft) }}>
-                {list.length} {list.length === 1 ? "compra" : "compras"}
-                {onCard > 0 && onCard < list.length
-                  ? `, ${onCard} no cartão e ${list.length - onCard} na conta`
-                  : onCard === list.length
-                    ? ", todas no cartão"
-                    : ", todas na conta"}
-              </Text>
-
               {/* What the instalments take in the month chosen on the chart, following it. */}
-              <Text style={{ marginTop: 26, fontSize: 15, color: th(INK.soft) }}>
+              <Text style={{ marginTop: 12, fontSize: 15, color: th(INK.soft) }}>
                 Comprometido {selected === 0 ? "este mês" : `em ${monthName}`}
               </Text>
               <CountUp
@@ -195,9 +182,20 @@ export function ParcelamentosView({
                     Livre em <Text style={{ fontWeight: "700", color: th("#fff") }}>{stats.monthsUntilFree} {stats.monthsUntilFree === 1 ? "mês" : "meses"}</Text>, em {monthYear(stats.lastEndDate)}
                   </>
                 ) : (
-                  "A última parcela é deste mês"
+                  "Termina neste mês"
                 )}
               </Text>
+              {/* How many purchases, and where they are paid — what used to sit under the title. */}
+              <View style={{ marginTop: 10, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, height: 28, paddingHorizontal: 12, borderRadius: 14, backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
+                <Text style={{ fontSize: 12.5, fontWeight: "600", color: th(INK.soft) }}>
+                  {list.length} {list.length === 1 ? "compra parcelada" : "compras parceladas"}
+                  {onCard > 0 && onCard < list.length
+                    ? ` · ${onCard} no cartão, ${list.length - onCard} na conta`
+                    : onCard === list.length
+                      ? " · todas no cartão"
+                      : " · todas na conta"}
+                </Text>
+              </View>
             </View>
 
             {/* ══ How much of the debt is behind you ══ */}

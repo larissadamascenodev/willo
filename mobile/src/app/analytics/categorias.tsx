@@ -12,7 +12,7 @@ import { APP_GROUP_DEFS } from "~/lib/taxonomy";
 import { MONTH_NAMES } from "@/lib/projectionRows";
 import { categoryHex } from "@/lib/categoryData";
 import Room from "~/components/Room";
-import BackButton from "~/components/BackButton";
+import PageHeader from "~/components/PageHeader";
 import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
 import BottomSheet from "~/components/BottomSheet";
@@ -146,9 +146,7 @@ export default function AnalyticsCategorias() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ height: 44, justifyContent: "center" }}>
-          <BackButton to="/" />
-        </View>
+        <PageHeader title="Categorias" back="/" />
 
         {data === null ? (
           <View style={{ marginTop: 16, gap: 12 }}>

@@ -10,15 +10,24 @@ import { showToast } from "~/lib/toast";
 import { fetchGoals, type Goal } from "@/services/goalService";
 import { colorFor } from "@/lib/banks";
 import { ensureReserve } from "~/lib/ensureReserve";
-import { catchUpYields, earns, estimate, latestCdi, yieldEarned } from "~/lib/yields";
+import {
+  catchUpYields,
+  earns,
+  estimate,
+  latestCdi,
+  yieldEarned,
+} from "~/lib/yields";
 import AccountSheet from "~/components/accounts/AccountSheet";
 import CaixinhaSheet from "~/components/accounts/CaixinhaSheet";
 import GastosFixosCard from "~/components/home/GastosFixosCard";
 import FixedSheet from "~/components/home/FixedSheet";
-import CaixinhaTile, { NewCaixinhaTile, TILE_W } from "~/components/accounts/CaixinhaTile";
+import CaixinhaTile, {
+  NewCaixinhaTile,
+  TILE_W,
+} from "~/components/accounts/CaixinhaTile";
 import Room from "~/components/Room";
 import RoundButton from "~/components/RoundButton";
-import BackButton from "~/components/BackButton";
+import PageHeader from "~/components/PageHeader";
 import Surface from "~/components/Surface";
 import BankMark from "~/components/BankMark";
 import { FlexBar } from "~/components/Bar";
@@ -68,9 +77,12 @@ export default function Gestao() {
   const [addingAccount, setAddingAccount] = useState(false);
   const [addingCaixinha, setAddingCaixinha] = useState(false);
   /* A fixed income or cost, asked the way a new account's setup asks it. */
-  const [addingFixed, setAddingFixed] = useState<"despesa" | "receita" | null>(null);
+  const [addingFixed, setAddingFixed] = useState<"despesa" | "receita" | null>(
+    null,
+  );
 
-  const announceChange = () => window.dispatchEvent(new CustomEvent("finance-data-changed"));
+  const announceChange = () =>
+    window.dispatchEvent(new CustomEvent("finance-data-changed"));
   const announce = announceChange;
 
   const load = useCallback(async () => {
@@ -98,7 +110,10 @@ export default function Gestao() {
       if (made || credited) list = await fetchGoals();
       setGoals(list);
       if (list.some(earns)) {
-        const [sum, rate] = await Promise.all([yieldEarned(user.id), latestCdi()]);
+        const [sum, rate] = await Promise.all([
+          yieldEarned(user.id),
+          latestCdi(),
+        ]);
         setEarned(sum);
         setCdi(rate?.rate ?? null);
       } else {
@@ -109,7 +124,6 @@ export default function Gestao() {
       setGoals([]);
     }
   }, [user]);
-
 
   useEffect(() => {
     void load();
@@ -133,20 +147,36 @@ export default function Gestao() {
 
   /* Where the month lands: the figure the home card shows, read the same way. */
   const now = useMemo(() => new Date(), []);
-  const { data: month } = useFinanceData(now.getMonth(), now.getFullYear(), { includeHistorical: false });
+  const { data: month } = useFinanceData(now.getMonth(), now.getFullYear(), {
+    includeHistorical: false,
+  });
   const previsto = month?.saldoPrevisto;
 
   const saldo = rows.reduce((s, r) => s + r.balance, 0);
   /* Money in a caixinha has left the account's balance but is still the person's, so
      the whole of what they have is the two together. */
-  const guardado = goals.reduce((s, g) => s + (Number(g.current_amount) || 0), 0);
+  const guardado = goals.reduce(
+    (s, g) => s + (Number(g.current_amount) || 0),
+    0,
+  );
   const total = saldo + guardado;
   /* What the caixinhas that earn are expected to add in a month, from the latest CDI. */
   const rendem = goals.some(earns);
   const noMes =
     cdi === null
       ? 0
-      : goals.filter(earns).reduce((s, g) => s + estimate(Number(g.current_amount) || 0, cdi, Number(g.yield_percent)).month, 0);
+      : goals
+          .filter(earns)
+          .reduce(
+            (s, g) =>
+              s +
+              estimate(
+                Number(g.current_amount) || 0,
+                cdi,
+                Number(g.yield_percent),
+              ).month,
+            0,
+          );
   /* Only what is actually in hand can take up room on a share rule; an account in
      the red still gets its line, so the list stays the whole truth. */
   const positive = rows.reduce((s, r) => s + Math.max(r.balance, 0), 0);
@@ -161,20 +191,47 @@ export default function Gestao() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <BackButton to="/" />
-          <RoundButton label="Adicionar conta" onPress={() => setAddingAccount(true)}>
-            <Plus size={18} color={th("rgba(255,255,255,0.9)")} strokeWidth={2.4} />
-          </RoundButton>
-        </View>
+        <PageHeader
+          title="Carteira"
+          back="/"
+          right={
+            <RoundButton
+              label="Adicionar conta"
+              onPress={() => setAddingAccount(true)}
+            >
+              <Plus
+                size={18}
+                color={th("rgba(255,255,255,0.9)")}
+                strokeWidth={2.4}
+              />
+            </RoundButton>
+          }
+        />
 
         {accounts === null ? (
           <View style={{ marginTop: 20, gap: 16 }}>
-            <View style={{ height: 96, borderRadius: 24, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }} />
-            <Surface style={{ height: 170 }}><View /></Surface>
+            <View
+              style={{
+                height: 96,
+                borderRadius: 24,
+                backgroundColor: th("rgba(255,255,255,0.04)", "bg"),
+              }}
+            />
+            <Surface style={{ height: 170 }}>
+              <View />
+            </Surface>
           </View>
         ) : rows.length === 0 ? (
-          <Surface radius={26} style={{ marginTop: 16, paddingHorizontal: 20, paddingTop: 24, paddingBottom: 20, alignItems: "center" }}>
+          <Surface
+            radius={26}
+            style={{
+              marginTop: 16,
+              paddingHorizontal: 20,
+              paddingTop: 24,
+              paddingBottom: 20,
+              alignItems: "center",
+            }}
+          >
             <View
               style={{
                 width: 48,
@@ -187,13 +244,34 @@ export default function Gestao() {
                 backgroundColor: th("rgba(255,255,255,0.04)", "bg"),
               }}
             >
-              <Landmark size={22} color={th("rgba(255,255,255,0.7)")} strokeWidth={2} />
+              <Landmark
+                size={22}
+                color={th("rgba(255,255,255,0.7)")}
+                strokeWidth={2}
+              />
             </View>
-            <Text style={{ marginTop: 14, fontSize: 17, fontWeight: "700", color: th("#fff") }}>
+            <Text
+              style={{
+                marginTop: 14,
+                fontSize: 17,
+                fontWeight: "700",
+                color: th("#fff"),
+              }}
+            >
               Nenhuma conta cadastrada
             </Text>
-            <Text style={{ marginTop: 6, maxWidth: 256, textAlign: "center", fontSize: 13.5, lineHeight: 18, color: th(INK.soft) }}>
-              Cadastre uma conta para acompanhar o saldo e o que entra e sai dela.
+            <Text
+              style={{
+                marginTop: 6,
+                maxWidth: 256,
+                textAlign: "center",
+                fontSize: 13.5,
+                lineHeight: 18,
+                color: th(INK.soft),
+              }}
+            >
+              Cadastre uma conta para acompanhar o saldo e o que entra e sai
+              dela.
             </Text>
             <Pressable
               onPress={() => setAddingAccount(true)}
@@ -208,14 +286,29 @@ export default function Gestao() {
                 opacity: pressed ? 0.85 : 1,
               })}
             >
-              <Text style={{ fontSize: 15, fontWeight: "700", color: th("#0B0B0B") }}>Adicionar conta</Text>
+              <Text
+                style={{
+                  fontSize: 15,
+                  fontWeight: "700",
+                  color: th("#0B0B0B"),
+                }}
+              >
+                Adicionar conta
+              </Text>
             </Pressable>
           </Surface>
         ) : (
           <>
             {/* ══ Everything you hold ══ */}
-            <Animated.View entering={FadeInDown.duration(400)} style={{ paddingHorizontal: 4, paddingTop: 12 }}>
-              <Text style={{ fontSize: 13.5, color: th("rgba(255,255,255,0.62)") }}>Saldo em contas</Text>
+            <Animated.View
+              entering={FadeInDown.duration(400)}
+              style={{ paddingHorizontal: 4, paddingTop: 12 }}
+            >
+              <Text
+                style={{ fontSize: 13.5, color: th("rgba(255,255,255,0.62)") }}
+              >
+                Saldo em contas
+              </Text>
               <Text
                 numberOfLines={1}
                 style={{
@@ -233,30 +326,71 @@ export default function Gestao() {
               <View style={{ marginTop: 14, flexDirection: "row", gap: 28 }}>
                 {previsto !== undefined && (
                   <View style={{ flexShrink: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.softer) }}>Previsto no final do mês</Text>
-                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: th(previsto < 0 ? RED : "#fff") }}>
+                    <Text
+                      numberOfLines={1}
+                      style={{ fontSize: 12, color: th(INK.softer) }}
+                    >
+                      Previsto no final do mês
+                    </Text>
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        marginTop: 3,
+                        fontSize: 16,
+                        fontWeight: "700",
+                        letterSpacing: -0.3,
+                        color: th(previsto < 0 ? RED : "#fff"),
+                      }}
+                    >
                       {money(previsto)}
                     </Text>
                   </View>
                 )}
                 {guardado > 0 && (
                   <View style={{ flexShrink: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.softer) }}>Patrimônio total</Text>
-                    <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
+                    <Text
+                      numberOfLines={1}
+                      style={{ fontSize: 12, color: th(INK.softer) }}
+                    >
+                      Patrimônio total
+                    </Text>
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        marginTop: 3,
+                        fontSize: 16,
+                        fontWeight: "700",
+                        letterSpacing: -0.3,
+                        color: th("#fff"),
+                      }}
+                    >
                       {money(total)}
                     </Text>
                   </View>
                 )}
               </View>
-              <Text style={{ marginTop: 10, fontSize: 12.5, color: th(INK.soft) }}>
+              <Text
+                style={{ marginTop: 10, fontSize: 12.5, color: th(INK.soft) }}
+              >
                 {rows.length} {rows.length === 1 ? "conta" : "contas"}
               </Text>
             </Animated.View>
 
             {/* ══ The accounts, one line each ══ */}
-            <Animated.View entering={FadeInDown.delay(60).duration(420)} style={{ marginTop: 24 }}>
+            <Animated.View
+              entering={FadeInDown.delay(60).duration(420)}
+              style={{ marginTop: 24 }}
+            >
               {/* One bar split the way the money is, each share in its bank's colour. */}
-              <View style={{ flexDirection: "row", height: 8, gap: 3, paddingHorizontal: 4, marginBottom: 4 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  height: 8,
+                  gap: 3,
+                  paddingHorizontal: 4,
+                  marginBottom: 4,
+                }}
+              >
                 {positive > 0 ? (
                   rows
                     .filter((r) => r.balance > 0)
@@ -269,16 +403,28 @@ export default function Gestao() {
                       />
                     ))
                 ) : (
-                  <View style={{ flex: 1, borderRadius: 999, backgroundColor: th("rgba(255,255,255,0.08)", "bg") }} />
+                  <View
+                    style={{
+                      flex: 1,
+                      borderRadius: 999,
+                      backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
+                    }}
+                  />
                 )}
               </View>
 
               {rows.map((r, i) => {
-                const share = positive > 0 ? Math.max(r.balance, 0) / positive : 0;
+                const share =
+                  positive > 0 ? Math.max(r.balance, 0) / positive : 0;
                 return (
-                  <Animated.View key={r.account.id} entering={FadeInDown.delay(40 + i * 50).duration(350)}>
+                  <Animated.View
+                    key={r.account.id}
+                    entering={FadeInDown.delay(40 + i * 50).duration(350)}
+                  >
                     <Pressable
-                      onPress={() => router.push(`/conta/${r.account.id}` as never)}
+                      onPress={() =>
+                        router.push(`/conta/${r.account.id}` as never)
+                      }
                       style={({ pressed }) => ({
                         flexDirection: "row",
                         alignItems: "center",
@@ -293,8 +439,22 @@ export default function Gestao() {
                       <BankMark name={r.account.name} hex={r.hex} size={40} />
 
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                          <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          <Text
+                            numberOfLines={1}
+                            style={{
+                              flexShrink: 1,
+                              fontSize: 15.5,
+                              fontWeight: "600",
+                              color: th("#fff"),
+                            }}
+                          >
                             {r.account.name}
                           </Text>
                           {r.account.is_default && (
@@ -306,7 +466,10 @@ export default function Gestao() {
                                 paddingVertical: 2,
                                 fontSize: 10,
                                 fontWeight: "700",
-                                backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
+                                backgroundColor: th(
+                                  "rgba(255,255,255,0.08)",
+                                  "bg",
+                                ),
                                 color: th(INK.soft),
                               }}
                             >
@@ -314,7 +477,14 @@ export default function Gestao() {
                             </Text>
                           )}
                         </View>
-                        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: th(INK.softer) }}>
+                        <Text
+                          numberOfLines={1}
+                          style={{
+                            marginTop: 2,
+                            fontSize: 12,
+                            color: th(INK.softer),
+                          }}
+                        >
                           {r.typeLabel}
                         </Text>
                       </View>
@@ -324,12 +494,24 @@ export default function Gestao() {
                           style={{
                             fontSize: 15.5,
                             fontWeight: "700",
-                            color: th(r.balance < 0 ? RED : r.balance > 0 ? "#fff" : INK.softer),
+                            color: th(
+                              r.balance < 0
+                                ? RED
+                                : r.balance > 0
+                                  ? "#fff"
+                                  : INK.softer,
+                            ),
                           }}
                         >
                           {money(r.balance)}
                         </Text>
-                        <Text style={{ marginTop: 2, fontSize: 12, color: th(share > 0 ? r.hex : INK.faint) }}>
+                        <Text
+                          style={{
+                            marginTop: 2,
+                            fontSize: 12,
+                            color: th(share > 0 ? r.hex : INK.faint),
+                          }}
+                        >
                           {Math.round(share * 100)}%
                         </Text>
                       </View>
@@ -340,24 +522,59 @@ export default function Gestao() {
             </Animated.View>
 
             {/* ══ What comes in and goes out every month: the home's own card, with a way to add one ══ */}
-            <Animated.View entering={FadeInDown.delay(80).duration(420)} style={{ marginTop: 30 }}>
+            <Animated.View
+              entering={FadeInDown.delay(80).duration(420)}
+              style={{ marginTop: 30 }}
+            >
               <GastosFixosCard onAdd={(kind) => setAddingFixed(kind)} />
             </Animated.View>
 
             {/* ══ Caixinhas: money set aside for something, still yours ══ */}
-            <Animated.View entering={FadeInDown.delay(120).duration(420)} style={{ marginTop: 30 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 4 }}>
+            <Animated.View
+              entering={FadeInDown.delay(120).duration(420)}
+              style={{ marginTop: 30 }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingHorizontal: 4,
+                  marginBottom: 4,
+                }}
+              >
                 <View>
                   <Text style={T.eyebrow}>Caixinhas</Text>
-                  <Text style={{ marginTop: 3, fontSize: 12.5, color: th(INK.soft) }}>Organize seus objetivos</Text>
+                  <Text
+                    style={{
+                      marginTop: 3,
+                      fontSize: 12.5,
+                      color: th(INK.soft),
+                    }}
+                  >
+                    Organize seus objetivos
+                  </Text>
                 </View>
                 <Pressable
                   onPress={() => setAddingCaixinha(true)}
                   hitSlop={8}
-                  style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, opacity: pressed ? 0.6 : 1 })}
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
+                    opacity: pressed ? 0.6 : 1,
+                  })}
                 >
                   <Plus size={14} color={th("#fff")} strokeWidth={2.6} />
-                  <Text style={{ fontSize: 13.5, fontWeight: "600", color: th("#fff") }}>Criar nova</Text>
+                  <Text
+                    style={{
+                      fontSize: 13.5,
+                      fontWeight: "600",
+                      color: th("#fff"),
+                    }}
+                  >
+                    Criar nova
+                  </Text>
                 </Pressable>
               </View>
 
@@ -377,13 +594,38 @@ export default function Gestao() {
                     opacity: pressed ? 0.7 : 1,
                   })}
                 >
-                  <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
+                  <View
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: th("rgba(255,255,255,0.07)", "bg"),
+                    }}
+                  >
                     <PiggyBank size={20} color={th("#fff")} strokeWidth={2} />
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff") }}>Crie sua primeira caixinha</Text>
-                    <Text style={{ marginTop: 2, fontSize: 12.5, lineHeight: 17, color: th(INK.soft) }}>
-                      Para a viagem, a reserva de emergência, o carro. O dinheiro sai da conta, mas continua seu.
+                    <Text
+                      style={{
+                        fontSize: 15,
+                        fontWeight: "700",
+                        color: th("#fff"),
+                      }}
+                    >
+                      Crie sua primeira caixinha
+                    </Text>
+                    <Text
+                      style={{
+                        marginTop: 2,
+                        fontSize: 12.5,
+                        lineHeight: 17,
+                        color: th(INK.soft),
+                      }}
+                    >
+                      Para a viagem, a reserva de emergência, o carro. O
+                      dinheiro sai da conta, mas continua seu.
                     </Text>
                   </View>
                   <ChevronRight size={16} color={th(INK.softer)} />
@@ -393,22 +635,68 @@ export default function Gestao() {
                   {/* The caixinhas as numbers first, the way the accounts are. Each one keeps its
                       own goal and pace on its own page, so only the total and what it earns are here. */}
                   <View style={{ paddingHorizontal: 4, paddingTop: 10 }}>
-                    <Text style={{ fontSize: 13.5, color: th("rgba(255,255,255,0.62)") }}>Total em caixinhas</Text>
-                    <Text numberOfLines={1} style={{ marginTop: 4, fontSize: 32, fontWeight: "800", letterSpacing: -1.2, color: th("#fff") }}>
+                    <Text
+                      style={{
+                        fontSize: 13.5,
+                        color: th("rgba(255,255,255,0.62)"),
+                      }}
+                    >
+                      Total em caixinhas
+                    </Text>
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        marginTop: 4,
+                        fontSize: 32,
+                        fontWeight: "800",
+                        letterSpacing: -1.2,
+                        color: th("#fff"),
+                      }}
+                    >
                       {money(guardado)}
                     </Text>
                     {rendem && (
-                      <View style={{ marginTop: 12, flexDirection: "row", gap: 26 }}>
+                      <View
+                        style={{ marginTop: 12, flexDirection: "row", gap: 26 }}
+                      >
                         <View style={{ flexShrink: 1, minWidth: 0 }}>
-                          <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.softer) }}>Rendimentos</Text>
-                          <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: th(GREEN) }}>
+                          <Text
+                            numberOfLines={1}
+                            style={{ fontSize: 12, color: th(INK.softer) }}
+                          >
+                            Rendimentos
+                          </Text>
+                          <Text
+                            numberOfLines={1}
+                            style={{
+                              marginTop: 3,
+                              fontSize: 16,
+                              fontWeight: "700",
+                              letterSpacing: -0.3,
+                              color: th(GREEN),
+                            }}
+                          >
                             {money(earned)}
                           </Text>
                         </View>
                         {noMes > 0 && (
                           <View style={{ flexShrink: 1, minWidth: 0 }}>
-                            <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.softer) }}>Estimado em um mês</Text>
-                            <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
+                            <Text
+                              numberOfLines={1}
+                              style={{ fontSize: 12, color: th(INK.softer) }}
+                            >
+                              Estimado em um mês
+                            </Text>
+                            <Text
+                              numberOfLines={1}
+                              style={{
+                                marginTop: 3,
+                                fontSize: 16,
+                                fontWeight: "700",
+                                letterSpacing: -0.3,
+                                color: th("#fff"),
+                              }}
+                            >
                               {money(noMes)}
                             </Text>
                           </View>
@@ -428,12 +716,25 @@ export default function Gestao() {
                     contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
                   >
                     {goals.map((g, i) => (
-                      <Animated.View key={g.id} entering={FadeInDown.delay(60 + i * 70).duration(420)}>
-                        <CaixinhaTile goal={g} delay={0.06 * i} onPress={() => router.push(`/metas/${g.id}` as never)} />
+                      <Animated.View
+                        key={g.id}
+                        entering={FadeInDown.delay(60 + i * 70).duration(420)}
+                      >
+                        <CaixinhaTile
+                          goal={g}
+                          delay={0.06 * i}
+                          onPress={() => router.push(`/metas/${g.id}` as never)}
+                        />
                       </Animated.View>
                     ))}
-                    <Animated.View entering={FadeInDown.delay(60 + goals.length * 70).duration(420)}>
-                      <NewCaixinhaTile onPress={() => setAddingCaixinha(true)} />
+                    <Animated.View
+                      entering={FadeInDown.delay(
+                        60 + goals.length * 70,
+                      ).duration(420)}
+                    >
+                      <NewCaixinhaTile
+                        onPress={() => setAddingCaixinha(true)}
+                      />
                     </Animated.View>
                   </ScrollView>
                 </>

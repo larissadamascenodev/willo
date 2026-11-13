@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMonth } from "@/contexts/MonthContext";
 import { useFinancialProjection } from "@/hooks/useFinancialProjection";
 import Room from "~/components/Room";
-import BackButton from "~/components/BackButton";
+import PageHeader from "~/components/PageHeader";
 import SegmentedTabs from "~/components/SegmentedTabs";
 import BalancoPanel from "~/components/financeiro/BalancoPanel";
 import ProjecoesPanel from "~/components/financeiro/ProjecoesPanel";
@@ -54,9 +54,7 @@ export default function FluxoDeCaixa() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ height: 44, justifyContent: "center" }}>
-          <BackButton to="/" />
-        </View>
+        <PageHeader title="Receitas e despesas" back="/" />
 
         <View style={{ marginTop: 10 }}>
           <SegmentedTabs

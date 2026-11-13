@@ -6,7 +6,7 @@ import { useRaioX } from "@/hooks/useRaioX";
 import { useAssistantSnapshot } from "@/hooks/useAssistantSnapshot";
 import { allowedCategories } from "@/services/quickEntry";
 import Room from "~/components/Room";
-import BackButton from "~/components/BackButton";
+import PageHeader from "~/components/PageHeader";
 import RadarPanel from "~/components/willo/RadarPanel";
 import { th, useThemeRedraw } from "~/theme/theme";
 import { type as T } from "~/theme/type";
@@ -36,11 +36,8 @@ export default function RadarScreen() {
   return (
     <Room>
       <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 16 }}>
-        <View style={{ height: 44, justifyContent: "center" }}>
-          <BackButton />
-        </View>
-        <Text style={[T.title, { marginTop: 8, paddingHorizontal: 4 }]}>Radar financeiro</Text>
-        <Text style={{ marginTop: 4, paddingHorizontal: 4, fontSize: 14, color: th("rgba(255,255,255,0.66)") }}>
+        <PageHeader title="Radar financeiro" />
+        <Text style={{ marginTop: 6, textAlign: "center", fontSize: 13.5, color: th("rgba(255,255,255,0.66)") }}>
           Toque num setor para ver o que o Willo encontrou
         </Text>
       </View>
