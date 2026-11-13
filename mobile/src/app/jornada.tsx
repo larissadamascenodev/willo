@@ -138,7 +138,7 @@ function JourneySide({ j, conq, onGoal, onMedals }: { j: Journey; conq: Conquist
           {j.change.up ? <TrendingUp size={18} color={th(GREEN)} strokeWidth={2.4} /> : <AlertTriangle size={18} color={AMBER} strokeWidth={2.4} />}
           <Text style={{ flex: 1, fontSize: 14, lineHeight: 20, color: th("#fff") }}>
             {j.change.up
-              ? `Você subiu para ${j.change.to}. O que você fez nas últimas semanas apareceu nos números.`
+              ? `Você subiu para ${j.change.to}. O que você fez nas semanas recentes apareceu nos números.`
               : `Você voltou para ${j.change.to}. Acontece, e o caminho de volta está logo abaixo.`}
           </Text>
         </Animated.View>

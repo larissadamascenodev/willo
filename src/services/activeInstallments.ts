@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import {
   buildActiveInstallmentItems,
+  partAmount,
   type ActiveInstallmentItem,
   type InstallmentInvoiceRow,
   type InstallmentTransactionRow,
@@ -171,13 +172,14 @@ export function installmentTotals(items: ActiveInstallmentItem[]): InstallmentTo
     const paidCount = item.installment_current - 1;
     const unpaidCount = item.installments - paidCount;
 
-    totalGeral += item.amount * item.installments;
-    totalJaPago += item.amount * paidCount;
-
-    if (unpaidCount > 0) {
-      totalMensal += item.amount;
-      totalRestante += item.amount * unpaidCount;
+    /* Instalment by instalment: one changed on its own counts as it is. */
+    for (let n = 1; n <= item.installments; n++) {
+      const each = partAmount(item, n);
+      totalGeral += each;
+      if (n <= paidCount) totalJaPago += each;
+      else totalRestante += each;
     }
+    if (unpaidCount > 0) totalMensal += partAmount(item, item.installment_current);
 
     const endDate = periodToDate(firstUnpaidPeriod(item) + (item.installments - item.installment_current));
     if (endDate > lastEndDate) lastEndDate = endDate;
@@ -259,7 +261,7 @@ export function installmentProjection(
           id: item.id,
           name: item.name,
           category: item.category,
-          amount: item.amount,
+          amount: partAmount(item, item.installment_current + monthsDiff),
           number: item.installment_current + monthsDiff,
           total: item.installments,
         });

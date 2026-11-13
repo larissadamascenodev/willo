@@ -79,7 +79,7 @@ export function localAnswer(question: string, snapshot: Snapshot, installments: 
     const when = t.lastEndDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
     return {
       agent: "cronos",
-      text: `São ${installments.length} compras parceladas, ${money(t.totalMensal)} por mês, e falta pagar ${money(t.totalRestante)}. A última parcela é em ${when}.`,
+      text: `São ${installments.length} compras parceladas, ${money(t.totalMensal)} por mês, e falta pagar ${money(t.totalRestante)}. Tudo termina em ${when}.`,
     };
   }
 

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { InvoicePayment } from "@/services/invoiceService";
+import { notifyFinanceDataChanged } from "@/services/transactionService";
 
 /**
  * Changing or removing one payment made to an invoice.
@@ -30,7 +31,7 @@ export async function removePayment(payment: InvoicePayment) {
   const { error } = await supabase.from("invoice_payments" as any).delete().eq("id", payment.id);
   if (error) throw error;
   await settle(payment.invoice_id, -Number(payment.amount));
-  window.dispatchEvent(new CustomEvent("finance-data-changed"));
+  notifyFinanceDataChanged();
 }
 
 export async function changePayment(payment: InvoicePayment, next: { amount: number; accountId: string | null }) {
@@ -40,5 +41,5 @@ export async function changePayment(payment: InvoicePayment, next: { amount: num
     .eq("id", payment.id);
   if (error) throw error;
   await settle(payment.invoice_id, next.amount - Number(payment.amount));
-  window.dispatchEvent(new CustomEvent("finance-data-changed"));
+  notifyFinanceDataChanged();
 }

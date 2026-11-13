@@ -39,7 +39,7 @@ export interface TransactionFilters {
   category?: string;
 }
 
-export function notifyFinanceDataChanged() {
+function dropFinanceCaches() {
   clearFinanceQueryCache();
   // Import dynamically to avoid circular deps
   import("@/services/dashboardData").then(({ clearDashboardCache }) => {
@@ -48,8 +48,20 @@ export function notifyFinanceDataChanged() {
   import("@/lib/financeEngine").then(({ clearMaterializedCache }) => {
     clearMaterializedCache();
   }).catch(() => {});
+}
+
+export function notifyFinanceDataChanged() {
+  dropFinanceCaches();
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent("finance-data-changed"));
+}
+
+/* Many screens announce a change by dispatching the event themselves. Whoever sends it,
+   what was kept is dropped first — this listener is added when the service loads, before
+   any screen's own — so a page that reloads on the event never reads the old list
+   (a card's used limit after paying its invoice, an account's balance after a payment). */
+if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+  window.addEventListener("finance-data-changed", () => clearFinanceQueryCache());
 }
 
 function getCachedList<T>(key: string, loader: () => Promise<T[]>): Promise<T[]> {

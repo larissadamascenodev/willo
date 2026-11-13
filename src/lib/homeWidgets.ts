@@ -32,10 +32,10 @@ export const WIDGETS: WidgetDef[] = [
   { id: "parcelamentos", label: "Parcelamentos", description: "O que ainda falta pagar em parcelas", resizable: true, defaultSize: "half" },
   { id: "assinaturas", label: "Assinaturas", description: "O que se repete todo mês", resizable: true, defaultSize: "half" },
   { id: "metas", label: "Metas", description: "Quanto já foi guardado", resizable: true, defaultSize: "half" },
-  { id: "fixos", label: "Gastos e receitas fixas", description: "O que é certo todo mês", resizable: true, defaultSize: "full" },
+  { id: "fixos", label: "Receitas e despesas fixas", description: "O que é certo todo mês", resizable: true, defaultSize: "full" },
   { id: "raiox", label: "Saúde do mês", description: "Quanto dá para gastar por dia até o fim do mês", resizable: true, defaultSize: "full" },
   { id: "categorias", label: "Gastos por categoria", description: "O mês repartido por categoria", resizable: false, defaultSize: "full" },
-  { id: "recentes", label: "Transações recentes", description: "As últimas movimentações", resizable: false, defaultSize: "full" },
+  { id: "recentes", label: "Transações recentes", description: "As movimentações mais recentes", resizable: false, defaultSize: "full" },
 ];
 
 export const widgetById = (id: string) => WIDGETS.find((w) => w.id === id);

@@ -180,7 +180,7 @@ export default function InstallmentPurchaseCard({
               <Text numberOfLines={1} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: th(INK.soft) }}>
                 {at === item.installments ? (
                   <>
-                    <Text style={{ fontWeight: "700", color: th("#fff") }}>Última</Text> parcela em {monthLabel}
+                    <Text style={{ fontWeight: "700", color: th("#fff") }}>Termina</Text> em {monthLabel}
                   </>
                 ) : (
                   <>

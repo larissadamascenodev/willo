@@ -134,7 +134,8 @@ export default function EntryForm({
         />
         {parcelado && v.parts ? (
           <Text style={[nums, { marginTop: 2, fontSize: 13.5, color: th(INK.soft) }]}>
-            {v.parts}x de {money(v.cents / 100 / v.parts)}
+            {/* Editing one instalment, the amount is already the instalment's: the whole is what it adds to. */}
+            {partOf ? `${v.parts}x · total ${money((v.cents / 100) * v.parts)}` : `${v.parts}x de ${money(v.cents / 100 / v.parts)}`}
           </Text>
         ) : null}
       </View>

@@ -528,8 +528,9 @@ export default function MetaDetalhe() {
                   return (
                     <View key={tx.id}>
                     {heading && (
-                      <Text style={{ marginTop: i === 0 ? 8 : 18, marginBottom: 2, fontSize: 13, fontWeight: "600", color: th(INK.softer), textTransform: "capitalize" }}>
-                        {heading}
+                      <Text style={{ marginTop: i === 0 ? 8 : 18, marginBottom: 2, fontSize: 13, fontWeight: "600", color: th(INK.softer) }}>
+                        {/* "Novembro de 2026": only the month's first letter grows. */}
+                        {heading.charAt(0).toUpperCase() + heading.slice(1)}
                       </Text>
                     )}
                     <Pressable

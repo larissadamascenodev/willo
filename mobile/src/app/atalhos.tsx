@@ -158,7 +158,7 @@ function BackTap() {
             title: "Toque em Tocar Atrás",
             text: (
               <>
-                É a última opção da tela. Toque em <B>Tocar Atrás</B>.
+                Fica no fim da tela. Toque em <B>Tocar Atrás</B>.
               </>
             ),
             screen: (

@@ -78,8 +78,10 @@ export function Consumo({ data, onAsk }: { data: RaioXData; onAsk: Ask }) {
   const top = rows[0];
 
   /* The ring: the largest five, and everything else as one. */
-  const rest = rows.slice(5).reduce((s, r) => s + r.total, 0);
-  const slices = [...rows.slice(0, 5).map((r, i) => ({ label: r.name, value: r.total, hex: SHADES[i] })), ...(rest > 0 ? [{ label: "Outros", value: rest, hex: SHADES[5] }] : [])];
+  /* The category "Outros" joins the rest, so the ring never shows two slices of that name. */
+  const named = rows.filter((r) => r.name !== "Outros").slice(0, 5);
+  const rest = rows.filter((r) => !named.includes(r)).reduce((s, r) => s + r.total, 0);
+  const slices = [...named.map((r, i) => ({ label: r.name, value: r.total, hex: SHADES[i] })), ...(rest > 0 ? [{ label: "Outros", value: rest, hex: SHADES[5] }] : [])];
 
   const inPeriod = spend.filter((t) => keys.includes(monthKey(t.date)));
   const planned = inPeriod.filter((t) => t.recurrence_type === "fixa" || (t.installments ?? 0) > 1).reduce((s, t) => s + t.amount, 0);

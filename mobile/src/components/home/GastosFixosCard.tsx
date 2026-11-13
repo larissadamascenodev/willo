@@ -117,7 +117,9 @@ export function GastosFixosView({
 
   const shown = expanded ? filtered : filtered.slice(0, SHOWN);
   const hasMore = filtered.length > SHOWN;
-  const paidCount = filtered.filter((s) => s.isPaidThisMonth).length;
+  /* This month's progress counts only what falls in it: one that begins next month is not late. */
+  const due = filtered.filter((s) => !s.startsOn);
+  const paidCount = due.filter((s) => s.isPaidThisMonth).length;
   const income = tab === "receita";
 
   return (
@@ -156,10 +158,10 @@ export function GastosFixosView({
 
             {/* The month's progress through them: one tick each, filled once it has happened. */}
             <View style={{ marginTop: 12 }}>
-              {filtered.length <= MAX_TICKS ? (
+              {due.length === 0 ? null : due.length <= MAX_TICKS ? (
                 <View style={{ flexDirection: "row", gap: 3 }}>
                   {/* What has happened fills from the left, as progress does. */}
-                  {[...filtered]
+                  {[...due]
                     .sort((a, b) => Number(b.isPaidThisMonth) - Number(a.isPaidThisMonth))
                     .map((s) => (
                     <View
@@ -179,11 +181,13 @@ export function GastosFixosView({
                 </View>
               ) : (
                 <View style={{ height: 5, borderRadius: 999, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.10)", "bg") }}>
-                  <Bar share={paidCount / filtered.length} color={income ? GREEN : "#fff"} delay={0.06} />
+                  <Bar share={paidCount / due.length} color={income ? GREEN : "#fff"} delay={0.06} />
                 </View>
               )}
-              <Text style={{ marginTop: 7, fontSize: 12, color: th(INK.soft) }}>
-                {paidCount} de {filtered.length} {income ? "já recebidas" : "já pagas"} este mês
+              <Text style={{ marginTop: due.length === 0 ? 0 : 7, fontSize: 12, color: th(INK.soft) }}>
+                {due.length === 0
+                  ? "Começa no mês que vem"
+                  : `${paidCount} de ${due.length} ${income ? "já recebidas" : "já pagas"} este mês`}
               </Text>
             </View>
           </>

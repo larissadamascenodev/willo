@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import { useRouter } from "expo-router";
+import { deleteTransaction } from "@/services/transactionService";
 import { categoryHex } from "@/lib/categoryData";
-import type { ActiveInstallmentItem } from "@/lib/installmentProgress";
+import { partAmount, type ActiveInstallmentItem } from "@/lib/installmentProgress";
 import type { CustomCategory } from "@/services/categoryService";
 import type { CardBadge } from "@/services/activeInstallments";
 import CenterModal from "~/components/CenterModal";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { money } from "~/lib/money";
+import { showToast } from "~/lib/toast";
+import { Pencil, Trash2 } from "~/components/icons";
 import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
@@ -136,7 +140,7 @@ export function InstallmentRow({
           <Text style={{ fontSize: 11.5, fontWeight: "600", color: th(INK.soft) }}>{`${number} de ${item.installments}`}</Text>
         </View>
       </View>
-      <Text style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>{money(item.amount)}</Text>
+      <Text style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>{money(partAmount(item, number))}</Text>
     </Pressable>
   );
 }
@@ -152,14 +156,26 @@ export function InstallmentDetail({
   card?: CardBadge;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const [shown, setShown] = useState<MonthPart | null>(entry);
-  if (entry && entry !== shown) setShown(entry);
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  if (entry && entry !== shown) {
+    setShown(entry);
+    setConfirming(false);
+  }
   if (!shown) return null;
 
   const { item, number } = shown;
   const hex = categoryHex(item.category, customCats);
   const Icon = categoryIcon(item.category, customCats);
   const paidCount = item.installment_current - 1;
+  /* Instalment by instalment, since one may have been changed on its own. */
+  const sumOf = (from: number, to: number) => {
+    let sum = 0;
+    for (let n = from; n <= to; n++) sum += partAmount(item, n);
+    return sum;
+  };
   const where = item.payment_method === "cartao" ? (card?.name ?? "Cartão") : "Conta";
   const start = new Date(`${item.date.slice(0, 10)}T12:00:00`);
   const day = start.toLocaleDateString("pt-BR", { day: "numeric", month: "short", year: "numeric" });
@@ -174,12 +190,44 @@ export function InstallmentDetail({
 
   return (
     <CenterModal open={!!entry} onClose={onClose} title={item.name} subtitle={where}>
+      {confirming ? (
+        <Animated.View entering={FadeIn.duration(200)} style={{ alignItems: "center", paddingTop: 8 }}>
+          <View style={{ width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,107,107,0.14)", "bg") }}>
+            <Trash2 size={24} color={th(RED)} />
+          </View>
+          <Text style={{ marginTop: 14, fontSize: 18, fontWeight: "700", color: th("#fff"), textAlign: "center" }}>Excluir “{item.name}”?</Text>
+          <Text style={{ marginTop: 8, fontSize: 14, lineHeight: 20, color: th(INK.soft), textAlign: "center" }}>
+            {item.payment_method === "cartao"
+              ? `As ${item.installments} parcelas, ${money(sumOf(1, item.installments))} ao todo, saem de todas as faturas e o limite do cartão volta a ficar livre.`
+              : `As ${item.installments} parcelas, ${money(sumOf(1, item.installments))} ao todo, saem dos seus lançamentos.`}
+          </Text>
+          <View style={{ marginTop: 22, alignSelf: "stretch", flexDirection: "row", gap: 10 }}>
+            <ModalButton label="Cancelar" disabled={busy} onPress={() => setConfirming(false)} />
+            <ModalButton
+              label={busy ? "Excluindo…" : "Excluir"}
+              danger
+              disabled={busy}
+              onPress={() => {
+                setBusy(true);
+                deleteTransaction(item.id)
+                  .then(() => {
+                    onClose();
+                    showToast(`“${item.name}” excluído`);
+                  })
+                  .catch(() => showToast("Não foi possível excluir."))
+                  .finally(() => setBusy(false));
+              }}
+            />
+          </View>
+        </Animated.View>
+      ) : (
+      <>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
         <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
           <Icon size={21} color={th(chipInk(hex))} strokeWidth={2} />
         </View>
         <View>
-          <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1, color: th("#fff") }}>{money(item.amount)}</Text>
+          <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1, color: th("#fff") }}>{money(partAmount(item, number))}</Text>
           <Text style={{ marginTop: 1, fontSize: 13, color: th(INK.soft) }}>por mês</Text>
         </View>
       </View>
@@ -190,22 +238,23 @@ export function InstallmentDetail({
             Parcela {number} de {item.installments}
           </Text>
           <Text style={{ fontSize: 13, color: th(INK.soft) }}>
-            {number === item.installments ? "" : `faltam ${money(item.amount * (item.installments - number))}`}
+            {/* What is still to be paid: every instalment not paid yet, this one included. */}
+            {paidCount >= item.installments ? "" : `faltam ${money(sumOf(paidCount + 1, item.installments))}`}
           </Text>
         </View>
         <View style={{ marginTop: 10, height: 6, flexDirection: "row", gap: 3 }}>
           {Array.from({ length: item.installments }, (_, i) => (
-            <View key={i} style={{ flex: 1, borderRadius: 3, backgroundColor: th(i < number ? hex : "rgba(255,255,255,0.10)", "bg") }} />
+            <View key={i} style={{ flex: 1, borderRadius: 3, backgroundColor: th(i < paidCount ? hex : i < number ? `${hex}66` : "rgba(255,255,255,0.10)", "bg") }} />
           ))}
         </View>
         <View style={{ marginTop: 10, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
           <View>
             <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Pago</Text>
-            <Text style={{ marginTop: 2, fontSize: 14.5, fontWeight: "700", color: th("#fff") }}>{money(item.amount * paidCount)}</Text>
+            <Text style={{ marginTop: 2, fontSize: 14.5, fontWeight: "700", color: th("#fff") }}>{money(sumOf(1, paidCount))}</Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>Total da compra</Text>
-            <Text style={{ marginTop: 2, fontSize: 17, fontWeight: "800", letterSpacing: -0.4, color: th("#fff") }}>{money(item.amount * item.installments)}</Text>
+            <Text style={{ marginTop: 2, fontSize: 17, fontWeight: "800", letterSpacing: -0.4, color: th("#fff") }}>{money(sumOf(1, item.installments))}</Text>
           </View>
         </View>
       </View>
@@ -223,11 +272,52 @@ export function InstallmentDetail({
             <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: th(a.n === paidCount + 1 ? "#fff" : "rgba(255,255,255,0.22)", "bg") }} />
             <Text style={{ width: 30, fontSize: 12.5, color: th(INK.softer) }}>{a.n}ª</Text>
             <Text style={{ flex: 1, fontSize: 14, color: th("#fff") }}>{a.label}</Text>
-            <Text style={{ fontSize: 14, fontWeight: "600", color: th("#fff") }}>{money(item.amount)}</Text>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: th("#fff") }}>{money(partAmount(item, a.n))}</Text>
           </View>
         ))}
       </View>
+
+      {/* The plan as a whole: change it, or remove every instalment of it. */}
+      <View style={{ marginTop: 16, flexDirection: "row", gap: 10 }}>
+        <ModalButton
+          label="Editar"
+          icon={Pencil}
+          onPress={() => {
+            onClose();
+            router.push({ pathname: "/manual", params: { editar: item.id } } as never);
+          }}
+        />
+        <ModalButton label="Excluir" icon={Trash2} danger soft onPress={() => setConfirming(true)} />
+      </View>
+      </>
+      )}
     </CenterModal>
+  );
+}
+
+function ModalButton({ label, onPress, icon: Icon, danger = false, soft = false, disabled = false }: { label: string; onPress: () => void; icon?: typeof Pencil; danger?: boolean; soft?: boolean; disabled?: boolean }) {
+  const solid = danger && !soft;
+  const ink = solid ? "#fff" : danger ? RED : "#fff";
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      style={({ pressed }) => ({
+        flex: 1,
+        height: 48,
+        borderRadius: 24,
+        flexDirection: "row",
+        gap: 8,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: th(solid ? RED : danger ? "rgba(255,107,107,0.12)" : "rgba(255,255,255,0.10)", "bg"),
+        opacity: disabled ? 0.5 : pressed ? 0.75 : 1,
+      })}
+    >
+      {Icon && <Icon size={16} color={th(ink)} strokeWidth={2.2} />}
+      <Text style={{ fontSize: 15, fontWeight: solid ? "700" : "600", color: th(ink) }}>{label}</Text>
+    </Pressable>
   );
 }
 

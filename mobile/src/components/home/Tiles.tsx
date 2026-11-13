@@ -202,7 +202,7 @@ export function ParcelamentosCard({
   const ends =
     totals.monthsUntilFree > 0
       ? `Termina em ${monthYear(totals.lastEndDate)}`
-      : "Última parcela este mês";
+      : "Termina este mês";
 
   if (!full) {
     /* Compact, the whole card used, as the caixinhas and the cards are: the heaviest

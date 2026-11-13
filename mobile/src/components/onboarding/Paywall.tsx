@@ -129,11 +129,12 @@ export default function Paywall({ name, goal, onClose, onStart, renew = false }:
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 16, fontWeight: "800", color: "#fff" }}>{p.label}</Text>
-                      <Text style={{ fontSize: 12.5, color: C.softer }}>{id === "anual" ? `${brl(p.price)} por ano` : "Cobrado todo mês"}</Text>
+                      <Text style={{ fontSize: 12.5, color: C.softer }}>{id === "anual" ? `equivale a ${brl(p.perMonth)}/mês` : "Cobrado todo mês"}</Text>
                     </View>
+                    {/* What is charged is the figure that stands out (App Store 3.1.2); a year's price as a month's is only the note. */}
                     <Text style={{ fontSize: 18, fontWeight: "800", color: "#fff" }}>
-                      {brl(p.perMonth)}
-                      <Text style={{ fontSize: 12, fontWeight: "600", color: C.softer }}>/mês</Text>
+                      {brl(p.price)}
+                      <Text style={{ fontSize: 12, fontWeight: "600", color: C.softer }}>/{p.period}</Text>
                     </Text>
                   </View>
                 </Pressable>
@@ -145,11 +146,12 @@ export default function Paywall({ name, goal, onClose, onStart, renew = false }:
             <Text style={{ fontSize: 11, fontWeight: "800", letterSpacing: 1.6, color: "rgba(255,255,255,0.55)" }}>
               {trial ? `PLANO ANUAL · ${TRIAL_DAYS} DIAS GRÁTIS` : plan === "anual" ? "PLANO ANUAL" : "PLANO MENSAL"}
             </Text>
+            {/* The amount charged is the largest price on the screen; the month's equivalent sits under it. */}
             <Text style={{ fontSize: 44, fontWeight: "800", letterSpacing: -1.8, color: "#fff" }}>
-              {brl(chosen.perMonth)}
-              <Text style={{ fontSize: 17, fontWeight: "500", letterSpacing: 0, color: C.soft }}> /mês</Text>
+              {brl(chosen.price)}
+              <Text style={{ fontSize: 17, fontWeight: "500", letterSpacing: 0, color: C.soft }}> /{chosen.period}</Text>
             </Text>
-            <Text style={{ fontSize: 13.5, color: C.soft }}>{plan === "anual" ? `${brl(chosen.price)} cobrado por ano` : "Cobrado todo mês"}</Text>
+            <Text style={{ fontSize: 13.5, color: C.soft }}>{plan === "anual" ? `Equivale a ${brl(chosen.perMonth)} por mês` : "Cobrado todo mês"}</Text>
           </Animated.View>
         )}
 

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { notifyFinanceDataChanged } from "@/services/transactionService";
 
 export interface Invoice {
   id: string;
@@ -110,6 +111,8 @@ export async function payInvoice(
   });
 
   if (error) throw error;
+  /* The card's used limit and the account's balance change with it: drop what was kept. */
+  notifyFinanceDataChanged();
   return data;
 }
 
@@ -119,6 +122,7 @@ export async function undoInvoicePayment(invoiceId: string) {
   });
 
   if (error) throw error;
+  notifyFinanceDataChanged();
   return data;
 }
 

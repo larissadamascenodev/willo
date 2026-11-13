@@ -69,7 +69,7 @@ export default function InstallmentChart({
         </Text>
         {last && (
           <Text style={{ textAlign: "right", fontSize: 11.5, lineHeight: 14, color: th(INK.faint) }}>
-            última parcela{"\n"}em {MONTH_SHORT[last.month]}/{String(last.year).slice(2)}
+            termina{"\n"}em {MONTH_SHORT[last.month]}/{String(last.year).slice(2)}
           </Text>
         )}
       </View>

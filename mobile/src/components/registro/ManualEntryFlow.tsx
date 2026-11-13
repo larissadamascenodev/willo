@@ -6,6 +6,7 @@ import { allowedCategories } from "@/services/quickEntry";
 import { parseLocal } from "@/lib/quickEntry/parseLocal";
 import { colorFor } from "@/lib/banks";
 import BankMark from "~/components/BankMark";
+import AccountSelect from "~/components/AccountSelect";
 import CategoryPicker from "~/components/CategoryPicker";
 import EntryForm, { todayIso, type EntryValues } from "~/components/registro/EntryForm";
 import { CategoryButton, Choice, EntryCard, GLASS, StepHeader, Primary, SavedView, dayLabel, nums, type Account, type Card } from "~/components/registro/entryParts";
@@ -74,7 +75,9 @@ export default function ManualEntryFlow({
     repeat: preset?.fixa ? "fixa" : "unica",
     parts: null,
     date: todayIso(),
-    status: "pendente",
+    /* Like the quick entry: what happened today is settled; a card's or a day ahead is not
+       (both are set to pending on the way). A fixed entry starts waiting for its day. */
+    status: preset?.fixa ? "pendente" : "pago",
     note: "",
   });
   const set = (patch: Partial<EntryValues>) => setV((p) => ({ ...p, ...patch }));
@@ -396,13 +399,19 @@ export default function ManualEntryFlow({
                 </View>
               )}
 
-              {q === "where" && (
-                <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-                  {list.map((o) => (
-                    <Choice key={o.id} wide={list.length > 3} on={v.whereId === o.id} icon={<BankMark name={o.name} hex={colorFor(o.name, o.color)} size={30} />} label={o.name} onPress={() => advance({ whereId: o.id })} />
-                  ))}
-                </View>
-              )}
+              {/* Two side by side; three or more in the one list, so no name is cut. */}
+              {q === "where" &&
+                (list.length <= 2 ? (
+                  <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
+                    {list.map((o) => (
+                      <Choice key={o.id} on={v.whereId === o.id} icon={<BankMark name={o.name} hex={colorFor(o.name, o.color)} size={30} />} label={o.name} onPress={() => advance({ whereId: o.id })} />
+                    ))}
+                  </View>
+                ) : (
+                  <View style={{ marginTop: 12 }}>
+                    <AccountSelect options={list} value={v.whereId} title={title.where} placeholder={credit ? "Escolher cartão" : "Escolher conta"} onChange={(id) => advance({ whereId: id })} />
+                  </View>
+                ))}
 
             </Animated.View>
           </Animated.View>

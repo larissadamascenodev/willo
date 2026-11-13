@@ -21,7 +21,7 @@ const KEYWORDS: Record<string, string[]> = {
   Transporte: ["uber", "uber trip", "99", "99 pop", "taxi", "onibus", "metro", "passagem de onibus", "bilhete unico", "cabify", "indrive"],
   Combustível: ["gasolina", "combustivel", "etanol", "posto", "abastecer", "diesel", "shell", "ipiranga", "petrobras", "br mania"],
   Supermercado: ["mercado", "supermercado", "atacadao", "assai", "carrefour", "feira", "hortifruti", "pao de acucar", "extra", "dia", "oxxo", "st marche", "zaffari", "guanabara", "mambo", "sams club", "makro"],
-  Restaurante: ["restaurante", "almoco", "jantar", "rodizio", "mcdonalds", "mc donalds", "burger king", "outback", "subway", "bobs", "habibs", "madero", "coco bambu"],
+  Restaurante: ["restaurante", "almoco", "jantar", "rodizio", "lanche", "lanchonete", "pizza", "pizzaria", "hamburguer", "hamburgueria", "sushi", "acai", "sorvete", "sorveteria", "churrascaria", "marmita", "salgado", "pastel", "mcdonalds", "mc donalds", "burger king", "outback", "subway", "bobs", "habibs", "madero", "coco bambu"],
   Delivery: ["ifood", "delivery", "rappi", "ze delivery", "ze", "aiqfome"],
   Cafeteria: ["cafe", "cafeteria", "starbucks", "padaria", "pao"],
   Farmácia: ["farmacia", "remedio", "drogaria", "droga raia", "drogasil", "raia", "pague menos", "panvel"],

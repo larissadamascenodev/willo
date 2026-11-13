@@ -475,7 +475,7 @@ export function achievements(input: AchInput): Achievement[] {
     { key: "bills", group: "Contas e cartões", name: "Contas em dia", what: "Contas e boletos pagos", icon: "check", steps: [5, 20, 60, 150, 300], unit: ["conta paga", "contas pagas"], value: billsPaid, dates: sortedDays(bills.map((t) => t.date)) },
     { key: "ontime", group: "Contas e cartões", name: "Sem atraso", what: "Meses sem nenhuma conta vencida sem pagar", icon: "calendar", steps: [1, 3, 6, 12], unit: ["mês sem atraso", "meses sem atraso"], value: onTimeMonths, dates: onTimeList },
     { key: "invoices", group: "Contas e cartões", name: "Fatura zerada", what: "Faturas de cartão pagas", icon: "card", steps: [1, 3, 6, 12], unit: ["fatura paga", "faturas pagas"], value: input.paidInvoices },
-    { key: "paidoff", group: "Contas e cartões", name: "Parcela quitada", what: "Pagou uma compra parcelada até a última parcela", icon: "layers", steps: [1], unit: ["compra quitada", "compras quitadas"], value: paidOff, dates: sortedDays(paidOffList.map((t) => t.date)) },
+    { key: "paidoff", group: "Contas e cartões", name: "Parcela quitada", what: "Quitou uma compra parcelada inteira", icon: "layers", steps: [1], unit: ["compra quitada", "compras quitadas"], value: paidOff, dates: sortedDays(paidOffList.map((t) => t.date)) },
     { key: "planned", group: "Contas e cartões", name: "Planejado", what: "Cadastrou as contas fixas, para o mês nunca pegar de surpresa", icon: "calendar", steps: [3], unit: ["conta fixa", "contas fixas"], value: fixed, dates: [...firstFixed.values()].sort() },
 
     { key: "firstbox", group: "Guardar", name: "Primeira caixinha", what: "Criou a primeira caixinha para guardar dinheiro", icon: "piggy", steps: [1], unit: ["caixinha", "caixinhas"], value: goalsMade, dates: goalDates },
@@ -511,7 +511,7 @@ export function achievements(input: AchInput): Achievement[] {
   return [
     ...open,
     secret({ key: "collector", name: "Colecionador", what: "Medalhas conquistadas, somando todas", icon: "crown", steps: [10, 25, 50], unit: ["medalha", "medalhas"], value: levels, hint: "Conquiste 5 medalhas para revelar" }, levels >= 5),
-    secret({ key: "legend", name: "Lenda", what: "Coleções completas, até a última medalha", icon: "gem", steps: [1, 3], unit: ["coleção completa", "coleções completas"], value: maxed, hint: "Conquiste a terceira medalha de uma coleção para revelar" }, open.some((a) => a.tier >= 3)),
+    secret({ key: "legend", name: "Lenda", what: "Coleções completas, com todas as medalhas", icon: "gem", steps: [1, 3], unit: ["coleção completa", "coleções completas"], value: maxed, hint: "Conquiste a terceira medalha de uma coleção para revelar" }, open.some((a) => a.tier >= 3)),
   ];
 }
 

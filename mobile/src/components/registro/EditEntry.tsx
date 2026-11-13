@@ -115,6 +115,9 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
   }
 
   const parcel = tx.recurrence_type === "parcelado" && (tx.installments ?? 0) > 1;
+  /* On a card, every invoice repeats the purchase as written on its first row: one
+     instalment cannot be changed or removed on its own — only the whole purchase. */
+  const wholeOnly = parcel && tx.payment_method === "cartao" && !!tx.credit_card_id;
   const child = !!tx.parent_transaction_id || parcel;
   const recurring = tx.recurrence_type === "fixa" || parcel;
 
@@ -229,6 +232,10 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
               <Text style={{ flex: 1, fontSize: 13, lineHeight: 18, color: th("rgba(255,255,255,0.82)") }}>
                 {!recurring
                   ? "Excluir este lançamento? Isso não pode ser desfeito."
+                  : wholeOnly
+                    ? asking === "delete"
+                      ? `São ${tx.installments} parcelas de uma compra no cartão. Excluir remove a compra inteira, de todas as faturas.`
+                      : `São ${tx.installments} parcelas de uma compra no cartão. A mudança vale para todas.`
                   : parcel
                     ? `É a parcela ${tx.installment_current ?? 1} de ${tx.installments}. Quer ${asking === "delete" ? "excluir" : "mudar"} só esta ou esta e as próximas?`
                     : asking === "delete"
@@ -240,10 +247,10 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
               <AskButton label="Excluir" danger onPress={() => void remove("all")} disabled={saving} />
             ) : (
               <>
-                <AskButton label={parcel ? "Só esta parcela" : "Só deste mês"} onPress={() => void (asking === "delete" ? remove("month") : save("month"))} disabled={saving} />
+                {!wholeOnly && <AskButton label={parcel ? "Só esta parcela" : "Só deste mês"} onPress={() => void (asking === "delete" ? remove("month") : save("month"))} disabled={saving} />}
                 {fixed && <AskButton label="A partir do mês seguinte" onPress={() => void (asking === "delete" ? remove("next") : save("next"))} disabled={saving} />}
                 <AskButton
-                  label={parcel ? "Esta e as próximas" : "Deste mês em diante"}
+                  label={wholeOnly ? (asking === "delete" ? "Excluir a compra" : "Todas as parcelas") : parcel ? "Esta e as próximas" : "Deste mês em diante"}
                   strong={asking !== "delete"}
                   danger={asking === "delete"}
                   onPress={() => void (asking === "delete" ? remove("all") : save("all"))}

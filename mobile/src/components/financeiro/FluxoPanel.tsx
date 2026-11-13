@@ -321,7 +321,7 @@ export default function FluxoPanel({
         <>
       {/* ══ The last few, named ══ */}
       <Text style={[T.eyebrow, { marginTop: 26, paddingHorizontal: 4 }]}>
-        {subTab === "geral" ? "Últimos lançamentos" : subTab === "entradas" ? "Últimas entradas" : "Últimas saídas"}
+        {subTab === "geral" ? "Últimos lançamentos" : subTab === "entradas" ? "Entradas recentes" : "Saídas recentes"}
       </Text>
 
       {latest.length === 0 ? (

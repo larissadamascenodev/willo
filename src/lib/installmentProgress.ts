@@ -51,7 +51,13 @@ export interface ActiveInstallmentItem {
   credit_card_id: string | null;
   isOverdue: boolean;
   dueDate: string | null;
+  /** Each instalment's own amount, by its number, when one was changed on its own. */
+  amounts?: Record<number, number>;
 }
+
+/** What instalment `n` of a purchase costs: its own amount, or the purchase's. */
+export const partAmount = (item: Pick<ActiveInstallmentItem, "amount" | "amounts">, n: number) =>
+  item.amounts?.[n] ?? item.amount;
 
 interface InstallmentGroup {
   id: string;
@@ -65,6 +71,7 @@ interface InstallmentGroup {
   unpaidInstallments: Set<number>;
   unpaidInvoiceInstallments: Map<number, string | null>;
   dueDates: Map<number, string>;
+  amounts: Map<number, number>;
 }
 
 const pickOne = <T,>(value: T | T[] | null | undefined): T | null => {
@@ -72,7 +79,7 @@ const pickOne = <T,>(value: T | T[] | null | undefined): T | null => {
   return value ?? null;
 };
 
-const upsertGroup = (map: Map<string, InstallmentGroup>, group: Omit<InstallmentGroup, "unpaidInstallments" | "unpaidInvoiceInstallments" | "dueDates">) => {
+const upsertGroup = (map: Map<string, InstallmentGroup>, group: Omit<InstallmentGroup, "unpaidInstallments" | "unpaidInvoiceInstallments" | "dueDates" | "amounts">) => {
   const existing = map.get(group.id);
 
   if (existing) {
@@ -86,6 +93,7 @@ const upsertGroup = (map: Map<string, InstallmentGroup>, group: Omit<Installment
     unpaidInstallments: new Set<number>(),
     unpaidInvoiceInstallments: new Map<number, string | null>(),
     dueDates: new Map<number, string>(),
+    amounts: new Map<number, number>(),
   };
   map.set(group.id, created);
   return created;
@@ -120,6 +128,7 @@ export const buildActiveInstallmentItems = ({
       credit_card_id: tx.credit_card_id,
     });
 
+    group.amounts.set(installmentNumber, Number(tx.amount));
     if (tx.status !== "pago") {
       group.unpaidInstallments.add(installmentNumber);
     }
@@ -145,6 +154,7 @@ export const buildActiveInstallmentItems = ({
       credit_card_id: tx.credit_card_id,
     });
 
+    group.amounts.set(item.installment_number, Number(item.amount));
     if (
       tx.credit_card_id &&
       creditCardDueDays?.[tx.credit_card_id] &&
@@ -165,7 +175,7 @@ export const buildActiveInstallmentItems = ({
   });
 
   return Array.from(groups.values())
-    .map((group) => {
+    .map((group): ActiveInstallmentItem | null => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
@@ -188,7 +198,9 @@ export const buildActiveInstallmentItems = ({
         id: group.id,
         name: group.name,
         category: group.category,
-        amount: group.amount,
+        /* The instalment due now: one changed on its own shows as it is. */
+        amount: group.amounts.get(currentInstallment) ?? group.amount,
+        amounts: Object.fromEntries(group.amounts) as Record<number, number>,
         installment_current: currentInstallment,
         installments: group.installments,
         payment_method: group.payment_method,
@@ -206,7 +218,7 @@ export const buildActiveInstallmentItems = ({
           return expectedDate < today;
         })(),
         dueDate,
-      } satisfies ActiveInstallmentItem;
+      };
     })
     .filter((item): item is ActiveInstallmentItem => item !== null)
     .sort((a, b) => b.amount - a.amount);

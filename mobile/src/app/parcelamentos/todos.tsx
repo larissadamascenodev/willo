@@ -1,3 +1,4 @@
+import { partAmount } from "@/lib/installmentProgress";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
@@ -72,8 +73,8 @@ export default function TodosParcelamentos() {
   }, [items, byId, month, year, today]);
 
   const onCard = entries.filter((e) => e.item.payment_method === "cartao");
-  const total = entries.reduce((s, e) => s + e.item.amount, 0);
-  const cardTotal = onCard.reduce((s, e) => s + e.item.amount, 0);
+  const total = entries.reduce((s, e) => s + partAmount(e.item, e.number), 0);
+  const cardTotal = onCard.reduce((s, e) => s + partAmount(e.item, e.number), 0);
 
   const shown = entries.filter(({ item }) => {
     if (tab === "cartao" && item.payment_method !== "cartao") return false;

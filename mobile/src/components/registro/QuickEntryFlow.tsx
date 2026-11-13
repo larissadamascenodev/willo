@@ -11,6 +11,7 @@ import { allowedCategories, readEntry, todayISO, type ParsedEntry } from "@/serv
 import { parseLocal } from "@/lib/quickEntry/parseLocal";
 import { colorFor } from "@/lib/banks";
 import BankMark from "~/components/BankMark";
+import AccountSelect from "~/components/AccountSelect";
 import CategoryPicker from "~/components/CategoryPicker";
 import ParticleOrb from "~/components/registro/ParticleOrb";
 import type { ReceiptLine } from "~/components/registro/ReceiptCard";
@@ -643,13 +644,25 @@ export default function QuickEntryFlow({
                     </View>
                   )}
 
-                  {question === "where" && (
-                    <View style={{ marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-                      {list.map((o) => (
-                        <Choice key={o.id} wide={list.length > 3} on={reopen === "where" && whereId === o.id} icon={<BankMark name={o.name} hex={colorFor(o.name, o.color)} size={30} />} label={o.name} onPress={() => answered({ where: o.id })} />
-                      ))}
-                    </View>
-                  )}
+                  {/* Two side by side; three or more in the one list, so no name is cut. */}
+                  {question === "where" &&
+                    (list.length <= 2 ? (
+                      <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
+                        {list.map((o) => (
+                          <Choice key={o.id} on={reopen === "where" && whereId === o.id} icon={<BankMark name={o.name} hex={colorFor(o.name, o.color)} size={30} />} label={o.name} onPress={() => answered({ where: o.id })} />
+                        ))}
+                      </View>
+                    ) : (
+                      <View style={{ marginTop: 12 }}>
+                        <AccountSelect
+                          options={list}
+                          value={reopen === "where" ? whereId : null}
+                          title={how === "cartao" ? "Em qual cartão?" : type === "receita" ? "Entrou em qual conta?" : "Que conta você usou?"}
+                          placeholder={how === "cartao" ? "Escolher cartão" : "Escolher conta"}
+                          onChange={(id) => answered({ where: id })}
+                        />
+                      </View>
+                    ))}
 
                   {question === "plan" && (
                     <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
