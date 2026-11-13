@@ -10,4 +10,6 @@ export const FEATURES = {
   plano: false,
   /** Desafios e conquistas: the home tile, the check-in shelf and the medals. */
   desafios: false,
+  /** Hoje dá para gastar: the thin card under the balance (its page, /resumo, stays reachable by link only). */
+  gastarHoje: false,
 } as const;

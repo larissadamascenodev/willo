@@ -66,7 +66,7 @@ export function renderHomeWidget(
       return (
         <View style={{ gap: 12 }}>
           <SaldoContasCard saldoPrevisto={ctx.saldoPrevisto} />
-          {ctx.isCurrentMonth && <SpendTodayCard />}
+          {FEATURES.gastarHoje && ctx.isCurrentMonth && <SpendTodayCard />}
         </View>
       );
 
