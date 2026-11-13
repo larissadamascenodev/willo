@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { Image, Text, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
+import { th } from "~/theme/theme";
 import { Check, ChevronLeft, ChevronRight, CreditCard, Plus, Search, Zap } from "~/components/icons";
 
 /**
@@ -12,19 +13,20 @@ import { Check, ChevronLeft, ChevronRight, CreditCard, Plus, Search, Zap } from 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const WILLO_ICON = require("../../../assets/willo-icon.png") as number;
 
-const BG = "#000000";
-const GROUP = "#1C1C1E";
-const SEP = "#38383A";
-const TEXT = "#FFFFFF";
+/* The app's own glass, so the drawings sit in its layout; they follow its theme. */
+const BG = () => th("rgba(255,255,255,0.045)", "bg");
+const GROUP = () => th("rgba(255,255,255,0.08)", "bg");
+const SEP = () => th("rgba(255,255,255,0.10)", "line");
+const TEXT = () => th("#FFFFFF");
 const SOFT = "#8E8E93";
 const BLUE = "#0A84FF";
 
 /** The phone's screen: a nav bar with its title, and what is on it. */
 export function MockScreen({ title, back, right, children }: { title: string; back?: string; right?: ReactNode; children: ReactNode }) {
   return (
-    <View style={{ width: "100%", height: 300, borderRadius: 26, borderCurve: "continuous", overflow: "hidden", backgroundColor: BG, borderWidth: 6, borderColor: "#2A2A2E" }}>
+    <View style={{ width: "100%", height: 300, borderRadius: 26, borderCurve: "continuous", overflow: "hidden", backgroundColor: BG(), borderWidth: 1, borderColor: th("rgba(255,255,255,0.12)", "line") }}>
       <View style={{ height: 22, flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16 }}>
-        <Text style={{ fontSize: 10, fontWeight: "700", color: TEXT }}>9:41</Text>
+        <Text style={{ fontSize: 10, fontWeight: "700", color: TEXT() }}>9:41</Text>
         <View style={{ width: 18, height: 8, borderRadius: 2, borderWidth: 1, borderColor: SOFT }} />
       </View>
       <View style={{ height: 30, flexDirection: "row", alignItems: "center", paddingHorizontal: 10 }}>
@@ -39,7 +41,7 @@ export function MockScreen({ title, back, right, children }: { title: string; ba
         <View style={{ flex: 1 }} />
         {right}
       </View>
-      <Text style={{ paddingHorizontal: 14, fontSize: 20, fontWeight: "800", color: TEXT }}>{title}</Text>
+      <Text style={{ paddingHorizontal: 14, fontSize: 20, fontWeight: "800", color: TEXT() }}>{title}</Text>
       <View style={{ flex: 1, paddingHorizontal: 10, paddingTop: 8 }}>{children}</View>
     </View>
   );
@@ -62,13 +64,13 @@ export function MockList({ rows, header }: { rows: MockRow[]; header?: string })
   return (
     <View>
       {header ? <Text style={{ marginLeft: 8, marginBottom: 4, fontSize: 9.5, fontWeight: "600", letterSpacing: 0.4, color: SOFT }}>{header.toUpperCase()}</Text> : null}
-      <View style={{ borderRadius: 10, overflow: "hidden", backgroundColor: GROUP }}>
+      <View style={{ borderRadius: 10, overflow: "hidden", backgroundColor: GROUP() }}>
         {rows.map((r, i) => (
           <View key={r.label + i}>
-            {i > 0 && <View style={{ height: 0.5, marginLeft: r.icon ? 40 : 12, backgroundColor: SEP }} />}
+            {i > 0 && <View style={{ height: 0.5, marginLeft: r.icon ? 40 : 12, backgroundColor: SEP() }} />}
             <View style={{ height: 34, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 10, backgroundColor: r.touch ? "rgba(10,132,255,0.18)" : "transparent" }}>
               {r.icon ? <View style={{ width: 22, height: 22, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: r.tint ?? "#3A3A3C" }}>{r.icon}</View> : null}
-              <Text numberOfLines={1} style={{ flex: 1, fontSize: 12.5, color: TEXT, fontWeight: r.touch ? "700" : "400" }}>
+              <Text numberOfLines={1} style={{ flex: 1, fontSize: 12.5, color: TEXT(), fontWeight: r.touch ? "700" : "400" }}>
                 {r.label}
               </Text>
               {r.value ? <Text style={{ fontSize: 11.5, color: SOFT }}>{r.value}</Text> : null}
@@ -92,8 +94,8 @@ export function Finger({ style }: { style?: object }) {
   const ring = useAnimatedStyle(() => ({ opacity: 0.9 * (1 - p.get()), transform: [{ scale: 0.6 + p.get() * 1.1 }] }));
   return (
     <View pointerEvents="none" style={[{ position: "absolute", right: 34, top: 7, width: 20, height: 20 }, style]}>
-      <Animated.View style={[{ position: "absolute", left: 0, top: 0, width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: "#FFFFFF" }, ring]} />
-      <View style={{ position: "absolute", left: 5, top: 5, width: 10, height: 10, borderRadius: 5, backgroundColor: "rgba(255,255,255,0.9)" }} />
+      <Animated.View style={[{ position: "absolute", left: 0, top: 0, width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: th("#FFFFFF", "line") }, ring]} />
+      <View style={{ position: "absolute", left: 5, top: 5, width: 10, height: 10, borderRadius: 5, backgroundColor: th("rgba(255,255,255,0.9)", "bg") }} />
     </View>
   );
 }
@@ -101,12 +103,12 @@ export function Finger({ style }: { style?: object }) {
 /** The sheet the Shortcuts app shows for a shared shortcut: its tile and "Adicionar Atalho". */
 export function MockAddShortcut({ name }: { name: string }) {
   return (
-    <View style={{ width: "100%", height: 300, borderRadius: 26, borderCurve: "continuous", overflow: "hidden", backgroundColor: "#111113", borderWidth: 6, borderColor: "#2A2A2E", alignItems: "center", justifyContent: "flex-end" }}>
-      <View style={{ width: "100%", padding: 16, borderTopLeftRadius: 18, borderTopRightRadius: 18, backgroundColor: GROUP, alignItems: "center" }}>
+    <View style={{ width: "100%", height: 300, borderRadius: 26, borderCurve: "continuous", overflow: "hidden", backgroundColor: BG(), borderWidth: 1, borderColor: th("rgba(255,255,255,0.12)", "line"), alignItems: "center", justifyContent: "flex-end" }}>
+      <View style={{ width: "100%", padding: 16, borderTopLeftRadius: 18, borderTopRightRadius: 18, backgroundColor: GROUP(), alignItems: "center" }}>
         <View style={{ width: 64, height: 64, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "#5E5CE6" }}>
           <Zap size={30} color="#fff" fill="#fff" />
         </View>
-        <Text style={{ marginTop: 10, fontSize: 15, fontWeight: "800", color: TEXT }}>{name}</Text>
+        <Text style={{ marginTop: 10, fontSize: 15, fontWeight: "800", color: TEXT() }}>{name}</Text>
         <Text style={{ marginTop: 2, fontSize: 11, color: SOFT }}>Abre o Registro rápido do Willo</Text>
         <View style={{ marginTop: 14, alignSelf: "stretch", height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: BLUE }}>
           <Text style={{ fontSize: 13.5, fontWeight: "700", color: "#fff" }}>Adicionar Atalho</Text>
@@ -121,7 +123,7 @@ export function MockAddShortcut({ name }: { name: string }) {
 /** The Shortcuts app's foot: its three tabs, one of them to touch. */
 export function MockTabs({ on }: { on: "Atalhos" | "Automação" | "Galeria" }) {
   return (
-    <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 42, flexDirection: "row", borderTopWidth: 0.5, borderTopColor: SEP, backgroundColor: "#0D0D0F" }}>
+    <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 42, flexDirection: "row", borderTopWidth: 0.5, borderTopColor: SEP(), backgroundColor: GROUP() }}>
       {(["Atalhos", "Automação", "Galeria"] as const).map((t) => (
         <View key={t} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <View style={{ width: 14, height: 14, borderRadius: 4, backgroundColor: t === on ? BLUE : "#48484A" }} />
@@ -146,9 +148,9 @@ export function MockPlus() {
 /** The search field at the foot of the action list, with what was typed. */
 export function MockSearch({ text }: { text: string }) {
   return (
-    <View style={{ height: 30, marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, borderRadius: 9, backgroundColor: GROUP }}>
+    <View style={{ height: 30, marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, borderRadius: 9, backgroundColor: GROUP() }}>
       <Search size={13} color={SOFT} />
-      <Text style={{ fontSize: 12.5, color: TEXT }}>{text}</Text>
+      <Text style={{ fontSize: 12.5, color: TEXT() }}>{text}</Text>
     </View>
   );
 }
@@ -167,15 +169,15 @@ export function MockWilloAction() {
     </View>
   );
   return (
-    <View style={{ borderRadius: 10, padding: 10, backgroundColor: GROUP, gap: 8 }}>
+    <View style={{ borderRadius: 10, padding: 10, backgroundColor: GROUP(), gap: 8 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <WilloTile />
-        <Text style={{ fontSize: 12.5, fontWeight: "700", color: TEXT }}>Registrar compra no Willo</Text>
+        <Text style={{ fontSize: 12.5, fontWeight: "700", color: TEXT() }}>Registrar compra no Willo</Text>
       </View>
       <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 5 }}>
-        <Text style={{ fontSize: 12, color: TEXT }}>Registrar</Text>
+        <Text style={{ fontSize: 12, color: TEXT() }}>Registrar</Text>
         {chip("Transação › Valor", true)}
-        <Text style={{ fontSize: 12, color: TEXT }}>de</Text>
+        <Text style={{ fontSize: 12, color: TEXT() }}>de</Text>
         {chip("Transação › Comerciante")}
       </View>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
@@ -189,4 +191,75 @@ export function MockWilloAction() {
 /** A card of the Wallet, for the list of cards to mark. */
 export function CardIcon({ color }: { color: string }) {
   return <CreditCard size={13} color={color} strokeWidth={2.4} />;
+}
+
+/** "Obter Conteúdo do URL" as the editor draws it, the address written in its field. */
+export function MockUrlAction({ url }: { url: string }) {
+  return (
+    <View style={{ borderRadius: 10, padding: 10, backgroundColor: GROUP(), gap: 8 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <View style={{ width: 22, height: 22, borderRadius: 6, alignItems: "center", justifyContent: "center", backgroundColor: "#30B0C7" }}>
+          <Text style={{ fontSize: 11, color: "#fff" }}>⌁</Text>
+        </View>
+        <Text style={{ fontSize: 12.5, fontWeight: "700", color: TEXT() }}>Obter conteúdo de</Text>
+      </View>
+      <View style={{ height: 26, borderRadius: 6, justifyContent: "center", paddingHorizontal: 8, backgroundColor: GROUP() }}>
+        <Text numberOfLines={1} ellipsizeMode="middle" style={{ fontSize: 11, color: TEXT() }}>
+          {url}
+        </Text>
+        <Finger style={{ right: 10, top: 3 }} />
+      </View>
+      <Text style={{ fontSize: 10.5, color: "#FF9F0A" }}>Endereço escrito, sem botão azul “Transação”.</Text>
+    </View>
+  );
+}
+
+/** The request's settings: POST, JSON, and the four fields — the last three blue chips. */
+export function MockJsonFields({ rows }: { rows: [string, string, boolean][] }) {
+  return (
+    <View style={{ borderRadius: 10, overflow: "hidden", backgroundColor: GROUP() }}>
+      {[
+        ["Método", "POST"],
+        ["Corpo da Solicitação", "JSON"],
+      ].map(([k, v]) => (
+        <View key={k} style={{ height: 28, flexDirection: "row", alignItems: "center", paddingHorizontal: 10, borderBottomWidth: 0.5, borderBottomColor: SEP() }}>
+          <Text style={{ flex: 1, fontSize: 11.5, color: TEXT() }}>{k}</Text>
+          <Text style={{ fontSize: 11.5, color: BLUE }}>{v}</Text>
+        </View>
+      ))}
+      {rows.map(([k, v, chip]) => (
+        <View key={k} style={{ height: 28, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 10, borderBottomWidth: 0.5, borderBottomColor: SEP() }}>
+          <Text style={{ width: 62, fontSize: 11.5, fontWeight: "600", color: TEXT() }}>{k}</Text>
+          {chip ? (
+            <View style={{ paddingHorizontal: 6, height: 18, borderRadius: 5, justifyContent: "center", backgroundColor: "rgba(10,132,255,0.22)" }}>
+              <Text style={{ fontSize: 10.5, fontWeight: "600", color: BLUE }}>{v}</Text>
+            </View>
+          ) : (
+            <Text numberOfLines={1} style={{ flex: 1, fontSize: 11, color: SOFT }}>
+              {v}
+            </Text>
+          )}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** The run button and the question the iPhone asks the first time. */
+export function MockAllow() {
+  return (
+    <View style={{ alignItems: "center", gap: 12, paddingTop: 6 }}>
+      <View style={{ width: "92%", borderRadius: 14, padding: 12, backgroundColor: GROUP(), alignItems: "center" }}>
+        <Text style={{ textAlign: "center", fontSize: 11.5, fontWeight: "700", color: TEXT() }}>Permitir que o atalho envie dados ao Willo?</Text>
+        <View style={{ marginTop: 10, alignSelf: "stretch", gap: 6 }}>
+          {["Permitir Uma Vez", "Permitir Sempre", "Não Permitir"].map((b) => (
+            <View key={b} style={{ height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: b === "Permitir Sempre" ? "rgba(10,132,255,0.25)" : GROUP() }}>
+              <Text style={{ fontSize: 11.5, fontWeight: b === "Permitir Sempre" ? "800" : "500", color: BLUE }}>{b}</Text>
+              {b === "Permitir Sempre" ? <Finger style={{ right: 40, top: 4 }} /> : null}
+            </View>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
 }

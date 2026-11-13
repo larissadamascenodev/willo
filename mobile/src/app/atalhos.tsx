@@ -12,7 +12,7 @@ import Surface from "~/components/Surface";
 import { AlertTriangle, Check, ChevronLeft, ChevronRight, Compass, Copy, CreditCard, Link2, Play, Zap } from "~/components/icons";
 import { showToast } from "~/lib/toast";
 import Walkthrough from "~/components/atalhos/Walkthrough";
-import { CardIcon, MockAddShortcut, MockList, MockPlus, MockScreen, MockSearch, MockTabs, MockWilloAction, WilloTile } from "~/components/atalhos/IOSMocks";
+import { CardIcon, MockAddShortcut, MockAllow, MockJsonFields, MockList, MockPlus, MockScreen, MockSearch, MockTabs, MockUrlAction, MockWilloAction, WilloTile } from "~/components/atalhos/IOSMocks";
 import { GREEN, INK } from "~/theme/tokens";
 
 import { th, useThemeRedraw } from "~/theme/theme";
@@ -94,7 +94,7 @@ function BackTap() {
   const g = (icon: ReactNode) => icon;
   return (
     <View>
-      <Lead icon={<Zap size={18} color={th(GREEN)} strokeWidth={2.4} />} title="Dois toques atrás do iPhone" text="O Willo abre direto no Registro rápido, mesmo com o app fechado. Leva menos de 1 minuto." />
+      <Lead icon={<Zap size={18} color={th(GREEN)} strokeWidth={2.4} />} title="Registro rápido no toque duplo" text="Dois toques atrás do iPhone e o Registro rápido abre, mesmo com o app fechado. Leva menos de 1 minuto." />
       <Walkthrough
         finish="Pronto. Dê dois toques firmes atrás do iPhone, perto da câmera, e o Registro rápido abre na hora."
         steps={[
@@ -267,67 +267,13 @@ function WalletCopilotAction() {
     <View>
       <Lead
         icon={<CreditCard size={18} color={th(GREEN)} strokeWidth={2.4} />}
-        title="Compras da Carteira no Copilot"
+        title="Willo Copilot"
         text="Cada compra por aproximação com o iPhone chega no Willo Copilot e espera você confirmar. Configura uma vez só."
       />
       <Walkthrough
         finish="Pronto. Na próxima compra por aproximação, ela aparece no card Willo Copilot, na tela inicial, esperando você confirmar."
         steps={[
-          {
-            title: "Abra a aba Automação",
-            text: (
-              <>
-                Abra o app <B>Atalhos</B>, toque em <B>Automação</B>, embaixo, e depois no <B>+</B>, em cima.
-              </>
-            ),
-            screen: (
-              <MockScreen title="Automação" right={<MockPlus />}>
-                <Text style={{ marginTop: 40, textAlign: "center", fontSize: 12, color: "#8E8E93" }}>Nenhuma automação ainda</Text>
-                <MockTabs on="Automação" />
-              </MockScreen>
-            ),
-          },
-          {
-            title: "Escolha Transação",
-            text: (
-              <>
-                Na lista do que dispara a automação, toque em <B>Transação</B>, a da Carteira.
-              </>
-            ),
-            screen: (
-              <MockScreen title="Nova Automação" back="Automação">
-                <MockList
-                  rows={[
-                    { label: "Hora do Dia", tint: "#0A84FF", icon: <View style={{ width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: "#fff" }} /> },
-                    { label: "Alarme", tint: "#FF9F0A", icon: <View style={{ width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: "#fff" }} /> },
-                    { label: "Transação", tint: "#1C1C1E", touch: true, icon: <CardIcon color="#FF9F0A" /> },
-                    { label: "E-mail", tint: "#0A84FF", icon: <View style={{ width: 11, height: 8, borderRadius: 2, borderWidth: 1.5, borderColor: "#fff" }} /> },
-                  ]}
-                />
-              </MockScreen>
-            ),
-          },
-          {
-            title: "Marque seus cartões",
-            text: (
-              <>
-                Marque os cartões da Carteira que você usa, escolha <B>Executar Imediatamente</B> e toque em <B>Seguinte</B>.
-              </>
-            ),
-            screen: (
-              <MockScreen title="Transação" back="Voltar" right={<Text style={{ fontSize: 12.5, fontWeight: "700", color: "#0A84FF" }}>Seguinte</Text>}>
-                <MockList
-                  header="Quando eu toco em"
-                  rows={[
-                    { label: "Nubank", check: true, chevron: false, tint: "#820AD1", icon: <CardIcon color="#fff" /> },
-                    { label: "Outro cartão", check: true, chevron: false, tint: "#3A3A3C", icon: <CardIcon color="#fff" /> },
-                  ]}
-                />
-                <View style={{ height: 10 }} />
-                <MockList rows={[{ label: "Executar Imediatamente", check: true, touch: true, chevron: false }, { label: "Confirmar Antes de Executar", chevron: false }]} />
-              </MockScreen>
-            ),
-          },
+          ...copilotAutomationSteps(),
           {
             title: "Escolha a ação do Willo",
             text: (
@@ -384,54 +330,96 @@ function WalletCopilotLink() {
     }
   };
 
+  const automationSteps = copilotAutomationSteps();
   return (
     <View>
       <Lead
         icon={<CreditCard size={18} color={th(GREEN)} strokeWidth={2.4} />}
-        title="Compras da Carteira no Copilot"
-        text="Cada compra por aproximação com o iPhone chega no Willo Copilot e espera você confirmar."
+        title="Willo Copilot"
+        text="Cada compra por aproximação com o iPhone chega no Copilot e espera você confirmar. Configura uma vez só."
       />
-
-      <Step n={1} title="Copie o seu código">
-        É ele que diz ao Willo que a compra é sua. Toque no botão e escolha <B>Copiar</B>. Não compartilhe com ninguém.
-        <Pressable
-          onPress={() => void shareCode()}
-          disabled={busy}
-          style={({ pressed }) => ({ marginTop: 12, height: 46, borderRadius: 23, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: th("#fff", "bg"), opacity: pressed || busy ? 0.8 : 1 })}
-        >
-          {busy ? <ActivityIndicator color={th("#0B0B0B")} /> : <Copy size={16} color={th("#0B0B0B")} strokeWidth={2.4} />}
-          <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#0B0B0B") }}>{busy ? "Gerando…" : "Copiar meu código"}</Text>
-        </Pressable>
-      </Step>
-
-      <Step n={2} title="Crie a automação">
-        No app <B>Atalhos</B>, vá na aba <B>Automação</B>, embaixo, e siga:
-        <Path steps={["+", "Transação"]} root="Automação" />
-        Marque os seus cartões, escolha <B>Executar Imediatamente</B> e toque em <B>Seguinte</B> e depois em <B>Novo Atalho em Branco</B>.
-      </Step>
-
-      <Step n={3} title="Adicione Obter Conteúdo do URL">
-        Toque em <B>Buscar</B>, digite <B>Obter conteúdo</B> e escolha <B>Obter Conteúdo do URL</B>. O Atalhos já coloca <B>Transação</B> no campo azul: toque nele e apague, até o campo ficar vazio. Depois toque no campo, segure e escolha <B>Colar</B> com este endereço copiado — o campo tem que mostrar o endereço escrito, não um botão azul de “Área de Transferência”:
-        <CopyField value={FUNCTION_URL} small />
-      </Step>
-
-      <Step n={4} title="Diga o que mandar">
-        Toque na setinha da ação. Em <B>Método</B>, escolha <B>POST</B>. Em <B>Corpo da Solicitação</B>, escolha <B>JSON</B>. Depois toque em <B>Adicionar novo campo</B> › <B>Texto</B>, quatro vezes:
-        <Fields
-          rows={[
-            ["code", "o código que você copiou"],
-            ["amount", "Transação › Valor"],
-            ["merchant", "Transação › Comerciante"],
-            ["card", "Transação › Cartão ou Passe"],
-          ]}
-        />
-        Nos três de baixo não se digita nada: toque em <B>Texto</B> e, na faixa acima do teclado, toque no botão azul <B>Transação</B> (em alguns iPhones, <B>Entrada do Atalho</B>). Depois toque nesse botão azul que entrou no campo e escolha o item da lista: <B>Valor</B>, <B>Comerciante</B> ou <B>Cartão ou Passe</B>. No campo <B>code</B>, cole o seu código segurando o dedo e escolhendo <B>Colar</B>.
-      </Step>
-
-      <Step n={5} title="Teste com uma compra" last>
-        Toque em <B>▶︎</B> embaixo. Se o iPhone perguntar se pode enviar para o endereço do Willo, toque em <B>Permitir Sempre</B>. A resposta “Valor não encontrado” quer dizer que está tudo certo (sem uma compra, não há valor). Na próxima compra por aproximação com o iPhone, ela aparece no card <B>Willo Copilot</B>, na tela inicial, esperando você confirmar.
-      </Step>
-
+      <Walkthrough
+        finish="Pronto. Na próxima compra por aproximação, ela aparece no card Willo Copilot, na tela inicial, esperando você confirmar."
+        steps={[
+          {
+            title: "Copie o seu código",
+            text: (
+              <>
+                É ele que diz ao Willo que a compra é sua. Toque no botão e escolha <B>Copiar</B>. Não compartilhe com ninguém.
+              </>
+            ),
+            screen: (
+              <MockScreen title="Compartilhar">
+                <MockList rows={[{ label: "Copiar", touch: true, chevron: false }, { label: "Mensagens", chevron: false }, { label: "Notas", chevron: false }]} />
+              </MockScreen>
+            ),
+            action: { label: busy ? "Gerando…" : "Copiar meu código", icon: <Copy size={16} color={th("#0B0B0B")} strokeWidth={2.4} />, onPress: () => void shareCode() },
+          },
+          ...automationSteps,
+          {
+            title: "Adicione Obter Conteúdo do URL",
+            text: (
+              <>
+                Toque em <B>Novo Atalho em Branco</B>, depois em <B>Buscar</B>, digite <B>Obter conteúdo</B> e escolha <B>Obter Conteúdo do URL</B>.
+              </>
+            ),
+            screen: (
+              <MockScreen title="Ações" back="Voltar">
+                <MockSearch text="Obter conteúdo" />
+                <MockList rows={[{ label: "Obter Conteúdo do URL", touch: true, chevron: false, tint: "#30B0C7", icon: <Text style={{ fontSize: 11, color: "#fff" }}>⌁</Text> }]} />
+              </MockScreen>
+            ),
+          },
+          {
+            title: "Cole o endereço do Willo",
+            text: (
+              <>
+                O Atalhos coloca <B>Transação</B> no campo: apague até ficar vazio. Copie o endereço abaixo e, no campo, segure o dedo e escolha <B>Colar</B>.
+                {"\n"}
+              </>
+            ),
+            screen: (
+              <MockScreen title="Nova Automação">
+                <MockUrlAction url={FUNCTION_URL} />
+              </MockScreen>
+            ),
+            action: { label: "Copiar endereço", icon: <Copy size={16} color={th("#0B0B0B")} strokeWidth={2.4} />, onPress: () => void Share.share({ message: FUNCTION_URL }).catch(() => undefined) },
+          },
+          {
+            title: "Diga o que mandar",
+            text: (
+              <>
+                Toque na setinha da ação: <B>Método</B> POST, <B>Corpo</B> JSON e quatro campos de <B>Texto</B>. Em <B>code</B>, cole o seu código. Nos outros, toque no botão azul <B>Transação</B> acima do teclado e escolha <B>Valor</B>, <B>Comerciante</B> e <B>Cartão ou Passe</B>.
+              </>
+            ),
+            screen: (
+              <MockScreen title="Obter conteúdo">
+                <MockJsonFields
+                  rows={[
+                    ["code", "wl1.…  (o seu código)", false],
+                    ["amount", "Transação › Valor", true],
+                    ["merchant", "Transação › Comerciante", true],
+                    ["card", "Transação › Cartão ou Passe", true],
+                  ]}
+                />
+              </MockScreen>
+            ),
+          },
+          {
+            title: "Teste uma vez",
+            text: (
+              <>
+                Toque em <B>▶︎</B>, embaixo. Quando o iPhone perguntar, toque em <B>Permitir Sempre</B>. A resposta “Valor não encontrado” quer dizer que está certo: sem compra, não há valor.
+              </>
+            ),
+            screen: (
+              <MockScreen title="Nova Automação">
+                <MockAllow />
+              </MockScreen>
+            ),
+          },
+        ]}
+      />
       <View style={{ marginTop: 16, flexDirection: "row", gap: 10, padding: 14, borderRadius: 18, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }}>
         <AlertTriangle size={16} color={AMBER} strokeWidth={2.4} style={{ marginTop: 1 }} />
         <Text style={{ flex: 1, fontSize: 13, lineHeight: 18, color: th(INK.soft) }}>
@@ -440,6 +428,67 @@ function WalletCopilotLink() {
       </View>
     </View>
   );
+}
+
+/** The automation's first three steps, the same with the Willo action or without. */
+function copilotAutomationSteps() {
+  return [
+    {
+      title: "Abra a aba Automação",
+      text: (
+        <>
+          Abra o app <B>Atalhos</B>, toque em <B>Automação</B>, embaixo, e depois no <B>+</B>, em cima.
+        </>
+      ),
+      screen: (
+        <MockScreen title="Automação" right={<MockPlus />}>
+          <Text style={{ marginTop: 40, textAlign: "center", fontSize: 12, color: "#8E8E93" }}>Nenhuma automação ainda</Text>
+          <MockTabs on="Automação" />
+        </MockScreen>
+      ),
+    },
+    {
+      title: "Escolha Transação",
+      text: (
+        <>
+          Na lista do que dispara a automação, toque em <B>Transação</B>, a da Carteira.
+        </>
+      ),
+      screen: (
+        <MockScreen title="Nova Automação" back="Automação">
+          <MockList
+            rows={[
+              { label: "Hora do Dia", tint: "#0A84FF", icon: <View style={{ width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: "#fff" }} /> },
+              { label: "Alarme", tint: "#FF9F0A", icon: <View style={{ width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: "#fff" }} /> },
+              { label: "Transação", tint: "#1C1C1E", touch: true, icon: <CardIcon color="#FF9F0A" /> },
+              { label: "E-mail", tint: "#0A84FF", icon: <View style={{ width: 11, height: 8, borderRadius: 2, borderWidth: 1.5, borderColor: "#fff" }} /> },
+            ]}
+          />
+        </MockScreen>
+      ),
+    },
+    {
+      title: "Marque seus cartões",
+      text: (
+        <>
+          Marque os cartões da Carteira que você usa, escolha <B>Executar Imediatamente</B> e toque em <B>Seguinte</B>.
+        </>
+      ),
+      screen: (
+        <MockScreen title="Transação" back="Voltar" right={<Text style={{ fontSize: 12.5, fontWeight: "700", color: "#0A84FF" }}>Seguinte</Text>}>
+          <MockList
+            header="Quando eu toco em"
+            rows={[
+              { label: "Nubank", check: true, chevron: false, tint: "#820AD1", icon: <CardIcon color="#fff" /> },
+              { label: "Outro cartão", check: true, chevron: false, tint: "#3A3A3C", icon: <CardIcon color="#fff" /> },
+            ]}
+          />
+          <View style={{ height: 10 }} />
+          <MockList rows={[{ label: "Executar Imediatamente", check: true, touch: true, chevron: false }, { label: "Confirmar Antes de Executar", chevron: false }]} />
+        </MockScreen>
+      ),
+    },
+  ];
 }
 
 /* ───────────── Pieces ───────────── */
@@ -463,8 +512,8 @@ function Segment({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
   };
   return (
     <View style={{ marginTop: 20, flexDirection: "row", padding: 4, borderRadius: 23, backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
-      {item("costas", "Toque nas costas")}
-      {item("carteira", "Compras da Carteira")}
+      {item("costas", "Registro rápido")}
+      {item("carteira", "Copilot")}
     </View>
   );
 }
