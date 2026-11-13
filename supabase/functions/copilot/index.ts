@@ -19,7 +19,7 @@ import { amountOf, plain, readNotice } from "./notice.ts";
  * - { code, notice, app? }, from a bank-notification automation: the notification's text,
  *   read for the amount, debit or credit, Pix sent or received and the shop or person.
  *   Anything that is not money moving is ignored. The same purchase arriving from the
- *   Wallet and from the bank within minutes is kept once, with what each one knew.
+ *   Wallet and from the bank within 2 minutes is kept once, with what each one knew.
  *
  * Deployed with verify_jwt off: the shortcut has no session, only the code.
  */
@@ -83,11 +83,13 @@ serve(async (req) => {
     const words = plain(text).split(/\s+/).filter((w) => w.length > 2);
     return cards.find((c) => words.some((w) => plain(c.name).includes(w)))?.id ?? null;
   };
-  /* The same amount waiting from the last few minutes, seen by the other source (the Wallet
-     for a bank notice, and the other way round): the same purchase, seen twice. Two
-     purchases from the same source are always two. */
+  /* The same purchase seen twice: the same amount, from the other source (the Wallet for a
+     bank notice, and the other way round), arriving within 2 minutes of each other — both
+     notices of one tap come in the same minute or so. Five minutes apart, they are two
+     purchases; and two from the same source are always two. */
+  const TWIN_WINDOW_MS = 2 * 60_000;
   const twin = async (amount: number, from: "atalho" | "aviso") => {
-    const since = new Date(Date.now() - 20 * 60_000).toISOString();
+    const since = new Date(Date.now() - TWIN_WINDOW_MS).toISOString();
     const { data } = await admin
       .from("copilot_pending")
       .select("id, raw, payment_method, credit_card_id")
