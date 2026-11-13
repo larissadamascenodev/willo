@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Platform, Pressable, Text, View, type TextStyle } from "react-native";
+import { router } from "expo-router";
 import { useRecorrentes, daysUntil, type RecurringItem } from "@/hooks/useRecorrentes";
+import { useMonth } from "@/contexts/MonthContext";
 import { categoryHex } from "@/lib/categoryData";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import Surface from "~/components/Surface";
@@ -256,6 +258,14 @@ export function GastosFixosView({
 
 /** One fixed item: what it is, where it stands, what it costs. */
 function FixedRow({ item: s, customCats, first }: { item: RecurringItem; customCats: CustomCategory[]; first: boolean }) {
+  const { selectedMonth, selectedYear } = useMonth();
+  /* Tapped, it opens to change or remove — this month, from next month, or from here on.
+     One that has not begun yet opens in its first month. */
+  const open = () => {
+    const mes = s.startsOn ? Number(s.startsOn.slice(5, 7)) - 1 : selectedMonth;
+    const ano = s.startsOn ? Number(s.startsOn.slice(0, 4)) : selectedYear;
+    router.push({ pathname: "/manual", params: { editar: s.id, mes: String(mes), ano: String(ano) } } as never);
+  };
   const income = s.txType === "receita";
   const days = daysUntil(s.dueDay);
   const soon = !s.isPaidThisMonth && days <= 3;
@@ -270,16 +280,19 @@ function FixedRow({ item: s, customCats, first }: { item: RecurringItem; customC
     : `${income ? "Recebe" : "Vence"} ${days === 0 ? "hoje" : days === 1 ? "amanhã" : `em ${days} dias`} · dia ${s.dueDay}`;
 
   return (
-    <View
-      style={{
+    <Pressable
+      onPress={open}
+      accessibilityRole="button"
+      accessibilityLabel={`${s.name}, editar`}
+      style={({ pressed }) => ({
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
         paddingVertical: 12,
         borderTopWidth: first ? 0 : 1,
         borderTopColor: th(RULE, "line"),
-        opacity: s.isPaidThisMonth ? 0.62 : 1,
-      }}
+        opacity: pressed ? 0.6 : s.isPaidThisMonth ? 0.62 : 1,
+      })}
     >
       <View
         style={{
@@ -321,6 +334,6 @@ function FixedRow({ item: s, customCats, first }: { item: RecurringItem; customC
           <Check size={11} color={th("#0B0B0B")} strokeWidth={3} />
         </View>
       )}
-    </View>
+    </Pressable>
   );
 }

@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { getAccounts, getCreditCards, getTransactionById, updateTransaction } from "@/services/transactionService";
-import { editInSeries } from "@/services/seriesActions";
+import { deleteInSeries, editInSeries } from "@/services/seriesActions";
 import CategoryPicker from "~/components/CategoryPicker";
 import EntryForm, { isoOf, type EntryValues, type Repeat } from "~/components/registro/EntryForm";
 import { Primary, type Account, type Card } from "~/components/registro/entryParts";
-import { Repeat as RepeatIcon } from "~/components/icons";
+import { Repeat as RepeatIcon, Trash2 } from "~/components/icons";
 import { showToast } from "~/lib/toast";
 import { behind, showNow } from "~/lib/optimistic";
 import { useAuth } from "~/lib/auth";
@@ -41,6 +41,8 @@ interface Tx {
   observation: string | null;
 }
 
+type Scope = "month" | "all" | "next";
+
 const PLAN_NOTE = /^paid_installments:\d+\s*(\|\s*)?/;
 
 /** The day a recurring entry falls on in a given month. */
@@ -56,7 +58,8 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
   const [picking, setPicking] = useState(false);
-  const [asking, setAsking] = useState(false);
+  /* Where a change or a removal goes, asked once the person has said which. */
+  const [asking, setAsking] = useState<false | "edit" | "delete">(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const set = (patch: Partial<EntryValues>) => setV((p) => (p ? { ...p, ...patch } : p));
@@ -111,9 +114,29 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
   const child = !!tx.parent_transaction_id || parcel;
   const recurring = tx.recurrence_type === "fixa" || parcel;
 
-  const save = async (scope?: "month" | "all") => {
+  /* A fixed entry's change can also begin with the month after the one on screen —
+     a new salary from next month, say — leaving this month as it is. */
+  const next = month === 11 ? { month: 0, year: year + 1 } : { month: month + 1, year };
+  const fixed = tx.recurrence_type === "fixa";
+
+  const remove = async (scope?: Scope) => {
+    if (!user) return;
+    if (!scope) return setAsking("delete");
+    const userId = user.id;
+    const at = scope === "next" ? next : { month, year };
+    if (scope !== "next") showNow({ id: tx.id, removed: true });
+    showToast(scope === "next" ? "Excluído a partir do mês seguinte" : `“${tx.name}” excluído`);
+    onDone();
+    void behind(
+      tx.id,
+      () => deleteInSeries(tx.id, scope === "next" ? "all" : scope, { ...at, userId }),
+      () => showToast("Não consegui excluir agora. Tente de novo."),
+    );
+  };
+
+  const save = async (scope?: Scope) => {
     if (!user || !v.name.trim() || v.cents <= 0 || !v.whereId) return;
-    if (recurring && !scope) return setAsking(true);
+    if (recurring && !scope) return setAsking("edit");
     setSaving(true);
     setError(null);
     try {
@@ -126,8 +149,9 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
         type: v.type,
         amount: parts ? Math.round(v.cents / parts) / 100 : v.cents / 100,
         category: v.category ?? "Outros",
-        date: v.date,
-        status: credit ? ("pendente" as const) : v.status,
+        /* From next month: the same day, in that month. */
+        date: scope === "next" ? inMonth(v.date, next.month, next.year) : v.date,
+        status: scope === "next" ? ("pendente" as const) : credit ? ("pendente" as const) : v.status,
         payment_method: v.type === "receita" ? ("conta" as const) : (v.method ?? "conta"),
         account_id: credit ? null : v.whereId,
         credit_card_id: credit ? v.whereId : null,
@@ -143,12 +167,15 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
 
       /* The list shows the change at once; the database catches up behind. */
       const userId = user.id;
-      showNow({ id: tx.id, row: { ...tx, ...fields, id: tx.id, date: fields.date } });
-      showToast("Lançamento atualizado");
+      if (scope !== "next") showNow({ id: tx.id, row: { ...tx, ...fields, id: tx.id, date: fields.date } });
+      showToast(scope === "next" ? "Alterado a partir do mês seguinte" : "Lançamento atualizado");
       onDone();
       void behind(
         tx.id,
-        () => (recurring && scope ? editInSeries(tx.id, scope, fields, { month, year, userId }) : updateTransaction(tx.id, fields as never)),
+        () =>
+          recurring && scope
+            ? editInSeries(tx.id, scope === "next" ? "all" : scope, fields, { ...(scope === "next" ? next : { month, year }), userId })
+            : updateTransaction(tx.id, fields as never),
         () => showToast("Não consegui salvar agora. Tente de novo."),
       );
     } catch (e) {
@@ -178,7 +205,7 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
 
         {error && <Text style={{ marginTop: 14, fontSize: 13.5, color: th(RED) }}>{error}</Text>}
 
-        {/* A recurring one: where the change goes */}
+        {/* A recurring one: where the change, or the removal, goes */}
         {asking ? (
           <Animated.View entering={FadeInDown.duration(220)} style={{ marginTop: 18, gap: 10 }}>
             <View
@@ -188,27 +215,51 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
                 gap: 10,
                 borderRadius: 18,
                 borderWidth: 1,
-                borderColor: th("rgba(249,206,78,0.24)", "line"),
-                backgroundColor: th("rgba(249,206,78,0.08)", "bg"),
+                borderColor: th(asking === "delete" ? "rgba(248,113,113,0.24)" : "rgba(249,206,78,0.24)", "line"),
+                backgroundColor: th(asking === "delete" ? "rgba(248,113,113,0.08)" : "rgba(249,206,78,0.08)", "bg"),
                 paddingHorizontal: 14,
                 paddingVertical: 12,
               }}
             >
-              <RepeatIcon size={16} color={th(AMBER)} />
+              {asking === "delete" ? <Trash2 size={16} color={th(RED)} /> : <RepeatIcon size={16} color={th(AMBER)} />}
               <Text style={{ flex: 1, fontSize: 13, lineHeight: 18, color: th("rgba(255,255,255,0.82)") }}>
-                {parcel
-                  ? `É a parcela ${tx.installment_current ?? 1} de ${tx.installments}. Quer mudar só esta ou esta e as próximas?`
-                  : "Essa transação se repete todo mês. Quer mudar só deste mês ou dela em diante?"}
+                {!recurring
+                  ? "Excluir este lançamento? Isso não pode ser desfeito."
+                  : parcel
+                    ? `É a parcela ${tx.installment_current ?? 1} de ${tx.installments}. Quer ${asking === "delete" ? "excluir" : "mudar"} só esta ou esta e as próximas?`
+                    : asking === "delete"
+                      ? "Essa transação se repete todo mês. Excluir a partir de quando?"
+                      : "Essa transação se repete todo mês. A mudança vale a partir de quando?"}
               </Text>
             </View>
-            <AskButton label={parcel ? "Só esta parcela" : "Só deste mês"} onPress={() => void save("month")} disabled={saving} />
-            <AskButton label={parcel ? "Esta e as próximas" : "Deste mês em diante"} strong onPress={() => void save("all")} disabled={saving} loading={saving} />
+            {!recurring ? (
+              <AskButton label="Excluir" danger onPress={() => void remove("all")} disabled={saving} />
+            ) : (
+              <>
+                <AskButton label={parcel ? "Só esta parcela" : "Só deste mês"} onPress={() => void (asking === "delete" ? remove("month") : save("month"))} disabled={saving} />
+                {fixed && <AskButton label="A partir do mês seguinte" onPress={() => void (asking === "delete" ? remove("next") : save("next"))} disabled={saving} />}
+                <AskButton
+                  label={parcel ? "Esta e as próximas" : "Deste mês em diante"}
+                  strong={asking !== "delete"}
+                  danger={asking === "delete"}
+                  onPress={() => void (asking === "delete" ? remove("all") : save("all"))}
+                  disabled={saving}
+                  loading={saving}
+                />
+              </>
+            )}
             <Pressable onPress={() => setAsking(false)} disabled={saving} style={{ height: 44, alignItems: "center", justifyContent: "center" }}>
               <Text style={{ fontSize: 14, color: th("rgba(255,255,255,0.7)") }}>Cancelar</Text>
             </Pressable>
           </Animated.View>
         ) : (
-          <Primary label={saving ? "Salvando…" : "Salvar alterações"} busy={saving} disabled={saving || v.cents <= 0 || !v.name.trim() || !v.whereId || (v.repeat === "parcelado" && !v.parts)} onPress={() => void save()} />
+          <>
+            <Primary label={saving ? "Salvando…" : "Salvar alterações"} busy={saving} disabled={saving || v.cents <= 0 || !v.name.trim() || !v.whereId || (v.repeat === "parcelado" && !v.parts)} onPress={() => void save()} />
+            <Pressable onPress={() => void remove()} disabled={saving} accessibilityRole="button" style={({ pressed }) => ({ marginTop: 6, height: 46, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
+              <Trash2 size={16} color={th(RED)} />
+              <Text style={{ fontSize: 14.5, fontWeight: "600", color: th(RED) }}>Excluir lançamento</Text>
+            </Pressable>
+          </>
         )}
       </View>
 
@@ -227,7 +278,7 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
 }
 
 /** One answer to "where does the change go", full width so its words are never cut. */
-function AskButton({ label, strong, onPress, disabled, loading }: { label: string; strong?: boolean; onPress: () => void; disabled?: boolean; loading?: boolean }) {
+function AskButton({ label, strong, danger, onPress, disabled, loading }: { label: string; strong?: boolean; danger?: boolean; onPress: () => void; disabled?: boolean; loading?: boolean }) {
   return (
     <Pressable
       onPress={onPress}
@@ -239,14 +290,14 @@ function AskButton({ label, strong, onPress, disabled, loading }: { label: strin
         justifyContent: "center",
         borderWidth: strong ? 0 : 1,
         borderColor: th("rgba(255,255,255,0.08)", "line"),
-        backgroundColor: strong ? th("#fff", "bg") : th("rgba(255,255,255,0.04)", "bg"),
+        backgroundColor: danger ? "rgba(248,113,113,0.16)" : strong ? th("#fff", "bg") : th("rgba(255,255,255,0.04)", "bg"),
         opacity: disabled && !loading ? 0.5 : pressed ? 0.8 : 1,
       })}
     >
       {loading ? (
         <ActivityIndicator color={th(strong ? "#0B0B0B" : "#fff")} />
       ) : (
-        <Text style={{ fontSize: 14.5, fontWeight: strong ? "700" : "600", color: th(strong ? "#0B0B0B" : "#fff") }}>{label}</Text>
+        <Text style={{ fontSize: 14.5, fontWeight: strong || danger ? "700" : "600", color: danger ? RED : th(strong ? "#0B0B0B" : "#fff") }}>{label}</Text>
       )}
     </Pressable>
   );
