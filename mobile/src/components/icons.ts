@@ -116,3 +116,5 @@ export { default as Play } from "lucide-react-native/icons/play";
 export { default as Copy } from "lucide-react-native/icons/copy";
 export { default as Settings } from "lucide-react-native/icons/settings";
 export { default as Compass } from "lucide-react-native/icons/compass";
+export { default as BellRing } from "lucide-react-native/icons/bell-ring";
+export { default as CheckCheck } from "lucide-react-native/icons/check-check";
