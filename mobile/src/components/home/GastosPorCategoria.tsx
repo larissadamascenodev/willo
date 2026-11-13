@@ -155,7 +155,9 @@ export default function GastosPorCategoria({
                   key={cat.name}
                   onPress={() => setSelected((p) => (p === cat.name ? null : cat.name))}
                   style={{
-                    width: `${pct}%`,
+                    /* A share of the room left after the gaps, so the bar ends at the card's edge. */
+                    flexGrow: pct,
+                    flexBasis: 0,
                     minWidth: 6,
                     height: "100%",
                     borderRadius: 999,

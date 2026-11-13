@@ -106,10 +106,13 @@ export default function SpendRing({
   /* The minimum slice pushes the total past a full circle; this pulls it back. */
   const fit = running > 0 ? C / running : 1;
 
+  /* The page shows the whole amount, centavos included (it shrinks to fit); the home's
+     small ring says it short, "R$ 2,9 mil". Written out by hand: the iPhone's Intl
+     ignores the compact notation and cut the figure to "2.919,8". */
   const label =
-    total >= 1000
-      ? `R$ ${new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 }).format(total)}`
-      : total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    !caption && total >= 1000
+      ? `R$ ${(Math.round(total / 100) / 10).toFixed(1).replace(".", ",").replace(/,0$/, "")} mil`
+      : `R$ ${total.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
 
   return (
     <View style={{ width: size, height: size, alignSelf: "center" }}>
