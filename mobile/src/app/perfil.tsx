@@ -590,14 +590,14 @@ function PlanRow({ plan, onPress }: { plan: PlanInfo; onPress: () => void }) {
   const soft = { fg: th(INK.soft), bg: th("rgba(255,255,255,0.08)", "bg") };
   const green = { fg: GREEN, bg: "rgba(103,205,103,0.16)" };
   const tag =
-    plan.active === null ? null : !on ? { text: "Assinar", ...green } : plan.trial ? { text: "Grátis", ...green } : !plan.renews && when ? { text: "Cancelado", ...soft } : { text: "Ativo", ...green };
+    plan.active === null ? null : !on ? { text: "Assinar", ...green } : plan.trial ? { text: "Teste", ...green } : !plan.renews && when ? { text: "Cancelado", ...soft } : { text: "Ativo", ...green };
   const detail =
     plan.active === null
       ? "Verificando…"
       : !on
         ? "Desbloqueie tudo no Willo"
         : plan.trial && when
-          ? `Semana grátis até ${when}`
+          ? `Grátis até ${when} · ${plan.renews ? `depois, ${(kind ?? "plano").toLowerCase()}` : "não renova"}`
           : kind && when
             ? `${kind} · ${plan.renews ? "renova em" : "até"} ${when}`
             : kind ?? "Todos os recursos liberados";
