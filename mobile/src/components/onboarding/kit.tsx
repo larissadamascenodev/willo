@@ -121,11 +121,12 @@ export function useTyping(lines: string[], speed = 22) {
 }
 
 /**
- * Willo asks. His head speaks while what he says writes itself out in his bubble;
- * then the question itself writes out large under it, and the answers rise in.
+ * Willo asks. Everything is there at once — his line, the question and the answers —
+ * because someone in a hurry should never wait for text to write itself out.
  */
 export function Ask({ lead, title, strong, children }: { lead: string; title: string; strong: string; children?: ReactNode }) {
-  const { parts, done } = useTyping([lead, title, strong]);
+  const parts = [lead, title, strong];
+  const done = true;
   const size = titleSize(title, strong);
   return (
     <View>
@@ -145,7 +146,7 @@ export function Ask({ lead, title, strong, children }: { lead: string; title: st
         </Text>
       </View>
       {done && children ? (
-        <Animated.View entering={FadeInDown.duration(420).easing(Easing.out(Easing.cubic))} style={{ paddingHorizontal: 20, paddingTop: 18 }}>
+        <Animated.View entering={FadeInDown.duration(260).easing(Easing.out(Easing.cubic))} style={{ paddingHorizontal: 20, paddingTop: 18 }}>
           {children}
         </Animated.View>
       ) : null}
