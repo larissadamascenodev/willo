@@ -402,18 +402,8 @@ function Option({
   );
 }
 
-/** A day of the month, one step at a time, as the account setup does it. */
-function DayStepper({
-  label,
-  value,
-  onChange,
-  note,
-}: {
-  label: string;
-  value: number;
-  onChange: (d: number) => void;
-  note?: string;
-}) {
+/** A day of the month, one step at a time, on one line: the label, then − day +. */
+function DayStepper({ label, value, onChange, note }: { label: string; value: number; onChange: (d: number) => void; note?: string }) {
   const step = (by: number) => {
     void Haptics.selectionAsync().catch(() => undefined);
     onChange(((value - 1 + by + 31) % 31) + 1);
@@ -423,80 +413,20 @@ function DayStepper({
       onPress={() => step(by)}
       hitSlop={8}
       accessibilityLabel={by < 0 ? "Dia anterior" : "Próximo dia"}
-      style={({ pressed }) => ({
-        width: 46,
-        height: 46,
-        borderRadius: 23,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: th("rgba(255,255,255,0.1)", "bg"),
-        opacity: pressed ? 0.6 : 1,
-      })}
+      style={({ pressed }) => ({ width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.1)", "bg"), opacity: pressed ? 0.6 : 1 })}
     >
-      {by < 0 ? (
-        <Minus size={18} color={th("#fff")} strokeWidth={2.4} />
-      ) : (
-        <Plus size={18} color={th("#fff")} strokeWidth={2.4} />
-      )}
+      {by < 0 ? <Minus size={16} color={th("#fff")} strokeWidth={2.4} /> : <Plus size={16} color={th("#fff")} strokeWidth={2.4} />}
     </Pressable>
   );
   return (
-    <View
-      style={{
-        marginTop: 14,
-        borderRadius: 22,
-        borderCurve: "continuous",
-        backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
-        borderWidth: 1,
-        borderColor: th("rgba(255,255,255,0.08)", "line"),
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-      }}
-    >
-      <Text
-        style={{
-          fontSize: 13,
-          fontWeight: "600",
-          color: th(INK.soft),
-          textAlign: "center",
-        }}
-      >
-        {label}
-      </Text>
-      <View
-        style={{
-          marginTop: 8,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
+    <View style={{ marginTop: 14, borderRadius: 18, borderCurve: "continuous", backgroundColor: th("rgba(255,255,255,0.06)", "bg"), borderWidth: 1, borderColor: th("rgba(255,255,255,0.08)", "line"), paddingVertical: 10, paddingLeft: 16, paddingRight: 10 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <Text style={{ flex: 1, fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>{label}</Text>
         {btn(-1)}
-        <Text
-          style={{
-            fontSize: 36,
-            fontWeight: "800",
-            letterSpacing: -1.2,
-            color: th("#fff"),
-            fontVariant: ["tabular-nums"],
-          }}
-        >
-          {value}
-        </Text>
+        <Text style={{ minWidth: 34, textAlign: "center", fontSize: 24, fontWeight: "800", letterSpacing: -0.6, color: th("#fff"), fontVariant: ["tabular-nums"] }}>{value}</Text>
         {btn(1)}
       </View>
-      {note ? (
-        <Text
-          style={{
-            marginTop: 8,
-            fontSize: 12.5,
-            color: th(INK.softer),
-            textAlign: "center",
-          }}
-        >
-          {note}
-        </Text>
-      ) : null}
+      {note ? <Text style={{ marginTop: 6, fontSize: 12, color: th(INK.softer) }}>{note}</Text> : null}
     </View>
   );
 }

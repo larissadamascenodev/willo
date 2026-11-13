@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Keyboard, Modal, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
+import { Keyboard, Modal, Platform, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import Animated, {
   Easing,
   FadeIn,
@@ -196,9 +196,18 @@ export default function StepSheet({
                 key={step}
                 entering={crossing ? (forward ? SlideInRight : SlideInLeft).duration(SLIDE).easing(Easing.out(Easing.cubic)) : undefined}
                 exiting={(forward ? SlideOutLeft : SlideOutRight).duration(SLIDE - 80).easing(Easing.in(Easing.cubic))}
-                style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, paddingHorizontal: 22 }}
+                style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
               >
-                {children}
+                {/* A page taller than the room the keyboard leaves scrolls instead of being cut. */}
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 22, paddingBottom: 16 }}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="interactive"
+                  showsVerticalScrollIndicator={false}
+                >
+                  {children}
+                </ScrollView>
               </Animated.View>
             </View>
 
