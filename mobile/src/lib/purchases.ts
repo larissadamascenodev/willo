@@ -139,13 +139,19 @@ export type PlanInfo = {
   until: string | null;
   /** False once it was cancelled: it ends on `until` instead of renewing. */
   renews: boolean;
+  /** Given for good (a promotional lifetime grant): nothing to renew, nothing ending. */
+  lifetime: boolean;
 };
 
 const readPlan = (info: CustomerInfo): PlanInfo => {
   const e = info.entitlements.active[ENTITLEMENT];
-  if (!e) return { active: false, period: null, trial: false, until: null, renews: false };
+  if (!e) return { active: false, period: null, trial: false, until: null, renews: false, lifetime: false };
   const id = e.productIdentifier ?? "";
+  /* A lifetime grant has no end, or one decades away, and is never "cancelled". */
+  const farOff = e.expirationDate ? new Date(e.expirationDate).getFullYear() - new Date().getFullYear() > 20 : true;
+  const lifetime = (e.store === "PROMOTIONAL" && farOff) || /lifetime|vitalic/i.test(id) || (!e.expirationDate && !e.willRenew);
   return {
+    lifetime,
     active: true,
     period: /anual|annual|year/i.test(id) ? "anual" : /mensal|month/i.test(id) ? "mensal" : null,
     trial: e.periodType === "TRIAL",
@@ -157,7 +163,7 @@ const readPlan = (info: CustomerInfo): PlanInfo => {
 /** The subscription in detail, kept up to date. In Expo Go: active, with no details. */
 export function usePlanInfo(): PlanInfo {
   const [plan, setPlan] = useState<PlanInfo>(
-    purchasesLive() ? { active: null, period: null, trial: false, until: null, renews: false } : { active: true, period: null, trial: false, until: null, renews: true },
+    purchasesLive() ? { active: null, period: null, trial: false, until: null, renews: false, lifetime: false } : { active: true, period: null, trial: false, until: null, renews: true, lifetime: false },
   );
   useEffect(() => {
     const P = sdk();

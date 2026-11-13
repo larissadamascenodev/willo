@@ -12,7 +12,7 @@ import Surface from "~/components/Surface";
 import { AlertTriangle, Bell, Check, ChevronLeft, ChevronRight, Compass, Copy, CreditCard, Link2, Play, Zap } from "~/components/icons";
 import { showToast } from "~/lib/toast";
 import Walkthrough from "~/components/atalhos/Walkthrough";
-import { CardIcon, MockActionSheet, MockAddShortcut, MockAllShortcuts, MockAllow, MockJsonFields, MockList, MockScreen, MockSearch, MockTrigger, MockUrlAction, MockWilloInput, WilloTile } from "~/components/atalhos/IOSMocks";
+import { CardIcon, MockActionSheet, MockAddShortcut, MockAllShortcuts, MockAllow, MockJsonFields, MockList, MockScreen, MockSearch, MockTrigger, MockUrlAction, WilloTile } from "~/components/atalhos/IOSMocks";
 import { GREEN, INK } from "~/theme/tokens";
 
 import { th, useThemeRedraw } from "~/theme/theme";
@@ -275,10 +275,19 @@ function WalletCopilotAction() {
         steps={[
           ...automationStart("carteira"),
           {
+            title: "Toque em Buscar",
+            text: (
+              <>
+                Aparece <B>“Quando Qualquer Cartão for aproximado”</B>. Deixe assim: vale para todos os cartões da Carteira. Se o iPhone mostrar sugestões (check-in, embarque…), ignore. Toque em <B>Buscar</B>, na barra de baixo.
+              </>
+            ),
+            screen: <MockTrigger kind="carteira" search />,
+          },
+          {
             title: "Adicione o Willo",
             text: (
               <>
-                Deixe <B>Qualquer Cartão</B>. Embaixo, toque em <B>Buscar</B>, digite <B>Willo</B> e toque em <B>Registrar compra no Willo</B>. A compra já vai junto, sozinha.
+                Digite <B>Willo</B> e toque em <B>Registrar compra no Willo</B>. A ação entra logo embaixo do “Quando…”, já ligada à compra.
               </>
             ),
             screen: (
@@ -289,17 +298,13 @@ function WalletCopilotAction() {
             ),
           },
           {
-            title: "Salve",
+            title: "Volte para salvar",
             text: (
               <>
-                Toque em <B>✓</B>, em cima. Pronto. (Se o campo <B>Valor</B> aparecer vazio, toque nele e escolha <B>Entrada do Atalho</B>.)
+                Toque na <B>setinha de voltar</B>, em cima à esquerda. Pronto: a automação fica salva e roda sozinha a cada compra por aproximação. Se o campo <B>Valor</B> aparecer vazio, toque nele e escolha <B>Entrada do Atalho</B> antes de voltar.
               </>
             ),
-            screen: (
-              <MockScreen title="Novo Atalho">
-                <MockWilloInput action="Registrar compra no Willo" field="Valor" />
-              </MockScreen>
-            ),
+            screen: <MockTrigger kind="carteira" action="Registrar compra no Willo" />,
           },
         ]}
       />
@@ -337,7 +342,7 @@ function BankNotices() {
             title: "Adicione a ação do Willo",
             text: (
               <>
-                Embaixo, toque em <B>Buscar</B>, digite <B>Willo</B> e toque em <B>Registrar aviso do banco no Willo</B>. O aviso já vai junto, sozinho.
+                Toque em <B>Buscar</B>, na barra de baixo, digite <B>Willo</B> e toque em <B>Registrar aviso do banco no Willo</B>. A ação entra logo embaixo do “Quando…”, já ligada ao aviso.
               </>
             ),
             screen: (
@@ -348,17 +353,13 @@ function BankNotices() {
             ),
           },
           {
-            title: "Salve",
+            title: "Volte para salvar",
             text: (
               <>
-                Toque em <B>✓</B>, em cima. Pronto. (Se o campo <B>Aviso</B> aparecer vazio, toque nele e escolha <B>Entrada do Atalho</B>.)
+                Toque na <B>setinha de voltar</B>, em cima à esquerda. Pronto. Se o campo <B>Aviso</B> aparecer vazio, toque nele e escolha <B>Entrada do Atalho</B> antes de voltar.
               </>
             ),
-            screen: (
-              <MockScreen title="Novo Atalho">
-                <MockWilloInput action="Registrar aviso do banco no Willo" field="Aviso" />
-              </MockScreen>
-            ),
+            screen: <MockTrigger kind="notificacao" action="Registrar aviso do banco no Willo" />,
           },
         ]}
       />
@@ -492,7 +493,7 @@ function automationStart(trigger: "carteira" | "notificacao") {
       title: "Toque no +",
       text: (
         <>
-          Abra o app <B>Atalhos</B> e toque no <B>+</B> redondo, embaixo no meio da tela.
+          Abra o app <B>Atalhos</B> do iPhone (o ícone de quadradinhos coloridos). Em <B>Todos os Atalhos</B>, toque no <B>+</B> redondo, embaixo no meio da tela.
         </>
       ),
       screen: <MockAllShortcuts />,
@@ -501,7 +502,7 @@ function automationStart(trigger: "carteira" | "notificacao") {
       title: "Toque em Automação",
       text: (
         <>
-          Na lista que sobe, toque no botão azul <B>Automação</B>, logo abaixo da busca.
+          Sobe uma lista de ações. Logo abaixo da busca há botões azuis: toque em <B>Automação</B>.
         </>
       ),
       screen: <MockActionSheet />,

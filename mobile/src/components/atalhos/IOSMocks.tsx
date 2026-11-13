@@ -321,7 +321,7 @@ export function MockActionSheet() {
 }
 
 /** The automation's "when", as the editor writes it: a sentence with blue blanks. */
-export function MockTrigger({ kind }: { kind: "carteira" | "notificacao" }) {
+export function MockTrigger({ kind, search = false, action }: { kind: "carteira" | "notificacao"; /** The search bar at the foot, to touch. */ search?: boolean; /** The Willo action already added under the trigger. */ action?: string }) {
   const chip = (t: string, touch?: boolean) => (
     <View style={{ paddingHorizontal: 6, height: 22, borderRadius: 6, justifyContent: "center", backgroundColor: "rgba(10,132,255,0.22)" }}>
       <Text style={{ fontSize: 12, fontWeight: "600", color: BLUE }}>{t}</Text>
@@ -338,18 +338,34 @@ export function MockTrigger({ kind }: { kind: "carteira" | "notificacao" }) {
             <Text style={{ fontSize: 12.5, color: TEXT() }}>Quando</Text>
             {chip("Qualquer Cartão")}
             <Text style={{ fontSize: 12.5, color: TEXT() }}>for aproximado</Text>
-            <View>
-              <ChevronRight size={15} color={BLUE} strokeWidth={2.6} />
-              <Finger style={{ right: -4, top: -2 }} />
-            </View>
+            <ChevronRight size={15} color={BLUE} strokeWidth={2.6} />
           </>
         ) : (
           <>
             <Text style={{ fontSize: 12.5, color: TEXT() }}>Quando eu receber uma notificação de</Text>
-            {chip("Nubank", true)}
+            {chip("Nubank", !search && !action)}
           </>
         )}
       </View>
+      {action ? (
+        <View style={{ marginTop: 8, borderRadius: 14, padding: 12, backgroundColor: GROUP(), flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <WilloTile />
+          <Text style={{ fontSize: 12.5, fontWeight: "700", color: TEXT() }}>{action}</Text>
+        </View>
+      ) : null}
+      {search ? (
+        <View style={{ position: "absolute", left: 10, right: 10, bottom: 10, height: 34, borderRadius: 17, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, backgroundColor: GROUP() }}>
+          <Search size={13} color={SOFT} />
+          <Text style={{ fontSize: 12, color: SOFT }}>Buscar</Text>
+          <Finger style={{ right: undefined, left: 60, top: 7 }} />
+        </View>
+      ) : null}
+      {action ? (
+        <View style={{ position: "absolute", left: 12, top: 18, width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: GROUP() }}>
+          <ChevronLeft size={15} color={TEXT()} strokeWidth={2.6} />
+          <Finger style={{ right: 2, top: 2 }} />
+        </View>
+      ) : null}
     </View>
   );
 }

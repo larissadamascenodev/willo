@@ -274,6 +274,8 @@ export default function Perfil() {
             onPress={() => {
               tick();
               if (plan.active === false) setPaywall(true);
+              /* For good: there is no App Store subscription to manage. */
+              else if (plan.lifetime) showToast("Seu acesso ao Willo PRO é vitalício.");
               else void Linking.openURL("https://apps.apple.com/account/subscriptions").catch(() => undefined);
             }}
           />
@@ -304,22 +306,6 @@ export default function Perfil() {
             }}
             chevron
           />
-          {/* A photo of one's own is set on its preview: its veil, light or dark, and blur. */}
-          {wornKey === "custom" && !!photo && (
-            <>
-              <Hairline style={{ marginLeft: 64 }} />
-              <Row
-                label="Ajustar a foto"
-                value={light ? "Véu claro ou escuro, na tela inicial" : "Intensidade do véu, na tela inicial"}
-                icon={<ImagePlus size={17} color={th("#fff")} strokeWidth={1.9} />}
-                onPress={() => {
-                  tick();
-                  router.push("/fundo-foto" as never);
-                }}
-                chevron
-              />
-            </>
-          )}
         </Surface>
 
         {/* What Willo tells the person, and the iPhone's own ways in. */}
@@ -449,6 +435,25 @@ export default function Perfil() {
               );
             })}
           </View>
+          {/* One's own photo is adjusted right here, under the choice of it. */}
+          {wornKey === "custom" && !!photo && (
+            <Pressable
+              onPress={() => {
+                tick();
+                setPickingBg(false);
+                setTimeout(() => router.push("/fundo-foto" as never), 280);
+              }}
+              accessibilityRole="button"
+              style={({ pressed }) => ({ marginTop: 18, height: 52, borderRadius: 18, borderCurve: "continuous", flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, backgroundColor: th("rgba(255,255,255,0.06)", "bg"), opacity: pressed ? 0.7 : 1 })}
+            >
+              <ImagePlus size={18} color={th("#fff")} strokeWidth={1.9} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>Ajustar a foto</Text>
+                <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>{light ? "Véu claro ou escuro, na tela inicial" : "Intensidade do véu, na tela inicial"}</Text>
+              </View>
+              <ChevronRight size={16} color={th(INK.faint)} />
+            </Pressable>
+          )}
         </View>
       </BottomSheet>
 
@@ -590,13 +595,15 @@ function PlanRow({ plan, onPress }: { plan: PlanInfo; onPress: () => void }) {
   const soft = { fg: th(INK.soft), bg: th("rgba(255,255,255,0.08)", "bg") };
   const green = { fg: GREEN, bg: "rgba(103,205,103,0.16)" };
   const tag =
-    plan.active === null ? null : !on ? { text: "Assinar", ...green } : plan.trial ? { text: "Teste", ...green } : !plan.renews && when ? { text: "Cancelado", ...soft } : { text: "Ativo", ...green };
+    plan.active === null ? null : !on ? { text: "Assinar", ...green } : plan.lifetime ? { text: "Vitalício", ...green } : plan.trial ? { text: "Teste", ...green } : !plan.renews && when ? { text: "Cancelado", ...soft } : { text: "Ativo", ...green };
   const detail =
     plan.active === null
       ? "Verificando…"
       : !on
         ? "Desbloqueie tudo no Willo"
-        : plan.trial && when
+        : plan.lifetime
+          ? "Acesso vitalício · todos os recursos liberados"
+          : plan.trial && when
           ? `Grátis até ${when} · ${plan.renews ? `depois, ${(kind ?? "plano").toLowerCase()}` : "não renova"}`
           : kind && when
             ? `${kind} · ${plan.renews ? "renova em" : "até"} ${when}`
