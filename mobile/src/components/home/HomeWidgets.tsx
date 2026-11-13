@@ -1,3 +1,4 @@
+import { View } from "react-native";
 import { type ReactNode } from "react";
 import type { WidgetSize } from "@/lib/homeWidgets";
 import type { CategoryExpense, FinanceEvent, Transaction } from "@/types/finance";
@@ -14,6 +15,7 @@ import SaudeDoMesCard from "~/components/home/SaudeDoMesCard";
 import GastosFixosCard from "~/components/home/GastosFixosCard";
 import GastosPorCategoria from "~/components/home/GastosPorCategoria";
 import TransacoesRecentes from "~/components/home/TransacoesRecentes";
+import SpendTodayCard from "~/components/home/SpendTodayCard";
 import { AssinaturasTile, MetasTile, ParcelamentosTile } from "~/components/home/Tiles";
 import { CategoriasCompact, EventosCompact, FluxoCompact } from "~/components/home/CompactCards";
 import { RadarWidget } from "~/components/home/ShortcutPair";
@@ -60,7 +62,13 @@ export function renderHomeWidget(
 ): ReactNode {
   switch (id) {
     case "saldo":
-      return <SaldoContasCard saldoPrevisto={ctx.saldoPrevisto} />;
+      /* What can be spent today rides with the balance, so it always sits right under it. */
+      return (
+        <View style={{ gap: 12 }}>
+          <SaldoContasCard saldoPrevisto={ctx.saldoPrevisto} />
+          {ctx.isCurrentMonth && <SpendTodayCard />}
+        </View>
+      );
 
     case "plano":
       return <PlanoCard />;
