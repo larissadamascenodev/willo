@@ -5,8 +5,7 @@ import { knownSub, logoUrl } from "~/lib/subscriptionLogos";
 import { th } from "~/theme/theme";
 
 /**
- * A subscription's mark: the service's real logo on a white tile, the way it looks as an
- * app icon; anything unknown, or a logo that does not load, gets its first letter in a
+ * A known shop's or service's mark: its real logo filling the whole mark, on its own colour; anything unknown, or a logo that does not load, gets its first letter in a
  * colour of its own.
  */
 
@@ -21,13 +20,14 @@ export default function SubLogo({ name, size = 40, ring = false, round = false }
 
   if (known && !failed) {
     return (
-      <View style={[{ width: size, height: size, borderRadius: radius, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" }, border]}>
+      /* The logo fills the whole mark, on the brand's own colour — no white tile behind it. */
+      <View style={[{ width: size, height: size, borderRadius: radius, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: known.hex }, border]}>
         <Image
           source={{ uri: logoUrl(known.domain) }}
           cachePolicy="disk"
-          contentFit="contain"
+          contentFit="cover"
           onError={() => setFailed(true)}
-          style={{ width: size * 0.7, height: size * 0.7 }}
+          style={{ width: size, height: size }}
           accessibilityLabel={known.name}
         />
       </View>

@@ -69,4 +69,4 @@ export function knownSub(name: string): KnownSub | null {
 }
 
 /** The service's own icon, by its site. */
-export const logoUrl = (domain: string) => `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+export const logoUrl = (domain: string) => `https://www.google.com/s2/favicons?domain=${domain}&sz=256`;

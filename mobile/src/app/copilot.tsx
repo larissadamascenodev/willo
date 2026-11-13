@@ -3,8 +3,7 @@ import { withPro } from "~/components/onboarding/RenewGate";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import Animated, { Easing, FadeInDown, LinearTransition, SlideOutRight, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
+import Animated, { FadeInDown, LinearTransition, SlideOutRight } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { getAccounts, getCreditCards } from "@/services/transactionService";
 import { categoryHex, DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "@/lib/categoryData";
@@ -81,8 +80,7 @@ function CopilotScreen() {
   const [editing, setEditing] = useState<CopilotItem | null>(null);
   const [values, setValues] = useState<EntryValues | null>(null);
   const [picking, setPicking] = useState(false);
-  /* The ones playing their tick, about to leave for the transactions (with their delay). */
-  const [leaving, setLeaving] = useState<Record<string, number>>({});
+  const [busy, setBusy] = useState<string | null>(null);
   const [history, setHistory] = useState<CopilotPast[] | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
@@ -101,32 +99,31 @@ function CopilotScreen() {
 
   const save = async (item: CopilotItem) => {
     if (!user) return;
+    setBusy(item.id);
     try {
-      await confirmPending(withAccount(withGuess(item)), user.id);
+      const ready = withAccount(withGuess(item));
+      await confirmPending(ready, user.id);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+      /* Said where it went: on a card it joins the open invoice, like any purchase on credit. */
+      const card = ready.credit_card_id ? cards.find((c) => c.id === ready.credit_card_id)?.name : null;
+      showToast(card ? `${ready.name}, ${money(ready.amount)} · na fatura do ${card}` : `${ready.type === "receita" ? "Receita" : "Gasto"} registrado · ${ready.name}, ${money(ready.amount)}`);
     } catch {
-      setLeaving((l) => {
-        const next = { ...l };
-        delete next[item.id];
-        return next;
-      });
       showToast("Não consegui confirmar agora. Tente de novo.");
+    } finally {
+      setBusy(null);
     }
   };
-
-  /* The tick plays first; the purchase is saved as it ends. */
-  const confirm = (item: CopilotItem, delay = 0) => {
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-    setLeaving((l) => ({ ...l, [item.id]: delay }));
-  };
+  const confirm = (item: CopilotItem) => void save(item);
 
   const list = items ?? [];
-  const confirmAll = () => list.forEach((item, i) => confirm(item, i * 140));
+  const confirmAll = async () => {
+    for (const item of list) await save(item);
+  };
   const total = list.reduce((t, i) => t + (i.type === "receita" ? 0 : i.amount), 0);
   const cardName = (id: string | null) => cards.find((c) => c.id === id)?.name ?? null;
   const accountName = (id: string | null) => accounts.find((a) => a.id === id)?.name ?? null;
   const placeOf = (item: CopilotItem) =>
     item.credit_card_id ? { card: true, name: cardName(item.credit_card_id) } : item.account_id ? { card: false, name: accountName(item.account_id) } : null;
-  const usedCards = [...new Set(list.map((i) => cardName(i.credit_card_id)).filter(Boolean))] as string[];
 
   /* By day, newest first: Hoje, Ontem, then the date. */
   const days: { label: string; rows: CopilotItem[] }[] = [];
@@ -164,7 +161,7 @@ function CopilotScreen() {
           </RoundButton>
         </View>
 
-        <Hero count={list.length} loading={items === null} total={total} cards={usedCards} latest={list[0]?.occurred_at ?? null} onSetup={() => router.push("/atalhos" as never)} />
+        <Hero count={list.length} loading={items === null} total={total} latest={list[0]?.occurred_at ?? null} onSetup={() => router.push("/atalhos" as never)} />
 
         {days.map((d) => (
           <View key={d.label} style={{ marginTop: 22 }}>
@@ -176,9 +173,8 @@ function CopilotScreen() {
                     item={item}
                     guess={guessOf(item)}
                     place={placeOf(item)}
-                    leaving={leaving[item.id]}
+                    busy={busy === item.id}
                     onConfirm={() => confirm(item)}
-                    onConfirmed={() => void save(item)}
                     onDiscard={() => {
                       void Haptics.selectionAsync().catch(() => undefined);
                       void discardPending(item.id);
@@ -199,7 +195,7 @@ function CopilotScreen() {
 
       {list.length > 1 && (
         <View style={{ position: "absolute", left: 16, right: 16, bottom: insets.bottom + 14 }}>
-          <Primary label={`Confirmar todas · ${money(total)}`} onPress={confirmAll} />
+          <Primary label={`Confirmar todas · ${money(total)}`} busy={!!busy} onPress={() => void confirmAll()} />
         </View>
       )}
 
@@ -220,7 +216,6 @@ function CopilotScreen() {
               onPress={() => {
                 const next = fromValues(editing, values);
                 setEditing(null);
-                void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
                 void save(next);
               }}
             />
@@ -287,51 +282,45 @@ function CopilotScreen() {
   );
 }
 
-/** What is waiting, in one look: how much, how many, on which cards, the most recent. */
-function Hero({ count, loading, total, cards, latest, onSetup }: { count: number; loading: boolean; total: number; cards: string[]; latest: string | null; onSetup: () => void }) {
+/** What is waiting, in one line of glass: how much, how many. */
+function Hero({ count, loading, total, latest, onSetup }: { count: number; loading: boolean; total: number; latest: string | null; onSetup: () => void }) {
   return (
-    <View style={{ marginTop: 14, borderRadius: 26, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.10)", "line") }}>
-      <LinearGradient colors={[th("rgba(103,205,103,0.16)", "bg"), th("rgba(111,168,232,0.10)", "bg"), th("rgba(255,255,255,0.03)", "bg")]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 18 }}>
-        {loading ? (
-          <ActivityIndicator color={th(INK.soft)} />
-        ) : count ? (
-          <>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-              <View style={{ width: 56, height: 56, borderRadius: 28, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
-                <ParticleOrb size={56} density={120} />
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ fontSize: 11.5, fontWeight: "700", letterSpacing: 1.4, color: th(INK.softer) }}>ESPERANDO VOCÊ</Text>
-                <Text style={{ marginTop: 3, fontSize: 30, fontWeight: "800", letterSpacing: -1, color: th("#fff"), fontVariant: ["tabular-nums"] }}>{money(total)}</Text>
-                <Text style={{ fontSize: 13.5, color: th(INK.soft) }}>
-                  em {count} {count === 1 ? "compra captada" : "compras captadas"}
-                </Text>
-              </View>
-            </View>
-            <View style={{ marginTop: 14, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {latest && <Chip icon={<Clock size={12} color={th(INK.soft)} strokeWidth={2.4} />} text={`Mais recente às ${timeOf(latest)}`} />}
-              {cards.slice(0, 2).map((c) => (
-                <Chip key={c} icon={<CreditCard size={12} color={th(INK.soft)} strokeWidth={2.4} />} text={c} />
-              ))}
-              <Chip icon={<Sparkles size={12} color={GREEN} strokeWidth={2.4} />} text="Categorias sugeridas" />
-            </View>
-            <Text style={{ marginTop: 12, fontSize: 12.5, lineHeight: 18, color: th(INK.softer) }}>Nada entra nas suas transações antes de você confirmar.</Text>
-          </>
-        ) : (
-          <View style={{ alignItems: "center", paddingVertical: 6 }}>
-            <View style={{ width: 56, height: 56, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(103,205,103,0.16)", "bg") }}>
-              <Check size={26} color={GREEN} strokeWidth={2.6} />
-            </View>
-            <Text style={{ marginTop: 12, fontSize: 18, fontWeight: "800", color: th("#fff") }}>Tudo em dia</Text>
-            <Text style={{ marginTop: 4, fontSize: 13.5, lineHeight: 19, textAlign: "center", color: th(INK.soft) }}>
-              Quando você pagar por aproximação, a compra aparece aqui para você confirmar.
-            </Text>
+    <View style={{ marginTop: 14, padding: 14, borderRadius: 22, borderCurve: "continuous", borderWidth: 1, borderColor: th("rgba(255,255,255,0.09)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
+      {loading ? (
+        <ActivityIndicator color={th(INK.soft)} />
+      ) : (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={{ width: 40, height: 40, borderRadius: 20, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
+            <ParticleOrb size={40} density={90} />
           </View>
-        )}
-        <Pressable onPress={onSetup} hitSlop={6} style={({ pressed }) => ({ marginTop: 12, alignSelf: count ? "flex-start" : "center", opacity: pressed ? 0.6 : 1 })}>
-          <Text style={{ fontSize: 13.5, fontWeight: "700", color: GREEN }}>Configurar compras da Carteira ›</Text>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            {count ? (
+              <>
+                <Text style={{ fontSize: 20, fontWeight: "800", letterSpacing: -0.5, color: th("#fff"), fontVariant: ["tabular-nums"] }}>{money(total)}</Text>
+                <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 13, color: th(INK.soft) }}>
+                  {count} {count === 1 ? "compra esperando" : "compras esperando"}
+                  {latest ? ` · mais recente às ${timeOf(latest)}` : ""}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={{ fontSize: 16, fontWeight: "700", color: th("#fff") }}>Tudo em dia</Text>
+                <Text numberOfLines={2} style={{ marginTop: 1, fontSize: 13, color: th(INK.soft) }}>
+                  Novas compras por aproximação aparecem aqui.
+                </Text>
+              </>
+            )}
+          </View>
+        </View>
+      )}
+      <View style={{ marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: th("rgba(255,255,255,0.07)", "line"), flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+        <Text numberOfLines={1} style={{ flex: 1, fontSize: 12.5, color: th(INK.softer) }}>
+          Nada entra antes de você confirmar.
+        </Text>
+        <Pressable onPress={onSetup} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+          <Text style={{ fontSize: 12.5, fontWeight: "700", color: th(INK.soft) }}>Configurar ›</Text>
         </Pressable>
-      </LinearGradient>
+      </View>
     </View>
   );
 }
@@ -355,46 +344,22 @@ function PendingCard({
   item,
   guess,
   place,
-  leaving,
+  busy,
   onConfirm,
-  onConfirmed,
   onDiscard,
   onOpen,
 }: {
   item: CopilotItem;
   guess: string | null;
   place: { card: boolean; name: string | null } | null;
-  leaving: number | undefined;
+  busy: boolean;
   onConfirm: () => void;
-  onConfirmed: () => void;
   onDiscard: () => void;
   onOpen: () => void;
 }) {
   const hex = categoryHex(guess ?? "Outros");
   const Icon = categoryIcon(guess ?? "Outros");
   const income = item.type === "receita";
-  const glass = useSharedValue(0);
-  const tick = useSharedValue(0);
-
-  useEffect(() => {
-    if (leaving === undefined) return;
-    const start = setTimeout(() => {
-      glass.set(withTiming(1, { duration: 220, easing: Easing.out(Easing.quad) }));
-      tick.set(withSequence(withTiming(0, { duration: 60 }), withSpring(1, { damping: 9, stiffness: 260 })));
-    }, leaving);
-    const done = setTimeout(onConfirmed, leaving + 620);
-    return () => {
-      clearTimeout(start);
-      clearTimeout(done);
-    };
-    // Once per confirm.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leaving]);
-
-  const veil = useAnimatedStyle(() => ({ opacity: glass.get() }));
-  const mark = useAnimatedStyle(() => ({ opacity: Math.min(tick.get() * 2, 1), transform: [{ scale: 0.4 + tick.get() * 0.6 }] }));
-  const busy = leaving !== undefined;
-
   return (
     <Pressable
       onPress={busy ? undefined : onOpen}
@@ -455,19 +420,12 @@ function PendingCard({
             accessibilityLabel="Confirmar"
             style={({ pressed }) => ({ height: 38, paddingHorizontal: 16, borderRadius: 19, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.85 : 1 })}
           >
-            <Check size={16} color={th("#0B0B0B")} strokeWidth={3} />
+            {busy ? <ActivityIndicator size="small" color={th("#0B0B0B")} /> : <Check size={16} color={th("#0B0B0B")} strokeWidth={3} />}
             <Text style={{ fontSize: 14, fontWeight: "800", color: th("#0B0B0B") }}>Confirmar</Text>
           </Pressable>
         </View>
       </View>
 
-      {/* Confirmed: green glass and a tick, then away. */}
-      <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 10, backgroundColor: "rgba(103,205,103,0.92)" }, veil]}>
-        <Animated.View style={[{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "#0B0B0B" }, mark]}>
-          <Check size={22} color={GREEN} strokeWidth={3.2} />
-        </Animated.View>
-        <Animated.Text style={[{ fontSize: 16, fontWeight: "800", color: "#0B0B0B" }, mark]}>Confirmada · {money(item.amount)}</Animated.Text>
-      </Animated.View>
     </Pressable>
   );
 }
