@@ -180,12 +180,12 @@ function WalletCopilot() {
         <Fields
           rows={[
             ["code", "o código que você copiou"],
-            ["amount", "Entrada do Atalho › Valor"],
-            ["merchant", "Entrada do Atalho › Comerciante"],
-            ["card", "Entrada do Atalho › Cartão ou Passe"],
+            ["amount", "Transação › Valor"],
+            ["merchant", "Transação › Comerciante"],
+            ["card", "Transação › Cartão ou Passe"],
           ]}
         />
-        Nos três de baixo, toque no valor, escolha <B>Entrada do Atalho</B> e, na lista que abre, toque no item: <B>Valor</B>, <B>Comerciante</B> e <B>Cartão ou Passe</B>. O campo tem que mostrar o nome do item, não “Entrada do Atalho”.
+        Nos três de baixo não se digita nada: toque em <B>Texto</B> e, na faixa acima do teclado, toque no botão azul <B>Transação</B> (em alguns iPhones, <B>Entrada do Atalho</B>). Depois toque nesse botão azul que entrou no campo e escolha o item da lista: <B>Valor</B>, <B>Comerciante</B> ou <B>Cartão ou Passe</B>. No campo <B>code</B>, cole o seu código segurando o dedo e escolhendo <B>Colar</B>.
       </Step>
 
       <Step n={5} title="Teste com uma compra" last>
