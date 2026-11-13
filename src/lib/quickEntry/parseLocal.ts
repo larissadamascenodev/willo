@@ -17,7 +17,7 @@ const plain = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerC
 
 /** Words that leave no doubt about the category, by the category's name. */
 const KEYWORDS: Record<string, string[]> = {
-  Compras: ["mercado livre", "mercadolivre", "shopee", "amazon", "shein", "magalu", "magazine luiza", "aliexpress", "americanas", "casas bahia", "temu"],
+  "Compras online": ["mercado livre", "mercadolivre", "shopee", "amazon", "shein", "magalu", "magazine luiza", "aliexpress", "americanas", "casas bahia", "temu"],
   Transporte: ["uber", "uber trip", "99", "99 pop", "taxi", "onibus", "metro", "passagem de onibus", "bilhete unico", "cabify", "indrive"],
   Combustível: ["gasolina", "combustivel", "etanol", "posto", "abastecer", "diesel", "shell", "ipiranga", "petrobras", "br mania"],
   Supermercado: ["mercado", "supermercado", "atacadao", "assai", "carrefour", "feira", "hortifruti", "pao de acucar", "extra", "dia", "oxxo", "st marche", "zaffari", "guanabara", "mambo", "sams club", "makro"],
