@@ -185,7 +185,7 @@ function WalletCopilot() {
             ["card", "Entrada do Atalho › Cartão ou Passe"],
           ]}
         />
-        Nos três de baixo, toque no valor, escolha <B>Entrada do Atalho</B> e depois o item da lista.
+        Nos três de baixo, toque no valor, escolha <B>Entrada do Atalho</B> e, na lista que abre, toque no item: <B>Valor</B>, <B>Comerciante</B> e <B>Cartão ou Passe</B>. O campo tem que mostrar o nome do item, não “Entrada do Atalho”.
       </Step>
 
       <Step n={5} title="Teste com uma compra" last>

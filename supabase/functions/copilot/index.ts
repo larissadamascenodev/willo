@@ -85,10 +85,30 @@ serve(async (req) => {
   const userId = await userFromCode(String(body.code ?? ""));
   if (!userId) return json({ error: "Código do Copilot inválido" }, 401);
 
-  const amount = amountOf(body.amount);
-  if (!(amount > 0)) return json({ error: "Valor não encontrado" }, 400);
-  const merchant = String(body.merchant ?? body.name ?? "").trim() || "Compra no cartão";
-  const card = String(body.card ?? "").trim();
+  /* What the shortcut sent, by shape only (no values), so a broken setup can be seen in the logs. */
+  console.log("copilot in", JSON.stringify(Object.fromEntries(Object.entries(body).map(([k, v]) => [k, k === "code" ? "…" : typeof v === "string" ? `text(${v.length})` : typeof v]))));
+
+  /* A field set to the whole "Entrada do Atalho" instead of one of its items arrives as
+     the purchase's full description; the amount and the shop are read out of it then. */
+  const texts = Object.entries(body)
+    .filter(([k]) => k !== "code")
+    .map(([, v]) => (typeof v === "string" ? v : v == null ? "" : JSON.stringify(v)));
+  /* Only a field that is just a number is read as one; anything longer is searched. */
+  const justNumber = (v: unknown) => typeof v === "number" || /^\s*(R\$)?\s*-?[\d.,]+\s*$/.test(String(v ?? ""));
+  let amount = justNumber(body.amount) ? amountOf(body.amount) : 0;
+  if (!(amount > 0)) {
+    for (const t of texts) {
+      const m = /R\$\s*-?\d[\d.,]*/.exec(t) ?? /\d+[.,]\d{2}/.exec(t);
+      if (m) {
+        amount = amountOf(m[0]);
+        if (amount > 0) break;
+      }
+    }
+  }
+  if (!(amount > 0)) return json({ error: "Valor não encontrado. No atalho, em amount, escolha Entrada do Atalho › Valor." }, 400);
+  const firstLine = (v: unknown) => String(v ?? "").split(/\r?\n/)[0].replace(/R\$\s*-?\d[\d.,]*/g, "").trim();
+  const merchant = firstLine(body.merchant ?? body.name) || "Compra no cartão";
+  const card = firstLine(body.card);
 
   /* The Wallet names the card ("Nubank Mastercard"); matched to one of the person's cards
      by its name, so the purchase is already on the right invoice when it is confirmed. */
