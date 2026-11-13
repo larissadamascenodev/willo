@@ -15,7 +15,7 @@ import LegalSheet from "~/components/auth/LegalSheet";
 import { Bell, Camera, Check, ChevronRight, FileText, ImagePlus, LifeBuoy, LogOut, Mail, Pencil, Shield, User, Zap } from "~/components/icons";
 import BottomSheet from "~/components/BottomSheet";
 import ThemeTile from "~/components/ThemeTile";
-import ProMark from "~/components/ProMark";
+import ProCrown from "~/components/ProCrown";
 import Paywall from "~/components/onboarding/Paywall";
 import { usePlanInfo, type PlanInfo } from "~/lib/purchases";
 import { useAuth } from "~/lib/auth";
@@ -42,6 +42,8 @@ import { isLight, switchTheme, th, useThemeRedraw, prepareThemeShot } from "~/th
  */
 
 const PAD = 16;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const WILLO_ICON = require("../../assets/willo-icon.png") as number;
 const SHEET_GAP = 10;
 
 const LIGHT_BACKGROUNDS: { key: LightSkyModel; label: string }[] = [
@@ -510,6 +512,7 @@ function Row({
   danger = false,
   caption = false,
   bare = false,
+  title,
 }: {
   icon?: ReactNode;
   label: string;
@@ -522,6 +525,8 @@ function Row({
   caption?: boolean;
   /** The icon is drawn as given, without the round tile behind it. */
   bare?: boolean;
+  /** Drawn in place of the label, when it is more than words. */
+  title?: ReactNode;
 }) {
   const body = (
     <>
@@ -541,9 +546,11 @@ function Row({
           </>
         ) : (
           <>
-            <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "500", color: th(danger ? RED : "#fff") }}>
-              {label}
-            </Text>
+            {title ?? (
+              <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "500", color: th(danger ? RED : "#fff") }}>
+                {label}
+              </Text>
+            )}
             {!!value && (
               <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: th(INK.soft) }}>
                 {value}
@@ -572,7 +579,7 @@ const day = (iso: string) => {
 };
 
 /**
- * The plan, as one row of the account: Willo PRO's crown, which plan it is and when it
+ * The plan, as one row of the account: the Willo icon, the crown before PRO, which plan it is and when it
  * renews or ends, and a small tag saying whether it is on. Tapped, it opens the App
  * Store's subscriptions, or the plans when there is none.
  */
@@ -597,9 +604,16 @@ function PlanRow({ plan, onPress }: { plan: PlanInfo; onPress: () => void }) {
 
   return (
     <Row
-      icon={<ProMark size={36} muted={plan.active === false} />}
+      icon={<Image source={WILLO_ICON} style={{ width: 36, height: 36, borderRadius: 10, opacity: plan.active === false ? 0.6 : 1 }} />}
       bare
       label="Willo PRO"
+      title={
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Text style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>Willo </Text>
+          <ProCrown size={15} muted={plan.active === false} />
+          <Text style={{ marginLeft: 3, fontSize: 15.5, fontWeight: "700", letterSpacing: 0.3, color: plan.active === false ? th(INK.soft) : GREEN }}>PRO</Text>
+        </View>
+      }
       value={detail}
       onPress={onPress}
       trailing={
