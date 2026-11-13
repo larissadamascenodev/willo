@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Modal, Pressable, Text, TextInput, View } from "react-native";
+import { Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -8,7 +8,10 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { createTransaction, getAccounts } from "@/services/transactionService";
+import { createTransaction, getAccounts, getCreditCards } from "@/services/transactionService";
+import CategoryPicker from "~/components/CategoryPicker";
+import EntryForm, { type EntryValues } from "~/components/registro/EntryForm";
+import type { Account, Card } from "~/components/registro/entryParts";
 import BankMark from "~/components/BankMark";
 import StepSheet, { Ask } from "~/components/StepSheet";
 import {
@@ -119,13 +122,7 @@ function nextOn(day: number) {
   return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-export default function FixedSheet({
-  kind,
-  onClose,
-}: {
-  kind: Kind | null;
-  onClose: () => void;
-}) {
+export default function FixedSheet({ kind, onClose }: { kind: Kind | null; onClose: () => void }) {
   const { user } = useAuth();
   const open = kind !== null;
   /* Kept while the sheet slides away, so its words do not change under it. */
@@ -137,16 +134,14 @@ export default function FixedSheet({
   const [day, setDay] = useState(5);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  /* Where it lands or leaves from: the person's accounts, the first one chosen to start. */
-  const [accounts, setAccounts] = useState<{ id: string; name: string; color: string | null }[]>([]);
+  /* Where it lands or leaves from: the person's accounts, the everyday one first. */
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [cards, setCards] = useState<Card[]>([]);
   const [accountId, setAccountId] = useState<string | null>(null);
-  const [made, setMade] = useState<{
-    name: string;
-    amount: number;
-    day: number;
-    income: boolean;
-    Icon: Icon;
-  } | null>(null);
+  /* The check before saving: the same form as any entry's, everything still changeable. */
+  const [entry, setEntry] = useState<EntryValues | null>(null);
+  const [picking, setPicking] = useState(false);
+  const [made, setMade] = useState<{ name: string; amount: number; day: number; income: boolean; Icon: Icon } | null>(null);
 
   useEffect(() => {
     if (!kind) return;
@@ -158,18 +153,16 @@ export default function FixedSheet({
     setDay(5);
     setSaving(false);
     setError(null);
-    setMade(null);
+    setEntry(null);
     let alive = true;
-    void getAccounts()
-      .then((list) => {
+    void Promise.all([getAccounts(), getCreditCards()])
+      .then(([list, cs]) => {
         if (!alive) return;
-        /* The everyday account first: a salary or a bill goes through the bank, not the wallet. */
-        const rank = (t: string) => (t === "checking" ? 0 : t === "savings" ? 1 : 2);
-        const usable = (list as unknown as { id: string; name: string; color: string | null; type: string }[])
-          .filter((a) => a.type !== "investment")
-          .sort((a, z) => rank(a.type) - rank(z.type));
+        const rank = (t?: string) => (t === "checking" ? 0 : t === "savings" ? 1 : 2);
+        const usable = (list as unknown as Account[]).filter((a) => a.type !== "investment").sort((a, z) => rank(a.type) - rank(z.type));
         setAccounts(usable);
-        setAccountId((cur) => cur ?? usable[0]?.id ?? null);
+        setCards(cs as unknown as Card[]);
+        setAccountId((cur) => (cur && usable.some((a) => a.id === cur) ? cur : (usable[0]?.id ?? null)));
       })
       .catch(() => undefined);
     return () => {
@@ -183,9 +176,6 @@ export default function FixedSheet({
   const starts = nextOn(day);
   const startsLater = Number(starts.slice(5, 7)) - 1 !== new Date().getMonth();
 
-  const account = accounts.find((a) => a.id === accountId) ?? null;
-  const startsLabel = `${Number(starts.slice(8, 10))} ${MONTHS[Number(starts.slice(5, 7)) - 1]}`;
-
   const next = async () => {
     setError(null);
     if (step === 0) {
@@ -193,46 +183,47 @@ export default function FixedSheet({
       setStep(1);
       return;
     }
-    /* With one account there is nothing to choose: straight to the check. */
     if (step === 1) {
-      setStep(accounts.length > 1 ? 2 : 3);
+      setEntry({
+        type: k,
+        cents,
+        name,
+        category: preset?.category ?? (income ? "Transferências recebidas" : "Outros"),
+        method: "conta",
+        whereId: accountId,
+        repeat: "fixa",
+        parts: null,
+        date: starts,
+        status: "pendente",
+        note: "",
+      });
+      setStep(2);
       return;
     }
-    if (step === 2) {
-      setStep(3);
-      return;
-    }
-    if (!user || cents <= 0) return;
+    const v = entry;
+    if (!user || !v || v.cents <= 0 || !v.name.trim() || !v.whereId) return;
     setSaving(true);
     try {
+      const credit = v.type === "despesa" && v.method === "cartao";
       await createTransaction(
         {
-          name,
-          type: k,
-          amount: cents / 100,
-          category:
-            preset?.category ??
-            (income ? "Transferências recebidas" : "Outros"),
-          date: starts,
-          status: "pendente",
-          payment_method: "conta",
-          account_id: accountId,
-          recurrence_type: "fixa",
+          name: v.name.trim(),
+          type: v.type,
+          amount: v.cents / 100,
+          category: v.category ?? "Outros",
+          date: v.date,
+          status: credit ? "pendente" : v.status,
+          payment_method: v.type === "receita" ? "conta" : (v.method ?? "conta"),
+          account_id: credit ? null : v.whereId,
+          credit_card_id: credit ? v.whereId : null,
+          recurrence_type: v.repeat === "fixa" ? "fixa" : "unica",
         } as never,
         user.id,
       );
       window.dispatchEvent(new CustomEvent("transaction-created"));
-      void Haptics.notificationAsync(
-        Haptics.NotificationFeedbackType.Success,
-      ).catch(() => undefined);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       /* The sheet goes; a small card says it was done, and goes by itself. */
-      setMade({
-        name,
-        amount: cents / 100,
-        day,
-        income,
-        Icon: preset?.Icon ?? (income ? Banknote : Pencil),
-      });
+      setMade({ name: v.name.trim(), amount: v.cents / 100, day: Number(v.date.slice(8, 10)), income: v.type === "receita", Icon: preset?.Icon ?? (v.type === "receita" ? Banknote : Pencil) });
       onClose();
     } catch {
       setError("Não foi possível salvar. Tente de novo.");
@@ -245,10 +236,8 @@ export default function FixedSheet({
     step === 0
       ? !!pick && (pick !== OTHER || typed.trim().length >= 2)
       : step === 1
-        ? cents > 0
-        : step === 2
-          ? !!accountId
-          : cents > 0;
+        ? cents > 0 && !!accountId
+        : !!entry && entry.cents > 0 && !!entry.name.trim() && !!entry.whereId;
 
   return (
     <>
@@ -257,14 +246,10 @@ export default function FixedSheet({
         open={open}
         onClose={onClose}
         step={step}
-        steps={4}
-        onBack={() => setStep(step === 3 && accounts.length <= 1 ? 1 : Math.max(step - 1, 0))}
+        steps={3}
+        onBack={() => setStep(Math.max(step - 1, 0))}
         onNext={next}
-        nextLabel={
-          step === 3
-            ? "Confirmar e adicionar"
-            : "Continuar"
-        }
+        nextLabel={step === 2 ? "Confirmar e adicionar" : "Continuar"}
         nextDisabled={!canNext}
         busy={saving}
       >
@@ -272,28 +257,13 @@ export default function FixedSheet({
           <View style={{ flex: 1 }}>
             <Ask
               title={income ? "Qual é a receita?" : "Qual é a conta?"}
-              note={
-                income
-                  ? "O que entra todo mês. Toque numa ou escreva outra."
-                  : "O que sai todo mês. Toque numa ou escreva outra."
-              }
+              note={income ? "O que entra todo mês. Toque numa ou escreva outra." : "O que sai todo mês. Toque numa ou escreva outra."}
             />
             <View style={{ marginTop: 18, gap: 8 }}>
               {PRESETS[k].map((p) => (
-                <Option
-                  key={p.label}
-                  label={p.label}
-                  Icon={p.Icon}
-                  on={pick === p.label}
-                  onPress={() => setPick(pick === p.label ? null : p.label)}
-                />
+                <Option key={p.label} label={p.label} Icon={p.Icon} on={pick === p.label} onPress={() => setPick(pick === p.label ? null : p.label)} />
               ))}
-              <Option
-                label={income ? "Outra receita" : "Outra conta"}
-                Icon={Pencil}
-                on={pick === OTHER}
-                onPress={() => setPick(pick === OTHER ? null : OTHER)}
-              />
+              <Option label={income ? "Outra receita" : "Outra conta"} Icon={Pencil} on={pick === OTHER} onPress={() => setPick(pick === OTHER ? null : OTHER)} />
             </View>
             {pick === OTHER && (
               <TextInput
@@ -301,9 +271,7 @@ export default function FixedSheet({
                 onChangeText={setTyped}
                 autoFocus
                 maxLength={40}
-                placeholder={
-                  income ? "Ex: Freela fixo, Pensão" : "Ex: Escola, Condomínio"
-                }
+                placeholder={income ? "Ex: Freela fixo, Pensão" : "Ex: Escola, Condomínio"}
                 placeholderTextColor={th(INK.faint)}
                 style={{ ...FIELD, marginTop: 12 }}
               />
@@ -313,130 +281,79 @@ export default function FixedSheet({
 
         {step === 1 && (
           <View style={{ flex: 1 }}>
-            <Ask
-              title={`${name}: qual o valor?`}
-              note={
-                income
-                  ? "O valor que cai na conta. O Willo lança todo mês."
-                  : "Um valor médio já serve. O Willo lança todo mês."
-              }
-            />
+            <Ask title={`${name}: qual o valor?`} note={income ? "O valor que cai na conta. O Willo lança todo mês." : "Um valor médio já serve. O Willo lança todo mês."} />
             <TextInput
-              value={(cents / 100).toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-              })}
-              onChangeText={(t) =>
-                setCents(
-                  Math.min(
-                    Number(t.replace(/\D/g, "").slice(0, 11) || "0"),
-                    999999999,
-                  ),
-                )
-              }
+              value={(cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              onChangeText={(t) => setCents(Math.min(Number(t.replace(/\D/g, "").slice(0, 11) || "0"), 999999999))}
               keyboardType="number-pad"
               autoFocus
-              style={{
-                marginTop: 18,
-                minWidth: 0,
-                fontSize: 44,
-                fontWeight: "800",
-                letterSpacing: -1.6,
-                color: th(cents === 0 ? INK.faint : "#fff"),
-                padding: 0,
-              }}
+              style={{ marginTop: 14, minWidth: 0, fontSize: 42, fontWeight: "800", letterSpacing: -1.5, color: th(cents === 0 ? INK.faint : "#fff"), padding: 0 }}
             />
             <DayStepper
               label={income ? "Cai todo dia" : "Vence todo dia"}
               value={day}
               onChange={setDay}
-              note={
-                startsLater
-                  ? `Esse dia já passou neste mês: começa em ${Number(starts.slice(8, 10))} ${MONTHS[Number(starts.slice(5, 7)) - 1]}`
-                  : undefined
-              }
+              note={startsLater ? `Esse dia já passou neste mês: começa em ${Number(starts.slice(8, 10))} ${MONTHS[Number(starts.slice(5, 7)) - 1]}` : undefined}
             />
-          </View>
-        )}
-
-        {step === 2 && (
-          <View style={{ flex: 1 }}>
-            <Ask
-              title={income ? "Entra em qual conta?" : "Sai de qual conta?"}
-              note={income ? "Onde esse dinheiro cai todo mês." : "De onde esse valor sai todo mês."}
-            />
-            <View style={{ marginTop: 18, gap: 8 }}>
-              {accounts.map((a) => {
-                const on = a.id === accountId;
-                return (
-                  <Pressable
-                    key={a.id}
-                    onPress={() => {
-                      void Haptics.selectionAsync().catch(() => undefined);
-                      setAccountId(a.id);
-                    }}
-                    style={({ pressed }) => ({
-                      height: 58,
-                      borderRadius: 18,
-                      borderCurve: "continuous",
-                      paddingHorizontal: 12,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 12,
-                      borderWidth: 1,
-                      borderColor: th(on ? "#fff" : "rgba(255,255,255,0.10)", "line"),
-                      backgroundColor: th(on ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)", "bg"),
-                      transform: [{ scale: pressed ? 0.98 : 1 }],
-                    })}
-                  >
-                    <BankMark name={a.name} hex={a.color ?? "#7C8AA5"} size={36} />
-                    <Text numberOfLines={1} style={{ flex: 1, fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>
-                      {a.name}
-                    </Text>
-                    <View style={{ width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", borderWidth: on ? 0 : 1.5, borderColor: th("rgba(255,255,255,0.3)", "line"), backgroundColor: th(on ? "#fff" : "transparent", "bg") }}>
-                      {on && <Check size={13} color={th("#0B0B0B")} strokeWidth={3.2} />}
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {step === 3 && (
-          <View style={{ flex: 1 }}>
-            <Ask title="Confere?" note={income ? "É isso que vai entrar todo mês." : "É isso que vai sair todo mês."} />
-            <View style={{ marginTop: 18, borderRadius: 22, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.08)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
-              <View style={{ alignItems: "center", paddingTop: 20, paddingBottom: 16 }}>
-                <Text style={{ fontSize: 13, color: th(INK.soft) }}>{name}</Text>
-                <Text style={{ marginTop: 4, fontSize: 32, fontWeight: "800", letterSpacing: -1, color: income ? GREEN : th("#fff") }}>
-                  {income ? "+" : "−"}
-                  {money(cents / 100)}
-                </Text>
-                <Text style={{ marginTop: 2, fontSize: 12.5, color: th(INK.softer) }}>todo mês</Text>
-              </View>
-              {[
-                { label: income ? "Cai todo dia" : "Vence todo dia", value: String(day) },
-                { label: "Primeira vez", value: startsLabel },
-                { label: "Conta", value: account?.name ?? "—" },
-                { label: "Categoria", value: preset?.category ?? (income ? "Transferências recebidas" : "Outros") },
-              ].map((row) => (
-                <View key={row.label} style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: th("rgba(255,255,255,0.06)", "line") }}>
-                  <Text style={{ fontSize: 14, color: th(INK.soft) }}>{row.label}</Text>
-                  <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 14, fontWeight: "600", color: th("#fff"), textAlign: "right" }}>
-                    {row.value}
-                  </Text>
-                </View>
-              ))}
-            </View>
-            {error && (
-              <Text style={{ marginTop: 12, fontSize: 13, color: th(RED) }}>
-                {error}
-              </Text>
+            {/* Which account, on the same page: one tap. */}
+            {accounts.length > 0 && (
+              <>
+                <Text style={{ marginTop: 18, fontSize: 13, fontWeight: "600", color: th(INK.soft) }}>{income ? "Entra na conta" : "Sai da conta"}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8, marginHorizontal: -20 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }} keyboardShouldPersistTaps="handled">
+                  {accounts.map((a) => {
+                    const on = a.id === accountId;
+                    return (
+                      <Pressable
+                        key={a.id}
+                        onPress={() => {
+                          void Haptics.selectionAsync().catch(() => undefined);
+                          setAccountId(a.id);
+                        }}
+                        style={({ pressed }) => ({
+                          height: 44,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 8,
+                          paddingLeft: 6,
+                          paddingRight: 14,
+                          borderRadius: 22,
+                          borderWidth: 1,
+                          borderColor: th(on ? "#fff" : "rgba(255,255,255,0.10)", "line"),
+                          backgroundColor: th(on ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.05)", "bg"),
+                          transform: [{ scale: pressed ? 0.96 : 1 }],
+                        })}
+                      >
+                        <BankMark name={a.name} hex={a.color ?? "#7C8AA5"} size={32} />
+                        <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: on ? "700" : "500", color: th("#fff") }}>
+                          {a.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </>
             )}
           </View>
         )}
+
+        {step === 2 && entry && (
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>Confira antes de salvar</Text>
+            <EntryForm values={entry} onChange={(patch) => setEntry((cur) => (cur ? { ...cur, ...patch } : cur))} accounts={accounts} cards={cards} onPickCategory={() => setPicking(true)} />
+            {error && <Text style={{ marginTop: 12, fontSize: 13, color: th(RED) }}>{error}</Text>}
+          </View>
+        )}
       </StepSheet>
+      <CategoryPicker
+        open={picking}
+        type={entry?.type ?? k}
+        value={entry?.category ?? ""}
+        onPick={(c: string) => {
+          setPicking(false);
+          setEntry((cur) => (cur ? { ...cur, category: c } : cur));
+        }}
+        onClose={() => setPicking(false)}
+      />
     </>
   );
 }
