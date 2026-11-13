@@ -94,19 +94,58 @@ function CopilotScreen() {
   }, []);
 
   /* With no account named, the main one. */
-  const withAccount = (item: CopilotItem): CopilotItem =>
-    item.account_id || item.credit_card_id ? item : { ...item, account_id: (accounts as (Account & { is_default?: boolean })[]).find((a) => a.is_default)?.id ?? accounts[0]?.id ?? null };
+  const mainAccount = () => (accounts as (Account & { is_default?: boolean })[]).find((a) => a.is_default)?.id ?? accounts[0]?.id ?? null;
+
+  /* Debit or credit. The Wallet does not say which; the card's name sometimes does
+     ("Débito", "Crédito") and then Willo decides. Otherwise nothing is chosen and the
+     person picks before confirming. Either way it can be changed on the card. */
+  const [modes, setModes] = useState<Record<string, Mode>>({});
+  const modeOf = (item: CopilotItem): Mode | null => {
+    if (item.type === "receita") return "conta";
+    if (modes[item.id]) return modes[item.id];
+    const text = walletCard(item);
+    if (/d[eé]bito|debit/i.test(text)) return "conta";
+    if (/cr[eé]dito|credit/i.test(text)) return "cartao";
+    /* Without a card of the person's own there is nothing to choose between. */
+    if (!cards.length) return "conta";
+    return null;
+  };
+  /* The account the same bank's debit takes from, by name, or the main one. */
+  const accountFor = (item: CopilotItem) => {
+    const words = [...plainWords(walletCard(item)), ...plainWords(cards.find((c) => c.id === item.credit_card_id)?.name ?? "")];
+    const hit = accounts.find((a) => words.some((w) => plainWords(a.name).includes(w)));
+    return item.account_id ?? hit?.id ?? mainAccount();
+  };
+  const cardFor = (item: CopilotItem) => {
+    if (item.credit_card_id) return item.credit_card_id;
+    const words = plainWords(walletCard(item));
+    return cards.find((c) => words.some((w) => plainWords(c.name).includes(w)))?.id ?? cards[0]?.id ?? null;
+  };
+  const resolve = (item: CopilotItem): CopilotItem =>
+    item.type === "receita" || modeOf(item) === "conta"
+      ? { ...item, payment_method: "conta", account_id: accountFor(item), credit_card_id: null }
+      : { ...item, payment_method: "cartao", credit_card_id: cardFor(item), account_id: null };
+  const withAccount = resolve;
+  const pickMode = (item: CopilotItem, mode: Mode) => {
+    void Haptics.selectionAsync().catch(() => undefined);
+    setModes((m) => ({ ...m, [item.id]: mode }));
+  };
 
   const save = async (item: CopilotItem) => {
     if (!user) return;
+    if (!modeOf(item)) {
+      showToast(`${item.name}: escolha débito ou crédito antes de confirmar.`);
+      return;
+    }
     setBusy(item.id);
     try {
       const ready = withAccount(withGuess(item));
       await confirmPending(ready, user.id);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-      /* Said where it went: on a card it joins the open invoice, like any purchase on credit. */
+      /* Said where it went: debit out of the account now, credit onto the open invoice. */
       const card = ready.credit_card_id ? cards.find((c) => c.id === ready.credit_card_id)?.name : null;
-      showToast(card ? `${ready.name}, ${money(ready.amount)} · na fatura do ${card}` : `${ready.type === "receita" ? "Receita" : "Gasto"} registrado · ${ready.name}, ${money(ready.amount)}`);
+      const account = ready.account_id ? accounts.find((a) => a.id === ready.account_id)?.name : null;
+      showToast(card ? `${ready.name}, ${money(ready.amount)} · na fatura do ${card}` : `${ready.name}, ${money(ready.amount)} · saiu da conta${account ? ` ${account}` : ""}`);
     } catch {
       showToast("Não consegui confirmar agora. Tente de novo.");
     } finally {
@@ -117,13 +156,17 @@ function CopilotScreen() {
 
   const list = items ?? [];
   const confirmAll = async () => {
-    for (const item of list) await save(item);
+    const open = list.filter((i) => !modeOf(i));
+    for (const item of list) if (modeOf(item)) await save(item);
+    if (open.length) showToast(`Escolha débito ou crédito em ${open.length === 1 ? "1 compra" : `${open.length} compras`} para confirmar.`);
   };
   const total = list.reduce((t, i) => t + (i.type === "receita" ? 0 : i.amount), 0);
   const cardName = (id: string | null) => cards.find((c) => c.id === id)?.name ?? null;
   const accountName = (id: string | null) => accounts.find((a) => a.id === id)?.name ?? null;
-  const placeOf = (item: CopilotItem) =>
-    item.credit_card_id ? { card: true, name: cardName(item.credit_card_id) } : item.account_id ? { card: false, name: accountName(item.account_id) } : null;
+  const placeOf = (raw: CopilotItem) => {
+    const item = resolve(raw);
+    return item.credit_card_id ? { card: true, name: cardName(item.credit_card_id) } : item.account_id ? { card: false, name: accountName(item.account_id) } : null;
+  };
 
   /* By day, newest first: Hoje, Ontem, then the date. */
   const days: { label: string; rows: CopilotItem[] }[] = [];
@@ -173,6 +216,9 @@ function CopilotScreen() {
                     item={item}
                     guess={guessOf(item)}
                     place={placeOf(item)}
+                    mode={modeOf(item)}
+                    canCredit={item.type !== "receita" && cards.length > 0}
+                    onMode={(m) => pickMode(item, m)}
                     busy={busy === item.id}
                     onConfirm={() => confirm(item)}
                     onDiscard={() => {
@@ -345,6 +391,9 @@ function PendingCard({
   guess,
   place,
   busy,
+  mode,
+  canCredit,
+  onMode,
   onConfirm,
   onDiscard,
   onOpen,
@@ -353,6 +402,10 @@ function PendingCard({
   guess: string | null;
   place: { card: boolean; name: string | null } | null;
   busy: boolean;
+  /** Null until chosen, when the card's name did not say. */
+  mode: Mode | null;
+  canCredit: boolean;
+  onMode: (m: Mode) => void;
   onConfirm: () => void;
   onDiscard: () => void;
   onOpen: () => void;
@@ -397,7 +450,29 @@ function PendingCard({
           </Text>
         </View>
 
-        <View style={{ marginTop: 14, flexDirection: "row", alignItems: "center", gap: 8 }}>
+        {/* Debit straight out of the account, or credit onto the invoice. */}
+        {canCredit && !mode && <Text style={{ marginTop: 12, fontSize: 12.5, fontWeight: "600", color: th("#F5C26B") }}>Foi no débito ou no crédito?</Text>}
+        {canCredit && (
+          <View style={{ marginTop: 12, flexDirection: "row", padding: 3, borderRadius: 14, backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
+            {(["conta", "cartao"] as const).map((m) => {
+              const on = mode === m;
+              return (
+                <Pressable
+                  key={m}
+                  onPress={busy || on ? undefined : () => onMode(m)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on }}
+                  style={{ flex: 1, height: 30, borderRadius: 11, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: on ? th("rgba(255,255,255,0.14)", "bg") : "transparent" }}
+                >
+                  {m === "conta" ? <Landmark size={12} color={th(on ? "#fff" : INK.softer)} strokeWidth={2.4} /> : <CreditCard size={12} color={th(on ? "#fff" : INK.softer)} strokeWidth={2.4} />}
+                  <Text style={{ fontSize: 12.5, fontWeight: on ? "700" : "500", color: th(on ? "#fff" : INK.softer) }}>{m === "conta" ? "Débito · sai da conta" : "Crédito · vai para a fatura"}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
+        <View style={{ marginTop: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
           {/* The category Willo suggests from the name; the card opens to change it. */}
           <View style={{ flexShrink: 1, flexDirection: "row", alignItems: "center", gap: 6, height: 32, paddingHorizontal: 10, borderRadius: 16, backgroundColor: th(`${hex}24`, "bg") }}>
             <Icon size={13} color={th(hex)} strokeWidth={2.3} />
@@ -418,7 +493,7 @@ function PendingCard({
           <Pressable
             onPress={busy ? undefined : onConfirm}
             accessibilityLabel="Confirmar"
-            style={({ pressed }) => ({ height: 38, paddingHorizontal: 16, borderRadius: 19, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.85 : 1 })}
+            style={({ pressed }) => ({ height: 38, paddingHorizontal: 16, borderRadius: 19, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: !mode ? 0.4 : pressed ? 0.85 : 1 })}
           >
             {busy ? <ActivityIndicator size="small" color={th("#0B0B0B")} /> : <Check size={16} color={th("#0B0B0B")} strokeWidth={3} />}
             <Text style={{ fontSize: 14, fontWeight: "800", color: th("#0B0B0B") }}>Confirmar</Text>
@@ -430,6 +505,24 @@ function PendingCard({
   );
 }
 
+type Mode = "conta" | "cartao";
+
+/** The card's name as the Wallet gave it ("Nubank", "Itaú Débito"…), from the purchase as it arrived. */
+function walletCard(item: CopilotItem): string {
+  try {
+    const raw = item.raw ? (JSON.parse(item.raw) as { card?: unknown }) : null;
+    return typeof raw?.card === "string" ? raw.card : "";
+  } catch {
+    return "";
+  }
+}
+const plainWords = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length > 2 && !["debito", "credito", "cartao", "mastercard", "visa", "elo", "black", "platinum", "gold"].includes(w));
 const pad = (n: number) => String(n).padStart(2, "0");
 const timeOf = (iso: string) => {
   const d = new Date(iso);
