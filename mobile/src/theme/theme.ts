@@ -106,6 +106,8 @@ export const liftThemeCover = () => setCover(null);
 
 /** How long the circle takes to cover the screen. */
 export const COVER_GROW_MS = 380;
+/** The change of theme and the switch's slide: one time, so they read as one movement. */
+export const THEME_FADE_MS = 380;
 
 /*
  * The better change, when it can be had: a photograph of the screen taken beforehand,
@@ -121,7 +123,9 @@ interface Shot {
   ready: string | null;
 }
 let shot: Shot = { uri: null, ready: null };
-let reveal: { x: number; y: number; to: ThemeMode } | null = null;
+/** `cut`: a part of the screen left live through the photograph (the switch that was tapped, still sliding). */
+export type ThemeCut = { x: number; y: number; w: number; h: number };
+let reveal: { x: number; y: number; to: ThemeMode; cut?: ThemeCut } | null = null;
 const shotListeners = new Set<() => void>();
 const emitShot = () => shotListeners.forEach((l) => l());
 const subscribeShot = (l: () => void) => {
@@ -189,7 +193,7 @@ const whenReady = (ms: number) =>
 let changing = false;
 
 /** Changes the theme from a screen, coming back to `route` once it is drawn again. */
-export async function switchTheme(next: ThemeMode, route: string, from?: { x: number; y: number }, tries = 0): Promise<void> {
+export async function switchTheme(next: ThemeMode, route: string, from?: { x: number; y: number; cut?: ThemeCut }, tries = 0): Promise<void> {
   if (next === pref) return;
   /* Tapped while a change is still running: it waits for that one to finish and then
      runs, with its own effect, instead of being lost. */
@@ -210,7 +214,7 @@ export async function switchTheme(next: ThemeMode, route: string, from?: { x: nu
   changing = false;
   if (shot.ready) {
     /* The photograph goes over the screen and the theme changes under it, in one go. */
-    reveal = { ...at, to: next };
+    reveal = { ...at, to: next, cut: from?.cut };
     emitShot();
     /* The photograph goes up and starts opening first; the screens are drawn in the new
        theme right after, while the circle is still small. */

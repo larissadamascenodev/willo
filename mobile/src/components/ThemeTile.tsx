@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Pressable, View, type GestureResponderEvent } from "react-native";
 import Animated, { Easing, interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { Moon, Sun } from "~/components/icons";
+import { THEME_FADE_MS } from "~/theme/theme";
 
 /**
  * The theme as a card that is its own switch. Dark, it is a black card with the moon,
@@ -19,7 +20,7 @@ export default function ThemeTile({ light, onPress, height }: { light: boolean; 
   /* 1 is dark, 0 is light. */
   const p = useSharedValue(light ? 0 : 1);
   useEffect(() => {
-    p.set(withTiming(light ? 0 : 1, { duration: 460, easing: Easing.inOut(Easing.cubic) }));
+    p.set(withTiming(light ? 0 : 1, { duration: THEME_FADE_MS, easing: Easing.inOut(Easing.cubic) }));
   }, [light, p]);
 
   const card = useAnimatedStyle(() => ({

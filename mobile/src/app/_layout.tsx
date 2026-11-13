@@ -2,9 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, Linking, View, useWindowDimensions } from "react-native";
 import { Stack } from "expo-router";
 import * as ExpoLinking from "expo-linking";
-import Animated, { Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
-import Svg, { ClipPath, Defs, Image as SvgImage, Path, Rect } from "react-native-svg";
+import Svg, { ClipPath, Defs, Image as SvgImage, Path } from "react-native-svg";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { installShims, hydrateShims } from "~/lib/shims";
@@ -18,7 +18,7 @@ import LaunchIntro from "~/components/LaunchIntro";
 import { markIntroDone } from "~/lib/launchIntro";
 import NotificationBridge from "~/lib/NotificationBridge";
 import { GREEN, GROUND } from "~/theme/tokens";
-import { COVER_GROW_MS, LIGHT_GROUND, endThemeReveal, liftThemeCover, markShotReady, setActiveTheme, takeReturnRoute, th, useThemeCover, useThemePref, useThemeReveal, useThemeShot } from "~/theme/theme";
+import { COVER_GROW_MS, LIGHT_GROUND, THEME_FADE_MS, endThemeReveal, liftThemeCover, markShotReady, setActiveTheme, takeReturnRoute, th, useThemeCover, useThemePref, useThemeReveal, useThemeShot } from "~/theme/theme";
 import { stageOf } from "~/lib/accountStage";
 import { accountLegal, acceptLegal, localLegal, syncLegal } from "~/lib/legalConsent";
 import Consent from "~/components/onboarding/Consent";
@@ -150,7 +150,6 @@ function Splash() {
   );
 }
 
-const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 
 function Door() {
@@ -188,39 +187,33 @@ function Door() {
   /* The photograph's hole, growing from the finger. */
   const themeShot = useThemeShot();
   const revealAt = useThemeReveal();
-  const hole = useSharedValue(0);
-  const holeX = useSharedValue(W / 2);
-  const holeY = useSharedValue(H / 2);
+  const veil = useSharedValue(1);
+  const veilStyle = useAnimatedStyle(() => ({ opacity: veil.get() }));
   /* The reveal starts the moment the photograph is up — at the touch — not once the
      screens have been drawn again: under the first, slow part of the opening the circle
      is still small, and the screens are drawn in the new theme in that time. It ends once
      both the opening is done and the screens are drawn. */
   const swappedRef = useRef(false);
-  /* Until the screens are drawn in the new theme, the opening shows its ground. */
-  const [awaitingSwap, setAwaitingSwap] = useState(false);
   const openedRef = useRef(false);
   const finishReveal = () => {
     if (!swappedRef.current || !openedRef.current) return;
     swappedRef.current = false;
     openedRef.current = false;
+    /* The veil is left clear: raising it here could show the old screen for a frame. */
     endThemeReveal();
-    hole.set(0);
   };
   useLayoutEffect(() => {
     if (!revealAt) return;
-    setAwaitingSwap(true);
     swappedRef.current = false;
     openedRef.current = false;
-    holeX.set(revealAt.x);
-    holeY.set(revealAt.y);
-    hole.set(0);
-    const reachOut = Math.hypot(Math.max(revealAt.x, W - revealAt.x), Math.max(revealAt.y, H - revealAt.y)) + 8;
-    /* Unhurried: it starts softly from the finger, opens, and settles. */
-    hole.set(withTiming(reachOut, { duration: 950, easing: Easing.bezier(0.42, 0, 0.25, 1) }));
+    /* The old theme dissolves into the new one in the switch's own time, starting at the
+       touch — the same movement as the card, the whole screen at once. */
+    veil.set(1);
+    veil.set(withTiming(0, { duration: THEME_FADE_MS, easing: Easing.inOut(Easing.cubic) }));
     const id = setTimeout(() => {
       openedRef.current = true;
       finishReveal();
-    }, 1000);
+    }, THEME_FADE_MS + 40);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [revealAt]);
@@ -232,7 +225,6 @@ function Door() {
     if (revealAt) {
       /* The screens are drawn in the new theme under the opening photograph. */
       swappedRef.current = true;
-      setAwaitingSwap(false);
       finishReveal();
     } else {
       /* The screens are drawn again in place under the circle; a frame, then it clears off them. */
@@ -246,13 +238,11 @@ function Door() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
   const circleStyle = useAnimatedStyle(() => ({ opacity: clear.get(), transform: [{ scale: Math.max(0.001, grow.get()) }] }));
-  /* The whole screen, less a circle: drawn with the even-odd rule, the circle is a hole. */
-  const holeProps = useAnimatedProps(() => {
-    const r = hole.get();
-    const x = holeX.get();
-    const y = holeY.get();
-    return { d: `M0 0H${W}V${H}H0Z M${x - r} ${y} a${r} ${r} 0 1 0 ${2 * r} 0 a${r} ${r} 0 1 0 ${-2 * r} 0Z` };
-  });
+  /* The whole screen, less the switch that was tapped (left live, sliding): even-odd. */
+  const cut = revealAt?.cut;
+  const veilPath = cut
+    ? `M0 0H${W}V${H}H0Z M${cut.x} ${cut.y}h${cut.w}v${cut.h}h${-cut.w}Z`
+    : `M0 0H${W}V${H}H0Z`;
   /* Far enough from the finger to reach the farthest corner. */
   const cx = coverTo?.x ?? W / 2;
   const cy = coverTo?.y ?? H / 2;
@@ -338,16 +328,16 @@ function Door() {
       /* In front of everything, explicitly: without it the native screens can be drawn
          over it, and a dark screen, being opaque, hid the change entirely. */
       <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, width: W, height: H, zIndex: 9999, elevation: 9999, opacity: revealAt ? 1 : 0 }}>
-        <Svg width={W} height={H}>
-          <Defs>
-            <ClipPath id="theme-hole">
-              <AnimatedPath animatedProps={holeProps} clipRule="evenodd" />
-            </ClipPath>
-          </Defs>
-          {/* The new theme's ground, in the opening, for the moment before its screens are drawn. */}
-          {awaitingSwap && revealAt && <Rect x={0} y={0} width={W} height={H} fill={revealAt.to === "light" ? LIGHT_GROUND : GROUND} />}
-          <SvgImage href={{ uri: themeShot.ready }} x={0} y={0} width={W} height={H} preserveAspectRatio="xMidYMid slice" clipPath="url(#theme-hole)" />
-        </Svg>
+        <Animated.View style={[{ width: W, height: H }, veilStyle]}>
+          <Svg width={W} height={H}>
+            <Defs>
+              <ClipPath id="theme-hole">
+                <Path d={veilPath} clipRule="evenodd" />
+              </ClipPath>
+            </Defs>
+            <SvgImage href={{ uri: themeShot.ready }} x={0} y={0} width={W} height={H} preserveAspectRatio="xMidYMid slice" clipPath="url(#theme-hole)" />
+          </Svg>
+        </Animated.View>
       </View>
     )}
     {coverTo && (
