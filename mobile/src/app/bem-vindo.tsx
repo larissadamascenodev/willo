@@ -43,13 +43,13 @@ interface Slide {
 }
 
 const SLIDES: Slide[] = [
-  { tag: "WILLO COPILOT", title: "Você compra, ele anota.", line: "O Willo lê o aviso de compra do banco\ne registra sozinho. Você só confere.", Demo: NotifyDemo, ms: DURATIONS.notify },
-  { tag: "VOZ", title: "Fale. O Willo anota.", line: "Diga do seu jeito: ele entende o valor,\na categoria, a conta e o dia.", Demo: VoiceDemo, ms: DURATIONS.voice },
-  { tag: "REGISTRO RÁPIDO", title: "Dois toques e pronto.", line: "Dois toques atrás do celular e\no registro rápido já abre.", Demo: QuickTap, ms: QUICK_MS },
-  { tag: "COMPROVANTE", title: "Fotografe. Ele lê.", line: "Local, valor, pagamento e data saem\nda foto direto para o registro.", Demo: ReceiptDemo, ms: DURATIONS.receipt },
-  { tag: "RADAR FINANCEIRO", title: "Seu dinheiro, explicado.", line: "Consumo, hábitos, compromissos, futuro\ne saúde, cada um numa frase.", Demo: RadarDemo, ms: DURATIONS.radar },
-  { tag: "PREVISÃO", title: "O mês, antes do fim.", line: "Veja quanto sobra no dia 30 e simule\num gasto antes de fazer.", Demo: ForecastDemo, ms: DURATIONS.forecast },
-  { tag: "CONVERSA", title: "Pergunte. Ele calcula.", line: "Respostas com os seus números,\nnão com conselhos genéricos.", Demo: AskDemo, ms: DURATIONS.ask },
+  { tag: "WILLO COPILOT", title: "Gastou? Já está anotado.", line: "O Willo pega o aviso de compra do seu banco\ne lança para você. É só conferir.", Demo: NotifyDemo, ms: DURATIONS.notify },
+  { tag: "VOZ", title: "Falou, está registrado.", line: "“Gastei 40 no mercado, no débito.” O Willo\nentende valor, categoria, conta e dia.", Demo: VoiceDemo, ms: DURATIONS.voice },
+  { tag: "REGISTRO RÁPIDO", title: "Anotar leva 2 segundos.", line: "Dois toques nas costas do iPhone e o\nregistro abre. Nenhum gasto escapa.", Demo: QuickTap, ms: QUICK_MS },
+  { tag: "COMPROVANTE", title: "Fotografe. Está feito.", line: "Valor, local, pagamento e data saem da\nfoto direto para o registro. Sem digitar.", Demo: ReceiptDemo, ms: DURATIONS.receipt },
+  { tag: "RADAR FINANCEIRO", title: "Saiba para onde vai cada real.", line: "Consumo, hábitos, compromissos e futuro,\ncada um explicado em uma frase.", Demo: RadarDemo, ms: DURATIONS.radar },
+  { tag: "PREVISÃO", title: "Veja hoje o fim do seu mês.", line: "Saiba quanto vai sobrar no dia 30 e simule\num gasto antes de fazer. Sem surpresas.", Demo: ForecastDemo, ms: DURATIONS.forecast },
+  { tag: "CONVERSA", title: "Pergunte. Ele responde com números.", line: "Respostas com o seu dinheiro de verdade,\nnão com dicas genéricas da internet.", Demo: AskDemo, ms: DURATIONS.ask },
 ];
 const N = SLIDES.length;
 /* After a demonstration ends, how long the slide stays before the next one comes. */
