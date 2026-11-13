@@ -6,28 +6,29 @@ import * as Haptics from "expo-haptics";
 import { GROUND } from "~/theme/tokens";
 
 /**
- * Willo waking up — the whole opening, in about two and a half seconds.
+ * Willo waking up, and becoming his name — one line, about two and a half seconds.
  *
- * In the dark a soft light blooms first, and his eyes open into it — from a thin line to
- * two pills of light, as a screen comes on. He looks to one side and the other, blinks,
- * and smiles with his eyes with a little hop. His name is written in under him. Then he
- * lets the app in gently: the name goes first, the smile opens back into eyes that grow
- * a little as they fade, and the dark lifts slowly off the app already there behind —
- * nothing is cut.
+ * His eyes are the two l's of "willo". In the dark a soft light comes up where the l's
+ * will be, and his eyes open into it, from a line to two pills of light. He glances to one
+ * side and the other, blinks, and smiles with his eyes, with a little hop. Then the eyes
+ * open again and stretch up into the two l's, and the rest of the name grows out of them:
+ * "wi" to the left, "o." to the right — the logo, whole, where his face was. On the way
+ * out the logo grows a hair as the dark lifts slowly off the app behind it.
  *
- * One clock; every step is a window of it. With reduced motion: the eyes and the name,
- * a moment, and the fade.
+ * One clock; every step is a window of it. With reduced motion: the logo, a moment, and
+ * the fade.
  */
 
-const BLOOM = [0, 420] as const; // the light comes up first
-const OPEN = [140, 520] as const; // the eyes open, line to pill
-const LOOK = [620, 1060] as const; // a glance to one side and the other
-const BLINK = [1100, 1270] as const; // one blink
-const SMILE = [1300, 1520] as const; // a smile with the eyes, and a little hop
-const NAME = [1260, 1700] as const; // his name, written in under him
-const NAME_OUT = [1880, 2120] as const; // the name goes first
-const UNSMILE = [1900, 2080] as const; // the smile opens back into eyes
-const OUT = [1960, 2560] as const; // the eyes grow a little as they fade; the dark lifts
+const BLOOM = [0, 380] as const; // the light comes up where the l's will be
+const OPEN = [120, 480] as const; // the eyes open, line to pill
+const LOOK = [560, 960] as const; // a glance to one side and the other
+const BLINK = [1000, 1160] as const; // one blink
+const SMILE = [1200, 1420] as const; // a smile with the eyes, and a little hop
+const UNSMILE = [1460, 1580] as const; // the smile opens back into eyes
+const STRETCH = [1560, 1900] as const; // the eyes stretch up into the two l's
+const GROW = [1700, 2080] as const; // "wi" and "o." grow out of them
+const SETTLE = [1980, 2140] as const; // the l's become the logo's own
+const OUT = [2300, 2780] as const; // the logo grows a hair as the dark lifts
 export const LAUNCH_INTRO_MS = OUT[1] + 20;
 const QUICK = [500, 900] as const;
 /** A breath on the plain ground before anything moves, once the app is built underneath. */
@@ -38,8 +39,17 @@ const WHITE = "#EEF6FF";
 const COLD = "#6FA8E8";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const WORD = require("../../assets/images/intro/wordmark.png"); // 725 × 222, "willo." in white
-const WORD_RATIO = 222 / 725;
+const WORD = require("../../assets/images/intro/wordmark.png"); // "willo." in white
+/* The wordmark, in its own pixels (measured from the picture). */
+const PX = { w: 725, h: 222 };
+const L1 = { x: 335, w: 56 }; // the first l
+const L2 = { x: 409, w: 56 }; // the second l
+const L_TOP = 5;
+const L_BOTTOM = 214;
+const LEFT_END = 326; // "wi" ends before here
+const RIGHT_START = 472; // "o." starts here
+/** Where an eye sits on its l before it stretches: the middle of the lower letters. */
+const EYE_MID = 150;
 
 function clamp01(v: number) {
   "worklet";
@@ -61,7 +71,7 @@ function inOutSine(v: number) {
   "worklet";
   return -(Math.cos(Math.PI * v) - 1) / 2;
 }
-function backOut(v: number, s = 1.8) {
+function backOut(v: number, s = 1.6) {
   "worklet";
   return 1 + (s + 1) * (v - 1) ** 3 + s * (v - 1) ** 2;
 }
@@ -75,14 +85,21 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
   const reduced = useReducedMotion();
   const t = useSharedValue(0);
 
-  /* The face a little above the middle; the name under it. */
-  const eyeW = Math.round(Math.min(width * 0.05, 22));
-  const eyeH = Math.round(eyeW * 2);
-  const gap = eyeW * 2.6; // between the two eyes' centres
-  const cx = width / 2;
-  const cy = height * 0.45;
-  const wordW = Math.min(width * 0.34, 150);
-  const wordH = wordW * WORD_RATIO;
+  /* The logo about three fifths of the screen wide, in the middle. */
+  const wordW = Math.min(width * 0.6, 250);
+  const u = wordW / PX.w;
+  const wordH = PX.h * u;
+  const left = (width - wordW) / 2;
+  const top = (height - wordH) / 2 - height * 0.02;
+
+  const eyeW = L1.w * u;
+  const eyeH = eyeW * 2;
+  const eyeTop = EYE_MID * u - eyeH / 2;
+  const lTop = L_TOP * u;
+  const lH = (L_BOTTOM - L_TOP) * u;
+  const leftW = LEFT_END * u;
+  const rightX = RIGHT_START * u;
+  const rightW = (PX.w - RIGHT_START) * u;
 
   useEffect(() => {
     const end = reduced ? QUICK[1] : LAUNCH_INTRO_MS;
@@ -97,6 +114,7 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
       if (!reduced) {
         timers.push(setTimeout(tap(Haptics.ImpactFeedbackStyle.Soft), OPEN[0] + 220));
         timers.push(setTimeout(tap(Haptics.ImpactFeedbackStyle.Light), SMILE[0] + 140));
+        timers.push(setTimeout(tap(Haptics.ImpactFeedbackStyle.Soft), STRETCH[1] - 40));
       }
       timers.push(setTimeout(onDone, end + 30));
     };
@@ -109,118 +127,145 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* The dark: lifting slowly off the app, starting a beat after the face begins to go. */
+  /* The dark: lifting slowly off the app. */
   const ground = useAnimatedStyle(() => {
     const now = t.get();
-    const out = reduced ? span(now, QUICK[0], QUICK[1]) : inOutSine(span(now, OUT[0] + 120, OUT[1]));
+    const out = reduced ? span(now, QUICK[0], QUICK[1]) : inOutSine(span(now, OUT[0] + 80, OUT[1]));
     return { opacity: 1 - out };
   });
 
-  /* The light behind the eyes: up first, breathing with them, gone with them. */
+  /* The whole logo: a hair larger on the way out, fading with the dark. */
+  const logo = useAnimatedStyle(() => {
+    const now = t.get();
+    const out = reduced ? 0 : inOutCubic(span(now, OUT[0], OUT[1]));
+    return { opacity: 1 - out * 0.6, transform: [{ scale: 1 + out * 0.08 }] };
+  });
+
+  /* The light behind the eyes: up first, breathing with the smile, gone as the name grows. */
   const glow = useAnimatedStyle(() => {
     const now = t.get();
-    if (reduced) return { opacity: 1, transform: [{ scale: 1 }] };
+    if (reduced) return { opacity: 0, transform: [{ scale: 1 }] };
     const up = outCubic(span(now, BLOOM[0], BLOOM[1]));
     const smile = Math.sin(span(now, SMILE[0], SMILE[1]) * Math.PI);
-    const out = inOutCubic(span(now, OUT[0], OUT[1]));
-    return { opacity: up * (1 + smile * 0.25) * (1 - out), transform: [{ scale: mix(0.6, 1, up) * (1 + smile * 0.08) * mix(1, 1.6, out) }] };
+    const away = inOutCubic(span(now, STRETCH[0], GROW[1]));
+    return { opacity: up * (1 + smile * 0.3) * (1 - away), transform: [{ scale: mix(0.6, 1, up) * (1 + smile * 0.08) }] };
   });
 
-  /* The face as one: the hop of the smile, then growing a little as it fades. */
-  const face = useAnimatedStyle(() => {
+  /* The eyes as a pair: the glance, and the hop of the smile. */
+  const pair = useAnimatedStyle(() => {
     const now = t.get();
-    if (reduced) return { opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }] };
-    const hop = Math.sin(span(now, SMILE[0], SMILE[1] + 80) * Math.PI) * eyeH * 0.22;
-    const out = inOutCubic(span(now, OUT[0], OUT[1]));
-    return { opacity: 1 - out, transform: [{ translateY: -hop }, { scale: mix(1, 1.9, out) }] };
-  });
-
-  /* Where the eyes look: a glance to one side, the other, and back. */
-  const gaze = useAnimatedStyle(() => {
-    const now = t.get();
-    if (reduced) return { transform: [{ translateX: 0 }] };
+    if (reduced) return { opacity: 0, transform: [{ translateX: 0 }, { translateY: 0 }] };
     const g = span(now, LOOK[0], LOOK[1]);
     /* left, hold, right, hold, centre */
     const x = g < 0.25 ? -inOutCubic(g / 0.25) : g < 0.4 ? -1 : g < 0.65 ? mix(-1, 1, inOutCubic((g - 0.4) / 0.25)) : g < 0.8 ? 1 : mix(1, 0, inOutCubic((g - 0.8) / 0.2));
-    return { transform: [{ translateX: x * eyeW * 0.45 }] };
+    const hop = Math.sin(span(now, SMILE[0], SMILE[1] + 80) * Math.PI) * eyeH * 0.25;
+    /* Once the l's are the logo's own, the eyes give way to them. */
+    return { opacity: 1 - span(now, SETTLE[0], SETTLE[1]), transform: [{ translateX: x * eyeW * 0.4 }, { translateY: -hop }] };
   });
 
-  /* The open eyes: from a line to a pill, a blink, giving way to the smile and back. */
-  const open = useAnimatedStyle(() => {
+  /* An open eye: from a line to a pill, a blink, shut in the smile and back, then
+     stretched up into its l. */
+  const eye = useAnimatedStyle(() => {
     const now = t.get();
-    if (reduced) return { opacity: 1, transform: [{ scaleY: 1 }] };
     const o = span(now, OPEN[0], OPEN[1]);
     const opening = o === 0 ? 0.06 : mix(0.06, 1, backOut(o, 1.4));
     const b = span(now, BLINK[0], BLINK[1]);
     const blink = b === 0 || b === 1 ? 1 : 1 - Math.sin(b * Math.PI) * 0.92;
     const shut = span(now, SMILE[0], SMILE[0] + 120) * (1 - span(now, UNSMILE[0], UNSMILE[1]));
-    return { opacity: clamp01(o * 4) * (1 - shut), transform: [{ scaleY: opening * blink }] };
+    const s = inOutCubic(span(now, STRETCH[0], STRETCH[1]));
+    /* The pill's height opening around its middle; then its top rising to the l's top and
+       its foot dropping to the line. */
+    const h = eyeH * opening * blink;
+    const midTop = eyeTop + (eyeH - h) / 2;
+    const top = mix(midTop, lTop, s);
+    const bottom = mix(midTop + h, lTop + lH, s);
+    return { opacity: clamp01(o * 4) * (1 - shut), top, height: Math.max(bottom - top, 1) };
   });
   const smile = useAnimatedStyle(() => {
     const now = t.get();
-    const v = reduced ? 0 : outCubic(span(now, SMILE[0] + 60, SMILE[1])) * (1 - span(now, UNSMILE[0], UNSMILE[1]));
-    return { opacity: v, transform: [{ translateY: mix(5, 0, v) }, { scale: mix(0.8, 1, v) }] };
+    const v = outCubic(span(now, SMILE[0] + 60, SMILE[1])) * (1 - span(now, UNSMILE[0], UNSMILE[1]));
+    return { opacity: v, transform: [{ translateY: mix(4, 0, v) }, { scale: mix(0.8, 1, v) }] };
   });
 
-  /* The name: written in from the left, rising a touch, and the first to go. */
-  const nameBox = useAnimatedStyle(() => {
-    const now = t.get();
-    const v = reduced ? 1 : inOutCubic(span(now, NAME[0], NAME[1]));
-    const out = reduced ? 0 : inOutCubic(span(now, NAME_OUT[0], NAME_OUT[1]));
-    return { opacity: clamp01(v * 1.6) * (1 - out), transform: [{ translateY: mix(10, 0, v) - out * 8 }] };
+  /* "wi", growing out to the left of the l's; "o.", out to the right. */
+  const grow = (now: number) => {
+    "worklet";
+    return reduced ? 1 : outCubic(span(now, GROW[0], GROW[1]));
+  };
+  const leftPart = useAnimatedStyle(() => {
+    const v = grow(t.get());
+    return { left: leftW * (1 - v), width: leftW * v, opacity: clamp01(v * 2) };
   });
-  const written = useAnimatedStyle(() => ({ width: wordW * (reduced ? 1 : outCubic(span(t.get(), NAME[0], NAME[1]))) }));
+  const leftImage = useAnimatedStyle(() => ({ transform: [{ translateX: -leftW * (1 - grow(t.get())) }] }));
+  const rightPart = useAnimatedStyle(() => {
+    const v = grow(t.get());
+    return { width: rightW * v, opacity: clamp01(v * 2) };
+  });
+  /* The l's as the logo has them, in place of the stretched eyes. */
+  const middle = useAnimatedStyle(() => ({ opacity: reduced ? 1 : span(t.get(), SETTLE[0], SETTLE[1]) }));
 
-  const box = gap + eyeW * 3; // the face's square
-  const left = cx - box / 2;
-  const top = cy - box / 2;
-  const eyes = [-gap / 2, gap / 2];
-  const arc = `M${eyeW * 0.3} ${eyeW * 1.05}Q${eyeW * 1.1} ${-eyeW * 0.35} ${eyeW * 1.9} ${eyeW * 1.05}`;
-  const glowSize = box * 2.2;
+  const glowSize = wordW * 0.9;
+  const arcW = eyeW * 1.5;
+  const arc = `M${arcW * 0.12} ${eyeW * 0.9}Q${arcW * 0.5} ${-eyeW * 0.25} ${arcW * 0.88} ${eyeW * 0.9}`;
+  const eyesAt = [L1.x * u, L2.x * u];
 
   return (
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: GROUND, zIndex: 100, overflow: "hidden" }, ground]}>
-      {/* The light the eyes throw, wider than the face. */}
-      <Animated.View style={[{ position: "absolute", left: cx - glowSize / 2, top: cy - glowSize / 2, width: glowSize, height: glowSize }, glow]}>
-        <Svg width={glowSize} height={glowSize}>
-          <Defs>
-            <RadialGradient id="intro-glow" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor={COLD} stopOpacity={0.3} />
-              <Stop offset="0.45" stopColor={COLD} stopOpacity={0.1} />
-              <Stop offset="1" stopColor={COLD} stopOpacity={0} />
-            </RadialGradient>
-          </Defs>
-          <Ellipse cx={glowSize / 2} cy={glowSize / 2} rx={glowSize / 2} ry={glowSize * 0.4} fill="url(#intro-glow)" />
-        </Svg>
-      </Animated.View>
+      <Animated.View style={[{ position: "absolute", left, top, width: wordW, height: wordH }, logo]}>
+        {/* The light the eyes throw, centred on the two l's. */}
+        <Animated.View
+          style={[
+            { position: "absolute", left: (L1.x + (L2.x + L2.w - L1.x) / 2) * u - glowSize / 2, top: EYE_MID * u - glowSize / 2, width: glowSize, height: glowSize },
+            glow,
+          ]}
+        >
+          <Svg width={glowSize} height={glowSize}>
+            <Defs>
+              <RadialGradient id="intro-glow" cx="50%" cy="50%" r="50%">
+                <Stop offset="0" stopColor={COLD} stopOpacity={0.32} />
+                <Stop offset="0.45" stopColor={COLD} stopOpacity={0.1} />
+                <Stop offset="1" stopColor={COLD} stopOpacity={0} />
+              </RadialGradient>
+            </Defs>
+            <Ellipse cx={glowSize / 2} cy={glowSize / 2} rx={glowSize / 2} ry={glowSize * 0.4} fill="url(#intro-glow)" />
+          </Svg>
+        </Animated.View>
 
-      <Animated.View style={[{ position: "absolute", left, top, width: box, height: box }, face]}>
-        <Animated.View style={[StyleSheet.absoluteFill, gaze]}>
-          {eyes.map((dx) => (
-            <View key={dx} style={{ position: "absolute", left: box / 2 + dx - eyeW / 2, top: box / 2 - eyeH / 2, width: eyeW, height: eyeH }}>
-              {/* Open: a pill of light. */}
+        {/* "wi" */}
+        <Animated.View style={[{ position: "absolute", top: 0, height: wordH, overflow: "hidden" }, leftPart]}>
+          <Animated.View style={leftImage}>
+            <Image source={WORD} style={{ width: wordW, height: wordH }} resizeMode="stretch" />
+          </Animated.View>
+        </Animated.View>
+
+        {/* "o." */}
+        <Animated.View style={[{ position: "absolute", left: rightX, top: 0, height: wordH, overflow: "hidden" }, rightPart]}>
+          <Image source={WORD} style={{ width: wordW, height: wordH, marginLeft: -rightX }} resizeMode="stretch" />
+        </Animated.View>
+
+        {/* The logo's own l's, taking over from the eyes. */}
+        <Animated.View style={[{ position: "absolute", left: leftW, top: 0, width: rightX - leftW, height: wordH, overflow: "hidden" }, middle]}>
+          <Image source={WORD} style={{ width: wordW, height: wordH, marginLeft: -leftW }} resizeMode="stretch" />
+        </Animated.View>
+
+        {/* His eyes, which are the l's. */}
+        <Animated.View style={[StyleSheet.absoluteFill, pair]}>
+          {eyesAt.map((x) => (
+            <View key={x} style={{ position: "absolute", left: x, top: 0, width: eyeW, height: wordH }}>
               <Animated.View
                 style={[
-                  StyleSheet.absoluteFill,
-                  { borderRadius: eyeW / 2, backgroundColor: WHITE, shadowColor: COLD, shadowOpacity: 0.95, shadowRadius: eyeW * 0.9, shadowOffset: { width: 0, height: 0 } },
-                  open,
+                  { position: "absolute", left: 0, width: eyeW, borderRadius: eyeW / 2, backgroundColor: WHITE, shadowColor: COLD, shadowOpacity: 0.95, shadowRadius: eyeW * 0.8, shadowOffset: { width: 0, height: 0 } },
+                  eye,
                 ]}
               />
-              {/* Smiling: shut in an arc. */}
-              <Animated.View style={[{ position: "absolute", left: -eyeW * 0.6, top: eyeH * 0.18, width: eyeW * 2.2, height: eyeW * 1.4 }, smile]}>
-                <Svg width={eyeW * 2.2} height={eyeW * 1.4}>
-                  <Path d={arc} stroke={COLD} strokeOpacity={0.35} strokeWidth={eyeW * 0.78} strokeLinecap="round" fill="none" />
-                  <Path d={arc} stroke={WHITE} strokeWidth={eyeW * 0.46} strokeLinecap="round" fill="none" />
+              <Animated.View style={[{ position: "absolute", left: (eyeW - arcW) / 2, top: EYE_MID * u - eyeW * 0.55, width: arcW, height: eyeW * 1.1 }, smile]}>
+                <Svg width={arcW} height={eyeW * 1.1}>
+                  <Path d={arc} stroke={COLD} strokeOpacity={0.35} strokeWidth={eyeW * 0.62} strokeLinecap="round" fill="none" />
+                  <Path d={arc} stroke={WHITE} strokeWidth={eyeW * 0.38} strokeLinecap="round" fill="none" />
                 </Svg>
               </Animated.View>
             </View>
           ))}
-        </Animated.View>
-      </Animated.View>
-
-      <Animated.View style={[{ position: "absolute", left: cx - wordW / 2, top: top + box + 18, width: wordW, height: wordH }, nameBox]}>
-        <Animated.View style={[{ height: wordH, overflow: "hidden" }, written]}>
-          <Image source={WORD} style={{ width: wordW, height: wordH }} resizeMode="stretch" />
         </Animated.View>
       </Animated.View>
     </Animated.View>
