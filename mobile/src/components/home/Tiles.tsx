@@ -13,7 +13,7 @@ import { daysUntil, type RecurringItem } from "@/hooks/useRecorrentes";
 import type { EndedSubscription } from "~/lib/subscriptionCheck";
 import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
-import { ChevronRight } from "~/components/icons";
+import { Check, ChevronRight, Plus, Repeat } from "~/components/icons";
 import CaixinhaCover from "~/components/accounts/CaixinhaCover";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
@@ -333,14 +333,14 @@ function Mark({ name, size = 30, ring = false }: { name: string; size?: number; 
 }
 
 /** Everything subscribed to, as a row of marks overlapping like a stack of cards. */
-function MarkRow({ items, max }: { items: RecurringItem[]; max: number }) {
+function MarkRow({ items, max, size = 30 }: { items: RecurringItem[]; max: number; size?: number }) {
   const shown = items.slice(0, max);
   const rest = items.length - shown.length;
   return (
     <View style={{ flexDirection: "row", alignItems: "center" }}>
       {shown.map((s, i) => (
         <View key={s.id} style={{ marginLeft: i === 0 ? 0 : -8 }}>
-          <Mark name={s.name} ring />
+          <Mark name={s.name} ring size={size} />
         </View>
       ))}
       {rest > 0 && <Text style={{ marginLeft: 8, fontSize: 12.5, color: th(INK.soft) }}>+{rest}</Text>}
@@ -356,11 +356,11 @@ const whenDue = (dueDay: number) => {
 /**
  * What repeats every month and carries a brand — and whatever repeats on a card.
  *
- * A slice of the recurring charges rather than a list of its own, because nothing in
- * the data marks a row as a subscription. With none, the card is not drawn at all: it
- * has nothing to say and is back the day there is one. When a subscription did not turn
- * up in the month that closed, the card leads with the question — still subscribed? —
- * because it is the one thing here someone has to answer.
+ * Always on the home, even with none: then it says what it is for and offers to add one.
+ * With some, it leads with what they cost a month and a year, shows them as marks, and
+ * lists what is charged next. When a subscription did not turn up in the month that
+ * closed, the card leads with the question — still subscribed? — because it is the one
+ * thing here someone has to answer.
  */
 export function AssinaturasTile({
   size = "full",
@@ -378,14 +378,6 @@ export function AssinaturasTile({
   onCancel: (e: EndedSubscription) => void;
 }) {
   const router = useRouter();
-  if (assinaturas.length === 0 && ended.length === 0) {
-    return (
-      <Surface onPress={() => router.push("/transacoes")} style={{ flex: 1, padding: 16 }}>
-        <Header title="Assinaturas" />
-        <Empty text="Nenhuma assinatura ainda. O que se repete todo mês aparece aqui." />
-      </Surface>
-    );
-  }
   return (
     <AssinaturasCard
       assinaturas={assinaturas}
@@ -395,11 +387,13 @@ export function AssinaturasTile({
       onCancel={onCancel}
       size={size}
       onOpen={() => router.push("/transacoes")}
+      onAdd={() => router.push("/manual?tipo=despesa&fixa=1" as never)}
     />
   );
 }
 
 const MONTH_NAMES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+const SUB_HEX = "#B48CFF";
 
 /** The question for a subscription that did not show up: asked in place, answered in a tap. */
 function EndedAsk({
@@ -420,12 +414,12 @@ function EndedAsk({
         borderRadius: 18,
         borderCurve: "continuous",
         borderWidth: 1,
-        borderColor: th("rgba(255,255,255,0.12)", "line"),
-        backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
+        borderColor: th("rgba(249,206,78,0.22)", "line"),
+        backgroundColor: th("rgba(249,206,78,0.07)", "bg"),
       }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <Mark name={item.name} />
+        <Mark name={item.name} size={36} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text numberOfLines={2} style={{ fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>
             {item.name} não foi cobrada em {MONTH_NAMES[item.month]}
@@ -437,15 +431,7 @@ function EndedAsk({
         <Pressable
           disabled={busy}
           onPress={onKeep}
-          style={({ pressed }) => ({
-            flex: 1,
-            height: 40,
-            borderRadius: 20,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: th("#fff", "bg"),
-            opacity: busy ? 0.5 : pressed ? 0.85 : 1,
-          })}
+          style={({ pressed }) => ({ flex: 1, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: busy ? 0.5 : pressed ? 0.85 : 1 })}
         >
           <Text style={{ fontSize: 13.5, fontWeight: "700", color: th("#0B0B0B") }}>Sim, continua</Text>
         </Pressable>
@@ -478,6 +464,18 @@ function EndedAsk({
   );
 }
 
+/** The subscriptions' own mark, for the card with none yet. */
+function SubsGlyph({ size = 44 }: { size?: number }) {
+  return (
+    <View style={{ width: size, height: size, borderRadius: size * 0.32, alignItems: "center", justifyContent: "center", backgroundColor: th(`${SUB_HEX}24`, "bg") }}>
+      <Repeat size={size * 0.44} color={th(SUB_HEX)} strokeWidth={2.1} />
+    </View>
+  );
+}
+
+/** When a subscription is charged, said plainly; paid ones say so. */
+const chargeLine = (s: RecurringItem) => (s.isPaidThisMonth ? `Cobrada · dia ${s.dueDay}` : `${whenDue(s.dueDay) === "hoje" ? "Cobra hoje" : `Cobra ${whenDue(s.dueDay)}`} · dia ${s.dueDay}`);
+
 /** The subscriptions card itself, drawn from what it is handed. */
 export function AssinaturasCard({
   assinaturas,
@@ -487,6 +485,7 @@ export function AssinaturasCard({
   onCancel,
   size,
   onOpen: open,
+  onAdd,
 }: {
   assinaturas: RecurringItem[];
   total: number;
@@ -495,63 +494,136 @@ export function AssinaturasCard({
   onCancel?: (e: EndedSubscription) => void | Promise<void>;
   size: WidgetSize;
   onOpen: () => void;
+  onAdd?: () => void;
 }) {
   const n = assinaturas.length;
-  const next = assinaturas
-    .filter((a) => !a.isPaidThisMonth)
-    .sort((a, b) => daysUntil(a.dueDay) - daysUntil(b.dueDay));
+  /* What is charged next first, then what has been charged this month. */
+  const ordered = [...assinaturas].sort((a, b) => Number(a.isPaidThisMonth) - Number(b.isPaidThisMonth) || daysUntil(a.dueDay) - daysUntil(b.dueDay));
+  const next = ordered.find((a) => !a.isPaidThisMonth);
   const ask = ended[0];
+  const yearly = totalAssinaturas * 12;
 
+  /* ── Compact ── */
   if (size !== "full") {
+    if (n === 0 && !ask) {
+      return (
+        <Surface onPress={onAdd ?? open} style={{ flex: 1, padding: 14 }}>
+          <View style={{ flex: 1, justifyContent: "space-between" }}>
+            <Header title="Assinaturas" />
+            <SubsGlyph size={40} />
+            <View>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff") }}>Nenhuma ativa</Text>
+              <Text numberOfLines={2} style={{ marginTop: 2, fontSize: 12, lineHeight: 16, color: th(INK.soft) }}>
+                Toque para adicionar
+              </Text>
+            </View>
+          </View>
+        </Surface>
+      );
+    }
     return (
-      <Surface onPress={open} style={{ flex: 1, padding: 16 }}>
-        <Header title="Assinaturas" />
-        <Lead value={money(totalAssinaturas)} unit="/mês" compact />
-        <View style={{ marginTop: 10 }}>
-          <MarkRow items={assinaturas} max={3} />
+      <Surface onPress={open} style={{ flex: 1, padding: 14 }}>
+        <View style={{ flex: 1, justifyContent: "space-between" }}>
+          <Header title="Assinaturas" />
+          <View style={{ marginTop: 10 }}>
+            <MarkRow items={ordered} max={4} size={32} />
+          </View>
+          <View style={{ marginTop: 10 }}>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+              <Text style={[nums, { fontSize: 20, fontWeight: "800", letterSpacing: -0.6, color: th("#fff") }]}>{money(totalAssinaturas)}</Text>
+              <Text style={{ fontSize: 12, color: th(INK.soft) }}> /mês</Text>
+            </Text>
+            <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 12, fontWeight: ask || (next && daysUntil(next.dueDay) <= 2) ? "600" : "400", color: th(ask ? AMBER : next && daysUntil(next.dueDay) <= 2 ? AMBER : INK.soft) }}>
+              {ask ? `Confirmar ${ask.name}` : next ? `${next.name} ${whenDue(next.dueDay)}` : "Todas cobradas no mês"}
+            </Text>
+          </View>
         </View>
-        <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 12, color: th(ask ? AMBER : INK.soft) }}>
-          {ask ? `Confirmar ${ask.name}` : next[0] ? `${next[0].name} ${whenDue(next[0].dueDay)}` : "Tudo pago no mês"}
-        </Text>
       </Surface>
     );
   }
 
+  /* ── Full width ── */
   return (
     <Surface onPress={open} style={{ padding: 16 }}>
       <Header title="Assinaturas" aside={n > 0 ? `${n} ${n === 1 ? "ativa" : "ativas"}` : undefined} />
 
-      {ask && onKeep && onCancel ? (
-        <EndedAsk item={ask} onKeep={() => onKeep(ask)} onCancel={() => onCancel(ask)} />
-      ) : null}
+      {ask && onKeep && onCancel ? <EndedAsk item={ask} onKeep={() => onKeep(ask)} onCancel={() => onCancel(ask)} /> : null}
 
-      {n > 0 && (
+      {n === 0 ? (
+        !ask && (
+          <View style={{ marginTop: 14 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+              <SubsGlyph />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#fff") }}>Nenhuma assinatura ativa</Text>
+                <Text style={{ marginTop: 3, fontSize: 13, lineHeight: 18, color: th(INK.soft) }}>
+                  Streaming, música, nuvem, academia: o Willo mostra quanto custam por mês e por ano.
+                </Text>
+              </View>
+            </View>
+            {onAdd && (
+              <Pressable
+                onPress={onAdd}
+                accessibilityRole="button"
+                style={({ pressed }) => ({
+                  marginTop: 14,
+                  height: 44,
+                  borderRadius: 22,
+                  flexDirection: "row",
+                  gap: 6,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderStyle: "dashed",
+                  borderColor: th("rgba(255,255,255,0.18)", "line"),
+                  opacity: pressed ? 0.6 : 1,
+                })}
+              >
+                <Plus size={16} color={th("#fff")} strokeWidth={2.2} />
+                <Text style={{ fontSize: 14, fontWeight: "600", color: th("#fff") }}>Adicionar assinatura</Text>
+              </Pressable>
+            )}
+          </View>
+        )
+      ) : (
         <>
-          <Lead value={money(totalAssinaturas)} unit="por mês" />
-          <View style={{ marginTop: 12 }}>
-            <MarkRow items={assinaturas} max={7} />
+          {/* What they cost, a month and a year, beside their marks. */}
+          <View style={{ marginTop: 12, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+            <View style={{ flexShrink: 1 }}>
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+                <Text style={[nums, { fontSize: 24, fontWeight: "800", letterSpacing: -0.8, color: th("#fff") }]}>{money(totalAssinaturas)}</Text>
+                <Text style={{ fontSize: 13.5, color: th(INK.soft) }}> /mês</Text>
+              </Text>
+              <Text style={{ marginTop: 2, fontSize: 12.5, color: th(INK.softer) }}>{money(yearly)} por ano</Text>
+            </View>
+            <MarkRow items={ordered} max={5} size={32} />
           </View>
 
           <View style={{ marginTop: 14, borderTopWidth: 1, borderTopColor: th(RULE, "line") }}>
-            {next.length === 0 ? (
-              <Text style={{ paddingTop: 12, fontSize: 13, color: th(INK.soft) }}>Todas já foram pagas este mês.</Text>
-            ) : (
-              next.slice(0, 2).map((s) => (
-                <View key={s.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingTop: 12 }}>
-                  <Mark name={s.name} />
+            {ordered.slice(0, 3).map((s) => {
+              const soon = !s.isPaidThisMonth && daysUntil(s.dueDay) <= 2;
+              return (
+                <View key={s.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingTop: 12, opacity: s.isPaidThisMonth ? 0.6 : 1 }}>
+                  <Mark name={s.name} size={34} />
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "500", color: th("#fff") }}>
+                    <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>
                       {s.name}
                     </Text>
-                    <Text style={{ marginTop: 1, fontSize: 12, color: th(INK.softer) }}>
-                      dia {s.dueDay}, {whenDue(s.dueDay)}
+                    <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12, fontWeight: soon ? "600" : "400", color: th(soon ? AMBER : INK.softer) }}>
+                      {chargeLine(s)}
                       {s.source === "cartao" ? " · no cartão" : ""}
                     </Text>
                   </View>
-                  <Text style={[nums, { fontSize: 14.5, fontWeight: "600", color: th("#fff") }]}>{money(s.amount)}</Text>
+                  <Text style={[nums, { fontSize: 14.5, fontWeight: "700", color: th("#fff") }]}>{money(s.amount)}</Text>
+                  {s.isPaidThisMonth && (
+                    <View style={{ width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg") }}>
+                      <Check size={10} color={th("#0B0B0B")} strokeWidth={3} />
+                    </View>
+                  )}
                 </View>
-              ))
-            )}
+              );
+            })}
+            {n > 3 && <Text style={{ paddingTop: 12, fontSize: 12.5, fontWeight: "600", color: th(INK.soft) }}>e mais {n - 3}</Text>}
           </View>
         </>
       )}

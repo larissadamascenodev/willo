@@ -44,13 +44,11 @@ export interface HomeWidgetContext {
 }
 
 /**
- * Cards that have nothing to say are not on the board at all, rather than drawn empty:
- * subscriptions when there are none, and the events once the month is settled. They are
- * back as soon as there is something, so nothing is removed from the person's layout.
+ * Cards that have nothing to say are not on the board at all, rather than drawn empty.
+ * Subscriptions are always on it: with none, the card offers to add one.
  */
 export function widgetIsEmpty(id: string, ctx: HomeWidgetContext): boolean {
   if (id === "plano") return !FEATURES.plano;
-  if (id === "assinaturas") return ctx.assinaturas.length === 0 && ctx.ended.length === 0;
   return false;
 }
 
