@@ -70,7 +70,7 @@ export function GastosFixosView({
   customCats: CustomCategory[];
   onAdd?: (kind: "despesa" | "receita") => void;
 }) {
-  const [tab, setTab] = useState<"despesa" | "receita">("despesa");
+  const [tab, setTab] = useState<"despesa" | "receita">("receita");
   const [expanded, setExpanded] = useState(false);
 
   /* Soonest first, with what has already happened at the end. */
@@ -133,8 +133,8 @@ export function GastosFixosView({
               setExpanded(false);
             }}
             options={[
-              { key: "despesa" as const, label: `Despesas ${despesaCount}` },
               { key: "receita" as const, label: `Receitas ${receitaCount}` },
+              { key: "despesa" as const, label: `Despesas ${despesaCount}` },
             ]}
           />
         </View>
