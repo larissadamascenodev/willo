@@ -1,5 +1,6 @@
 import AppIntents
 import Foundation
+import UserNotifications
 
 /// "Registrar compra no Willo": the action a Wallet "Transação" automation runs after a
 /// tap-to-pay. It sends the purchase to the Willo Copilot queue, where the person confirms
@@ -55,6 +56,8 @@ struct WilloLogPurchaseIntent: AppIntent {
       let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
       throw WilloCopilotError.server((body?["error"] as? String) ?? "Não foi possível enviar a compra ao Willo.")
     }
+    let reply = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+    WilloCopilotNotice.arrived((reply?["message"] as? String) ?? "Uma compra chegou no Willo Copilot")
     return .result()
   }
 }
@@ -107,5 +110,44 @@ struct WilloAppShortcuts: AppShortcutsProvider {
       shortTitle: "Registrar compra",
       systemImageName: "creditcard.fill"
     )
+  }
+}
+
+
+/// What the person sees on the phone when a purchase reaches the Copilot: a notice at once
+/// ("iFood · R$ 42,90 no Willo Copilot — toque para confirmar"), and one in the evening
+/// in case it is still waiting (replaced by each new purchase, so there is only ever one).
+/// Tapping either opens the Copilot. Nothing is shown if notifications are off.
+enum WilloCopilotNotice {
+  static func arrived(_ message: String) {
+    let center = UNUserNotificationCenter.current()
+    center.getNotificationSettings { settings in
+      guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { return }
+
+      let now = UNMutableNotificationContent()
+      now.title = "Willo Copilot"
+      now.body = message.replacingOccurrences(of: " no Willo Copilot", with: "") + " · toque para confirmar"
+      now.sound = .default
+      now.threadIdentifier = "willo-copilot"
+      now.userInfo = ["url": "/copilot", "body": ["url": "/copilot"]]
+      center.add(UNNotificationRequest(identifier: "willo-copilot-\(UUID().uuidString)", content: now, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)))
+
+      let later = UNMutableNotificationContent()
+      later.title = "Compras esperando no Copilot"
+      later.body = "Confirme para elas entrarem no seu mês."
+      later.threadIdentifier = "willo-copilot"
+      later.userInfo = ["url": "/copilot", "body": ["url": "/copilot"]]
+      var at = DateComponents()
+      at.hour = 20
+      at.minute = 0
+      let tonight = Calendar.current.component(.hour, from: Date()) < 20
+      if !tonight, let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) {
+        let d = Calendar.current.dateComponents([.year, .month, .day], from: tomorrow)
+        at.year = d.year
+        at.month = d.month
+        at.day = d.day
+      }
+      center.add(UNNotificationRequest(identifier: "willo-copilot-evening", content: later, trigger: UNCalendarNotificationTrigger(dateMatching: at, repeats: false)))
+    }
   }
 }

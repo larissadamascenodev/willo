@@ -140,7 +140,7 @@ function whenSaid(dueIso: string, from: Date) {
 }
 
 /* Notices of one kind stack together in the notification centre. */
-type Thread = "contas" | "faturas" | "metas" | "voltar" | "plano" | "semana";
+type Thread = "contas" | "faturas" | "metas" | "voltar" | "plano" | "semana" | "copilot";
 
 interface Planned {
   date: Date;
@@ -244,6 +244,36 @@ async function run(userId: string | undefined | null) {
     const left = money(Number(g.target_amount) - Number(g.current_amount));
     const at = atHour(g.deadline, 10, 3);
     planned.push({ date: at, title: `${g.name}: o prazo é ${whenSaid(g.deadline, at)}`, body: `Faltam ${left} para chegar lá. Dá para guardar mais um pouco?`, url: `/metas/${g.id}`, thread: "metas" });
+  }
+
+  /* Willo Copilot: purchases caught and not yet confirmed — in the evening, and again the
+     next day at lunch. Laid out again whenever the list changes, so it stops once they
+     are answered. */
+  try {
+    /* The evening notice the iPhone action left when a purchase came in is replaced by this one, which knows the count. */
+    await N.cancelScheduledNotificationAsync("willo-copilot-evening").catch(() => undefined);
+    const { data: waiting } = await supabase
+      .from("copilot_pending" as never)
+      .select("amount, name")
+      .eq("user_id" as never, userId as never)
+      .eq("status" as never, "pendente" as never)
+      .limit(50);
+    const rows = (waiting ?? []) as unknown as { amount: number; name: string }[];
+    if (rows.length) {
+      const sum = money(rows.reduce((t, r) => t + Number(r.amount), 0));
+      const title = rows.length === 1 ? `${rows[0].name} espera você no Copilot` : `${rows.length} compras esperando você no Copilot`;
+      const body = `${sum}. Confirme para elas entrarem no seu mês.`;
+      const evening = new Date(now);
+      if (evening.getHours() >= 20) evening.setDate(evening.getDate() + 1);
+      evening.setHours(20, 0, 0, 0);
+      const lunch = new Date(evening);
+      lunch.setDate(lunch.getDate() + 1);
+      lunch.setHours(12, 30, 0, 0);
+      planned.push({ date: evening, title, body, url: "/copilot", thread: "copilot" });
+      planned.push({ date: lunch, title, body: `${sum}. Toque para confirmar ou descartar.`, url: "/copilot", thread: "copilot" });
+    }
+  } catch {
+    /* No Copilot reminder this time. */
   }
 
   /* Coming back: set ahead every time the app opens, so they only reach someone who

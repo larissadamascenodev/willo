@@ -20,6 +20,7 @@ import { Check, ChevronLeft, Clock, CreditCard, Landmark, Sparkles, X } from "~/
 import { categoryIcon } from "~/lib/categoryIcon";
 import { confirmPending, discardPending, listHistory, useCopilot, type CopilotItem, type CopilotPast } from "~/lib/copilot";
 import { useAuth } from "~/lib/auth";
+import { syncDeviceNotifications } from "~/lib/deviceNotifications";
 import { showToast } from "~/lib/toast";
 import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
@@ -155,6 +156,12 @@ function CopilotScreen() {
   const confirm = (item: CopilotItem) => void save(item);
 
   const list = items ?? [];
+  /* The reminders follow the list: one fewer waiting, the evening's notice says so. */
+  useEffect(() => {
+    if (items === null || !user) return;
+    const t = setTimeout(() => void syncDeviceNotifications(user.id), 1500);
+    return () => clearTimeout(t);
+  }, [items?.length, user]);
   const confirmAll = async () => {
     const open = list.filter((i) => !modeOf(i));
     for (const item of list) if (modeOf(item)) await save(item);
