@@ -35,7 +35,7 @@ const SHORTCUT_NAME = "Registro rápido Willo";
  * the person's Shortcuts, nothing to build. Empty until the link exists; the steps to
  * build it by hand show instead.
  */
-const RAPIDO_SHORTCUT_LINK = "";
+const RAPIDO_SHORTCUT_LINK = "https://www.icloud.com/shortcuts/55b4011c3e0346c28bb6ceb472a27312";
 
 /* The blue of the Shortcuts app, so the drawings read as its screens. */
 const SHORTCUT_BLUE = "#3B82F6";
