@@ -4,6 +4,7 @@ import Animated, { Easing, FadeIn, interpolateColor, useAnimatedStyle, useShared
 import * as Haptics from "expo-haptics";
 import { categoryHex } from "@/lib/categoryData";
 import ParticleOrb from "~/components/registro/ParticleOrb";
+import Glass from "~/components/Glass";
 import ReceiptCard, { type ReceiptLine } from "~/components/registro/ReceiptCard";
 import { Banknote, CalendarClock, Check, ChevronLeft, ChevronRight, Download, Minus, Plus, Repeat as RepeatIcon, Share2, Tag } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
@@ -216,21 +217,21 @@ export function Toggle({ value, onChange, label }: { value: boolean; onChange: (
 export function StepHeader({ label, stage, total, onBack }: { label: string; stage: number; total: number; onBack?: () => void }) {
   return (
     <>
-      {/* Voltar first, then the step centred in the room left beside it — never touching. */}
-      <View style={{ minHeight: 30, flexDirection: "row", alignItems: "center", gap: 16 }}>
-        {onBack && (
-          <Pressable
-            onPress={onBack}
-            hitSlop={10}
-            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, height: 30, paddingLeft: 6, paddingRight: 11, borderRadius: 15, backgroundColor: th("rgba(255,255,255,0.08)", "bg"), opacity: pressed ? 0.6 : 1 })}
-          >
-            <ChevronLeft size={15} color={th("#fff")} />
-            <Text style={{ fontSize: 13, fontWeight: "600", color: th("#fff") }}>Voltar</Text>
-          </Pressable>
-        )}
-        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ flex: 1, textAlign: "center", fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: th("rgba(255,255,255,0.72)") }}>
+      {/* The way back as the pages have it — the arrow in its glass circle — and the step's
+          name in the middle of the card, whatever is beside it. */}
+      <View style={{ height: 36, justifyContent: "center" }}>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ marginHorizontal: 46, textAlign: "center", fontSize: 11, fontWeight: "700", letterSpacing: 1.4, color: th("rgba(255,255,255,0.72)") }}>
           {label}
         </Text>
+        {onBack && (
+          <Animated.View entering={FadeIn.duration(180)} style={{ position: "absolute", left: 0, top: 0 }}>
+            <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel="Voltar" hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+              <Glass interactive style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+                <ChevronLeft size={18} color={th("#fff")} strokeWidth={2.4} />
+              </Glass>
+            </Pressable>
+          </Animated.View>
+        )}
       </View>
       <View style={{ marginTop: 8, flexDirection: "row", gap: 4 }}>
         {Array.from({ length: total }, (_, i) => (
