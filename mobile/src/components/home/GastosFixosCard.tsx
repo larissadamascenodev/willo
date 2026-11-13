@@ -262,7 +262,10 @@ function FixedRow({ item: s, customCats, first }: { item: RecurringItem; customC
   const Icon = categoryIcon(s.category, customCats);
   const hex = categoryHex(s.category, customCats);
 
-  const where = s.isPaidThisMonth
+  const MON = ["jan.", "fev.", "mar.", "abr.", "maio", "jun.", "jul.", "ago.", "set.", "out.", "nov.", "dez."];
+  const where = s.startsOn
+    ? `Começa em ${s.dueDay} ${MON[Number(s.startsOn.slice(5, 7)) - 1]} · todo dia ${s.dueDay}`
+    : s.isPaidThisMonth
     ? `${income ? "Recebido" : "Pago"} · dia ${s.dueDay}`
     : `${income ? "Recebe" : "Vence"} ${days === 0 ? "hoje" : days === 1 ? "amanhã" : `em ${days} dias`} · dia ${s.dueDay}`;
 

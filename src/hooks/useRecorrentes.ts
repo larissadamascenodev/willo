@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMonth } from "@/contexts/MonthContext";
 import { getRecurringSourceId, getRecurringTransactionsForMonth } from "@/services/recurringService";
 import { isSubscription } from "@/lib/subscriptionBrands";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Everything that repeats every month, read once and split three ways.
@@ -29,6 +30,8 @@ export interface RecurringItem {
   source: "conta" | "cartao";
   txType: RecurringType;
   isPaidThisMonth: boolean;
+  /** Registered this month on a day already gone: it first falls due next month (ISO date). */
+  startsOn?: string;
 }
 
 /** Days from today until the next time this falls due. */
@@ -58,6 +61,39 @@ export function useRecorrentes() {
         if (!seen.has(key)) seen.set(key, tx);
       }
 
+      /* A fixed entry registered on a day of the month already gone — at sign-up, or any
+         day after — has its first date next month, so the month's own rows miss it. It
+         is a commitment all the same: shown from the month it was registered in. */
+      const monthEnd = new Date(selectedYear, selectedMonth + 1, 0);
+      const endIso = `${monthEnd.getFullYear()}-${String(monthEnd.getMonth() + 1).padStart(2, "0")}-${String(monthEnd.getDate()).padStart(2, "0")}`;
+      const { data: later } = await supabase
+        .from("transactions")
+        .select("id, name, amount, date, category, payment_method, type, parent_transaction_id, created_at")
+        .eq("user_id", user.id)
+        .eq("recurrence_type", "fixa")
+        .is("parent_transaction_id", null)
+        .gt("date", endIso)
+        .lte("created_at", `${endIso}T23:59:59`);
+      const upcoming: RecurringItem[] = ((later ?? []) as { id: string; name: string; amount: number; date: string; category: string; payment_method: string | null; type: string }[])
+        .filter((tx) => !seen.has(`${tx.type}-${tx.id}`))
+        /* Only what starts right after this month: a series that begins further on is not this month's. */
+        .filter((tx) => {
+          const d = new Date(tx.date + "T12:00:00");
+          return (d.getFullYear() * 12 + d.getMonth()) - (selectedYear * 12 + selectedMonth) === 1;
+        })
+        .map((tx) => ({
+          id: tx.id,
+          sourceId: tx.id,
+          name: tx.name,
+          amount: Number(tx.amount),
+          dueDay: new Date(tx.date + "T12:00:00").getDate(),
+          category: tx.category,
+          source: tx.payment_method === "cartao" ? ("cartao" as const) : ("conta" as const),
+          txType: tx.type as RecurringType,
+          isPaidThisMonth: false,
+          startsOn: tx.date,
+        }));
+
       const mapped: RecurringItem[] = Array.from(seen.values()).map((tx) => ({
         id: tx.id,
         sourceId: getRecurringSourceId(tx),
@@ -69,6 +105,7 @@ export function useRecorrentes() {
         txType: tx.type as RecurringType,
         isPaidThisMonth: tx.status === "pago",
       }));
+      mapped.push(...upcoming);
 
       // What is still owed comes first, then by how soon it falls due.
       mapped.sort((a, b) => {
