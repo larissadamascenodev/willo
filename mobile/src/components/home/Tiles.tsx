@@ -10,6 +10,10 @@ import { goalProgress } from "@/lib/goalPresets";
 import { installmentTotals, loadActiveInstallments } from "@/services/activeInstallments";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { daysUntil, type RecurringItem } from "@/hooks/useRecorrentes";
+import { useMonth } from "@/contexts/MonthContext";
+import SubLogo from "~/components/SubLogo";
+import SubscriptionsSheet from "~/components/home/SubscriptionsSheet";
+import FixedSheet, { type FixedKind } from "~/components/home/FixedSheet";
 import type { EndedSubscription } from "~/lib/subscriptionCheck";
 import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
@@ -340,7 +344,7 @@ function MarkRow({ items, max, size = 30 }: { items: RecurringItem[]; max: numbe
     <View style={{ flexDirection: "row", alignItems: "center" }}>
       {shown.map((s, i) => (
         <View key={s.id} style={{ marginLeft: i === 0 ? 0 : -8 }}>
-          <Mark name={s.name} ring size={size} />
+          <SubLogo name={s.name} ring size={size} />
         </View>
       ))}
       {rest > 0 && <Text style={{ marginLeft: 8, fontSize: 12.5, color: th(INK.soft) }}>+{rest}</Text>}
@@ -378,17 +382,40 @@ export function AssinaturasTile({
   onCancel: (e: EndedSubscription) => void;
 }) {
   const router = useRouter();
+  const { selectedMonth, selectedYear } = useMonth();
+  /* The list opens over the home; adding one is the same sheet as the fixed entries'. */
+  const [listOpen, setListOpen] = useState(false);
+  const [adding, setAdding] = useState<FixedKind | null>(null);
   return (
-    <AssinaturasCard
-      assinaturas={assinaturas}
-      total={total}
-      ended={ended}
-      onKeep={onKeep}
-      onCancel={onCancel}
-      size={size}
-      onOpen={() => router.push("/transacoes")}
-      onAdd={() => router.push("/manual?tipo=despesa&fixa=1" as never)}
-    />
+    <>
+      <AssinaturasCard
+        assinaturas={assinaturas}
+        total={total}
+        ended={ended}
+        onKeep={onKeep}
+        onCancel={onCancel}
+        size={size}
+        onOpen={() => setListOpen(true)}
+        onAdd={() => setAdding("assinatura")}
+      />
+      <SubscriptionsSheet
+        open={listOpen}
+        onClose={() => setListOpen(false)}
+        items={assinaturas}
+        total={total}
+        onAdd={() => {
+          setListOpen(false);
+          setTimeout(() => setAdding("assinatura"), 280);
+        }}
+        onEdit={(s) => {
+          setListOpen(false);
+          const mes = s.startsOn ? Number(s.startsOn.slice(5, 7)) - 1 : selectedMonth;
+          const ano = s.startsOn ? Number(s.startsOn.slice(0, 4)) : selectedYear;
+          setTimeout(() => router.push({ pathname: "/manual", params: { editar: s.id, mes: String(mes), ano: String(ano) } } as never), 280);
+        }}
+      />
+      <FixedSheet kind={adding} onClose={() => setAdding(null)} />
+    </>
   );
 }
 
@@ -419,7 +446,7 @@ function EndedAsk({
       }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <Mark name={item.name} size={36} />
+        <SubLogo name={item.name} size={36} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text numberOfLines={2} style={{ fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>
             {item.name} não foi cobrada em {MONTH_NAMES[item.month]}
@@ -604,7 +631,7 @@ export function AssinaturasCard({
               const soon = !s.isPaidThisMonth && daysUntil(s.dueDay) <= 2;
               return (
                 <View key={s.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingTop: 12, opacity: s.isPaidThisMonth ? 0.6 : 1 }}>
-                  <Mark name={s.name} size={34} />
+                  <SubLogo name={s.name} size={34} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>
                       {s.name}

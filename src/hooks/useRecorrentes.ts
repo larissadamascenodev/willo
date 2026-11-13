@@ -30,6 +30,9 @@ export interface RecurringItem {
   source: "conta" | "cartao";
   txType: RecurringType;
   isPaidThisMonth: boolean;
+  /** Where it is paid from or lands: the account, or the card it is charged on. */
+  accountId?: string | null;
+  cardId?: string | null;
   /** Registered this month on a day already gone: it first falls due next month (ISO date). */
   startsOn?: string;
 }
@@ -68,13 +71,13 @@ export function useRecorrentes() {
       const endIso = `${monthEnd.getFullYear()}-${String(monthEnd.getMonth() + 1).padStart(2, "0")}-${String(monthEnd.getDate()).padStart(2, "0")}`;
       const { data: later } = await supabase
         .from("transactions")
-        .select("id, name, amount, date, category, payment_method, type, parent_transaction_id, created_at")
+        .select("id, name, amount, date, category, payment_method, type, parent_transaction_id, created_at, account_id, credit_card_id")
         .eq("user_id", user.id)
         .eq("recurrence_type", "fixa")
         .is("parent_transaction_id", null)
         .gt("date", endIso)
         .lte("created_at", `${endIso}T23:59:59`);
-      const upcoming: RecurringItem[] = ((later ?? []) as { id: string; name: string; amount: number; date: string; category: string; payment_method: string | null; type: string }[])
+      const upcoming: RecurringItem[] = ((later ?? []) as { id: string; name: string; amount: number; date: string; category: string; payment_method: string | null; type: string; account_id: string | null; credit_card_id: string | null }[])
         .filter((tx) => !seen.has(`${tx.type}-${tx.id}`))
         /* Only what starts right after this month: a series that begins further on is not this month's. */
         .filter((tx) => {
@@ -91,6 +94,8 @@ export function useRecorrentes() {
           source: tx.payment_method === "cartao" ? ("cartao" as const) : ("conta" as const),
           txType: tx.type as RecurringType,
           isPaidThisMonth: false,
+          accountId: tx.account_id,
+          cardId: tx.credit_card_id,
           startsOn: tx.date,
         }));
 
@@ -104,6 +109,8 @@ export function useRecorrentes() {
         source: tx.payment_method === "cartao" ? ("cartao" as const) : ("conta" as const),
         txType: tx.type as RecurringType,
         isPaidThisMonth: tx.status === "pago",
+        accountId: (tx as { account_id?: string | null }).account_id ?? null,
+        cardId: (tx as { credit_card_id?: string | null }).credit_card_id ?? null,
       }));
       mapped.push(...upcoming);
 

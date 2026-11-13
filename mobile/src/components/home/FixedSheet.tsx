@@ -17,6 +17,8 @@ import CategoryPicker from "~/components/CategoryPicker";
 import EntryForm, { type EntryValues } from "~/components/registro/EntryForm";
 import type { Account, Card } from "~/components/registro/entryParts";
 import AccountSelect from "~/components/AccountSelect";
+import SubLogo from "~/components/SubLogo";
+import { KNOWN_SUBS, knownSub } from "~/lib/subscriptionLogos";
 import StepSheet, { Ask } from "~/components/StepSheet";
 import {
   Banknote,
@@ -42,11 +44,12 @@ import { live, th } from "~/theme/theme";
  * the month. Nothing else — it lands in the account like the setup's, every month.
  */
 
-type Kind = "despesa" | "receita";
+export type FixedKind = "despesa" | "receita" | "assinatura";
+type Kind = FixedKind;
 type Icon = typeof House;
 
 const PRESETS: Record<
-  Kind,
+  Exclude<Kind, "assinatura">,
   { label: string; category: string; Icon: Icon; day: number }[]
 > = {
   receita: [
@@ -81,6 +84,11 @@ const PRESETS: Record<
 };
 
 const OTHER = "__outro";
+
+/* The subscriptions offered first: the ones most people in Brazil have. */
+const SUB_PICKS = ["Netflix", "Spotify", "YouTube Premium", "Disney+", "Prime Video", "Max", "Globoplay", "iCloud+", "ChatGPT"]
+  .map((n) => KNOWN_SUBS.find((k) => k.name === n)!)
+  .filter(Boolean);
 
 const FIELD = live({
   height: 56,
@@ -148,6 +156,9 @@ export default function FixedSheet({
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
   const [accountId, setAccountId] = useState<string | null>(null);
+  /* A subscription is most often on a card: paid with which, a card or an account. */
+  const [via, setVia] = useState<"cartao" | "conta">("cartao");
+  const [cardId, setCardId] = useState<string | null>(null);
   /* The check before saving: the same form as any entry's, everything still changeable. */
   const [entry, setEntry] = useState<EntryValues | null>(null);
   const [picking, setPicking] = useState(false);
@@ -157,6 +168,7 @@ export default function FixedSheet({
     day: number;
     income: boolean;
     Icon: Icon;
+    title?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -181,6 +193,9 @@ export default function FixedSheet({
           .sort((a, z) => rank(a.type) - rank(z.type));
         setAccounts(usable);
         setCards(cs as unknown as Card[]);
+        const cardList = cs as unknown as Card[];
+        setCardId((cur) => (cur && cardList.some((c) => c.id === cur) ? cur : (cardList[0]?.id ?? null)));
+        setVia(cardList.length > 0 ? "cartao" : "conta");
         setAccountId((cur) =>
           cur && usable.some((a) => a.id === cur)
             ? cur
@@ -194,7 +209,10 @@ export default function FixedSheet({
   }, [kind]);
 
   const income = k === "receita";
-  const preset = PRESETS[k].find((p) => p.label === pick) ?? null;
+  const sub = k === "assinatura";
+  const preset = sub ? null : (PRESETS[k as Exclude<Kind, "assinatura">].find((p) => p.label === pick) ?? null);
+  const known = sub && pick && pick !== OTHER ? knownSub(pick) : null;
+  const payWhere = sub && via === "cartao" ? cardId : accountId;
   const name = pick === OTHER ? typed.trim() : (pick ?? "");
   const starts = nextOn(day);
   const startsLater = Number(starts.slice(5, 7)) - 1 !== new Date().getMonth();
@@ -203,18 +221,21 @@ export default function FixedSheet({
     setError(null);
     if (step === 0) {
       if (preset) setDay(preset.day);
+      /* A known service starts from its usual price; the person corrects it. */
+      if (known?.price && cents === 0) setCents(Math.round(known.price * 100));
       setStep(1);
       return;
     }
     if (step === 1) {
       setEntry({
-        type: k,
+        type: sub ? "despesa" : (k as "despesa" | "receita"),
         cents,
         name,
-        category:
-          preset?.category ?? (income ? "Transferências recebidas" : "Outros"),
-        method: "conta",
-        whereId: accountId,
+        category: sub
+          ? "Assinaturas"
+          : (preset?.category ?? (income ? "Transferências recebidas" : "Outros")),
+        method: sub ? via : "conta",
+        whereId: payWhere,
         repeat: "fixa",
         parts: null,
         date: starts,
@@ -256,6 +277,7 @@ export default function FixedSheet({
         day: Number(v.date.slice(8, 10)),
         income: v.type === "receita",
         Icon: preset?.Icon ?? (v.type === "receita" ? Banknote : Pencil),
+        title: sub ? "Assinatura adicionada" : undefined,
       });
       onClose();
     } catch {
@@ -269,7 +291,7 @@ export default function FixedSheet({
     step === 0
       ? !!pick && (pick !== OTHER || typed.trim().length >= 2)
       : step === 1
-        ? cents > 0 && !!accountId
+        ? cents > 0 && !!payWhere
         : !!entry && entry.cents > 0 && !!entry.name.trim() && !!entry.whereId;
 
   return (
@@ -287,7 +309,53 @@ export default function FixedSheet({
         busy={saving}
         tall={step === 2}
       >
-        {step === 0 && (
+        {step === 0 && sub && (
+          <View style={{ flex: 1 }}>
+            <Ask title="Qual assinatura?" note="Toque no serviço ou escreva outro." />
+            <View style={{ marginTop: 16, flexDirection: "row", flexWrap: "wrap", rowGap: 10 }}>
+              {[...SUB_PICKS.map((k2) => k2.name), OTHER].map((n) => {
+                const on = pick === n;
+                return (
+                  <Pressable
+                    key={n}
+                    onPress={() => {
+                      void Haptics.selectionAsync().catch(() => undefined);
+                      setPick(on ? null : n);
+                      setCents(0);
+                    }}
+                    style={({ pressed }) => ({ width: "33.33%", alignItems: "center", transform: [{ scale: pressed ? 0.95 : 1 }] })}
+                  >
+                    <View style={{ padding: 3, borderRadius: 18, borderWidth: 2, borderColor: th(on ? "#fff" : "transparent", "line") }}>
+                      {n === OTHER ? (
+                        <View style={{ width: 50, height: 50, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
+                          <Pencil size={20} color={th("#fff")} strokeWidth={2} />
+                        </View>
+                      ) : (
+                        <SubLogo name={n} size={50} />
+                      )}
+                    </View>
+                    <Text numberOfLines={1} style={{ marginTop: 5, fontSize: 12, fontWeight: on ? "700" : "500", color: th(on ? "#fff" : INK.soft) }}>
+                      {n === OTHER ? "Outra" : n}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {pick === OTHER && (
+              <TextInput
+                value={typed}
+                onChangeText={setTyped}
+                autoFocus
+                maxLength={40}
+                placeholder="Ex: Academia, Curso, Revista"
+                placeholderTextColor={th(INK.faint)}
+                style={{ ...FIELD, marginTop: 12 }}
+              />
+            )}
+          </View>
+        )}
+
+        {step === 0 && !sub && (
           <View style={{ flex: 1 }}>
             <Ask
               title={income ? "Qual é a receita?" : "Qual é a conta?"}
@@ -298,7 +366,7 @@ export default function FixedSheet({
               }
             />
             <View style={{ marginTop: 18, gap: 8 }}>
-              {PRESETS[k].map((p) => (
+              {PRESETS[k as Exclude<Kind, "assinatura">].map((p) => (
                 <Option
                   key={p.label}
                   label={p.label}
@@ -358,8 +426,35 @@ export default function FixedSheet({
                 padding: 0,
               }}
             />
+            {/* A subscription: on a card or from an account, then which one. */}
+            {sub && (
+              <View style={{ marginTop: 14 }}>
+                <Text style={{ marginBottom: 8, fontSize: 13, fontWeight: "600", color: th(INK.soft) }}>Paga com</Text>
+                {cards.length > 0 && (
+                  <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
+                    {(["cartao", "conta"] as const).map((w) => (
+                      <Pressable
+                        key={w}
+                        onPress={() => {
+                          void Haptics.selectionAsync().catch(() => undefined);
+                          setVia(w);
+                        }}
+                        style={({ pressed }) => ({ flex: 1, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: th(via === w ? "#fff" : "rgba(255,255,255,0.07)", "bg"), opacity: pressed ? 0.8 : 1 })}
+                      >
+                        <Text style={{ fontSize: 13.5, fontWeight: "700", color: th(via === w ? "#0B0B0B" : "#fff") }}>{w === "cartao" ? "Cartão de crédito" : "Conta"}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+                {via === "cartao" && cards.length > 0 ? (
+                  <AccountSelect options={cards} value={cardId} onChange={setCardId} title="Em qual cartão?" placeholder="Escolher cartão" />
+                ) : (
+                  <AccountSelect options={accounts} value={accountId} onChange={setAccountId} title="De qual conta sai?" />
+                )}
+              </View>
+            )}
             {/* Which account, right under the amount, so the keyboard never hides it. */}
-            {accounts.length > 0 && (
+            {!sub && accounts.length > 0 && (
               <View style={{ marginTop: 14 }}>
                 <Text
                   style={{
@@ -380,7 +475,7 @@ export default function FixedSheet({
               </View>
             )}
             <DayStepper
-              label={income ? "Cai todo dia" : "Vence todo dia"}
+              label={income ? "Cai todo dia" : sub ? "Cobra todo dia" : "Vence todo dia"}
               value={day}
               onChange={setDay}
               note={
@@ -423,7 +518,7 @@ export default function FixedSheet({
       </StepSheet>
       <CategoryPicker
         open={picking}
-        type={entry?.type ?? k}
+        type={entry?.type ?? (k === "receita" ? "receita" : "despesa")}
         value={entry?.category ?? ""}
         onPick={(c: string) => {
           setPicking(false);
@@ -609,6 +704,7 @@ function Saved({
     day: number;
     income: boolean;
     Icon: Icon;
+    title?: string;
   } | null;
   onGone: () => void;
 }) {
@@ -673,7 +769,7 @@ function Saved({
               backgroundColor: `${tint}26`,
             }}
           >
-            <I size={24} color={tint} strokeWidth={2.1} />
+            {made.title ? <SubLogo name={made.name} size={52} /> : <I size={24} color={tint} strokeWidth={2.1} />}
             <View
               style={{
                 position: "absolute",
@@ -698,7 +794,7 @@ function Saved({
               color: th("#fff"),
             }}
           >
-            {made.income ? "Receita adicionada" : "Despesa adicionada"}
+            {made.title ?? (made.income ? "Receita adicionada" : "Despesa adicionada")}
           </Text>
           <Text
             numberOfLines={2}
