@@ -63,8 +63,9 @@ function Word({
       <Text
         style={{
           fontSize: size,
+          lineHeight: Math.round(size * 1.22),
           ...face(700),
-          letterSpacing: -0.4,
+          letterSpacing: -size * 0.024,
           color: th("#fff"),
         }}
       >
@@ -160,7 +161,18 @@ export default function GreetingLine({
   const [at, setAt] = useState(0);
   /* How many steps smaller the line on show had to be set to fit; each new line starts over. */
   const [shrink, setShrink] = useState(0);
-  useEffect(() => setShrink(0), [at]);
+  /* The line's drawn height. Kept, not only acted on as it is measured: the room beside
+     the sphere is often measured after the line, and a line measured first was never
+     made to fit — it ran past the foot and was cut. */
+  const [drawn, setDrawn] = useState(0);
+  useEffect(() => {
+    setShrink(0);
+    setDrawn(0);
+  }, [at]);
+  useEffect(() => {
+    if (align !== "left" || !maxHeight || !drawn) return;
+    if (drawn > maxHeight + 0.5 && shrink < 12) setShrink((n) => n + 1);
+  }, [drawn, maxHeight, shrink, align]);
   const latest = useRef(lines);
   latest.current = lines;
   const out = useSharedValue(1);
@@ -209,10 +221,7 @@ export default function GreetingLine({
   /* The guess below is only a start: the line is measured once drawn, and while it
      overflows the room it has, the line under it goes first, then the title gets smaller,
      a step at a time. A word is never cut off. */
-  const onMeasured = (h: number) => {
-    if (align !== "left" || !maxHeight) return;
-    if (h > maxHeight + 0.5 && shrink < 10) setShrink((n) => n + 1);
-  };
+  const onMeasured = (h: number) => setDrawn(h);
   /* Bold at this size runs about half its size a letter; the sub line, a little less. */
   const left = align === "left";
   const room = roomProp ?? width - 44;
@@ -235,7 +244,7 @@ export default function GreetingLine({
       !!line.sub &&
       line.sub.length * 1.1 <= subLines * Math.floor(room / (13 * 0.52));
     return {
-      size: Math.max(12.5, size - Math.max(0, shrink - 1)),
+      size: Math.max(13, size - Math.max(0, shrink - 1) * 0.75),
       subLines,
       subFits: subFits && shrink === 0,
     };

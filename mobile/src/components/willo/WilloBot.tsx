@@ -157,8 +157,10 @@ export default function WilloBot({
       shown.set(withTiming(1, { duration: 220 }));
       return;
     }
-    /* Never stay hidden: if a piece is slow to say it loaded, he shows anyway. */
-    const id = setTimeout(() => setWhole(true), 1800);
+    /* Shown whole or not at all: a face without its head read as a fault, and on a slow
+       connection (Expo Go fetches every picture) the pieces took longer than the old
+       1.8 s. Only a picture that never says it loaded lets him show anyway, much later. */
+    const id = setTimeout(() => setWhole(true), 9000);
     return () => clearTimeout(id);
   }, [ready, shown]);
   const appear = useAnimatedStyle(() => ({ opacity: shown.get() }));

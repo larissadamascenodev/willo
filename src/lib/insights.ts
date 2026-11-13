@@ -125,7 +125,7 @@ export function buildInsights(input: InsightInput): InsightSlide[] {
     body: firstName
       ? [{ text: `${greeting}, ` }, { text: firstName, bold: true }, { text: "." }]
       : [{ text: `${greeting}.` }],
-    quip: "Veja o que mudou por aqui desde a última vez.",
+    quip: "Veja o que mudou por aqui desde a sua visita anterior.",
     score: Infinity,
   });
 

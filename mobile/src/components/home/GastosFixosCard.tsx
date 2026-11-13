@@ -93,7 +93,7 @@ export function GastosFixosView({
   if (items.length === 0 && !onAdd) {
     return (
       <Surface style={{ padding: 16 }}>
-        <Text style={T.cardLabel}>Gastos e receitas fixas</Text>
+        <Text style={T.cardLabel}>Receitas e Despesas Fixas</Text>
         <View style={{ marginTop: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
           <View
             style={{
@@ -123,7 +123,7 @@ export function GastosFixosView({
   return (
     <Surface>
       <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
-        <Text style={T.cardLabel}>Gastos e receitas fixas</Text>
+        <Text style={T.cardLabel}>Receitas e Despesas Fixas</Text>
 
         <View style={{ marginTop: 12 }}>
           <SegmentedTabs

@@ -121,9 +121,10 @@ function Shell() {
 
   useEffect(() => {
     void loadChatFonts();
-    /* Willo's pictures, both themes, ready before he is first drawn. */
-    void warmWilloBot();
-    hydrateShims().finally(() => setReady(true));
+    /* Willo's pictures, both themes, ready before he is first drawn: the opening waits
+       for them a moment (never more than 1.5 s), so the home does not open on half of him. */
+    const pictures = Promise.race([warmWilloBot(), new Promise((r) => setTimeout(r, 1500))]);
+    Promise.all([hydrateShims(), pictures]).finally(() => setReady(true));
   }, []);
 
   if (!ready) return <Splash />;
