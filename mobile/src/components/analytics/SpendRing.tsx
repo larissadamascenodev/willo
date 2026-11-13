@@ -149,9 +149,11 @@ export default function SpendRing({
           bottom: 0,
           alignItems: "center",
           justifyContent: "center",
+          paddingHorizontal: stroke + 14,
         }}
       >
-        <Text numberOfLines={1} style={{ fontSize: labelSize, fontWeight: "800", letterSpacing: -labelSize / 30, color: th("#fff") }}>
+        {/* The total shrinks to fit inside the ring rather than losing its last digit. */}
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={{ fontSize: labelSize, fontWeight: "800", letterSpacing: -labelSize / 30, color: th("#fff") }}>
           {label}
         </Text>
         {caption ? <Text style={{ marginTop: 2, fontSize: 14, color: th(INK.soft) }}>{caption}</Text> : null}

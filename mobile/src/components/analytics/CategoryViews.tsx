@@ -56,7 +56,7 @@ export function TopSpendRow({
           <Icon size={20} color={th(category.hex)} strokeWidth={2} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ fontSize: 12, color: th(INK.soft) }}>Maior gasto em {monthLabel}</Text>
+          <Text numberOfLines={1} style={{ fontSize: 12, color: th(INK.soft) }}>Maior gasto do mês</Text>
           <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 16, fontWeight: "600", color: th("#fff") }}>
             {category.name}
           </Text>
