@@ -1,7 +1,15 @@
-import { useEffect } from "react";
-import { Image, StyleSheet, useWindowDimensions } from "react-native";
-import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming, type SharedValue } from "react-native-reanimated";
+import { useEffect, type ComponentType, type ReactElement, type ReactNode } from "react";
+import { Image, StyleSheet, useWindowDimensions, type ViewStyle } from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+  type SharedValue,
+} from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
+import MaskedViewBase from "@react-native-masked-view/masked-view";
 import * as Haptics from "expo-haptics";
 import { GROUND } from "~/theme/tokens";
 
@@ -27,12 +35,17 @@ const PULL = [700, 1560] as const; // they run across, the name written behind t
 const LAG = 55; // each card a beat behind the one ahead
 const MERGE = [1520, 1980] as const; // at its end they draw into the point, one by one
 const MERGE_GAP = 60;
-const POINT = [1880, 2240] as const; // the point lands, green
-const OUT = [2620, 3080] as const; // the logo grows a hair as the screen fades onto the app
+const POINT = [1880, 2240] as const; // the point lands, white
+const SHINE = [2260, 2900] as const; // a gleam crosses the finished name
+const OUT = [2980, 3440] as const; // the logo grows a hair as the screen fades onto the app
+const FADE_IN = 360; // it begins dark and comes up
 export const LAUNCH_INTRO_MS = OUT[1] + 20;
 const QUICK = [700, 1050] as const;
 /** A breath on the plain ground before anything moves, once the app is built underneath. */
 const START_AFTER = 520;
+
+/* Its class types predate React 19's; used as the component it is. */
+const MaskedView = MaskedViewBase as unknown as ComponentType<{ maskElement: ReactElement; style?: ViewStyle; pointerEvents?: "none"; children?: ReactNode }>;
 
 /* eslint-disable @typescript-eslint/no-require-imports -- the artwork, bundled */
 const CARDS = [
@@ -48,7 +61,8 @@ const WORD_PX = 725;
 const WORD_PY = 222;
 const TEXT_END = 640;
 const DOT = { x: 640, y: 162, w: 81, h: 54 };
-const GREEN = "#67CD67";
+/* The point is white, like the name: the cards keep the colour. */
+const POINT_COLOR = "#FFFFFF";
 /** The soft leading edge the name is written with. */
 const FEATHER = 34;
 
@@ -113,15 +127,25 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
     const start = () => {
       if (cancelled) return;
       t.set(withTiming(end, { duration: end, easing: Easing.linear }));
-      const tap = (style: Haptics.ImpactFeedbackStyle) => () => void Haptics.impactAsync(style).catch(() => undefined);
+      const tap = (style: Haptics.ImpactFeedbackStyle) => () =>
+        void Haptics.impactAsync(style).catch(() => undefined);
       if (!reduced) {
-        timers.push(setTimeout(tap(Haptics.ImpactFeedbackStyle.Soft), RISE[0] + RISE_EACH * 0.6));
-        timers.push(setTimeout(tap(Haptics.ImpactFeedbackStyle.Medium), POINT[0] + 60));
+        timers.push(
+          setTimeout(
+            tap(Haptics.ImpactFeedbackStyle.Soft),
+            RISE[0] + RISE_EACH * 0.6,
+          ),
+        );
+        timers.push(
+          setTimeout(tap(Haptics.ImpactFeedbackStyle.Medium), POINT[0] + 60),
+        );
       }
       timers.push(setTimeout(onDone, end + 30));
     };
     /* Two frames drawn (the app's first paint has happened), then a breath. */
-    requestAnimationFrame(() => requestAnimationFrame(() => timers.push(setTimeout(start, START_AFTER))));
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => timers.push(setTimeout(start, START_AFTER))),
+    );
     return () => {
       cancelled = true;
       timers.forEach(clearTimeout);
@@ -132,8 +156,26 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
 
   const shell = useAnimatedStyle(() => {
     const now = t.get();
-    const out = reduced ? span(now, QUICK[0], QUICK[1]) : inOutCubic(span(now, OUT[0], OUT[1]));
+    const out = reduced
+      ? span(now, QUICK[0], QUICK[1])
+      : inOutCubic(span(now, OUT[0], OUT[1]));
     return { opacity: 1 - out };
+  });
+  /* What is on the ground comes up out of the dark, rather than being there at once. */
+  const scene = useAnimatedStyle(() => ({
+    opacity: reduced ? 1 : outCubic(span(t.get(), 0, FADE_IN)),
+  }));
+
+  /* The gleam: a soft band of light crossing the letters once the name is whole. */
+  const gleam = useAnimatedStyle(() => {
+    const v = reduced ? 0 : inOutCubic(span(t.get(), SHINE[0], SHINE[1]));
+    return {
+      opacity: v > 0 && v < 1 ? 1 : 0,
+      transform: [
+        { translateX: mix(-wordW * 0.45, wordW * 1.05, v) },
+        { skewX: "-18deg" },
+      ],
+    };
   });
 
   /* The logo as one: settling a hair as the point lands, growing a hair on the way out. */
@@ -159,43 +201,146 @@ export default function LaunchIntro({ onDone }: { onDone: () => void }) {
   /* The point: there once the cards have become it, green, landing with a little give. */
   const point = useAnimatedStyle(() => {
     const v = reduced ? 1 : span(t.get(), POINT[0], POINT[1]);
-    return { opacity: clamp01(v * 3), transform: [{ scale: v === 0 ? 0 : mix(0.2, 1, backOut(v)) }] };
+    return {
+      opacity: clamp01(v * 3),
+      transform: [{ scale: v === 0 ? 0 : mix(0.2, 1, backOut(v)) }],
+    };
   });
 
   const cardW = wordH * 0.64;
   const cardH = cardW * (560 / 680);
 
   return (
-    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: GROUND, zIndex: 100, overflow: "hidden" }, shell]}>
-      <Animated.View style={[{ position: "absolute", left, top, width: wordW, height: wordH }, logo]}>
-        {/* The name, white, without its point: the point is the cards' to make. */}
-        <Animated.View style={[{ position: "absolute", left: 0, top: 0, height: wordH, overflow: "hidden" }, written]}>
-          <Image source={WORD} style={{ width: wordW, height: wordH }} resizeMode="stretch" />
-          <Animated.View style={[{ position: "absolute", right: 0, top: 0, bottom: 0, width: FEATHER }, edge]}>
-            <LinearGradient colors={[`${GROUND}00`, GROUND]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ flex: 1 }} />
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        StyleSheet.absoluteFill,
+        { backgroundColor: GROUND, zIndex: 100, overflow: "hidden" },
+        shell,
+      ]}
+    >
+      <Animated.View style={[StyleSheet.absoluteFill, scene]}>
+        <Animated.View
+          style={[
+            { position: "absolute", left, top, width: wordW, height: wordH },
+            logo,
+          ]}
+        >
+          {/* The name, white, without its point: the point is the cards' to make. */}
+          <Animated.View
+            style={[
+              {
+                position: "absolute",
+                left: 0,
+                top: 0,
+                height: wordH,
+                overflow: "hidden",
+              },
+              written,
+            ]}
+          >
+            <Image
+              source={WORD}
+              style={{ width: wordW, height: wordH, opacity: 0.9 }}
+              resizeMode="stretch"
+            />
+            <Animated.View
+              style={[
+                {
+                  position: "absolute",
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: FEATHER,
+                },
+                edge,
+              ]}
+            >
+              <LinearGradient
+                colors={[`${GROUND}00`, GROUND]}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={{ flex: 1 }}
+              />
+            </Animated.View>
           </Animated.View>
+
+          <Animated.View
+            style={[
+              {
+                position: "absolute",
+                left: dot.x,
+                top: dot.y,
+                width: dot.w,
+                height: dot.h,
+                borderRadius: dot.h / 2,
+                backgroundColor: POINT_COLOR,
+              },
+              point,
+            ]}
+          />
+
+          {/* The gleam, only where the letters are. */}
+          {!reduced && (
+            <MaskedView
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                width: wordW,
+                height: wordH,
+              }}
+              maskElement={
+                <Image
+                  source={WORD}
+                  style={{ width: wordW, height: wordH }}
+                  resizeMode="stretch"
+                />
+              }
+            >
+              <Animated.View
+                style={[
+                  {
+                    position: "absolute",
+                    top: -wordH * 0.2,
+                    width: wordW * 0.38,
+                    height: wordH * 1.4,
+                  },
+                  gleam,
+                ]}
+              >
+                <LinearGradient
+                  colors={[
+                    "rgba(255,255,255,0)",
+                    "rgba(255,255,255,0.95)",
+                    "rgba(255,255,255,0)",
+                  ]}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={{ flex: 1 }}
+                />
+              </Animated.View>
+            </MaskedView>
+          )}
         </Animated.View>
 
-        <Animated.View
-          style={[{ position: "absolute", left: dot.x, top: dot.y, width: dot.w, height: dot.h, borderRadius: dot.h / 2, backgroundColor: GREEN }, point]}
-        />
+        {!reduced &&
+          CARDS.map((src, i) => (
+            <Card
+              key={i}
+              i={i}
+              src={src}
+              t={t}
+              w={cardW}
+              h={cardH}
+              startX={left - cardW * 0.15}
+              endX={left + textW - cardW * 0.15}
+              midY={top + wordH * 0.48}
+              dot={{ x: left + dot.x, y: top + dot.y, w: dot.w, h: dot.h }}
+            />
+          ))}
       </Animated.View>
-
-      {!reduced &&
-        CARDS.map((src, i) => (
-          <Card
-            key={i}
-            i={i}
-            src={src}
-            t={t}
-            w={cardW}
-            h={cardH}
-            startX={left - cardW * 0.15}
-            endX={left + textW - cardW * 0.15}
-            midY={top + wordH * 0.48}
-            dot={{ x: left + dot.x, y: top + dot.y, w: dot.w, h: dot.h }}
-          />
-        ))}
     </Animated.View>
   );
 }
@@ -241,14 +386,23 @@ function Card({
     const merge = inOutCubic(span(now, m0, m0 + (MERGE[1] - MERGE[0])));
 
     const x = mix(startX, endX, pull);
-    const yRun = midY - h / 2 + offY + mix(140, 0, rise);
+    /* Hopping as they run: three little jumps each, out of step with one another, none
+       at the start or the end of the run. */
+    const hop =
+      -Math.abs(Math.sin(p * Math.PI * 3 + i * 0.7)) *
+      h *
+      0.42 *
+      Math.sin(p * Math.PI) *
+      (1 - merge);
+    const yRun = midY - h / 2 + offY + mix(140, 0, rise) + hop;
     /* Leaning into the run: most at its fastest, upright at either end. */
     const lean = -Math.sin(p * Math.PI) * 7;
     const toX = dot.x + dot.w / 2 - w / 2;
     const toY = dot.y + dot.h / 2 - h / 2;
     const restScale = mix(0.82, 1, outCubic(r));
     return {
-      opacity: clamp01(r * 2.4) * (1 - span(now, POINT[0] + 20, POINT[0] + 180)),
+      opacity:
+        clamp01(r * 2.4) * (1 - span(now, POINT[0] + 20, POINT[0] + 180)),
       transform: [
         { translateX: mix(x, toX, merge) },
         { translateY: mix(yRun, toY, merge) },
@@ -259,8 +413,17 @@ function Card({
   });
 
   return (
-    <Animated.View style={[{ position: "absolute", left: 0, top: 0, width: w, height: h }, style]}>
-      <Image source={src} style={{ width: w, height: h }} resizeMode="stretch" />
+    <Animated.View
+      style={[
+        { position: "absolute", left: 0, top: 0, width: w, height: h },
+        style,
+      ]}
+    >
+      <Image
+        source={src}
+        style={{ width: w, height: h }}
+        resizeMode="stretch"
+      />
     </Animated.View>
   );
 }
