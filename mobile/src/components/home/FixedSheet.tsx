@@ -8,7 +8,8 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { createTransaction } from "@/services/transactionService";
+import { createTransaction, getAccounts } from "@/services/transactionService";
+import BankMark from "~/components/BankMark";
 import StepSheet, { Ask } from "~/components/StepSheet";
 import {
   Banknote,
@@ -136,6 +137,9 @@ export default function FixedSheet({
   const [day, setDay] = useState(5);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /* Where it lands or leaves from: the person's accounts, the first one chosen to start. */
+  const [accounts, setAccounts] = useState<{ id: string; name: string; color: string | null }[]>([]);
+  const [accountId, setAccountId] = useState<string | null>(null);
   const [made, setMade] = useState<{
     name: string;
     amount: number;
@@ -155,6 +159,22 @@ export default function FixedSheet({
     setSaving(false);
     setError(null);
     setMade(null);
+    let alive = true;
+    void getAccounts()
+      .then((list) => {
+        if (!alive) return;
+        /* The everyday account first: a salary or a bill goes through the bank, not the wallet. */
+        const rank = (t: string) => (t === "checking" ? 0 : t === "savings" ? 1 : 2);
+        const usable = (list as unknown as { id: string; name: string; color: string | null; type: string }[])
+          .filter((a) => a.type !== "investment")
+          .sort((a, z) => rank(a.type) - rank(z.type));
+        setAccounts(usable);
+        setAccountId((cur) => cur ?? usable[0]?.id ?? null);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
   }, [kind]);
 
   const income = k === "receita";
@@ -163,11 +183,23 @@ export default function FixedSheet({
   const starts = nextOn(day);
   const startsLater = Number(starts.slice(5, 7)) - 1 !== new Date().getMonth();
 
+  const account = accounts.find((a) => a.id === accountId) ?? null;
+  const startsLabel = `${Number(starts.slice(8, 10))} ${MONTHS[Number(starts.slice(5, 7)) - 1]}`;
+
   const next = async () => {
     setError(null);
     if (step === 0) {
       if (preset) setDay(preset.day);
       setStep(1);
+      return;
+    }
+    /* With one account there is nothing to choose: straight to the check. */
+    if (step === 1) {
+      setStep(accounts.length > 1 ? 2 : 3);
+      return;
+    }
+    if (step === 2) {
+      setStep(3);
       return;
     }
     if (!user || cents <= 0) return;
@@ -184,6 +216,7 @@ export default function FixedSheet({
           date: starts,
           status: "pendente",
           payment_method: "conta",
+          account_id: accountId,
           recurrence_type: "fixa",
         } as never,
         user.id,
@@ -211,7 +244,11 @@ export default function FixedSheet({
   const canNext =
     step === 0
       ? !!pick && (pick !== OTHER || typed.trim().length >= 2)
-      : cents > 0;
+      : step === 1
+        ? cents > 0
+        : step === 2
+          ? !!accountId
+          : cents > 0;
 
   return (
     <>
@@ -220,14 +257,12 @@ export default function FixedSheet({
         open={open}
         onClose={onClose}
         step={step}
-        steps={2}
-        onBack={() => setStep(0)}
+        steps={4}
+        onBack={() => setStep(step === 3 && accounts.length <= 1 ? 1 : Math.max(step - 1, 0))}
         onNext={next}
         nextLabel={
-          step === 1
-            ? income
-              ? "Salvar receita"
-              : "Salvar despesa"
+          step === 3
+            ? "Confirmar e adicionar"
             : "Continuar"
         }
         nextDisabled={!canNext}
@@ -321,6 +356,79 @@ export default function FixedSheet({
                   : undefined
               }
             />
+          </View>
+        )}
+
+        {step === 2 && (
+          <View style={{ flex: 1 }}>
+            <Ask
+              title={income ? "Entra em qual conta?" : "Sai de qual conta?"}
+              note={income ? "Onde esse dinheiro cai todo mês." : "De onde esse valor sai todo mês."}
+            />
+            <View style={{ marginTop: 18, gap: 8 }}>
+              {accounts.map((a) => {
+                const on = a.id === accountId;
+                return (
+                  <Pressable
+                    key={a.id}
+                    onPress={() => {
+                      void Haptics.selectionAsync().catch(() => undefined);
+                      setAccountId(a.id);
+                    }}
+                    style={({ pressed }) => ({
+                      height: 58,
+                      borderRadius: 18,
+                      borderCurve: "continuous",
+                      paddingHorizontal: 12,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 12,
+                      borderWidth: 1,
+                      borderColor: th(on ? "#fff" : "rgba(255,255,255,0.10)", "line"),
+                      backgroundColor: th(on ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)", "bg"),
+                      transform: [{ scale: pressed ? 0.98 : 1 }],
+                    })}
+                  >
+                    <BankMark name={a.name} hex={a.color ?? "#7C8AA5"} size={36} />
+                    <Text numberOfLines={1} style={{ flex: 1, fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>
+                      {a.name}
+                    </Text>
+                    <View style={{ width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", borderWidth: on ? 0 : 1.5, borderColor: th("rgba(255,255,255,0.3)", "line"), backgroundColor: th(on ? "#fff" : "transparent", "bg") }}>
+                      {on && <Check size={13} color={th("#0B0B0B")} strokeWidth={3.2} />}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {step === 3 && (
+          <View style={{ flex: 1 }}>
+            <Ask title="Confere?" note={income ? "É isso que vai entrar todo mês." : "É isso que vai sair todo mês."} />
+            <View style={{ marginTop: 18, borderRadius: 22, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.08)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
+              <View style={{ alignItems: "center", paddingTop: 20, paddingBottom: 16 }}>
+                <Text style={{ fontSize: 13, color: th(INK.soft) }}>{name}</Text>
+                <Text style={{ marginTop: 4, fontSize: 32, fontWeight: "800", letterSpacing: -1, color: income ? GREEN : th("#fff") }}>
+                  {income ? "+" : "−"}
+                  {money(cents / 100)}
+                </Text>
+                <Text style={{ marginTop: 2, fontSize: 12.5, color: th(INK.softer) }}>todo mês</Text>
+              </View>
+              {[
+                { label: income ? "Cai todo dia" : "Vence todo dia", value: String(day) },
+                { label: "Primeira vez", value: startsLabel },
+                { label: "Conta", value: account?.name ?? "—" },
+                { label: "Categoria", value: preset?.category ?? (income ? "Transferências recebidas" : "Outros") },
+              ].map((row) => (
+                <View key={row.label} style={{ flexDirection: "row", justifyContent: "space-between", gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: th("rgba(255,255,255,0.06)", "line") }}>
+                  <Text style={{ fontSize: 14, color: th(INK.soft) }}>{row.label}</Text>
+                  <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 14, fontWeight: "600", color: th("#fff"), textAlign: "right" }}>
+                    {row.value}
+                  </Text>
+                </View>
+              ))}
+            </View>
             {error && (
               <Text style={{ marginTop: 12, fontSize: 13, color: th(RED) }}>
                 {error}
