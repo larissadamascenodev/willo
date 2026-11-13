@@ -15,14 +15,12 @@ import { categoryHex } from "@/lib/categoryData";
 import type { FinanceEvent } from "@/types/finance";
 import Room from "~/components/Room";
 import PageHeader from "~/components/PageHeader";
-import Glass from "~/components/Glass";
+import MonthStrip from "~/components/MonthStrip";
 import Surface from "~/components/Surface";
 import SegmentedTabs from "~/components/SegmentedTabs";
 import MonthCalendar from "~/components/eventos/MonthCalendar";
 import {
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   ChevronUp,
 } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
@@ -134,12 +132,7 @@ export default function Eventos() {
     return [...map.entries()];
   }, [coming]);
 
-  const step = (delta: number) => {
-    const d = new Date(year, month + delta, 1);
-    setMonth(d.getMonth(), d.getFullYear());
-    setDay(null);
-    setShowSettled(false);
-  };
+
 
   const isPastMonth =
     year < today.getFullYear() ||
@@ -166,54 +159,17 @@ export default function Eventos() {
       >
         {/* ══ The way out, the page's name, and which month just above the month's figures ══ */}
         <PageHeader title="Próximos eventos" back="/" />
-        <View style={{ marginTop: 14, alignItems: "center" }}>
-          <Glass
-            interactive
-            style={{ flexDirection: "row", alignItems: "center", padding: 3 }}
-          >
-            <Pressable
-              accessibilityLabel="Mês anterior"
-              onPress={() => step(-1)}
-              hitSlop={6}
-              style={({ pressed }) => ({
-                width: 34,
-                height: 34,
-                borderRadius: 17,
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: pressed ? 0.5 : 1,
-              })}
-            >
-              <ChevronLeft size={17} color={th("#fff")} />
-            </Pressable>
-            <Text
-              style={{
-                minWidth: 84,
-                textAlign: "center",
-                fontSize: 14,
-                fontWeight: "600",
-                color: th("#fff"),
-              }}
-            >
-              {capitalise(MONTHS[month])}
-              {year !== today.getFullYear() ? ` ${String(year).slice(2)}` : ""}
-            </Text>
-            <Pressable
-              accessibilityLabel="Próximo mês"
-              onPress={() => step(1)}
-              hitSlop={6}
-              style={({ pressed }) => ({
-                width: 34,
-                height: 34,
-                borderRadius: 17,
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: pressed ? 0.5 : 1,
-              })}
-            >
-              <ChevronRight size={17} color={th("#fff")} />
-            </Pressable>
-          </Glass>
+        {/* The month, at the right, the way Transações chooses it. */}
+        <View style={{ marginTop: 14, alignItems: "flex-end" }}>
+          <MonthStrip
+            month={month}
+            year={year}
+            onChange={(m, y) => {
+              setMonth(m, y);
+              setDay(null);
+              setShowSettled(false);
+            }}
+          />
         </View>
 
         {/* ══ The month in three lines ══ */}

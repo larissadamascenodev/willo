@@ -16,22 +16,27 @@ export interface KnownSub {
   match: string[];
   /** A usual price in Brazil, to start the amount from (the person corrects it). */
   price?: number;
+  /** Drawn here instead of fetched, where the site's own icon is small or blends into its colour. */
+  mark?: "netflix" | "spotify" | "youtube" | "max" | "claude";
+  /** A better picture than the site's icon, when there is one. */
+  logo?: string;
 }
 
 export const KNOWN_SUBS: KnownSub[] = [
-  { name: "Netflix", domain: "netflix.com", hex: "#E50914", match: ["netflix"], price: 44.9 },
-  { name: "Spotify", domain: "spotify.com", hex: "#1DB954", match: ["spotify"], price: 23.9 },
-  { name: "YouTube Premium", domain: "youtube.com", hex: "#FF0000", match: ["youtube", "yt premium"], price: 26.9 },
+  { name: "Netflix", domain: "netflix.com", hex: "#000000", match: ["netflix"], price: 44.9, mark: "netflix" },
+  { name: "Spotify", domain: "spotify.com", hex: "#1DB954", match: ["spotify"], price: 23.9, mark: "spotify" },
+  { name: "YouTube Premium", domain: "youtube.com", hex: "#FF0000", match: ["youtube", "yt premium"], price: 26.9, mark: "youtube" },
   { name: "Disney+", domain: "disneyplus.com", hex: "#113CCF", match: ["disney"], price: 43.9 },
   { name: "Prime Video", domain: "primevideo.com", hex: "#00A8E1", match: ["prime video", "amazon prime", "prime"], price: 19.9 },
-  { name: "Max", domain: "max.com", hex: "#002BE7", match: ["hbo", "max"], price: 34.9 },
+  { name: "Max", domain: "max.com", hex: "#002BE7", match: ["hbo", "max"], price: 34.9, mark: "max" },
   { name: "Globoplay", domain: "globoplay.globo.com", hex: "#E21B22", match: ["globoplay"], price: 26.9 },
+  { name: "Premiere", domain: "premiere.globo.com", hex: "#1A8B3A", match: ["premiere"], price: 59.9 },
   { name: "Apple Music", domain: "music.apple.com", hex: "#FC3C44", match: ["apple music"], price: 21.9 },
   { name: "Apple TV+", domain: "tv.apple.com", hex: "#111111", match: ["apple tv"], price: 21.9 },
   { name: "iCloud+", domain: "icloud.com", hex: "#3693F3", match: ["icloud"], price: 5.9 },
   { name: "Google One", domain: "one.google.com", hex: "#4285F4", match: ["google one"], price: 9.99 },
-  { name: "ChatGPT", domain: "chatgpt.com", hex: "#10A37F", match: ["chatgpt", "openai"], price: 99.9 },
-  { name: "Claude", domain: "claude.ai", hex: "#D97757", match: ["claude", "anthropic"] },
+  { name: "ChatGPT", domain: "chatgpt.com", hex: "#000000", match: ["chatgpt", "openai"], price: 99.9, logo: "https://www.google.com/s2/favicons?domain=help.openai.com&sz=256" },
+  { name: "Claude", domain: "claude.ai", hex: "#D97757", match: ["claude", "anthropic"], mark: "claude" },
   { name: "Deezer", domain: "deezer.com", hex: "#A238FF", match: ["deezer"], price: 22.9 },
   { name: "Paramount+", domain: "paramountplus.com", hex: "#0064FF", match: ["paramount"], price: 19.9 },
   { name: "Crunchyroll", domain: "crunchyroll.com", hex: "#F47521", match: ["crunchyroll"], price: 19.99 },

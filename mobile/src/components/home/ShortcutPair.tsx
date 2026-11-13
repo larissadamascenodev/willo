@@ -29,7 +29,7 @@ import { pendingCheckins, tickToday, type PendingCheckin } from "~/lib/challenge
 import { FEATURES } from "~/lib/features";
 import { loadConquistas, type Conquistas } from "~/lib/conquistas";
 import { showToast } from "~/lib/toast";
-import { th } from "~/theme/theme";
+import { isLight, th } from "~/theme/theme";
 import { INK } from "~/theme/tokens";
 
 /**
@@ -102,12 +102,12 @@ export default function ShortcutPair({ gap = 16 }: { gap?: number }) {
 const STEP = 60;
 const SWEEP_MS = 3000;
 
-function sectorWedge(c: number, r: number, inner: number) {
+function sectorWedge(c: number, r: number, inner: number, from = -STEP / 2, to = STEP / 2) {
   const point = (rad: number, deg: number) => {
     const a = ((deg - 90) * Math.PI) / 180;
     return `${(c + rad * Math.cos(a)).toFixed(2)} ${(c + rad * Math.sin(a)).toFixed(2)}`;
   };
-  return `M${point(inner, -STEP / 2)}L${point(r, -STEP / 2)}A${r} ${r} 0 0 1 ${point(r, STEP / 2)}L${point(inner, STEP / 2)}A${inner} ${inner} 0 0 0 ${point(inner, -STEP / 2)}Z`;
+  return `M${point(inner, from)}L${point(r, from)}A${r} ${r} 0 0 1 ${point(r, to)}L${point(inner, to)}A${inner} ${inner} 0 0 0 ${point(inner, from)}Z`;
 }
 
 type Blips = Partial<Record<SectorKey, { risk: number; note: number }>>;
@@ -133,6 +133,11 @@ function MiniScope({ size, blips }: { size: number; blips: Blips }) {
   const ice = th(ICE);
   const risk = th(RISK, "bg");
   const note = th(ICE, "bg");
+  /* On the dark ground the light has to glow to be seen: stronger, with a fading trail
+     behind it. On the light ground it already reads as it is. */
+  const dark = !isLight();
+  const lightEdge = dark ? 0.75 : 0.4;
+  const lightCore = dark ? 0.12 : 0.06;
 
   return (
     <View style={{ width: size, height: size }}>
@@ -155,11 +160,18 @@ function MiniScope({ size, blips }: { size: number; blips: Blips }) {
         <Svg width={size} height={size}>
           <Defs>
             <RadialGradient id="mini-scope-light" cx="50%" cy="50%" r="50%">
-              <Stop offset="0.3" stopColor={sky} stopOpacity={0.06} />
-              <Stop offset="1" stopColor={sky} stopOpacity={0.4} />
+              <Stop offset="0.3" stopColor={sky} stopOpacity={lightCore} />
+              <Stop offset="1" stopColor={sky} stopOpacity={lightEdge} />
             </RadialGradient>
           </Defs>
-          <Path d={sectorWedge(c, r, core)} fill="url(#mini-scope-light)" stroke={ice} strokeOpacity={0.55} strokeWidth={1} />
+          {/* The trail the light leaves behind it, fading. */}
+          {dark && (
+            <>
+              <Path d={sectorWedge(c, r, core, -STEP * 1.5, -STEP / 2)} fill="url(#mini-scope-light)" opacity={0.35} />
+              <Path d={sectorWedge(c, r, core, -STEP * 2.5, -STEP * 1.5)} fill="url(#mini-scope-light)" opacity={0.14} />
+            </>
+          )}
+          <Path d={sectorWedge(c, r, core)} fill="url(#mini-scope-light)" stroke={ice} strokeOpacity={dark ? 0.9 : 0.55} strokeWidth={dark ? 1.3 : 1} />
         </Svg>
       </Animated.View>
 

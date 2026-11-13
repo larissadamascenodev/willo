@@ -10,9 +10,7 @@ import { goalProgress } from "@/lib/goalPresets";
 import { installmentTotals, loadActiveInstallments } from "@/services/activeInstallments";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
 import { daysUntil, type RecurringItem } from "@/hooks/useRecorrentes";
-import { useMonth } from "@/contexts/MonthContext";
 import SubLogo from "~/components/SubLogo";
-import SubscriptionsSheet from "~/components/home/SubscriptionsSheet";
 import FixedSheet, { type FixedKind } from "~/components/home/FixedSheet";
 import type { EndedSubscription } from "~/lib/subscriptionCheck";
 import Surface from "~/components/Surface";
@@ -384,9 +382,7 @@ export function AssinaturasTile({
   loading?: boolean;
 }) {
   const router = useRouter();
-  const { selectedMonth, selectedYear } = useMonth();
-  /* The list opens over the home; adding one is the same sheet as the fixed entries'. */
-  const [listOpen, setListOpen] = useState(false);
+  /* The list is its own page; adding one is the same sheet as the fixed entries'. */
   const [adding, setAdding] = useState<FixedKind | null>(null);
   return (
     <>
@@ -398,24 +394,8 @@ export function AssinaturasTile({
         onKeep={onKeep}
         onCancel={onCancel}
         size={size}
-        onOpen={() => setListOpen(true)}
+        onOpen={() => router.push("/assinaturas" as never)}
         onAdd={() => setAdding("assinatura")}
-      />
-      <SubscriptionsSheet
-        open={listOpen}
-        onClose={() => setListOpen(false)}
-        items={assinaturas}
-        total={total}
-        onAdd={() => {
-          setListOpen(false);
-          setTimeout(() => setAdding("assinatura"), 280);
-        }}
-        onEdit={(s) => {
-          setListOpen(false);
-          const mes = s.startsOn ? Number(s.startsOn.slice(5, 7)) - 1 : selectedMonth;
-          const ano = s.startsOn ? Number(s.startsOn.slice(0, 4)) : selectedYear;
-          setTimeout(() => router.push({ pathname: "/manual", params: { editar: s.id, mes: String(mes), ano: String(ano) } } as never), 280);
-        }}
       />
       <FixedSheet kind={adding} onClose={() => setAdding(null)} />
     </>
