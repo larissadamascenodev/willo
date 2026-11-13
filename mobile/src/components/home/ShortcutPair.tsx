@@ -133,11 +133,16 @@ function MiniScope({ size, blips }: { size: number; blips: Blips }) {
   const ice = th(ICE);
   const risk = th(RISK, "bg");
   const note = th(ICE, "bg");
-  /* On the dark ground the light has to glow to be seen: stronger, with a fading trail
-     behind it. On the light ground it already reads as it is. */
+  /* On the dark ground the light has to glow to be seen: one beam, filled from the
+     orb to the rim with no hollow in it, its leading edge lit. On the light ground it
+     already reads as it is. */
   const dark = !isLight();
-  const lightEdge = dark ? 0.75 : 0.4;
-  const lightCore = dark ? 0.12 : 0.06;
+  const lightEdge = dark ? 0.62 : 0.4;
+  const lightCore = dark ? 0.34 : 0.06;
+  const edge = (deg: number) => {
+    const a = ((deg - 90) * Math.PI) / 180;
+    return { x1: c + core * Math.cos(a), y1: c + core * Math.sin(a), x2: c + r * Math.cos(a), y2: c + r * Math.sin(a) };
+  };
 
   return (
     <View style={{ width: size, height: size }}>
@@ -164,14 +169,9 @@ function MiniScope({ size, blips }: { size: number; blips: Blips }) {
               <Stop offset="1" stopColor={sky} stopOpacity={lightEdge} />
             </RadialGradient>
           </Defs>
-          {/* The trail the light leaves behind it, fading. */}
-          {dark && (
-            <>
-              <Path d={sectorWedge(c, r, core, -STEP * 1.5, -STEP / 2)} fill="url(#mini-scope-light)" opacity={0.35} />
-              <Path d={sectorWedge(c, r, core, -STEP * 2.5, -STEP * 1.5)} fill="url(#mini-scope-light)" opacity={0.14} />
-            </>
-          )}
-          <Path d={sectorWedge(c, r, core)} fill="url(#mini-scope-light)" stroke={ice} strokeOpacity={dark ? 0.9 : 0.55} strokeWidth={dark ? 1.3 : 1} />
+          <Path d={sectorWedge(c, r, core)} fill="url(#mini-scope-light)" stroke={dark ? "none" : ice} strokeOpacity={0.55} strokeWidth={1} />
+          {/* The leading edge, lit. */}
+          {dark && <Line {...edge(STEP / 2)} stroke={ice} strokeOpacity={0.95} strokeWidth={1.4} strokeLinecap="round" />}
         </Svg>
       </Animated.View>
 

@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { Image } from "expo-image";
-import { knownSub, logoUrl } from "~/lib/subscriptionLogos";
+import { KNOWN_SUBS, knownSub, logoUrl } from "~/lib/subscriptionLogos";
 import Svg, { Circle, Line, Path, Polygon, Rect, Text as SvgText } from "react-native-svg";
 import { th } from "~/theme/theme";
 
@@ -13,9 +13,21 @@ import { th } from "~/theme/theme";
 const PALETTE = ["#B48CFF", "#7CC4FF", "#F5C26B", "#3FE0B8", "#FF8FA3", "#9EE493"];
 const colourOf = (name: string) => PALETTE[[...name].reduce((t, c) => t + c.charCodeAt(0), 0) % PALETTE.length];
 
+/* Every known logo fetched once, early, and kept on the phone — so none waits on the network later. */
+let prefetched = false;
+function prefetchLogos() {
+  if (prefetched) return;
+  prefetched = true;
+  const urls = KNOWN_SUBS.filter((k) => !k.mark).map((k) => k.logo ?? logoUrl(k.domain));
+  void Image.prefetch(urls, "disk").catch(() => {
+    prefetched = false;
+  });
+}
+
 export default function SubLogo({ name, size = 40, ring = false, round = false }: { name: string; size?: number; ring?: boolean; /** A circle, for the lists whose marks are round. */ round?: boolean }) {
   const known = knownSub(name);
-  const [failed, setFailed] = useState(false);
+  useEffect(prefetchLogos, []);
+  const [failed, setFailed] = useState(0);
   const radius = round ? size / 2 : Math.round(size * 0.28);
   const border = ring ? { borderWidth: 2, borderColor: th("#121315", "line") } : null;
 
@@ -27,23 +39,28 @@ export default function SubLogo({ name, size = 40, ring = false, round = false }
     );
   }
 
-  if (known && !failed) {
+  if (known) {
     return (
-      /* The logo fills the whole mark, on the brand's own colour — no white tile behind it. */
-      <View style={[{ width: size, height: size, borderRadius: radius, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: known.hex }, border]}>
-        <Image
-          source={{ uri: known.logo ?? logoUrl(known.domain) }}
-          cachePolicy="disk"
-          contentFit="cover"
-          onError={() => setFailed(true)}
-          style={{ width: size, height: size }}
-          accessibilityLabel={known.name}
-        />
+      /* The brand's colour and initial at once; its logo laid over them as soon as it is
+         in — so a slow or failed load never shows as an error, and a failure is tried again. */
+      <View style={[{ width: size, height: size, borderRadius: radius, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: known.hex }, border]} accessibilityLabel={known.name}>
+        <Text style={{ fontSize: size * 0.42, fontWeight: "800", color: "#fff" }}>{known.name[0]}</Text>
+        {failed < 3 && (
+          <Image
+            key={failed}
+            source={{ uri: known.logo ?? logoUrl(known.domain) }}
+            cachePolicy="disk"
+            contentFit="cover"
+            transition={120}
+            onError={() => setTimeout(() => setFailed((n) => n + 1), 1500)}
+            style={{ position: "absolute", width: size, height: size }}
+          />
+        )}
       </View>
     );
   }
 
-  const hex = known?.hex ?? colourOf(name);
+  const hex = colourOf(name);
   return (
     <View style={[{ width: size, height: size, borderRadius: radius, alignItems: "center", justifyContent: "center", backgroundColor: th(`${hex}2E`, "bg") }, border]}>
       <Text style={{ fontSize: size * 0.42, fontWeight: "800", color: th(hex) }}>{(name.trim()[0] ?? "?").toUpperCase()}</Text>

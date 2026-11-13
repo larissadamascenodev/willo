@@ -20,10 +20,12 @@ export interface KnownSub {
   mark?: "netflix" | "spotify" | "youtube" | "max" | "claude";
   /** A better picture than the site's icon, when there is one. */
   logo?: string;
+  /** For bars and dots, where the tile's colour is black and would vanish on the dark ground. */
+  accent?: string;
 }
 
 export const KNOWN_SUBS: KnownSub[] = [
-  { name: "Netflix", domain: "netflix.com", hex: "#000000", match: ["netflix"], price: 44.9, mark: "netflix" },
+  { name: "Netflix", domain: "netflix.com", hex: "#000000", match: ["netflix"], price: 44.9, mark: "netflix", accent: "#E50914" },
   { name: "Spotify", domain: "spotify.com", hex: "#1DB954", match: ["spotify"], price: 23.9, mark: "spotify" },
   { name: "YouTube Premium", domain: "youtube.com", hex: "#FF0000", match: ["youtube", "yt premium"], price: 26.9, mark: "youtube" },
   { name: "Disney+", domain: "disneyplus.com", hex: "#113CCF", match: ["disney"], price: 43.9 },
@@ -32,10 +34,10 @@ export const KNOWN_SUBS: KnownSub[] = [
   { name: "Globoplay", domain: "globoplay.globo.com", hex: "#E21B22", match: ["globoplay"], price: 26.9 },
   { name: "Premiere", domain: "premiere.globo.com", hex: "#1A8B3A", match: ["premiere"], price: 59.9 },
   { name: "Apple Music", domain: "music.apple.com", hex: "#FC3C44", match: ["apple music"], price: 21.9 },
-  { name: "Apple TV+", domain: "tv.apple.com", hex: "#111111", match: ["apple tv"], price: 21.9 },
+  { name: "Apple TV+", domain: "tv.apple.com", hex: "#111111", match: ["apple tv"], price: 21.9, accent: "#A1A1AA" },
   { name: "iCloud+", domain: "icloud.com", hex: "#3693F3", match: ["icloud"], price: 5.9 },
   { name: "Google One", domain: "one.google.com", hex: "#4285F4", match: ["google one"], price: 9.99 },
-  { name: "ChatGPT", domain: "chatgpt.com", hex: "#000000", match: ["chatgpt", "openai"], price: 99.9, logo: "https://www.google.com/s2/favicons?domain=help.openai.com&sz=256" },
+  { name: "ChatGPT", domain: "chatgpt.com", hex: "#000000", match: ["chatgpt", "openai"], price: 99.9, logo: "https://www.google.com/s2/favicons?domain=help.openai.com&sz=256", accent: "#10A37F" },
   { name: "Claude", domain: "claude.ai", hex: "#D97757", match: ["claude", "anthropic"], mark: "claude" },
   { name: "Deezer", domain: "deezer.com", hex: "#A238FF", match: ["deezer"], price: 22.9 },
   { name: "Paramount+", domain: "paramountplus.com", hex: "#0064FF", match: ["paramount"], price: 19.9 },
@@ -47,12 +49,12 @@ export const KNOWN_SUBS: KnownSub[] = [
   { name: "Adobe", domain: "adobe.com", hex: "#FF0000", match: ["adobe", "photoshop", "lightroom"] },
   { name: "Microsoft 365", domain: "microsoft.com", hex: "#F25022", match: ["microsoft 365", "office 365"] },
   { name: "Dropbox", domain: "dropbox.com", hex: "#0061FF", match: ["dropbox"] },
-  { name: "Notion", domain: "notion.so", hex: "#111111", match: ["notion"] },
+  { name: "Notion", domain: "notion.so", hex: "#111111", match: ["notion"], accent: "#A1A1AA" },
   { name: "Wellhub", domain: "wellhub.com", hex: "#D4FF00", match: ["wellhub", "gympass"] },
   { name: "Smart Fit", domain: "smartfit.com.br", hex: "#FFD100", match: ["smart fit", "smartfit"] },
   { name: "Mercado Livre", domain: "mercadolivre.com.br", hex: "#FFE600", match: ["meli+", "mercado livre", "mercado"] },
   { name: "iFood", domain: "ifood.com.br", hex: "#EA1D2C", match: ["ifood"] },
-  { name: "Uber One", domain: "uber.com", hex: "#111111", match: ["uber"] },
+  { name: "Uber One", domain: "uber.com", hex: "#111111", match: ["uber"], accent: "#A1A1AA" },
   { name: "Twitch", domain: "twitch.tv", hex: "#9146FF", match: ["twitch"] },
   { name: "LinkedIn Premium", domain: "linkedin.com", hex: "#0A66C2", match: ["linkedin"] },
 ];
