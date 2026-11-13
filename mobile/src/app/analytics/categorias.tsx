@@ -5,11 +5,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { supabase } from "~/supabase/client";
 import { useMonth } from "@/contexts/MonthContext";
-import {
-  buildCategorySummaries,
-  loadCategoryAnalytics,
-  type CategoryAnalytics,
-} from "@/services/categoryAnalytics";
+import { buildCategorySummaries, type CategoryAnalytics } from "@/services/categoryAnalytics";
+import { useCategoryAnalytics } from "~/lib/warmStart";
 import { groupCategoryAmounts } from "@/lib/categoryGroups";
 import { APP_GROUP_DEFS } from "~/lib/taxonomy";
 import { MONTH_NAMES } from "@/lib/projectionRows";
@@ -72,21 +69,15 @@ export default function AnalyticsCategorias() {
   const { user } = useAuth();
   const { selectedMonth, selectedYear } = useMonth();
 
-  const [data, setData] = useState<CategoryAnalytics | null>(null);
+  /* What the home's card already read, at once; the fresh read replaces it under the eye. */
+  const kept = useCategoryAnalytics(user?.id, selectedMonth, selectedYear);
+  const data: CategoryAnalytics | null = user ? kept : EMPTY;
   const [limits, setLimits] = useState<Limit[]>([]);
   const [view, setView] = useState<"categorias" | "grupos">("categorias");
   const [sheet, setSheet] = useState<{ open: boolean; category: string | null }>({
     open: false,
     category: null,
   });
-
-  const load = useCallback(async () => {
-    if (!user) {
-      setData(EMPTY);
-      return;
-    }
-    setData(await loadCategoryAnalytics({ userId: user.id, month: selectedMonth, year: selectedYear }));
-  }, [user, selectedMonth, selectedYear]);
 
   const loadLimits = useCallback(async () => {
     if (!user) return;
@@ -104,15 +95,11 @@ export default function AnalyticsCategorias() {
   }, [user]);
 
   useEffect(() => {
-    void load();
     void loadLimits();
-    const onChange = () => {
-      void load();
-      void loadLimits();
-    };
+    const onChange = () => void loadLimits();
     window.addEventListener("finance-data-changed", onChange);
     return () => window.removeEventListener("finance-data-changed", onChange);
-  }, [load, loadLimits]);
+  }, [loadLimits]);
 
   const summaries = useMemo(
     () => (data ? buildCategorySummaries(data.transactions) : []),

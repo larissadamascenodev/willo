@@ -4,6 +4,7 @@ import { AppState } from "react-native";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "~/supabase/client";
 import { cachedAccounts, warmHome, warmHomeWithin } from "~/lib/warmHome";
+import { forgetWarmStart } from "~/lib/warmStart";
 import { loginGate } from "~/lib/socialAuth";
 
 /**
@@ -102,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: session?.user ?? null,
         loading,
         signOut: async () => {
+          forgetWarmStart();
           await supabase.auth.signOut();
         },
       }}

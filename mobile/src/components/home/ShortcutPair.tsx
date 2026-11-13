@@ -24,6 +24,7 @@ import { ICE, RISK, SECTORS, SKY, type SectorKey } from "~/components/radar/part
 import { ChallengeCover } from "~/components/desafios/ChallengeTile";
 import { Check, ChevronRight, Flame, Trophy } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
+import { keepValue, keptValue } from "~/lib/warmStart";
 import { pendingCheckins, tickToday, type PendingCheckin } from "~/lib/challenges";
 import { FEATURES } from "~/lib/features";
 import { loadConquistas, type Conquistas } from "~/lib/conquistas";
@@ -186,7 +187,9 @@ function MiniScope({ size, blips }: { size: number; blips: Blips }) {
 
 /** The Radar's own reading, mounted a moment after the home: it is not what the home waits for. */
 function RadarTile({ art, onPress }: { art: number; onPress: () => void }) {
-  const [ready, setReady] = useState(false);
+  const { user } = useAuth();
+  /* With a reading kept, the dial is drawn at once; the first time, a moment after the home. */
+  const [ready, setReady] = useState(() => !!keptValue("radar", user?.id));
   useEffect(() => {
     const t = setTimeout(() => setReady(true), 700);
     return () => clearTimeout(t);
@@ -202,9 +205,12 @@ function RadarTile({ art, onPress }: { art: number; onPress: () => void }) {
 }
 
 function useBlips(): { blips: Blips; ready: boolean } {
+  const { user } = useAuth();
   const data = useRaioX();
-  const ready = !data.loading;
-  const blips: Blips = ready
+  const live = !data.loading;
+  /* While the reading runs, the last one is shown: the lights are there from the start. */
+  const [kept] = useState<Blips | null>(() => keptValue<Blips>("radar", user?.id));
+  const fresh: Blips = live
     ? {
         consumo: { risk: data.categories.filter((x) => x.tone === "critico").length, note: data.categories.filter((x) => x.tone === "atencao").length },
         habitos: { risk: 0, note: data.anomalies.length + data.duplicates.length },
@@ -213,6 +219,12 @@ function useBlips(): { blips: Blips; ready: boolean } {
         saude: { risk: data.report.pillars.filter((p) => p.tone === "critico").length, note: data.report.pillars.filter((p) => p.tone === "atencao").length },
       }
     : {};
+  useEffect(() => {
+    if (live && user) keepValue("radar", user.id, fresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live, user, data]);
+  const ready = live || !!kept;
+  const blips = live ? fresh : kept ?? {};
   return { blips, ready };
 }
 

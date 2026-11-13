@@ -3,7 +3,6 @@ import type { WidgetSize } from "@/lib/homeWidgets";
 import type { CategoryExpense, FinanceEvent, Transaction } from "@/types/finance";
 import type { RecurringItem } from "@/hooks/useRecorrentes";
 import type { EndedSubscription } from "~/lib/subscriptionCheck";
-import { upcoming } from "~/lib/events";
 import { FEATURES } from "~/lib/features";
 import SaldoContasCard from "~/components/home/SaldoContasCard";
 import JornadaCard from "~/components/home/JornadaCard";
@@ -52,7 +51,6 @@ export interface HomeWidgetContext {
 export function widgetIsEmpty(id: string, ctx: HomeWidgetContext): boolean {
   if (id === "plano") return !FEATURES.plano;
   if (id === "assinaturas") return ctx.assinaturas.length === 0 && ctx.ended.length === 0;
-  if (id === "eventos") return upcoming(ctx.events).length === 0;
   return false;
 }
 

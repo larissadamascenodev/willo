@@ -19,6 +19,7 @@ import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { goalPreset } from "~/lib/goalIcon";
 import { useAuth } from "~/lib/auth";
+import { keepValue, keptValue } from "~/lib/warmStart";
 import { money } from "~/lib/money";
 import { AMBER, GREEN, INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
@@ -130,7 +131,8 @@ function Skeleton({ size }: { size: WidgetSize }) {
 export function ParcelamentosTile({ size = "full" }: { size?: WidgetSize }) {
   const router = useRouter();
   const { user } = useAuth();
-  const [items, setItems] = useState<ActiveInstallmentItem[] | null>(null);
+  /* The last list seen, drawn at once; the fresh one replaces it. */
+  const [items, setItems] = useState<ActiveInstallmentItem[] | null>(() => keptValue("parcelamentos", user?.id));
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
 
   const load = useCallback(async () => {
@@ -141,6 +143,7 @@ export function ParcelamentosTile({ size = "full" }: { size?: WidgetSize }) {
     try {
       const [active, cats] = await Promise.all([loadActiveInstallments(user.id), getCustomCategories()]);
       setItems(active.items);
+      keepValue("parcelamentos", user.id, active.items);
       setCustomCats(cats);
     } catch {
       setItems([]);
@@ -562,7 +565,7 @@ export function AssinaturasCard({
 export function MetasTile({ size = "full" }: { size?: WidgetSize }) {
   const router = useRouter();
   const { user } = useAuth();
-  const [goals, setGoals] = useState<Goal[] | null>(null);
+  const [goals, setGoals] = useState<Goal[] | null>(() => keptValue("metas", user?.id));
 
   useEffect(() => {
     let alive = true;
@@ -573,6 +576,7 @@ export function MetasTile({ size = "full" }: { size?: WidgetSize }) {
     const load = async () => {
       try {
         const rows = await fetchGoals();
+        keepValue("metas", user.id, rows);
         if (alive) setGoals(rows);
       } catch {
         if (alive) setGoals([]);

@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useCardsOverview, monthKey } from "@/hooks/useCardsOverview";
 import { useAuth } from "~/lib/auth";
+import { keepValue, keptValue } from "~/lib/warmStart";
 import { getInvoiceStatusLabel, type CreditCardItem } from "@/lib/invoiceCycle";
 import { colorFor } from "@/lib/banks";
 import { shade } from "@/lib/tone";
@@ -24,7 +25,20 @@ import { th } from "~/theme/theme";
 export default function CartoesResumoCard({ size = "full" }: { size?: "half" | "full" } = {}) {
   const router = useRouter();
   const { user } = useAuth();
-  const { cards, invoices, loading } = useCardsOverview();
+  const live = useCardsOverview();
+  /* The last cards seen are drawn while the fresh ones load, never a blank box. */
+  const kept = useMemo(
+    () => keptValue<{ cards: typeof live.cards; invoices: typeof live.invoices }>("cartoes", user?.id),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [user?.id],
+  );
+  useEffect(() => {
+    if (!live.loading && user) keepValue("cartoes", user.id, { cards: live.cards, invoices: live.invoices });
+  }, [live.loading, live.cards, live.invoices, user]);
+  const showKept = live.loading && !!kept;
+  const cards = showKept ? kept!.cards : live.cards;
+  const invoices = showKept ? kept!.invoices : live.invoices;
+  const loading = live.loading && !kept;
 
   const rows = useMemo(() => {
     const now = new Date();

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { RefreshControl, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -25,6 +25,7 @@ import { renderHomeWidget, widgetIsEmpty } from "~/components/home/HomeWidgets";
 import { useRecorrentes } from "@/hooks/useRecorrentes";
 import { useEndedSubscriptions } from "~/lib/subscriptionCheck";
 import { useAuth } from "~/lib/auth";
+import { asCategoryExpenses, keepDashboard, seedDashboard, useCategoryAnalytics } from "~/lib/warmStart";
 import { useNavChrome } from "~/lib/navChrome";
 import { INK } from "~/theme/tokens";
 
@@ -76,7 +77,29 @@ export default function Home() {
   const month = today.getMonth();
   const year = today.getFullYear();
 
-  const { data, refetch } = useFinanceData(month, year, { includeHistorical: false });
+  /* The month kept on the phone is drawn at once; the fresh one is asked for under it. */
+  const seeded = useRef(false);
+  if (!seeded.current && seedDashboard(user?.id, month, year)) seeded.current = true;
+  const { data, loading, refetch } = useFinanceData(month, year, { includeHistorical: false });
+  const askedFresh = useRef(false);
+  useEffect(() => {
+    if (seeded.current && user && !askedFresh.current) {
+      askedFresh.current = true;
+      void refetch();
+    }
+  }, [user, refetch]);
+  useEffect(() => {
+    /* An empty month from a failed read is not kept over a good one. */
+    const something = data.transactions.length > 0 || data.events.length > 0 || data.receitas !== 0 || data.despesas !== 0;
+    if (!loading && user && something) keepDashboard(user.id, month, year, data);
+  }, [data, loading, user, month, year]);
+  /* One count of the month's categories for the whole app: the card here says what the
+     categories page says, because both read it from the same place. */
+  const categoryData = useCategoryAnalytics(user?.id, month, year);
+  const categories = useMemo(
+    () => asCategoryExpenses(categoryData) ?? data.categories ?? [],
+    [categoryData, data.categories],
+  );
   const { profile, refetch: refetchProfile } = useProfile();
   /* Coming back from the profile, the photo and the name may have changed; and the
      bell's dot says whether there is something new, worked out as the web does. */
@@ -169,7 +192,7 @@ export default function Home() {
         despesas: data.despesas,
         saldoPrevisto: data.saldoPrevisto,
         saldoAtual: data.saldoAtual,
-        categories: data.categories ?? [],
+        categories,
         events: data.events ?? [],
         transactions: data.transactions ?? [],
         month,
@@ -177,7 +200,7 @@ export default function Home() {
         invoice,
         hidden,
       }),
-    [greeting, dateStr, firstName, data, month, invoice, hidden],
+    [greeting, dateStr, firstName, data, categories, month, invoice, hidden],
   );
 
   const widgetContext = useMemo(
@@ -185,7 +208,7 @@ export default function Home() {
       receitas: data.receitas,
       despesas: data.despesas,
       saldoPrevisto: data.saldoPrevisto,
-      categories: data.categories ?? [],
+      categories,
       events: data.events ?? [],
       transactions: data.transactions ?? [],
       month,
@@ -196,7 +219,7 @@ export default function Home() {
       keepEnded,
       cancelEnded,
     }),
-    [data, month, assinaturas, totalAssinaturas, ended, keepEnded, cancelEnded],
+    [data, categories, month, assinaturas, totalAssinaturas, ended, keepEnded, cancelEnded],
   );
 
   const skipWidget = useCallback((id: string) => widgetIsEmpty(id, widgetContext), [widgetContext]);

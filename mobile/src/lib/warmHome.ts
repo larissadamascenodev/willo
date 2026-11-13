@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getAccounts } from "@/services/transactionService";
+import { prefetchDashboardData } from "@/services/dashboardData";
+import { fetchCategories, keepDashboard } from "~/lib/warmStart";
 
 /**
  * The home, ready before it is shown.
@@ -43,7 +45,15 @@ export const rememberName = (userId: string, name: string | null | undefined) =>
 
 /** Fetches what the home opens on and keeps it. Never rejects. */
 export async function warmHome(userId: string): Promise<void> {
+  /* The month the home opens on and its categories, so no card waits on the network. */
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
   await Promise.all([
+    prefetchDashboardData(month, year, { includeHistorical: false, userId })
+      .then((d) => keepDashboard(userId, month, year, d))
+      .catch(() => undefined),
+    fetchCategories(userId, month, year).catch(() => undefined),
     getAccounts()
       .then((a) => rememberAccounts(userId, a as unknown as Account[]))
       .catch(() => undefined),
