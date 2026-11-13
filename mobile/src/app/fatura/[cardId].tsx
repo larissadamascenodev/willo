@@ -24,7 +24,9 @@ import { PaymentDetail, paymentName } from "~/components/fatura/InvoicePayments"
 import PayInvoiceSheet from "~/components/fatura/PayInvoiceSheet";
 import AddToCardSheet from "~/components/fatura/AddToCardSheet";
 import AnchoredMenu, { MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
-import { AlertTriangle, CalendarClock, Check, Clock, Lock, MoreVertical, Pencil, Plus, Trash2, Wallet } from "~/components/icons";
+import { AlertTriangle, CalendarClock, Check, Clock, Lock, MoreVertical, Pencil, Plus, Undo2, Wallet } from "~/components/icons";
+import CenterModal from "~/components/CenterModal";
+import { removePayment } from "~/lib/invoicePayments";
 import { showToast } from "~/lib/toast";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
@@ -76,6 +78,9 @@ export default function Fatura() {
   const [payments, setPayments] = useState<InvoicePayment[]>([]);
   const [accountNames, setAccountNames] = useState<Record<string, string>>({});
   const [openPayment, setOpenPayment] = useState<InvoicePayment | null>(null);
+  /* Undoing what was paid on the invoice on screen: asked, then every payment of it goes. */
+  const [undoing, setUndoing] = useState(false);
+  const [undoBusy, setUndoBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [openLine, setOpenLine] = useState<InvoiceLine | null>(null);
   const [menuAt, setMenuAt] = useState<AnchorRect | null>(null);
@@ -570,19 +575,72 @@ export default function Fatura() {
         onSave={(d) => void saveCard(d)}
       />
 
-      {/* What can be done to the card itself. */}
+      {/* What can be done to the card, and to the payment of the invoice on screen. */}
       <AnchoredMenu open={!!menuAt} anchor={menuAt} onClose={() => setMenuAt(null)}>
         <MenuRow
           icon={Pencil}
           label="Editar cartão"
+          last={payments.length === 0}
           onPress={() => {
             setMenuAt(null);
             setSaveError(null);
             setEditing(true);
           }}
         />
-        <MenuRow icon={Trash2} label="Excluir cartão" danger last onPress={() => setMenuAt(null)} />
+        {payments.length > 0 && (
+          <MenuRow
+            icon={Undo2}
+            label="Desfazer pagamento"
+            last
+            onPress={() => {
+              setMenuAt(null);
+              setUndoing(true);
+            }}
+          />
+        )}
       </AnchoredMenu>
+
+      <CenterModal open={undoing} onClose={() => !undoBusy && setUndoing(false)} title="Desfazer pagamento" subtitle={`Fatura de ${MONTH_NAMES[month - 1]?.toLowerCase() ?? ""} · ${card?.name ?? ""}`}>
+        {(() => {
+          const total = payments.reduce((sum, pay) => sum + Number(pay.amount), 0);
+          const from = [...new Set(payments.map((pay) => (pay.account_id ? accountNames[pay.account_id] : null)).filter(Boolean))].join(" e ");
+          return (
+            <View>
+              <Text style={{ fontSize: 15, lineHeight: 21, color: th(INK.soft) }}>
+                {money(total)} volta{from ? ` para ${from}` : " para a conta"} e a fatura fica em aberto de novo.
+              </Text>
+              <View style={{ marginTop: 22, flexDirection: "row", gap: 10 }}>
+                <Pressable
+                  onPress={() => setUndoing(false)}
+                  disabled={undoBusy}
+                  style={({ pressed }) => ({ flex: 1, height: 50, borderRadius: 25, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.10)", "bg"), opacity: pressed ? 0.7 : 1 })}
+                >
+                  <Text style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>Cancelar</Text>
+                </Pressable>
+                <Pressable
+                  disabled={undoBusy}
+                  onPress={async () => {
+                    setUndoBusy(true);
+                    try {
+                      for (const pay of payments) await removePayment(pay);
+                      setUndoing(false);
+                      showToast("Pagamento desfeito · a fatura voltou a ficar em aberto");
+                      refresh();
+                    } catch {
+                      showToast("Não consegui desfazer agora. Tente de novo.");
+                    } finally {
+                      setUndoBusy(false);
+                    }
+                  }}
+                  style={({ pressed }) => ({ flex: 1, height: 50, borderRadius: 25, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: undoBusy ? 0.5 : pressed ? 0.8 : 1 })}
+                >
+                  <Text style={{ fontSize: 15.5, fontWeight: "700", color: "#0B0B0B" }}>{undoBusy ? "Desfazendo…" : "Desfazer"}</Text>
+                </Pressable>
+              </View>
+            </View>
+          );
+        })()}
+      </CenterModal>
     </Room>
   );
 }

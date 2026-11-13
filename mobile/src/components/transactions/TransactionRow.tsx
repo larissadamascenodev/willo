@@ -58,6 +58,10 @@ export default function TransactionRow({
 
   const isRecurring = tx.recurrence_type === "fixa" || !!(tx.installments && tx.installments > 1);
   const isPending = tx.status !== "pago";
+  /* A bill whose day has gone by unpaid reads as late, in red — an invoice past its due day, say. */
+  const today = new Date();
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const isLate = isPending && !isReceita && tx.date.slice(0, 10) < todayIso;
 
   const onCard = tx.payment_method === "cartao" && !isFatura;
   const cardName = onCard ? creditCards?.find((c: any) => c.id === tx.credit_card_id)?.name : null;
@@ -126,11 +130,13 @@ export default function TransactionRow({
           {isReceita ? "+" : "−"}
           {money(tx.amount)}
         </Text>
-        <Text style={[{ marginTop: 2, fontSize: 11.5 }, isPending ? { fontWeight: "600", ...outlinedInk(AMBER) } : { color: th(INK.softer) }]}>
+        <Text style={[{ marginTop: 2, fontSize: 11.5 }, isPending ? { fontWeight: "600", ...outlinedInk(isLate ? RED : AMBER) } : { color: th(INK.softer) }]}>
           {isPending
             ? isReceita
               ? "A receber"
-              : "Pendente"
+              : isLate
+                ? "Atrasado"
+                : "Pendente"
             : isReceita
               ? "Recebido"
               : "Pago"}

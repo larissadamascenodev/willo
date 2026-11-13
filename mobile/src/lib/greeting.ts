@@ -61,7 +61,7 @@ function openings(name: string | null, now: Date): string[] {
   const to = name ? `, ${name}` : "";
   const part = hour < 5 ? "madrugada" : hour < 12 ? "manha" : hour < 18 ? "tarde" : "noite";
 
-  const out = [`Que bom te ver de novo${to}.`, `Você de volta${to}.`, `Oi${to}. Tô aqui.`, `E aí${to}?`];
+  const out = [`Que bom te ver de novo${to}.`, `Olha você aqui de novo${to}.`, `Oi${to}. Tô aqui.`, `E aí${to}?`];
   if (part === "manha") out.push(`Bom dia${to}.`, `Bom dia${to}. Café já foi?`);
   if (part === "tarde") out.push(`Boa tarde${to}.`, `Boa tarde${to}. Como vai o dia?`);
   if (part === "noite") out.push(`Boa noite${to}.`, `Boa noite${to}. Fechando o dia?`);

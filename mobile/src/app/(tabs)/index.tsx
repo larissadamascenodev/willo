@@ -53,7 +53,24 @@ const ORB_TRAVEL = 160;
  * only appears in the row at the top once the block has receded far enough that
  * reading the greeting is no longer the point.
  */
+/**
+ * The home loads its widgets only once it has been on screen. Opened straight onto a page
+ * on top of it — a notification, the Copilot, a link — the home underneath stays empty
+ * until the person comes back to it, so the page asked for does not wait behind every
+ * widget's queries. Coming back, the month is usually already loaded by that page.
+ */
 export default function Home() {
+  const [seen, setSeen] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      setSeen(true);
+    }, []),
+  );
+  if (!seen) return <Room lit sky home>{null}</Room>;
+  return <HomeScreen />;
+}
+
+function HomeScreen() {
   /* Drawn again in place when the theme changes. */
   useThemeRedraw();
   const insets = useSafeAreaInsets();
@@ -116,7 +133,7 @@ export default function Home() {
     }, [refetchProfile, user]),
   );
   const { cards, invoices } = useCardsOverview();
-  const { assinaturas, totalAssinaturas } = useRecorrentes();
+  const { assinaturas, totalAssinaturas, loading: assinaturasLoading } = useRecorrentes();
   const { ended, keep: keepEnded, cancel: cancelEnded } = useEndedSubscriptions(user?.id);
 
   const name = profile?.display_name || user?.email?.split("@")[0] || "";
@@ -214,12 +231,13 @@ export default function Home() {
       month,
       isCurrentMonth: true,
       assinaturas,
+      assinaturasLoading,
       totalAssinaturas,
       ended,
       keepEnded,
       cancelEnded,
     }),
-    [data, categories, month, assinaturas, totalAssinaturas, ended, keepEnded, cancelEnded],
+    [data, categories, month, assinaturas, assinaturasLoading, totalAssinaturas, ended, keepEnded, cancelEnded],
   );
 
   const skipWidget = useCallback((id: string) => widgetIsEmpty(id, widgetContext), [widgetContext]);

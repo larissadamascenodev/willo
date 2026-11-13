@@ -56,7 +56,18 @@ export function useRecorrentes() {
     if (!user) return;
     setLoading(true);
     try {
-      const txs = await getRecurringTransactionsForMonth(selectedMonth, selectedYear, user.id);
+      /* Both asked at once: the month's own rows and the ones that start right after it. */
+      const monthEnd = new Date(selectedYear, selectedMonth + 1, 0);
+      const endIso = `${monthEnd.getFullYear()}-${String(monthEnd.getMonth() + 1).padStart(2, "0")}-${String(monthEnd.getDate()).padStart(2, "0")}`;
+      const laterQuery = supabase
+        .from("transactions")
+        .select("id, name, amount, date, category, payment_method, type, parent_transaction_id, created_at, account_id, credit_card_id")
+        .eq("user_id", user.id)
+        .eq("recurrence_type", "fixa")
+        .is("parent_transaction_id", null)
+        .gt("date", endIso)
+        .lte("created_at", `${endIso}T23:59:59`);
+      const [txs, { data: later }] = await Promise.all([getRecurringTransactionsForMonth(selectedMonth, selectedYear, user.id), laterQuery]);
 
       const seen = new Map<string, typeof txs[number]>();
       for (const tx of txs) {
@@ -67,16 +78,6 @@ export function useRecorrentes() {
       /* A fixed entry registered on a day of the month already gone — at sign-up, or any
          day after — has its first date next month, so the month's own rows miss it. It
          is a commitment all the same: shown from the month it was registered in. */
-      const monthEnd = new Date(selectedYear, selectedMonth + 1, 0);
-      const endIso = `${monthEnd.getFullYear()}-${String(monthEnd.getMonth() + 1).padStart(2, "0")}-${String(monthEnd.getDate()).padStart(2, "0")}`;
-      const { data: later } = await supabase
-        .from("transactions")
-        .select("id, name, amount, date, category, payment_method, type, parent_transaction_id, created_at, account_id, credit_card_id")
-        .eq("user_id", user.id)
-        .eq("recurrence_type", "fixa")
-        .is("parent_transaction_id", null)
-        .gt("date", endIso)
-        .lte("created_at", `${endIso}T23:59:59`);
       const upcoming: RecurringItem[] = ((later ?? []) as { id: string; name: string; amount: number; date: string; category: string; payment_method: string | null; type: string; account_id: string | null; credit_card_id: string | null }[])
         .filter((tx) => !seen.has(`${tx.type}-${tx.id}`))
         /* Only what starts right after this month: a series that begins further on is not this month's. */

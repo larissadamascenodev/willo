@@ -11,7 +11,7 @@ import Surface from "~/components/Surface";
 import BankMark from "~/components/BankMark";
 import { ChevronRight } from "~/components/icons";
 import { money } from "~/lib/money";
-import { INK } from "~/theme/tokens";
+import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 import { th } from "~/theme/theme";
@@ -98,6 +98,9 @@ export default function CartoesResumoCard({ size = "full" }: { size?: "half" | "
   }
 
   const total = rows.reduce((s, r) => s + r.owed, 0);
+  /* An invoice past its due day is said under the figure, in red, instead of "open". */
+  const late = rows.filter((r) => r.owed > 0 && r.status.label.startsWith("Venceu")).length;
+  const owedLine = late > 0 ? (late === 1 ? "1 fatura vencida" : `${late} faturas vencidas`) : "em faturas abertas";
 
   if (size === "half") {
     /* Compact, the whole card used: the cards' marks at the top, what the open invoices
@@ -125,7 +128,7 @@ export default function CartoesResumoCard({ size = "full" }: { size?: "half" | "
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.7, color: th("#fff"), fontVariant: ["tabular-nums"] }}>
               {money(total)}
             </Text>
-            <Text style={{ marginTop: 1, fontSize: 12.5, color: th(INK.soft) }}>em faturas abertas</Text>
+            <Text style={{ marginTop: 1, fontSize: 12.5, fontWeight: late > 0 ? "600" : "400", color: th(late > 0 ? RED : INK.soft) }}>{owedLine}</Text>
           </View>
 
           <View>
@@ -157,8 +160,8 @@ export default function CartoesResumoCard({ size = "full" }: { size?: "half" | "
       <Text numberOfLines={1} style={[T.figure, { marginTop: 4 }]}>
         {money(total)}
       </Text>
-      <Text numberOfLines={1} style={[T.note, { marginTop: 8, fontSize: 13 }]}>
-        em faturas abertas
+      <Text numberOfLines={1} style={[T.note, { marginTop: 8, fontSize: 13 }, late > 0 && { fontWeight: "600", color: th(RED) }]}>
+        {owedLine}
       </Text>
 
       {/* One bar split by card: the share each takes of what is owed. */}

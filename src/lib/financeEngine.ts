@@ -65,7 +65,23 @@ function getMonthRange(month: number, year: number) {
 // Cache for materialize RPC calls — avoid calling the same month/user twice per session
 const materializedMonths = new Set<string>();
 
+/* The same question asked twice at once — the home, the page on top of it and the months
+   before all opening together — goes to the database once: the later callers share the
+   answer still on its way. Only while it is on its way: kept answers live in the caches. */
+const inflight = new Map<string, Promise<unknown>>();
+function once<T>(key: string, run: () => Promise<T>): Promise<T> {
+  const pending = inflight.get(key) as Promise<T> | undefined;
+  if (pending) return pending;
+  const request = run().finally(() => {
+    if (inflight.get(key) === request) inflight.delete(key);
+  });
+  inflight.set(key, request);
+  return request;
+}
+
 export function clearMaterializedCache() {
+  /* A change was just written: anything already on its way may predate it. */
+  inflight.clear();
   materializedMonths.clear();
   monthTxCache.clear();
   invoiceTotalsCache.clear();
@@ -81,7 +97,11 @@ function getCachedMonthTxs(key: string): RawTransaction[] | null {
   return null;
 }
 
-async function fetchMonthTransactions(month: number, year: number, opts?: { skipMaterialize?: boolean; userId?: string }) {
+function fetchMonthTransactions(month: number, year: number, opts?: { skipMaterialize?: boolean; userId?: string }) {
+  return once(`mtx:${month}:${year}:${opts?.skipMaterialize ? 1 : 0}:${opts?.userId ?? ""}`, () => fetchMonthTransactionsNow(month, year, opts));
+}
+
+async function fetchMonthTransactionsNow(month: number, year: number, opts?: { skipMaterialize?: boolean; userId?: string }) {
   const { start, end } = getMonthRange(month, year);
   const dbMonth = month + 1; // DB stores 1-based months
 
@@ -169,7 +189,11 @@ async function fetchMonthTransactions(month: number, year: number, opts?: { skip
   return result;
 }
 
-async function fetchMonthEvents(month: number, year: number) {
+function fetchMonthEvents(month: number, year: number) {
+  return once(`ev:${month}:${year}`, () => fetchMonthEventsNow(month, year));
+}
+
+async function fetchMonthEventsNow(month: number, year: number) {
   const { start, end } = getMonthRange(month, year);
   const { data, error } = await supabase
     .from("finance_events")
@@ -182,7 +206,11 @@ async function fetchMonthEvents(month: number, year: number) {
   return (data ?? []) as RawEvent[];
 }
 
-async function fetchTotalAccountBalance(month?: number, year?: number): Promise<number> {
+function fetchTotalAccountBalance(month?: number, year?: number): Promise<number> {
+  return once(`bal:${month}:${year}`, () => fetchTotalAccountBalanceNow(month, year));
+}
+
+async function fetchTotalAccountBalanceNow(month?: number, year?: number): Promise<number> {
   const { data: accounts } = await supabase
     .from("accounts")
     .select("current_balance, initial_balance, type, created_at")
@@ -284,7 +312,11 @@ const invoiceTotalsCache = new Map<string, { data: InvoiceTotals; timestamp: num
  * than the month's leftover and no outgoing line to explain it, and the next month
  * counted the same money a second time.
  */
-async function fetchInvoiceTotalsForMonth(month: number, year: number): Promise<InvoiceTotals> {
+function fetchInvoiceTotalsForMonth(month: number, year: number): Promise<InvoiceTotals> {
+  return once(`inv:${month}:${year}`, () => fetchInvoiceTotalsForMonthNow(month, year));
+}
+
+async function fetchInvoiceTotalsForMonthNow(month: number, year: number): Promise<InvoiceTotals> {
   const cacheKey = `inv-${month}-${year}`;
   const cached = invoiceTotalsCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < MONTH_TX_CACHE_TTL) return cached.data;
@@ -343,10 +375,18 @@ async function fetchInvoiceTotalsForMonth(month: number, year: number): Promise<
   return result;
 }
 
-export async function fetchHistoricalAverages(
+export function fetchHistoricalAverages(
   currentMonth: number,
   currentYear: number,
   months: number = 3
+): Promise<{ avgIncome: number; avgExpense: number }> {
+  return once(`hist:${currentMonth}:${currentYear}:${months}`, () => fetchHistoricalAveragesNow(currentMonth, currentYear, months));
+}
+
+async function fetchHistoricalAveragesNow(
+  currentMonth: number,
+  currentYear: number,
+  months: number,
 ): Promise<{ avgIncome: number; avgExpense: number }> {
   // Build month/year pairs
   const periods: { m: number; y: number }[] = [];
@@ -397,7 +437,15 @@ function computeStatus(
   return "safe";
 }
 
-export async function getFinancialSummary(
+export function getFinancialSummary(
+  month: number,
+  year: number,
+  options?: { includeHistorical?: boolean; userId?: string }
+): ReturnType<typeof getFinancialSummaryNow> {
+  return once(`fs:${month}:${year}:${options?.includeHistorical ?? true}:${options?.userId ?? ""}`, () => getFinancialSummaryNow(month, year, options));
+}
+
+async function getFinancialSummaryNow(
   month: number,
   year: number,
   options?: { includeHistorical?: boolean; userId?: string }

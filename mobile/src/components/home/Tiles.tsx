@@ -373,6 +373,7 @@ export function AssinaturasTile({
   ended,
   onKeep,
   onCancel,
+  loading = false,
 }: {
   size?: WidgetSize;
   assinaturas: RecurringItem[];
@@ -380,6 +381,7 @@ export function AssinaturasTile({
   ended: EndedSubscription[];
   onKeep: (e: EndedSubscription) => void;
   onCancel: (e: EndedSubscription) => void;
+  loading?: boolean;
 }) {
   const router = useRouter();
   const { selectedMonth, selectedYear } = useMonth();
@@ -390,6 +392,7 @@ export function AssinaturasTile({
     <>
       <AssinaturasCard
         assinaturas={assinaturas}
+        loading={loading}
         total={total}
         ended={ended}
         onKeep={onKeep}
@@ -513,8 +516,11 @@ export function AssinaturasCard({
   size,
   onOpen: open,
   onAdd,
+  loading = false,
 }: {
   assinaturas: RecurringItem[];
+  /** Still being read: nothing is said to be missing until it has been looked for. */
+  loading?: boolean;
   total: number;
   ended?: EndedSubscription[];
   onKeep?: (e: EndedSubscription) => void;
@@ -529,6 +535,22 @@ export function AssinaturasCard({
   const next = ordered.find((a) => !a.isPaidThisMonth);
   const ask = ended[0];
   const yearly = totalAssinaturas * 12;
+
+  /* Still reading: the card keeps its place, without claiming there is none. */
+  if (loading && n === 0 && !ask) {
+    const bar = (w: number, mt: number) => <View style={{ marginTop: mt, height: 12, width: w, borderRadius: 6, backgroundColor: th("rgba(255,255,255,0.06)", "bg") }} />;
+    return (
+      <Surface style={size !== "full" ? { flex: 1, padding: 14 } : { padding: 16 }}>
+        <View style={size !== "full" ? { flex: 1, justifyContent: "space-between" } : undefined}>
+          <Header title="Assinaturas" />
+          <View>
+            {bar(96, 14)}
+            {bar(64, 8)}
+          </View>
+        </View>
+      </Surface>
+    );
+  }
 
   /* ── Compact ── */
   if (size !== "full") {

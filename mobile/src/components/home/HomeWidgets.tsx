@@ -37,6 +37,7 @@ export interface HomeWidgetContext {
   month: number;
   isCurrentMonth: boolean;
   assinaturas: RecurringItem[];
+  assinaturasLoading?: boolean;
   totalAssinaturas: number;
   ended: EndedSubscription[];
   keepEnded: (e: EndedSubscription) => void;
@@ -90,6 +91,7 @@ export function renderHomeWidget(
         <AssinaturasTile
           size={size}
           assinaturas={ctx.assinaturas}
+          loading={ctx.assinaturasLoading}
           total={ctx.totalAssinaturas}
           ended={ctx.ended}
           onKeep={ctx.keepEnded}
