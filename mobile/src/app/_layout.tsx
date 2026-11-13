@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ActivityIndicator, Image, Linking, View, useWindowDimensions } from "react-native";
 import { Stack } from "expo-router";
 import * as ExpoLinking from "expo-linking";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
 import Svg, { ClipPath, Defs, Image as SvgImage, Path } from "react-native-svg";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -22,6 +22,8 @@ import { COVER_GROW_MS, LIGHT_GROUND, THEME_FADE_MS, endThemeReveal, liftThemeCo
 import { stageOf } from "~/lib/accountStage";
 import { accountLegal, acceptLegal, localLegal, syncLegal } from "~/lib/legalConsent";
 import Consent from "~/components/onboarding/Consent";
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 /* Before any shared module is imported for real, the handful of browser things it
    expects have to exist. */
@@ -187,8 +189,9 @@ function Door() {
   /* The photograph's hole, growing from the finger. */
   const themeShot = useThemeShot();
   const revealAt = useThemeReveal();
-  const veil = useSharedValue(1);
-  const veilStyle = useAnimatedStyle(() => ({ opacity: veil.get() }));
+  const hole = useSharedValue(0);
+  const holeX = useSharedValue(W / 2);
+  const holeY = useSharedValue(H / 2);
   /* The reveal starts the moment the photograph is up — at the touch — not once the
      screens have been drawn again: under the first, slow part of the opening the circle
      is still small, and the screens are drawn in the new theme in that time. It ends once
@@ -199,17 +202,20 @@ function Door() {
     if (!swappedRef.current || !openedRef.current) return;
     swappedRef.current = false;
     openedRef.current = false;
-    /* The veil is left clear: raising it here could show the old screen for a frame. */
     endThemeReveal();
+    hole.set(0);
   };
   useLayoutEffect(() => {
     if (!revealAt) return;
     swappedRef.current = false;
     openedRef.current = false;
-    /* The old theme dissolves into the new one in the switch's own time, starting at the
-       touch — the same movement as the card, the whole screen at once. */
-    veil.set(1);
-    veil.set(withTiming(0, { duration: THEME_FADE_MS, easing: Easing.inOut(Easing.cubic) }));
+    /* A circle of the new theme opens from the exact point of the touch, in the switch's
+       own time: the knob crosses as the circle reaches the far corner. */
+    holeX.set(revealAt.x);
+    holeY.set(revealAt.y);
+    hole.set(0);
+    const reachOut = Math.hypot(Math.max(revealAt.x, W - revealAt.x), Math.max(revealAt.y, H - revealAt.y)) + 8;
+    hole.set(withTiming(reachOut, { duration: THEME_FADE_MS, easing: Easing.inOut(Easing.cubic) }));
     const id = setTimeout(() => {
       openedRef.current = true;
       finishReveal();
@@ -238,11 +244,13 @@ function Door() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
   const circleStyle = useAnimatedStyle(() => ({ opacity: clear.get(), transform: [{ scale: Math.max(0.001, grow.get()) }] }));
-  /* The whole screen, less the switch that was tapped (left live, sliding): even-odd. */
-  const cut = revealAt?.cut;
-  const veilPath = cut
-    ? `M0 0H${W}V${H}H0Z M${cut.x} ${cut.y}h${cut.w}v${cut.h}h${-cut.w}Z`
-    : `M0 0H${W}V${H}H0Z`;
+  /* The whole screen, less a circle: drawn with the even-odd rule, the circle is a hole. */
+  const holeProps = useAnimatedProps(() => {
+    const r = hole.get();
+    const x = holeX.get();
+    const y = holeY.get();
+    return { d: `M0 0H${W}V${H}H0Z M${x - r} ${y} a${r} ${r} 0 1 0 ${2 * r} 0 a${r} ${r} 0 1 0 ${-2 * r} 0Z` };
+  });
   /* Far enough from the finger to reach the farthest corner. */
   const cx = coverTo?.x ?? W / 2;
   const cy = coverTo?.y ?? H / 2;
@@ -328,16 +336,14 @@ function Door() {
       /* In front of everything, explicitly: without it the native screens can be drawn
          over it, and a dark screen, being opaque, hid the change entirely. */
       <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, width: W, height: H, zIndex: 9999, elevation: 9999, opacity: revealAt ? 1 : 0 }}>
-        <Animated.View style={[{ width: W, height: H }, veilStyle]}>
-          <Svg width={W} height={H}>
-            <Defs>
-              <ClipPath id="theme-hole">
-                <Path d={veilPath} clipRule="evenodd" />
-              </ClipPath>
-            </Defs>
-            <SvgImage href={{ uri: themeShot.ready }} x={0} y={0} width={W} height={H} preserveAspectRatio="xMidYMid slice" clipPath="url(#theme-hole)" />
-          </Svg>
-        </Animated.View>
+        <Svg width={W} height={H}>
+          <Defs>
+            <ClipPath id="theme-hole">
+              <AnimatedPath animatedProps={holeProps} clipRule="evenodd" />
+            </ClipPath>
+          </Defs>
+          <SvgImage href={{ uri: themeShot.ready }} x={0} y={0} width={W} height={H} preserveAspectRatio="xMidYMid slice" clipPath="url(#theme-hole)" />
+        </Svg>
       </View>
     )}
     {coverTo && (
