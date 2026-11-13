@@ -365,22 +365,22 @@ export default function FixedSheet({
                   : "O que sai todo mês. Toque numa ou escreva outra."
               }
             />
-            <View style={{ marginTop: 18, gap: 8 }}>
+            {/* Two to a row, so every one fits without scrolling; the last, to write one's own, the whole row. */}
+            <View style={{ marginTop: 18, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {PRESETS[k as Exclude<Kind, "assinatura">].map((p) => (
-                <Option
-                  key={p.label}
-                  label={p.label}
-                  Icon={p.Icon}
-                  on={pick === p.label}
-                  onPress={() => setPick(pick === p.label ? null : p.label)}
-                />
+                <View key={p.label} style={{ width: "48.8%" }}>
+                  <Option compact label={p.label} Icon={p.Icon} on={pick === p.label} onPress={() => setPick(pick === p.label ? null : p.label)} />
+                </View>
               ))}
-              <Option
-                label={income ? "Outra receita" : "Outra conta"}
-                Icon={Pencil}
-                on={pick === OTHER}
-                onPress={() => setPick(pick === OTHER ? null : OTHER)}
-              />
+              <View style={{ width: "100%" }}>
+                <Option
+                  compact
+                  label={income ? "Outra receita" : "Outra conta"}
+                  Icon={Pencil}
+                  on={pick === OTHER}
+                  onPress={() => setPick(pick === OTHER ? null : OTHER)}
+                />
+              </View>
             </View>
             {pick === OTHER && (
               <TextInput
@@ -536,11 +536,14 @@ function Option({
   on,
   onPress,
   Icon,
+  compact = false,
 }: {
   label: string;
   on: boolean;
   onPress: () => void;
   Icon: Icon;
+  /** Half a row: smaller, and no tick (the outline says it is chosen). */
+  compact?: boolean;
 }) {
   return (
     <Pressable
@@ -549,13 +552,13 @@ function Option({
         onPress();
       }}
       style={({ pressed }) => ({
-        height: 54,
-        borderRadius: 18,
+        height: compact ? 50 : 54,
+        borderRadius: compact ? 16 : 18,
         borderCurve: "continuous",
-        paddingHorizontal: 12,
+        paddingHorizontal: compact ? 10 : 12,
         flexDirection: "row",
         alignItems: "center",
-        gap: 12,
+        gap: compact ? 9 : 12,
         borderWidth: 1,
         borderColor: th(on ? "#fff" : "rgba(255,255,255,0.10)", "line"),
         backgroundColor: th(
@@ -578,16 +581,17 @@ function Option({
         <Icon size={17} color={th("#fff")} strokeWidth={2.1} />
       </View>
       <Text
+        numberOfLines={1}
         style={{
           flex: 1,
-          fontSize: 15.5,
+          fontSize: compact ? 14.5 : 15.5,
           fontWeight: "600",
           color: th("#fff"),
         }}
       >
         {label}
       </Text>
-      <View
+      {!compact && <View
         style={{
           width: 22,
           height: 22,
@@ -600,7 +604,7 @@ function Option({
         }}
       >
         {on && <Check size={13} color={th("#0B0B0B")} strokeWidth={3.2} />}
-      </View>
+      </View>}
     </Pressable>
   );
 }

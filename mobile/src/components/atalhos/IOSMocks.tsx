@@ -263,3 +263,112 @@ export function MockAllow() {
     </View>
   );
 }
+
+/* ───────────── iOS 26: the Shortcuts app as it is now ───────────── */
+
+/** "Todos os Atalhos": the grid of tiles and the round + floating at the foot. */
+export function MockAllShortcuts() {
+  const tiles = [
+    ["#8FA894", "Obter Conteúdo"],
+    ["#E9A54D", "Registro Rápido"],
+    ["#E06A6A", "Perguntar"],
+    ["#4A8BEF", "Beber Água"],
+  ];
+  return (
+    <View style={{ width: "100%", height: 300, borderRadius: 26, borderCurve: "continuous", overflow: "hidden", backgroundColor: BG(), borderWidth: 1, borderColor: th("rgba(255,255,255,0.12)", "line"), padding: 12 }}>
+      <Text style={{ marginTop: 18, fontSize: 19, fontWeight: "800", color: TEXT() }}>Todos os Atalhos</Text>
+      <View style={{ marginTop: 10, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        {tiles.map(([c, l]) => (
+          <View key={l} style={{ width: "48%", height: 64, borderRadius: 14, padding: 8, justifyContent: "flex-end", backgroundColor: c }}>
+            <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: "700", color: "#fff" }}>{l}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={{ position: "absolute", bottom: 16, alignSelf: "center", left: "50%", marginLeft: -24, width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(60,60,64,0.92)", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" }}>
+        <Plus size={22} color="#fff" strokeWidth={2.4} />
+        <Finger style={{ right: 14, top: 14 }} />
+      </View>
+    </View>
+  );
+}
+
+/** "Novo Atalho" with the action list risen from the foot, its "Automação" chip to touch. */
+export function MockActionSheet() {
+  return (
+    <View style={{ width: "100%", height: 300, borderRadius: 26, borderCurve: "continuous", overflow: "hidden", backgroundColor: BG(), borderWidth: 1, borderColor: th("rgba(255,255,255,0.12)", "line") }}>
+      <Text style={{ marginTop: 18, textAlign: "center", fontSize: 13, fontWeight: "700", color: TEXT() }}>Novo Atalho</Text>
+      <View style={{ position: "absolute", left: 6, right: 6, bottom: 6, height: 170, borderRadius: 20, padding: 10, backgroundColor: GROUP() }}>
+        <View style={{ height: 28, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.08)" }}>
+          <Search size={12} color={SOFT} />
+          <Text style={{ fontSize: 11.5, color: SOFT }}>Buscar</Text>
+        </View>
+        <View style={{ marginTop: 8, flexDirection: "row", gap: 6 }}>
+          {["Automação", "Scripts", "Controle"].map((c, i) => (
+            <View key={c} style={{ height: 26, paddingHorizontal: 10, borderRadius: 13, justifyContent: "center", backgroundColor: i === 0 ? "rgba(10,132,255,0.28)" : "rgba(255,255,255,0.06)" }}>
+              <Text style={{ fontSize: 11, fontWeight: i === 0 ? "800" : "600", color: BLUE }}>{c}</Text>
+              {i === 0 ? <Finger style={{ right: 26, top: 3 }} /> : null}
+            </View>
+          ))}
+        </View>
+        {["Enviar Mensagem", "Abrir App", "Reproduzir Música"].map((r) => (
+          <View key={r} style={{ marginTop: 6, height: 26, borderRadius: 10, justifyContent: "center", paddingHorizontal: 10, backgroundColor: "rgba(255,255,255,0.05)" }}>
+            <Text style={{ fontSize: 11, color: TEXT() }}>{r}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/** The automation's "when", as the editor writes it: a sentence with blue blanks. */
+export function MockTrigger({ kind }: { kind: "carteira" | "notificacao" }) {
+  const chip = (t: string, touch?: boolean) => (
+    <View style={{ paddingHorizontal: 6, height: 22, borderRadius: 6, justifyContent: "center", backgroundColor: "rgba(10,132,255,0.22)" }}>
+      <Text style={{ fontSize: 12, fontWeight: "600", color: BLUE }}>{t}</Text>
+      {touch ? <Finger style={{ right: -8, top: 1 }} /> : null}
+    </View>
+  );
+  return (
+    <View style={{ width: "100%", height: 300, borderRadius: 26, borderCurve: "continuous", overflow: "hidden", backgroundColor: BG(), borderWidth: 1, borderColor: th("rgba(255,255,255,0.12)", "line"), padding: 12 }}>
+      <Text style={{ marginTop: 18, textAlign: "center", fontSize: 13, fontWeight: "700", color: TEXT() }}>Novo Atalho</Text>
+      <View style={{ marginTop: 14, borderRadius: 14, padding: 12, backgroundColor: GROUP(), flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
+        {kind === "carteira" ? (
+          <>
+            <CardIcon color={BLUE} />
+            <Text style={{ fontSize: 12.5, color: TEXT() }}>Quando</Text>
+            {chip("Qualquer Cartão")}
+            <Text style={{ fontSize: 12.5, color: TEXT() }}>for aproximado</Text>
+            <View>
+              <ChevronRight size={15} color={BLUE} strokeWidth={2.6} />
+              <Finger style={{ right: -4, top: -2 }} />
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={{ fontSize: 12.5, color: TEXT() }}>Quando eu receber uma notificação de</Text>
+            {chip("Nubank", true)}
+          </>
+        )}
+      </View>
+    </View>
+  );
+}
+
+/** A Willo action with its one blank set to "Entrada do Atalho". */
+export function MockWilloInput({ action, field }: { action: string; field: string }) {
+  return (
+    <View style={{ borderRadius: 10, padding: 10, backgroundColor: GROUP(), gap: 8 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <WilloTile />
+        <Text style={{ fontSize: 12.5, fontWeight: "700", color: TEXT() }}>{action}</Text>
+      </View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <Text style={{ fontSize: 12, color: SOFT }}>{field}</Text>
+        <View style={{ paddingHorizontal: 6, height: 20, borderRadius: 5, justifyContent: "center", backgroundColor: "rgba(10,132,255,0.22)" }}>
+          <Text style={{ fontSize: 11, fontWeight: "600", color: BLUE }}>Entrada do Atalho</Text>
+          <Finger style={{ right: -6, top: 0 }} />
+        </View>
+      </View>
+    </View>
+  );
+}

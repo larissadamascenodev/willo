@@ -4,15 +4,15 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { hasCopilotAction } from "../../modules/willo-copilot";
+import { hasBankNoticeAction, hasCopilotAction } from "../../modules/willo-copilot";
 import { supabase } from "@/integrations/supabase/client";
 import Room from "~/components/Room";
 import RoundButton from "~/components/RoundButton";
 import Surface from "~/components/Surface";
-import { AlertTriangle, Check, ChevronLeft, ChevronRight, Compass, Copy, CreditCard, Link2, Play, Zap } from "~/components/icons";
+import { AlertTriangle, Bell, Check, ChevronLeft, ChevronRight, Compass, Copy, CreditCard, Link2, Play, Zap } from "~/components/icons";
 import { showToast } from "~/lib/toast";
 import Walkthrough from "~/components/atalhos/Walkthrough";
-import { CardIcon, MockAddShortcut, MockAllow, MockJsonFields, MockList, MockPlus, MockScreen, MockSearch, MockTabs, MockUrlAction, MockWilloAction, WilloTile } from "~/components/atalhos/IOSMocks";
+import { CardIcon, MockActionSheet, MockAddShortcut, MockAllShortcuts, MockAllow, MockJsonFields, MockList, MockScreen, MockSearch, MockTrigger, MockUrlAction, MockWilloInput, WilloTile } from "~/components/atalhos/IOSMocks";
 import { GREEN, INK } from "~/theme/tokens";
 
 import { th, useThemeRedraw } from "~/theme/theme";
@@ -273,31 +273,31 @@ function WalletCopilotAction() {
       <Walkthrough
         finish="Pronto. Na próxima compra por aproximação, ela aparece no card Willo Copilot, na tela inicial, esperando você confirmar."
         steps={[
-          ...copilotAutomationSteps(),
+          ...automationStart("carteira"),
           {
-            title: "Escolha a ação do Willo",
+            title: "Adicione a ação do Willo",
             text: (
               <>
-                Toque em <B>Novo Atalho em Branco</B>, depois em <B>Buscar</B>, digite <B>Willo</B> e escolha <B>Registrar compra no Willo</B>.
+                Toque em <B>Buscar</B>, digite <B>Willo</B> e escolha <B>Registrar compra no Willo</B>.
               </>
             ),
             screen: (
-              <MockScreen title="Ações" back="Voltar">
+              <MockScreen title="Novo Atalho">
                 <MockSearch text="Willo" />
-                <MockList rows={[{ label: "Registrar compra no Willo", touch: true, icon: <WilloTile />, tint: "transparent", chevron: false }, { label: "Registro rápido do Willo", icon: <WilloTile />, tint: "transparent", chevron: false }]} />
+                <MockList rows={[{ label: "Registrar compra no Willo", touch: true, icon: <WilloTile />, tint: "transparent", chevron: false }, { label: "Registrar aviso do banco no Willo", icon: <WilloTile />, tint: "transparent", chevron: false }]} />
               </MockScreen>
             ),
           },
           {
-            title: "Ligue a compra à ação",
+            title: "Ligue a compra",
             text: (
               <>
-                Toque em <B>Valor</B> e escolha <B>Transação</B>; toque de novo e escolha <B>Valor</B>. Faça o mesmo em <B>Comerciante</B> e em <B>Cartão</B> (escolhendo <B>Cartão ou Passe</B>). Toque em <B>OK</B>.
+                Toque em <B>Valor</B> e escolha <B>Entrada do Atalho</B>. Só isso: o Willo lê sozinho o valor, a loja e o cartão. Toque em <B>✓</B> para salvar.
               </>
             ),
             screen: (
-              <MockScreen title="Nova Automação" right={<Text style={{ fontSize: 12.5, fontWeight: "700", color: "#0A84FF" }}>OK</Text>}>
-                <MockWilloAction />
+              <MockScreen title="Novo Atalho">
+                <MockWilloInput action="Registrar compra no Willo" field="Valor" />
               </MockScreen>
             ),
           },
@@ -308,8 +308,62 @@ function WalletCopilotAction() {
 }
 
 function WalletCopilot() {
-  if (hasCopilotAction) return <WalletCopilotAction />;
-  return <WalletCopilotLink />;
+  if (!hasCopilotAction) return <WalletCopilotLink />;
+  return (
+    <View>
+      <WalletCopilotAction />
+      {hasBankNoticeAction && <BankNotices />}
+    </View>
+  );
+}
+
+/**
+ * The bank's own notification, read: it says debit or credit, and it sees Pix sent and
+ * received — what the Wallet does not. With both set up, a purchase seen by each is kept once.
+ */
+function BankNotices() {
+  return (
+    <View style={{ marginTop: 28 }}>
+      <Lead
+        icon={<Bell size={18} color={th(GREEN)} strokeWidth={2.4} />}
+        title="Avisos do banco"
+        text="Quando o app do seu banco avisa uma compra ou um Pix, o Willo lê o aviso: débito ou crédito, valor, loja ou pessoa. Avisos de fatura, limite e ofertas ficam de fora."
+      />
+      <Walkthrough
+        finish="Pronto. No próximo aviso de compra ou Pix do seu banco, ele chega no Willo Copilot — já dizendo se foi no débito ou no crédito."
+        steps={[
+          ...automationStart("notificacao"),
+          {
+            title: "Adicione a ação do Willo",
+            text: (
+              <>
+                Toque em <B>Buscar</B>, digite <B>Willo</B> e escolha <B>Registrar aviso do banco no Willo</B>.
+              </>
+            ),
+            screen: (
+              <MockScreen title="Novo Atalho">
+                <MockSearch text="Willo" />
+                <MockList rows={[{ label: "Registrar compra no Willo", icon: <WilloTile />, tint: "transparent", chevron: false }, { label: "Registrar aviso do banco no Willo", touch: true, icon: <WilloTile />, tint: "transparent", chevron: false }]} />
+              </MockScreen>
+            ),
+          },
+          {
+            title: "Ligue o aviso",
+            text: (
+              <>
+                Toque em <B>Aviso</B> e escolha <B>Entrada do Atalho</B>. Toque em <B>✓</B> para salvar.
+              </>
+            ),
+            screen: (
+              <MockScreen title="Novo Atalho">
+                <MockWilloInput action="Registrar aviso do banco no Willo" field="Aviso" />
+              </MockScreen>
+            ),
+          },
+        ]}
+      />
+    </View>
+  );
 }
 
 /** Builds without the Willo action: the shortcut posts to the Copilot address itself. */
@@ -431,64 +485,78 @@ function WalletCopilotLink() {
 }
 
 /** The automation's first three steps, the same with the Willo action or without. */
-function copilotAutomationSteps() {
+/** The first steps of an automation in iOS 26: the +, "Automação", the trigger. */
+function automationStart(trigger: "carteira" | "notificacao") {
   return [
     {
-      title: "Abra a aba Automação",
+      title: "Toque no +",
       text: (
         <>
-          Abra o app <B>Atalhos</B>, toque em <B>Automação</B>, embaixo, e depois no <B>+</B>, em cima.
+          Abra o app <B>Atalhos</B> e toque no <B>+</B> redondo, embaixo no meio da tela.
         </>
       ),
-      screen: (
-        <MockScreen title="Automação" right={<MockPlus />}>
-          <Text style={{ marginTop: 40, textAlign: "center", fontSize: 12, color: "#8E8E93" }}>Nenhuma automação ainda</Text>
-          <MockTabs on="Automação" />
-        </MockScreen>
-      ),
+      screen: <MockAllShortcuts />,
     },
     {
-      title: "Escolha Transação",
+      title: "Toque em Automação",
       text: (
         <>
-          Na lista do que dispara a automação, toque em <B>Transação</B>, a da Carteira.
+          Na lista que sobe, toque no botão azul <B>Automação</B>, logo abaixo da busca.
         </>
       ),
+      screen: <MockActionSheet />,
+    },
+    {
+      title: trigger === "carteira" ? "Escolha Carteira" : "Escolha Notificação",
+      text:
+        trigger === "carteira" ? (
+          <>
+            Desça até <B>Apps</B> e toque em <B>Carteira</B> — “Quando eu aproximar um Cartão…”.
+          </>
+        ) : (
+          <>
+            Desça até <B>Apps</B> e toque em <B>Notificação</B> — “Quando eu receber uma notificação…”.
+          </>
+        ),
       screen: (
-        <MockScreen title="Nova Automação" back="Automação">
+        <MockScreen title="Automação">
           <MockList
+            header="Apps"
             rows={[
-              { label: "Hora do Dia", tint: "#0A84FF", icon: <View style={{ width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: "#fff" }} /> },
-              { label: "Alarme", tint: "#FF9F0A", icon: <View style={{ width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: "#fff" }} /> },
-              { label: "Transação", tint: "#1C1C1E", touch: true, icon: <CardIcon color="#FF9F0A" /> },
-              { label: "E-mail", tint: "#0A84FF", icon: <View style={{ width: 11, height: 8, borderRadius: 2, borderWidth: 1.5, borderColor: "#fff" }} /> },
+              { label: "App", tint: "#3A3A3C", icon: <View style={{ width: 9, height: 9, borderRadius: 2, borderWidth: 1.5, borderColor: "#fff" }} /> },
+              { label: "Carteira", tint: "#0A84FF", touch: trigger === "carteira", icon: <CardIcon color="#fff" /> },
+              { label: "Captura de Tela", tint: "#3A3A3C", icon: <View style={{ width: 9, height: 9, borderRadius: 2, borderWidth: 1.5, borderColor: "#fff" }} /> },
+              { label: "Notificação", tint: "#FF453A", touch: trigger === "notificacao", icon: <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: "#fff" }} /> },
             ]}
           />
         </MockScreen>
       ),
     },
-    {
-      title: "Marque seus cartões",
-      text: (
-        <>
-          Marque os cartões da Carteira que você usa, escolha <B>Executar Imediatamente</B> e toque em <B>Seguinte</B>.
-        </>
-      ),
-      screen: (
-        <MockScreen title="Transação" back="Voltar" right={<Text style={{ fontSize: 12.5, fontWeight: "700", color: "#0A84FF" }}>Seguinte</Text>}>
-          <MockList
-            header="Quando eu toco em"
-            rows={[
-              { label: "Nubank", check: true, chevron: false, tint: "#820AD1", icon: <CardIcon color="#fff" /> },
-              { label: "Outro cartão", check: true, chevron: false, tint: "#3A3A3C", icon: <CardIcon color="#fff" /> },
-            ]}
-          />
-          <View style={{ height: 10 }} />
-          <MockList rows={[{ label: "Executar Imediatamente", check: true, touch: true, chevron: false }, { label: "Confirmar Antes de Executar", chevron: false }]} />
-        </MockScreen>
-      ),
-    },
+    trigger === "carteira"
+      ? {
+          title: "Deixe Qualquer Cartão",
+          text: (
+            <>
+              Deixe <B>Qualquer Cartão</B>. Toque na setinha <B>›</B> e, se aparecer, escolha <B>Executar Imediatamente</B> — assim ela roda sozinha, sem perguntar.
+            </>
+          ),
+          screen: <MockTrigger kind="carteira" />,
+        }
+      : {
+          title: "Escolha o app do banco",
+          text: (
+            <>
+              Toque no app e escolha o do seu banco — <B>Nubank</B>, Itaú, Inter… Usa mais de um? Marque todos. Na setinha <B>›</B>, escolha <B>Executar Imediatamente</B>.
+            </>
+          ),
+          screen: <MockTrigger kind="notificacao" />,
+        },
   ];
+}
+
+/* Kept for builds without the Willo action, whose walkthrough continues with a request. */
+function copilotAutomationSteps() {
+  return automationStart("carteira");
 }
 
 /* ───────────── Pieces ───────────── */

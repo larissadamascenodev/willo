@@ -62,6 +62,57 @@ struct WilloLogPurchaseIntent: AppIntent {
   }
 }
 
+/// "Registrar aviso do banco no Willo": the action a "Notificação" automation runs when the
+/// bank's app notifies a purchase or a Pix ("Compra no débito aprovada: R$ 21,00 em ...").
+/// The text goes to the server, which reads debit or credit, the amount and the shop, and
+/// leaves alone anything that is not money moving. The same purchase also seen by the
+/// Wallet is kept once.
+@available(iOS 16.0, *)
+struct WilloLogBankNoticeIntent: AppIntent {
+  static let title: LocalizedStringResource = "Registrar aviso do banco no Willo"
+  static let description = IntentDescription("Lê o aviso de compra ou Pix do seu banco e manda para o Willo Copilot. Você confirma no app.")
+  static let openAppWhenRun: Bool = false
+
+  @Parameter(title: "Aviso")
+  var notice: String?
+
+  @Parameter(title: "App do banco")
+  var app: String?
+
+  static var parameterSummary: some ParameterSummary {
+    Summary("Registrar \(\.$notice) no Willo") {
+      \.$app
+    }
+  }
+
+  func perform() async throws -> some IntentResult {
+    let d = UserDefaults.standard
+    guard
+      let code = d.string(forKey: "willo.copilot.code"),
+      let base = d.string(forKey: "willo.copilot.url"),
+      let url = URL(string: base + "/functions/v1/copilot")
+    else {
+      throw WilloCopilotError.notSignedIn
+    }
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.timeoutInterval = 20
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.httpBody = try JSONSerialization.data(withJSONObject: ["code": code, "notice": notice ?? "", "app": app ?? ""])
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+    if let http = response as? HTTPURLResponse, http.statusCode >= 300 {
+      let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+      throw WilloCopilotError.server((body?["error"] as? String) ?? "Não foi possível enviar o aviso ao Willo.")
+    }
+    let reply = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+    /* Not money moving (an invoice closing, an offer): nothing to tell. */
+    if (reply?["ignored"] as? Bool) == true { return .result() }
+    WilloCopilotNotice.arrived((reply?["message"] as? String) ?? "Uma compra chegou no Willo Copilot")
+    return .result()
+  }
+}
+
 @available(iOS 16.0, *)
 enum WilloCopilotError: Error, CustomLocalizedStringResourceConvertible {
   case notSignedIn
@@ -109,6 +160,12 @@ struct WilloAppShortcuts: AppShortcutsProvider {
       phrases: ["Registrar compra no \(.applicationName)"],
       shortTitle: "Registrar compra",
       systemImageName: "creditcard.fill"
+    )
+    AppShortcut(
+      intent: WilloLogBankNoticeIntent(),
+      phrases: ["Registrar aviso do banco no \(.applicationName)"],
+      shortTitle: "Aviso do banco",
+      systemImageName: "bell.badge.fill"
     )
   }
 }

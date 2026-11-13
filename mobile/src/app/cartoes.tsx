@@ -16,6 +16,7 @@ import CardFaceTile, { FREE_LIMIT_HEX } from "~/components/wallet/CardFaceTile";
 /* What is used of the limit, in a strong yellow: it reads on both grounds and against the green. */
 const LIMIT_USED = "#FFC21A";
 import CardFormSheet, { type CardDraft } from "~/components/wallet/CardFormSheet";
+import DeleteCardModal from "~/components/wallet/DeleteCardModal";
 import { createCreditCard, updateCreditCard } from "@/services/transactionService";
 import { CreditCard, Pencil, Plus, Trash2 } from "~/components/icons";
 import { showToast } from "~/lib/toast";
@@ -44,6 +45,7 @@ export default function Cartoes() {
   const { user } = useAuth();
   const { cards, invoices, items, loading, refresh } = useCardsOverview();
   const [held, setHeld] = useState<OverviewCard | null>(null);
+  const [deleting, setDeleting] = useState<OverviewCard | null>(null);
   const [heldRect, setHeldRect] = useState<AnchorRect | null>(null);
   /* The card sheet: { card: null } makes a new one, { card } changes that one. */
   const [form, setForm] = useState<{ card: OverviewCard | null } | null>(null);
@@ -349,8 +351,19 @@ export default function Cartoes() {
             setHeld(null);
           }}
         />
-        <MenuRow icon={Trash2} label="Excluir" danger last onPress={() => setHeld(null)} />
+        <MenuRow
+          icon={Trash2}
+          label="Excluir"
+          danger
+          last
+          onPress={() => {
+            setDeleting(held);
+            setHeld(null);
+          }}
+        />
       </AnchoredMenu>
+
+      <DeleteCardModal card={deleting} onClose={() => setDeleting(null)} />
 
       <CardFormSheet
         open={!!form}

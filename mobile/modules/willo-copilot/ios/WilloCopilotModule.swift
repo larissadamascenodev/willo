@@ -22,6 +22,11 @@ public class WilloCopilotModule: Module {
       UserDefaults.standard.string(forKey: "willo.copilot.code") != nil
     }
 
+    /// This build has the bank-notice action too.
+    Function("hasBankNotice") { () -> Bool in
+      return true
+    }
+
     /// The screen an iPhone action asked the app to open ("rapido"), handed over once.
     Function("takeRoute") { () -> String? in
       let d = UserDefaults.standard

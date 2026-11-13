@@ -24,7 +24,8 @@ import { PaymentDetail, paymentName } from "~/components/fatura/InvoicePayments"
 import PayInvoiceSheet from "~/components/fatura/PayInvoiceSheet";
 import AddToCardSheet from "~/components/fatura/AddToCardSheet";
 import AnchoredMenu, { MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
-import { AlertTriangle, CalendarClock, Check, Clock, Lock, MoreVertical, Pencil, Plus, Undo2, Wallet } from "~/components/icons";
+import { AlertTriangle, CalendarClock, Check, Clock, Lock, MoreVertical, Pencil, Plus, Trash2, Undo2, Wallet } from "~/components/icons";
+import DeleteCardModal from "~/components/wallet/DeleteCardModal";
 import CenterModal from "~/components/CenterModal";
 import { removePayment } from "~/lib/invoicePayments";
 import { showToast } from "~/lib/toast";
@@ -80,6 +81,7 @@ export default function Fatura() {
   const [openPayment, setOpenPayment] = useState<InvoicePayment | null>(null);
   /* Undoing what was paid on the invoice on screen: asked, then every payment of it goes. */
   const [undoing, setUndoing] = useState(false);
+  const [deletingCard, setDeletingCard] = useState(false);
   const [undoBusy, setUndoBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [openLine, setOpenLine] = useState<InvoiceLine | null>(null);
@@ -580,7 +582,6 @@ export default function Fatura() {
         <MenuRow
           icon={Pencil}
           label="Editar cartão"
-          last={payments.length === 0}
           onPress={() => {
             setMenuAt(null);
             setSaveError(null);
@@ -591,14 +592,25 @@ export default function Fatura() {
           <MenuRow
             icon={Undo2}
             label="Desfazer pagamento"
-            last
             onPress={() => {
               setMenuAt(null);
               setUndoing(true);
             }}
           />
         )}
+        <MenuRow
+          icon={Trash2}
+          label="Excluir cartão"
+          danger
+          last
+          onPress={() => {
+            setMenuAt(null);
+            setDeletingCard(true);
+          }}
+        />
       </AnchoredMenu>
+
+      <DeleteCardModal card={deletingCard && card ? { id: card.id, name: card.name } : null} onClose={() => setDeletingCard(false)} onDeleted={() => router.replace("/cartoes" as never)} />
 
       <CenterModal open={undoing} onClose={() => !undoBusy && setUndoing(false)} title="Desfazer pagamento" subtitle={`Fatura de ${MONTH_NAMES[month - 1]?.toLowerCase() ?? ""} · ${card?.name ?? ""}`}>
         {(() => {
