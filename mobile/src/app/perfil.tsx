@@ -224,19 +224,6 @@ export default function Perfil() {
           {!!email && <Text style={{ marginTop: 4, fontSize: 14, color: th(INK.soft) }}>{email}</Text>}
         </View>
 
-        {/* The plan. */}
-        <PlanCard
-          plan={plan}
-          onManage={() => {
-            tick();
-            void Linking.openURL("https://apps.apple.com/account/subscriptions").catch(() => undefined);
-          }}
-          onSubscribe={() => {
-            tick();
-            setPaywall(true);
-          }}
-        />
-
         {/* The account. */}
         <Eyebrow>Conta</Eyebrow>
         <Surface>
@@ -278,6 +265,16 @@ export default function Perfil() {
           )}
           <Hairline style={{ marginLeft: 64 }} />
           <Row icon={<Mail size={17} color={th("#fff")} strokeWidth={1.9} />} caption label="E-mail" value={email} />
+          <Hairline style={{ marginLeft: 64 }} />
+          {/* The plan. */}
+          <PlanRow
+            plan={plan}
+            onPress={() => {
+              tick();
+              if (plan.active === false) setPaywall(true);
+              else void Linking.openURL("https://apps.apple.com/account/subscriptions").catch(() => undefined);
+            }}
+          />
         </Surface>
 
         {/* How the app looks: the theme is one switch; the background opens a sheet
@@ -571,69 +568,48 @@ function Row({
 const MONTHS = ["jan.", "fev.", "mar.", "abr.", "maio", "jun.", "jul.", "ago.", "set.", "out.", "nov.", "dez."];
 const day = (iso: string) => {
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? "" : `${d.getDate()} de ${MONTHS[d.getMonth()]} de ${d.getFullYear()}`;
+  return Number.isNaN(d.getTime()) ? "" : `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 };
 
 /**
- * The plan, on a card of its own at the top: Willo PRO's mark, whether it is on, which
- * plan it is and when it renews or ends; managed in the App Store, or taken from here.
+ * The plan, as one row of the account: Willo PRO's crown, which plan it is and when it
+ * renews or ends, and a small tag saying whether it is on. Tapped, it opens the App
+ * Store's subscriptions, or the plans when there is none.
  */
-function PlanCard({ plan, onManage, onSubscribe }: { plan: PlanInfo; onManage: () => void; onSubscribe: () => void }) {
+function PlanRow({ plan, onPress }: { plan: PlanInfo; onPress: () => void }) {
   const on = plan.active === true;
   const kind = plan.period === "anual" ? "Plano anual" : plan.period === "mensal" ? "Plano mensal" : null;
   const when = plan.until ? day(plan.until) : "";
-  const chip =
-    plan.active === null ? null : !on ? { text: "Inativo", fg: th(INK.soft), bg: th("rgba(255,255,255,0.08)", "bg") } : plan.trial ? { text: "Semana grátis", fg: GREEN, bg: "rgba(103,205,103,0.16)" } : !plan.renews && when ? { text: "Cancelado", fg: th(INK.soft), bg: th("rgba(255,255,255,0.08)", "bg") } : { text: "Ativo", fg: GREEN, bg: "rgba(103,205,103,0.16)" };
+  const soft = { fg: th(INK.soft), bg: th("rgba(255,255,255,0.08)", "bg") };
+  const green = { fg: GREEN, bg: "rgba(103,205,103,0.16)" };
+  const tag =
+    plan.active === null ? null : !on ? { text: "Assinar", ...green } : plan.trial ? { text: "Grátis", ...green } : !plan.renews && when ? { text: "Cancelado", ...soft } : { text: "Ativo", ...green };
   const detail =
     plan.active === null
-      ? "Verificando a assinatura…"
+      ? "Verificando…"
       : !on
-        ? "Seus dados continuam aqui. Assine para registrar, ler comprovantes e conversar com o Willo."
+        ? "Desbloqueie tudo no Willo"
         : plan.trial && when
-          ? `Grátis até ${when}${kind ? ` · depois, ${kind.toLowerCase()}` : ""}`
+          ? `Semana grátis até ${when}`
           : kind && when
-            ? `${kind} · ${plan.renews ? "renova em" : "termina em"} ${when}`
+            ? `${kind} · ${plan.renews ? "renova em" : "até"} ${when}`
             : kind ?? "Todos os recursos liberados";
 
   return (
-    <Surface style={{ marginTop: 28 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 16 }}>
-        <ProMark size={52} muted={plan.active === false} />
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Text style={{ fontSize: 18, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>Willo PRO</Text>
-            {chip && (
-              <View style={{ paddingHorizontal: 8, height: 22, borderRadius: 11, justifyContent: "center", backgroundColor: chip.bg }}>
-                <Text style={{ fontSize: 11.5, fontWeight: "700", color: chip.fg }}>{chip.text}</Text>
-              </View>
-            )}
+    <Row
+      icon={<ProMark size={36} muted={plan.active === false} />}
+      bare
+      label="Willo PRO"
+      value={detail}
+      onPress={onPress}
+      trailing={
+        tag ? (
+          <View style={{ paddingHorizontal: 9, height: 24, borderRadius: 12, justifyContent: "center", backgroundColor: tag.bg }}>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: tag.fg }}>{tag.text}</Text>
           </View>
-          <Text style={{ marginTop: 4, fontSize: 13.5, lineHeight: 18, color: th(INK.soft) }}>{detail}</Text>
-        </View>
-      </View>
-      {on ? (
-        <>
-          <Hairline style={{ marginLeft: 16 }} />
-          <Pressable
-            onPress={onManage}
-            accessibilityRole="button"
-            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, height: 50, backgroundColor: pressed ? th("rgba(255,255,255,0.04)", "bg") : "transparent" })}
-          >
-            <Text style={{ flex: 1, fontSize: 15, fontWeight: "500", color: th("#fff") }}>Gerenciar assinatura</Text>
-            <ChevronRight size={17} color={th(INK.faint)} strokeWidth={2} />
-          </Pressable>
-        </>
-      ) : plan.active === false ? (
-        <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
-          <Pressable
-            onPress={onSubscribe}
-            accessibilityRole="button"
-            style={({ pressed }) => ({ height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.85 : 1 })}
-          >
-            <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#0B0B0B") }}>Conhecer o Willo PRO</Text>
-          </Pressable>
-        </View>
-      ) : null}
-    </Surface>
+        ) : undefined
+      }
+      chevron
+    />
   );
 }
