@@ -15,6 +15,7 @@ import { useApplyOnboarding } from "~/lib/onboarding";
 import { MonthProvider } from "@/contexts/MonthContext";
 import ToastHost from "~/components/ToastHost";
 import LaunchIntro from "~/components/LaunchIntro";
+import QuickBlink from "~/components/QuickBlink";
 import { markIntroDone } from "~/lib/launchIntro";
 import NotificationBridge from "~/lib/NotificationBridge";
 import { GREEN, GROUND } from "~/theme/tokens";
@@ -59,6 +60,16 @@ const namesScreen = (url: string | null | undefined) => {
   }
 };
 
+/** The double tap's link: Registro rápido. */
+const isQuick = (url: string | null | undefined) => {
+  if (!url) return false;
+  try {
+    return (ExpoLinking.parse(url).path ?? "").replace(/^\/+|\/+$/g, "") === "rapido";
+  } catch {
+    return false;
+  }
+};
+
 export default function RootLayout() {
   /* Opened by a link into a screen — Registro rápido from the back of the phone — the
      opening never starts: whoever taps twice wants to note something, now. Read at once,
@@ -78,6 +89,21 @@ export default function RootLayout() {
     }
     return true;
   });
+  /* Registro rápido from the back of the phone — opened cold or with the app already
+     running: in place of the opening, Willo's eyes blink once while the sheet comes up. */
+  const [blink, setBlink] = useState(() => {
+    try {
+      return isQuick(ExpoLinking.getLinkingURL());
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    const sub = Linking.addEventListener("url", ({ url }) => {
+      if (isQuick(url)) setBlink(true);
+    });
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     if (!intro) return;
@@ -90,6 +116,7 @@ export default function RootLayout() {
     void Linking.getInitialURL()
       .then((url) => {
         if (namesScreen(url)) skip();
+        if (isQuick(url)) setBlink(true);
       })
       .catch(() => undefined);
     const sub = Linking.addEventListener("url", ({ url }) => {
@@ -110,6 +137,7 @@ export default function RootLayout() {
           }}
         />
       )}
+      {blink && !intro && <QuickBlink onDone={() => setBlink(false)} />}
     </View>
   );
 }
