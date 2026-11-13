@@ -14,6 +14,7 @@ import { catchUpYields, earns, estimate, latestCdi, yieldEarned } from "~/lib/yi
 import AccountSheet from "~/components/accounts/AccountSheet";
 import CaixinhaSheet from "~/components/accounts/CaixinhaSheet";
 import GastosFixosCard from "~/components/home/GastosFixosCard";
+import FixedSheet from "~/components/home/FixedSheet";
 import CaixinhaTile, { NewCaixinhaTile, TILE_W } from "~/components/accounts/CaixinhaTile";
 import Room from "~/components/Room";
 import RoundButton from "~/components/RoundButton";
@@ -66,6 +67,8 @@ export default function Gestao() {
   const [cdi, setCdi] = useState<number | null>(null);
   const [addingAccount, setAddingAccount] = useState(false);
   const [addingCaixinha, setAddingCaixinha] = useState(false);
+  /* A fixed income or cost, asked the way a new account's setup asks it. */
+  const [addingFixed, setAddingFixed] = useState<"despesa" | "receita" | null>(null);
 
   const announceChange = () => window.dispatchEvent(new CustomEvent("finance-data-changed"));
   const announce = announceChange;
@@ -338,7 +341,7 @@ export default function Gestao() {
 
             {/* ══ What comes in and goes out every month: the home's own card, with a way to add one ══ */}
             <Animated.View entering={FadeInDown.delay(80).duration(420)} style={{ marginTop: 30 }}>
-              <GastosFixosCard onAdd={(kind) => router.push(`/manual?tipo=${kind}&fixa=1` as never)} />
+              <GastosFixosCard onAdd={(kind) => setAddingFixed(kind)} />
             </Animated.View>
 
             {/* ══ Caixinhas: money set aside for something, still yours ══ */}
@@ -451,6 +454,7 @@ export default function Gestao() {
           showToast("Conta adicionada");
         }}
       />
+      <FixedSheet kind={addingFixed} onClose={() => setAddingFixed(null)} />
       <CaixinhaSheet
         open={addingCaixinha}
         onClose={() => setAddingCaixinha(false)}
