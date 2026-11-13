@@ -5,6 +5,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "~/supabase/client";
 import { cachedAccounts, warmHome, warmHomeWithin } from "~/lib/warmHome";
 import { forgetWarmStart } from "~/lib/warmStart";
+import { hasCopilotAction, setCopilotCode } from "../../modules/willo-copilot";
 import { loginGate } from "~/lib/socialAuth";
 
 /**
@@ -96,6 +97,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!loading) void syncPurchasesUser(uid);
   }, [uid, loading]);
 
+  /* The iPhone action "Registrar compra no Willo" sends Wallet purchases with the
+     person's Copilot code; it is handed to it here, so there is nothing to paste. */
+  useEffect(() => {
+    if (loading || !hasCopilotAction) return;
+    if (!uid) {
+      setCopilotCode(null, null);
+      return;
+    }
+    const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? null;
+    const key = `willo:copilot-code:${uid}`;
+    let kept: string | null = null;
+    try {
+      kept = localStorage.getItem(key);
+    } catch {
+      kept = null;
+    }
+    if (kept) {
+      setCopilotCode(kept, url);
+      return;
+    }
+    void supabase.functions
+      .invoke("copilot", { body: { action: "code" } })
+      .then(({ data }) => {
+        const code = (data as { code?: string } | null)?.code;
+        if (!code) return;
+        try {
+          localStorage.setItem(key, code);
+        } catch {
+          /* fetched again next launch */
+        }
+        setCopilotCode(code, url);
+      })
+      .catch(() => undefined);
+  }, [uid, loading]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -104,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         signOut: async () => {
           forgetWarmStart();
+          setCopilotCode(null, null);
           await supabase.auth.signOut();
         },
       }}

@@ -37,6 +37,7 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/withCopilotIntent",
       "expo-asset",
       "expo-apple-authentication",
       [

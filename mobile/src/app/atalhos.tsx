@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import { hasCopilotAction } from "../../modules/willo-copilot";
 import { supabase } from "@/integrations/supabase/client";
 import Room from "~/components/Room";
 import RoundButton from "~/components/RoundButton";
@@ -127,7 +128,45 @@ function BackTap() {
 
 /* ───────────── Wallet purchases into Copilot ───────────── */
 
+/**
+ * With the Willo action in the build, the Wallet automation runs it directly: no
+ * address, no code, no request to fill in — only the three items of the purchase.
+ */
+function WalletCopilotAction() {
+  return (
+    <View>
+      <Lead
+        icon={<CreditCard size={18} color={th(GREEN)} strokeWidth={2.4} />}
+        title="Compras da Carteira no Copilot"
+        text="Cada compra por aproximação com o iPhone chega no Willo Copilot e espera você confirmar."
+      />
+
+      <Step n={1} title="Crie a automação">
+        No app <B>Atalhos</B>, vá na aba <B>Automação</B>, embaixo, e siga:
+        <Path steps={["+", "Transação"]} root="Automação" />
+        Marque os seus cartões, escolha <B>Executar Imediatamente</B> e toque em <B>Seguinte</B> e depois em <B>Novo Atalho em Branco</B>.
+      </Step>
+
+      <Step n={2} title="Escolha a ação do Willo">
+        Toque em <B>Buscar</B>, digite <B>Willo</B> e escolha <B>Registrar compra no Willo</B>.
+      </Step>
+
+      <Step n={3} title="Ligue a compra à ação" last>
+        Toque em <B>Valor</B> e, na faixa acima do teclado, toque no botão azul <B>Transação</B>; toque nele de novo e escolha <B>Valor</B>. Faça o mesmo em <B>Comerciante</B> (escolhendo <B>Comerciante</B>) e, tocando na setinha, em <B>Cartão</B> (escolhendo <B>Cartão ou Passe</B>). Se já vierem preenchidos, é só conferir.
+      </Step>
+
+      <Done text="Pronto. Na próxima compra por aproximação, ela aparece no card Willo Copilot, na tela inicial, esperando você confirmar." />
+    </View>
+  );
+}
+
 function WalletCopilot() {
+  if (hasCopilotAction) return <WalletCopilotAction />;
+  return <WalletCopilotLink />;
+}
+
+/** Builds without the Willo action: the shortcut posts to the Copilot address itself. */
+function WalletCopilotLink() {
   const [busy, setBusy] = useState(false);
 
   /* The person's Copilot code, handed over through the share sheet so it can be copied. */
