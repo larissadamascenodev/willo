@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getAccounts } from "@/services/transactionService";
-import { prefetchDashboardData } from "@/services/dashboardData";
 import { fetchCategories, keepDashboard } from "~/lib/warmStart";
 
 /**
@@ -50,7 +49,10 @@ export async function warmHome(userId: string): Promise<void> {
   const month = now.getMonth();
   const year = now.getFullYear();
   await Promise.all([
-    prefetchDashboardData(month, year, { includeHistorical: false, userId })
+    /* Required here, not at the top, for the same reason as in warmStart. */
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    (require("@/services/dashboardData") as typeof import("@/services/dashboardData"))
+      .prefetchDashboardData(month, year, { includeHistorical: false, userId })
       .then((d) => keepDashboard(userId, month, year, d))
       .catch(() => undefined),
     fetchCategories(userId, month, year).catch(() => undefined),

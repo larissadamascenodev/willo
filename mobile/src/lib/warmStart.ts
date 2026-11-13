@@ -1,15 +1,14 @@
 import { useEffect, useState } from "react";
-import {
-  buildDashboardCacheKey,
-  getCachedDashboardData,
-  setCachedDashboardData,
-} from "@/services/dashboardData";
-import {
-  buildCategorySummaries,
-  loadCategoryAnalytics,
-  type CategoryAnalytics,
-} from "@/services/categoryAnalytics";
+import type { CategoryAnalytics } from "@/services/categoryAnalytics";
 import type { CategoryExpense, DashboardData } from "@/types/finance";
+
+/* The shared services are required when first used, not imported at the top: this file
+   is loaded with the auth, before the shims give the phone `window`, and some of those
+   services listen on `window` the moment they load. */
+/* eslint-disable @typescript-eslint/no-require-imports */
+const dash = () => require("@/services/dashboardData") as typeof import("@/services/dashboardData");
+const cats = () => require("@/services/categoryAnalytics") as typeof import("@/services/categoryAnalytics");
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 /**
  * What the screens showed last time, kept on the phone.
@@ -57,6 +56,7 @@ const monthKey = (userId: string, month: number, year: number) => `${userId}:${y
  */
 export function seedDashboard(userId: string | undefined, month: number, year: number): boolean {
   if (!userId) return false;
+  const { buildDashboardCacheKey, getCachedDashboardData, setCachedDashboardData } = dash();
   const key = buildDashboardCacheKey(userId, month, year);
   if (getCachedDashboardData(key)) return false;
   const kept = read<DashboardData>(DASH + monthKey(userId, month, year));
@@ -96,7 +96,8 @@ export function fetchCategories(userId: string, month: number, year: number, for
   const running = inflight.get(k);
   /* After a write, a read already on its way may predate it: start another. */
   if (running && !force) return running;
-  const p = loadCategoryAnalytics({ userId, month, year })
+  const p = cats()
+    .loadCategoryAnalytics({ userId, month, year })
     .then((fresh) => {
       memory.set(k, fresh);
       write(CATS + k, fresh);
@@ -137,7 +138,7 @@ export function useCategoryAnalytics(userId: string | undefined, month: number, 
 /** The categories as the home's cards read them, from the same arithmetic as the page. */
 export function asCategoryExpenses(data: CategoryAnalytics | null): CategoryExpense[] | null {
   if (!data) return null;
-  return buildCategorySummaries(data.transactions).map((c) => ({ name: c.name, amount: c.amount, color: "", icon: "" }));
+  return cats().buildCategorySummaries(data.transactions).map((c) => ({ name: c.name, amount: c.amount, color: "", icon: "" }));
 }
 
 /* ── Any other card's last reading ── */
