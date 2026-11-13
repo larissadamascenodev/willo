@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import AccountSelect from "~/components/AccountSelect";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -588,38 +589,12 @@ export default function CaixinhaSheet({
                       ) : (
                         <View>
                           <Text style={{ marginBottom: 8, marginLeft: 4, fontSize: 12, fontWeight: "600", letterSpacing: 0.2, color: th(INK.softer) }}>Sai de qual conta</Text>
-                          <Group>
-                            {accounts.map((acc, i) => {
-                              const on = acc.id === accountId;
-                              return (
-                                <Pressable key={acc.id} onPress={() => { void Haptics.selectionAsync().catch(() => undefined); setAccountId(acc.id); }}>
-                                  <Row last={i === accounts.length - 1}>
-                                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                                      <BankMark name={acc.name} hex={colorFor(acc.name, acc.color, "#6B7280")} size={38} />
-                                      <View style={{ flex: 1, minWidth: 0 }}>
-                                        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>{acc.name}</Text>
-                                        <Text style={{ marginTop: 1, fontSize: 12.5, color: th(INK.softer) }}>{money(Number(acc.current_balance) || 0)}</Text>
-                                      </View>
-                                      <View
-                                        style={{
-                                          width: 24,
-                                          height: 24,
-                                          borderRadius: 12,
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                          borderWidth: on ? 0 : 1.5,
-                                          borderColor: th("rgba(255,255,255,0.28)", "line"),
-                                          backgroundColor: th(on ? "#fff" : "transparent", "bg"),
-                                        }}
-                                      >
-                                        {on && <Check size={14} color={th("#0B0B0B")} strokeWidth={3.2} />}
-                                      </View>
-                                    </View>
-                                  </Row>
-                                </Pressable>
-                              );
-                            })}
-                          </Group>
+                          <AccountSelect
+                            options={accounts.map((acc) => ({ id: acc.id, name: acc.name, color: acc.color, note: money(Number(acc.current_balance) || 0) }))}
+                            value={accountId}
+                            onChange={setAccountId}
+                            title="Sai de qual conta?"
+                          />
                         </View>
                       ))}
                   </Animated.View>

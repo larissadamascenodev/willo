@@ -3,6 +3,7 @@ import { Pressable, Text, TextInput, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { categoryHex } from "@/lib/categoryData";
 import { colorFor } from "@/lib/banks";
+import AccountSelect from "~/components/AccountSelect";
 import BankMark from "~/components/BankMark";
 import MonthCalendar from "~/components/eventos/MonthCalendar";
 import { Chip, Choice, PartsBar, REPEAT_LABEL, RepeatList, Toggle, dayLabel, invoiceMonthOf, nums, type Account, type Card, type Kind, type Method, type Repeat } from "~/components/registro/entryParts";
@@ -210,21 +211,16 @@ export default function EntryForm({
                 <Choice icon={<CreditCard size={18} color={th("#fff")} strokeWidth={2.1} />} label="Crédito" on={v.method === "cartao"} onPress={() => pickMethod("cartao")} />
               </View>
             ) : (
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {list.map((o) => (
-                  <Choice
-                    key={o.id}
-                    wide
-                    on={v.whereId === o.id}
-                    icon={<BankMark name={o.name} hex={colorFor(o.name, o.color)} size={26} />}
-                    label={o.name}
-                    onPress={() => {
-                      onChange({ whereId: o.id });
-                      setOpen(null);
-                    }}
-                  />
-                ))}
-              </View>
+              <AccountSelect
+                options={list}
+                value={v.whereId}
+                title={credit ? "Em qual cartão?" : income ? "Em qual conta entrou?" : "De qual conta saiu?"}
+                placeholder={credit ? "Escolher cartão" : "Escolher conta"}
+                onChange={(id) => {
+                  onChange({ whereId: id });
+                  setOpen(null);
+                }}
+              />
             )}
           </Animated.View>
         )}

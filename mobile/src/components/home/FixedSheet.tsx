@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Modal, Pressable, Text, TextInput, View } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -12,7 +12,7 @@ import { createTransaction, getAccounts, getCreditCards } from "@/services/trans
 import CategoryPicker from "~/components/CategoryPicker";
 import EntryForm, { type EntryValues } from "~/components/registro/EntryForm";
 import type { Account, Card } from "~/components/registro/entryParts";
-import BankMark from "~/components/BankMark";
+import AccountSelect from "~/components/AccountSelect";
 import StepSheet, { Ask } from "~/components/StepSheet";
 import {
   Banknote,
@@ -289,50 +289,19 @@ export default function FixedSheet({ kind, onClose }: { kind: Kind | null; onClo
               autoFocus
               style={{ marginTop: 14, minWidth: 0, fontSize: 42, fontWeight: "800", letterSpacing: -1.5, color: th(cents === 0 ? INK.faint : "#fff"), padding: 0 }}
             />
+            {/* Which account, right under the amount, so the keyboard never hides it. */}
+            {accounts.length > 0 && (
+              <View style={{ marginTop: 14 }}>
+                <Text style={{ marginBottom: 8, fontSize: 13, fontWeight: "600", color: th(INK.soft) }}>{income ? "Entra na conta" : "Sai da conta"}</Text>
+                <AccountSelect options={accounts} value={accountId} onChange={setAccountId} title={income ? "Em qual conta entra?" : "De qual conta sai?"} />
+              </View>
+            )}
             <DayStepper
               label={income ? "Cai todo dia" : "Vence todo dia"}
               value={day}
               onChange={setDay}
               note={startsLater ? `Esse dia já passou neste mês: começa em ${Number(starts.slice(8, 10))} ${MONTHS[Number(starts.slice(5, 7)) - 1]}` : undefined}
             />
-            {/* Which account, on the same page: one tap. */}
-            {accounts.length > 0 && (
-              <>
-                <Text style={{ marginTop: 18, fontSize: 13, fontWeight: "600", color: th(INK.soft) }}>{income ? "Entra na conta" : "Sai da conta"}</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8, marginHorizontal: -20 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }} keyboardShouldPersistTaps="handled">
-                  {accounts.map((a) => {
-                    const on = a.id === accountId;
-                    return (
-                      <Pressable
-                        key={a.id}
-                        onPress={() => {
-                          void Haptics.selectionAsync().catch(() => undefined);
-                          setAccountId(a.id);
-                        }}
-                        style={({ pressed }) => ({
-                          height: 44,
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 8,
-                          paddingLeft: 6,
-                          paddingRight: 14,
-                          borderRadius: 22,
-                          borderWidth: 1,
-                          borderColor: th(on ? "#fff" : "rgba(255,255,255,0.10)", "line"),
-                          backgroundColor: th(on ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.05)", "bg"),
-                          transform: [{ scale: pressed ? 0.96 : 1 }],
-                        })}
-                      >
-                        <BankMark name={a.name} hex={a.color ?? "#7C8AA5"} size={32} />
-                        <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: on ? "700" : "500", color: th("#fff") }}>
-                          {a.name}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </>
-            )}
           </View>
         )}
 
@@ -474,7 +443,7 @@ function DayStepper({
   return (
     <View
       style={{
-        marginTop: 22,
+        marginTop: 14,
         borderRadius: 22,
         borderCurve: "continuous",
         backgroundColor: th("rgba(255,255,255,0.06)", "bg"),

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AccountSelect from "~/components/AccountSelect";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import type { InvoiceLine } from "@/lib/invoice/readModel";
@@ -200,21 +201,9 @@ export function PaymentDetail({
             style={{ marginTop: 4, padding: 0, fontSize: 32, fontWeight: "800", letterSpacing: -1.1, color: th(cents === 0 ? INK.faint : "#fff") }}
           />
           <Text style={{ marginTop: 16, fontSize: 12.5, color: th(INK.soft) }}>Pago com</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8, marginHorizontal: -20 }} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>
-            {accounts.map((a) => {
-              const on = a.id === accountId;
-              return (
-                <Pressable
-                  key={a.id}
-                  onPress={() => setAccountId(a.id)}
-                  style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8, paddingLeft: 8, paddingRight: 12, borderRadius: 18, borderWidth: 1, borderColor: th(on ? "#fff" : "rgba(255,255,255,0.08)", "line"), backgroundColor: th(on ? "rgba(255,255,255,0.13)" : "rgba(255,255,255,0.05)", "bg") }}
-                >
-                  <BankMark name={a.name} hex={colorFor(a.name, a.color)} size={28} />
-                  <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "700", color: th("#fff") }}>{a.name}</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+          <View style={{ marginTop: 8 }}>
+            <AccountSelect options={accounts.map((a) => ({ id: a.id, name: a.name, color: a.color }))} value={accountId} onChange={setAccountId} title="Pago com qual conta?" />
+          </View>
           {error && <Text style={{ marginTop: 12, fontSize: 13, color: th(RED) }}>{error}</Text>}
           <View style={{ marginTop: 20, flexDirection: "row", gap: 10 }}>
             <Button label="Cancelar" onPress={() => setMode("view")} disabled={busy} />

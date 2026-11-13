@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AccountSelect from "~/components/AccountSelect";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { getAccounts } from "@/services/transactionService";
@@ -221,36 +222,14 @@ export default function PayInvoiceSheet({
 
         {/* From where. */}
         <Text style={{ marginTop: 22, fontSize: 12.5, color: th(INK.soft) }}>Pagar com</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8, marginHorizontal: -20 }} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>
-          {accounts.map((a) => {
-            const on = a.id === accountId;
-            return (
-              <Pressable
-                key={a.id}
-                onPress={() => setAccountId(a.id)}
-                style={({ pressed }) => ({
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 10,
-                  paddingVertical: 10,
-                  paddingLeft: 10,
-                  paddingRight: 14,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: th(on ? "#fff" : "rgba(255,255,255,0.08)", "line"),
-                  backgroundColor: th(on ? "rgba(255,255,255,0.13)" : "rgba(255,255,255,0.05)", "bg"),
-                  opacity: pressed ? 0.75 : 1,
-                })}
-              >
-                <BankMark name={a.name} hex={colorFor(a.name, a.color)} size={32} />
-                <View>
-                  <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "700", color: th("#fff") }}>{a.name}</Text>
-                  <Text style={{ fontSize: 12, color: th(INK.soft) }}>{money(Number(a.current_balance))}</Text>
-                </View>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <View style={{ marginTop: 8 }}>
+          <AccountSelect
+            options={accounts.map((a) => ({ id: a.id, name: a.name, color: a.color, note: money(Number(a.current_balance)) }))}
+            value={accountId}
+            onChange={setAccountId}
+            title="Pagar com qual conta?"
+          />
+        </View>
         {short && <Text style={{ marginTop: 10, fontSize: 12.5, color: th(RED) }}>Essa conta não tem saldo para esse pagamento. Escolha outra conta ou um valor menor.</Text>}
         {error && <Text style={{ marginTop: 10, fontSize: 13, color: th(RED) }}>{error}</Text>}
 

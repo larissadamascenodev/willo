@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AccountSelect from "~/components/AccountSelect";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { getAccounts } from "@/services/transactionService";
 import { colorFor } from "@/lib/banks";
@@ -202,43 +203,16 @@ export default function GoalMoveSheet({
           {isDeposit ? "De qual conta" : "Para qual conta"}
         </Text>
         <View style={{ marginTop: 10, gap: 8 }}>
-          {accounts.map((acc) => {
-            const on = acc.id === accountId;
-            const hex = colorFor(acc.name, acc.color, "#6B7280");
-            return (
-              <Pressable
-                key={acc.id}
-                onPress={() => setAccountId(on ? null : acc.id)}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 12,
-                  borderRadius: 18,
-                  borderWidth: 1,
-                  borderColor: th(on ? "#fff" : "rgba(255,255,255,0.07)", "line"),
-                  backgroundColor: th(on ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.035)", "bg"),
-                  paddingHorizontal: 14,
-                  paddingVertical: 12,
-                }}
-              >
-                <BankMark name={acc.name} hex={hex} size={32} />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>
-                    {acc.name}
-                  </Text>
-                  <Text style={{ marginTop: 1, fontSize: 12, color: th(INK.softer) }}>
-                    {money(Number(acc.current_balance) || 0)}
-                  </Text>
-                </View>
-                {on && <Check size={16} color={th(GREEN)} strokeWidth={3} />}
-              </Pressable>
-            );
-          })}
-          <Text style={{ fontSize: 11.5, lineHeight: 16, color: th(INK.softer) }}>
-            {isDeposit
-              ? "Sem conta marcada, o depósito entra como dinheiro vindo de fora do Willo."
-              : "Sem conta marcada, o saque sai da caixinha sem entrar em nenhuma conta."}
-          </Text>
+          {/* Without an account, the money comes from (or goes) outside the Willo. */}
+          <AccountSelect
+            options={[
+              ...accounts.map((acc) => ({ id: acc.id, name: acc.name, color: acc.color, note: money(Number(acc.current_balance) || 0) })),
+              { id: "__fora", name: "Fora do Willo", color: "#6B7280", note: isDeposit ? "Dinheiro que veio de fora" : "Sai sem entrar em conta" },
+            ]}
+            value={accountId ?? "__fora"}
+            onChange={(id) => setAccountId(id === "__fora" ? null : id)}
+            title={isDeposit ? "De qual conta?" : "Para qual conta?"}
+          />
         </View>
 
         <Text style={{ marginTop: 20, fontSize: 12.5, color: th(INK.soft) }}>
