@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentRef, type ReactNode } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -177,13 +177,16 @@ export default function Perfil() {
   const wornKey: SkyModel | LightSkyModel = light ? lightSky : sky;
   const wornLabel = (light ? LIGHT_BACKGROUNDS : BACKGROUNDS).find((b) => b.key === wornKey)?.label ?? "";
 
-  /* The switch and the theme move together, from the touch and in the same time: the
-     knob slides while a circle of the new theme opens from the point that was tapped. */
+  /* The switch and the theme move together, in the same time: the screen dissolves into
+     the new theme while the knob slides, the switch itself left live through the change. */
+  const themeTileRef = useRef<ComponentRef<typeof View>>(null);
   const flipTheme = (x: number, y: number) => {
     tick();
     const next = !wantLight;
     setWantLight(next);
-    void switchTheme(next ? "light" : "dark", "/perfil", { x, y });
+    const go = (cut?: { x: number; y: number; w: number; h: number }) => void switchTheme(next ? "light" : "dark", "/perfil", { x, y, cut });
+    if (themeTileRef.current) themeTileRef.current.measureInWindow((cx, cy, w, h) => go(w > 0 ? { x: cx, y: cy, w, h } : undefined));
+    else go();
   };
 
   return (
@@ -287,7 +290,9 @@ export default function Perfil() {
             chosen in a sheet, where the previews have room. */}
         <Eyebrow>Aparência</Eyebrow>
         <View style={{ flexDirection: "row", gap: 12 }}>
-          <ThemeTile light={wantLight} height={APPEARANCE_H} onPress={(e) => flipTheme(e.nativeEvent.pageX, e.nativeEvent.pageY)} />
+          <View ref={themeTileRef} collapsable={false} style={{ flex: 1 }}>
+            <ThemeTile light={wantLight} height={APPEARANCE_H} onPress={(e) => flipTheme(e.nativeEvent.pageX, e.nativeEvent.pageY)} />
+          </View>
           {/* The background worn now, filling the card; the choice opens in a sheet. */}
           <Pressable
             onPress={() => {
