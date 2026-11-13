@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ActivityIndicator, Image, Linking, View, useWindowDimensions } from "react-native";
-import { Stack } from "expo-router";
+import { ActivityIndicator, AppState, Image, Linking, View, useWindowDimensions } from "react-native";
+import { Stack, router } from "expo-router";
 import * as ExpoLinking from "expo-linking";
 import Animated, { Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
@@ -16,6 +16,7 @@ import { MonthProvider } from "@/contexts/MonthContext";
 import ToastHost from "~/components/ToastHost";
 import LaunchIntro from "~/components/LaunchIntro";
 import QuickBlink from "~/components/QuickBlink";
+import { takeActionRoute } from "../../modules/willo-copilot";
 import { markIntroDone } from "~/lib/launchIntro";
 import NotificationBridge from "~/lib/NotificationBridge";
 import { GREEN, GROUND } from "~/theme/tokens";
@@ -45,6 +46,8 @@ installShims();
  */
 /* Once per launch: coming back to the app from the background does not replay it. */
 let introPlayed = false;
+/* Registro rápido asked for by the iPhone action before the navigator was up. */
+let pendingQuick = false;
 
 /* Opened from a shortcut or a link straight into a screen (the double tap on the back
    of the phone opens willo://rapido): the home sits under it, ready to go back to. */
@@ -74,8 +77,17 @@ export default function RootLayout() {
   /* Opened by a link into a screen — Registro rápido from the back of the phone — the
      opening never starts: whoever taps twice wants to note something, now. Read at once,
      before the first frame, so not even a flash of it plays under the sheet. */
+  /* The iPhone action "Registro rápido do Willo" (build 7 on) leaves the screen it wants
+     in the app's defaults and opens the app: taken at once, so the opening never starts. */
+  const actionRoute = useRef<string | null>(null);
+  if (actionRoute.current === null) actionRoute.current = takeActionRoute() ?? "";
   const [intro, setIntro] = useState(() => {
     if (introPlayed) return false;
+    if (actionRoute.current === "rapido") {
+      introPlayed = true;
+      markIntroDone();
+      return false;
+    }
     let url: string | null = null;
     try {
       url = ExpoLinking.getLinkingURL();
@@ -92,12 +104,28 @@ export default function RootLayout() {
   /* Registro rápido from the back of the phone — opened cold or with the app already
      running: in place of the opening, Willo's eyes blink once while the sheet comes up. */
   const [blink, setBlink] = useState(() => {
+    if (actionRoute.current === "rapido") return true;
     try {
       return isQuick(ExpoLinking.getLinkingURL());
     } catch {
       return false;
     }
   });
+  /* The action's screen: opened once the navigator is up, and again whenever the action
+     brings the app back to the front. */
+  useEffect(() => {
+    const open = () => setTimeout(() => router.push("/rapido" as never), 0);
+    /* Cold: the navigator is not up yet — the door opens it once the session is read. */
+    if (actionRoute.current === "rapido") pendingQuick = true;
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      if (takeActionRoute() === "rapido") {
+        setBlink(true);
+        open();
+      }
+    });
+    return () => sub.remove();
+  }, []);
   useEffect(() => {
     const sub = Linking.addEventListener("url", ({ url }) => {
       if (isQuick(url)) setBlink(true);
@@ -185,6 +213,12 @@ function Splash() {
 
 function Door() {
   const { session, loading } = useAuth();
+  useEffect(() => {
+    if (loading || !session || !pendingQuick) return;
+    pendingQuick = false;
+    const id = setTimeout(() => router.push("/rapido" as never), 0);
+    return () => clearTimeout(id);
+  }, [loading, session]);
   useApplyOnboarding();
   /* A "yes" to the Terms given before the account existed goes onto it; asked here once if missing. */
   const [legalNow, setLegalNow] = useState(false);

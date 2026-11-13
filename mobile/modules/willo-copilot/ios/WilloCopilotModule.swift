@@ -21,5 +21,13 @@ public class WilloCopilotModule: Module {
     Function("hasCode") { () -> Bool in
       UserDefaults.standard.string(forKey: "willo.copilot.code") != nil
     }
+
+    /// The screen an iPhone action asked the app to open ("rapido"), handed over once.
+    Function("takeRoute") { () -> String? in
+      let d = UserDefaults.standard
+      let route = d.string(forKey: "willo.route")
+      d.removeObject(forKey: "willo.route")
+      return route
+    }
   }
 }

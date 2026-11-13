@@ -74,13 +74,38 @@ enum WilloCopilotError: Error, CustomLocalizedStringResourceConvertible {
   }
 }
 
-/// Puts the action in the Shortcuts app under Willo, ready to be picked.
+/// "Registro rápido do Willo": opens the app straight on Registro rápido — for the double
+/// tap on the back of the iPhone, Siri, or the Action button. It leaves the screen to open
+/// where the app looks for it as it comes to the front (WilloCopilotModule.takeRoute).
+@available(iOS 16.0, *)
+struct WilloQuickEntryIntent: AppIntent {
+  static let title: LocalizedStringResource = "Registro rápido do Willo"
+  static let description = IntentDescription("Abre o Willo direto no Registro rápido.")
+  static let openAppWhenRun: Bool = true
+
+  @MainActor
+  func perform() async throws -> some IntentResult {
+    UserDefaults.standard.set("rapido", forKey: "willo.route")
+    return .result()
+  }
+}
+
+/// Puts the actions in the Shortcuts app under Willo, ready to be picked — no shortcut to
+/// build by hand.
 @available(iOS 16.0, *)
 struct WilloAppShortcuts: AppShortcutsProvider {
   static var appShortcuts: [AppShortcut] {
     AppShortcut(
+      intent: WilloQuickEntryIntent(),
+      phrases: ["Registro rápido no \(.applicationName)", "Anotar gasto no \(.applicationName)"],
+      shortTitle: "Registro rápido",
+      systemImageName: "bolt.fill"
+    )
+    AppShortcut(
       intent: WilloLogPurchaseIntent(),
-      phrases: ["Registrar compra no \(.applicationName)"]
+      phrases: ["Registrar compra no \(.applicationName)"],
+      shortTitle: "Registrar compra",
+      systemImageName: "creditcard.fill"
     )
   }
 }

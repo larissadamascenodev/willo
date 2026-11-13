@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Share, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, ScrollView, Share, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn } from "react-native-reanimated";
@@ -30,6 +30,12 @@ import { th, useThemeRedraw } from "~/theme/theme";
 const FUNCTION_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/copilot`;
 const RAPIDO_URL = "willo://rapido";
 const SHORTCUT_NAME = "Registro rápido Willo";
+/**
+ * The ready-made shortcut, shared from iCloud: one tap on "Adicionar Atalho" and it is in
+ * the person's Shortcuts, nothing to build. Empty until the link exists; the steps to
+ * build it by hand show instead.
+ */
+const RAPIDO_SHORTCUT_LINK = "";
 
 /* The blue of the Shortcuts app, so the drawings read as its screens. */
 const SHORTCUT_BLUE = "#3B82F6";
@@ -70,6 +76,53 @@ export default function Atalhos() {
 /* ───────────── Two taps on the back ───────────── */
 
 function BackTap() {
+  const [byHand, setByHand] = useState(!RAPIDO_SHORTCUT_LINK);
+  if (byHand) {
+    return (
+      <View>
+        <BackTapByHand />
+        {!!RAPIDO_SHORTCUT_LINK && (
+          <Pressable onPress={() => setByHand(false)} style={{ marginTop: 14, alignSelf: "center", padding: 8 }}>
+            <Text style={{ fontSize: 13.5, fontWeight: "600", color: th(INK.soft) }}>Voltar ao jeito rápido</Text>
+          </Pressable>
+        )}
+      </View>
+    );
+  }
+  return (
+    <View>
+      <Lead icon={<Zap size={18} color={th(GREEN)} strokeWidth={2.4} />} title="Dois toques atrás do iPhone" text="O Willo abre direto no Registro rápido, mesmo com o app fechado. São dois passos." />
+
+      <Step n={1} title="Instale o atalho do Willo">
+        Toque no botão abaixo. O app <B>Atalhos</B> abre com o atalho pronto: é só tocar em <B>Adicionar Atalho</B>.
+        <Pressable
+          onPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+            void Linking.openURL(RAPIDO_SHORTCUT_LINK).catch(() => showToast("Não consegui abrir o app Atalhos."));
+          }}
+          style={({ pressed }) => ({ marginTop: 12, height: 50, borderRadius: 25, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.85 : 1 })}
+        >
+          <Zap size={17} color={th("#0B0B0B")} strokeWidth={2.4} />
+          <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#0B0B0B") }}>Instalar atalho</Text>
+        </Pressable>
+      </Step>
+
+      <Step n={2} title="Ligue nas costas do iPhone" last>
+        Abra os <B>Ajustes</B> do iPhone e siga:
+        <Path steps={["Acessibilidade", "Toque", "Tocar Atrás", "Toque Duplo"]} />
+        Na lista, escolha <B>{SHORTCUT_NAME}</B>.
+      </Step>
+
+      <Done text="Pronto. Dê dois toques firmes atrás do iPhone, perto da câmera, e o Registro rápido abre." />
+
+      <Pressable onPress={() => setByHand(true)} style={{ marginTop: 14, alignSelf: "center", padding: 8 }}>
+        <Text style={{ fontSize: 13.5, fontWeight: "600", color: th(INK.soft) }}>Prefiro montar o atalho por conta própria</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function BackTapByHand() {
   return (
     <View>
       <Lead icon={<Zap size={18} color={th(GREEN)} strokeWidth={2.4} />} title="Dois toques atrás do iPhone" text="O Willo abre direto no Registro rápido, mesmo com o app fechado." />

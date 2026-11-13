@@ -4,7 +4,7 @@ import { requireOptionalNativeModule } from "expo-modules-core";
  * The bridge to the iPhone action "Registrar compra no Willo". Absent in Expo Go and in
  * builds made before it existed, so every call is optional.
  */
-type Native = { setCode(code: string | null, url: string | null): void; hasCode(): boolean };
+type Native = { setCode(code: string | null, url: string | null): void; hasCode(): boolean; takeRoute?(): string | null };
 
 const native = requireOptionalNativeModule<Native>("WilloCopilot");
 
@@ -16,5 +16,14 @@ export function setCopilotCode(code: string | null, url: string | null) {
     native?.setCode(code, url);
   } catch {
     /* an older build: nothing to hand over */
+  }
+}
+
+/** The screen an iPhone action (Registro rápido do Willo) asked for, once; null otherwise. */
+export function takeActionRoute(): string | null {
+  try {
+    return native?.takeRoute?.() ?? null;
+  } catch {
+    return null;
   }
 }
