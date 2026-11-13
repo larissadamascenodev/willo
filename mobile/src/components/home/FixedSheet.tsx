@@ -8,7 +8,11 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { createTransaction, getAccounts, getCreditCards } from "@/services/transactionService";
+import {
+  createTransaction,
+  getAccounts,
+  getCreditCards,
+} from "@/services/transactionService";
 import CategoryPicker from "~/components/CategoryPicker";
 import EntryForm, { type EntryValues } from "~/components/registro/EntryForm";
 import type { Account, Card } from "~/components/registro/entryParts";
@@ -122,7 +126,13 @@ function nextOn(day: number) {
   return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-export default function FixedSheet({ kind, onClose }: { kind: Kind | null; onClose: () => void }) {
+export default function FixedSheet({
+  kind,
+  onClose,
+}: {
+  kind: Kind | null;
+  onClose: () => void;
+}) {
   const { user } = useAuth();
   const open = kind !== null;
   /* Kept while the sheet slides away, so its words do not change under it. */
@@ -141,7 +151,13 @@ export default function FixedSheet({ kind, onClose }: { kind: Kind | null; onClo
   /* The check before saving: the same form as any entry's, everything still changeable. */
   const [entry, setEntry] = useState<EntryValues | null>(null);
   const [picking, setPicking] = useState(false);
-  const [made, setMade] = useState<{ name: string; amount: number; day: number; income: boolean; Icon: Icon } | null>(null);
+  const [made, setMade] = useState<{
+    name: string;
+    amount: number;
+    day: number;
+    income: boolean;
+    Icon: Icon;
+  } | null>(null);
 
   useEffect(() => {
     if (!kind) return;
@@ -158,11 +174,18 @@ export default function FixedSheet({ kind, onClose }: { kind: Kind | null; onClo
     void Promise.all([getAccounts(), getCreditCards()])
       .then(([list, cs]) => {
         if (!alive) return;
-        const rank = (t?: string) => (t === "checking" ? 0 : t === "savings" ? 1 : 2);
-        const usable = (list as unknown as Account[]).filter((a) => a.type !== "investment").sort((a, z) => rank(a.type) - rank(z.type));
+        const rank = (t?: string) =>
+          t === "checking" ? 0 : t === "savings" ? 1 : 2;
+        const usable = (list as unknown as Account[])
+          .filter((a) => a.type !== "investment")
+          .sort((a, z) => rank(a.type) - rank(z.type));
         setAccounts(usable);
         setCards(cs as unknown as Card[]);
-        setAccountId((cur) => (cur && usable.some((a) => a.id === cur) ? cur : (usable[0]?.id ?? null)));
+        setAccountId((cur) =>
+          cur && usable.some((a) => a.id === cur)
+            ? cur
+            : (usable[0]?.id ?? null),
+        );
       })
       .catch(() => undefined);
     return () => {
@@ -188,7 +211,8 @@ export default function FixedSheet({ kind, onClose }: { kind: Kind | null; onClo
         type: k,
         cents,
         name,
-        category: preset?.category ?? (income ? "Transferências recebidas" : "Outros"),
+        category:
+          preset?.category ?? (income ? "Transferências recebidas" : "Outros"),
         method: "conta",
         whereId: accountId,
         repeat: "fixa",
@@ -213,7 +237,8 @@ export default function FixedSheet({ kind, onClose }: { kind: Kind | null; onClo
           category: v.category ?? "Outros",
           date: v.date,
           status: credit ? "pendente" : v.status,
-          payment_method: v.type === "receita" ? "conta" : (v.method ?? "conta"),
+          payment_method:
+            v.type === "receita" ? "conta" : (v.method ?? "conta"),
           account_id: credit ? null : v.whereId,
           credit_card_id: credit ? v.whereId : null,
           recurrence_type: v.repeat === "fixa" ? "fixa" : "unica",
@@ -221,9 +246,17 @@ export default function FixedSheet({ kind, onClose }: { kind: Kind | null; onClo
         user.id,
       );
       window.dispatchEvent(new CustomEvent("transaction-created"));
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+      void Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success,
+      ).catch(() => undefined);
       /* The sheet goes; a small card says it was done, and goes by itself. */
-      setMade({ name: v.name.trim(), amount: v.cents / 100, day: Number(v.date.slice(8, 10)), income: v.type === "receita", Icon: preset?.Icon ?? (v.type === "receita" ? Banknote : Pencil) });
+      setMade({
+        name: v.name.trim(),
+        amount: v.cents / 100,
+        day: Number(v.date.slice(8, 10)),
+        income: v.type === "receita",
+        Icon: preset?.Icon ?? (v.type === "receita" ? Banknote : Pencil),
+      });
       onClose();
     } catch {
       setError("Não foi possível salvar. Tente de novo.");
@@ -252,18 +285,34 @@ export default function FixedSheet({ kind, onClose }: { kind: Kind | null; onClo
         nextLabel={step === 2 ? "Confirmar e adicionar" : "Continuar"}
         nextDisabled={!canNext}
         busy={saving}
+        tall={step === 2}
       >
         {step === 0 && (
           <View style={{ flex: 1 }}>
             <Ask
               title={income ? "Qual é a receita?" : "Qual é a conta?"}
-              note={income ? "O que entra todo mês. Toque numa ou escreva outra." : "O que sai todo mês. Toque numa ou escreva outra."}
+              note={
+                income
+                  ? "O que entra todo mês. Toque numa ou escreva outra."
+                  : "O que sai todo mês. Toque numa ou escreva outra."
+              }
             />
             <View style={{ marginTop: 18, gap: 8 }}>
               {PRESETS[k].map((p) => (
-                <Option key={p.label} label={p.label} Icon={p.Icon} on={pick === p.label} onPress={() => setPick(pick === p.label ? null : p.label)} />
+                <Option
+                  key={p.label}
+                  label={p.label}
+                  Icon={p.Icon}
+                  on={pick === p.label}
+                  onPress={() => setPick(pick === p.label ? null : p.label)}
+                />
               ))}
-              <Option label={income ? "Outra receita" : "Outra conta"} Icon={Pencil} on={pick === OTHER} onPress={() => setPick(pick === OTHER ? null : OTHER)} />
+              <Option
+                label={income ? "Outra receita" : "Outra conta"}
+                Icon={Pencil}
+                on={pick === OTHER}
+                onPress={() => setPick(pick === OTHER ? null : OTHER)}
+              />
             </View>
             {pick === OTHER && (
               <TextInput
@@ -271,7 +320,9 @@ export default function FixedSheet({ kind, onClose }: { kind: Kind | null; onClo
                 onChangeText={setTyped}
                 autoFocus
                 maxLength={40}
-                placeholder={income ? "Ex: Freela fixo, Pensão" : "Ex: Escola, Condomínio"}
+                placeholder={
+                  income ? "Ex: Freela fixo, Pensão" : "Ex: Escola, Condomínio"
+                }
                 placeholderTextColor={th(INK.faint)}
                 style={{ ...FIELD, marginTop: 12 }}
               />
@@ -281,35 +332,92 @@ export default function FixedSheet({ kind, onClose }: { kind: Kind | null; onClo
 
         {step === 1 && (
           <View style={{ flex: 1 }}>
-            <Ask title={`${name}: qual o valor?`} note={income ? "O valor que cai na conta. O Willo lança todo mês." : "Um valor médio já serve. O Willo lança todo mês."} />
+            <Ask title={`${name}: qual o valor?`} />
             <TextInput
-              value={(cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-              onChangeText={(t) => setCents(Math.min(Number(t.replace(/\D/g, "").slice(0, 11) || "0"), 999999999))}
+              value={(cents / 100).toLocaleString("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              })}
+              onChangeText={(t) =>
+                setCents(
+                  Math.min(
+                    Number(t.replace(/\D/g, "").slice(0, 11) || "0"),
+                    999999999,
+                  ),
+                )
+              }
               keyboardType="number-pad"
               autoFocus
-              style={{ marginTop: 14, minWidth: 0, fontSize: 42, fontWeight: "800", letterSpacing: -1.5, color: th(cents === 0 ? INK.faint : "#fff"), padding: 0 }}
+              style={{
+                marginTop: 14,
+                minWidth: 0,
+                fontSize: 38,
+                fontWeight: "800",
+                letterSpacing: -1.4,
+                color: th(cents === 0 ? INK.faint : "#fff"),
+                padding: 0,
+              }}
             />
             {/* Which account, right under the amount, so the keyboard never hides it. */}
             {accounts.length > 0 && (
               <View style={{ marginTop: 14 }}>
-                <Text style={{ marginBottom: 8, fontSize: 13, fontWeight: "600", color: th(INK.soft) }}>{income ? "Entra na conta" : "Sai da conta"}</Text>
-                <AccountSelect options={accounts} value={accountId} onChange={setAccountId} title={income ? "Em qual conta entra?" : "De qual conta sai?"} />
+                <Text
+                  style={{
+                    marginBottom: 8,
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: th(INK.soft),
+                  }}
+                >
+                  {income ? "Entra na conta" : "Sai da conta"}
+                </Text>
+                <AccountSelect
+                  options={accounts}
+                  value={accountId}
+                  onChange={setAccountId}
+                  title={income ? "Em qual conta entra?" : "De qual conta sai?"}
+                />
               </View>
             )}
             <DayStepper
               label={income ? "Cai todo dia" : "Vence todo dia"}
               value={day}
               onChange={setDay}
-              note={startsLater ? `Esse dia já passou neste mês: começa em ${Number(starts.slice(8, 10))} ${MONTHS[Number(starts.slice(5, 7)) - 1]}` : undefined}
+              note={
+                startsLater
+                  ? `Esse dia já passou neste mês: começa em ${Number(starts.slice(8, 10))} ${MONTHS[Number(starts.slice(5, 7)) - 1]}`
+                  : undefined
+              }
             />
           </View>
         )}
 
         {step === 2 && entry && (
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>Confira antes de salvar</Text>
-            <EntryForm values={entry} onChange={(patch) => setEntry((cur) => (cur ? { ...cur, ...patch } : cur))} accounts={accounts} cards={cards} onPickCategory={() => setPicking(true)} />
-            {error && <Text style={{ marginTop: 12, fontSize: 13, color: th(RED) }}>{error}</Text>}
+            <Text
+              style={{
+                fontSize: 22,
+                fontWeight: "800",
+                letterSpacing: -0.5,
+                color: th("#fff"),
+              }}
+            >
+              Confira antes de salvar
+            </Text>
+            <EntryForm
+              values={entry}
+              onChange={(patch) =>
+                setEntry((cur) => (cur ? { ...cur, ...patch } : cur))
+              }
+              accounts={accounts}
+              cards={cards}
+              onPickCategory={() => setPicking(true)}
+            />
+            {error && (
+              <Text style={{ marginTop: 12, fontSize: 13, color: th(RED) }}>
+                {error}
+              </Text>
+            )}
           </View>
         )}
       </StepSheet>
@@ -403,7 +511,17 @@ function Option({
 }
 
 /** A day of the month, one step at a time, on one line: the label, then − day +. */
-function DayStepper({ label, value, onChange, note }: { label: string; value: number; onChange: (d: number) => void; note?: string }) {
+function DayStepper({
+  label,
+  value,
+  onChange,
+  note,
+}: {
+  label: string;
+  value: number;
+  onChange: (d: number) => void;
+  note?: string;
+}) {
   const step = (by: number) => {
     void Haptics.selectionAsync().catch(() => undefined);
     onChange(((value - 1 + by + 31) % 31) + 1);
@@ -413,20 +531,69 @@ function DayStepper({ label, value, onChange, note }: { label: string; value: nu
       onPress={() => step(by)}
       hitSlop={8}
       accessibilityLabel={by < 0 ? "Dia anterior" : "Próximo dia"}
-      style={({ pressed }) => ({ width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.1)", "bg"), opacity: pressed ? 0.6 : 1 })}
+      style={({ pressed }) => ({
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: th("rgba(255,255,255,0.1)", "bg"),
+        opacity: pressed ? 0.6 : 1,
+      })}
     >
-      {by < 0 ? <Minus size={16} color={th("#fff")} strokeWidth={2.4} /> : <Plus size={16} color={th("#fff")} strokeWidth={2.4} />}
+      {by < 0 ? (
+        <Minus size={16} color={th("#fff")} strokeWidth={2.4} />
+      ) : (
+        <Plus size={16} color={th("#fff")} strokeWidth={2.4} />
+      )}
     </Pressable>
   );
   return (
-    <View style={{ marginTop: 14, borderRadius: 18, borderCurve: "continuous", backgroundColor: th("rgba(255,255,255,0.06)", "bg"), borderWidth: 1, borderColor: th("rgba(255,255,255,0.08)", "line"), paddingVertical: 10, paddingLeft: 16, paddingRight: 10 }}>
+    <View
+      style={{
+        marginTop: 14,
+        borderRadius: 18,
+        borderCurve: "continuous",
+        backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
+        borderWidth: 1,
+        borderColor: th("rgba(255,255,255,0.08)", "line"),
+        paddingVertical: 10,
+        paddingLeft: 16,
+        paddingRight: 10,
+      }}
+    >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <Text style={{ flex: 1, fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>{label}</Text>
+        <Text
+          style={{
+            flex: 1,
+            fontSize: 14.5,
+            fontWeight: "600",
+            color: th("#fff"),
+          }}
+        >
+          {label}
+        </Text>
         {btn(-1)}
-        <Text style={{ minWidth: 34, textAlign: "center", fontSize: 24, fontWeight: "800", letterSpacing: -0.6, color: th("#fff"), fontVariant: ["tabular-nums"] }}>{value}</Text>
+        <Text
+          style={{
+            minWidth: 34,
+            textAlign: "center",
+            fontSize: 24,
+            fontWeight: "800",
+            letterSpacing: -0.6,
+            color: th("#fff"),
+            fontVariant: ["tabular-nums"],
+          }}
+        >
+          {value}
+        </Text>
         {btn(1)}
       </View>
-      {note ? <Text style={{ marginTop: 6, fontSize: 12, color: th(INK.softer) }}>{note}</Text> : null}
+      {note ? (
+        <Text style={{ marginTop: 6, fontSize: 12, color: th(INK.softer) }}>
+          {note}
+        </Text>
+      ) : null}
     </View>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Keyboard, Modal, Platform, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Keyboard, Modal, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
 import Animated, {
   Easing,
   FadeIn,
@@ -48,6 +48,7 @@ export default function StepSheet({
   nextDisabled = false,
   busy = false,
   done,
+  tall = false,
   children,
 }: {
   open: boolean;
@@ -61,6 +62,8 @@ export default function StepSheet({
   busy?: boolean;
   /** Shown in place of the steps once the thing has been made. */
   done?: ReactNode;
+  /** A page with more on it (a check of everything): the panel takes the whole height there is. */
+  tall?: boolean;
   children: ReactNode;
 }) {
   const insets = useSafeAreaInsets();
@@ -127,7 +130,7 @@ export default function StepSheet({
   }, [open, insets.bottom]);
 
   const room = height - insets.top - 16;
-  const panel = Math.min(Math.round(height * 0.8), 700, room - lift);
+  const panel = tall ? room - lift : Math.min(Math.round(height * 0.8), 700, room - lift);
 
   const finished = done !== undefined && done !== null;
 
@@ -196,18 +199,9 @@ export default function StepSheet({
                 key={step}
                 entering={crossing ? (forward ? SlideInRight : SlideInLeft).duration(SLIDE).easing(Easing.out(Easing.cubic)) : undefined}
                 exiting={(forward ? SlideOutLeft : SlideOutRight).duration(SLIDE - 80).easing(Easing.in(Easing.cubic))}
-                style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+                style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, paddingHorizontal: 22 }}
               >
-                {/* A page taller than the room the keyboard leaves scrolls instead of being cut. */}
-                <ScrollView
-                  style={{ flex: 1 }}
-                  contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 22, paddingBottom: 16 }}
-                  keyboardShouldPersistTaps="handled"
-                  keyboardDismissMode="interactive"
-                  showsVerticalScrollIndicator={false}
-                >
-                  {children}
-                </ScrollView>
+                {children}
               </Animated.View>
             </View>
 
