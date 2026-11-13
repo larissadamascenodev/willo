@@ -55,6 +55,8 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
   const { user } = useAuth();
   const [tx, setTx] = useState<Tx | null>(null);
   const [v, setV] = useState<EntryValues | null>(null);
+  /* As it opened: nothing changed, nothing to save. */
+  const [opened, setOpened] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
   const [picking, setPicking] = useState(false);
@@ -76,7 +78,7 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
         setTx(t);
         setAccounts((accs as unknown as Account[]).filter((a) => a.type !== "investment"));
         setCards(cs as unknown as Card[]);
-        setV({
+        const first: EntryValues = {
           type: t.type,
           /* An instalment, the first included, is shown as itself. */
           cents: Math.round(Number(t.amount) * 100),
@@ -91,7 +93,9 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
              month it came from has. */
           status: t.recurrence_type === "fixa" && t.date.slice(0, 7) !== `${year}-${String(month + 1).padStart(2, "0")}` ? "pendente" : t.status,
           note: (t.observation ?? "").replace(PLAN_NOTE, ""),
-        });
+        };
+        setV(first);
+        setOpened(JSON.stringify(first));
       })
       .catch((e) => {
         console.warn("[EditEntry] could not read", id, e);
@@ -254,8 +258,8 @@ export default function EditEntry({ id, month, year, onDone }: { id: string; mon
           </Animated.View>
         ) : (
           <>
-            <Primary label={saving ? "Salvando…" : "Salvar alterações"} busy={saving} disabled={saving || v.cents <= 0 || !v.name.trim() || !v.whereId || (v.repeat === "parcelado" && !v.parts)} onPress={() => void save()} />
-            <Pressable onPress={() => void remove()} disabled={saving} accessibilityRole="button" style={({ pressed }) => ({ marginTop: 6, height: 46, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
+            {JSON.stringify(v) !== opened && <Primary label={saving ? "Salvando…" : "Salvar alterações"} busy={saving} disabled={saving || v.cents <= 0 || !v.name.trim() || !v.whereId || (v.repeat === "parcelado" && !v.parts)} onPress={() => void save()} />}
+            <Pressable onPress={() => void remove()} disabled={saving} accessibilityRole="button" style={({ pressed }) => ({ marginTop: 12, height: 46, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
               <Trash2 size={16} color={th(RED)} />
               <Text style={{ fontSize: 14.5, fontWeight: "600", color: th(RED) }}>Excluir lançamento</Text>
             </Pressable>
