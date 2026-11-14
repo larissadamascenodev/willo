@@ -111,6 +111,7 @@ export async function loadCategoryAnalytics({
     recurring,
     prevRecurring,
     customCats,
+    exclusionsRes,
   ] = await Promise.all([
     supabase
       .from("transactions")
@@ -123,7 +124,7 @@ export async function loadCategoryAnalytics({
     /* The history of what did not go on a card can be read off the dates. */
     supabase
       .from("transactions")
-      .select("id,category,date,amount,type,payment_method,credit_card_id")
+      .select("id,category,date,amount,type,payment_method,credit_card_id,recurrence_type")
       .eq("user_id", userId)
       .eq("type", "despesa")
       .eq("payment_method", "conta")
@@ -163,7 +164,27 @@ export async function loadCategoryAnalytics({
     getRecurringForMonth(month, year),
     getRecurringForMonth(prevM, prevY),
     getCustomCategories(),
+    /* A fixed entry struck off one month ("só este mês") keeps its row; the month it was
+       struck off must not count it. */
+    supabase
+      .from("recurring_exclusions")
+      .select("transaction_id, month, year")
+      .eq("user_id", userId)
+      .gte("year", histMonths[0].y)
+      .lte("year", year),
   ]);
+
+  const struck = new Set(
+    ((exclusionsRes.data ?? []) as { transaction_id: string; month: number; year: number }[]).map(
+      (e) => `${e.transaction_id}:${e.year}-${e.month}`,
+    ),
+  );
+  /** Whether this row is a fixed entry struck off the month of its own date. */
+  const isStruck = (t: { id: string; date: string; recurrence_type?: string | null }) => {
+    if (t.recurrence_type !== "fixa") return false;
+    const d = new Date(`${t.date}T12:00:00`);
+    return struck.has(`${t.id}:${d.getFullYear()}-${d.getMonth()}`);
+  };
 
   const userStartDate = profileRes.data?.created_at ? new Date(profileRes.data.created_at) : null;
 
@@ -177,7 +198,7 @@ export async function loadCategoryAnalytics({
   const invoiceTxIds = new Set(invoiceItems.map((ii) => ii.transaction_id));
 
   /* A card purchase only counts in the month its invoice falls in. */
-  const baseTxs = (txRes.data ?? []) as AnalyticsTransaction[];
+  const baseTxs = ((txRes.data ?? []) as AnalyticsTransaction[]).filter((t) => !isStruck(t));
   const filteredBase = baseTxs.filter((tx) =>
     tx.payment_method === "cartao" && tx.credit_card_id ? invoiceTxIds.has(tx.id) : true,
   );
@@ -193,14 +214,14 @@ export async function loadCategoryAnalytics({
 
   const prevInvoiceTxIds = new Set((prevInvoiceItemsRes.data ?? []).map((ii: any) => ii.transaction_id));
   const prevBase = ((prevTxRes.data ?? []) as AnalyticsTransaction[]).filter((tx) =>
-    tx.payment_method === "cartao" && tx.credit_card_id ? prevInvoiceTxIds.has(tx.id) : true,
+    isStruck(tx) ? false : tx.payment_method === "cartao" && tx.credit_card_id ? prevInvoiceTxIds.has(tx.id) : true,
   );
 
   return {
     transactions: [...filteredBase, ...extra, ...materialise(recurring as any[], month, year)],
     prevTransactions: [...prevBase, ...materialise(prevRecurring as any[], prevM, prevY)],
     historical: buildHistorical({
-      rows: (histRes.data ?? []) as any[],
+      rows: ((histRes.data ?? []) as any[]).filter((t) => !isStruck(t)),
       invoiceItems: (histInvoiceItemsRes.data ?? []) as any[],
       histMonths,
       month,
