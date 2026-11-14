@@ -1,6 +1,9 @@
-import { useMemo } from "react";
-import { Platform, Text, View, type TextStyle } from "react-native";
-import type { CategoryAnalytics } from "@/services/categoryAnalytics";
+import { useEffect, useMemo, useState } from "react";
+import { Platform, Pressable, Text, View, type TextStyle } from "react-native";
+import type { AnalyticsTransaction, CategoryAnalytics } from "@/services/categoryAnalytics";
+import { supabase } from "~/supabase/client";
+import CenterModal from "~/components/CenterModal";
+import { CreditCard } from "~/components/icons";
 import { appGroupOf } from "~/lib/taxonomy";
 import { categoryHex } from "@/lib/categoryData";
 import { MONTH_NAMES } from "@/lib/projectionRows";
@@ -95,6 +98,33 @@ export default function SpendModal({
 
   const Icon = subject?.icon;
 
+  /* Where each charge was paid from: the card or the account, by name. */
+  const [names, setNames] = useState<{ accounts: Record<string, string>; cards: Record<string, { name: string; due: number }> }>({ accounts: {}, cards: {} });
+  useEffect(() => {
+    if (!subject) return;
+    let alive = true;
+    void Promise.all([
+      supabase.from("accounts").select("id, name"),
+      supabase.from("credit_cards").select("id, name, due_day"),
+    ]).then(([a, c]) => {
+      if (!alive) return;
+      setNames({
+        accounts: Object.fromEntries(((a.data ?? []) as { id: string; name: string }[]).map((r) => [r.id, r.name])),
+        cards: Object.fromEntries(((c.data ?? []) as { id: string; name: string; due_day: number }[]).map((r) => [r.id, { name: r.name, due: r.due_day }])),
+      });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [subject]);
+  const [open, setOpen] = useState<AnalyticsTransaction | null>(null);
+  const onCard = (t: AnalyticsTransaction) => t.payment_method === "cartao" && !!t.credit_card_id;
+  const paidWith = (t: AnalyticsTransaction) => {
+    if (onCard(t)) return `Cartão ${names.cards[t.credit_card_id!]?.name ?? ""}`.trim();
+    const acc = (t as AnalyticsTransaction & { account_id?: string | null }).account_id;
+    return (acc && names.accounts[acc]) || "Conta";
+  };
+
   return (
     <BottomSheet open={!!subject} onClose={onClose} full>
       {subject && Icon && (
@@ -164,28 +194,118 @@ export default function SpendModal({
               charges.map((t) => {
                 const CatIcon = categoryIcon(t.category, data?.customCats);
                 const hex = categoryHex(t.category, data?.customCats);
-                const day = new Date(`${t.date}T12:00:00`).toLocaleDateString("pt-BR", { day: "numeric", month: "long" });
+                const card = onCard(t);
                 return (
-                  <View key={t.id} style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 11 }}>
+                  <Pressable
+                    key={t.id}
+                    onPress={() => setOpen(t)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t.name}, ${money(Number(t.amount))}, ver detalhes`}
+                    style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 11, opacity: pressed ? 0.6 : 1 })}
+                  >
                     <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
                       <CatIcon size={20} color={th(chipInk(hex))} strokeWidth={2} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "700", color: th("#fff") }}>{t.name}</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        {card && <CreditCard size={14} color={th(INK.soft)} strokeWidth={2.2} />}
+                        <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15.5, fontWeight: "700", color: th("#fff") }}>{t.name}</Text>
+                      </View>
                       <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: th(INK.soft) }}>
-                        {day} · {t.category}
-                        {t.installments && t.installment_current ? ` · ${t.installment_current}/${t.installments}` : ""}
+                        {t.category} · {paidWith(t)}
+                        {t.installments && t.installments > 1 && t.installment_current ? ` · ${t.installment_current}/${t.installments}` : ""}
                       </Text>
                     </View>
                     <Text style={[nums, { fontSize: 15.5, fontWeight: "700", color: th(RED) }]}>−{money(Number(t.amount))}</Text>
-                  </View>
+                  </Pressable>
                 );
               })
             )}
           </View>
         </View>
       )}
+      <ChargeDetails
+        tx={open}
+        onClose={() => setOpen(null)}
+        paidWith={open ? paidWith(open) : ""}
+        due={open && onCard(open) ? names.cards[open.credit_card_id!]?.due ?? null : null}
+        month={month}
+        year={year}
+      />
     </BottomSheet>
   );
 }
 
+const longDay = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
+
+/**
+ * One charge, whole: what it was, how it was paid, when it was bought and when the money
+ * actually leaves. On a card those are two dates: a purchase of October can be paid in
+ * November's invoice, which is why it is counted there.
+ */
+function ChargeDetails({
+  tx,
+  onClose,
+  paidWith,
+  due,
+  month,
+  year,
+}: {
+  tx: AnalyticsTransaction | null;
+  onClose: () => void;
+  paidWith: string;
+  /** The card's due day, for a charge on a card. */
+  due: number | null;
+  month: number;
+  year: number;
+}) {
+  /* Kept through the way out, so the pane does not empty as it leaves. */
+  const [last, setLast] = useState<AnalyticsTransaction | null>(tx);
+  useEffect(() => {
+    if (tx) setLast(tx);
+  }, [tx]);
+  const t = tx ?? last;
+  if (!t) return null;
+
+  const card = t.payment_method === "cartao" && !!t.credit_card_id;
+  const amount = Number(t.amount);
+  const parts = t.installments && t.installments > 1 ? t.installments : 0;
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const dueIso = due ? `${year}-${String(month + 1).padStart(2, "0")}-${String(Math.min(due, lastDay)).padStart(2, "0")}` : null;
+  const cardName = paidWith.replace(/^Cartão\s*/, "");
+
+  const rows: [string, string][] = [
+    ["Categoria", t.category],
+    ["Pago com", card ? `Cartão de crédito${cardName ? ` · ${cardName}` : ""}` : paidWith],
+    [card ? "Data da compra" : "Data", longDay(t.date)],
+  ];
+  if (card) rows.push(["Pagamento", `Fatura de ${MONTH_NAMES[month].toLowerCase()}${dueIso ? `, vence ${longDay(dueIso)}` : ""}`]);
+  else rows.push(["Situação", t.status === "pago" ? "Pago" : "A pagar"]);
+  if (parts) {
+    rows.push(["Parcela", `${t.installment_current ?? 1} de ${parts}`]);
+    rows.push(["Total da compra", money(amount * parts)]);
+  }
+  if (t.recurrence_type === "fixa") rows.push(["Repete", "Todo mês"]);
+  const note = (t as AnalyticsTransaction & { observation?: string | null }).observation?.trim();
+
+  return (
+    <CenterModal open={!!tx} onClose={onClose} title={t.name} subtitle={card ? "No cartão de crédito" : undefined}>
+      <Text style={[nums, { fontSize: 34, fontWeight: "800", letterSpacing: -1.2, color: th(RED) }]}>−{money(amount)}</Text>
+      {parts ? <Text style={{ marginTop: 2, fontSize: 13.5, color: th(INK.soft) }}>por parcela</Text> : null}
+      <View style={{ marginTop: 14 }}>
+        {rows.map(([label, value]) => (
+          <View key={label} style={{ flexDirection: "row", justifyContent: "space-between", gap: 16, paddingVertical: 10, borderTopWidth: 1, borderTopColor: th("rgba(255,255,255,0.08)", "line") }}>
+            <Text style={{ fontSize: 14.5, color: th(INK.soft) }}>{label}</Text>
+            <Text style={[nums, { flexShrink: 1, textAlign: "right", fontSize: 14.5, fontWeight: "600", color: th("#fff") }]}>{value}</Text>
+          </View>
+        ))}
+        {note ? (
+          <View style={{ paddingVertical: 10, borderTopWidth: 1, borderTopColor: th("rgba(255,255,255,0.08)", "line") }}>
+            <Text style={{ fontSize: 14.5, color: th(INK.soft) }}>Observação</Text>
+            <Text style={{ marginTop: 4, fontSize: 14.5, color: th("#fff") }}>{note}</Text>
+          </View>
+        ) : null}
+      </View>
+    </CenterModal>
+  );
+}
