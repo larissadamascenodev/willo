@@ -317,6 +317,7 @@ function HomeScreen() {
       <ScrollEdge on={moved && !editing} />
       <HomeHeader
         name={name}
+        userId={user?.id}
         avatarUrl={profile?.avatar_url}
         collapsed={collapsed && !editing}
         onProfile={() => router.push("/perfil" as never)}

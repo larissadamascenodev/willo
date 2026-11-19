@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import KeyboardAway from "~/components/KeyboardAway";
 import { Keyboard, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -128,11 +129,11 @@ export default function CardFormSheet({
 
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={{ flex: 1 }} onPress={saving ? undefined : onClose}>
+      <Pressable style={{ flex: 1 }} onPress={saving ? undefined : () => (lift > 0 ? Keyboard.dismiss() : onClose())}>
         <BlurView intensity={18} tint={th("dark", "tint")} style={{ flex: 1, backgroundColor: th("rgba(0,0,0,0.5)", "bg") }} />
       </Pressable>
 
-      <View
+      <KeyboardAway
         style={{
           position: "absolute",
           left: 0,
@@ -257,7 +258,7 @@ export default function CardFormSheet({
             </Text>
           </Pressable>
         </ScrollView>
-      </View>
+      </KeyboardAway>
     </Modal>
   );
 }

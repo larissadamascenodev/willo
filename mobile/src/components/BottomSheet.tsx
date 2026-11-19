@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import KeyboardAway from "~/components/KeyboardAway";
 import { Keyboard, Modal, Platform, Pressable, View, useWindowDimensions } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -160,7 +161,7 @@ export default function BottomSheet({
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <GestureHandlerRootView style={{ flex: 1 }}>
-      <Pressable style={{ flex: 1 }} onPress={onClose}>
+      <Pressable style={{ flex: 1 }} onPress={() => (lift > 0 ? Keyboard.dismiss() : onClose())}>
         <AnimatedBlur tint={th("dark", "tint")} animatedProps={blurProps} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
         <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(0,0,0,0.4)", "bg") }, dim]} />
       </Pressable>
@@ -217,7 +218,7 @@ export default function BottomSheet({
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
           >
-            {children}
+            <KeyboardAway>{children}</KeyboardAway>
           </Animated.ScrollView>
         </GestureDetector>
       </Animated.View>

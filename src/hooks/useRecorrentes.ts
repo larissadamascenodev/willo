@@ -46,15 +46,35 @@ export function daysUntil(dueDay: number, now = new Date()): number {
   return Math.max(0, Math.ceil((next.getTime() - now.getTime()) / 86_400_000));
 }
 
+/* The last list read for each person and month, so a card that mounts again (going back
+   to the account, the home after a page) draws it at once and reads again quietly,
+   instead of an empty box until the network answers. */
+const kept = new Map<string, RecurringItem[]>();
+const keyOf = (userId: string | undefined, month: number, year: number) => (userId ? `${userId}:${year}-${month}` : "");
+
+/** Forgets every list kept, for when the person signed in changes. */
+export function forgetRecorrentes() {
+  kept.clear();
+}
+
 export function useRecorrentes() {
   const { user } = useAuth();
   const { selectedMonth, selectedYear } = useMonth();
-  const [items, setItems] = useState<RecurringItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const key = keyOf(user?.id, selectedMonth, selectedYear);
+  const [items, setItems] = useState<RecurringItem[]>(() => kept.get(key) ?? []);
+  const [loading, setLoading] = useState(() => !kept.has(key));
+
+  /* Another person or another month: what was kept for it, if anything, right away. */
+  useEffect(() => {
+    setItems(kept.get(key) ?? []);
+    setLoading(!kept.has(key));
+  }, [key]);
 
   const refetch = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+    const k = keyOf(user.id, selectedMonth, selectedYear);
+    /* Only the first read shows as loading; later ones replace the list when they land. */
+    if (!kept.has(k)) setLoading(true);
     try {
       /* Both asked at once: the month's own rows and the ones that start right after it. */
       const monthEnd = new Date(selectedYear, selectedMonth + 1, 0);
@@ -121,9 +141,12 @@ export function useRecorrentes() {
         return daysUntil(a.dueDay) - daysUntil(b.dueDay);
       });
 
+      kept.set(k, mapped);
       setItems(mapped);
     } catch {
-      setItems([]);
+      /* A failed read (a session being refreshed, a weak signal) keeps what was shown
+         rather than emptying the list as if nothing repeated. */
+      if (!kept.has(k)) setItems([]);
     } finally {
       setLoading(false);
     }

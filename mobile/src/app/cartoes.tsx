@@ -188,6 +188,28 @@ export default function Cartoes() {
             <Text style={{ marginTop: 6, maxWidth: 256, textAlign: "center", fontSize: 13.5, lineHeight: 18, color: th(INK.soft) }}>
               Cadastre um cartão para acompanhar faturas, limite e parcelamentos.
             </Text>
+            <Pressable
+              onPress={() => {
+                setFormError(null);
+                setForm({ card: null });
+              }}
+              accessibilityRole="button"
+              style={({ pressed }) => ({
+                marginTop: 18,
+                height: 50,
+                paddingHorizontal: 24,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                borderRadius: 25,
+                backgroundColor: th("#fff", "bg"),
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <Plus size={18} color={th("#0B0B0B")} strokeWidth={2.4} />
+              <Text style={{ fontSize: 15, fontWeight: "700", color: th("#0B0B0B") }}>Adicionar cartão</Text>
+            </Pressable>
           </Surface>
         ) : (
           <>

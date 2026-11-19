@@ -4,7 +4,7 @@ import { AppState } from "react-native";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "~/supabase/client";
 import { cachedAccounts, warmHome, warmHomeWithin } from "~/lib/warmHome";
-import { forgetWarmStart } from "~/lib/warmStart";
+import { forgetAccountData } from "~/lib/forgetAccount";
 import { hasCopilotAction, setCopilotCode } from "../../modules/willo-copilot";
 import { loginGate } from "~/lib/socialAuth";
 
@@ -53,8 +53,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
+    /* Whoever was signed in last: when it is someone else now (or no one), what the
+       previous account left in memory is dropped before anything is drawn. */
+    let lastUid: string | null = null;
     const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
       if (!alive) return;
+      const uid = next?.user?.id ?? null;
+      if (event === "SIGNED_OUT" || (lastUid && uid && uid !== lastUid)) forgetAccountData();
+      if (uid) lastUid = uid;
+      else if (event === "SIGNED_OUT") lastUid = null;
       /* Just signed in: the home's numbers are fetched first, so it opens filled in
          rather than with empty cards. The login keeps its spinner meanwhile. */
       /* Signing in from "Já tenho conta" with Apple or Google: wait until the account is
@@ -139,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: session?.user ?? null,
         loading,
         signOut: async () => {
-          forgetWarmStart();
+          forgetAccountData();
           setCopilotCode(null, null);
           await supabase.auth.signOut();
         },

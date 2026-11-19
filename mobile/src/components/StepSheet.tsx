@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import KeyboardAway from "~/components/KeyboardAway";
 import { Keyboard, Modal, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
 import Animated, {
   Easing,
@@ -136,7 +137,7 @@ export default function StepSheet({
 
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={{ flex: 1 }} onPress={finished || busy ? undefined : onClose}>
+      <Pressable style={{ flex: 1 }} onPress={finished || busy ? undefined : () => (lift > 0 ? Keyboard.dismiss() : onClose())}>
         <AnimatedBlur tint={th("dark", "tint")} animatedProps={blurProps} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
         <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(0,0,0,0.4)", "bg") }, dim]} />
       </Pressable>
@@ -201,7 +202,7 @@ export default function StepSheet({
                 exiting={(forward ? SlideOutLeft : SlideOutRight).duration(SLIDE - 80).easing(Easing.in(Easing.cubic))}
                 style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, paddingHorizontal: 22 }}
               >
-                {children}
+                <KeyboardAway style={{ flex: 1 }}>{children}</KeyboardAway>
               </Animated.View>
             </View>
 

@@ -1,8 +1,6 @@
 import { Pressable, Text, View } from "react-native";
 import { Image } from "expo-image";
-
-/* The last picture shown, kept while the profile loads again (as it does after the theme changes), so the circle is never empty. */
-let lastAvatar: string | null = null;
+import { lastHeaderAvatar, rememberHeaderAvatar } from "~/lib/headerAvatar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, withTiming, type EntryExitAnimationFunction } from "react-native-reanimated";
 import { Bell, User } from "~/components/icons";
@@ -18,6 +16,7 @@ import { useGroundTh } from "~/theme/groundInk";
  */
 export default function HomeHeader({
   name,
+  userId,
   avatarUrl,
   unread = 0,
   collapsed = false,
@@ -25,6 +24,8 @@ export default function HomeHeader({
   onBell,
 }: {
   name?: string | null;
+  /** Whose picture it is: the one kept while loading is only ever this person's. */
+  userId?: string;
   avatarUrl?: string | null;
   unread?: number;
   /** The top of the screen has receded; the name takes over here. */
@@ -34,7 +35,8 @@ export default function HomeHeader({
   /** Opens the notifications. */
   onBell?: () => void;
 }) {
-  if (avatarUrl) lastAvatar = avatarUrl;
+  rememberHeaderAvatar(userId, avatarUrl);
+  const shownAvatar = avatarUrl ?? lastHeaderAvatar(userId);
   const th = useGroundTh();
   const insets = useSafeAreaInsets();
   const firstName = name?.trim().split(" ")[0] ?? "";
@@ -99,8 +101,8 @@ export default function HomeHeader({
           opacity: pressed ? 0.7 : 1,
         })}
       >
-        {(avatarUrl ?? lastAvatar) ? (
-          <Image source={{ uri: (avatarUrl ?? lastAvatar) as string }} cachePolicy="memory-disk" transition={0} style={{ width: "100%", height: "100%" }} />
+        {shownAvatar ? (
+          <Image source={{ uri: shownAvatar }} cachePolicy="memory-disk" transition={0} style={{ width: "100%", height: "100%" }} />
         ) : initial ? (
           <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff") }}>{initial}</Text>
         ) : (

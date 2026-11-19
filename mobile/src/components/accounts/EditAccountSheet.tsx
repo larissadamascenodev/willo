@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import KeyboardAway from "~/components/KeyboardAway";
 import { Keyboard, Modal, Platform, Pressable, Text, TextInput, View } from "react-native";
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -84,11 +85,11 @@ export default function EditAccountSheet({
 
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={{ flex: 1 }} onPress={saving ? undefined : onClose}>
+      <Pressable style={{ flex: 1 }} onPress={saving ? undefined : () => (lift > 0 ? Keyboard.dismiss() : onClose())}>
         <BlurView intensity={18} tint={th("dark", "tint")} style={{ flex: 1, backgroundColor: th("rgba(0,0,0,0.5)", "bg") }} />
       </Pressable>
 
-      <View
+      <KeyboardAway
         style={{
           position: "absolute",
           left: 0,
@@ -200,7 +201,7 @@ export default function EditAccountSheet({
             <Text style={{ fontSize: 16.5, fontWeight: "700", color: th("#0B0B0B") }}>{saving ? "Salvando…" : "Salvar"}</Text>
           </Pressable>
         </View>
-      </View>
+      </KeyboardAway>
     </Modal>
   );
 }

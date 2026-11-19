@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import KeyboardAway from "~/components/KeyboardAway";
 import { Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
@@ -131,10 +132,11 @@ export default function CenterModal({
             </Pressable>
           </View>
           <ScrollView
+            keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20 }}
           >
-            {children}
+            <KeyboardAway>{children}</KeyboardAway>
           </ScrollView>
         </Animated.View>
       </View>
