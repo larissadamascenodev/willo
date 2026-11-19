@@ -7,7 +7,7 @@ import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import type { TransactionRow as Row } from "@/services/monthTransactions";
 import type { CustomCategory } from "@/services/categoryService";
-import { CreditCard, RefreshCw, Wallet } from "~/components/icons";
+import { ArrowLeftRight, CreditCard, RefreshCw, Wallet } from "~/components/icons";
 import { money } from "~/lib/money";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
@@ -45,23 +45,27 @@ export default function TransactionRow({
   const box = useRef<ComponentRef<typeof View>>(null);
 
   const isReceita = tx.type === "receita";
+  /* Between the person's own accounts: neither in nor out, so no sign and no colour. */
+  const isTransfer = tx.type === "transferencia";
   const isFatura = tx.id.startsWith("fatura-");
   const isInitialBalance = tx.id.startsWith("initial-balance-");
 
-  const Icon = isFatura ? CreditCard : isInitialBalance ? Wallet : categoryIcon(tx.category, customCategories);
+  const Icon = isFatura ? CreditCard : isInitialBalance ? Wallet : isTransfer ? ArrowLeftRight : categoryIcon(tx.category, customCategories);
 
   const discHex = isFatura
     ? hexFor(creditCards?.find((c: any) => c.id === tx.credit_card_id)?.color, "#A855F7")
     : isInitialBalance
       ? "#3B82F6"
-      : categoryHex(tx.category, customCategories);
+      : isTransfer
+        ? "#8A8F98"
+        : categoryHex(tx.category, customCategories);
 
   const isRecurring = tx.recurrence_type === "fixa" || !!(tx.installments && tx.installments > 1);
   const isPending = tx.status !== "pago";
   /* A bill whose day has gone by unpaid reads as late, in red — an invoice past its due day, say. */
   const today = new Date();
   const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  const isLate = isPending && !isReceita && tx.date.slice(0, 10) < todayIso;
+  const isLate = isPending && !isReceita && !isTransfer && tx.date.slice(0, 10) < todayIso;
 
   const onCard = tx.payment_method === "cartao" && !isFatura;
   const cardName = onCard ? creditCards?.find((c: any) => c.id === tx.credit_card_id)?.name : null;
@@ -127,11 +131,15 @@ export default function TransactionRow({
 
       <View style={{ alignItems: "flex-end" }}>
         <Text style={[T.rowValue, isReceita && { color: th(GREEN) }]}>
-          {isReceita ? "+" : "−"}
+          {isReceita ? "+" : isTransfer ? "" : "−"}
           {money(tx.amount)}
         </Text>
         <Text style={[{ marginTop: 2, fontSize: 11.5 }, isPending ? { fontWeight: "600", ...outlinedInk(isLate ? RED : AMBER) } : { color: th(INK.softer) }]}>
-          {isPending
+          {isTransfer
+            ? isPending
+              ? "Agendada"
+              : "Feita"
+            : isPending
             ? isReceita
               ? "A receber"
               : isLate

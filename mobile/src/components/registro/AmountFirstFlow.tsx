@@ -758,7 +758,7 @@ function Receipt({
  * glow along its edges that lingers and fades — the two-phones-touching light, in Willo's
  * green. Only numbers cross into the animated styles (no theme calls inside them).
  */
-function PaidGlow({ w, h }: { w: number; h: number }) {
+export function PaidGlow({ w, h }: { w: number; h: number }) {
   const p = useSharedValue(0);
   const edge = useSharedValue(0);
   useEffect(() => {

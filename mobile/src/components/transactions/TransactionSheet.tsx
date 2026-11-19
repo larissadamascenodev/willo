@@ -125,6 +125,7 @@ export default function TransactionSheet({
   if (!tx) return null;
 
   const isReceita = tx.type === "receita";
+  const isTransfer = tx.type === "transferencia";
   const isPaid = tx.status === "pago";
   const isCard = tx.payment_method === "cartao";
   const isFixed = tx.recurrence_type === "fixa";
@@ -151,7 +152,7 @@ export default function TransactionSheet({
   const removeAll = () =>
     now({ id: tx.id, removed: true }, () => removeTransaction(tx, "all", { month, year, userId }), `“${tx.name}” excluído`, "Não foi possível excluir. Tente de novo.");
 
-  const kind = isReceita ? "Receita" : "Gasto";
+  const kind = isReceita ? "Receita" : isTransfer ? "Transferência" : "Gasto";
   const tipo = isParcelled ? `${kind} · parcela ${tx.installment_current ?? 1} de ${tx.installments}` : isFixed ? `${kind} · todo mês` : kind;
   const where = accountName || (isCard ? "Cartão" : "Conta");
 
@@ -211,7 +212,7 @@ export default function TransactionSheet({
           <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4, backgroundColor: th(isPaid ? "rgba(103,205,103,0.14)" : "rgba(249,206,78,0.14)", "bg") }}>
             {isPaid ? <Check size={13} color={th(GREEN)} strokeWidth={3} /> : <Clock size={13} color={th(AMBER)} strokeWidth={2.6} />}
             <Text style={{ fontSize: 12.5, fontWeight: "600", color: th(isPaid ? GREEN : AMBER) }}>
-              {isPaid ? (isReceita ? "Recebido" : "Pago") : isReceita ? "A receber" : "Pendente"}
+              {isTransfer ? (isPaid ? "Feita" : "Agendada") : isPaid ? (isReceita ? "Recebido" : "Pago") : isReceita ? "A receber" : "Pendente"}
             </Text>
           </View>
         </View>

@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { withPro } from "~/components/onboarding/RenewGate";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import BottomSheet from "~/components/BottomSheet";
-import AmountFirstFlow from "~/components/registro/AmountFirstFlow";
+import NewEntry from "~/components/registro/NewEntry";
 import EditEntry from "~/components/registro/EditEntry";
 import ManualEntryFlow, { type ManualStep } from "~/components/registro/ManualEntryFlow";
 import { useThemeRedraw } from "~/theme/theme";
 
 /**
- * Adicionar manualmente — guided, in a sheet over whatever was on screen — and the same
+ * Adicionar manualmente — the "+": a new entry in one tall sheet over whatever was on
+ * screen (NewEntry), with Registro rápido keeping its own flow — and the same
  * sheet to change an entry already written (`editar`). Opened inside a card (`cartao`) it
  * is a purchase on that card. The sheet leaves first; the screen behind it is already there.
  */
@@ -44,7 +45,7 @@ function Manual() {
       {editar ? (
         <EditEntry id={editar} month={month} year={year} onDone={() => leave()} />
       ) : !preset ? (
-        <AmountFirstFlow
+        <NewEntry
           cardId={cartao ?? null}
           onScan={() => leave(() => router.push("/scanner" as never))}
           onClose={() => leave()}
