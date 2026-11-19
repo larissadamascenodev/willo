@@ -5,6 +5,7 @@ import type { CategoryExpense, FinanceEvent, Transaction } from "@/types/finance
 import type { RecurringItem } from "@/hooks/useRecorrentes";
 import type { EndedSubscription } from "~/lib/subscriptionCheck";
 import { FEATURES } from "~/lib/features";
+import { upcoming } from "~/lib/events";
 import SaldoContasCard from "~/components/home/SaldoContasCard";
 import JornadaCard from "~/components/home/JornadaCard";
 import FluxoCard from "~/components/home/FluxoCard";
@@ -44,6 +45,8 @@ export interface HomeWidgetContext {
   ended: EndedSubscription[];
   keepEnded: (e: EndedSubscription) => void;
   cancelEnded: (e: EndedSubscription) => void;
+  /** Whether there is a caixinha worth a card: money in one, or more than the reserve made at sign-up. Null while unknown. */
+  hasGoals?: boolean | null;
 }
 
 /**
@@ -52,6 +55,10 @@ export interface HomeWidgetContext {
  */
 export function widgetIsEmpty(id: string, ctx: HomeWidgetContext): boolean {
   if (id === "plano") return !FEATURES.plano;
+  /* Only there when there is something in them, so the home is not a stack of empty boxes. */
+  if (id === "assinaturas") return ctx.assinaturas.length === 0 && ctx.ended.length === 0;
+  if (id === "eventos") return upcoming(ctx.events).length === 0;
+  if (id === "metas") return ctx.hasGoals !== true;
   return false;
 }
 

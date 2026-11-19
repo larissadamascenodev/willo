@@ -279,6 +279,23 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
      otherwise rounds the pair past the row, and the second card drops to the next one. */
   const halfW = width > 0 ? Math.floor(((width - gap) / 2) * 2) / 2 - 0.5 : 0;
 
+  /* A small card with no partner on its row (the next one is large, or there is none) is
+     drawn large across the row instead of leaving half of it empty. Not while editing: there
+     each card shows the size it really has. */
+  const lonely = useMemo(() => {
+    const out = new Set<string>();
+    if (editing) return out;
+    for (let i = 0; i < shown.length; i++) {
+      if (shown[i].size !== "half") continue;
+      if (shown[i + 1]?.size === "half") {
+        i++;
+        continue;
+      }
+      out.add(shown[i].id);
+    }
+    return out;
+  }, [shown, editing]);
+
   const missing = PHONE_WIDGETS.filter((w) => !slots.some((s) => s.id === w.id) && (w.id !== "plano" || FEATURES.plano));
 
   const floating = useAnimatedStyle(() => ({
@@ -295,13 +312,15 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
           onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
           style={{ flexDirection: "row", flexWrap: "wrap", columnGap: gap, rowGap: gap }}
         >
-          {shown.map((slot, i) => (
+          {shown.map((slot, i) => {
+            const half = slot.size === "half" && !lonely.has(slot.id);
+            return (
             <WidgetFrame
               key={`${slot.id}:${slot.size}`}
               slot={slot}
               editing={editing}
-              half={slot.size === "half"}
-              width={slot.size === "half" ? halfW || undefined : width || undefined}
+              half={half}
+              width={half ? halfW || undefined : width || undefined}
               phase={i % 3}
               hidden={carried?.id === slot.id}
               tx={tx}
@@ -317,9 +336,10 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
               }}
               registerFrame={registerFrame}
             >
-              {render(slot.id, slot.size)}
+              {render(slot.id, half ? "half" : "full")}
             </WidgetFrame>
-          ))}
+            );
+          })}
         </View>
 
         <Pressable

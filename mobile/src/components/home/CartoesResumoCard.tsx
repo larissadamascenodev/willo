@@ -11,8 +11,7 @@ import Surface from "~/components/Surface";
 import BankMark from "~/components/BankMark";
 import { ChevronRight } from "~/components/icons";
 import { money } from "~/lib/money";
-import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
-import { LinearGradient } from "expo-linear-gradient";
+import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 import { th } from "~/theme/theme";
@@ -99,119 +98,126 @@ export default function CartoesResumoCard({ size = "full" }: { size?: "half" | "
   }
 
   const total = rows.reduce((s, r) => s + r.owed, 0);
-  const free = rows.reduce((s, r) => s + r.available, 0);
   /* An invoice past its due day is said under the figure, in red, instead of "open". */
   const late = rows.filter((r) => r.owed > 0 && r.status.label.startsWith("Venceu")).length;
   const owedLine = late > 0 ? (late === 1 ? "1 fatura vencida" : `${late} faturas vencidas`) : "em faturas abertas";
 
-  /* One word on the whole: overdue, due soon, or fine. */
-  const soon = rows
-    .filter((r) => r.owed > 0 && /^Vence (hoje|amanhã|em [1-5] dias?)$/.test(r.status.label))
-    .sort((a, b) => order(a.status.label) - order(b.status.label))[0];
-  const badge =
-    late > 0
-      ? { label: late === 1 ? "Vencida" : `${late} vencidas`, tone: RED }
-      : soon
-        ? { label: soon.status.label, tone: AMBER }
-        : { label: total > 0 ? "Em dia" : "Sem fatura", tone: GREEN };
+  if (size === "half") {
+    /* Compact, the whole card used: the cards' marks at the top, what the open invoices
+       ask for large in the middle, and at the foot the bill split by card with the limit
+       still free. */
+    const free = rows.reduce((s, r) => s + r.available, 0);
+    return (
+      <Surface onPress={() => router.push("/cartoes")} style={{ flex: 1, padding: 14 }}>
+        <View style={{ flex: 1, justifyContent: "space-between" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Text numberOfLines={1} style={[T.cardLabel, { flex: 1, fontSize: 13 }]}>Cartões</Text>
+            <ChevronRight size={14} color={th(INK.faint)} />
+          </View>
 
-  const half = size === "half";
-  /* The cards themselves, stacked at the foot like in a wallet: the one that owes most in front. */
-  const faces = [...rows].sort((a, b) => b.owed - a.owed).slice(0, half ? 2 : 3).reverse();
-  const FACE = half ? 46 : 58;
-  const STEP = half ? 26 : 36;
-  const stackH = FACE + STEP * (faces.length - 1);
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            {rows.slice(0, 3).map((r, i) => (
+              <View key={r.card.id} style={{ marginLeft: i === 0 ? 0 : -10, borderRadius: 999, borderWidth: 2, borderColor: th("#1A1B20", "bg"), zIndex: 3 - i }}>
+                <BankMark name={r.card.name} hex={r.hex} size={34} />
+              </View>
+            ))}
+            {rows.length > 3 && <Text style={{ marginLeft: 8, fontSize: 12.5, fontWeight: "600", color: th(INK.soft) }}>+{rows.length - 3}</Text>}
+          </View>
 
-  return (
-    <Surface onPress={() => router.push("/cartoes")} style={{ flex: half ? 1 : undefined, overflow: "hidden", paddingTop: half ? 14 : 18 }}>
-      <View style={{ paddingHorizontal: half ? 14 : 18 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Text numberOfLines={1} style={{ flex: 1, fontSize: half ? 14.5 : 16, fontWeight: "600", color: th("#fff") }}>
-            {half ? "Cartões" : "Cartões de crédito"}
-          </Text>
-          <View style={{ paddingHorizontal: half ? 8 : 11, height: half ? 22 : 28, borderRadius: 999, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: th(tint(badge.tone, 0.35), "line"), backgroundColor: th(tint(badge.tone, 0.14), "bg") }}>
-            <Text numberOfLines={1} style={{ fontSize: half ? 11 : 13, fontWeight: "700", color: th(badge.tone) }}>{badge.label}</Text>
+          <View>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.7, color: th("#fff"), fontVariant: ["tabular-nums"] }}>
+              {money(total)}
+            </Text>
+            <Text style={{ marginTop: 1, fontSize: 12.5, fontWeight: late > 0 ? "600" : "400", color: th(late > 0 ? RED : INK.soft) }}>{owedLine}</Text>
+          </View>
+
+          <View>
+            <View style={{ height: 7, flexDirection: "row", gap: 3, borderRadius: 999, overflow: "hidden", backgroundColor: total > 0 ? "transparent" : th("rgba(255,255,255,0.07)", "bg") }}>
+              {total > 0 &&
+                rows
+                  .filter((r) => r.owed > 0)
+                  .map((r) => <View key={r.card.id} style={{ flex: r.owed / total, minWidth: 6, borderRadius: 999, backgroundColor: th(r.hex, "bg") }} />)}
+            </View>
+            <Text numberOfLines={1} style={{ marginTop: 7, fontSize: 12, color: th(INK.soft) }}>
+              <Text style={{ fontWeight: "700", color: th("#fff") }}>{money(free)}</Text> livres
+            </Text>
           </View>
         </View>
+      </Surface>
+    );
+  }
 
-        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={{ marginTop: half ? 10 : 18, fontSize: half ? 25 : 40, fontWeight: "600", letterSpacing: half ? -0.8 : -1.4, color: th("#fff"), fontVariant: ["tabular-nums"] }}>
-          {whole(total)}
-          <Text style={{ color: th(INK.faint) }}>{cents(total)}</Text>
-        </Text>
-        <Text numberOfLines={1} style={{ marginTop: 1, fontSize: half ? 12 : 14, fontWeight: late > 0 ? "600" : "400", color: th(late > 0 ? RED : INK.soft) }}>
-          {half ? owedLine : `${owedLine} · ${money(free)} livres`}
-        </Text>
+  return (
+    <Surface
+      onPress={() => router.push("/cartoes")}
+      style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <Text style={T.cardLabel}>Cartões de crédito</Text>
+        <ChevronRight size={16} color={th(INK.faint)} />
       </View>
 
-      {/* The stack, its front card's foot on the card's edge. */}
-      <View style={{ marginTop: half ? "auto" : 20, height: stackH + (half ? 8 : 12), paddingHorizontal: half ? 8 : 12 }}>
-        {faces.map((r, i) => {
-          const front = i === faces.length - 1;
-          return (
-            <View
-              key={r.card.id}
-              style={{
-                position: "absolute",
-                left: half ? 8 : 12,
-                right: half ? 8 : 12,
-                top: i * STEP,
-                height: FACE,
-                borderRadius: half ? 14 : 18,
-                borderCurve: "continuous",
-                overflow: "hidden",
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.22)",
-                shadowColor: "#000",
-                shadowOpacity: 0.35,
-                shadowRadius: 8,
-                shadowOffset: { width: 0, height: -2 },
-              }}
-            >
-              <LinearGradient colors={[lift(r.hex, 0.28), r.hex]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-              <View style={{ flex: 1, flexDirection: "row", alignItems: front || !half ? "center" : "flex-start", paddingTop: front || !half ? 0 : 6, paddingHorizontal: half ? 10 : 14, gap: 8 }}>
-                <Text numberOfLines={1} style={{ flex: 1, fontSize: half ? 12.5 : 15, fontWeight: "700", letterSpacing: 0.3, color: "#FFFFFF", fontVariant: ["tabular-nums"] }}>
-                  {r.card.lastFour ? `•••• ${r.card.lastFour}` : r.card.name}
-                </Text>
-                {!half && r.owed > 0 && <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.9)", fontVariant: ["tabular-nums"] }}>{money(r.owed)}</Text>}
-                <BankMark name={r.card.name} hex={shadeHex(r.hex)} size={half ? 20 : 24} />
-              </View>
+      <Text numberOfLines={1} style={[T.figure, { marginTop: 4 }]}>
+        {money(total)}
+      </Text>
+      <Text numberOfLines={1} style={[T.note, { marginTop: 8, fontSize: 13 }, late > 0 && { fontWeight: "600", color: th(RED) }]}>
+        {owedLine}
+      </Text>
+
+      {/* One bar split by card: the share each takes of what is owed. */}
+      <View style={{ flexDirection: "row", gap: 3, height: 7, marginTop: 14 }}>
+        {total > 0 ? (
+          rows
+            .filter((r) => r.owed > 0)
+            .map((r) => (
+              <View
+                key={r.card.id}
+                style={{
+                  flexGrow: r.owed / total,
+                  flexBasis: 0,
+                  borderRadius: 999,
+                  backgroundColor: th(r.hex, "bg"),
+                }}
+              />
+            ))
+        ) : (
+          <View style={{ flex: 1, borderRadius: 999, backgroundColor: th("rgba(255,255,255,0.08)", "bg") }} />
+        )}
+      </View>
+
+      <View
+        style={{
+          marginTop: 14,
+          paddingTop: 14,
+          borderTopWidth: 1,
+          borderTopColor: th("rgba(255,255,255,0.06)", "line"),
+          gap: 12,
+        }}
+      >
+        {rows.map((r) => (
+          <View key={r.card.id} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <BankMark name={r.card.name} hex={r.hex} size={36} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text numberOfLines={1} style={[T.rowName, { fontSize: 14 }]}>
+                {r.card.name}
+              </Text>
+              <Text numberOfLines={1} style={T.rowNote}>
+                {r.owed > 0 ? r.status.label : "Sem fatura em aberto"}
+              </Text>
             </View>
-          );
-        })}
+            <View style={{ alignItems: "flex-end" }}>
+              <Text
+                style={[T.rowValue, { fontSize: 14 }, r.owed === 0 && { color: th(INK.softer) }]}
+              >
+                {money(r.owed)}
+              </Text>
+              <Text style={{ fontSize: 11.5, color: th(INK.softer) }}>
+                {money(r.available)} livres
+              </Text>
+            </View>
+          </View>
+        ))}
       </View>
     </Surface>
   );
-}
-
-/** "R$ 2.039" and ",37": the cents are drawn quieter, as the big apps do. */
-const whole = (v: number) => money(v).replace(/,\d{2}$/, "");
-const cents = (v: number) => (money(v).match(/,\d{2}$/)?.[0] ?? "");
-
-/** Soonest first: today, tomorrow, then in so many days. */
-const order = (label: string) => (label === "Vence hoje" ? 0 : label === "Vence amanhã" ? 1 : Number(label.match(/\d+/)?.[0] ?? 9));
-
-/** A colour at some strength, for fills and borders; #rrggbb or rgb() in. */
-function tint(color: string, a: number) {
-  const [r, g, b] = rgb(color);
-  return `rgba(${r},${g},${b},${a})`;
-}
-
-/** A colour lifted toward white, for the top of a card face. */
-function lift(color: string, t: number) {
-  const [r, g, b] = rgb(color).map((c) => Math.round(c + (255 - c) * t));
-  return `rgb(${r},${g},${b})`;
-}
-
-/** The face's own colour, a shade deeper, so the bank's mark stands on it. */
-function shadeHex(color: string) {
-  const [r, g, b] = rgb(color).map((c) => Math.round(c * 0.7));
-  return `rgb(${r},${g},${b})`;
-}
-
-function rgb(color: string): [number, number, number] {
-  const h = /^#([0-9a-f]{6})$/i.exec(color);
-  if (h) return [parseInt(h[1].slice(0, 2), 16), parseInt(h[1].slice(2, 4), 16), parseInt(h[1].slice(4, 6), 16)];
-  const m = color.match(/\d+(\.\d+)?/g);
-  if (m && m.length >= 3) return [Number(m[0]), Number(m[1]), Number(m[2])];
-  return [139, 92, 246];
 }

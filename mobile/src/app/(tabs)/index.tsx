@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Pressable, RefreshControl, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { runOnJS, useAnimatedProps, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from "react-native-reanimated";
+import Animated, { LinearTransition, runOnJS, useAnimatedProps, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { useProfile } from "@/hooks/useProfile";
@@ -13,7 +13,9 @@ import HomeHeader from "~/components/home/HomeHeader";
 import BalanceHero from "~/components/home/BalanceHero";
 import DailyBudgetCard from "~/components/home/DailyBudgetCard";
 import CategoryStrip from "~/components/home/CategoryStrip";
-import MonthFlowCard from "~/components/home/MonthFlowCard";
+import FluxoCard from "~/components/home/FluxoCard";
+import HomeNotices, { type HomeNotice } from "~/components/home/HomeNotices";
+import { useCopilot } from "~/lib/copilot";
 import WidgetBoard from "~/components/home/WidgetBoard";
 import EditBar from "~/components/home/EditBar";
 import { renderHomeWidget, widgetIsEmpty } from "~/components/home/HomeWidgets";
@@ -23,14 +25,19 @@ import { useAuth } from "~/lib/auth";
 import { asCategoryExpenses, keepDashboard, seedDashboard, useCategoryAnalytics } from "~/lib/warmStart";
 import { useNavChrome } from "~/lib/navChrome";
 import { INK } from "~/theme/tokens";
+import { money } from "~/lib/money";
 
 import { th, useThemeRedraw } from "~/theme/theme";
 import { GroundInkProvider } from "~/theme/groundInk";
 import { useLightSkyModel, usePhotoLook, useSkyModel, useSkyPhoto } from "~/lib/skyModel";
 import { isLight } from "~/theme/theme";
 import { countUnread, generateNotifications } from "@/services/notificationService";
+import { fetchGoals, type Goal } from "@/services/goalService";
+import { keptValue } from "~/lib/warmStart";
 /** The balance's room before it is measured: its label, figure, line under it and its chart. */
 const HERO_GUESS = 300;
+/** The space between the balance and the first card under it. */
+const HERO_GAP = 18;
 const AnimatedBlur = Animated.createAnimatedComponent(BlurView);
 
 /**
@@ -123,6 +130,42 @@ function HomeScreen() {
   );
   const { assinaturas, totalAssinaturas, loading: assinaturasLoading } = useRecorrentes();
   const { ended, keep: keepEnded, cancel: cancelEnded } = useEndedSubscriptions(user?.id);
+  /* What the Willo has to tell, under the balance: for now, purchases the Copilot caught. */
+  const { items: copilotItems } = useCopilot();
+  const notices = useMemo<HomeNotice[]>(() => {
+    const list: HomeNotice[] = [];
+    const n = copilotItems?.length ?? 0;
+    if (n > 0) {
+      const first = copilotItems![0];
+      list.push({
+        key: "copilot",
+        from: "Willo Copilot",
+        title: n === 1 ? `${first.name} · ${hidden ? "R$ •••" : money(Number(first.amount))}` : `${n} compras para confirmar`,
+        text: n === 1 ? "Captada do seu banco. Toque para confirmar." : "Captadas dos seus bancos. Toque para revisar.",
+        badge: String(n),
+        onPress: () => router.push("/copilot" as never),
+      });
+    }
+    return list;
+  }, [copilotItems, hidden, router]);
+  /* Whether the caixinhas card has anything to say: money in one, or more than the reserve
+     every account starts with. The last answer kept on the phone first. */
+  const goalsWorth = (rows: Goal[] | null) => (rows ? rows.some((g) => Number(g.current_amount) > 0) || rows.length > 1 : null);
+  const [hasGoals, setHasGoals] = useState<boolean | null>(() => goalsWorth(keptValue<Goal[]>("metas", user?.id)));
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    const load = () =>
+      fetchGoals()
+        .then((rows) => alive && setHasGoals(goalsWorth(rows as Goal[])))
+        .catch(() => undefined);
+    void load();
+    window.addEventListener("finance-data-changed", load);
+    return () => {
+      alive = false;
+      window.removeEventListener("finance-data-changed", load);
+    };
+  }, [user]);
 
   const name = profile?.display_name || user?.email?.split("@")[0] || "";
   /* How many charges each category had this month, for the cards under the line. */
@@ -154,14 +197,15 @@ function HomeScreen() {
       runOnJS(setCollapsed)(e.contentOffset.y > heroH * 0.6);
     },
   });
+  /* It does not move. What the cards have covered is cut away from below, at the top edge
+     of the first card, so none of it shows through their glass; what is still uncovered
+     softens as the cards rise. */
+  const heroClip = useAnimatedStyle(() => ({ height: Math.max(0, heroH + HERO_GAP - Math.max(0, scrollY.get())) }));
   const heroStyle = useAnimatedStyle(() => {
     const p = Math.min(Math.max(scrollY.get() / heroH, 0), 1);
-    return {
-      opacity: 1 - p * 0.8,
-      transform: [{ translateY: -Math.max(0, scrollY.get()) * 0.18 }, { scale: 1 - p * 0.04 }],
-    };
+    return { opacity: 1 - p * 0.5 };
   });
-  const heroBlur = useAnimatedProps(() => ({ intensity: Math.min(Math.max(scrollY.get() / heroH, 0), 1) * 32 }));
+  const heroBlur = useAnimatedProps(() => ({ intensity: Math.min(Math.max(scrollY.get() / heroH, 0), 1) * 24 }));
 
   const widgetContext = useMemo(
     () => ({
@@ -179,12 +223,13 @@ function HomeScreen() {
       ended,
       keepEnded,
       cancelEnded,
+      hasGoals,
     }),
-    [data, categories, month, assinaturas, assinaturasLoading, totalAssinaturas, ended, keepEnded, cancelEnded],
+    [data, categories, month, assinaturas, assinaturasLoading, totalAssinaturas, ended, keepEnded, cancelEnded, hasGoals],
   );
 
   /* The balance, the month's in and out and the categories now live above the board, drawn their new way. */
-  const skipWidget = useCallback((id: string) => id === "saldo" || id === "categorias" || id === "fluxo" || widgetIsEmpty(id, widgetContext), [widgetContext]);
+  const skipWidget = useCallback((id: string) => id === "saldo" || id === "categorias" || id === "fluxo" || id === "copilot" || widgetIsEmpty(id, widgetContext), [widgetContext]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -200,7 +245,8 @@ function HomeScreen() {
       <GroundInkProvider mode={groundMode}>
       {/* The balance, fixed behind the page. Editing is about the board, so it stands down then. */}
       {!editing && (
-        <Animated.View pointerEvents="none" style={[{ position: "absolute", top: insets.top + 60, left: 16, right: 16 }, heroStyle]}>
+        <Animated.View pointerEvents="none" style={[{ position: "absolute", top: insets.top + 60, left: 0, right: 0, overflow: "hidden" }, heroClip]}>
+        <Animated.View style={[{ paddingHorizontal: 16 }, heroStyle]}>
           <View onLayout={(e) => setHeroH(Math.max(200, Math.round(e.nativeEvent.layout.height)))}>
             <BalanceHero
               saldoAtual={data.saldoAtual}
@@ -212,7 +258,8 @@ function HomeScreen() {
               loading={loading}
             />
           </View>
-          <AnimatedBlur tint={th("dark", "tint")} animatedProps={heroBlur} style={{ position: "absolute", top: -20, bottom: -20, left: -16, right: -16 }} />
+          <AnimatedBlur tint={th("dark", "tint")} animatedProps={heroBlur} style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }} />
+        </Animated.View>
         </Animated.View>
       )}
       <Animated.ScrollView
@@ -237,21 +284,19 @@ function HomeScreen() {
         <View style={{ height: insets.top + 60 }} pointerEvents="none" />
 
         {!editing && (
-          <View style={{ gap: 18, marginBottom: 26 }}>
+          <View style={{ gap: HERO_GAP, marginBottom: 26 }}>
             {/* The balance's place in the page: a tap on it opens the accounts. */}
             <Pressable accessibilityRole="button" accessibilityLabel="Saldo em contas" onPress={() => router.push("/gestao" as never)} style={{ height: heroH }} />
-            <DailyBudgetCard hidden={hidden} />
-            <MonthFlowCard
-              month={month}
-              receitas={data.receitas}
-              recebidas={data.receitasRecebidas}
-              despesas={data.despesas}
-              pagas={data.despesasPagas}
-              hidden={hidden}
-            />
-            <View style={{ marginTop: 10 }}>
+            <HomeNotices notices={notices} />
+            <Animated.View layout={LinearTransition.duration(320)}>
+              <DailyBudgetCard hidden={hidden} />
+            </Animated.View>
+            <Animated.View layout={LinearTransition.duration(320)}>
+              <FluxoCard receitas={data.receitas} despesas={data.despesas} month={month} isCurrentMonth />
+            </Animated.View>
+            <Animated.View layout={LinearTransition.duration(320)} style={{ marginTop: 10 }}>
               <CategoryStrip categories={categories} counts={counts} month={month} hidden={hidden} />
-            </View>
+            </Animated.View>
           </View>
         )}
 

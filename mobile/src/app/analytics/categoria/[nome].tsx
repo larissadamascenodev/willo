@@ -513,7 +513,7 @@ function Bars({ width, hex, bars }: { width: number; hex: string; bars: { label:
         const h = b.value > 0 ? Math.max(6, (b.value / max) * room) : 4;
         const cx = 18 + slot * i + slot / 2;
         return (
-          <View key={i}>
+          <View key={i} pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
             <GrowBar left={cx - bw / 2} width={bw} height={h} bottom={floor} color={th(hex, "bg")} strong={b.on} delay={i * 55} />
             {b.on && b.value > 0 && (
               <Animated.Text entering={FadeIn.delay(300 + i * 55).duration(300)} style={[nums, { position: "absolute", left: cx - 50, width: 100, bottom: floor + h + 6, textAlign: "center", fontSize: 13, fontWeight: "700", color: th("#fff") }]}>
@@ -662,7 +662,8 @@ function DrawnPath({ d, stroke, strokeWidth }: { d: string; stroke: string; stro
 function GrowBar({ left, width, height, bottom, color, strong, delay }: { left: number; width: number; height: number; bottom: number; color: string; strong: boolean; delay: number }) {
   const h = useSharedValue(0);
   useEffect(() => {
-    h.set(withDelay(delay, withSpring(height, { damping: 16, stiffness: 140 })));
+    /* Eased, not sprung: it rises to its figure and stops there, never past the label above it. */
+    h.set(withDelay(delay, withTiming(height, { duration: 620, easing: Easing.out(Easing.cubic) })));
   }, [h, height, delay]);
   const style = useAnimatedStyle(() => ({ height: Math.max(0, h.get()) }));
   return <Animated.View style={[{ position: "absolute", left, width, bottom, borderRadius: Math.min(12, width / 2), backgroundColor: color, opacity: strong ? 1 : 0.4 }, style]} />;
