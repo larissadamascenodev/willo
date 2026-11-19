@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
-import { RefreshControl, View } from "react-native";
+import { Pressable, RefreshControl, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { runOnJS, useAnimatedScrollHandler } from "react-native-reanimated";
+import Animated, { runOnJS, useAnimatedProps, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from "react-native-reanimated";
+import { BlurView } from "expo-blur";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { useProfile } from "@/hooks/useProfile";
 import { useHiddenValues } from "@/hooks/useHiddenValues";
@@ -12,6 +13,7 @@ import HomeHeader from "~/components/home/HomeHeader";
 import BalanceHero from "~/components/home/BalanceHero";
 import DailyBudgetCard from "~/components/home/DailyBudgetCard";
 import CategoryStrip from "~/components/home/CategoryStrip";
+import MonthFlowCard from "~/components/home/MonthFlowCard";
 import WidgetBoard from "~/components/home/WidgetBoard";
 import EditBar from "~/components/home/EditBar";
 import { renderHomeWidget, widgetIsEmpty } from "~/components/home/HomeWidgets";
@@ -21,15 +23,15 @@ import { useAuth } from "~/lib/auth";
 import { asCategoryExpenses, keepDashboard, seedDashboard, useCategoryAnalytics } from "~/lib/warmStart";
 import { useNavChrome } from "~/lib/navChrome";
 import { INK } from "~/theme/tokens";
-import { money } from "~/lib/money";
 
 import { th, useThemeRedraw } from "~/theme/theme";
 import { GroundInkProvider } from "~/theme/groundInk";
 import { useLightSkyModel, usePhotoLook, useSkyModel, useSkyPhoto } from "~/lib/skyModel";
 import { isLight } from "~/theme/theme";
 import { countUnread, generateNotifications } from "@/services/notificationService";
-/** How far the page travels before the balance has gone under the row at the top. */
-const HERO_TRAVEL = 150;
+/** The balance's room before it is measured: its label, figure, line under it and its chart. */
+const HERO_GUESS = 300;
+const AnimatedBlur = Animated.createAnimatedComponent(BlurView);
 
 /**
  * The home.
@@ -140,13 +142,26 @@ function HomeScreen() {
   const onPhoto = !!skyPhoto && (isLight() ? lightSkyModel : skyModel) === "custom";
   /* The words on the photo follow its veil: always dark in the dark theme, either in the light. */
   const groundMode = onPhoto ? (isLight() ? photoLook.tone : "dark") : null;
+  /* The balance stays where it is, behind the page: the cards scroll up over it and it goes
+     soft and quiet as they do, the way the home always moved. */
+  const [heroH, setHeroH] = useState(HERO_GUESS);
+  const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler({
     onScroll: (e) => {
+      scrollY.set(e.contentOffset.y);
       runOnJS(report)(e.contentOffset.y);
-      /* The balance takes the middle of the row up top once it has scrolled under it. */
-      runOnJS(setCollapsed)(e.contentOffset.y > HERO_TRAVEL);
+      /* The name takes over up top once the cards have covered most of the balance. */
+      runOnJS(setCollapsed)(e.contentOffset.y > heroH * 0.6);
     },
   });
+  const heroStyle = useAnimatedStyle(() => {
+    const p = Math.min(Math.max(scrollY.get() / heroH, 0), 1);
+    return {
+      opacity: 1 - p * 0.8,
+      transform: [{ translateY: -Math.max(0, scrollY.get()) * 0.18 }, { scale: 1 - p * 0.04 }],
+    };
+  });
+  const heroBlur = useAnimatedProps(() => ({ intensity: Math.min(Math.max(scrollY.get() / heroH, 0), 1) * 32 }));
 
   const widgetContext = useMemo(
     () => ({
@@ -168,8 +183,8 @@ function HomeScreen() {
     [data, categories, month, assinaturas, assinaturasLoading, totalAssinaturas, ended, keepEnded, cancelEnded],
   );
 
-  /* The balance and the categories now live above the board, drawn their new way. */
-  const skipWidget = useCallback((id: string) => id === "saldo" || id === "categorias" || widgetIsEmpty(id, widgetContext), [widgetContext]);
+  /* The balance, the month's in and out and the categories now live above the board, drawn their new way. */
+  const skipWidget = useCallback((id: string) => id === "saldo" || id === "categorias" || id === "fluxo" || widgetIsEmpty(id, widgetContext), [widgetContext]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -183,6 +198,23 @@ function HomeScreen() {
   return (
     <Room lit sky home>
       <GroundInkProvider mode={groundMode}>
+      {/* The balance, fixed behind the page. Editing is about the board, so it stands down then. */}
+      {!editing && (
+        <Animated.View pointerEvents="none" style={[{ position: "absolute", top: insets.top + 60, left: 16, right: 16 }, heroStyle]}>
+          <View onLayout={(e) => setHeroH(Math.max(200, Math.round(e.nativeEvent.layout.height)))}>
+            <BalanceHero
+              saldoAtual={data.saldoAtual}
+              saldoPrevisto={data.saldoPrevisto}
+              transactions={data.transactions ?? []}
+              month={month}
+              year={year}
+              hidden={hidden}
+              loading={loading}
+            />
+          </View>
+          <AnimatedBlur tint={th("dark", "tint")} animatedProps={heroBlur} style={{ position: "absolute", top: -20, bottom: -20, left: -16, right: -16 }} />
+        </Animated.View>
+      )}
       <Animated.ScrollView
         scrollEnabled={!carrying}
         contentContainerStyle={{
@@ -206,17 +238,17 @@ function HomeScreen() {
 
         {!editing && (
           <View style={{ gap: 18, marginBottom: 26 }}>
-            <BalanceHero
-              saldoAtual={data.saldoAtual}
-              saldoPrevisto={data.saldoPrevisto}
-              transactions={data.transactions ?? []}
-              month={month}
-              year={year}
-              hidden={hidden}
-              loading={loading}
-              onPress={() => router.push("/gestao" as never)}
-            />
+            {/* The balance's place in the page: a tap on it opens the accounts. */}
+            <Pressable accessibilityRole="button" accessibilityLabel="Saldo em contas" onPress={() => router.push("/gestao" as never)} style={{ height: heroH }} />
             <DailyBudgetCard hidden={hidden} />
+            <MonthFlowCard
+              month={month}
+              receitas={data.receitas}
+              recebidas={data.receitasRecebidas}
+              despesas={data.despesas}
+              pagas={data.despesasPagas}
+              hidden={hidden}
+            />
             <View style={{ marginTop: 10 }}>
               <CategoryStrip categories={categories} counts={counts} month={month} hidden={hidden} />
             </View>
@@ -238,7 +270,6 @@ function HomeScreen() {
       <ScrollEdge on={moved && !editing} />
       <HomeHeader
         name={name}
-        title={hidden ? null : money(data.saldoAtual)}
         userId={user?.id}
         avatarUrl={profile?.avatar_url}
         collapsed={collapsed && !editing}
