@@ -83,36 +83,45 @@ function journeyInPlace(userId: string | undefined, slots: WidgetSlot[]): Widget
 }
 
 /**
- * The board a new account opens on, in the order Larissa set (2026-11-12): what is
- * in the accounts first, then the Copilot beside the cards, the month's flows and
- * categories, the Radar, the next event beside the instalments, and the caixinhas
- * beside the journey. Every card is there even with nothing in it yet; the fixed
- * entries, the recent transactions and the subscriptions wait in "Adicionar widgets".
- * After this first time the board is the person's to rearrange.
+ * The board a new account opens on, in the order Larissa set (2026-11-19). Above the board,
+ * fixed, are the balance, what can be spent today, Receitas e despesas and Gastos por
+ * categoria (their slots below are kept so the order stays readable, and the page skips
+ * them). On the board: the cards, then the instalments beside the journey. The caixinhas sit
+ * between those two and show only once there is one: then they take the place beside the
+ * instalments and the journey, alone on its row, is drawn large (see WidgetBoard's lonely
+ * cards). The next events and the subscriptions come after, only when they have something.
+ * The Radar, the Copilot card, the fixed entries and the recent transactions wait in
+ * "Adicionar widgets". After this the board is the person's to rearrange.
  */
 const STARTING: WidgetSlot[] = [
   { id: "saldo", size: "full" },
-  { id: "copilot", size: "half" },
-  { id: "cartoes", size: "half" },
   { id: "fluxo", size: "full" },
   { id: "categorias", size: "full" },
-  { id: "radar", size: "full" },
-  { id: "eventos", size: "half" },
+  { id: "cartoes", size: "full" },
   { id: "parcelamentos", size: "half" },
   { id: "metas", size: "half" },
   { id: "jornada", size: "half" },
+  { id: "eventos", size: "full" },
+  { id: "assinaturas", size: "full" },
   /* Hidden while the plan is switched off; it takes its place when it comes back. */
   { id: "plano", size: "full" },
 ];
-const WAITING = ["fixos", "recentes", "assinaturas"];
+const WAITING = ["radar", "copilot", "fixos", "recentes", "raiox"];
 
-/** A board never arranged before starts from STARTING, and the old one-time moves are marked done. */
+const ORDERED = (userId?: string) => `willo.home.widgets.phone-default-v2.${userId ?? "anon"}`;
+
+/**
+ * A board never arranged before starts from STARTING, and the old one-time moves are marked
+ * done. A board arranged before this order was set is put on it once, too.
+ */
 function firstBoard(userId: string | undefined) {
   try {
-    if (localStorage.getItem(`willo.home.widgets.${userId ?? "anon"}`)) return;
+    const fresh = !localStorage.getItem(`willo.home.widgets.${userId ?? "anon"}`);
+    if (!fresh && localStorage.getItem(ORDERED(userId))) return;
     saveLayout(userId, STARTING);
     for (const id of WAITING) setDismissed(userId, id, true);
-    for (const k of [moved(userId), placed(userId), paired(userId), journeyed(userId)]) localStorage.setItem(k, "1");
+    for (const id of STARTING.map((x) => x.id)) setDismissed(userId, id, false);
+    for (const k of [moved(userId), placed(userId), paired(userId), journeyed(userId), ORDERED(userId)]) localStorage.setItem(k, "1");
   } catch {
     /* Without storage the shared default is used. */
   }
