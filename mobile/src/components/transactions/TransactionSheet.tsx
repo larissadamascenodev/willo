@@ -11,14 +11,18 @@ import type { TransactionRow as Row } from "@/services/monthTransactions";
 import type { CustomCategory } from "@/services/categoryService";
 import { BlurView } from "expo-blur";
 import BottomSheet from "~/components/BottomSheet";
-import RoundButton from "~/components/RoundButton";
+import RaisedButton from "~/components/RaisedButton";
+import BankMark from "~/components/BankMark";
+import { colorFor } from "@/lib/banks";
 import {
   AlertTriangle,
   CalendarDays,
   Check,
+  ChevronRight,
   Clock,
   CreditCard,
   FileText,
+  MoreHorizontal,
   MoreVertical,
   Pencil,
   Repeat,
@@ -147,35 +151,22 @@ export default function TransactionSheet({
   const removeAll = () =>
     now({ id: tx.id, removed: true }, () => removeTransaction(tx, "all", { month, year, userId }), `“${tx.name}” excluído`, "Não foi possível excluir. Tente de novo.");
 
+  const kind = isReceita ? "Receita" : "Gasto";
+  const tipo = isParcelled ? `${kind} · parcela ${tx.installment_current ?? 1} de ${tx.installments}` : isFixed ? `${kind} · todo mês` : kind;
+  const where = accountName || (isCard ? "Cartão" : "Conta");
+
   return (
-    <BottomSheet open={!!asked} onClose={onClose}>
-      <View style={{ paddingHorizontal: 20 }}>
+    <BottomSheet open={!!asked} onClose={onClose} tint={hex} full>
+      <View style={{ paddingHorizontal: 18 }}>
         {/* Anywhere outside the menu closes it. */}
-        {menuOpen && (
-          <Pressable
-            onPress={() => setMenuOpen(false)}
-            accessibilityLabel="Fechar menu"
-            style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0, zIndex: 15 }}
-          />
-        )}
+        {menuOpen && <Pressable onPress={() => setMenuOpen(false)} accessibilityLabel="Fechar menu" style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0, zIndex: 15 }} />}
         {menuOpen && (
           <Animated.View
             entering={FadeIn.duration(140)}
-            style={{
-              position: "absolute",
-              top: 46,
-              right: 20,
-              zIndex: 20,
-              width: 188,
-              borderRadius: 18,
-              borderCurve: "continuous",
-              borderWidth: 1,
-              borderColor: th("rgba(255,255,255,0.12)", "line"),
-              overflow: "hidden",
-            }}
+            style={{ position: "absolute", top: 54, right: 18, zIndex: 20, width: 200, borderRadius: 20, borderCurve: "continuous", borderWidth: 1, borderColor: th("rgba(255,255,255,0.12)", "line"), overflow: "hidden" }}
           >
             <BlurView intensity={70} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-            <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.5)", "bg") }} />
+            <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(18,20,26,0.55)", "bg") }} />
             <MenuItem
               icon={Pencil}
               label="Editar"
@@ -197,50 +188,27 @@ export default function TransactionSheet({
           </Animated.View>
         )}
 
-        {/* ── What it is ── */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View style={{ width: 48, height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
-            <Icon size={21} color={th(chipInk(hex))} />
-          </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text numberOfLines={1} style={{ fontSize: 18, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
-              {tx.name}
-            </Text>
-            <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 6 }}>
-              {isCard ? <CreditCard size={13} color={th(INK.soft)} /> : <Wallet size={13} color={th(INK.soft)} />}
-              <Text numberOfLines={1} style={{ fontSize: 12.5, color: th(INK.soft) }}>
-                {accountName}
-              </Text>
-            </View>
-          </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <RoundButton label="Mais opções" onPress={() => setMenuOpen((v) => !v)}>
-              <MoreVertical size={18} color={th("rgba(255,255,255,0.9)")} />
-            </RoundButton>
-            <RoundButton label="Fechar" onPress={onClose}>
-              <X size={18} color={th("rgba(255,255,255,0.9)")} />
-            </RoundButton>
-          </View>
+        {/* Out on the left; what can be done to it behind the three dots. */}
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <RaisedButton label="Fechar" onPress={onClose} size={46}>
+            <X size={21} color={th("#fff")} strokeWidth={2.4} />
+          </RaisedButton>
+          <View style={{ flex: 1 }} />
+          <RaisedButton label="Mais opções" onPress={() => setMenuOpen((v) => !v)} size={46}>
+            <MoreHorizontal size={21} color={th("#fff")} strokeWidth={2.4} />
+          </RaisedButton>
         </View>
 
-        {/* ── How much, and whether it has happened ── */}
-        <View style={{ marginTop: 26, alignItems: "center" }}>
-          <Text style={[nums, { fontSize: 40, fontWeight: "800", letterSpacing: -1.4, color: th(isReceita ? GREEN : "#fff") }]}>
-            {isReceita ? "+" : "−"}
+        {/* ── How much, and what it was ── */}
+        <View style={{ alignItems: "center", marginTop: -6 }}>
+          <Text style={[nums, { fontSize: 42, fontWeight: "700", letterSpacing: -1.5, color: th(isReceita ? GREEN : "#fff") }]}>
+            {isReceita ? "+" : ""}
             {money(tx.amount)}
           </Text>
-          <View
-            style={{
-              marginTop: 12,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              borderRadius: 999,
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              backgroundColor: th(isPaid ? "rgba(200,243,109,0.12)" : "rgba(249,206,78,0.12)", "bg"),
-            }}
-          >
+          <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 16, fontWeight: "600", color: th("rgba(255,255,255,0.86)") }}>
+            {tx.name}
+          </Text>
+          <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4, backgroundColor: th(isPaid ? "rgba(103,205,103,0.14)" : "rgba(249,206,78,0.14)", "bg") }}>
             {isPaid ? <Check size={13} color={th(GREEN)} strokeWidth={3} /> : <Clock size={13} color={th(AMBER)} strokeWidth={2.6} />}
             <Text style={{ fontSize: 12.5, fontWeight: "600", color: th(isPaid ? GREEN : AMBER) }}>
               {isPaid ? (isReceita ? "Recebido" : "Pago") : isReceita ? "A receber" : "Pendente"}
@@ -248,43 +216,43 @@ export default function TransactionSheet({
           </View>
         </View>
 
-        {/* ── The facts ── */}
-        <View
-          style={{
-            marginTop: 24,
-            borderRadius: 20,
-            borderWidth: 1,
-            borderColor: th("rgba(255,255,255,0.07)", "line"),
-            backgroundColor: th("rgba(255,255,255,0.035)", "bg"),
-            paddingHorizontal: 14,
-          }}
-        >
-          <Fact icon={CalendarDays} label="Data" first>
-            {longDate(tx.date)}
-          </Fact>
-          {tx.time ? <Fact icon={Clock} label="Horário">{tx.time}</Fact> : null}
-          <Fact icon={Tag} label="Categoria" dot={hex}>
-            {tx.category}
-          </Fact>
-          <Fact icon={isCard ? CreditCard : Wallet} label={isCard ? "Cartão" : "Conta"}>
-            {accountName}
-          </Fact>
-          {isParcelled && (
-            <Fact icon={Repeat} label="Parcela">
-              {tx.installment_current ?? 1} de {tx.installments}
-            </Fact>
-          )}
-          {tx.recurrence_type && RECURRENCE[tx.recurrence_type] && !isParcelled ? (
-            <Fact icon={Repeat} label="Repetição">
-              {RECURRENCE[tx.recurrence_type]}
-            </Fact>
+        {!confirming && (
+        <>
+        {/* ── Where it belongs: a tap changes it ── */}
+        <Group style={{ marginTop: 18 }}>
+          <Line label="Categoria" onPress={() => onEdit(tx)} first>
+            <View style={{ width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: th(hex, "bg") }}>
+              <Icon size={14} color="#FFFFFF" />
+            </View>
+            <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 16.5, fontWeight: "600", color: th("#fff") }}>{tx.category}</Text>
+          </Line>
+          <Line label={isCard ? "Cartão" : "Conta"} onPress={() => onEdit(tx)}>
+            <BankMark name={where} hex={colorFor(where, null)} size={26} />
+            <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 16.5, fontWeight: "600", color: th("#fff") }}>{where}</Text>
+          </Line>
+        </Group>
+
+        {/* ── When, and what kind ── */}
+        <Group style={{ marginTop: 10 }}>
+          <Line label="Data" icon={CalendarDays} first>
+            <Text style={[nums, { fontSize: 16, fontWeight: "600", color: th("#fff") }]}>{longDate(tx.date)}</Text>
+          </Line>
+          {tx.time ? (
+            <Line label="Horário" icon={Clock}>
+              <Text style={[nums, { fontSize: 16, fontWeight: "600", color: th("#fff") }]}>{tx.time}</Text>
+            </Line>
           ) : null}
+          <Line label="Tipo" icon={Repeat}>
+            <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 16, fontWeight: "600", color: th("#fff") }}>{tipo}</Text>
+          </Line>
           {tx.observation && !tx.observation.startsWith("paid_installments:") ? (
-            <Fact icon={FileText} label="Observação">
-              {tx.observation}
-            </Fact>
+            <Line label="Observação" icon={FileText}>
+              <Text numberOfLines={2} style={{ flexShrink: 1, textAlign: "right", fontSize: 15, color: th("#fff") }}>{tx.observation}</Text>
+            </Line>
           ) : null}
-        </View>
+        </Group>
+        </>
+        )}
 
         {error && <Text style={{ marginTop: 12, fontSize: 13, color: th(RED) }}>{error}</Text>}
 
@@ -293,7 +261,7 @@ export default function TransactionSheet({
           /* A purchase on a card is settled by its invoice, not here. */
           isPaid ? (
             !isCard && (
-              <Animated.View entering={FadeIn.duration(180)} style={{ marginTop: 22 }}>
+              <Animated.View entering={FadeIn.duration(180)} style={{ marginTop: 16 }}>
                 <Pressable
                   onPress={() => void markPending()}
                   disabled={busy}
@@ -304,49 +272,26 @@ export default function TransactionSheet({
               </Animated.View>
             )
           ) : (
-            <Animated.View entering={FadeIn.duration(180)} style={{ marginTop: 22 }}>
+            <Animated.View entering={FadeIn.duration(180)} style={{ marginTop: 16 }}>
               <Pressable
                 onPress={() => void markPaid()}
                 disabled={busy}
-                style={({ pressed }) => ({
-                  height: 54,
-                  borderRadius: 999,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  backgroundColor: th("#fff", "bg"),
-                  opacity: busy ? 0.5 : pressed ? 0.85 : 1,
-                })}
+                style={({ pressed }) => ({ height: 54, borderRadius: 999, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: th("#fff", "bg"), opacity: busy ? 0.5 : pressed ? 0.85 : 1 })}
               >
                 {busy ? (
                   <ActivityIndicator color={th("#0B0B0B")} />
                 ) : (
                   <>
                     <Check size={16} color={th("#0B0B0B")} strokeWidth={3} />
-                    <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#0B0B0B") }}>
-                      {isReceita ? "Marcar como recebida" : "Marcar como paga"}
-                    </Text>
+                    <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#0B0B0B") }}>{isReceita ? "Marcar como recebida" : "Marcar como paga"}</Text>
                   </>
                 )}
               </Pressable>
             </Animated.View>
           )
         ) : (
-          <Animated.View entering={FadeInDown.duration(220)} style={{ marginTop: 22, gap: 10 }}>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "flex-start",
-                gap: 10,
-                borderRadius: 18,
-                borderWidth: 1,
-                borderColor: th("rgba(248,113,113,0.22)", "line"),
-                backgroundColor: th("rgba(248,113,113,0.07)", "bg"),
-                paddingHorizontal: 14,
-                paddingVertical: 12,
-              }}
-            >
+          <Animated.View entering={FadeInDown.duration(220)} style={{ marginTop: 16, gap: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10, borderRadius: 18, borderWidth: 1, borderColor: th("rgba(248,113,113,0.22)", "line"), backgroundColor: th("rgba(248,113,113,0.07)", "bg"), paddingHorizontal: 14, paddingVertical: 12 }}>
               <AlertTriangle size={16} color={th(RED)} />
               <Text style={{ flex: 1, fontSize: 13, lineHeight: 18, color: th("rgba(255,255,255,0.82)") }}>
                 {isFixed
@@ -356,16 +301,8 @@ export default function TransactionSheet({
                     : "Essa transação será excluída e não dá para desfazer."}
               </Text>
             </View>
-            {(isFixed || isParcelled) && (
-              <Wide label={isFixed ? "Só deste mês" : "Só esta parcela"} onPress={() => void removeThisMonth()} disabled={busy} />
-            )}
-            <Wide
-              label={isFixed ? "Deste mês em diante" : isParcelled ? "Esta e as próximas" : "Excluir"}
-              danger
-              onPress={() => void removeAll()}
-              disabled={busy}
-              loading={busy}
-            />
+            {(isFixed || isParcelled) && <Wide label={isFixed ? "Só deste mês" : "Só esta parcela"} onPress={() => void removeThisMonth()} disabled={busy} />}
+            <Wide label={isFixed ? "Deste mês em diante" : isParcelled ? "Esta e as próximas" : "Excluir"} danger onPress={() => void removeAll()} disabled={busy} loading={busy} />
             <Pressable onPress={() => setConfirming(false)} style={{ height: 44, alignItems: "center", justifyContent: "center" }}>
               <Text style={{ fontSize: 14, color: th("rgba(255,255,255,0.7)") }}>Cancelar</Text>
             </Pressable>
@@ -373,6 +310,33 @@ export default function TransactionSheet({
         )}
       </View>
     </BottomSheet>
+  );
+}
+
+/** A block of rows, the way the phone's own settings group them. */
+function Group({ children, style }: { children: ReactNode; style?: object }) {
+  return (
+    <View style={[{ borderRadius: 24, borderCurve: "continuous", backgroundColor: th("rgba(255,255,255,0.07)", "bg"), paddingHorizontal: 16 }, style]}>
+      {children}
+    </View>
+  );
+}
+
+/** One row of a block: its name on the left, what it holds on the right, a chevron when it opens something. */
+function Line({ label, icon: Icon, onPress, first, children }: { label: string; icon?: ComponentType<{ size?: number; color?: string }>; onPress?: () => void; first?: boolean; children: ReactNode }) {
+  const body = (
+    <View style={{ minHeight: 50, flexDirection: "row", alignItems: "center", gap: 10, borderTopWidth: first ? 0 : 1, borderTopColor: th("rgba(255,255,255,0.08)", "line") }}>
+      {Icon && <Icon size={19} color={th(INK.soft)} />}
+      <Text style={{ fontSize: 16, color: th(INK.soft) }}>{label}</Text>
+      <View style={{ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>{children}</View>
+      {onPress && <ChevronRight size={18} color={th(INK.softer)} />}
+    </View>
+  );
+  if (!onPress) return body;
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+      {body}
+    </Pressable>
   );
 }
 

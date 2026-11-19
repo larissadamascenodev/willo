@@ -4,6 +4,7 @@ import { Keyboard, Modal, Platform, Pressable, View, useWindowDimensions } from 
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import SparkleLayer from "~/components/SparkleLayer";
 import ToastHost from "~/components/ToastHost";
 import Animated, {
@@ -49,6 +50,7 @@ export default function BottomSheet({
   children,
   full = false,
   above,
+  tint,
 }: {
   open: boolean;
   onClose: () => void;
@@ -57,6 +59,8 @@ export default function BottomSheet({
   full?: boolean;
   /** Stands just above the sheet's top edge, covering none of it. */
   above?: ReactNode;
+  /** A colour washed softly over the whole sheet, strongest at the top (#rrggbb). */
+  tint?: string;
 }) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -197,6 +201,14 @@ export default function BottomSheet({
       >
         <BlurView intensity={isLight() ? 90 : 60} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
         <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: isLight() ? "rgba(246,247,249,0.78)" : "rgba(18,20,26,0.38)" }} />
+        {tint && /^#[0-9a-f]{6}$/i.test(tint) && (
+          <LinearGradient
+            pointerEvents="none"
+            colors={[`${tint}2E`, `${tint}12`, `${tint}06`]}
+            locations={[0, 0.55, 1]}
+            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+          />
+        )}
 
         {/* The grab handle, which says which way this came from. */}
         <View
