@@ -6,8 +6,9 @@ import { BACKDROP_KEYS, LIGHT_BACKDROP_KEYS, type BackdropKey, type LightBackdro
 /**
  * What the screens that wear a sky are wearing.
  *
- * - "2", the default: the hour as a picture, with the glow turned down so cards pass
- *   over it quietly.
+ * - "horizonte", the default (lib/backdrops): one calm petrol light at the top, washing
+ *   down smoothly into the dark, after the big apps' own homes.
+ * - "2": the hour as a picture, with the glow turned down so cards pass over it quietly.
  * - "1": the same hour drawn live, with its fire and its water.
  * - "plain": no sky, only the room's soft lights on the dark ground.
  * - "custom": a photo the person chose, kept on the phone.
@@ -25,15 +26,20 @@ import { BACKDROP_KEYS, LIGHT_BACKDROP_KEYS, type BackdropKey, type LightBackdro
 export type SkyModel = "1" | "2" | "plain" | "custom" | BackdropKey;
 
 const KEY = "sky-model";
+const DEFAULT: SkyModel = "horizonte";
+/* Set once the old default ("2", "aurora-clara") has been moved to the new one. */
+const MOVED_KEY = "sky-default-horizonte";
+const LIGHT_KEY = "sky-model-light";
+const LIGHT_DEFAULT = "horizonte-claro" as const;
 const PHOTO_KEY = "sky-photo";
 const listeners = new Set<() => void>();
 
 const readModel = (): SkyModel => {
   try {
     const v = localStorage.getItem(KEY);
-    return v === "1" || v === "plain" || v === "custom" || BACKDROP_KEYS.includes(v as BackdropKey) ? (v as SkyModel) : "2";
+    return v === "1" || v === "2" || v === "plain" || v === "custom" || BACKDROP_KEYS.includes(v as BackdropKey) ? (v as SkyModel) : DEFAULT;
   } catch {
-    return "2";
+    return DEFAULT;
   }
 };
 
@@ -52,11 +58,22 @@ let current: SkyModel = readModel();
 let photo: string | null = readPhoto();
 /* A custom choice with its photo gone falls back to the default. */
 const settle = () => {
-  if (current === "custom" && !photo) current = "2";
+  if (current === "custom" && !photo) current = DEFAULT;
 };
 settle();
 
 onHydrated(() => {
+  /* Once, on the phone's own stored choices: whoever was on the old defaults moves to the
+     new one; a background picked on purpose (a drawn one, a photo) stays. */
+  try {
+    if (!localStorage.getItem(MOVED_KEY)) {
+      localStorage.setItem(MOVED_KEY, "1");
+      if (localStorage.getItem(KEY) === "2") localStorage.setItem(KEY, DEFAULT);
+      if (localStorage.getItem(LIGHT_KEY) === "aurora-clara") localStorage.setItem(LIGHT_KEY, LIGHT_DEFAULT);
+    }
+  } catch {
+    /* Read as they are. */
+  }
   current = readModel();
   photo = readPhoto();
   settle();
@@ -122,19 +139,19 @@ export function useSkyPhoto() {
 /* ── The light theme's background, kept apart so each theme keeps its own ───── */
 
 export type LightSkyModel = LightBackdropKey | "custom";
-const LIGHT_KEY = "sky-model-light";
+
 const readLight = (): LightSkyModel => {
   try {
     const v = localStorage.getItem(LIGHT_KEY);
-    return v === "custom" || LIGHT_BACKDROP_KEYS.includes(v as LightBackdropKey) ? (v as LightSkyModel) : "aurora-clara";
+    return v === "custom" || LIGHT_BACKDROP_KEYS.includes(v as LightBackdropKey) ? (v as LightSkyModel) : LIGHT_DEFAULT;
   } catch {
-    return "aurora-clara";
+    return LIGHT_DEFAULT;
   }
 };
 let currentLight: LightSkyModel = readLight();
 onHydrated(() => {
   currentLight = readLight();
-  if (currentLight === "custom" && !photo) currentLight = "aurora-clara";
+  if (currentLight === "custom" && !photo) currentLight = LIGHT_DEFAULT;
   listeners.forEach((l) => l());
 });
 

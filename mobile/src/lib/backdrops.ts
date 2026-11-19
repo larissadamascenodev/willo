@@ -9,7 +9,7 @@
  * of the screen; `a` is the light's strength at its centre.
  */
 
-export type BackdropKey = "aurora" | "oceano" | "ametista" | "brasa" | "grafite" | "meia-noite";
+export type BackdropKey = "horizonte" | "aurora" | "oceano" | "ametista" | "brasa" | "grafite" | "meia-noite";
 
 export interface Backdrop {
   label: string;
@@ -17,9 +17,30 @@ export interface Backdrop {
   lights: { cx: number; cy: number; rx: number; ry: number; rgb: string; a: number; fade?: number }[];
   /** A field of faint stars across the top. */
   stars?: boolean;
+  /** A smooth top-to-bottom wash under the lights: colours and where each sits (0 to 1). */
+  wash?: { colors: string[]; stops: number[] };
+  /** How hard the corners close (0 to 1); 0.55 when not said. */
+  edge?: number;
 }
 
 export const BACKDROPS: Record<BackdropKey, Backdrop> = {
+  /* The default, after the big apps' own homes: one calm colour at the top — petrol, a
+     little grey, like a photo out of focus — running down in one smooth wash into the
+     dark where the cards are, with a soft haze where the light is strongest. */
+  horizonte: {
+    label: "Horizonte",
+    ground: "#07090A",
+    edge: 0.3,
+    wash: {
+      colors: ["#2F5A62", "#21454D", "#14303A", "#0C1C22", "#08100F", "#07090A"],
+      stops: [0, 0.14, 0.28, 0.42, 0.56, 0.7],
+    },
+    lights: [
+      { cx: 0.5, cy: -0.06, rx: 1.0, ry: 0.32, rgb: "150,192,198", a: 0.26 },
+      { cx: 0.04, cy: 0.12, rx: 0.62, ry: 0.3, rgb: "70,150,138", a: 0.2 },
+      { cx: 0.96, cy: 0.08, rx: 0.6, ry: 0.3, rgb: "56,96,140", a: 0.22 },
+    ],
+  },
   aurora: {
     label: "Aurora",
     ground: "#05060C",
@@ -96,9 +117,23 @@ export const STARS = (() => {
  * for the bars and buttons to pick up as the page scrolls under them, fading to near
  * white where the cards and figures are.
  */
-export type LightBackdropKey = "nevoa" | "aurora-clara" | "ceu-claro" | "lavanda" | "pessego" | "areia" | "perola";
+export type LightBackdropKey = "horizonte-claro" | "nevoa" | "aurora-clara" | "ceu-claro" | "lavanda" | "pessego" | "areia" | "perola";
 
 export const LIGHT_BACKDROPS: Record<LightBackdropKey, Backdrop> = {
+  /* The default in the light: the same petrol, washed pale, fading to the light ground. */
+  "horizonte-claro": {
+    label: "Horizonte",
+    ground: "#F3F5F6",
+    wash: {
+      colors: ["#C9DDE0", "#D8E7E9", "#E7EFF0", "#F3F5F6"],
+      stops: [0, 0.18, 0.36, 0.55],
+    },
+    lights: [
+      { cx: 0.5, cy: -0.06, rx: 1.0, ry: 0.3, rgb: "255,255,255", a: 0.55 },
+      { cx: 0.05, cy: 0.12, rx: 0.6, ry: 0.3, rgb: "150,205,195", a: 0.3 },
+      { cx: 0.95, cy: 0.1, rx: 0.6, ry: 0.3, rgb: "160,190,225", a: 0.28 },
+    ],
+  },
   nevoa: {
     label: "Névoa",
     ground: "#F5F5F7",

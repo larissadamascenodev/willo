@@ -85,7 +85,7 @@ export default function Room({
   const [chosen] = useSkyModel();
   const [chosenLight] = useLightSkyModel();
   /* Off the home, a photo gives way to the theme's own ground: Céu vivo in the dark. */
-  const model = (preview as SkyModel | undefined) ?? (chosen === "custom" && !home ? "1" : chosen);
+  const model = (preview as SkyModel | undefined) ?? (chosen === "custom" && !home ? "horizonte" : chosen);
   const storedPhoto = useSkyPhoto();
   const photo = previewPhoto ?? storedPhoto;
   /* A photo of one's own is worn one way, chosen to suit any photo: blurred, under a
@@ -116,9 +116,9 @@ export default function Room({
   /* In the light, its own backgrounds: a light ground with soft colour pooled near
      the top for the glass to pick up, or the person's photo under a pale veil. */
   if (isLight()) {
-    const lightModel = (preview as LightSkyModel | undefined) ?? (chosenLight === "custom" && !home ? "nevoa" : chosenLight);
+    const lightModel = (preview as LightSkyModel | undefined) ?? (chosenLight === "custom" && !home ? "horizonte-claro" : chosenLight);
     const ownLight = lightModel === "custom" && !!photo;
-    const pale = LIGHT_BACKDROPS[lightModel as LightBackdropKey] ?? LIGHT_BACKDROPS["aurora-clara"];
+    const pale = LIGHT_BACKDROPS[lightModel as LightBackdropKey] ?? LIGHT_BACKDROPS["horizonte-claro"];
     const lid = (name: string) => `${name}-light-${lightModel}`;
     return (
       <View style={[{ flex: 1, backgroundColor: ownLight ? LIGHT_GROUND : pale.ground }, style]}>
@@ -129,6 +129,8 @@ export default function Room({
             <LinearGradient pointerEvents="none" colors={veilTop} style={{ position: "absolute", top: 0, left: 0, right: 0, height: "45%" }} />
           </>
         ) : (
+          <>
+          {pale.wash && <Wash wash={pale.wash} />}
           <Svg width="100%" height="100%" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
             <Defs>
               {pale.lights.map((l, i) => (
@@ -147,6 +149,7 @@ export default function Room({
             ))}
             <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${lid("edge")})`} />
           </Svg>
+          </>
         )}
         {children}
       </View>
@@ -156,6 +159,7 @@ export default function Room({
   if (drawn) {
     return (
       <View style={[{ flex: 1, backgroundColor: th(drawn.ground, "bg") }, style]}>
+        {drawn.wash && <Wash wash={drawn.wash} />}
         <Svg width="100%" height="100%" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
           <Defs>
             {drawn.lights.map((l, i) => (
@@ -166,7 +170,7 @@ export default function Room({
             ))}
             <RadialGradient id={id("edge")} cx="0.5" cy="0.44" rx="0.7" ry="0.5">
               <Stop offset="0.42" stopColor={th("#000", "grad")} stopOpacity={0} />
-              <Stop offset="1" stopColor={th("#000", "grad")} stopOpacity={0.55} />
+              <Stop offset="1" stopColor={th("#000", "grad")} stopOpacity={drawn.edge ?? 0.55} />
             </RadialGradient>
           </Defs>
           {drawn.lights.map((_, i) => (
@@ -253,5 +257,17 @@ export default function Room({
 
       {children}
     </View>
+  );
+}
+
+/** A background's smooth top-to-bottom wash, under its lights. */
+function Wash({ wash }: { wash: { colors: string[]; stops: number[] } }) {
+  return (
+    <LinearGradient
+      pointerEvents="none"
+      colors={wash.colors as unknown as readonly [string, string, ...string[]]}
+      locations={wash.stops as unknown as readonly [number, number, ...number[]]}
+      style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+    />
   );
 }
