@@ -41,7 +41,7 @@ function hsl(spec: string): string {
   return `rgb(${to(r)}, ${to(g)}, ${to(b)})`;
 }
 
-const catColor = (name: string, fallbackIdx: number, customCats?: CustomCategory[]) => {
+export const catColor = (name: string, fallbackIdx: number, customCats?: CustomCategory[]) => {
   const c = getCategoryColor(name, customCats);
   return hsl(c !== "220 10% 55%" ? c : FALLBACK_COLORS[fallbackIdx % FALLBACK_COLORS.length]);
 };

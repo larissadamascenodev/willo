@@ -1,24 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
-import { RefreshControl, View, useWindowDimensions } from "react-native";
+import { RefreshControl, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, {
-  runOnJS,
-  useAnimatedScrollHandler,
-  useAnimatedStyle,
-  useDerivedValue,
-  useSharedValue,
-} from "react-native-reanimated";
-import { useGreeting } from "@/lib/greeting";
-import { buildInsights } from "@/lib/insights";
+import Animated, { runOnJS, useAnimatedScrollHandler } from "react-native-reanimated";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { useProfile } from "@/hooks/useProfile";
 import { useHiddenValues } from "@/hooks/useHiddenValues";
-import { useCardsOverview, invoiceDueDate } from "@/hooks/useCardsOverview";
 import Room from "~/components/Room";
 import ScrollEdge from "~/components/ScrollEdge";
 import HomeHeader from "~/components/home/HomeHeader";
-import OrbHero, { ORB_HERO_BODY, WilloGlow } from "~/components/home/OrbHero";
+import BalanceHero from "~/components/home/BalanceHero";
+import DailyBudgetCard from "~/components/home/DailyBudgetCard";
+import CategoryStrip from "~/components/home/CategoryStrip";
 import WidgetBoard from "~/components/home/WidgetBoard";
 import EditBar from "~/components/home/EditBar";
 import { renderHomeWidget, widgetIsEmpty } from "~/components/home/HomeWidgets";
@@ -28,30 +21,24 @@ import { useAuth } from "~/lib/auth";
 import { asCategoryExpenses, keepDashboard, seedDashboard, useCategoryAnalytics } from "~/lib/warmStart";
 import { useNavChrome } from "~/lib/navChrome";
 import { INK } from "~/theme/tokens";
+import { money } from "~/lib/money";
 
 import { th, useThemeRedraw } from "~/theme/theme";
 import { GroundInkProvider } from "~/theme/groundInk";
 import { useLightSkyModel, usePhotoLook, useSkyModel, useSkyPhoto } from "~/lib/skyModel";
 import { isLight } from "~/theme/theme";
 import { countUnread, generateNotifications } from "@/services/notificationService";
-/** How far the page travels before the block on top has gone. */
-/** The robot is taller, so he takes longer to go. */
-const ORB_TRAVEL = 160;
+/** How far the page travels before the balance has gone under the row at the top. */
+const HERO_TRAVEL = 150;
 
 /**
  * The home.
  *
- * The top of the screen does not scroll. It stays where it is and fades while the cards
- * travel up over it: a fixed row that says who is signed in, the block on top, and a scroller
- * that starts below both and passes over them.
- *
- * What is on top is one of two, chosen from the avatar's sheet: Willo floating and saying what
- * he has noticed, one line at a time, or the same lines centred with no robot, which answer to
- * the touch the way he does.
- *
- * The greeting is not a heading here: it is the first of the readings. The name
- * only appears in the row at the top once the block has receded far enough that
- * reading the greeting is no longer the point.
+ * On top, the balance, large, with the month's line under it across the whole width: what
+ * is in the accounts now and how it got here, dashed on to where the month should end. Under
+ * it, what can be spent today; then the month by category, as a row of cards; then the
+ * board of cards the person arranges. The row with the profile and the bell stays put as
+ * two drops of glass; once the balance has scrolled under it, the balance takes its middle.
  */
 /**
  * The home loads its widgets only once it has been on screen. Opened straight onto a page
@@ -76,10 +63,8 @@ function HomeScreen() {
   /* Drawn again in place when the theme changes. */
   useThemeRedraw();
   const insets = useSafeAreaInsets();
-  const { height: screenH } = useWindowDimensions();
   const { user } = useAuth();
   const { report, moved } = useNavChrome();
-  const { greeting, dateStr } = useGreeting();
   const hidden = useHiddenValues();
   const [refreshing, setRefreshing] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -134,12 +119,16 @@ function HomeScreen() {
         .catch(() => undefined);
     }, [refetchProfile, user]),
   );
-  const { cards, invoices } = useCardsOverview();
   const { assinaturas, totalAssinaturas, loading: assinaturasLoading } = useRecorrentes();
   const { ended, keep: keepEnded, cancel: cancelEnded } = useEndedSubscriptions(user?.id);
 
   const name = profile?.display_name || user?.email?.split("@")[0] || "";
-  const firstName = name.trim().split(" ")[0] ?? "";
+  /* How many charges each category had this month, for the cards under the line. */
+  const counts = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const t of categoryData?.transactions ?? []) if (t.type === "despesa") out[t.category] = (out[t.category] ?? 0) + 1;
+    return out;
+  }, [categoryData]);
 
 
   /* On a photo of one's own, the words outside the cards follow its veil — black on a
@@ -151,76 +140,13 @@ function HomeScreen() {
   const onPhoto = !!skyPhoto && (isLight() ? lightSkyModel : skyModel) === "custom";
   /* The words on the photo follow its veil: always dark in the dark theme, either in the light. */
   const groundMode = onPhoto ? (isLight() ? photoLook.tone : "dark") : null;
-  const travel = ORB_TRAVEL;
-
-  /* ── How far into the recession we are, and everything that reads off it ── */
-  const scrollY = useSharedValue(0);
-  const progress = useDerivedValue(() => Math.min(Math.max(scrollY.value / travel, 0), 1));
-
   const onScroll = useAnimatedScrollHandler({
     onScroll: (e) => {
-      scrollY.value = e.contentOffset.y;
       runOnJS(report)(e.contentOffset.y);
-      /* The name takes over up top once the greeting has faded far enough. */
-      runOnJS(setCollapsed)(e.contentOffset.y / travel > 0.55);
+      /* The balance takes the middle of the row up top once it has scrolled under it. */
+      runOnJS(setCollapsed)(e.contentOffset.y > HERO_TRAVEL);
     },
   });
-
-  /* The sphere sits above the page, so the cards cannot pass over it the way they do
-     the stories; it is gone before they reach it instead. */
-  const orbStyle = useAnimatedStyle(() => ({
-    opacity: Math.max(0, 1 - progress.value * 1.7),
-    transform: [{ translateY: -progress.value * 26 }, { scale: 1 - progress.value * 0.06 }],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({ opacity: 1 - progress.value * 0.6 }));
-
-  /* The one reading this screen has to work out for itself: which invoice is next. */
-  const invoice = useMemo(() => {
-    const now = new Date();
-    const pending = cards
-      .map((card) => {
-        const rolls = now.getDate() > card.closingDay ? 1 : 0;
-        const i = now.getFullYear() * 12 + now.getMonth() + rolls;
-        const found = invoices.find(
-          (x) => x.cardId === card.id && x.month === (i % 12) + 1 && x.year === Math.floor(i / 12),
-        );
-        return { card, invoice: found, due: invoiceDueDate(card, Math.floor(i / 12), (i % 12) + 1) };
-      })
-      .filter((x) => x.invoice && !x.invoice.isPaid && x.invoice.total > 0)
-      .sort((a, b) => a.due.getTime() - b.due.getTime())[0];
-    if (!pending) return null;
-    return {
-      cardId: pending.card.id,
-      cardName: pending.card.name,
-      /* What it still asks for: a payment made ahead has already left it. */
-      total: Math.max(0, pending.invoice!.total - pending.invoice!.paid),
-      days: Math.round(
-        (new Date(pending.due).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000,
-      ),
-    };
-  }, [cards, invoices]);
-
-  const slides = useMemo(
-    () =>
-      buildInsights({
-        greeting,
-        dateStr,
-        firstName,
-        receitas: data.receitas,
-        despesas: data.despesas,
-        saldoPrevisto: data.saldoPrevisto,
-        saldoAtual: data.saldoAtual,
-        categories,
-        events: data.events ?? [],
-        transactions: data.transactions ?? [],
-        month,
-        isCurrentMonth: true,
-        invoice,
-        hidden,
-      }),
-    [greeting, dateStr, firstName, data, categories, month, invoice, hidden],
-  );
 
   const widgetContext = useMemo(
     () => ({
@@ -242,7 +168,8 @@ function HomeScreen() {
     [data, categories, month, assinaturas, assinaturasLoading, totalAssinaturas, ended, keepEnded, cancelEnded],
   );
 
-  const skipWidget = useCallback((id: string) => widgetIsEmpty(id, widgetContext), [widgetContext]);
+  /* The balance and the categories now live above the board, drawn their new way. */
+  const skipWidget = useCallback((id: string) => id === "saldo" || id === "categorias" || widgetIsEmpty(id, widgetContext), [widgetContext]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -253,22 +180,9 @@ function HomeScreen() {
     }
   }, [refetch]);
 
-  /* Where the readings sit, and therefore where the first card starts. */
-  /* Under the header, so neither the sphere nor the readings touch its icons. */
-  const pinnedTop = insets.top + 72;
-  const pinnedHeight = pinnedTop + ORB_HERO_BODY;
-
   return (
     <Room lit sky home>
       <GroundInkProvider mode={groundMode}>
-      {/* Willo's light, behind everything, so the cards rise through it. Editing is about the
-          board, so the top stands down for it. */}
-      {!editing && (
-        <Animated.View pointerEvents="none" style={[{ position: "absolute", top: 0, left: 0, right: 0 }, glowStyle]}>
-          <WilloGlow height={pinnedHeight + 160} cx="24%" />
-        </Animated.View>
-      )}
-
       <Animated.ScrollView
         scrollEnabled={!carrying}
         contentContainerStyle={{
@@ -287,11 +201,27 @@ function HomeScreen() {
           />
         }
       >
-        {/* Holds the room of the block on top, so the first card starts below it. The same
-            while editing: holding a card starts editing, and a board that moved up under the
-            finger at that moment would drop the card somewhere else. */}
-        <View style={{ height: pinnedHeight }} pointerEvents="none" />
+        {/* Under the row at the top. */}
+        <View style={{ height: insets.top + 60 }} pointerEvents="none" />
 
+        {!editing && (
+          <View style={{ gap: 18, marginBottom: 26 }}>
+            <BalanceHero
+              saldoAtual={data.saldoAtual}
+              saldoPrevisto={data.saldoPrevisto}
+              transactions={data.transactions ?? []}
+              month={month}
+              year={year}
+              hidden={hidden}
+              loading={loading}
+              onPress={() => router.push("/gestao" as never)}
+            />
+            <DailyBudgetCard hidden={hidden} />
+            <View style={{ marginTop: 10 }}>
+              <CategoryStrip categories={categories} counts={counts} month={month} hidden={hidden} />
+            </View>
+          </View>
+        )}
 
         <WidgetBoard
           userId={user?.id}
@@ -304,21 +234,11 @@ function HomeScreen() {
         />
       </Animated.ScrollView>
 
-      {/* The sphere is above the page, not under it: the scroller would take the tap.
-          Whatever it does not cover still reaches the page. */}
-      {!editing && (
-        <Animated.View
-          pointerEvents={collapsed ? "none" : "box-none"}
-          style={[{ position: "absolute", left: 0, right: 0, top: pinnedTop - 8, paddingHorizontal: 16 }, orbStyle]}
-        >
-          <OrbHero slides={slides} />
-        </Animated.View>
-      )}
-
       {/* Above everything: the row that stays, and the band the page passes under. */}
       <ScrollEdge on={moved && !editing} />
       <HomeHeader
         name={name}
+        title={hidden ? null : money(data.saldoAtual)}
         userId={user?.id}
         avatarUrl={profile?.avatar_url}
         collapsed={collapsed && !editing}

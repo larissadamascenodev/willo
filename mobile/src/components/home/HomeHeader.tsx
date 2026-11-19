@@ -4,6 +4,7 @@ import { lastHeaderAvatar, rememberHeaderAvatar } from "~/lib/headerAvatar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, withTiming, type EntryExitAnimationFunction } from "react-native-reanimated";
 import { Bell, User } from "~/components/icons";
+import Glass from "~/components/Glass";
 import { GREEN } from "~/theme/tokens";
 
 import { useGroundTh } from "~/theme/groundInk";
@@ -16,6 +17,7 @@ import { useGroundTh } from "~/theme/groundInk";
  */
 export default function HomeHeader({
   name,
+  title,
   userId,
   avatarUrl,
   unread = 0,
@@ -24,6 +26,8 @@ export default function HomeHeader({
   onBell,
 }: {
   name?: string | null;
+  /** What takes the middle once the top has scrolled away (the balance); the first name if not given. */
+  title?: string | null;
   /** Whose picture it is: the one kept while loading is only ever this person's. */
   userId?: string;
   avatarUrl?: string | null;
@@ -85,39 +89,29 @@ export default function HomeHeader({
         paddingBottom: 10,
       }}
     >
-      <Pressable
-        accessibilityLabel="Perfil"
-        onPress={onProfile}
-        style={({ pressed }) => ({
-          width: 44,
-          height: 44,
-          borderRadius: 22,
-          alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
-          borderWidth: 1,
-          borderColor: th("rgba(255,255,255,0.34)", "line"),
-          backgroundColor: th("rgba(255,255,255,0.10)", "bg"),
-          opacity: pressed ? 0.7 : 1,
-        })}
-      >
-        {shownAvatar ? (
-          <Image source={{ uri: shownAvatar }} cachePolicy="memory-disk" transition={0} style={{ width: "100%", height: "100%" }} />
-        ) : initial ? (
-          <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff") }}>{initial}</Text>
-        ) : (
-          <User size={18} color={th("rgba(255,255,255,0.8)")} />
-        )}
+      {/* Two floating drops of glass: who is signed in, and what is waiting. */}
+      <Pressable accessibilityLabel="Perfil" onPress={onProfile} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
+        <Glass interactive style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", padding: 3 }}>
+          <View style={{ width: 40, height: 40, borderRadius: 20, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
+            {shownAvatar ? (
+              <Image source={{ uri: shownAvatar }} cachePolicy="memory-disk" transition={0} style={{ width: "100%", height: "100%" }} />
+            ) : initial ? (
+              <Text style={{ fontSize: 16, fontWeight: "700", color: th("#fff") }}>{initial}</Text>
+            ) : (
+              <User size={19} color={th("rgba(255,255,255,0.85)")} />
+            )}
+          </View>
+        </Glass>
       </Pressable>
 
-      {collapsed && firstName ? (
+      {collapsed && (title || firstName) ? (
         <Animated.Text
           entering={enter}
           exiting={leave}
           numberOfLines={1}
-          style={{ flex: 1, fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}
+          style={{ flex: 1, textAlign: title ? "center" : "left", fontSize: title ? 17 : 19, fontWeight: title ? "600" : "700", letterSpacing: -0.4, color: th("#fff"), fontVariant: ["tabular-nums"] }}
         >
-          {firstName}
+          {title || firstName}
         </Animated.Text>
       ) : (
         <View style={{ flex: 1 }} />
@@ -127,23 +121,18 @@ export default function HomeHeader({
         onPress={onBell}
         accessibilityRole="button"
         accessibilityLabel={unread > 0 ? `Notificações, ${unread} novas` : "Notificações"}
-        style={({ pressed }) => ({
-          width: 44,
-          height: 44,
-          borderRadius: 22,
-          alignItems: "center",
-          justifyContent: "center",
-          /* Just the bell, no ring around it: lighter at the corner of the home. */
-          opacity: pressed ? 0.55 : 1,
-        })}
+        style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
       >
-        <Bell size={24} color={th("#fff")} strokeWidth={1.9} />
+        <Glass interactive style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center" }}>
+          <Bell size={21} color={th("#fff")} strokeWidth={2} />
+        </Glass>
         {unread > 0 && (
           <View
+            pointerEvents="none"
             style={{
               position: "absolute",
-              right: 10,
-              top: 9,
+              right: 11,
+              top: 10,
               width: 9,
               height: 9,
               borderRadius: 4.5,

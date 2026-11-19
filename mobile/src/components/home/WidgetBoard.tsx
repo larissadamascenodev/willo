@@ -275,7 +275,9 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
      left floating over the board. */
   const shown = useMemo(() => slots.filter((slot) => !skip?.(slot.id)), [slots, skip]);
   const [width, setWidth] = useState(0);
-  const halfW = width > 0 ? (width - gap) / 2 : 0;
+  /* Half a pixel short of half: a width with a fraction in it (393 points less the margins)
+     otherwise rounds the pair past the row, and the second card drops to the next one. */
+  const halfW = width > 0 ? Math.floor(((width - gap) / 2) * 2) / 2 - 0.5 : 0;
 
   const missing = PHONE_WIDGETS.filter((w) => !slots.some((s) => s.id === w.id) && (w.id !== "plano" || FEATURES.plano));
 
