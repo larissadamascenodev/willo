@@ -104,7 +104,7 @@ export default function CategoryStrip({
             const r = (ICON + 8) / 2 - 2;
             const c = 2 * Math.PI * r;
             return (
-              <Surface key={cat.name} onPress={open} radius={26} style={{ width: CARD_W, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 }}>
+              <Surface key={cat.name} onPress={() => router.push(`/analytics/categoria/${encodeURIComponent(cat.name)}` as never)} radius={26} style={{ width: CARD_W, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 }}>
                 <View style={{ width: ICON + 8, height: ICON + 8, alignItems: "center", justifyContent: "center" }}>
                   <Svg width={ICON + 8} height={ICON + 8} style={{ position: "absolute", transform: [{ rotate: "-90deg" }] }}>
                     <Circle cx={(ICON + 8) / 2} cy={(ICON + 8) / 2} r={r} stroke={th(color, "line")} strokeOpacity={0.22} strokeWidth={3} fill="none" />

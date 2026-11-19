@@ -4,7 +4,7 @@ import { lastHeaderAvatar, rememberHeaderAvatar } from "~/lib/headerAvatar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { Easing, withTiming, type EntryExitAnimationFunction } from "react-native-reanimated";
 import { Bell, User } from "~/components/icons";
-import Glass from "~/components/Glass";
+import RaisedButton from "~/components/RaisedButton";
 import { GREEN } from "~/theme/tokens";
 
 import { useGroundTh } from "~/theme/groundInk";
@@ -89,20 +89,18 @@ export default function HomeHeader({
         paddingBottom: 10,
       }}
     >
-      {/* Two floating drops of glass: who is signed in, and what is waiting. */}
-      <Pressable accessibilityLabel="Perfil" onPress={onProfile} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
-        <Glass interactive style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center", padding: 3 }}>
-          <View style={{ width: 40, height: 40, borderRadius: 20, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
-            {shownAvatar ? (
-              <Image source={{ uri: shownAvatar }} cachePolicy="memory-disk" transition={0} style={{ width: "100%", height: "100%" }} />
-            ) : initial ? (
-              <Text style={{ fontSize: 16, fontWeight: "700", color: th("#fff") }}>{initial}</Text>
-            ) : (
-              <User size={19} color={th("rgba(255,255,255,0.85)")} />
-            )}
-          </View>
-        </Glass>
-      </Pressable>
+      {/* Two raised drops: who is signed in, and what is waiting. */}
+      <RaisedButton label="Perfil" onPress={onProfile} size={50}>
+        <View style={{ width: 42, height: 42, borderRadius: 21, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
+          {shownAvatar ? (
+            <Image source={{ uri: shownAvatar }} cachePolicy="memory-disk" transition={0} style={{ width: "100%", height: "100%" }} />
+          ) : initial ? (
+            <Text style={{ fontSize: 17, fontWeight: "700", color: th("#fff") }}>{initial}</Text>
+          ) : (
+            <User size={20} color={th("rgba(255,255,255,0.9)")} />
+          )}
+        </View>
+      </RaisedButton>
 
       {collapsed && (title || firstName) ? (
         <Animated.Text
@@ -117,22 +115,17 @@ export default function HomeHeader({
         <View style={{ flex: 1 }} />
       )}
 
-      <Pressable
-        onPress={onBell}
-        accessibilityRole="button"
-        accessibilityLabel={unread > 0 ? `Notificações, ${unread} novas` : "Notificações"}
-        style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
-      >
-        <Glass interactive style={{ width: 46, height: 46, alignItems: "center", justifyContent: "center" }}>
-          <Bell size={21} color={th("#fff")} strokeWidth={2} />
-        </Glass>
+      <View>
+        <RaisedButton label={unread > 0 ? `Notificações, ${unread} novas` : "Notificações"} onPress={onBell} size={50}>
+          <Bell size={22} color={th("#fff")} strokeWidth={2} />
+        </RaisedButton>
         {unread > 0 && (
           <View
             pointerEvents="none"
             style={{
               position: "absolute",
-              right: 11,
-              top: 10,
+              right: 12,
+              top: 11,
               width: 9,
               height: 9,
               borderRadius: 4.5,
@@ -140,7 +133,7 @@ export default function HomeHeader({
             }}
           />
         )}
-      </Pressable>
+      </View>
     </View>
   );
 }

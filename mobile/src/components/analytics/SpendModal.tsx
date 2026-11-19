@@ -243,7 +243,7 @@ const longDay = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString(
  * actually leaves. On a card those are two dates: a purchase of October can be paid in
  * November's invoice, which is why it is counted there.
  */
-function ChargeDetails({
+export function ChargeDetails({
   tx,
   onClose,
   paidWith,
