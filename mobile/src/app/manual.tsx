@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { withPro } from "~/components/onboarding/RenewGate";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import BottomSheet from "~/components/BottomSheet";
+import AmountFirstFlow from "~/components/registro/AmountFirstFlow";
 import EditEntry from "~/components/registro/EditEntry";
 import ManualEntryFlow, { type ManualStep } from "~/components/registro/ManualEntryFlow";
 import { useThemeRedraw } from "~/theme/theme";
@@ -39,9 +40,16 @@ function Manual() {
   };
 
   return (
-    <BottomSheet open={open} onClose={() => leave()} full={!!editar || step === "confirm" || step === "done"}>
+    <BottomSheet open={open} onClose={() => leave()} full={!!editar || !preset || step === "confirm" || step === "done"}>
       {editar ? (
         <EditEntry id={editar} month={month} year={year} onDone={() => leave()} />
+      ) : !preset ? (
+        <AmountFirstFlow
+          cardId={cartao ?? null}
+          onScan={() => leave(() => router.push("/scanner" as never))}
+          onClose={() => leave()}
+          onSeeTransactions={() => leave(() => router.push("/(tabs)/transacoes" as never))}
+        />
       ) : (
         <ManualEntryFlow
           cardId={cartao ?? null}

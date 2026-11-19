@@ -5,6 +5,7 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import ParticleOrb from "~/components/registro/ParticleOrb";
 import BottomSheet from "~/components/BottomSheet";
 import QuickEntryFlow, { type Step } from "~/components/registro/QuickEntryFlow";
+import AmountFirstFlow from "~/components/registro/AmountFirstFlow";
 import { useThemeRedraw } from "~/theme/theme";
 
 /**
@@ -39,7 +40,7 @@ function Rapido() {
     <BottomSheet
       open={open}
       onClose={() => leave()}
-      full={step !== "ask"}
+      full={!frase || step !== "ask"}
       above={
         hearing ? (
           <Animated.View entering={FadeIn.duration(220)} exiting={FadeOut.duration(180)}>
@@ -48,6 +49,13 @@ function Rapido() {
         ) : null
       }
     >
+      {!frase ? (
+        <AmountFirstFlow
+          onScan={() => leave(() => router.push("/scanner" as never))}
+          onClose={() => leave()}
+          onSeeTransactions={() => leave(() => router.push("/(tabs)/transacoes" as never))}
+        />
+      ) : (
       <QuickEntryFlow
         heard={frase ?? null}
         onClose={() => leave()}
@@ -56,6 +64,7 @@ function Rapido() {
         onStep={setStep}
         onHearing={setHearing}
       />
+      )}
     </BottomSheet>
   );
 }
