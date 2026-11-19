@@ -5,6 +5,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "~/supabase/client";
 import { cachedAccounts, warmHome, warmHomeWithin } from "~/lib/warmHome";
 import { forgetAccountData } from "~/lib/forgetAccount";
+import { setCacheScope } from "@/lib/cacheScope";
 import { hasCopilotAction, setCopilotCode } from "../../modules/willo-copilot";
 import { loginGate } from "~/lib/socialAuth";
 
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     supabase.auth.getSession().then(({ data }) => {
       if (!alive) return;
+      setCacheScope(data.session?.user?.id ?? null);
       setSession(data.session);
       setLoading(false);
     });
@@ -59,6 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
       if (!alive) return;
       const uid = next?.user?.id ?? null;
+      /* The caches answer for this person from now on, before anything reads them. */
+      setCacheScope(uid);
       if (event === "SIGNED_OUT" || (lastUid && uid && uid !== lastUid)) forgetAccountData();
       if (uid) lastUid = uid;
       else if (event === "SIGNED_OUT") lastUid = null;

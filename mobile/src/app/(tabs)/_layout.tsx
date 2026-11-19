@@ -2,6 +2,7 @@ import { Tabs } from "expo-router";
 import BottomNav from "~/components/BottomNav";
 import { NavChromeProvider } from "~/lib/navChrome";
 import { useThemeRedraw } from "~/theme/theme";
+import { useAuth } from "~/lib/auth";
 
 /**
  * The two places the bar goes, and the screen between them.
@@ -13,9 +14,12 @@ import { useThemeRedraw } from "~/theme/theme";
 export default function TabsLayout() {
   /* Drawn again in place when the theme changes. */
   useThemeRedraw();
+  /* Each account gets its own tabs: none keeps the previous account's figures on screen. */
+  const { user } = useAuth();
   return (
     <NavChromeProvider>
       <Tabs
+        key={user?.id ?? "none"}
         tabBar={(props) => <BottomNav {...props} />}
         screenOptions={{
           headerShown: false,

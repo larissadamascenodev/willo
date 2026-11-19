@@ -1,3 +1,4 @@
+import { cacheScope } from "@/lib/cacheScope";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface CustomCategory {
@@ -15,6 +16,7 @@ export interface CustomCategory {
 // Module-level cache for custom categories
 let cachedCategories: CustomCategory[] | null = null;
 let cacheTimestamp = 0;
+let cachedScope = "";
 const CACHE_TTL = 30_000; // 30s
 
 export function invalidateCustomCategoryCache() {
@@ -29,10 +31,11 @@ if (typeof window !== "undefined") {
 
 export async function getCustomCategories(type?: "receita" | "despesa") {
   // Use cache if fresh and no type filter
-  if (!type && cachedCategories && Date.now() - cacheTimestamp < CACHE_TTL) {
+  if (!type && cachedCategories && cachedScope === cacheScope() && Date.now() - cacheTimestamp < CACHE_TTL) {
     return cachedCategories;
   }
 
+  const scope = cacheScope();
   let query = supabase
     .from("custom_categories" as any)
     .select("*")
@@ -47,6 +50,7 @@ export async function getCustomCategories(type?: "receita" | "despesa") {
   if (!type) {
     cachedCategories = result;
     cacheTimestamp = Date.now();
+    cachedScope = scope;
   }
 
   return result;

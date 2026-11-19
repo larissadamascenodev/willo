@@ -66,8 +66,10 @@ export default function Home() {
       setSeen(true);
     }, []),
   );
+  const { user } = useAuth();
   if (!seen) return <Room lit sky home>{null}</Room>;
-  return <HomeScreen />;
+  /* Built anew for each account: no card keeps the previous one's figures while loading. */
+  return <HomeScreen key={user?.id ?? "none"} />;
 }
 
 function HomeScreen() {

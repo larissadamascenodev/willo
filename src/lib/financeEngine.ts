@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { cacheScope } from "@/lib/cacheScope";
 import { getRecurringForMonth } from "@/services/recurringService";
 import { dayOfMonth } from "@/lib/dateOnly";
 import { chargeStartsAfterMonth } from "@/lib/installments";
@@ -69,7 +70,8 @@ const materializedMonths = new Set<string>();
    before all opening together — goes to the database once: the later callers share the
    answer still on its way. Only while it is on its way: kept answers live in the caches. */
 const inflight = new Map<string, Promise<unknown>>();
-function once<T>(key: string, run: () => Promise<T>): Promise<T> {
+function once<T>(bare: string, run: () => Promise<T>): Promise<T> {
+  const key = `${cacheScope()}|${bare}`;
   const pending = inflight.get(key) as Promise<T> | undefined;
   if (pending) return pending;
   const request = run().finally(() => {
@@ -104,10 +106,12 @@ function fetchMonthTransactions(month: number, year: number, opts?: { skipMateri
 async function fetchMonthTransactionsNow(month: number, year: number, opts?: { skipMaterialize?: boolean; userId?: string }) {
   const { start, end } = getMonthRange(month, year);
   const dbMonth = month + 1; // DB stores 1-based months
+  /* Taken now: by the time the answer lands, another account may be signed in. */
+  const scope = cacheScope();
 
   // Check intermediate cache for skipMaterialize calls (chain calculations)
   if (opts?.skipMaterialize) {
-    const cacheKey = `mtx-${month}-${year}`;
+    const cacheKey = `${scope}|mtx-${month}-${year}`;
     const cached = getCachedMonthTxs(cacheKey);
     if (cached) return cached;
   }
@@ -183,7 +187,7 @@ async function fetchMonthTransactionsNow(month: number, year: number, opts?: { s
 
   // Cache intermediate results for chain calculations
   if (opts?.skipMaterialize) {
-    monthTxCache.set(`mtx-${month}-${year}`, { txs: result, timestamp: Date.now() });
+    monthTxCache.set(`${scope}|mtx-${month}-${year}`, { txs: result, timestamp: Date.now() });
   }
 
   return result;
@@ -317,7 +321,7 @@ function fetchInvoiceTotalsForMonth(month: number, year: number): Promise<Invoic
 }
 
 async function fetchInvoiceTotalsForMonthNow(month: number, year: number): Promise<InvoiceTotals> {
-  const cacheKey = `inv-${month}-${year}`;
+  const cacheKey = `${cacheScope()}|inv-${month}-${year}`;
   const cached = invoiceTotalsCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < MONTH_TX_CACHE_TTL) return cached.data;
 

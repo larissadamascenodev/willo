@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { cacheScope } from "@/lib/cacheScope";
 import { toTitleCase } from "@/lib/textCase";
 
 const ACCOUNTS_CACHE_KEY = "accounts-active";
@@ -64,7 +65,9 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
   window.addEventListener("finance-data-changed", () => clearFinanceQueryCache());
 }
 
-function getCachedList<T>(key: string, loader: () => Promise<T[]>): Promise<T[]> {
+function getCachedList<T>(bare: string, loader: () => Promise<T[]>): Promise<T[]> {
+  /* Per person: these lists come back for whoever is signed in. */
+  const key = `${cacheScope()}|${bare}`;
   const cached = queryCache.get(key);
   if (cached && Date.now() - cached.timestamp < QUERY_CACHE_TTL) return Promise.resolve(cached.data as T[]);
 

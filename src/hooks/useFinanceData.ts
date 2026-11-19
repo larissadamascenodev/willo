@@ -26,6 +26,8 @@ export function useFinanceData(selectedMonth: number, selectedYear: number, opti
   const includeHistorical = options?.includeHistorical ?? false;
   const cacheKey = buildDashboardCacheKey(user?.id, selectedMonth, selectedYear);
   const activeKeyRef = useRef(cacheKey);
+  /* Whose figures are on screen: another account's are never shown while this one's load. */
+  const shownUserRef = useRef(user?.id ?? null);
   const [data, setData] = useState<DashboardData>(() => getCachedDashboardData(cacheKey) ?? EMPTY_DASHBOARD_DATA);
   const [loading, setLoading] = useState(() => authLoading || !getCachedDashboardData(cacheKey));
 
@@ -51,8 +53,10 @@ export function useFinanceData(selectedMonth: number, selectedYear: number, opti
       setLoading(false);
       // Still refresh in background but don't show loading
     } else {
+      if (shownUserRef.current !== user.id) setData(EMPTY_DASHBOARD_DATA);
       setLoading(true);
     }
+    shownUserRef.current = user.id;
 
     // Single prefetch call — the service handles base vs historical splitting internally
     prefetchDashboardData(selectedMonth, selectedYear, {
