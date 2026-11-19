@@ -1,17 +1,28 @@
-import type { ReactNode } from "react";
-import { Pressable, View, type StyleProp, type ViewStyle } from "react-native";
+import { useEffect, useState, type ReactNode } from "react";
+import { AccessibilityInfo, Pressable, View, type StyleProp, type ViewStyle } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
+import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
 import { isLight, th } from "~/theme/theme";
 
 /**
- * A round button that stands up off the page.
+ * A round button of glass, the phone's own.
  *
- * Not a hole of glass in the background but a drop sitting on it, the way the big apps
- * draw the buttons in their top row: the page shows through, a shade lighter, brighter at
- * the top than at the bottom; a thin line of light along its upper rim; and a soft shadow
- * under it, so it reads as raised. Pressed, it sinks a little.
+ * On iOS 26 it is the system's Liquid Glass itself — the same drop the phone's own apps put
+ * in their top rows: dark and see-through over the page, with a thin bright edge where the
+ * light catches it. Elsewhere (older iPhones, the browser) it is drawn to look the same:
+ * a dark, blurred fill and a rim of light, brightest at the upper left and again, fainter,
+ * at the lower right. Pressed, it sinks a little.
  */
+
+const NATIVE = (() => {
+  try {
+    return isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
+  } catch {
+    return false;
+  }
+})();
+
 export default function RaisedButton({
   size = 50,
   onPress,
@@ -27,51 +38,62 @@ export default function RaisedButton({
 }) {
   const light = isLight();
   const r = size / 2;
+  const [plain, setPlain] = useState(false);
+  useEffect(() => {
+    if (typeof AccessibilityInfo.isReduceTransparencyEnabled !== "function") return;
+    let alive = true;
+    AccessibilityInfo.isReduceTransparencyEnabled()
+      .then((on) => alive && setPlain(on))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const content = <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>{children}</View>;
+
+  let body: ReactNode;
+  if (plain) {
+    body = (
+      <View style={{ width: size, height: size, borderRadius: r, borderWidth: 1, borderColor: light ? "rgba(17,19,24,0.08)" : "rgba(255,255,255,0.12)", backgroundColor: light ? "#FFFFFF" : "#1C1D20" }}>
+        {content}
+      </View>
+    );
+  } else if (NATIVE) {
+    body = (
+      <GlassView glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={false} style={{ width: size, height: size, borderRadius: r }}>
+        {content}
+      </GlassView>
+    );
+  } else {
+    /* The rim is a gradient one point wide around the fill: bright upper left, gone in the
+       middle, a fainter glint lower right — how the light sits on a drop of glass. */
+    body = (
+      <LinearGradient
+        colors={light ? ["rgba(255,255,255,1)", "rgba(255,255,255,0.5)", "rgba(255,255,255,0.9)"] : ["rgba(255,255,255,0.42)", "rgba(255,255,255,0.06)", "rgba(255,255,255,0.22)"]}
+        locations={[0, 0.5, 1]}
+        start={{ x: 0.15, y: 0 }}
+        end={{ x: 0.85, y: 1 }}
+        style={{ width: size, height: size, borderRadius: r, padding: 1 }}
+      >
+        <View style={{ flex: 1, borderRadius: r - 1, overflow: "hidden" }}>
+          <BlurView intensity={light ? 50 : 30} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: light ? "rgba(255,255,255,0.55)" : "rgba(34,35,40,0.55)" }} />
+          {content}
+        </View>
+      </LinearGradient>
+    );
+  }
+
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
       hitSlop={6}
-      style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.94 : 1 }], opacity: pressed ? 0.9 : 1 }, style]}
+      style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.94 : 1 }], opacity: pressed ? 0.85 : 1 }, style]}
     >
-      <View
-        style={{
-          width: size,
-          height: size,
-          borderRadius: r,
-          shadowColor: "#000",
-          shadowOpacity: light ? 0.14 : 0.45,
-          shadowRadius: light ? 8 : 10,
-          shadowOffset: { width: 0, height: light ? 3 : 4 },
-        }}
-      >
-        <View style={{ flex: 1, borderRadius: r, overflow: "hidden", borderWidth: 1, borderColor: light ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.18)" }}>
-          <BlurView intensity={light ? 40 : 28} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-          <LinearGradient
-            pointerEvents="none"
-            colors={light ? ["rgba(255,255,255,0.98)", "rgba(246,247,249,0.92)"] : ["rgba(255,255,255,0.30)", "rgba(255,255,255,0.12)"]}
-            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-          />
-          {/* The rim of light along the top edge. */}
-          <View
-            pointerEvents="none"
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              borderRadius: r,
-              borderTopWidth: 1.2,
-              borderLeftWidth: 0.6,
-              borderRightWidth: 0.6,
-              borderColor: light ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.6)",
-            }}
-          />
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>{children}</View>
-        </View>
-      </View>
+      {body}
     </Pressable>
   );
 }

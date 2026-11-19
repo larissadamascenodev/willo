@@ -90,17 +90,20 @@ export default function HomeHeader({
       }}
     >
       {/* Two raised drops: who is signed in, and what is waiting. */}
-      <RaisedButton label="Perfil" onPress={onProfile} size={50}>
-        <View style={{ width: 42, height: 42, borderRadius: 21, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
-          {shownAvatar ? (
-            <Image source={{ uri: shownAvatar }} cachePolicy="memory-disk" transition={0} style={{ width: "100%", height: "100%" }} />
-          ) : initial ? (
-            <Text style={{ fontSize: 17, fontWeight: "700", color: th("#fff") }}>{initial}</Text>
+      {/* A photo fills the whole circle, edge to edge; without one, the glass drop holds the initial. */}
+      {shownAvatar ? (
+        <Pressable accessibilityRole="button" accessibilityLabel="Perfil" onPress={onProfile} hitSlop={6} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.94 : 1 }], opacity: pressed ? 0.85 : 1 })}>
+          <Image source={{ uri: shownAvatar }} cachePolicy="memory-disk" transition={0} style={{ width: 50, height: 50, borderRadius: 25 }} />
+        </Pressable>
+      ) : (
+        <RaisedButton label="Perfil" onPress={onProfile} size={50}>
+          {initial ? (
+            <Text style={{ fontSize: 18, fontWeight: "700", color: th("#fff") }}>{initial}</Text>
           ) : (
-            <User size={20} color={th("rgba(255,255,255,0.9)")} />
+            <User size={21} color={th("rgba(255,255,255,0.9)")} />
           )}
-        </View>
-      </RaisedButton>
+        </RaisedButton>
+      )}
 
       {collapsed && (title || firstName) ? (
         <Animated.Text
