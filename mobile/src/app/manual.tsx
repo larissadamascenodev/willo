@@ -41,7 +41,7 @@ function Manual() {
   };
 
   return (
-    <BottomSheet open={open} onClose={() => leave()} full={!!editar || !preset || step === "confirm" || step === "done"}>
+    <BottomSheet open={open} onClose={() => leave()} full={!!editar || !preset || step === "confirm" || step === "done"} nearlyFull={!editar && !preset}>
       {editar ? (
         <EditEntry id={editar} month={month} year={year} onDone={() => leave()} />
       ) : !preset ? (

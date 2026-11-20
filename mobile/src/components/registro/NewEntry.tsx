@@ -5,6 +5,7 @@ import Animated, {
   Easing,
   FadeIn,
   FadeOut,
+  LinearTransition,
   runOnJS,
   useAnimatedStyle,
   useReducedMotion,
@@ -25,6 +26,8 @@ import { categoryHex } from "@/lib/categoryData";
 import AnchoredMenu, { MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import BankMark from "~/components/BankMark";
 import BottomSheet from "~/components/BottomSheet";
+import { tallSheetBody } from "~/lib/sheetRoom";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CategoryPicker from "~/components/CategoryPicker";
 import RaisedButton from "~/components/RaisedButton";
 import MonthCalendar from "~/components/eventos/MonthCalendar";
@@ -43,7 +46,9 @@ import {
   ChevronRight,
   ChevronsRight,
   Clock,
+  CreditCard,
   Delete,
+  Landmark,
   Mic,
   MoreHorizontal,
   PenLine,
@@ -82,7 +87,7 @@ import { th } from "~/theme/theme";
 
 type Kind = "despesa" | "receita" | "transferencia";
 type Method = "conta" | "cartao";
-type Stage = "edit" | "confirm" | "done";
+type Stage = "amount" | "details" | "confirm" | "done";
 type Repeat = "unica" | "fixa" | "parcelado";
 type Sheet = null | "conta" | "de" | "para" | "data" | "repetir" | "nota";
 type Listen = "off" | "on" | "reading";
@@ -95,10 +100,10 @@ const tick = () => void Haptics.selectionAsync().catch(() => undefined);
 const yesterdayIso = () => isoOf(new Date(Date.now() - 86_400_000));
 const SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const WEEK = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
-const KINDS: { k: Kind; label: string }[] = [
-  { k: "despesa", label: "Despesa" },
-  { k: "receita", label: "Receita" },
-  { k: "transferencia", label: "Transferência" },
+const KINDS: { k: Kind; label: string; Icon: IconC }[] = [
+  { k: "despesa", label: "Despesa", Icon: ArrowUpRight },
+  { k: "receita", label: "Receita", Icon: ArrowDownLeft },
+  { k: "transferencia", label: "Transferência", Icon: ArrowLeftRight },
 ];
 const KEYS = [
   ["1", "2", "3"],
@@ -157,11 +162,24 @@ export default function NewEntry({
 }) {
   const { user } = useAuth();
   const { height: screenH } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const [kb, setKb] = useState(0);
+  useEffect(() => {
+    const ios = Platform.OS === "ios";
+    const show = Keyboard.addListener(ios ? "keyboardWillChangeFrame" : "keyboardDidShow", (e) => setKb(Math.max(0, e.endCoordinates.height)));
+    const hide = Keyboard.addListener(ios ? "keyboardWillHide" : "keyboardDidHide", () => setKb(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  /* Exactly the sheet's room, so it fills the screen and never scrolls. */
+  const bodyH = tallSheetBody(screenH, insets.top, insets.bottom, kb);
   const compact = screenH < 740;
   const reduce = useReducedMotion();
   const locked = !!cardId;
 
-  const [stage, setStage] = useState<Stage>("edit");
+  const [stage, setStage] = useState<Stage>("amount");
   const [kind, setKind] = useState<Kind>("despesa");
   const [raw, setRaw] = useState("");
   const [method, setMethod] = useState<Method>(locked ? "cartao" : "conta");
@@ -344,7 +362,7 @@ export default function NewEntry({
   };
 
   const again = () => {
-    setStage("edit");
+    setStage("amount");
     setRaw("");
     setName("");
     setCategory(null);
@@ -475,7 +493,6 @@ export default function NewEntry({
 
   /* ── Done: the coin, the light, the confetti ── */
   const [box, setBox] = useState({ w: 0, h: 0 });
-  const [editH, setEditH] = useState(0);
   const [glowing, setGlowing] = useState(false);
   useEffect(() => {
     if (stage !== "done") return;
@@ -493,7 +510,41 @@ export default function NewEntry({
 
   const hex = transfer ? "#8A8F98" : category ? categoryHex(category) : "#8A8F98";
   const CatIcon: IconC = transfer ? ArrowLeftRight : category ? categoryIcon(category) : Sparkles;
-  const rowH = compact ? 50 : 58;
+  const rowH = compact ? 54 : 64;
+  const custom = date !== today && date !== yesterdayIso();
+  const payLine = transfer
+    ? `${picked?.name ?? ""} → ${toAcc?.name ?? ""}`
+    : `${credit ? "Crédito" : income ? "Em" : "Débito"} · ${picked?.name ?? ""}${n ? ` · ${n}x` : ""}`;
+  const secondLine = (o: Option | null) => {
+    if (!o) return "";
+    if (credit && "limit" in o && o.limit != null) return `Disponível ${money(Number(o.limit) - (Number(o.used_limit) || 0))}`;
+    if (credit) return "Crédito";
+    const b = balanceOf(o);
+    return b != null ? money(b) : "";
+  };
+  const next = () => {
+    if (!canSave) return;
+    Keyboard.dismiss();
+    setError(null);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    setStage("details");
+  };
+  const moreButton = (
+    <View ref={moreRef} collapsable={false}>
+      <RaisedButton size={46} label="Mais opções" onPress={openMenu}>
+        <MoreHorizontal size={20} color={th("#fff")} strokeWidth={2.4} />
+      </RaisedButton>
+    </View>
+  );
+  const cardStyle = {
+    flex: 1,
+    marginTop: 12,
+    borderRadius: 34,
+    borderCurve: "continuous" as const,
+    borderWidth: 1,
+    borderColor: th("rgba(255,255,255,0.08)", "line"),
+    backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
+  };
   const repeatLabel = repeat === "fixa" ? "Todo mês" : n ? (cents > 0 ? `${n}x de ${money(value / n)}` : `${n}x`) : "Única";
   const accountNote = (o: Option) => {
     if ("limit" in o && o.limit != null) return `Disponível ${money(Number(o.limit) - (Number(o.used_limit) || 0))}`;
@@ -507,53 +558,35 @@ export default function NewEntry({
       onLayout={(e) => {
         const { width, height } = e.nativeEvent.layout;
         setBox({ w: width, h: height });
-        if (stage === "edit" && !typing && listen === "off") setEditH(height);
       }}
-      style={{ paddingHorizontal: 20, paddingBottom: 4, minHeight: stage === "edit" ? undefined : editH || undefined }}
+      style={{ height: bodyH, paddingHorizontal: 10 }}
     >
-      {stage === "edit" && (
-        <Animated.View key="edit" entering={FadeIn.duration(200)} exiting={FadeOut.duration(120)}>
-          {/* Close, what it is, more. */}
-          <View style={{ height: 40, flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <RaisedButton size={40} label="Fechar" onPress={onClose}>
-              <X size={18} color={th("#fff")} strokeWidth={2.4} />
+      {/* ── 1 · How much, from where, and what kind ── */}
+      {stage === "amount" && (
+        <Animated.View key="amount" entering={FadeIn.duration(200)} exiting={FadeOut.duration(120)} style={{ flex: 1 }}>
+          <View style={{ height: 48, paddingHorizontal: 6, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <RaisedButton size={46} label="Fechar" onPress={onClose}>
+              <X size={20} color={th("#fff")} strokeWidth={2.4} />
             </RaisedButton>
-            <View style={{ flex: 1 }}>
-              {locked ? (
-                <Text style={{ textAlign: "center", fontSize: 15, fontWeight: "700", color: th("#fff") }}>Compra no cartão</Text>
-              ) : (
-                <KindPill value={kind} onChange={changeKind} />
-              )}
-            </View>
-            <View ref={moreRef} collapsable={false}>
-              <RaisedButton size={40} label="Mais opções" onPress={openMenu}>
-                <MoreHorizontal size={18} color={th("#fff")} strokeWidth={2.4} />
-              </RaisedButton>
-            </View>
+            {locked ? (
+              <Text style={{ fontSize: 16, fontWeight: "700", color: th("#fff") }}>Compra no cartão</Text>
+            ) : (
+              <KindPill value={kind} onChange={changeKind} />
+            )}
+            {moreButton}
           </View>
 
-          {/* Everything about it, in one card. */}
-          <View
-            style={{
-              marginTop: 12,
-              padding: 14,
-              borderRadius: 26,
-              borderCurve: "continuous",
-              borderWidth: 1,
-              borderColor: th("rgba(255,255,255,0.10)", "line"),
-              backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
-            }}
-          >
+          <View style={[cardStyle, { padding: 12 }]}>
             {/* Where the money is: the account in the corner, the scanner across. */}
-            <View style={{ height: 34, flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ height: 58, flexDirection: "row", alignItems: "center", gap: 8 }}>
               {transfer ? (
                 accounts.length < 2 ? (
-                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 13.5, color: th(INK.soft) }}>
+                  <Text numberOfLines={2} style={{ flex: 1, paddingHorizontal: 8, fontSize: 14, color: th(INK.soft) }}>
                     Para transferir, cadastre outra conta.
                   </Text>
                 ) : (
                   <>
-                    <WhereChip grow bare caption="De" option={picked} placeholder="Conta" onPress={() => setSheet("de")} />
+                    <AccountChip grow option={picked} line={secondLine(picked)} label="De" placeholder="Conta" onPress={() => setSheet("de")} />
                     <Pressable
                       onPress={() => {
                         if (!picked || !toAcc) return;
@@ -563,126 +596,70 @@ export default function NewEntry({
                       }}
                       accessibilityLabel="Inverter as contas"
                       hitSlop={6}
-                      style={({ pressed }) => ({ width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: th(GREEN, "bg"), opacity: pressed ? 0.6 : 1 })}
+                      style={({ pressed }) => ({ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: th(GREEN, "bg"), opacity: pressed ? 0.6 : 1 })}
                     >
-                      <ArrowRight size={15} color="#0B0B0B" strokeWidth={2.8} />
+                      <ArrowRight size={16} color="#0B0B0B" strokeWidth={2.8} />
                     </Pressable>
-                    <WhereChip grow bare caption="Para" option={toAcc} placeholder="Conta" onPress={() => setSheet("para")} />
+                    <AccountChip grow option={toAcc} line={secondLine(toAcc)} label="Para" placeholder="Conta" onPress={() => setSheet("para")} />
                   </>
                 )
               ) : (
                 <>
-                  <WhereChip
-                    caption={credit ? "Crédito" : income ? "Em" : "Débito"}
+                  <AccountChip
                     option={picked}
+                    line={secondLine(picked)}
+                    label={credit ? "Cartão" : "Conta"}
                     placeholder={credit ? "Escolher cartão" : "Escolher conta"}
                     disabled={locked}
-                    onPress={() => {
-                      Keyboard.dismiss();
-                      setSheet("conta");
-                    }}
+                    onPress={() => setSheet("conta")}
                   />
                   <View style={{ flex: 1 }} />
                   {onScan && !income && (
                     <Pressable
                       onPress={onScan}
                       accessibilityLabel="Ler comprovante com a câmera"
-                      hitSlop={6}
-                      style={({ pressed }) => ({ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg"), opacity: pressed ? 0.6 : 1 })}
+                      hitSlop={4}
+                      style={({ pressed }) => ({
+                        height: 58,
+                        paddingHorizontal: 18,
+                        borderRadius: 29,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 8,
+                        borderWidth: 1,
+                        borderColor: th("rgba(255,255,255,0.08)", "line"),
+                        backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
+                        opacity: pressed ? 0.6 : 1,
+                      })}
                     >
-                      <ScanLine size={17} color={th("#fff")} strokeWidth={2.2} />
+                      <ScanLine size={20} color={th("#fff")} strokeWidth={2.2} />
                     </Pressable>
                   )}
                 </>
               )}
             </View>
 
-            {/* The amount. A tap here brings the number keys back from the phone's keyboard. */}
-            <Pressable
-              onPress={() => Keyboard.dismiss()}
-              accessibilityLabel={`Valor: ${money(value)}`}
-              style={{ marginTop: 6, height: typing ? 52 : compact ? 60 : 68, alignItems: "center", justifyContent: "center" }}
-            >
-              <Amount raw={raw} income={income} size={typing ? 38 : compact ? 46 : 54} />
-            </Pressable>
-
-            {/* What it was, with its category found from the words; the mark changes it. */}
-            <View
-              style={{
-                marginTop: 8,
-                height: 56,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 10,
-                paddingLeft: 8,
-                paddingRight: 12,
-                borderRadius: 20,
-                borderCurve: "continuous",
-                backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
-              }}
-            >
-              <Pressable
-                disabled={transfer}
-                onPress={() => {
-                  Keyboard.dismiss();
-                  setPicking(true);
-                }}
-                accessibilityLabel={`Categoria: ${category ?? "automática"}. Trocar`}
-                style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg"), opacity: pressed ? 0.7 : 1 })}
-              >
-                <CatIcon size={18} color={th(chipInk(hex))} strokeWidth={2.2} />
-              </Pressable>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <TextInput
-                  value={name}
-                  onChangeText={(t) => {
-                    setName(t);
-                    setError(null);
-                  }}
-                  onFocus={() => setTyping(true)}
-                  onBlur={() => setTyping(false)}
-                  placeholder={transfer ? "Descrição (opcional)" : income ? "De onde veio?" : "Com o que foi?"}
-                  placeholderTextColor={th(INK.softer)}
-                  returnKeyType="done"
-                  onSubmitEditing={() => Keyboard.dismiss()}
-                  style={[{ padding: 0, height: 24, fontSize: 16, fontWeight: "600", color: th("#fff") }, Platform.OS === "web" ? ({ outlineStyle: "none" } as never) : null]}
-                />
-                <Pressable
-                  disabled={transfer}
-                  onPress={() => {
-                    Keyboard.dismiss();
-                    setPicking(true);
-                  }}
-                  hitSlop={6}
-                >
-                  <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, fontWeight: "600", color: category ? th(chipInk(hex)) : th(INK.softer) }}>
-                    {transfer ? "Entre suas contas" : (category ?? "Categoria automática")}
-                  </Text>
-                </Pressable>
-              </View>
+            {/* The amount, big, in the middle of the card. */}
+            <View accessible accessibilityLabel={`Valor: ${money(value)}`} style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 6 }}>
+              <Amount raw={raw} income={income} size={compact ? 62 : 78} />
             </View>
 
-            {/* When, how often, and the microphone. */}
-            <View style={{ marginTop: 10, height: 36, flexDirection: "row", alignItems: "center", gap: 8 }}>
+            {/* How it was paid, and the microphone. */}
+            <View style={{ height: 50, flexDirection: "row", alignItems: "center", gap: 8 }}>
               {listen !== "off" ? (
                 <VoiceBar state={listen} loudness={loudnessOf(voice.level)} onStop={() => void finishVoice()} />
               ) : (
                 <>
-                  <SmallChip
-                    icon={CalendarDays}
-                    label={`${dayShort(date)}${status === "pendente" && !credit && !ahead ? " · pendente" : ""}`}
-                    onPress={() => {
-                      Keyboard.dismiss();
-                      setSheet("data");
-                    }}
-                  />
-                  {!transfer && (
+                  {kind === "despesa" && !locked && (
                     <SmallChip
-                      icon={RepeatIcon}
-                      label={repeatLabel}
+                      tall
+                      icon={credit ? CreditCard : Landmark}
+                      label={credit ? "Crédito" : "Débito"}
                       onPress={() => {
-                        Keyboard.dismiss();
-                        setSheet("repetir");
+                        tick();
+                        setMethod(credit ? "conta" : "cartao");
+                        setWhereId(null);
+                        if (credit && repeat === "parcelado") setRepeat("unica");
                       }}
                     />
                   )}
@@ -690,11 +667,11 @@ export default function NewEntry({
                   <Pressable
                     onPress={() => void startVoice()}
                     accessibilityLabel="Falar o lançamento"
-                    hitSlop={6}
+                    hitSlop={4}
                     style={({ pressed }) => ({
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
+                      width: 50,
+                      height: 50,
+                      borderRadius: 25,
                       alignItems: "center",
                       justifyContent: "center",
                       borderWidth: 1,
@@ -703,15 +680,171 @@ export default function NewEntry({
                       opacity: pressed ? 0.7 : 1,
                     })}
                   >
-                    <Mic size={17} color={th(GREEN)} strokeWidth={2.3} />
+                    <Mic size={21} color={th(GREEN)} strokeWidth={2.3} />
                   </Pressable>
                 </>
               )}
             </View>
+
+            <Keypad rowH={rowH} onKey={press} />
           </View>
 
-          {/* The number keys, drawn straight on the sheet; hidden while the phone's keyboard is up. */}
-          {!typing && <Keypad rowH={rowH} onKey={press} />}
+          {error && <Text style={{ marginTop: 8, textAlign: "center", fontSize: 13.5, color: th(RED) }}>{error}</Text>}
+
+          <Pressable
+            onPress={next}
+            disabled={!canSave}
+            accessibilityRole="button"
+            style={({ pressed }) => ({
+              marginTop: 12,
+              height: 56,
+              borderRadius: 28,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: th("#fff", "bg"),
+              opacity: !canSave ? 0.35 : pressed ? 0.85 : 1,
+            })}
+          >
+            <Text style={{ fontSize: 17, fontWeight: "700", color: th("#0B0B0B") }}>Continuar</Text>
+          </Pressable>
+        </Animated.View>
+      )}
+
+      {/* ── 2 · What it was, when, how often ── */}
+      {stage === "details" && (
+        <Animated.View key="details" entering={FadeIn.duration(220)} exiting={FadeOut.duration(120)} style={{ flex: 1 }}>
+          <View style={{ height: 48, paddingHorizontal: 6, flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <RaisedButton
+              size={46}
+              label="Voltar"
+              onPress={() => {
+                Keyboard.dismiss();
+                setError(null);
+                setStage("amount");
+              }}
+            >
+              <ChevronLeft size={21} color={th("#fff")} strokeWidth={2.4} />
+            </RaisedButton>
+            <View style={{ flex: 1, minWidth: 0, alignItems: "center" }}>
+              <Text numberOfLines={1} style={[nums, { fontSize: 19, fontWeight: "800", color: th(income ? INCOME : "#fff") }]}>
+                {money(value)}
+              </Text>
+              <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 12.5, color: th(INK.soft) }}>
+                {payLine}
+              </Text>
+            </View>
+            {moreButton}
+          </View>
+
+          <View style={[cardStyle, { paddingHorizontal: 18, paddingTop: 18, paddingBottom: 14 }]}>
+            <Text style={{ fontSize: 13, fontWeight: "600", color: th(INK.soft) }}>{transfer ? "Descrição" : income ? "De onde veio?" : "Com o que foi?"}</Text>
+            <TextInput
+              value={name}
+              onChangeText={(t) => {
+                setName(t);
+                setError(null);
+              }}
+              autoFocus={!name}
+              onFocus={() => setTyping(true)}
+              onBlur={() => setTyping(false)}
+              placeholder={transfer ? "Opcional" : income ? "Salário, freela, Pix…" : "Mercado, Uber, aluguel…"}
+              placeholderTextColor={th(INK.faint)}
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
+              style={[{ marginTop: 4, padding: 0, height: 40, fontSize: 28, fontWeight: "700", letterSpacing: -0.6, color: th("#fff") }, Platform.OS === "web" ? ({ outlineStyle: "none" } as never) : null]}
+            />
+
+            {/* The category found in the words; a tap changes it. */}
+            {!transfer && (
+              <Pressable
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setPicking(true);
+                }}
+                accessibilityLabel={`Categoria: ${category ?? "automática"}. Trocar`}
+                style={({ pressed }) => ({
+                  marginTop: 12,
+                  alignSelf: "flex-start",
+                  height: 42,
+                  paddingLeft: 4,
+                  paddingRight: 14,
+                  borderRadius: 21,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                  backgroundColor: th(category ? chipFill(hex) : "rgba(255,255,255,0.07)", "bg"),
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <View style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+                  <CatIcon size={16} color={th(chipInk(hex))} strokeWidth={2.3} />
+                </View>
+                <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 14.5, fontWeight: "700", color: category ? th(chipInk(hex)) : th(INK.soft) }}>
+                  {category ?? "Categoria automática"}
+                </Text>
+                <ChevronDown size={14} color={th(INK.soft)} strokeWidth={2.4} />
+              </Pressable>
+            )}
+
+            <View style={{ marginTop: 18, height: 1, backgroundColor: th("rgba(255,255,255,0.07)", "line") }} />
+
+            <Section title="Quando">
+              <Choice label="Hoje" on={date === today} onPress={() => setDate(today)} />
+              <Choice label="Ontem" on={date === yesterdayIso()} onPress={() => setDate(yesterdayIso())} />
+              <Choice
+                icon={CalendarDays}
+                label={custom ? dayShort(date) : "Outra data"}
+                on={custom}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setSheet("data");
+                }}
+              />
+            </Section>
+
+            {!typing && !transfer && (
+              <Section title="Repetição">
+                <Choice label="Única" on={repeat === "unica"} onPress={() => setRepeat("unica")} />
+                <Choice label="Todo mês" on={repeat === "fixa"} onPress={() => setRepeat("fixa")} />
+                {credit && <Choice label={n ? `${n}x de ${money(value / n)}` : "Parcelado"} on={repeat === "parcelado"} onPress={() => setSheet("repetir")} />}
+              </Section>
+            )}
+
+            {!typing && !credit && !ahead && (
+              <Section title="Situação">
+                <Choice label={transfer ? "Feita" : income ? "Recebido" : "Pago"} on={!pending} onPress={() => setPending(false)} />
+                <Choice label={income ? "A receber" : "Pendente"} on={pending} onPress={() => setPending(true)} />
+              </Section>
+            )}
+
+            {/* A detail to remember, at the foot of the card. */}
+            {!typing && (
+              <Pressable
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setSheet("nota");
+                }}
+                accessibilityRole="button"
+                style={({ pressed }) => ({
+                  marginTop: "auto",
+                  height: 54,
+                  paddingHorizontal: 16,
+                  borderRadius: 20,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                  backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <PenLine size={17} color={th(INK.soft)} strokeWidth={2.2} />
+                <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: note.trim() ? "600" : "500", color: th(note.trim() ? "#fff" : INK.soft) }}>
+                  {note.trim() || "Adicionar observação"}
+                </Text>
+                <ChevronRight size={16} color={th(INK.softer)} strokeWidth={2.2} />
+              </Pressable>
+            )}
+          </View>
 
           {error && <Text style={{ marginTop: 8, textAlign: "center", fontSize: 13.5, color: th(RED) }}>{error}</Text>}
 
@@ -720,22 +853,22 @@ export default function NewEntry({
             disabled={!canSave || busy}
             accessibilityRole="button"
             style={({ pressed }) => ({
-              marginTop: typing ? 12 : 8,
-              height: 54,
-              borderRadius: 27,
+              marginTop: 12,
+              height: 56,
+              borderRadius: 28,
               alignItems: "center",
               justifyContent: "center",
               backgroundColor: th("#fff", "bg"),
               opacity: !canSave ? 0.35 : pressed || busy ? 0.85 : 1,
             })}
           >
-            {busy ? <ActivityIndicator color={th("#0B0B0B")} /> : <Text style={{ fontSize: 17, fontWeight: "700", color: th("#0B0B0B") }}>Salvar</Text>}
+            {busy ? <ActivityIndicator color={th("#0B0B0B")} /> : <Text style={{ fontSize: 17, fontWeight: "700", color: th("#0B0B0B") }}>Revisar</Text>}
           </Pressable>
         </Animated.View>
       )}
 
       {stage === "confirm" && (
-        <Animated.View key="confirm" entering={FadeIn.duration(220)} exiting={FadeOut.duration(400)} style={{ flexGrow: 1 }}>
+        <Animated.View key="confirm" entering={FadeIn.duration(220)} exiting={FadeOut.duration(400)} style={{ flex: 1, paddingHorizontal: 10 }}>
           <View style={{ height: 40, flexDirection: "row", alignItems: "center" }}>
             <RaisedButton
               size={40}
@@ -743,7 +876,7 @@ export default function NewEntry({
               onPress={() => {
                 if (saving) return;
                 setError(null);
-                setStage("edit");
+                setStage("details");
               }}
             >
               <ChevronLeft size={19} color={th("#fff")} strokeWidth={2.4} />
@@ -752,7 +885,7 @@ export default function NewEntry({
             <View style={{ width: 40 }} />
           </View>
 
-          <View style={{ marginTop: 16, alignItems: "center" }}>
+          <View style={{ marginTop: 28, alignItems: "center" }}>
             <View style={{ height: 28, paddingHorizontal: 12, borderRadius: 14, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
               {transfer ? (
                 <ArrowLeftRight size={13} color={th(INK.soft)} strokeWidth={2.4} />
@@ -763,7 +896,7 @@ export default function NewEntry({
               )}
               <Text style={{ fontSize: 13, fontWeight: "700", color: th(INK.soft) }}>{transfer ? "Transferência" : income ? "Receita" : credit ? "Despesa no crédito" : "Despesa"}</Text>
             </View>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[nums, { marginTop: 10, fontSize: 46, fontWeight: "800", letterSpacing: -1.6, color: th(income ? INCOME : "#fff") }]}>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[nums, { marginTop: 12, fontSize: 58, fontWeight: "800", letterSpacing: -2, color: th(income ? INCOME : "#fff") }]}>
               {money(value)}
             </Text>
             {n ? <Text style={[nums, { marginTop: 2, fontSize: 14, color: th(INK.soft) }]}>{`${n}x de ${money(value / n)}`}</Text> : null}
@@ -774,7 +907,7 @@ export default function NewEntry({
             ) : null}
           </View>
 
-          <View style={{ marginTop: 16, paddingHorizontal: 16, paddingVertical: 2, borderRadius: 22, borderCurve: "continuous", borderWidth: 1, borderColor: th("rgba(255,255,255,0.09)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
+          <View style={{ marginTop: 24, paddingHorizontal: 16, paddingVertical: 2, borderRadius: 22, borderCurve: "continuous", borderWidth: 1, borderColor: th("rgba(255,255,255,0.09)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
             {(transfer
               ? [
                   {
@@ -817,7 +950,7 @@ export default function NewEntry({
       )}
 
       {stage === "done" && (
-        <Animated.View key="done" entering={reduce ? FadeIn.duration(200) : FadeIn.delay(460).duration(420)} style={{ flexGrow: 1, alignItems: "center", paddingTop: 26 }}>
+        <Animated.View key="done" entering={reduce ? FadeIn.duration(200) : FadeIn.delay(460).duration(420)} style={{ flex: 1, alignItems: "center", paddingTop: 26, paddingHorizontal: 10 }}>
           <SuccessMark />
           <Text style={{ marginTop: 20, fontSize: 24, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>
             {transfer ? (status === "pago" ? "Transferência feita" : "Transferência agendada") : income ? "Receita registrada" : "Despesa registrada"}
@@ -978,56 +1111,56 @@ export default function NewEntry({
 
 /* ───────────────────────────── Pieces of the card ───────────────────────────── */
 
-/** Despesa, Receita, Transferência — the light slides to the one chosen. */
+/** Despesa, Receita, Transferência: the chosen one shows its name, the others only their mark. */
 function KindPill({ value, onChange }: { value: Kind; onChange: (k: Kind) => void }) {
-  const [spots, setSpots] = useState<Partial<Record<Kind, { x: number; w: number }>>>({});
-  const x = useSharedValue(0);
-  const w = useSharedValue(0);
-  const spot = spots[value];
-  useEffect(() => {
-    if (!spot) return;
-    if (w.get() === 0) {
-      x.set(spot.x);
-      w.set(spot.w);
-      return;
-    }
-    x.set(withTiming(spot.x, { duration: 260, easing: Easing.out(Easing.cubic) }));
-    w.set(withTiming(spot.w, { duration: 260, easing: Easing.out(Easing.cubic) }));
-  }, [spot, x, w]);
-  const slide = useAnimatedStyle(() => ({ left: x.get(), width: w.get(), opacity: w.get() > 0 ? 1 : 0 }));
-  const fill = th("rgba(255,255,255,0.16)", "bg");
-
   return (
     <View
       style={{
-        height: 40,
+        height: 50,
+        flexShrink: 1,
         flexDirection: "row",
-        padding: 3,
-        borderRadius: 20,
+        alignItems: "center",
+        gap: 2,
+        padding: 4,
+        borderRadius: 25,
         borderWidth: 1,
         borderColor: th("rgba(255,255,255,0.08)", "line"),
-        backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
+        backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
       }}
     >
-      <Animated.View style={[{ position: "absolute", top: 3, bottom: 3, borderRadius: 17, backgroundColor: fill }, slide]} />
-      {KINDS.map(({ k, label }) => {
+      {KINDS.map(({ k, label, Icon }) => {
         const on = value === k;
         return (
-          <Pressable
-            key={k}
-            onLayout={(e) => {
-              const { x: lx, width } = e.nativeEvent.layout;
-              setSpots((s) => (s[k]?.x === lx && s[k]?.w === width ? s : { ...s, [k]: { x: lx, w: width } }));
-            }}
-            onPress={() => onChange(k)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: on }}
-            style={{ flex: k === "transferencia" ? 1.38 : 1, paddingHorizontal: 4, alignItems: "center", justifyContent: "center", borderRadius: 17 }}
-          >
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ fontSize: 13, fontWeight: on ? "700" : "600", color: th(on ? "#fff" : INK.soft) }}>
-              {label}
-            </Text>
-          </Pressable>
+          <Animated.View key={k} layout={LinearTransition.duration(240)} style={{ flexShrink: on ? 1 : 0 }}>
+            <Pressable
+              onPress={() => onChange(k)}
+              accessibilityRole="tab"
+              accessibilityLabel={label}
+              accessibilityState={{ selected: on }}
+              hitSlop={4}
+              style={{
+                height: 42,
+                minWidth: 42,
+                paddingLeft: on ? 7 : 0,
+                paddingRight: on ? 16 : 0,
+                borderRadius: 21,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 9,
+                backgroundColor: on ? th("rgba(255,255,255,0.12)", "bg") : "transparent",
+              }}
+            >
+              <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: on ? th("#fff", "bg") : th("rgba(255,255,255,0.28)", "bg") }}>
+                <Icon size={15} color={th("#0B0B0B")} strokeWidth={2.8} />
+              </View>
+              {on && (
+                <Animated.Text entering={FadeIn.duration(200)} numberOfLines={1} style={{ flexShrink: 1, fontSize: 17, fontWeight: "600", color: th("#fff") }}>
+                  {label}
+                </Animated.Text>
+              )}
+            </Pressable>
+          </Animated.View>
         );
       })}
     </View>
@@ -1053,71 +1186,82 @@ function Amount({ raw, income, size }: { raw: string; income: boolean; size: num
   );
 }
 
-function WhereChip({
+function AccountChip({
   option,
-  caption,
+  line,
+  label,
   placeholder,
   onPress,
   grow,
-  bare,
   disabled,
 }: {
   option: Option | null;
-  caption: string;
+  /** Under the name: the balance, or what is left on the card. */
+  line: string;
+  /** Read aloud with the name: Conta, Cartão, De, Para. */
+  label: string;
   placeholder: string;
   onPress: () => void;
   grow?: boolean;
-  /** Only the mark and the name: the arrow between two of them says which is which. */
-  bare?: boolean;
   disabled?: boolean;
 }) {
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        Keyboard.dismiss();
+        onPress();
+      }}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityLabel={`${caption}: ${option?.name ?? placeholder}. Trocar`}
+      accessibilityLabel={`${label}: ${option?.name ?? placeholder}. Trocar`}
       style={({ pressed }) => ({
-        height: 34,
+        height: 58,
         flexGrow: grow ? 1 : 0,
         flexBasis: grow ? 0 : "auto",
         flexShrink: 1,
         minWidth: 0,
         flexDirection: "row",
         alignItems: "center",
-        gap: 7,
-        paddingLeft: 4,
-        paddingRight: bare ? 12 : 10,
-        borderRadius: 17,
-        backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
+        gap: grow ? 8 : 10,
+        paddingLeft: 7,
+        paddingRight: grow ? 10 : 18,
+        borderRadius: 29,
+        borderWidth: 1,
+        borderColor: th("rgba(255,255,255,0.08)", "line"),
+        backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
         opacity: pressed ? 0.7 : 1,
       })}
     >
       {option ? (
-        <BankMark name={option.name} hex={colorFor(option.name, option.color)} size={26} />
+        <BankMark name={option.name} hex={colorFor(option.name, option.color)} size={grow ? 36 : 44} />
       ) : (
-        <View style={{ width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
-          <Wallet size={13} color={th(INK.soft)} strokeWidth={2.2} />
+        <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
+          <Wallet size={18} color={th(INK.soft)} strokeWidth={2.2} />
         </View>
       )}
-      <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 13.5, fontWeight: "700", color: th("#fff") }}>
-        {bare ? null : <Text style={{ fontWeight: "600", color: th(INK.soft) }}>{caption} · </Text>}
-        {option?.name ?? placeholder}
-      </Text>
-      {!disabled && !bare && <ChevronDown size={14} color={th(INK.soft)} strokeWidth={2.4} />}
+      <View style={{ flexShrink: 1, minWidth: 0 }}>
+        <Text numberOfLines={1} style={{ fontSize: grow ? 14.5 : 17, fontWeight: "700", color: th("#fff") }}>
+          {option?.name ?? placeholder}
+        </Text>
+        {line ? (
+          <Text numberOfLines={1} style={[nums, { marginTop: 1, fontSize: grow ? 12.5 : 14, color: th(INK.soft) }]}>
+            {line}
+          </Text>
+        ) : null}
+      </View>
     </Pressable>
   );
 }
 
-function SmallChip({ icon: Icon, label, onPress }: { icon: IconC; label: string; onPress: () => void }) {
+function SmallChip({ icon: Icon, label, onPress, tall }: { icon: IconC; label: string; onPress: () => void; tall?: boolean }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      style={({ pressed }) => ({ height: 34, flexShrink: 1, paddingHorizontal: 12, borderRadius: 17, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: th("rgba(255,255,255,0.08)", "bg"), opacity: pressed ? 0.7 : 1 })}
+      style={({ pressed }) => ({ height: tall ? 50 : 34, flexShrink: 1, paddingHorizontal: tall ? 18 : 12, borderRadius: tall ? 25 : 17, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: th("rgba(255,255,255,0.08)", "bg"), opacity: pressed ? 0.7 : 1 })}
     >
-      <Icon size={15} color={th(INK.soft)} strokeWidth={2.2} />
-      <Text numberOfLines={1} style={[nums, { flexShrink: 1, fontSize: 13.5, fontWeight: "700", color: th("#fff") }]}>
+      <Icon size={tall ? 18 : 15} color={th(INK.soft)} strokeWidth={2.2} />
+      <Text numberOfLines={1} style={[nums, { flexShrink: 1, fontSize: tall ? 16 : 13.5, fontWeight: tall ? "600" : "700", color: th("#fff") }]}>
         {label}
       </Text>
     </Pressable>
@@ -1182,9 +1326,9 @@ function Keypad({ rowH, onKey }: { rowH: number; onKey: (k: string) => void }) {
                 <>
                   <View style={{ position: "absolute", width: rowH + 30, height: rowH - 6, borderRadius: (rowH - 6) / 2, backgroundColor: pressed ? pressFill : "transparent" }} />
                   {k === "del" ? (
-                    <Delete size={26} color={ink} strokeWidth={1.9} />
+                    <Delete size={28} color={ink} strokeWidth={1.9} />
                   ) : (
-                    <Text style={[nums, { fontSize: k === "," ? 34 : 32, fontWeight: "500", color: ink, marginTop: k === "," ? -10 : 0 }]}>{k}</Text>
+                    <Text style={[nums, { fontSize: k === "," ? 38 : 34, fontWeight: "500", color: ink, marginTop: k === "," ? -12 : 0 }]}>{k}</Text>
                   )}
                 </>
               )}
@@ -1193,6 +1337,45 @@ function Keypad({ rowH, onKey }: { rowH: number; onKey: (k: string) => void }) {
         </View>
       ))}
     </Animated.View>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={{ marginTop: 20 }}>
+      <Text style={{ marginBottom: 8, fontSize: 13, fontWeight: "600", color: th(INK.soft) }}>{title}</Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{children}</View>
+    </View>
+  );
+}
+
+function Choice({ label, on, onPress, icon: Icon }: { label: string; on: boolean; onPress: () => void; icon?: IconC }) {
+  return (
+    <Pressable
+      onPress={() => {
+        tick();
+        onPress();
+      }}
+      accessibilityRole="radio"
+      accessibilityState={{ selected: on }}
+      style={({ pressed }) => ({
+        height: 40,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        borderWidth: 1,
+        borderColor: th(on ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.10)", "line"),
+        backgroundColor: th(on ? "rgba(255,255,255,0.14)" : "transparent", "bg"),
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      {Icon ? <Icon size={15} color={th(on ? "#fff" : INK.soft)} strokeWidth={2.2} /> : null}
+      <Text numberOfLines={1} style={[nums, { fontSize: 14.5, fontWeight: "700", color: th(on ? "#fff" : INK.soft) }]}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import SparkleLayer from "~/components/SparkleLayer";
+import { TALL_GAP } from "~/lib/sheetRoom";
 import ToastHost from "~/components/ToastHost";
 import Animated, {
   Easing,
@@ -44,6 +45,7 @@ const DISMISS_DISTANCE = 110;
 const DISMISS_VELOCITY = 900;
 const AnimatedBlur = Animated.createAnimatedComponent(BlurView);
 
+
 export default function BottomSheet({
   open,
   onClose,
@@ -51,6 +53,7 @@ export default function BottomSheet({
   full = false,
   above,
   tint,
+  nearlyFull = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -61,6 +64,8 @@ export default function BottomSheet({
   above?: ReactNode;
   /** A colour washed softly over the whole sheet, strongest at the top (#rrggbb). */
   tint?: string;
+  /** Up to just under the status bar, nearly the whole screen (see `tallSheetBody` in lib/sheetRoom). */
+  nearlyFull?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -188,7 +193,7 @@ export default function BottomSheet({
             right: 0,
             bottom: lift,
             /* Never up under the status bar, however tall the content. */
-            maxHeight: Math.min(full ? height * 0.92 : height * 0.72, height - insets.top - 16 - lift),
+            maxHeight: nearlyFull ? height - insets.top - TALL_GAP - lift : Math.min(full ? height * 0.92 : height * 0.72, height - insets.top - 16 - lift),
             borderTopLeftRadius: 30,
             borderTopRightRadius: 30,
             borderCurve: "continuous",
