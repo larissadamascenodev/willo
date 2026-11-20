@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ComponentRef, type ComponentType } from "react";
-import { ActivityIndicator, Keyboard, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions, type TextStyle } from "react-native";
+import { ActivityIndicator, Keyboard, Platform, Pressable, ScrollView, Switch, Text, TextInput, View, useWindowDimensions, type TextStyle } from "react-native";
 import Animated, {
   cancelAnimation,
   Easing,
@@ -41,8 +41,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsRight,
-  CircleCheck,
-  Clock,
   Delete,
   MoreHorizontal,
   PenLine,
@@ -66,11 +64,11 @@ import { th } from "~/theme/theme";
 /**
  * A new entry, from the "+": one sheet, nearly the whole screen, everything in one card.
  *
- * Under the close button, the card. At its top the account, small — a tap opens
- * "Selecionar conta", where Débito or Crédito is chosen and then the account or the card —
- * and across from it Despesa or Receita. In the middle the amount, big; under it what it was,
- * typed in place, with its category found from the words. Then the day, how often, and
- * whether it is paid, as three chips. At the foot the app's own number keys, with no boxes
+ * At the top, close, Despesa or Receita, and more. Then the card. At its top the account,
+ * small — a tap opens "Selecionar conta", where Débito or Crédito is chosen and then the
+ * account or the card — and across from it a switch for whether it is already paid. In the
+ * middle the amount, big; under it what it was, typed in place, with its category found from
+ * the words. Then the day in one corner and how often in the other. At the foot the app's own number keys, with no boxes
  * around them (they step aside while the phone's keyboard is up for the name). Salvar
  * leads to the check of what will be written, confirmed by sliding; then the ring of light,
  * and the success — with confetti and the coin — in the same sheet.
@@ -383,7 +381,7 @@ export default function NewEntry({
             <RaisedButton size={46} label="Fechar" onPress={onClose}>
               <X size={20} color={th("#fff")} strokeWidth={2.4} />
             </RaisedButton>
-            {locked && <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff") }}>Compra no cartão</Text>}
+            {locked ? <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff") }}>Compra no cartão</Text> : <KindPill value={kind} onChange={changeKind} />}
             <View ref={moreRef} collapsable={false}>
               <RaisedButton size={46} label="Mais opções" onPress={openMenu}>
                 <MoreHorizontal size={20} color={th("#fff")} strokeWidth={2.4} />
@@ -404,7 +402,7 @@ export default function NewEntry({
               backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
             }}
           >
-            {/* The account, small, in the corner; Despesa or Receita across from it. */}
+            {/* The account, small, in the corner; whether it is paid across from it. */}
             <View style={{ height: 42, flexDirection: "row", alignItems: "center", gap: 8 }}>
               <AccountChip
                 option={picked}
@@ -417,7 +415,35 @@ export default function NewEntry({
                 }}
               />
               <View style={{ flex: 1 }} />
-              {!locked && <KindPill value={kind} onChange={changeKind} />}
+              {!credit && (
+                <View
+                  style={{
+                    height: 42,
+                    paddingLeft: 14,
+                    paddingRight: 6,
+                    borderRadius: 21,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    backgroundColor: th("rgba(255,255,255,0.07)", "bg"),
+                  }}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: th(ahead ? INK.soft : "#fff") }}>{ahead ? "Agendado" : income ? "Recebido" : "Pago"}</Text>
+                  <Switch
+                    value={!pending && !ahead}
+                    disabled={ahead}
+                    onValueChange={(on) => {
+                      tick();
+                      setPending(!on);
+                    }}
+                    accessibilityLabel={income ? "Já recebido" : "Já pago"}
+                    trackColor={{ false: th("rgba(255,255,255,0.18)", "bg"), true: GREEN }}
+                    ios_backgroundColor={th("rgba(255,255,255,0.18)", "bg")}
+                    thumbColor="#FFFFFF"
+                    style={Platform.OS === "ios" ? { transform: [{ scale: 0.82 }] } : undefined}
+                  />
+                </View>
+              )}
             </View>
 
             {/* The amount, and under it what it was, with its category. */}
@@ -471,8 +497,8 @@ export default function NewEntry({
               </Pressable>
             </View>
 
-            {/* When, how often, and whether it is paid. */}
-            <View style={{ height: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            {/* When, in one corner; how often, in the other. */}
+            <View style={{ height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
               <SmallChip
                 icon={CalendarDays}
                 label={dayShort(date)}
@@ -489,15 +515,6 @@ export default function NewEntry({
                   setSheet("repetir");
                 }}
               />
-              {!credit && (
-                <SmallChip
-                  icon={pending || ahead ? Clock : CircleCheck}
-                  iconColor={pending || ahead ? AMBER : GREEN}
-                  label={paidLabel}
-                  disabled={ahead}
-                  onPress={() => setPending((p) => !p)}
-                />
-              )}
             </View>
 
             {/* The number keys, straight on the card; aside while the phone's keyboard is up. */}
@@ -743,8 +760,8 @@ function KindPill({ value, onChange }: { value: Kind; onChange: (k: Kind) => voi
   const fill = th("rgba(255,255,255,0.15)", "bg");
 
   return (
-    <View style={{ height: 40, flexDirection: "row", padding: 3, borderRadius: 20, backgroundColor: th("rgba(255,255,255,0.06)", "bg") }}>
-      <Animated.View style={[{ position: "absolute", top: 3, bottom: 3, borderRadius: 17, backgroundColor: fill }, slide]} />
+    <View style={{ height: 46, flexDirection: "row", padding: 3, borderRadius: 23, borderWidth: 1, borderColor: th("rgba(255,255,255,0.08)", "line"), backgroundColor: th("rgba(255,255,255,0.06)", "bg") }}>
+      <Animated.View style={[{ position: "absolute", top: 3, bottom: 3, borderRadius: 19, backgroundColor: fill }, slide]} />
       {KINDS.map(({ k, label }) => {
         const on = value === k;
         return (
@@ -757,9 +774,9 @@ function KindPill({ value, onChange }: { value: Kind; onChange: (k: Kind) => voi
             onPress={() => onChange(k)}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
-            style={{ height: 34, paddingHorizontal: 14, borderRadius: 17, alignItems: "center", justifyContent: "center" }}
+            style={{ height: 38, paddingHorizontal: 18, borderRadius: 19, alignItems: "center", justifyContent: "center" }}
           >
-            <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: on ? "700" : "600", color: th(on ? "#fff" : INK.soft) }}>
+            <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: on ? "700" : "600", color: th(on ? "#fff" : INK.soft) }}>
               {label}
             </Text>
           </Pressable>
