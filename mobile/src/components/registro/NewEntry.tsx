@@ -77,9 +77,9 @@ import { th } from "~/theme/theme";
  * it (Despesa or Receita is changed back on the entry); it is confirmed by sliding. Then the
  * success: a disc of glass whose check draws itself, how much, what it was, and the rest in
  * one quiet card. The check is saved by pulling its button up, a light growing under it; let
- * go, the light rises at once through the sheet with an arrow — the money leaving the phone —
- * and closes round the sheet's edges as the success comes in, with a little confetti and the
- * coin; then the edges settle.
+ * go, the light carries on up through the sheet and out of its top — the money leaving the
+ * phone — and the success is there at once, with a little confetti and the coin, while the
+ * save goes on behind it.
  *
  * The microphone after the name: spoken instead ("vinte reais na padaria"), the Willo fills in
  * what it heard and goes to the check; what was not said is filled there.
@@ -321,10 +321,10 @@ export default function NewEntry({
     if ((!user && !dryRun) || saving || !picked) return;
     setSaving(true);
     setError(null);
-    /* The light goes the moment it is let go — no waiting for the save — and the success
-       comes in as it reaches the edges. */
+    /* Let go, it is done: the light carries on up and the success is there at once, while
+       the save goes on behind it. Should the save fail, the check comes back with why. */
     if (!reduce) sheetLight("launch");
-    const began = Date.now();
+    setStage("done");
     try {
       if (!dryRun && user) {
         await createTransaction(
@@ -348,11 +348,9 @@ export default function NewEntry({
         );
         window.dispatchEvent(new CustomEvent("transaction-created"));
       }
-      const left = (reduce ? 0 : 420) - (Date.now() - began);
-      if (left > 0) await new Promise((r) => setTimeout(r, left));
-      setStage("done");
     } catch {
       sheetLight("off");
+      setStage("confirm");
       setError("Não consegui salvar agora. Tente de novo.");
       setTries((t) => t + 1);
     } finally {
@@ -1365,9 +1363,9 @@ function PullToSave({ label, busy, onDone }: { label: string; busy: boolean; onD
           <Glass radius={29} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
           <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
             <Animated.View style={[{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg") }, arrow]}>
-              {busy ? <ActivityIndicator size="small" color={th("#0B0B0B")} /> : <ArrowUp size={17} color={th("#0B0B0B")} strokeWidth={2.8} />}
+              <ArrowUp size={17} color={th("#0B0B0B")} strokeWidth={2.8} />
             </Animated.View>
-            <Text style={{ fontSize: 16, fontWeight: "700", color: th("#fff") }}>{busy ? "Salvando…" : label}</Text>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: th("#fff") }}>{label}</Text>
           </View>
         </Animated.View>
       </GestureDetector>
