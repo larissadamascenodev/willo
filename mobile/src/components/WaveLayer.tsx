@@ -21,9 +21,10 @@ import { onSheetLight, type SheetLight } from "~/lib/sheetWave";
  * sits best with the glass: deep violet to one side, a bluer indigo-violet to the other, lilac
  * between, and a pale lavender light at the very foot — one colour in its own shades, kept soft
  * over the black and spread across the whole width.
- * Saved, it rises in one smooth movement, gathering pace and then easing, and dissolves as it
- * leaves through the top: the money leaving the phone. It never stops on the way and nothing
- * stays behind. Only numbers cross into the animated styles.
+ * Saved, it stretches upward from its foot — the top reaching up while a fading gradient stays
+ * below it — then lifts away whole and dissolves as it leaves through the top: the money leaving
+ * the phone. No straight line moves up, it never stops on the way and nothing stays behind.
+ * Only numbers cross into the animated styles.
  */
 
 interface Box {
@@ -70,7 +71,10 @@ function Glow({ box, mode, onGone }: { box: Box; mode: SheetLight; onGone: () =>
 
   const y = useSharedValue(h + 10);
   const o = useSharedValue(0);
-  const grow = useSharedValue(0.96);
+  /* Breathing while it waits; stretching upward from its foot as it goes. */
+  const breathe = useSharedValue(0.5);
+  const stretch = useSharedValue(1);
+  const widen = useSharedValue(1);
   const swirl = useSharedValue(0.5);
 
   useEffect(() => {
@@ -78,17 +82,21 @@ function Glow({ box, mode, onGone }: { box: Box; mode: SheetLight; onGone: () =>
       o.set(withTiming(1, { duration: 360, easing: Easing.out(Easing.quad) }));
       y.set(withTiming(rest, { duration: 520, easing: Easing.out(Easing.cubic) }));
       swirl.set(withRepeat(withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.sin) }), -1, true));
-      grow.set(withRepeat(withTiming(1.03, { duration: 900, easing: Easing.inOut(Easing.sin) }), -1, true));
+      breathe.set(withRepeat(withTiming(1, { duration: 900, easing: Easing.inOut(Easing.sin) }), -1, true));
       return;
     }
     if (mode === "launch") {
-      /* From wherever it is, without a pause: up and out, fading as it leaves. */
-      cancelAnimation(grow);
+      /* It does not jump up as a block: it stretches upward from its foot first, its top
+         reaching up while its foot lingers as a fading gradient below, then the whole of it
+         lifts away and leaves through the top, fading as it goes. No line, no pause. */
+      cancelAnimation(breathe);
       cancelAnimation(y);
-      grow.set(withTiming(1.12, { duration: 760, easing: Easing.out(Easing.quad) }));
-      y.set(withTiming(out, { duration: 780, easing: Easing.bezier(0.45, 0, 0.25, 1) }));
-      o.set(withDelay(360, withTiming(0, { duration: 420, easing: Easing.in(Easing.quad) })));
-      const t = setTimeout(onGone, 820);
+      breathe.set(withTiming(0.5, { duration: 300 }));
+      stretch.set(withTiming(2.3, { duration: 640, easing: Easing.out(Easing.cubic) }));
+      widen.set(withTiming(1.08, { duration: 640, easing: Easing.out(Easing.cubic) }));
+      y.set(withTiming(out, { duration: 1000, easing: Easing.bezier(0.55, 0, 0.35, 1) }));
+      o.set(withDelay(500, withTiming(0, { duration: 500, easing: Easing.in(Easing.quad) })));
+      const t = setTimeout(onGone, 1060);
       return () => clearTimeout(t);
     }
     // onGone only ends it; rest and out follow the sheet measured when it began.
@@ -99,19 +107,28 @@ function Glow({ box, mode, onGone }: { box: Box; mode: SheetLight; onGone: () =>
     () => () => {
       cancelAnimation(y);
       cancelAnimation(o);
-      cancelAnimation(grow);
+      cancelAnimation(breathe);
+      cancelAnimation(stretch);
+      cancelAnimation(widen);
       cancelAnimation(swirl);
     },
-    [y, o, grow, swirl],
+    [y, o, breathe, stretch, widen, swirl],
   );
 
-  const glow = useAnimatedStyle(() => ({ opacity: o.get(), transform: [{ translateY: y.get() }, { scale: grow.get() }] }));
+  /* Scaled about its foot, so stretching reaches upward and leaves the foot where it is. */
+  const glow = useAnimatedStyle(() => {
+    const b = breathe.get();
+    return {
+      opacity: o.get(),
+      transform: [{ translateY: y.get() }, { scaleX: widen.get() * (0.99 + 0.03 * b) }, { scaleY: stretch.get() * (0.97 + 0.06 * b) }],
+    };
+  });
   /* Its colours turn against each other: one layer one way, the other the other way. */
   const layerA = useAnimatedStyle(() => ({ transform: [{ translateX: (swirl.get() - 0.5) * 28 }] }));
   const layerB = useAnimatedStyle(() => ({ transform: [{ translateX: (0.5 - swirl.get()) * 28 }] }));
 
   return (
-    <Animated.View style={[{ position: "absolute", left: (w - W) / 2, top: 0, width: W, height: H }, glow]}>
+    <Animated.View style={[{ position: "absolute", left: (w - W) / 2, top: 0, width: W, height: H, transformOrigin: "bottom" }, glow]}>
       <Animated.View style={[{ position: "absolute", left: 0, top: 0, width: W, height: H }, layerA]}>
         <Svg width={W} height={H}>
           <Defs>
@@ -139,13 +156,13 @@ function Glow({ box, mode, onGone }: { box: Box; mode: SheetLight; onGone: () =>
               <Stop offset="1" stopColor="#A78BFA" stopOpacity={0} />
             </RadialGradient>
             <RadialGradient id="glow-foot" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#EDE9FE" stopOpacity={0.6} />
-              <Stop offset="0.6" stopColor="#C4B5FD" stopOpacity={0.2} />
+              <Stop offset="0" stopColor="#EDE9FE" stopOpacity={0.42} />
+              <Stop offset="0.6" stopColor="#C4B5FD" stopOpacity={0.14} />
               <Stop offset="1" stopColor="#C4B5FD" stopOpacity={0} />
             </RadialGradient>
           </Defs>
           <Ellipse cx={W * 0.5} cy={H * 0.62} rx={W * 0.28} ry={H * 0.32} fill="url(#glow-lilac)" />
-          <Ellipse cx={W * 0.5} cy={H * 0.8} rx={W * 0.42} ry={H * 0.14} fill="url(#glow-foot)" />
+          <Ellipse cx={W * 0.5} cy={H * 0.74} rx={W * 0.4} ry={H * 0.24} fill="url(#glow-foot)" />
         </Svg>
       </Animated.View>
     </Animated.View>

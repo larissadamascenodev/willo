@@ -351,7 +351,7 @@ export default function NewEntry({
         const left = 950 - (Date.now() - began);
         if (left > 0) await new Promise((r) => setTimeout(r, left));
         sheetLight("launch");
-        await new Promise((r) => setTimeout(r, 340));
+        await new Promise((r) => setTimeout(r, 420));
       }
       setStage("done");
     } catch {
