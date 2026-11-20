@@ -12,6 +12,7 @@ import Animated, {
   useSharedValue,
   withDelay,
   withRepeat,
+  withSequence,
   withSpring,
   withTiming,
   type SharedValue,
@@ -20,7 +21,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Svg, { Path } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import { createTransaction, getAccounts, getCreditCards, getRecentTransactions } from "@/services/transactionService";
 import { allowedCategories, readEntry, type ParsedEntry } from "@/services/quickEntry";
 import { parseLocal } from "@/lib/quickEntry/parseLocal";
@@ -41,7 +42,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronsRight,
   CircleCheck,
   Clock,
   Delete,
@@ -76,9 +76,10 @@ import { th } from "~/theme/theme";
  * leads to the check — "Confira antes de salvar" — where every line still opens what changes
  * it (Despesa or Receita is changed back on the entry); it is confirmed by sliding. Then the
  * success: a disc of glass whose check draws itself, how much, what it was, and the rest in
- * one quiet card. While it is saved the check softens behind a veil and a light gathers along
- * the sheet's foot; saved, the light rises through the sheet and out of its top — the money
- * leaving the phone — and the success comes in behind it, with a little confetti and the coin.
+ * one quiet card. The check is saved by pulling its button up, a light growing under it; let
+ * go, the light rises at once through the sheet with an arrow — the money leaving the phone —
+ * and closes round the sheet's edges as the success comes in, with a little confetti and the
+ * coin; then the edges settle.
  *
  * The microphone after the name: spoken instead ("vinte reais na padaria"), the Willo fills in
  * what it heard and goes to the check; what was not said is filled there.
@@ -320,8 +321,9 @@ export default function NewEntry({
     if ((!user && !dryRun) || saving || !picked) return;
     setSaving(true);
     setError(null);
-    /* The light gathers at the foot while it is saved, for long enough to be seen. */
-    if (!reduce) sheetLight("charge");
+    /* The light goes the moment it is let go — no waiting for the save — and the success
+       comes in as it reaches the edges. */
+    if (!reduce) sheetLight("launch");
     const began = Date.now();
     try {
       if (!dryRun && user) {
@@ -346,13 +348,8 @@ export default function NewEntry({
         );
         window.dispatchEvent(new CustomEvent("transaction-created"));
       }
-      if (!reduce) {
-        const left = 1300 - (Date.now() - began);
-        if (left > 0) await new Promise((r) => setTimeout(r, left));
-        /* Saved: it shoots up and out; the receipt comes in behind it. */
-        sheetLight("launch");
-        await new Promise((r) => setTimeout(r, 380));
-      }
+      const left = (reduce ? 0 : 420) - (Date.now() - began);
+      if (left > 0) await new Promise((r) => setTimeout(r, left));
       setStage("done");
     } catch {
       sheetLight("off");
@@ -830,20 +827,8 @@ export default function NewEntry({
           {error && <Text style={{ marginTop: 10, textAlign: "center", fontSize: 13.5, color: th(RED) }}>{error}</Text>}
 
           <View style={{ marginTop: 24 }}>
-            <SwipeToConfirm key={tries} label="Deslize para salvar" busy={saving} onDone={() => void register()} />
+            <PullToSave key={tries} label="Arraste para cima para salvar" busy={saving} onDone={() => void register()} />
           </View>
-
-          {/* While it is saved: everything softened behind a veil, and what is happening. */}
-          {saving && (
-            <Animated.View entering={FadeIn.duration(280)} style={{ position: "absolute", top: 0, left: -10, right: -10, bottom: 0 }}>
-              <BlurView intensity={26} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-              <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(10,11,14,0.35)", "bg") }} />
-              <View style={{ position: "absolute", left: 0, right: 0, top: "38%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
-                <ActivityIndicator size="small" color={th("#fff")} />
-                <Text style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>{income ? "Registrando receita…" : "Registrando despesa…"}</Text>
-              </View>
-            </Animated.View>
-          )}
         </Animated.View>
       )}
 
@@ -1307,20 +1292,22 @@ function DetailRow({
   );
 }
 
-/** Slide the green knob to the end to confirm; let go before it and it springs back. */
-function SwipeToConfirm({ label, busy, onDone }: { label: string; busy: boolean; onDone: () => void }) {
-  const KNOB = 56;
-  const PAD = 4;
-  const [w, setW] = useState(0);
-  const max = Math.max(0, w - KNOB - PAD * 2);
-  const x = useSharedValue(0);
-  const shine = useSharedValue(0);
+/**
+ * Pulled up to save. The button follows the finger up, a light growing under it; let go past
+ * the mark (a tick says when it is reached) and it saves, short of it and it settles back.
+ * A tap does nothing, so nothing is saved by accident; VoiceOver can still activate it.
+ */
+function PullToSave({ label, busy, onDone }: { label: string; busy: boolean; onDone: () => void }) {
+  const MARK = 110;
+  const lift = useSharedValue(0);
+  const crossed = useSharedValue(0);
+  const bob = useSharedValue(0);
   const fired = useRef(false);
 
   useEffect(() => {
-    shine.set(withRepeat(withTiming(1, { duration: 1300, easing: Easing.inOut(Easing.quad) }), -1, true));
-    return () => cancelAnimation(shine);
-  }, [shine]);
+    bob.set(withRepeat(withSequence(withTiming(1, { duration: 520, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: 520, easing: Easing.in(Easing.quad) }), withDelay(700, withTiming(0, { duration: 1 }))), -1, false));
+    return () => cancelAnimation(bob);
+  }, [bob]);
 
   const fire = () => {
     if (fired.current) return;
@@ -1328,73 +1315,63 @@ function SwipeToConfirm({ label, busy, onDone }: { label: string; busy: boolean;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
     onDone();
   };
+  const reached = () => void Haptics.selectionAsync().catch(() => undefined);
 
   const pan = Gesture.Pan()
-    .enabled(!busy && max > 0)
-    .activeOffsetX([-4, 4])
-    .failOffsetY([-26, 26])
+    .enabled(!busy)
+    .activeOffsetY(-6)
+    .failOffsetY(14)
+    .failOffsetX([-36, 36])
     .onUpdate((e) => {
-      x.set(Math.min(max, Math.max(0, e.translationX)));
+      const up = Math.max(0, -e.translationY);
+      /* Past the mark it gives less, as if held. */
+      lift.set(up < MARK ? up : Math.min(MARK + 70, MARK + (up - MARK) * 0.35));
+      if (up >= MARK && crossed.get() === 0) {
+        crossed.set(1);
+        runOnJS(reached)();
+      } else if (up < MARK && crossed.get() === 1) crossed.set(0);
     })
-    .onEnd(() => {
-      if (x.get() >= max * 0.85) {
-        x.set(withTiming(max, { duration: 120 }));
+    .onEnd((e) => {
+      if (-e.translationY >= MARK) {
+        lift.set(withTiming(MARK + 40, { duration: 160, easing: Easing.out(Easing.quad) }));
         runOnJS(fire)();
       } else {
-        x.set(withSpring(0, { duration: 420, dampingRatio: 0.82 }));
+        lift.set(withSpring(0, { duration: 420, dampingRatio: 0.8 }));
       }
     });
 
-  const knob = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));
-  const fill = useAnimatedStyle(() => ({ width: x.get() + KNOB + PAD * 2 }));
-  const hint = useAnimatedStyle(() => ({ opacity: max > 0 ? Math.max(0, 1 - (x.get() / max) * 1.6) : 1 }));
-  const chevrons = useAnimatedStyle(() => ({ opacity: 0.35 + shine.get() * 0.65, transform: [{ translateX: shine.get() * 4 }] }));
+  const button = useAnimatedStyle(() => ({ transform: [{ translateY: -lift.get() }], opacity: crossed.get() === 1 && lift.get() > MARK + 30 ? 0.85 : 1 }));
+  const light = useAnimatedStyle(() => {
+    const k = Math.min(1, lift.get() / MARK);
+    return { opacity: k, transform: [{ scaleY: 0.35 + 0.65 * k }] };
+  });
+  const arrow = useAnimatedStyle(() => ({ transform: [{ translateY: -3 * bob.get() }] }));
 
-  const H = KNOB + PAD * 2;
-  const trail = th("rgba(255,255,255,0.14)", "bg");
   const a11y = Platform.OS === "web" ? {} : { accessibilityActions: [{ name: "activate" as const }], onAccessibilityAction: () => fire() };
   return (
-    <GestureDetector gesture={pan}>
-      <View
-        onLayout={(e) => setW(e.nativeEvent.layout.width)}
-        accessible
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        {...a11y}
-        style={{ height: H, borderRadius: H / 2, overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.14)", "line") }}
-      >
-        <Glass radius={H / 2} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <Animated.View style={[{ position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: H / 2, backgroundColor: trail }, fill]} />
-        <Animated.View style={[{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, paddingLeft: KNOB, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }, hint]}>
-          <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#fff") }}>{label}</Text>
-          <Animated.View style={chevrons}>
-            <ChevronsRight size={18} color={th(INK.soft)} strokeWidth={2.4} />
-          </Animated.View>
-        </Animated.View>
+    <View style={{ height: 58 }}>
+      {/* The light under the button, growing as it is pulled. */}
+      <Animated.View pointerEvents="none" style={[{ position: "absolute", left: -10, right: -10, bottom: -24, height: 220, transformOrigin: "bottom" }, light]}>
+        <LinearGradient colors={["rgba(167,243,208,0)", "rgba(153,246,228,0.22)", "rgba(255,255,255,0.42)"]} locations={[0, 0.55, 1]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+      </Animated.View>
+      <GestureDetector gesture={pan}>
         <Animated.View
-          style={[
-            {
-              position: "absolute",
-              left: PAD,
-              top: PAD,
-              width: KNOB,
-              height: KNOB,
-              borderRadius: KNOB / 2,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: th("#fff", "bg"),
-              shadowColor: "#000",
-              shadowOpacity: 0.28,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 2 },
-            },
-            knob,
-          ]}
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={label}
+          {...a11y}
+          style={[{ height: 58, borderRadius: 29, overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.16)", "line") }, button]}
         >
-          {busy ? <ActivityIndicator color={th("#0B0B0B")} /> : <ChevronRight size={26} color={th("#0B0B0B")} strokeWidth={2.8} />}
+          <Glass radius={29} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+            <Animated.View style={[{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg") }, arrow]}>
+              {busy ? <ActivityIndicator size="small" color={th("#0B0B0B")} /> : <ArrowUp size={17} color={th("#0B0B0B")} strokeWidth={2.8} />}
+            </Animated.View>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: th("#fff") }}>{busy ? "Salvando…" : label}</Text>
+          </View>
         </Animated.View>
-      </View>
-    </GestureDetector>
+      </GestureDetector>
+    </View>
   );
 }
 
