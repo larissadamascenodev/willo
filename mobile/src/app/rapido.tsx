@@ -5,13 +5,14 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import ParticleOrb from "~/components/registro/ParticleOrb";
 import BottomSheet from "~/components/BottomSheet";
 import QuickEntryFlow, { type Step } from "~/components/registro/QuickEntryFlow";
-import AmountFirstFlow from "~/components/registro/AmountFirstFlow";
+import NewEntry from "~/components/registro/NewEntry";
 import { useThemeRedraw } from "~/theme/theme";
 
 /**
- * Registro rápido, a double tap away: the steps in a half sheet over whatever was on
- * screen. The sheet leaves first; the screen behind it is already there. While he listens,
- * Willo stands above the sheet, covering none of it.
+ * Registro rápido, a double tap away: the same entry as the "+" (NewEntry), nearly the whole
+ * screen, over whatever was on screen. A sentence already heard (Siri, a shortcut) goes to
+ * the guided steps instead, and while he listens Willo stands above the sheet, covering none
+ * of it. The sheet leaves first; the screen behind it is already there.
  */
 function Rapido() {
   /* Drawn again in place when the theme changes. */
@@ -41,6 +42,7 @@ function Rapido() {
       open={open}
       onClose={() => leave()}
       full={!frase || step !== "ask"}
+      nearlyFull={!frase}
       above={
         hearing ? (
           <Animated.View entering={FadeIn.duration(220)} exiting={FadeOut.duration(180)}>
@@ -50,7 +52,7 @@ function Rapido() {
       }
     >
       {!frase ? (
-        <AmountFirstFlow
+        <NewEntry
           onScan={() => leave(() => router.push("/scanner" as never))}
           onClose={() => leave()}
           onSeeTransactions={() => leave(() => router.push("/(tabs)/transacoes" as never))}
