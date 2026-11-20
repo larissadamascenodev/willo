@@ -6,6 +6,7 @@ import Animated, {
   FadeIn,
   FadeOut,
   runOnJS,
+  useAnimatedProps,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -16,7 +17,7 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Svg, { Line } from "react-native-svg";
+import Svg, { Path } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { BlurView } from "expo-blur";
@@ -74,10 +75,10 @@ import { th } from "~/theme/theme";
  * around them (they step aside while the phone's keyboard is up for the name). Salvar
  * leads to the check — "Confira antes de salvar" — where every line still opens what changes
  * it (Despesa or Receita is changed back on the entry); it is confirmed by sliding. Then the
- * receipt, in the sheet's own glass. While it is saved the check softens behind a veil and a
- * warm light gathers at the sheet's foot; saved, the light shoots up through the sheet and out
- * of its top — the money leaving the phone — and the receipt comes in behind it, with a little
- * confetti and the coin.
+ * success: a disc of glass whose check draws itself, how much, what it was, and the rest in
+ * one quiet card. While it is saved the check softens behind a veil and a light gathers along
+ * the sheet's foot; saved, the light rises through the sheet and out of its top — the money
+ * leaving the phone — and the success comes in behind it, with a little confetti and the coin.
  *
  * The microphone after the name: spoken instead ("vinte reais na padaria"), the Willo fills in
  * what it heard and goes to the check; what was not said is filled there.
@@ -91,6 +92,7 @@ type Sheet = null | "conta" | "data" | "repetir" | "nome";
 type Listen = "off" | "on" | "reading";
 type Acc = Account & { current_balance?: number | string | null };
 type Option = Acc | Card;
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 type IconC = ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
 
 const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }, default: {} }) as TextStyle;
@@ -195,7 +197,6 @@ export default function NewEntry({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tries, setTries] = useState(0);
-  const [savedAt, setSavedAt] = useState<Date | null>(null);
 
   const [accounts, setAccounts] = useState<Acc[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
@@ -352,7 +353,6 @@ export default function NewEntry({
         sheetLight("launch");
         await new Promise((r) => setTimeout(r, 380));
       }
-      setSavedAt(new Date());
       setStage("done");
     } catch {
       sheetLight("off");
@@ -848,34 +848,60 @@ export default function NewEntry({
       )}
 
       {stage === "done" && (
-        <Animated.View key="done" onLayout={measure} entering={FadeIn.duration(reduce ? 200 : 320)} style={{ paddingHorizontal: 10, paddingBottom: 6 }}>
-          <View style={{ height: 48, alignItems: "center", justifyContent: "center" }}>
-            <DoneTag label={income ? "Receita registrada" : "Despesa registrada"} />
+        <Animated.View key="done" onLayout={measure} entering={FadeIn.duration(reduce ? 200 : 360)} style={{ paddingHorizontal: 10, paddingTop: 14, paddingBottom: 6 }}>
+          {/* One focus: the check, then how much. */}
+          <View style={{ alignItems: "center" }}>
+            <SuccessBadge />
+            <Text style={{ marginTop: 14, fontSize: 15, fontWeight: "600", color: th(INK.soft) }}>{income ? "Receita registrada" : "Despesa registrada"}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[nums, { marginTop: 2, fontSize: 52, fontWeight: "800", letterSpacing: -1.8, color: th(income ? INCOME : "#fff") }]}>
+              {money(value)}
+            </Text>
+            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 16.5, fontWeight: "600", color: th("rgba(255,255,255,0.88)") }}>
+              {title}
+            </Text>
+            {n ? <Text style={[nums, { marginTop: 3, fontSize: 13.5, color: th(INK.soft) }]}>{`${n}x de ${money(value / n)}`}</Text> : null}
           </View>
 
-          <ReceiptCard
-            income={income}
-            value={value}
-            parts={n}
-            title={title}
-            category={category ?? "Outros"}
-            date={date}
-            savedAt={savedAt}
-            picked={picked}
-            credit={credit}
-            invoice={credit && picked ? invoiceMonthOf(date, (picked as Card).closing_day).label : null}
-            repeatText={repeat === "fixa" ? "Todo mês" : n ? `${n}x de ${money(value / n)}` : null}
-            paid={credit ? null : { label: paidLabel, waiting: pending || ahead }}
-          />
+          {/* The rest, quietly, in one glass card. */}
+          <View
+            style={{
+              marginTop: 24,
+              paddingHorizontal: 16,
+              borderRadius: 22,
+              borderCurve: "continuous",
+              borderWidth: 1,
+              borderColor: th("rgba(255,255,255,0.08)", "line"),
+              backgroundColor: th("rgba(255,255,255,0.045)", "bg"),
+            }}
+          >
+            <DoneRow label="Categoria" value={category ?? "Outros"} lead={<View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: categoryHex(category ?? "Outros") }} />} />
+            <DoneRow
+              label={income ? "Entrou em" : credit ? "Cartão" : "Conta"}
+              value={picked ? `${picked.name}${income ? "" : credit ? " · Crédito" : " · Débito"}` : "—"}
+              lead={picked ? <BankMark name={picked.name} hex={colorFor(picked.name, picked.color)} size={20} /> : null}
+            />
+            <DoneRow label="Data" value={dayLong(date)} />
+            {credit && picked ? <DoneRow label="Fatura" value={capital(invoiceMonthOf(date, (picked as Card).closing_day).label)} /> : null}
+            {repeat === "fixa" ? <DoneRow label="Repetição" value="Todo mês" /> : null}
+            {!credit ? (
+              <DoneRow
+                label="Situação"
+                value={paidLabel}
+                lead={<View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: pending || ahead ? AMBER : GREEN }} />}
+                last
+              />
+            ) : null}
+          </View>
 
-          <View style={{ marginTop: 20 }}>
+          <View style={{ marginTop: 22 }}>
             <Pressable onPress={onClose} style={({ pressed }) => ({ height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.85 : 1 })}>
               <Text style={{ fontSize: 17, fontWeight: "700", color: th("#0B0B0B") }}>Concluir</Text>
             </Pressable>
-            <View style={{ marginTop: 14, flexDirection: "row", justifyContent: "center", gap: 28 }}>
+            <View style={{ marginTop: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 14 }}>
               <Pressable onPress={again} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
                 <Text style={{ fontSize: 14.5, fontWeight: "600", color: th(INK.soft) }}>Registrar outra</Text>
               </Pressable>
+              <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: th(INK.softer) }} />
               <Pressable onPress={onSeeTransactions} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
                 <Text style={{ fontSize: 14.5, fontWeight: "600", color: th(INK.soft) }}>Ver transações</Text>
               </Pressable>
@@ -1434,159 +1460,44 @@ function Recorder({ state, loudness, seconds, onCancel, onStop }: { state: Liste
   );
 }
 
-/** The receipt, in the sheet's own glass: what it was and how much, then when, from where, how often, and whether paid. */
-function ReceiptCard({
-  income,
-  value,
-  parts,
-  title,
-  category,
-  date,
-  savedAt,
-  picked,
-  credit,
-  invoice,
-  repeatText,
-  paid,
-}: {
-  income: boolean;
-  value: number;
-  parts: number | null;
-  title: string;
-  category: string;
-  date: string;
-  savedAt: Date | null;
-  picked: Option | null;
-  credit: boolean;
-  invoice: string | null;
-  repeatText: string | null;
-  paid: { label: string; waiting: boolean } | null;
-}) {
-  const d = new Date(`${date}T12:00:00`);
-  const hex = categoryHex(category);
-  const Icon = categoryIcon(category);
-  const at = savedAt ? `${String(savedAt.getHours()).padStart(2, "0")}:${String(savedAt.getMinutes()).padStart(2, "0")}` : "";
-  const line = th("rgba(255,255,255,0.16)", "line");
-  const rows: { key: string; mark: React.ReactNode; label: string; value: string; sub?: string }[] = [
-    {
-      key: "quando",
-      mark: (
-        <View style={{ width: 40, height: 40, borderRadius: 11, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.06)", "bg") }}>
-          <View style={{ height: 14, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.16)", "bg") }}>
-            <Text style={{ fontSize: 9, fontWeight: "800", letterSpacing: 0.4, color: th("#fff") }}>{SHORT[d.getMonth()].toUpperCase()}</Text>
-          </View>
-          <Text style={[nums, { textAlign: "center", fontSize: 16, lineHeight: 25, fontWeight: "800", color: th("#fff") }]}>{d.getDate()}</Text>
-        </View>
-      ),
-      label: "Quando",
-      value: dayLong(date),
-    },
-    {
-      key: "onde",
-      mark: picked ? <BankMark name={picked.name} hex={colorFor(picked.name, picked.color)} size={40} /> : <View style={{ width: 40 }} />,
-      label: income ? "Entrou em" : credit ? "Cartão" : "Pago com",
-      value: picked?.name ?? "—",
-      sub: credit ? (invoice ? `Fatura de ${invoice}` : "Crédito") : income ? undefined : "Débito",
-    },
-    ...(repeatText
-      ? [
-          {
-            key: "repete",
-            mark: (
-              <View style={{ width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
-                <RepeatIcon size={17} color={th("#fff")} strokeWidth={2.2} />
-              </View>
-            ),
-            label: parts ? "Parcelas" : "Repetição",
-            value: repeatText,
-          },
-        ]
-      : []),
-    ...(paid
-      ? [
-          {
-            key: "situacao",
-            mark: (
-              <View style={{ width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: th(paid.waiting ? "rgba(249,206,78,0.12)" : "rgba(103,205,103,0.12)", "bg") }}>
-                {paid.waiting ? <Clock size={17} color={th(AMBER)} strokeWidth={2.4} /> : <CircleCheck size={17} color={th(GREEN)} strokeWidth={2.4} />}
-              </View>
-            ),
-            label: "Situação",
-            value: paid.label,
-          },
-        ]
-      : []),
-  ];
+/** The check, in a disc of glass with a soft green light inside; it pops in and draws itself. */
+function SuccessBadge() {
+  const pop = useSharedValue(0);
+  const draw = useSharedValue(0);
+  useEffect(() => {
+    pop.set(withSpring(1, { duration: 560, dampingRatio: 0.62 }));
+    draw.set(withDelay(240, withTiming(1, { duration: 440, easing: Easing.out(Easing.cubic) })));
+  }, [pop, draw]);
+  const badge = useAnimatedStyle(() => ({ opacity: Math.min(1, pop.get() * 1.6), transform: [{ scale: 0.6 + 0.4 * pop.get() }] }));
+  const stroke = useAnimatedProps(() => ({ strokeDashoffset: 24 * (1 - draw.get()) }));
   return (
-    <View style={{ marginTop: 14, borderRadius: 26, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.10)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
-      <View style={{ paddingHorizontal: 18, paddingTop: 15, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Text style={{ fontSize: 11.5, fontWeight: "800", letterSpacing: 1.4, color: th(INK.soft) }}>COMPROVANTE</Text>
-        {at ? <Text style={[nums, { fontSize: 12.5, fontWeight: "600", color: th(INK.soft) }]}>{`Hoje, ${at}`}</Text> : null}
-      </View>
-
-      <View style={{ alignItems: "center", paddingTop: 12, paddingBottom: 16, paddingHorizontal: 18 }}>
-        <View style={{ width: 46, height: 46, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
-          <Icon size={21} color={th(chipInk(hex))} strokeWidth={2.2} />
-        </View>
-        <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 16, fontWeight: "700", color: th("#fff") }}>
-          {title}
-        </Text>
-        <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 13, color: th(INK.soft) }}>
-          {category}
-        </Text>
-        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[nums, { marginTop: 8, fontSize: 42, fontWeight: "800", letterSpacing: -1.4, color: th(income ? INCOME : "#fff") }]}>
-          {income ? "+" : "−"}
-          {money(value)}
-        </Text>
-        {parts ? <Text style={[nums, { marginTop: 1, fontSize: 13.5, color: th(INK.soft) }]}>{`${parts}x de ${money(value / parts)}`}</Text> : null}
-      </View>
-
-      {/* The tear line. */}
-      <Svg height={2} width="100%">
-        <Line x1="14" y1="1" x2="100%" y2="1" stroke={line} strokeWidth={1.2} strokeDasharray="5 5" />
+    <Animated.View
+      style={[
+        { width: 68, height: 68, borderRadius: 34, overflow: "hidden", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: th("rgba(255,255,255,0.16)", "line") },
+        badge,
+      ]}
+    >
+      <Glass radius={34} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+      <View style={{ position: "absolute", width: 46, height: 46, borderRadius: 23, backgroundColor: "rgba(103,205,103,0.16)" }} />
+      <Svg width={30} height={30} viewBox="0 0 28 28">
+        <AnimatedPath d="M7 14.5 L12 19.5 L21 9.5" stroke={GREEN} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" fill="none" strokeDasharray="24" animatedProps={stroke} />
       </Svg>
-
-      <View style={{ paddingHorizontal: 18, paddingVertical: 4 }}>
-        {rows.map((r, i) => (
-          <View key={r.key} style={{ minHeight: 56, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: i === rows.length - 1 ? 0 : 1, borderBottomColor: th("rgba(255,255,255,0.06)", "line") }}>
-            {r.mark}
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>{r.label}</Text>
-              <Text numberOfLines={1} style={[nums, { marginTop: 1, fontSize: 15, fontWeight: "700", color: th("#fff") }]}>
-                {r.value}
-              </Text>
-            </View>
-            {r.sub ? (
-              <Text numberOfLines={1} style={{ maxWidth: 140, textAlign: "right", fontSize: 12.5, color: th(INK.soft) }}>
-                {r.sub}
-              </Text>
-            ) : null}
-          </View>
-        ))}
-      </View>
-    </View>
+    </Animated.View>
   );
 }
 
-/** The success, as a tag of glass where the kind was: a small green check and the words. */
-function DoneTag({ label }: { label: string }) {
-  const sc = useSharedValue(0.7);
-  const o = useSharedValue(0);
-  useEffect(() => {
-    sc.set(withDelay(160, withSpring(1, { duration: 520, dampingRatio: 0.62 })));
-    o.set(withDelay(160, withTiming(1, { duration: 200 })));
-  }, [sc, o]);
-  const pop = useAnimatedStyle(() => ({ opacity: o.get(), transform: [{ scale: sc.get() }] }));
+/** One line of the success card: the label, and the value with what marks it. */
+function DoneRow({ label, value, lead, last }: { label: string; value: string; lead?: React.ReactNode; last?: boolean }) {
   return (
-    <Animated.View style={[{ height: 46, borderRadius: 23, overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.14)", "line") }, pop]}>
-      <Glass radius={23} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-      <View style={{ height: 44, paddingLeft: 6, paddingRight: 18, flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(103,205,103,0.16)", "bg") }}>
-          <Check size={17} color={th(GREEN)} strokeWidth={3} />
-        </View>
-        <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#fff") }}>{label}</Text>
+    <View style={{ minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: last ? 0 : 1, borderBottomColor: th("rgba(255,255,255,0.06)", "line") }}>
+      <Text style={{ fontSize: 14.5, color: th(INK.soft) }}>{label}</Text>
+      <View style={{ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+        {lead ?? null}
+        <Text numberOfLines={1} style={[nums, { flexShrink: 1, fontSize: 15, fontWeight: "600", color: th("#fff") }]}>
+          {value}
+        </Text>
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
