@@ -1,19 +1,18 @@
 import { useEffect, useRef, useState, type ComponentRef } from "react";
 import { View } from "react-native";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import Svg, { Defs, Ellipse, LinearGradient, Mask, RadialGradient, Rect, Stop } from "react-native-svg";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming, type SharedValue } from "react-native-reanimated";
+import Svg, { Defs, Ellipse, RadialGradient, Stop } from "react-native-svg";
 import { onSheetLight } from "~/lib/sheetWave";
 
 /**
  * Where the light of a payment going through is drawn: over the whole sheet, touching
  * nothing.
  *
- * Let go, the light that grew under the button carries on: a wide soft light in the Willo's
- * greens — teal, emerald, its own green, a touch of cyan; no white haze — rising at once from
- * the sheet's foot,
- * fast at first and easing as it goes, so there is no pause before it moves, and fading as it
- * leaves through the top: the money leaving the phone. Nothing stays behind. Only numbers
- * cross into the animated style.
+ * Let go, a few soft clouds of light — lavender, sky, rose, a breath of peach, all kept quiet
+ * so the app does not fill with colour — rise from the sheet's foot together but not in step,
+ * each swaying a little as it goes, and fade as they leave through the top: the money leaving
+ * the phone. It starts gently, moves at an even pace and eases out; nothing stays behind. Only
+ * numbers cross into the animated styles.
  */
 
 interface Run {
@@ -21,6 +20,27 @@ interface Run {
   w: number;
   h: number;
 }
+
+/** One cloud: where across, how big, its colour and strength, how late it sets off, how it sways. */
+interface Cloud {
+  key: string;
+  cx: number;
+  wide: number;
+  tall: number;
+  color: string;
+  strength: number;
+  late: number;
+  sway: number;
+}
+
+const CLOUDS: Cloud[] = [
+  { key: "lavender", cx: 0.28, wide: 0.95, tall: 300, color: "#C4B5FD", strength: 0.58, late: 0, sway: 14 },
+  { key: "sky", cx: 0.74, wide: 0.95, tall: 300, color: "#93C5FD", strength: 0.52, late: 0.05, sway: -16 },
+  { key: "rose", cx: 0.5, wide: 0.8, tall: 260, color: "#F9A8D4", strength: 0.48, late: 0.1, sway: 10 },
+  { key: "peach", cx: 0.42, wide: 0.6, tall: 200, color: "#FDBA74", strength: 0.3, late: 0.14, sway: -8 },
+];
+
+const DURATION = 1300;
 
 export default function WaveLayer() {
   const ref = useRef<ComponentRef<typeof View>>(null);
@@ -47,58 +67,57 @@ export default function WaveLayer() {
 }
 
 function Launch({ run, onGone }: { run: Run; onGone: () => void }) {
-  const { w, h } = run;
-  const GH = Math.min(420, Math.max(300, h * 0.7));
-  /* From its bright part at the foot, where the button's light is, to wholly past the top. */
-  const from = h - GH * 0.7;
-  const to = -GH;
-  const rise = useSharedValue(0);
+  const p = useSharedValue(0);
 
   useEffect(() => {
-    rise.set(withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) }));
-    const t = setTimeout(onGone, 760);
+    p.set(withTiming(1, { duration: DURATION, easing: Easing.bezier(0.3, 0, 0.2, 1) }));
+    const t = setTimeout(onGone, DURATION + 80);
     return () => clearTimeout(t);
     // Runs once per light; the parent keys it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const band = useAnimatedStyle(() => {
-    const v = rise.get();
+  return (
+    <>
+      {CLOUDS.map((c) => (
+        <CloudOfLight key={c.key} cloud={c} run={run} p={p} />
+      ))}
+    </>
+  );
+}
+
+function CloudOfLight({ cloud, run, p }: { cloud: Cloud; run: Run; p: SharedValue<number> }) {
+  const { w, h } = run;
+  const W = w * cloud.wide;
+  const H = cloud.tall;
+  /* From half under the sheet's foot to wholly past its top. */
+  const from = h - H * 0.45;
+  const to = -H - 10;
+  const late = cloud.late;
+  const sway = cloud.sway;
+
+  const style = useAnimatedStyle(() => {
+    const raw = (p.get() - late) / (1 - late);
+    const v = raw < 0 ? 0 : raw > 1 ? 1 : raw;
+    const o = raw <= 0 ? 0 : v < 0.15 ? v / 0.15 : v > 0.62 ? Math.max(0, (1 - v) / 0.38) : 1;
     return {
-      opacity: v < 0.45 ? 1 : Math.max(0, 1 - (v - 0.45) / 0.55),
-      transform: [{ translateY: from + (to - from) * v }, { scaleY: 0.95 + 0.25 * v }],
+      opacity: o,
+      transform: [{ translateX: Math.sin(v * Math.PI) * sway }, { translateY: from + (to - from) * v }, { scale: 0.9 + 0.25 * v }],
     };
   });
 
+  const id = `cloud-${cloud.key}`;
   return (
-    <Animated.View style={[{ position: "absolute", left: 0, top: 0, width: w, height: GH }, band]}>
-      <Svg width={w} height={GH}>
+    <Animated.View style={[{ position: "absolute", left: cloud.cx * w - W / 2, top: 0, width: W, height: H }, style]}>
+      <Svg width={W} height={H}>
         <Defs>
-          <LinearGradient id="launch-tint" x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor="#2DD4BF" />
-            <Stop offset="0.3" stopColor="#34D399" />
-            <Stop offset="0.5" stopColor="#67CD67" />
-            <Stop offset="0.7" stopColor="#4ADE80" />
-            <Stop offset="1" stopColor="#22D3EE" />
-          </LinearGradient>
-          <LinearGradient id="launch-rise" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#fff" stopOpacity={0} />
-            <Stop offset="0.35" stopColor="#fff" stopOpacity={0.22} />
-            <Stop offset="0.62" stopColor="#fff" stopOpacity={1} />
-            <Stop offset="0.74" stopColor="#fff" stopOpacity={1} />
-            <Stop offset="1" stopColor="#fff" stopOpacity={0} />
-          </LinearGradient>
-          <Mask id="launch-mask" x="0" y="0" width={w} height={GH} maskUnits="userSpaceOnUse">
-            <Rect x={0} y={0} width={w} height={GH} fill="url(#launch-rise)" />
-          </Mask>
-          <RadialGradient id="launch-heart" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor="#86EFAC" stopOpacity={0.5} />
-            <Stop offset="0.6" stopColor="#67CD67" stopOpacity={0.18} />
-            <Stop offset="1" stopColor="#67CD67" stopOpacity={0} />
+          <RadialGradient id={id} cx="50%" cy="50%" r="50%">
+            <Stop offset="0" stopColor={cloud.color} stopOpacity={cloud.strength} />
+            <Stop offset="0.55" stopColor={cloud.color} stopOpacity={cloud.strength * 0.42} />
+            <Stop offset="1" stopColor={cloud.color} stopOpacity={0} />
           </RadialGradient>
         </Defs>
-        <Rect x={0} y={0} width={w} height={GH} fill="url(#launch-tint)" opacity={0.42} mask="url(#launch-mask)" />
-        <Ellipse cx={w * 0.5} cy={GH * 0.66} rx={w * 0.5} ry={GH * 0.2} fill="url(#launch-heart)" />
+        <Ellipse cx={W / 2} cy={H / 2} rx={W / 2} ry={H / 2} fill={`url(#${id})`} />
       </Svg>
     </Animated.View>
   );
