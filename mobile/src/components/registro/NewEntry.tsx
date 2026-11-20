@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ComponentRef, type ComponentType } from "react";
-import { ActivityIndicator, Keyboard, Platform, Pressable, ScrollView, Switch, Text, TextInput, View, useWindowDimensions, type TextStyle } from "react-native";
+import { ActivityIndicator, Keyboard, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions, type TextStyle } from "react-native";
 import Animated, {
   cancelAnimation,
   Easing,
@@ -23,10 +23,10 @@ import { allowedCategories } from "@/services/quickEntry";
 import { parseLocal } from "@/lib/quickEntry/parseLocal";
 import { colorFor } from "@/lib/banks";
 import { categoryHex } from "@/lib/categoryData";
-import AnchoredMenu, { MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import BankMark from "~/components/BankMark";
 import BottomSheet from "~/components/BottomSheet";
 import CategoryPicker from "~/components/CategoryPicker";
+import Glass from "~/components/Glass";
 import RaisedButton from "~/components/RaisedButton";
 import MonthCalendar from "~/components/eventos/MonthCalendar";
 import { isoOf, todayIso } from "~/components/registro/EntryForm";
@@ -41,9 +41,6 @@ import {
   ChevronRight,
   ChevronsRight,
   Delete,
-  MoreHorizontal,
-  PenLine,
-  Receipt,
   Repeat as RepeatIcon,
   ScanLine,
   Sparkles,
@@ -64,11 +61,11 @@ import { th } from "~/theme/theme";
 /**
  * A new entry, from the "+": one sheet, nearly the whole screen, everything in one card.
  *
- * At the top, close, Despesa or Receita, and more. Then the card. At its top the account,
+ * At the top, close, Despesa or Receita, and the scanner for a receipt. Then the card. At its top the account,
  * small — a tap opens "Selecionar conta", where Débito or Crédito is chosen and then the
- * account or the card — and across from it a switch for whether it is already paid. In the
- * middle the amount, big; under it what it was, typed in place, with its category found from
- * the words. Then the day in one corner and how often in the other. At the foot the app's own number keys, with no boxes
+ * account or the card — and across from it the day. Over the amount, how often and a small
+ * tag with its own switch for whether it is already paid; the amount, big; under it what it
+ * was, typed in place, with its category found from the words. At the foot the app's own number keys, with no boxes
  * around them (they step aside while the phone's keyboard is up for the name). Salvar
  * leads to the check of what will be written, confirmed by sliding; then the success in the
  * same card, a wave of green light running from its check through the whole sheet, with
@@ -79,7 +76,7 @@ type Kind = "despesa" | "receita";
 type Method = "conta" | "cartao";
 type Stage = "edit" | "confirm" | "done";
 type Repeat = "unica" | "fixa" | "parcelado";
-type Sheet = null | "conta" | "data" | "repetir" | "nota";
+type Sheet = null | "conta" | "data" | "repetir";
 type Acc = Account & { current_balance?: number | string | null };
 type Option = Acc | Card;
 type IconC = ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
@@ -168,10 +165,8 @@ export default function NewEntry({
   const [repeat, setRepeat] = useState<Repeat>("unica");
   const [parts, setParts] = useState(2);
   const [pending, setPending] = useState(false);
-  const [note, setNote] = useState("");
   const [sheet, setSheet] = useState<Sheet>(null);
   const [picking, setPicking] = useState(false);
-  const [menu, setMenu] = useState<AnchorRect | null>(null);
   const [typing, setTyping] = useState(false);
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -182,7 +177,6 @@ export default function NewEntry({
   const [cards, setCards] = useState<Card[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const history = useRef<Record<string, string>>({});
-  const moreRef = useRef<ComponentRef<typeof View>>(null);
 
   useEffect(() => {
     preloadCash();
@@ -311,7 +305,7 @@ export default function NewEntry({
             recurrence_type: n ? "parcelado" : repeat === "fixa" ? "fixa" : "unica",
             installments: n,
             installment_current: n ? 1 : null,
-            observation: note.trim() || null,
+            observation: null,
           } as never,
           user.id,
         );
@@ -335,7 +329,6 @@ export default function NewEntry({
     setDate(todayIso());
     setRepeat("unica");
     setPending(false);
-    setNote("");
     setError(null);
   };
 
@@ -363,10 +356,6 @@ export default function NewEntry({
     playCash();
   }, [stage]);
 
-  const openMenu = () => {
-    tick();
-    moreRef.current?.measureInWindow((x, y, w, h) => setMenu({ left: x + w - 258, top: y, bottom: y + h, width: 258 }));
-  };
 
   const hex = category ? categoryHex(category) : "#8A8F98";
   const CatIcon: IconC = category ? categoryIcon(category) : Sparkles;
@@ -386,7 +375,6 @@ export default function NewEntry({
     { label: "Data", value: dayLong(date) },
     ...(repeat === "fixa" ? [{ label: "Repetição", value: "Todo mês" }] : n ? [{ label: "Parcelas", value: `${n}x de ${money(value / n)}` }] : []),
     ...(!credit ? [{ label: "Situação", value: paidLabel }] : []),
-    ...(note.trim() ? [{ label: "Observação", value: note.trim() }] : []),
   ].map((r, i, all) => (
     <DetailRow
       key={r.label}
@@ -420,11 +408,13 @@ export default function NewEntry({
               <X size={20} color={th("#fff")} strokeWidth={2.4} />
             </RaisedButton>
             {locked ? <Text style={{ fontSize: 15, fontWeight: "700", color: th("#fff") }}>Compra no cartão</Text> : <KindPill value={kind} onChange={changeKind} />}
-            <View ref={moreRef} collapsable={false}>
-              <RaisedButton size={46} label="Mais opções" onPress={openMenu}>
-                <MoreHorizontal size={20} color={th("#fff")} strokeWidth={2.4} />
+            {onScan ? (
+              <RaisedButton size={46} label="Ler comprovante com a câmera" onPress={onScan}>
+                <ScanLine size={20} color={th("#fff")} strokeWidth={2.2} />
               </RaisedButton>
-            </View>
+            ) : (
+              <View style={{ width: 46 }} />
+            )}
           </View>
 
           {/* Everything about it, in one card. */}
@@ -440,7 +430,7 @@ export default function NewEntry({
               backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
             }}
           >
-            {/* The account, small, in the corner; whether it is paid across from it. */}
+            {/* The account, small, in the corner; the day across from it. */}
             <View style={{ height: 42, flexDirection: "row", alignItems: "center", gap: 8 }}>
               <AccountChip
                 option={picked}
@@ -453,39 +443,39 @@ export default function NewEntry({
                 }}
               />
               <View style={{ flex: 1 }} />
-              {!credit && (
-                <View
-                  style={{
-                    height: 42,
-                    paddingLeft: 14,
-                    paddingRight: 6,
-                    borderRadius: 21,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 8,
-                    backgroundColor: th("rgba(255,255,255,0.07)", "bg"),
-                  }}
-                >
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: th(ahead ? INK.soft : "#fff") }}>{ahead ? "Agendado" : income ? "Recebido" : "Pago"}</Text>
-                  <Switch
-                    value={!pending && !ahead}
-                    disabled={ahead}
-                    onValueChange={(on) => {
-                      tick();
-                      setPending(!on);
-                    }}
-                    accessibilityLabel={income ? "Já recebido" : "Já pago"}
-                    trackColor={{ false: th("rgba(255,255,255,0.18)", "bg"), true: GREEN }}
-                    ios_backgroundColor={th("rgba(255,255,255,0.18)", "bg")}
-                    thumbColor="#FFFFFF"
-                    style={Platform.OS === "ios" ? { transform: [{ scale: 0.82 }] } : undefined}
-                  />
-                </View>
-              )}
+              <SmallChip
+                icon={CalendarDays}
+                label={dayShort(date)}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setSheet("data");
+                }}
+              />
             </View>
 
-            {/* The amount, and under it what it was, with its category. */}
+            {/* Over the amount, how often and whether it is paid; under it, what it was and its category. */}
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 6 }}>
+              <View style={{ marginBottom: typing ? 2 : 8, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <MiniChip
+                  icon={RepeatIcon}
+                  label={repeatLabel}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setSheet("repetir");
+                  }}
+                />
+                {!credit && (
+                  <PaidTag
+                    on={!pending && !ahead}
+                    disabled={ahead}
+                    label={ahead ? "Agendado" : pending ? (income ? "A receber" : "Pendente") : income ? "Recebido" : "Pago"}
+                    onToggle={() => {
+                      tick();
+                      setPending((p) => !p);
+                    }}
+                  />
+                )}
+              </View>
               <Amount raw={raw} income={income} size={typing ? 42 : compact ? 56 : 72} />
               <TextInput
                 value={name}
@@ -535,26 +525,6 @@ export default function NewEntry({
               </Pressable>
             </View>
 
-            {/* When, in one corner; how often, in the other. */}
-            <View style={{ height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-              <SmallChip
-                icon={CalendarDays}
-                label={dayShort(date)}
-                onPress={() => {
-                  Keyboard.dismiss();
-                  setSheet("data");
-                }}
-              />
-              <SmallChip
-                icon={RepeatIcon}
-                label={repeatLabel}
-                onPress={() => {
-                  Keyboard.dismiss();
-                  setSheet("repetir");
-                }}
-              />
-            </View>
-
             {/* The number keys, straight on the card; aside while the phone's keyboard is up. */}
             {!typing && <Keypad rowH={rowH} onKey={press} />}
           </View>
@@ -598,7 +568,7 @@ export default function NewEntry({
             <View style={{ width: 46 }} />
           </View>
 
-          <View style={{ marginTop: 36, alignItems: "center" }}>
+          <View style={{ marginTop: 10, alignItems: "center" }}>
             <View style={{ height: 28, paddingHorizontal: 12, borderRadius: 14, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
               {income ? <ArrowDownLeft size={14} color={th(INCOME)} strokeWidth={2.4} /> : <ArrowUpRight size={14} color={th(INK.soft)} strokeWidth={2.4} />}
               <Text style={{ fontSize: 13, fontWeight: "700", color: th(INK.soft) }}>{income ? "Receita" : credit ? "Despesa no crédito" : "Despesa"}</Text>
@@ -623,8 +593,7 @@ export default function NewEntry({
 
       {stage === "done" && (
         <Animated.View key="done" onLayout={measure} entering={FadeIn.duration(reduce ? 200 : 260)} style={{ paddingHorizontal: 10, paddingBottom: 6 }}>
-          <View style={{ height: 48 }} />
-          <View style={{ alignItems: "center" }}>
+          <View style={{ paddingTop: 22, alignItems: "center" }}>
             <SuccessMark onPlaced={reduce ? undefined : sheetWave} />
             <Text style={{ marginTop: 6, height: 18, fontSize: 14.5, lineHeight: 18, fontWeight: "700", color: th(INK.soft) }}>{income ? "Receita registrada" : "Despesa registrada"}</Text>
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[nums, { marginTop: 0, fontSize: 58, fontWeight: "800", letterSpacing: -2, color: th(income ? INCOME : "#fff") }]}>
@@ -701,15 +670,6 @@ export default function NewEntry({
         }}
         onClose={() => setSheet(null)}
       />
-      <NoteSheet
-        open={sheet === "nota"}
-        value={note}
-        onSave={(t) => {
-          setNote(t);
-          setSheet(null);
-        }}
-        onClose={() => setSheet(null)}
-      />
       <CategoryPicker
         open={picking}
         value={category ?? ""}
@@ -721,35 +681,6 @@ export default function NewEntry({
           setPicking(false);
         }}
       />
-      <AnchoredMenu open={!!menu} anchor={menu} onClose={() => setMenu(null)}>
-        <MenuRow
-          icon={PenLine}
-          label={note.trim() ? "Editar observação" : "Adicionar observação"}
-          onPress={() => {
-            setMenu(null);
-            setSheet("nota");
-          }}
-        />
-        {onScan && !income && (
-          <MenuRow
-            icon={ScanLine}
-            label="Ler comprovante"
-            onPress={() => {
-              setMenu(null);
-              onScan();
-            }}
-          />
-        )}
-        <MenuRow
-          icon={Receipt}
-          label="Ver transações"
-          onPress={() => {
-            setMenu(null);
-            onSeeTransactions();
-          }}
-          last
-        />
-      </AnchoredMenu>
     </Animated.View>
   );
 }
@@ -871,6 +802,81 @@ function SmallChip({ icon: Icon, iconColor, label, onPress, disabled }: { icon: 
       <Text numberOfLines={1} style={[nums, { flexShrink: 1, fontSize: 14, fontWeight: "700", color: th("#fff") }]}>
         {label}
       </Text>
+    </Pressable>
+  );
+}
+
+/** Over the amount: how often, small. */
+function MiniChip({ icon: Icon, label, onPress }: { icon: IconC; label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={() => {
+        tick();
+        onPress();
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={`Repetição: ${label}. Trocar`}
+      hitSlop={6}
+      style={({ pressed }) => ({
+        height: 32,
+        paddingLeft: 11,
+        paddingRight: 9,
+        borderRadius: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        borderWidth: 1,
+        borderColor: th("rgba(255,255,255,0.08)", "line"),
+        backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <Icon size={14} color={th(INK.soft)} strokeWidth={2.3} />
+      <Text numberOfLines={1} style={[nums, { fontSize: 13, fontWeight: "700", color: th("#fff") }]}>
+        {label}
+      </Text>
+      <ChevronDown size={12} color={th(INK.soft)} strokeWidth={2.4} />
+    </Pressable>
+  );
+}
+
+/** Over the amount: whether it is paid, a small tag with its own switch; the whole tag flips it. */
+function PaidTag({ on, label, disabled, onToggle }: { on: boolean; label: string; disabled?: boolean; onToggle: () => void }) {
+  const x = useSharedValue(on ? 1 : 0);
+  useEffect(() => {
+    x.set(withTiming(on ? 1 : 0, { duration: 180, easing: Easing.out(Easing.quad) }));
+  }, [on, x]);
+  const knob = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() * 12 }] }));
+  const lit = useAnimatedStyle(() => ({ opacity: x.get() }));
+  return (
+    <Pressable
+      onPress={onToggle}
+      disabled={disabled}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: on, disabled }}
+      accessibilityLabel={label}
+      hitSlop={6}
+      style={({ pressed }) => ({
+        height: 32,
+        paddingLeft: 11,
+        paddingRight: 7,
+        borderRadius: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        borderWidth: 1,
+        borderColor: th("rgba(255,255,255,0.08)", "line"),
+        backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
+        opacity: disabled ? 0.6 : pressed ? 0.7 : 1,
+      })}
+    >
+      <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: "700", color: th("#fff") }}>
+        {label}
+      </Text>
+      <View style={{ width: 30, height: 18, borderRadius: 9, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.2)", "bg") }}>
+        <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: GREEN }, lit]} />
+        <Animated.View style={[{ position: "absolute", top: 2, left: 2, width: 14, height: 14, borderRadius: 7, backgroundColor: "#FFFFFF" }, knob]} />
+      </View>
     </Pressable>
   );
 }
@@ -1002,6 +1008,7 @@ function SwipeToConfirm({ label, busy, onDone }: { label: string; busy: boolean;
   const chevrons = useAnimatedStyle(() => ({ opacity: 0.35 + shine.get() * 0.65, transform: [{ translateX: shine.get() * 4 }] }));
 
   const H = KNOB + PAD * 2;
+  const trail = th("rgba(255,255,255,0.14)", "bg");
   const a11y = Platform.OS === "web" ? {} : { accessibilityActions: [{ name: "activate" as const }], onAccessibilityAction: () => fire() };
   return (
     <GestureDetector gesture={pan}>
@@ -1011,9 +1018,10 @@ function SwipeToConfirm({ label, busy, onDone }: { label: string; busy: boolean;
         accessibilityRole="button"
         accessibilityLabel={label}
         {...a11y}
-        style={{ height: H, borderRadius: H / 2, overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.12)", "line"), backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}
+        style={{ height: H, borderRadius: H / 2, overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.14)", "line") }}
       >
-        <Animated.View style={[{ position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: H / 2, backgroundColor: "rgba(103,205,103,0.22)" }, fill]} />
+        <Glass radius={H / 2} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+        <Animated.View style={[{ position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: H / 2, backgroundColor: trail }, fill]} />
         <Animated.View style={[{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, paddingLeft: KNOB, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }, hint]}>
           <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#fff") }}>{label}</Text>
           <Animated.View style={chevrons}>
@@ -1031,16 +1039,16 @@ function SwipeToConfirm({ label, busy, onDone }: { label: string; busy: boolean;
               borderRadius: KNOB / 2,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: GREEN,
-              shadowColor: "#67CD67",
-              shadowOpacity: 0.5,
-              shadowRadius: 12,
-              shadowOffset: { width: 0, height: 0 },
+              backgroundColor: th("#fff", "bg"),
+              shadowColor: "#000",
+              shadowOpacity: 0.28,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 2 },
             },
             knob,
           ]}
         >
-          {busy ? <ActivityIndicator color="#0B0B0B" /> : <ChevronRight size={26} color="#0B0B0B" strokeWidth={2.8} />}
+          {busy ? <ActivityIndicator color={th("#0B0B0B")} /> : <ChevronRight size={26} color={th("#0B0B0B")} strokeWidth={2.8} />}
         </Animated.View>
       </View>
     </GestureDetector>
@@ -1125,7 +1133,7 @@ function Confetti({ w, h }: { w: number; h: number }) {
     };
     return Array.from({ length: 56 }, () => ({
       x0: w / 2 + (r() - 0.5) * 30,
-      y0: 74 + (r() - 0.5) * 20,
+      y0: 48 + (r() - 0.5) * 20,
       vx: (r() - 0.5) * 760,
       vy: -(140 + r() * 420),
       w: 5 + r() * 4,
@@ -1450,44 +1458,6 @@ function RepeatSheet({
             </ScrollView>
           </Animated.View>
         )}
-      </View>
-    </BottomSheet>
-  );
-}
-
-function NoteSheet({ open, value, onSave, onClose }: { open: boolean; value: string; onSave: (t: string) => void; onClose: () => void }) {
-  const [text, setText] = useState(value);
-  return (
-    <BottomSheet open={open} onClose={onClose}>
-      <View style={{ paddingHorizontal: 20, paddingBottom: 4 }}>
-        <SheetHead title="Observação" onClose={onClose} />
-        <TextInput
-          value={text}
-          onChangeText={setText}
-          autoFocus
-          multiline
-          placeholder="Um detalhe para lembrar depois"
-          placeholderTextColor={th(INK.softer)}
-          style={[
-            {
-              marginTop: 14,
-              height: 100,
-              padding: 14,
-              borderRadius: 18,
-              fontSize: 16,
-              textAlignVertical: "top",
-              color: th("#fff"),
-              backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
-            },
-            Platform.OS === "web" ? ({ outlineStyle: "none" } as never) : null,
-          ]}
-        />
-        <Pressable
-          onPress={() => onSave(text.trim())}
-          style={({ pressed }) => ({ marginTop: 12, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.85 : 1 })}
-        >
-          <Text style={{ fontSize: 16, fontWeight: "700", color: th("#0B0B0B") }}>Salvar</Text>
-        </Pressable>
       </View>
     </BottomSheet>
   );
