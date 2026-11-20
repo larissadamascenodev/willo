@@ -8,8 +8,9 @@ import { onSheetLight } from "~/lib/sheetWave";
  * Where the light of a payment going through is drawn: over the whole sheet, touching
  * nothing.
  *
- * Let go, the light that grew under the button carries on: a wide soft light — white, aqua,
- * mint, pale green, the Willo's own colours kept quiet — rising at once from the sheet's foot,
+ * Let go, the light that grew under the button carries on: a wide soft light in the Willo's
+ * greens — teal, emerald, its own green, a touch of cyan; no white haze — rising at once from
+ * the sheet's foot,
  * fast at first and easing as it goes, so there is no pause before it moves, and fading as it
  * leaves through the top: the money leaving the phone. Nothing stays behind. Only numbers
  * cross into the animated style.
@@ -74,11 +75,11 @@ function Launch({ run, onGone }: { run: Run; onGone: () => void }) {
       <Svg width={w} height={GH}>
         <Defs>
           <LinearGradient id="launch-tint" x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor="#99F6E4" />
-            <Stop offset="0.28" stopColor="#D1FAE5" />
-            <Stop offset="0.5" stopColor="#FFFFFF" />
-            <Stop offset="0.72" stopColor="#BBF7D0" />
-            <Stop offset="1" stopColor="#A7F3D0" />
+            <Stop offset="0" stopColor="#2DD4BF" />
+            <Stop offset="0.3" stopColor="#34D399" />
+            <Stop offset="0.5" stopColor="#67CD67" />
+            <Stop offset="0.7" stopColor="#4ADE80" />
+            <Stop offset="1" stopColor="#22D3EE" />
           </LinearGradient>
           <LinearGradient id="launch-rise" x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor="#fff" stopOpacity={0} />
@@ -91,11 +92,12 @@ function Launch({ run, onGone }: { run: Run; onGone: () => void }) {
             <Rect x={0} y={0} width={w} height={GH} fill="url(#launch-rise)" />
           </Mask>
           <RadialGradient id="launch-heart" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.6} />
-            <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
+            <Stop offset="0" stopColor="#86EFAC" stopOpacity={0.5} />
+            <Stop offset="0.6" stopColor="#67CD67" stopOpacity={0.18} />
+            <Stop offset="1" stopColor="#67CD67" stopOpacity={0} />
           </RadialGradient>
         </Defs>
-        <Rect x={0} y={0} width={w} height={GH} fill="url(#launch-tint)" opacity={0.5} mask="url(#launch-mask)" />
+        <Rect x={0} y={0} width={w} height={GH} fill="url(#launch-tint)" opacity={0.42} mask="url(#launch-mask)" />
         <Ellipse cx={w * 0.5} cy={GH * 0.66} rx={w * 0.5} ry={GH * 0.2} fill="url(#launch-heart)" />
       </Svg>
     </Animated.View>

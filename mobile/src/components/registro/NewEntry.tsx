@@ -12,7 +12,6 @@ import Animated, {
   useSharedValue,
   withDelay,
   withRepeat,
-  withSequence,
   withSpring,
   withTiming,
   type SharedValue,
@@ -42,6 +41,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsRight,
   CircleCheck,
   Clock,
   Delete,
@@ -76,10 +76,10 @@ import { th } from "~/theme/theme";
  * leads to the check — "Confira antes de salvar" — where every line still opens what changes
  * it (Despesa or Receita is changed back on the entry); it is confirmed by sliding. Then the
  * success: a disc of glass whose check draws itself, how much, what it was, and the rest in
- * one quiet card. The check is saved by pulling its button up, a light growing under it; let
- * go, the light carries on up through the sheet and out of its top — the money leaving the
- * phone — and the success is there at once, with a little confetti and the coin, while the
- * save goes on behind it.
+ * one quiet card. The check is saved by sliding its knob across, a green light growing under
+ * it; let go at the end, the light carries on up through the sheet and out of its top — the
+ * money leaving the phone — and the success is there at once, with a little confetti and the
+ * coin, while the save goes on behind it.
  *
  * The microphone after the name: spoken instead ("vinte reais na padaria"), the Willo fills in
  * what it heard and goes to the check; what was not said is filled there.
@@ -825,7 +825,7 @@ export default function NewEntry({
           {error && <Text style={{ marginTop: 10, textAlign: "center", fontSize: 13.5, color: th(RED) }}>{error}</Text>}
 
           <View style={{ marginTop: 24 }}>
-            <PullToSave key={tries} label="Arraste para cima para salvar" busy={saving} onDone={() => void register()} />
+            <SwipeToConfirm key={tries} label="Deslize para salvar" busy={saving} onDone={() => void register()} />
           </View>
         </Animated.View>
       )}
@@ -1291,21 +1291,23 @@ function DetailRow({
 }
 
 /**
- * Pulled up to save. The button follows the finger up, a light growing under it; let go past
- * the mark (a tick says when it is reached) and it saves, short of it and it settles back.
- * A tap does nothing, so nothing is saved by accident; VoiceOver can still activate it.
+ * Slid across to save: a white knob on glass. As it slides a green light grows under the
+ * button, and let go at the end that light carries on up through the sheet (WaveLayer); let go
+ * before it and the knob springs back. VoiceOver can still activate it.
  */
-function PullToSave({ label, busy, onDone }: { label: string; busy: boolean; onDone: () => void }) {
-  const MARK = 110;
-  const lift = useSharedValue(0);
-  const crossed = useSharedValue(0);
-  const bob = useSharedValue(0);
+function SwipeToConfirm({ label, busy, onDone }: { label: string; busy: boolean; onDone: () => void }) {
+  const KNOB = 56;
+  const PAD = 4;
+  const [w, setW] = useState(0);
+  const max = Math.max(0, w - KNOB - PAD * 2);
+  const x = useSharedValue(0);
+  const shine = useSharedValue(0);
   const fired = useRef(false);
 
   useEffect(() => {
-    bob.set(withRepeat(withSequence(withTiming(1, { duration: 520, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: 520, easing: Easing.in(Easing.quad) }), withDelay(700, withTiming(0, { duration: 1 }))), -1, false));
-    return () => cancelAnimation(bob);
-  }, [bob]);
+    shine.set(withRepeat(withTiming(1, { duration: 1300, easing: Easing.inOut(Easing.quad) }), -1, true));
+    return () => cancelAnimation(shine);
+  }, [shine]);
 
   const fire = () => {
     if (fired.current) return;
@@ -1313,61 +1315,85 @@ function PullToSave({ label, busy, onDone }: { label: string; busy: boolean; onD
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
     onDone();
   };
-  const reached = () => void Haptics.selectionAsync().catch(() => undefined);
 
   const pan = Gesture.Pan()
-    .enabled(!busy)
-    .activeOffsetY(-6)
-    .failOffsetY(14)
-    .failOffsetX([-36, 36])
+    .enabled(!busy && max > 0)
+    .activeOffsetX([-4, 4])
+    .failOffsetY([-26, 26])
     .onUpdate((e) => {
-      const up = Math.max(0, -e.translationY);
-      /* Past the mark it gives less, as if held. */
-      lift.set(up < MARK ? up : Math.min(MARK + 70, MARK + (up - MARK) * 0.35));
-      if (up >= MARK && crossed.get() === 0) {
-        crossed.set(1);
-        runOnJS(reached)();
-      } else if (up < MARK && crossed.get() === 1) crossed.set(0);
+      x.set(Math.min(max, Math.max(0, e.translationX)));
     })
-    .onEnd((e) => {
-      if (-e.translationY >= MARK) {
-        lift.set(withTiming(MARK + 40, { duration: 160, easing: Easing.out(Easing.quad) }));
+    .onEnd(() => {
+      if (x.get() >= max * 0.85) {
+        x.set(withTiming(max, { duration: 120 }));
         runOnJS(fire)();
       } else {
-        lift.set(withSpring(0, { duration: 420, dampingRatio: 0.8 }));
+        x.set(withSpring(0, { duration: 420, dampingRatio: 0.82 }));
       }
     });
 
-  const button = useAnimatedStyle(() => ({ transform: [{ translateY: -lift.get() }], opacity: crossed.get() === 1 && lift.get() > MARK + 30 ? 0.85 : 1 }));
+  const knob = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));
+  const fill = useAnimatedStyle(() => ({ width: x.get() + KNOB + PAD * 2 }));
+  const hint = useAnimatedStyle(() => ({ opacity: max > 0 ? Math.max(0, 1 - (x.get() / max) * 1.6) : 1 }));
+  const chevrons = useAnimatedStyle(() => ({ opacity: 0.35 + shine.get() * 0.65, transform: [{ translateX: shine.get() * 4 }] }));
+  /* The light under the button, growing with the slide. */
   const light = useAnimatedStyle(() => {
-    const k = Math.min(1, lift.get() / MARK);
+    const k = max > 0 ? Math.min(1, x.get() / max) : 0;
     return { opacity: k, transform: [{ scaleY: 0.35 + 0.65 * k }] };
   });
-  const arrow = useAnimatedStyle(() => ({ transform: [{ translateY: -3 * bob.get() }] }));
 
+  const H = KNOB + PAD * 2;
+  const trail = th("rgba(255,255,255,0.14)", "bg");
   const a11y = Platform.OS === "web" ? {} : { accessibilityActions: [{ name: "activate" as const }], onAccessibilityAction: () => fire() };
   return (
-    <View style={{ height: 58 }}>
-      {/* The light under the button, growing as it is pulled. */}
-      <Animated.View pointerEvents="none" style={[{ position: "absolute", left: -10, right: -10, bottom: -24, height: 220, transformOrigin: "bottom" }, light]}>
-        <LinearGradient colors={["rgba(167,243,208,0)", "rgba(153,246,228,0.22)", "rgba(255,255,255,0.42)"]} locations={[0, 0.55, 1]} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+    <View style={{ height: H }}>
+      <Animated.View pointerEvents="none" style={[{ position: "absolute", left: -10, right: -10, bottom: -24, height: 230, transformOrigin: "bottom" }, light]}>
+        <LinearGradient
+          colors={["rgba(52,211,153,0)", "rgba(45,212,191,0.16)", "rgba(103,205,103,0.42)"]}
+          locations={[0, 0.55, 1]}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+        />
       </Animated.View>
       <GestureDetector gesture={pan}>
-        <Animated.View
+        <View
+          onLayout={(e) => setW(e.nativeEvent.layout.width)}
           accessible
           accessibilityRole="button"
           accessibilityLabel={label}
           {...a11y}
-          style={[{ height: 58, borderRadius: 29, overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.16)", "line") }, button]}
+          style={{ height: H, borderRadius: H / 2, overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.14)", "line") }}
         >
-          <Glass radius={29} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-          <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
-            <Animated.View style={[{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg") }, arrow]}>
-              <ArrowUp size={17} color={th("#0B0B0B")} strokeWidth={2.8} />
+          <Glass radius={H / 2} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+          <Animated.View style={[{ position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: H / 2, backgroundColor: trail }, fill]} />
+          <Animated.View style={[{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, paddingLeft: KNOB, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }, hint]}>
+            <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#fff") }}>{label}</Text>
+            <Animated.View style={chevrons}>
+              <ChevronsRight size={18} color={th(INK.soft)} strokeWidth={2.4} />
             </Animated.View>
-            <Text style={{ fontSize: 16, fontWeight: "700", color: th("#fff") }}>{label}</Text>
-          </View>
-        </Animated.View>
+          </Animated.View>
+          <Animated.View
+            style={[
+              {
+                position: "absolute",
+                left: PAD,
+                top: PAD,
+                width: KNOB,
+                height: KNOB,
+                borderRadius: KNOB / 2,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: th("#fff", "bg"),
+                shadowColor: "#000",
+                shadowOpacity: 0.28,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 2 },
+              },
+              knob,
+            ]}
+          >
+            <ChevronRight size={26} color={th("#0B0B0B")} strokeWidth={2.8} />
+          </Animated.View>
+        </View>
       </GestureDetector>
     </View>
   );
