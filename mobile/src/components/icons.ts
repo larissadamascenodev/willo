@@ -120,5 +120,4 @@ export { default as Settings } from "lucide-react-native/icons/settings";
 export { default as Compass } from "lucide-react-native/icons/compass";
 export { default as BellRing } from "lucide-react-native/icons/bell-ring";
 export { default as CheckCheck } from "lucide-react-native/icons/check-check";
-export { default as ArrowRight } from "lucide-react-native/icons/arrow-right";
 export { default as ChevronsRight } from "lucide-react-native/icons/chevrons-right";
