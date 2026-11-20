@@ -17,9 +17,9 @@ import { onSheetLight, type SheetLight } from "~/lib/sheetWave";
  * nothing.
  *
  * As in Larissa's reference: let go, a wide glow comes up at the sheet's foot and stays there
- * a moment, breathing, its colours turning slowly. The colours are the Willo icon's own, so the
- * light belongs to the app: its purple card to one side, its amber-orange card to the other, its
- * teal card between, and at the very foot the pale blue-white of the robot's eyes — kept soft
+ * a moment, breathing, its tones turning slowly. It is the Willo icon's purple, the one that
+ * sits best with the glass: deep violet to one side, a bluer indigo-violet to the other, lilac
+ * between, and a pale lavender light at the very foot — one colour in its own shades, kept soft
  * over the black and spread across the whole width.
  * Saved, it rises in one smooth movement, gathering pace and then easing, and dissolves as it
  * leaves through the top: the money leaving the phone. It never stops on the way and nothing
@@ -116,36 +116,36 @@ function Glow({ box, mode, onGone }: { box: Box; mode: SheetLight; onGone: () =>
         <Svg width={W} height={H}>
           <Defs>
             <RadialGradient id="glow-purple" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#9F67FA" stopOpacity={0.6} />
-              <Stop offset="0.6" stopColor="#7C3AED" stopOpacity={0.22} />
+              <Stop offset="0" stopColor="#9F67FA" stopOpacity={0.62} />
+              <Stop offset="0.6" stopColor="#7C3AED" stopOpacity={0.24} />
               <Stop offset="1" stopColor="#7C3AED" stopOpacity={0} />
             </RadialGradient>
-            <RadialGradient id="glow-amber" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#FBA94C" stopOpacity={0.52} />
-              <Stop offset="0.6" stopColor="#F97316" stopOpacity={0.18} />
-              <Stop offset="1" stopColor="#F97316" stopOpacity={0} />
+            <RadialGradient id="glow-indigo" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor="#818CF8" stopOpacity={0.55} />
+              <Stop offset="0.6" stopColor="#6366F1" stopOpacity={0.2} />
+              <Stop offset="1" stopColor="#6366F1" stopOpacity={0} />
             </RadialGradient>
           </Defs>
-          <Ellipse cx={W * 0.29} cy={H * 0.6} rx={W * 0.31} ry={H * 0.36} fill="url(#glow-purple)" />
-          <Ellipse cx={W * 0.71} cy={H * 0.58} rx={W * 0.31} ry={H * 0.36} fill="url(#glow-amber)" />
+          <Ellipse cx={W * 0.3} cy={H * 0.6} rx={W * 0.34} ry={H * 0.36} fill="url(#glow-purple)" />
+          <Ellipse cx={W * 0.7} cy={H * 0.58} rx={W * 0.34} ry={H * 0.36} fill="url(#glow-indigo)" />
         </Svg>
       </Animated.View>
       <Animated.View style={[{ position: "absolute", left: 0, top: 0, width: W, height: H }, layerB]}>
         <Svg width={W} height={H}>
           <Defs>
-            <RadialGradient id="glow-teal" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#3EE0C0" stopOpacity={0.48} />
-              <Stop offset="0.6" stopColor="#14B8A6" stopOpacity={0.16} />
-              <Stop offset="1" stopColor="#14B8A6" stopOpacity={0} />
+            <RadialGradient id="glow-lilac" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor="#C4B5FD" stopOpacity={0.55} />
+              <Stop offset="0.6" stopColor="#A78BFA" stopOpacity={0.2} />
+              <Stop offset="1" stopColor="#A78BFA" stopOpacity={0} />
             </RadialGradient>
-            <RadialGradient id="glow-eyes" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#E0E7FF" stopOpacity={0.6} />
-              <Stop offset="0.6" stopColor="#A5B4FC" stopOpacity={0.2} />
-              <Stop offset="1" stopColor="#A5B4FC" stopOpacity={0} />
+            <RadialGradient id="glow-foot" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor="#EDE9FE" stopOpacity={0.6} />
+              <Stop offset="0.6" stopColor="#C4B5FD" stopOpacity={0.2} />
+              <Stop offset="1" stopColor="#C4B5FD" stopOpacity={0} />
             </RadialGradient>
           </Defs>
-          <Ellipse cx={W * 0.5} cy={H * 0.64} rx={W * 0.22} ry={H * 0.3} fill="url(#glow-teal)" />
-          <Ellipse cx={W * 0.5} cy={H * 0.8} rx={W * 0.42} ry={H * 0.14} fill="url(#glow-eyes)" />
+          <Ellipse cx={W * 0.5} cy={H * 0.62} rx={W * 0.28} ry={H * 0.32} fill="url(#glow-lilac)" />
+          <Ellipse cx={W * 0.5} cy={H * 0.8} rx={W * 0.42} ry={H * 0.14} fill="url(#glow-foot)" />
         </Svg>
       </Animated.View>
     </Animated.View>
