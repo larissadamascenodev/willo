@@ -339,6 +339,22 @@ export default function NewEntry({
     setError(null);
   };
 
+  /* ── The sheet's height: nearly the whole screen for the entry (riding the keyboard at
+     once), and on the check and the success only what they hold, the sheet easing down to
+     it and back up when the entry is opened again. ── */
+  const [natural, setNatural] = useState(0);
+  const sheetH = useSharedValue(bodyH);
+  const lastStage = useRef<Stage>(stage);
+  useEffect(() => {
+    const target = stage === "edit" ? bodyH : natural || bodyH;
+    const moved = lastStage.current !== stage;
+    lastStage.current = stage;
+    if (stage === "edit" && !moved) sheetH.set(target);
+    else sheetH.set(withTiming(target, { duration: reduce ? 0 : 420, easing: Easing.out(Easing.cubic) }));
+  }, [stage, bodyH, natural, reduce, sheetH]);
+  const heightStyle = useAnimatedStyle(() => ({ height: sheetH.get() }));
+  const measure = (e: { nativeEvent: { layout: { height: number } } }) => setNatural(Math.ceil(e.nativeEvent.layout.height));
+
   /* ── Done: the coin, the wave of light from the check, the confetti ── */
   const [box, setBox] = useState({ w: 0, h: 0 });
   useEffect(() => {
@@ -390,15 +406,15 @@ export default function NewEntry({
   };
 
   return (
-    <View
+    <Animated.View
       onLayout={(e) => {
         const { width, height } = e.nativeEvent.layout;
         setBox({ w: width, h: height });
       }}
-      style={{ height: bodyH, paddingHorizontal: 10 }}
+      style={[{ paddingHorizontal: 10, overflow: "hidden" }, heightStyle]}
     >
       {stage === "edit" && (
-        <Animated.View key="edit" entering={FadeIn.duration(200)} exiting={FadeOut.duration(120)} style={{ flex: 1 }}>
+        <Animated.View key="edit" entering={FadeIn.duration(200)} exiting={FadeOut.duration(120)} style={{ height: bodyH }}>
           <View style={{ height: 48, paddingHorizontal: 6, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <RaisedButton size={46} label="Fechar" onPress={onClose}>
               <X size={20} color={th("#fff")} strokeWidth={2.4} />
@@ -565,7 +581,7 @@ export default function NewEntry({
       )}
 
       {stage === "confirm" && (
-        <Animated.View key="confirm" entering={FadeIn.duration(220)} exiting={FadeOut.duration(220)} style={{ flex: 1, paddingHorizontal: 10 }}>
+        <Animated.View key="confirm" onLayout={measure} entering={FadeIn.duration(220)} exiting={FadeOut.duration(220)} style={{ paddingHorizontal: 10, paddingBottom: 6 }}>
           <View style={{ height: 48, flexDirection: "row", alignItems: "center" }}>
             <RaisedButton
               size={46}
@@ -599,14 +615,14 @@ export default function NewEntry({
 
           {error && <Text style={{ marginTop: 10, textAlign: "center", fontSize: 13.5, color: th(RED) }}>{error}</Text>}
 
-          <View style={{ marginTop: "auto", paddingTop: 16 }}>
+          <View style={{ marginTop: 24 }}>
             <SwipeToConfirm key={tries} label="Deslize para confirmar" busy={saving} onDone={() => void register()} />
           </View>
         </Animated.View>
       )}
 
       {stage === "done" && (
-        <Animated.View key="done" entering={FadeIn.duration(reduce ? 200 : 260)} style={{ flex: 1, paddingHorizontal: 10 }}>
+        <Animated.View key="done" onLayout={measure} entering={FadeIn.duration(reduce ? 200 : 260)} style={{ paddingHorizontal: 10, paddingBottom: 6 }}>
           <View style={{ height: 48 }} />
           <View style={{ alignItems: "center" }}>
             <SuccessMark onPlaced={reduce ? undefined : sheetWave} />
@@ -621,7 +637,7 @@ export default function NewEntry({
             {details}
           </View>
 
-          <View style={{ marginTop: "auto", paddingTop: 16 }}>
+          <View style={{ marginTop: 24 }}>
             <Pressable onPress={onClose} style={({ pressed }) => ({ height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.85 : 1 })}>
               <Text style={{ fontSize: 17, fontWeight: "700", color: th("#0B0B0B") }}>Concluir</Text>
             </Pressable>
@@ -734,7 +750,7 @@ export default function NewEntry({
           last
         />
       </AnchoredMenu>
-    </View>
+    </Animated.View>
   );
 }
 
