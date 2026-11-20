@@ -271,6 +271,8 @@ export default function Transacoes() {
             saldoPrevisto={finance.saldoPrevisto}
             receitas={finance.receitas}
             despesas={finance.despesas}
+            recebidas={finance.receitasRecebidas}
+            pagas={finance.despesasPagas}
           />
         </Animated.View>
 
