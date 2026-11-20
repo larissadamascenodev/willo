@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import SparkleLayer from "~/components/SparkleLayer";
+import WaveLayer from "~/components/WaveLayer";
 import { TALL_GAP } from "~/lib/sheetRoom";
 import ToastHost from "~/components/ToastHost";
 import Animated, {
@@ -238,6 +239,8 @@ export default function BottomSheet({
             <KeyboardAway>{children}</KeyboardAway>
           </Animated.ScrollView>
         </GestureDetector>
+        {/* The success wave, edge to edge over the whole sheet. */}
+        <WaveLayer />
       </Animated.View>
       </GestureDetector>
 

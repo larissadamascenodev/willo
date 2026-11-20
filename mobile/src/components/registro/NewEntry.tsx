@@ -29,7 +29,6 @@ import BottomSheet from "~/components/BottomSheet";
 import CategoryPicker from "~/components/CategoryPicker";
 import RaisedButton from "~/components/RaisedButton";
 import MonthCalendar from "~/components/eventos/MonthCalendar";
-import { PaidGlow } from "~/components/registro/AmountFirstFlow";
 import { isoOf, todayIso } from "~/components/registro/EntryForm";
 import { invoiceMonthOf, MONTH_NAMES, type Account, type Card } from "~/components/registro/entryParts";
 import {
@@ -56,6 +55,7 @@ import { chipFill, chipInk } from "~/lib/chip";
 import { suggestCategory } from "~/lib/categorize";
 import { money } from "~/lib/money";
 import { tallSheetBody } from "~/lib/sheetRoom";
+import { sheetWave } from "~/lib/sheetWave";
 import { playCash, preloadCash } from "~/lib/sounds";
 import { useAuth } from "~/lib/auth";
 import { AMBER, GREEN, INCOME, INK, RED } from "~/theme/tokens";
@@ -70,8 +70,9 @@ import { th } from "~/theme/theme";
  * middle the amount, big; under it what it was, typed in place, with its category found from
  * the words. Then the day in one corner and how often in the other. At the foot the app's own number keys, with no boxes
  * around them (they step aside while the phone's keyboard is up for the name). Salvar
- * leads to the check of what will be written, confirmed by sliding; then the ring of light,
- * and the success — with confetti and the coin — in the same sheet.
+ * leads to the check of what will be written, confirmed by sliding; then the success in the
+ * same card, a wave of green light running from its check through the whole sheet, with
+ * confetti and the coin.
  */
 
 type Kind = "despesa" | "receita";
@@ -338,16 +339,12 @@ export default function NewEntry({
     setError(null);
   };
 
-  /* ── Done: the coin, the light, the confetti ── */
+  /* ── Done: the coin, the wave of light from the check, the confetti ── */
   const [box, setBox] = useState({ w: 0, h: 0 });
-  const [glowing, setGlowing] = useState(false);
   useEffect(() => {
     if (stage !== "done") return;
-    setGlowing(true);
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
     playCash();
-    const t = setTimeout(() => setGlowing(false), 2200);
-    return () => clearTimeout(t);
   }, [stage]);
 
   const openMenu = () => {
@@ -360,6 +357,31 @@ export default function NewEntry({
   const rowH = compact ? 50 : 60;
   const repeatLabel = repeat === "fixa" ? "Todo mês" : n ? (cents > 0 ? `${n}x de ${money(value / n)}` : `${n}x`) : credit ? "À vista" : "Única";
   const paidLabel = ahead ? "Agendado" : pending ? (income ? "A receber" : "Pendente") : income ? "Recebido" : "Pago";
+  /* What will be (and was) written, row by row: on the check and again on the success. */
+  const details = [
+    { label: "Descrição", value: title },
+    { label: "Categoria", value: category ?? "Outros", cat: category ?? "Outros" },
+    {
+      label: credit ? "Cartão" : income ? "Entra em" : "Conta",
+      value: picked?.name ?? "—",
+      mark: picked,
+      sub: credit && picked ? `Fatura de ${invoiceMonthOf(date, (picked as Card).closing_day).label}` : undefined,
+    },
+    { label: "Data", value: dayLong(date) },
+    ...(repeat === "fixa" ? [{ label: "Repetição", value: "Todo mês" }] : n ? [{ label: "Parcelas", value: `${n}x de ${money(value / n)}` }] : []),
+    ...(!credit ? [{ label: "Situação", value: paidLabel }] : []),
+    ...(note.trim() ? [{ label: "Observação", value: note.trim() }] : []),
+  ].map((r, i, all) => (
+    <DetailRow
+      key={r.label}
+      label={r.label}
+      value={r.value}
+      sub={"sub" in r ? r.sub : undefined}
+      mark={"mark" in r ? (r.mark ?? null) : null}
+      cat={"cat" in r ? r.cat : undefined}
+      last={i === all.length - 1}
+    />
+  ));
   const accountNote = (o: Option) => {
     if ("limit" in o && o.limit != null) return `Disponível ${money(Number(o.limit) - (Number(o.used_limit) || 0))}`;
     if ("closing_day" in o && o.closing_day) return `Fecha dia ${o.closing_day}`;
@@ -543,7 +565,7 @@ export default function NewEntry({
       )}
 
       {stage === "confirm" && (
-        <Animated.View key="confirm" entering={FadeIn.duration(220)} exiting={FadeOut.duration(400)} style={{ flex: 1, paddingHorizontal: 10 }}>
+        <Animated.View key="confirm" entering={FadeIn.duration(220)} exiting={FadeOut.duration(220)} style={{ flex: 1, paddingHorizontal: 10 }}>
           <View style={{ height: 48, flexDirection: "row", alignItems: "center" }}>
             <RaisedButton
               size={46}
@@ -560,7 +582,7 @@ export default function NewEntry({
             <View style={{ width: 46 }} />
           </View>
 
-          <View style={{ marginTop: 28, alignItems: "center" }}>
+          <View style={{ marginTop: 36, alignItems: "center" }}>
             <View style={{ height: 28, paddingHorizontal: 12, borderRadius: 14, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
               {income ? <ArrowDownLeft size={14} color={th(INCOME)} strokeWidth={2.4} /> : <ArrowUpRight size={14} color={th(INK.soft)} strokeWidth={2.4} />}
               <Text style={{ fontSize: 13, fontWeight: "700", color: th(INK.soft) }}>{income ? "Receita" : credit ? "Despesa no crédito" : "Despesa"}</Text>
@@ -572,30 +594,7 @@ export default function NewEntry({
           </View>
 
           <View style={{ marginTop: 24, paddingHorizontal: 16, paddingVertical: 2, borderRadius: 22, borderCurve: "continuous", borderWidth: 1, borderColor: th("rgba(255,255,255,0.09)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
-            {[
-              { label: "Descrição", value: title },
-              { label: "Categoria", value: category ?? "Outros", cat: category ?? "Outros" },
-              {
-                label: credit ? "Cartão" : income ? "Entra em" : "Conta",
-                value: picked?.name ?? "—",
-                mark: picked,
-                sub: credit && picked ? `Fatura de ${invoiceMonthOf(date, (picked as Card).closing_day).label}` : undefined,
-              },
-              { label: "Data", value: dayLong(date) },
-              ...(repeat === "fixa" ? [{ label: "Repetição", value: "Todo mês" }] : n ? [{ label: "Parcelas", value: `${n}x de ${money(value / n)}` }] : []),
-              ...(!credit ? [{ label: "Situação", value: paidLabel }] : []),
-              ...(note.trim() ? [{ label: "Observação", value: note.trim() }] : []),
-            ].map((r, i, all) => (
-              <DetailRow
-                key={r.label}
-                label={r.label}
-                value={r.value}
-                sub={"sub" in r ? r.sub : undefined}
-                mark={"mark" in r ? (r.mark ?? null) : null}
-                cat={"cat" in r ? r.cat : undefined}
-                last={i === all.length - 1}
-              />
-            ))}
+            {details}
           </View>
 
           {error && <Text style={{ marginTop: 10, textAlign: "center", fontSize: 13.5, color: th(RED) }}>{error}</Text>}
@@ -607,20 +606,22 @@ export default function NewEntry({
       )}
 
       {stage === "done" && (
-        <Animated.View key="done" entering={reduce ? FadeIn.duration(200) : FadeIn.delay(460).duration(420)} style={{ flex: 1, alignItems: "center", paddingTop: 26, paddingHorizontal: 10 }}>
-          <SuccessMark />
-          <Text style={{ marginTop: 20, fontSize: 24, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>{income ? "Receita registrada" : "Despesa registrada"}</Text>
-          <Text numberOfLines={2} style={{ marginTop: 6, paddingHorizontal: 12, textAlign: "center", fontSize: 15, color: th(INK.soft) }}>
-            {`${title} · ${credit ? "Crédito" : income ? "em" : "Débito"} ${picked?.name ?? ""}`}
-          </Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[nums, { marginTop: 18, fontSize: 44, fontWeight: "800", letterSpacing: -1.6, color: th(income ? INCOME : "#fff") }]}>
-            {income ? "+" : "−"}
-            {money(value)}
-          </Text>
-          {n ? <Text style={[nums, { marginTop: 2, fontSize: 14, color: th(INK.soft) }]}>{`${n}x de ${money(value / n)}`}</Text> : null}
-          <Text style={{ marginTop: 6, fontSize: 13.5, color: th(INK.softer) }}>{dayLong(date)}</Text>
+        <Animated.View key="done" entering={FadeIn.duration(reduce ? 200 : 260)} style={{ flex: 1, paddingHorizontal: 10 }}>
+          <View style={{ height: 48 }} />
+          <View style={{ alignItems: "center" }}>
+            <SuccessMark onPlaced={reduce ? undefined : sheetWave} />
+            <Text style={{ marginTop: 6, height: 18, fontSize: 14.5, lineHeight: 18, fontWeight: "700", color: th(INK.soft) }}>{income ? "Receita registrada" : "Despesa registrada"}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[nums, { marginTop: 0, fontSize: 58, fontWeight: "800", letterSpacing: -2, color: th(income ? INCOME : "#fff") }]}>
+              {money(value)}
+            </Text>
+            {n ? <Text style={[nums, { marginTop: 2, fontSize: 14, color: th(INK.soft) }]}>{`${n}x de ${money(value / n)}`}</Text> : null}
+          </View>
 
-          <View style={{ marginTop: "auto", alignSelf: "stretch", paddingTop: 20 }}>
+          <View style={{ marginTop: 24, paddingHorizontal: 16, paddingVertical: 2, borderRadius: 22, borderCurve: "continuous", borderWidth: 1, borderColor: th("rgba(255,255,255,0.09)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
+            {details}
+          </View>
+
+          <View style={{ marginTop: "auto", paddingTop: 16 }}>
             <Pressable onPress={onClose} style={({ pressed }) => ({ height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.85 : 1 })}>
               <Text style={{ fontSize: 17, fontWeight: "700", color: th("#0B0B0B") }}>Concluir</Text>
             </Pressable>
@@ -636,7 +637,6 @@ export default function NewEntry({
         </Animated.View>
       )}
 
-      {glowing && !reduce && box.w > 0 && <PaidGlow w={box.w} h={box.h} />}
       {stage === "done" && !reduce && box.w > 0 && <Confetti w={box.w} h={box.h} />}
 
       {/* ── The smaller sheets ── */}
@@ -859,12 +859,11 @@ function SmallChip({ icon: Icon, iconColor, label, onPress, disabled }: { icon: 
   );
 }
 
-/** "R$ 1.250,5" as typed, the cents still to come drawn faint. */
+/** "R$ 1.250,50" as typed, the cents filled in; faint only while nothing is typed. */
 function Amount({ raw, income, size }: { raw: string; income: boolean; size: number }) {
   const [i, d] = raw.split(",");
   const empty = raw === "";
   const ink = th(empty ? "rgba(255,255,255,0.32)" : income ? INCOME : "#fff");
-  const faint = th("rgba(255,255,255,0.28)");
   const rest = d === undefined ? ",00" : "00".slice(d.length);
   return (
     <View style={{ flexDirection: "row", alignItems: "baseline", maxWidth: "100%" }}>
@@ -872,7 +871,7 @@ function Amount({ raw, income, size }: { raw: string; income: boolean; size: num
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.55} style={[nums, { flexShrink: 1, fontSize: size, fontWeight: "800", letterSpacing: -size * 0.035, color: ink }]}>
         {grouped(empty ? "0" : i || "0")}
         {d !== undefined ? `,${d}` : ""}
-        <Text style={{ color: faint }}>{d !== undefined && d.length === 0 ? "00" : rest}</Text>
+        {d !== undefined && d.length === 0 ? "00" : rest}
       </Text>
     </View>
   );
@@ -1034,20 +1033,48 @@ function SwipeToConfirm({ label, busy, onDone }: { label: string; busy: boolean;
 
 /* ───────────────────────────── Done ───────────────────────────── */
 
-function SuccessMark() {
-  const s = useSharedValue(0.4);
+/** The check, popping in as the wave leaves it; laid out, it says where the wave starts. */
+function SuccessMark({ onPlaced }: { onPlaced?: (x: number, y: number) => void }) {
+  const ref = useRef<ComponentRef<typeof View>>(null);
+  const sent = useRef(false);
+  const s = useSharedValue(0.3);
   const o = useSharedValue(0);
   useEffect(() => {
-    s.set(withDelay(480, withSpring(1, { duration: 560, dampingRatio: 0.55 })));
-    o.set(withDelay(480, withTiming(1, { duration: 200 })));
+    s.set(withDelay(240, withSpring(1, { duration: 520, dampingRatio: 0.55 })));
+    o.set(withDelay(240, withTiming(1, { duration: 180 })));
   }, [s, o]);
   const pop = useAnimatedStyle(() => ({ opacity: o.get(), transform: [{ scale: s.get() }] }));
   return (
-    <Animated.View style={[{ width: 92, height: 92, borderRadius: 46, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(103,205,103,0.16)" }, pop]}>
-      <View style={{ width: 68, height: 68, borderRadius: 34, alignItems: "center", justifyContent: "center", backgroundColor: GREEN }}>
-        <Check size={36} color="#0B0B0B" strokeWidth={3.2} />
-      </View>
-    </Animated.View>
+    <View
+      ref={ref}
+      collapsable={false}
+      onLayout={() => {
+        if (!onPlaced || sent.current) return;
+        sent.current = true;
+        ref.current?.measureInWindow((x, y, w, h) => onPlaced(x + w / 2, y + h / 2));
+      }}
+      style={{ width: 52, height: 52 }}
+    >
+      <Animated.View
+        style={[
+          {
+            width: 52,
+            height: 52,
+            borderRadius: 26,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: GREEN,
+            shadowColor: "#67CD67",
+            shadowOpacity: 0.6,
+            shadowRadius: 16,
+            shadowOffset: { width: 0, height: 0 },
+          },
+          pop,
+        ]}
+      >
+        <Check size={28} color="#0B0B0B" strokeWidth={3.4} />
+      </Animated.View>
+    </View>
   );
 }
 
@@ -1072,7 +1099,7 @@ const CONFETTI = ["#67CD67", "#67CD67", "#FFFFFF", "#BFF3BF", "#FFE08A", "#E9FFE
 function Confetti({ w, h }: { w: number; h: number }) {
   const clock = useSharedValue(0);
   useEffect(() => {
-    clock.set(withDelay(520, withTiming(4, { duration: 4000, easing: Easing.linear })));
+    clock.set(withDelay(420, withTiming(4, { duration: 4000, easing: Easing.linear })));
   }, [clock]);
   const bits = useMemo<Bit[]>(() => {
     let s = Math.floor(Math.random() * 1e9) >>> 0;
@@ -1082,7 +1109,7 @@ function Confetti({ w, h }: { w: number; h: number }) {
     };
     return Array.from({ length: 56 }, () => ({
       x0: w / 2 + (r() - 0.5) * 30,
-      y0: 70 + (r() - 0.5) * 20,
+      y0: 74 + (r() - 0.5) * 20,
       vx: (r() - 0.5) * 760,
       vy: -(140 + r() * 420),
       w: 5 + r() * 4,
