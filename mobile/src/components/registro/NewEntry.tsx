@@ -350,7 +350,7 @@ export default function NewEntry({
         if (left > 0) await new Promise((r) => setTimeout(r, left));
         /* Saved: it shoots up and out; the receipt comes in behind it. */
         sheetLight("launch");
-        await new Promise((r) => setTimeout(r, 280));
+        await new Promise((r) => setTimeout(r, 380));
       }
       setSavedAt(new Date());
       setStage("done");
