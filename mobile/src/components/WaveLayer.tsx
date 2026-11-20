@@ -1,41 +1,49 @@
 import { useEffect, useRef, useState, type ComponentRef } from "react";
 import { View } from "react-native";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 import Svg, { Defs, Ellipse, RadialGradient, Stop } from "react-native-svg";
-import { onSheetLight } from "~/lib/sheetWave";
+import { onSheetLight, type SheetLight } from "~/lib/sheetWave";
 
 /**
  * Where the light of a payment going through is drawn: over the whole sheet, touching
  * nothing.
  *
- * Let go, one veil of light the whole width of the sheet rises from its foot and leaves
- * through its top: the money leaving the phone. It is a single wash, not separate shapes —
- * soft above and below, its upper edge gently uneven — in quiet colours (lavender, sky, rose,
- * a breath of peach) that drift slowly against each other as it goes, so it feels alive
- * without filling the app with colour. It starts gently, keeps an even pace and dissolves as
- * it leaves; nothing stays behind. Only numbers cross into the animated styles.
+ * As in Larissa's reference: let go, a wide glow comes up at the sheet's foot and stays there
+ * a moment, breathing, its colours turning slowly — lavender to one side, rose between, peach
+ * to the other, a pale light right at the foot — kept soft and spread across the whole width.
+ * Saved, it rises in one smooth movement, gathering pace and then easing, and dissolves as it
+ * leaves through the top: the money leaving the phone. It never stops on the way and nothing
+ * stays behind. Only numbers cross into the animated styles.
  */
 
-interface Run {
-  id: number;
+interface Box {
   w: number;
   h: number;
 }
 
-const DURATION = 1250;
-
 export default function WaveLayer() {
   const ref = useRef<ComponentRef<typeof View>>(null);
-  const [run, setRun] = useState<Run | null>(null);
-  const next = useRef(1);
+  const [box, setBox] = useState<Box | null>(null);
+  const [mode, setMode] = useState<SheetLight>("off");
+  const [id, setId] = useState(0);
 
   useEffect(
     () =>
       onSheetLight((cmd) => {
-        if (cmd === "off") return setRun(null);
+        if (cmd !== "charge") return setMode(cmd);
         ref.current?.measureInWindow((_x, _y, w, h) => {
           if (w <= 0 || h <= 0) return;
-          setRun({ id: next.current++, w, h });
+          setBox({ w, h });
+          setId((n) => n + 1);
+          setMode("charge");
         });
       }),
     [],
@@ -43,75 +51,99 @@ export default function WaveLayer() {
 
   return (
     <View ref={ref} collapsable={false} pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, overflow: "hidden" }}>
-      {run && <Veil key={run.id} run={run} onGone={() => setRun(null)} />}
+      {box && mode !== "off" && <Glow key={id} box={box} mode={mode} onGone={() => setMode("off")} />}
     </View>
   );
 }
 
-function Veil({ run, onGone }: { run: Run; onGone: () => void }) {
-  const { w, h } = run;
-  /* Wider than the sheet, so its colours can drift without showing an end. */
+function Glow({ box, mode, onGone }: { box: Box; mode: SheetLight; onGone: () => void }) {
+  const { w, h } = box;
+  /* Wider than the sheet, so its colours can turn without showing an end. */
   const W = w * 1.5;
-  const H = Math.min(380, Math.max(280, h * 0.62));
-  /* From its brightest just at the sheet's foot to wholly past its top. */
-  const from = h - H * 0.62;
-  const to = -H - 10;
-  const p = useSharedValue(0);
+  const H = Math.min(400, Math.max(300, h * 0.66));
+  /* Resting: the pale light at its foot just under the sheet's foot, its colours over the
+     lower third of the sheet. Gone: wholly past the top. */
+  const rest = h - H * 0.8;
+  const out = -H - 10;
+
+  const y = useSharedValue(h + 10);
+  const o = useSharedValue(0);
+  const grow = useSharedValue(0.96);
+  const swirl = useSharedValue(0.5);
 
   useEffect(() => {
-    p.set(withTiming(1, { duration: DURATION, easing: Easing.bezier(0.32, 0, 0.22, 1) }));
-    const t = setTimeout(onGone, DURATION + 80);
-    return () => clearTimeout(t);
-    // Runs once per light; the parent keys it.
+    if (mode === "charge") {
+      o.set(withTiming(1, { duration: 360, easing: Easing.out(Easing.quad) }));
+      y.set(withTiming(rest, { duration: 520, easing: Easing.out(Easing.cubic) }));
+      swirl.set(withRepeat(withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.sin) }), -1, true));
+      grow.set(withRepeat(withTiming(1.03, { duration: 900, easing: Easing.inOut(Easing.sin) }), -1, true));
+      return;
+    }
+    if (mode === "launch") {
+      /* From wherever it is, without a pause: up and out, fading as it leaves. */
+      cancelAnimation(grow);
+      cancelAnimation(y);
+      grow.set(withTiming(1.12, { duration: 760, easing: Easing.out(Easing.quad) }));
+      y.set(withTiming(out, { duration: 780, easing: Easing.bezier(0.45, 0, 0.25, 1) }));
+      o.set(withDelay(360, withTiming(0, { duration: 420, easing: Easing.in(Easing.quad) })));
+      const t = setTimeout(onGone, 820);
+      return () => clearTimeout(t);
+    }
+    // onGone only ends it; rest and out follow the sheet measured when it began.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mode]);
 
-  const veil = useAnimatedStyle(() => {
-    const v = p.get();
-    return {
-      opacity: v < 0.12 ? v / 0.12 : v > 0.58 ? Math.max(0, (1 - v) / 0.42) : 1,
-      transform: [{ translateY: from + (to - from) * v }, { scaleY: 0.92 + 0.2 * v }],
-    };
-  });
-  /* The colours drift against each other: one layer one way, the other the other way. */
-  const driftA = useAnimatedStyle(() => ({ transform: [{ translateX: -w * 0.08 * p.get() }] }));
-  const driftB = useAnimatedStyle(() => ({ transform: [{ translateX: w * 0.08 * p.get() }] }));
+  useEffect(
+    () => () => {
+      cancelAnimation(y);
+      cancelAnimation(o);
+      cancelAnimation(grow);
+      cancelAnimation(swirl);
+    },
+    [y, o, grow, swirl],
+  );
+
+  const glow = useAnimatedStyle(() => ({ opacity: o.get(), transform: [{ translateY: y.get() }, { scale: grow.get() }] }));
+  /* Its colours turn against each other: one layer one way, the other the other way. */
+  const layerA = useAnimatedStyle(() => ({ transform: [{ translateX: (swirl.get() - 0.5) * 28 }] }));
+  const layerB = useAnimatedStyle(() => ({ transform: [{ translateX: (0.5 - swirl.get()) * 28 }] }));
 
   return (
-    <Animated.View style={[{ position: "absolute", left: (w - W) / 2, top: 0, width: W, height: H }, veil]}>
-      <Animated.View style={[{ position: "absolute", left: 0, top: 0, width: W, height: H }, driftA]}>
+    <Animated.View style={[{ position: "absolute", left: (w - W) / 2, top: 0, width: W, height: H }, glow]}>
+      <Animated.View style={[{ position: "absolute", left: 0, top: 0, width: W, height: H }, layerA]}>
         <Svg width={W} height={H}>
           <Defs>
-            <RadialGradient id="veil-lavender" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#C4B5FD" stopOpacity={0.5} />
-              <Stop offset="0.6" stopColor="#C4B5FD" stopOpacity={0.2} />
-              <Stop offset="1" stopColor="#C4B5FD" stopOpacity={0} />
+            <RadialGradient id="glow-lavender" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor="#A78BFA" stopOpacity={0.55} />
+              <Stop offset="0.6" stopColor="#A78BFA" stopOpacity={0.2} />
+              <Stop offset="1" stopColor="#A78BFA" stopOpacity={0} />
             </RadialGradient>
-            <RadialGradient id="veil-peach" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#FDBA74" stopOpacity={0.26} />
+            <RadialGradient id="glow-peach" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor="#FDBA74" stopOpacity={0.5} />
+              <Stop offset="0.6" stopColor="#FDBA74" stopOpacity={0.18} />
               <Stop offset="1" stopColor="#FDBA74" stopOpacity={0} />
             </RadialGradient>
           </Defs>
-          <Ellipse cx={W * 0.36} cy={H * 0.58} rx={W * 0.42} ry={H * 0.34} fill="url(#veil-lavender)" />
-          <Ellipse cx={W * 0.56} cy={H * 0.68} rx={W * 0.3} ry={H * 0.2} fill="url(#veil-peach)" />
+          <Ellipse cx={W * 0.32} cy={H * 0.6} rx={W * 0.34} ry={H * 0.36} fill="url(#glow-lavender)" />
+          <Ellipse cx={W * 0.68} cy={H * 0.58} rx={W * 0.34} ry={H * 0.36} fill="url(#glow-peach)" />
         </Svg>
       </Animated.View>
-      <Animated.View style={[{ position: "absolute", left: 0, top: 0, width: W, height: H }, driftB]}>
+      <Animated.View style={[{ position: "absolute", left: 0, top: 0, width: W, height: H }, layerB]}>
         <Svg width={W} height={H}>
           <Defs>
-            <RadialGradient id="veil-sky" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#93C5FD" stopOpacity={0.46} />
-              <Stop offset="0.6" stopColor="#93C5FD" stopOpacity={0.18} />
-              <Stop offset="1" stopColor="#93C5FD" stopOpacity={0} />
+            <RadialGradient id="glow-rose" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor="#F9A8D4" stopOpacity={0.55} />
+              <Stop offset="0.6" stopColor="#F472B6" stopOpacity={0.18} />
+              <Stop offset="1" stopColor="#F472B6" stopOpacity={0} />
             </RadialGradient>
-            <RadialGradient id="veil-rose" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#F9A8D4" stopOpacity={0.4} />
-              <Stop offset="0.6" stopColor="#F9A8D4" stopOpacity={0.15} />
-              <Stop offset="1" stopColor="#F9A8D4" stopOpacity={0} />
+            <RadialGradient id="glow-foot" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor="#FFE4F1" stopOpacity={0.6} />
+              <Stop offset="0.6" stopColor="#FBCFE8" stopOpacity={0.2} />
+              <Stop offset="1" stopColor="#FBCFE8" stopOpacity={0} />
             </RadialGradient>
           </Defs>
-          <Ellipse cx={W * 0.64} cy={H * 0.52} rx={W * 0.42} ry={H * 0.34} fill="url(#veil-sky)" />
-          <Ellipse cx={W * 0.48} cy={H * 0.62} rx={W * 0.36} ry={H * 0.26} fill="url(#veil-rose)" />
+          <Ellipse cx={W * 0.5} cy={H * 0.62} rx={W * 0.3} ry={H * 0.34} fill="url(#glow-rose)" />
+          <Ellipse cx={W * 0.5} cy={H * 0.8} rx={W * 0.42} ry={H * 0.14} fill="url(#glow-foot)" />
         </Svg>
       </Animated.View>
     </Animated.View>

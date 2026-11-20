@@ -1,14 +1,15 @@
 /**
  * The light of a payment going through, drawn over the open sheet (WaveLayer).
  *
- * "launch": let go, it rises at once through the sheet and out of its top. "off": gone at
- * once (the save failed, say).
+ * "charge": let go, a glow comes up at the sheet's foot and stays there, breathing.
+ * "launch": saved, it rises through the sheet and out of its top. "off": gone at once (the
+ * save failed, say).
  *
  * Asked for from anywhere and drawn by the layer inside the open sheet, so it covers the
  * whole sheet edge to edge and goes when the sheet goes.
  */
 
-export type SheetLight = "launch" | "off";
+export type SheetLight = "charge" | "launch" | "off";
 
 type Listener = (cmd: SheetLight) => void;
 

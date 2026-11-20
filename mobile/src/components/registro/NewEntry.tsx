@@ -75,10 +75,10 @@ import { th } from "~/theme/theme";
  * leads to the check — "Confira antes de salvar" — where every line still opens what changes
  * it (Despesa or Receita is changed back on the entry); it is confirmed by sliding. Then the
  * success: a disc of glass whose check draws itself, how much, what it was, and the rest in
- * one quiet card. The check is saved by sliding its knob across; let go at the end, soft
- * clouds of light rise through the sheet and out of its top — the money leaving the phone —
- * and the success is there at once, with a little confetti and the coin, while the save goes
- * on behind it.
+ * one quiet card. The check is saved by sliding its knob across; let go at the end, a soft
+ * glow comes up at the sheet's foot and stays a moment while it is saved, then rises through
+ * the sheet and out of its top — the money leaving the phone — and the success comes in behind
+ * it, with a little confetti and the coin.
  *
  * The microphone after the name: spoken instead ("vinte reais na padaria"), the Willo fills in
  * what it heard and goes to the check; what was not said is filled there.
@@ -320,10 +320,10 @@ export default function NewEntry({
     if ((!user && !dryRun) || saving || !picked) return;
     setSaving(true);
     setError(null);
-    /* Let go, it is done: the light carries on up and the success is there at once, while
-       the save goes on behind it. Should the save fail, the check comes back with why. */
-    if (!reduce) sheetLight("launch");
-    setStage("done");
+    /* Let go: the light comes up at the foot and stays a moment while it is saved, then
+       rises and leaves, and the success comes in behind it. No words in the middle. */
+    if (!reduce) sheetLight("charge");
+    const began = Date.now();
     try {
       if (!dryRun && user) {
         await createTransaction(
@@ -347,9 +347,15 @@ export default function NewEntry({
         );
         window.dispatchEvent(new CustomEvent("transaction-created"));
       }
+      if (!reduce) {
+        const left = 950 - (Date.now() - began);
+        if (left > 0) await new Promise((r) => setTimeout(r, left));
+        sheetLight("launch");
+        await new Promise((r) => setTimeout(r, 340));
+      }
+      setStage("done");
     } catch {
       sheetLight("off");
-      setStage("confirm");
       setError("Não consegui salvar agora. Tente de novo.");
       setTries((t) => t + 1);
     } finally {
