@@ -16,10 +16,11 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Svg, { Line } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { createTransaction, getAccounts, getCreditCards, getRecentTransactions } from "@/services/transactionService";
-import { allowedCategories } from "@/services/quickEntry";
+import { allowedCategories, readEntry, type ParsedEntry } from "@/services/quickEntry";
 import { parseLocal } from "@/lib/quickEntry/parseLocal";
 import { colorFor } from "@/lib/banks";
 import { categoryHex } from "@/lib/categoryData";
@@ -32,15 +33,17 @@ import MonthCalendar from "~/components/eventos/MonthCalendar";
 import { isoOf, todayIso } from "~/components/registro/EntryForm";
 import { invoiceMonthOf, MONTH_NAMES, type Account, type Card } from "~/components/registro/entryParts";
 import {
-  ArrowDownLeft,
-  ArrowUpRight,
+  ArrowUp,
   CalendarDays,
   Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsRight,
+  CircleCheck,
+  Clock,
   Delete,
+  Mic,
   Repeat as RepeatIcon,
   ScanLine,
   Sparkles,
@@ -54,6 +57,7 @@ import { money } from "~/lib/money";
 import { tallSheetBody } from "~/lib/sheetRoom";
 import { sheetWave } from "~/lib/sheetWave";
 import { playCash, preloadCash } from "~/lib/sounds";
+import { loudnessOf, MicrophoneDenied, useVoice } from "~/lib/voice";
 import { useAuth } from "~/lib/auth";
 import { AMBER, GREEN, INCOME, INK, RED } from "~/theme/tokens";
 import { th } from "~/theme/theme";
@@ -68,9 +72,12 @@ import { th } from "~/theme/theme";
  * was, typed in place, with its category found from the words. At the foot the app's own number keys, with no boxes
  * around them (they step aside while the phone's keyboard is up for the name). Salvar
  * leads to the check — "Confira antes de salvar" — where every line still opens what changes
- * it, and the kind can still be switched; it is confirmed by sliding. Then the success in the
- * same card, a wave of light rising from the foot of the sheet as the money leaves the phone,
- * a little confetti and the coin.
+ * it (Despesa or Receita is changed back on the entry); it is confirmed by sliding. Then the
+ * receipt, in the sheet's own glass, as a band of soft light rises through the sheet and out
+ * of its top, the money leaving the phone, with a little confetti and the coin.
+ *
+ * The microphone after the name: spoken instead ("vinte reais na padaria"), the Willo fills in
+ * what it heard and goes to the check; what was not said is filled there.
  */
 
 type Kind = "despesa" | "receita";
@@ -78,6 +85,7 @@ type Method = "conta" | "cartao";
 type Stage = "edit" | "confirm" | "done";
 type Repeat = "unica" | "fixa" | "parcelado";
 type Sheet = null | "conta" | "data" | "repetir" | "nome";
+type Listen = "off" | "on" | "reading";
 type Acc = Account & { current_balance?: number | string | null };
 type Option = Acc | Card;
 type IconC = ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
@@ -103,6 +111,17 @@ function centsOf(raw: string) {
   const [i, d = ""] = raw.split(",");
   return Number(i || "0") * 100 + Number(`${d}00`.slice(0, 2));
 }
+/** 125050 → "1250,5", the way it would have been typed. */
+function rawOf(cents: number) {
+  const i = Math.floor(cents / 100);
+  const d = cents % 100;
+  return d === 0 ? String(i) : `${i},${String(d).padStart(2, "0").replace(/0$/, "")}`;
+}
+/* Knowing when someone has stopped talking, as Registro rápido does. */
+const QUIET_MS = 900;
+const NOTHING_MS = 9000;
+const LONGEST_MS = 30_000;
+const ABOVE_FLOOR = 13;
 const grouped = (i: string) => i.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 const capital = (s: string) => s.replace(/^./, (c) => c.toUpperCase());
 
@@ -173,6 +192,7 @@ export default function NewEntry({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tries, setTries] = useState(0);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
 
   const [accounts, setAccounts] = useState<Acc[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
@@ -249,7 +269,6 @@ export default function NewEntry({
       setMethod("conta");
       if (repeat === "parcelado") setRepeat("unica");
     }
-    if (stage === "confirm") void settleCategory(name, k).then(setCategory);
   };
 
   /**
@@ -320,6 +339,7 @@ export default function NewEntry({
         );
         window.dispatchEvent(new CustomEvent("transaction-created"));
       }
+      setSavedAt(new Date());
       setStage("done");
     } catch {
       setError("Não consegui salvar agora. Tente de novo.");
@@ -328,6 +348,137 @@ export default function NewEntry({
       setSaving(false);
     }
   };
+
+  /* ── Spoken instead: the Willo fills in what it heard and goes to the check; what was not
+     said stays as it was, to be filled there. ── */
+  const voice = useVoice();
+  const [listen, setListenState] = useState<Listen>("off");
+  const listenRef = useRef<Listen>("off");
+  const setListen = (v: Listen) => {
+    listenRef.current = v;
+    setListenState(v);
+  };
+  const voiceRef = useRef(voice);
+  useEffect(() => {
+    voiceRef.current = voice;
+  });
+  useEffect(
+    () => () => {
+      if (listenRef.current === "on") void voiceRef.current.cancel();
+    },
+    [],
+  );
+  const calm = useRef({ floor: 0, seen: false, spoke: false, quietSince: 0, began: 0 });
+
+  const startVoice = async () => {
+    if (listenRef.current !== "off") return;
+    Keyboard.dismiss();
+    setError(null);
+    try {
+      await voice.start();
+      calm.current = { floor: 0, seen: false, spoke: false, quietSince: 0, began: Date.now() };
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+      setListen("on");
+    } catch (err) {
+      setError(err instanceof MicrophoneDenied ? "O microfone está bloqueado. Libere o Willo em Ajustes › Willo › Microfone." : "Não consegui acessar o microfone agora.");
+    }
+  };
+
+  const cancelVoice = async () => {
+    if (listenRef.current !== "on") return;
+    setListen("off");
+    await voice.cancel();
+  };
+
+  const applyHeard = async (e: ParsedEntry, transcript: string | null) => {
+    const said = `${transcript ?? ""} ${e.name ?? ""}`.toLowerCase();
+    const k: Kind = locked ? "despesa" : e.type === "receita" ? "receita" : "despesa";
+    const m: Method = locked ? "cartao" : k === "receita" ? "conta" : (e.paymentMethod ?? method);
+    const pool: Option[] = m === "cartao" ? cards : accounts;
+    const named = locked ? null : pool.find((o) => o.name && said.includes(o.name.toLowerCase()));
+    const words = e.name ? capital(e.name) : name;
+    const heard = e.amount > 0 ? Math.round(e.amount * 100) : 0;
+    const total = heard || cents;
+    const cat = e.category && e.category !== "Outros" && categories.includes(e.category) ? e.category : words.trim() ? await settleCategory(words, k) : null;
+    setKind(k);
+    setMethod(m);
+    if (named) setWhereId(named.id);
+    if (heard) setRaw(rawOf(heard));
+    setName(words);
+    if (cat) {
+      setCategory(cat);
+      setByHand(true);
+    }
+    if (e.date) setDate(e.date);
+    if (e.settled === false && m === "conta") setPending(true);
+    if (m !== "cartao" && repeat === "parcelado") setRepeat("unica");
+    setListen("off");
+    if (total <= 0) {
+      setError("Faltou o valor: diga de novo ou digite nos números.");
+      return;
+    }
+    if (pool.length === 0) {
+      setSheet("conta");
+      return;
+    }
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    setStage("confirm");
+  };
+
+  const finishVoice = async () => {
+    if (listenRef.current !== "on") return;
+    setListen("reading");
+    try {
+      const clip = await voice.stop();
+      if (!clip || clip.seconds < 0.4) {
+        setListen("off");
+        setError("Não ouvi nada. Toque no microfone e fale de novo.");
+        return;
+      }
+      const { entries, transcript } = await readEntry({ audio: { data: clip.data, mimeType: clip.mimeType }, categories });
+      const first = entries[0];
+      if (!first) {
+        setListen("off");
+        setError(transcript ? `Ouvi “${transcript}”, mas não entendi. Tente de novo.` : "Não entendi. Tente de novo.");
+        return;
+      }
+      await applyHeard(first, transcript);
+    } catch {
+      setListen("off");
+      setError("Não consegui entender agora. Tente de novo.");
+    }
+  };
+
+  /* A short silence after speaking ends the listening; the button ends it too. */
+  useEffect(() => {
+    if (listen !== "on") return;
+    const c = calm.current;
+    const now = Date.now();
+    if (now - c.began > LONGEST_MS) {
+      void finishVoice();
+      return;
+    }
+    const level = voice.level;
+    if (typeof level !== "number") return;
+    c.floor = c.seen ? Math.min(c.floor + 0.05, level) : level;
+    c.seen = true;
+    const loud = level > Math.max(-42, c.floor + ABOVE_FLOOR);
+    if (loud) {
+      c.spoke = true;
+      c.quietSince = 0;
+    } else if (c.spoke) {
+      if (c.quietSince === 0) c.quietSince = now;
+      else if (now - c.quietSince > QUIET_MS) void finishVoice();
+    } else if (now - c.began > NOTHING_MS) {
+      void voice.cancel();
+      setListen("off");
+      setError("Não ouvi nada. Toque no microfone e fale de novo.");
+    }
+    // finishVoice and voice change every render; the level is what drives this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listen, voice.level]);
+
+  const [nameW, setNameW] = useState(0);
 
   const again = () => {
     setStage("edit");
@@ -517,52 +668,88 @@ export default function NewEntry({
                 )}
               </View>
               <Amount raw={raw} income={income} size={typing ? 42 : compact ? 56 : 72} />
-              <TextInput
-                value={name}
-                onChangeText={(t) => {
-                  setName(t);
-                  setError(null);
-                }}
-                onFocus={() => setTyping(true)}
-                onBlur={() => setTyping(false)}
-                placeholder={income ? "De onde veio?" : "Com o que foi?"}
-                placeholderTextColor={th(INK.faint)}
-                returnKeyType="done"
-                onSubmitEditing={() => Keyboard.dismiss()}
-                textAlign="center"
-                style={[
-                  { alignSelf: "stretch", marginTop: typing ? 4 : 10, padding: 0, height: 34, textAlign: "center", fontSize: 20, fontWeight: "600", color: th("#fff") },
-                  Platform.OS === "web" ? ({ outlineStyle: "none" } as never) : null,
-                ]}
-              />
-              <Pressable
-                onPress={() => {
-                  Keyboard.dismiss();
-                  setPicking(true);
-                }}
-                accessibilityLabel={`Categoria: ${category ?? "automática"}. Trocar`}
-                hitSlop={6}
-                style={({ pressed }) => ({
-                  marginTop: 8,
-                  height: 32,
-                  paddingLeft: 4,
-                  paddingRight: 12,
-                  borderRadius: 16,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 7,
-                  backgroundColor: th(category ? chipFill(hex) : "rgba(255,255,255,0.06)", "bg"),
-                  opacity: pressed ? 0.7 : 1,
-                })}
-              >
-                <View style={{ width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
-                  <CatIcon size={13} color={th(chipInk(hex))} strokeWidth={2.4} />
-                </View>
-                <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "700", color: category ? th(chipInk(hex)) : th(INK.soft) }}>
-                  {category ?? "Categoria automática"}
-                </Text>
-                <ChevronDown size={13} color={th(INK.soft)} strokeWidth={2.4} />
-              </Pressable>
+              {listen !== "off" ? (
+                <Recorder state={listen} loudness={loudnessOf(voice.level)} seconds={voice.seconds} onCancel={() => void cancelVoice()} onStop={() => void finishVoice()} />
+              ) : (
+                <>
+                  {/* The name sized to its words, so the microphone sits right after them. */}
+                  <View style={{ alignSelf: "stretch", alignItems: "center", marginTop: typing ? 4 : 10 }}>
+                    <Text
+                      numberOfLines={1}
+                      onLayout={(e) => setNameW(Math.ceil(e.nativeEvent.layout.width))}
+                      style={{ position: "absolute", opacity: 0, fontSize: 20, fontWeight: "600" }}
+                    >
+                      {name || (income ? "De onde veio?" : "Com o que foi?")}
+                    </Text>
+                    <View style={{ height: 36, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <TextInput
+                        value={name}
+                        onChangeText={(t) => {
+                          setName(t);
+                          setError(null);
+                        }}
+                        onFocus={() => setTyping(true)}
+                        onBlur={() => setTyping(false)}
+                        placeholder={income ? "De onde veio?" : "Com o que foi?"}
+                        placeholderTextColor={th(INK.faint)}
+                        returnKeyType="done"
+                        onSubmitEditing={() => Keyboard.dismiss()}
+                        textAlign="center"
+                        style={[
+                          { width: Math.min(Math.max(nameW + 8, 60), 250), height: 36, padding: 0, textAlign: "center", fontSize: 20, fontWeight: "600", color: th("#fff") },
+                          Platform.OS === "web" ? ({ outlineStyle: "none" } as never) : null,
+                        ]}
+                      />
+                      <Pressable
+                        onPress={() => void startVoice()}
+                        accessibilityLabel="Falar em vez de digitar"
+                        hitSlop={8}
+                        style={({ pressed }) => ({
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderWidth: 1,
+                          borderColor: th("rgba(255,255,255,0.12)", "line"),
+                          backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
+                          opacity: pressed ? 0.6 : 1,
+                        })}
+                      >
+                        <Mic size={15} color={th("#fff")} strokeWidth={2.3} />
+                      </Pressable>
+                    </View>
+                  </View>
+                  <Pressable
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      setPicking(true);
+                    }}
+                    accessibilityLabel={`Categoria: ${category ?? "automática"}. Trocar`}
+                    hitSlop={6}
+                    style={({ pressed }) => ({
+                      marginTop: 8,
+                      height: 32,
+                      paddingLeft: 4,
+                      paddingRight: 12,
+                      borderRadius: 16,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 7,
+                      backgroundColor: th(category ? chipFill(hex) : "rgba(255,255,255,0.06)", "bg"),
+                      opacity: pressed ? 0.7 : 1,
+                    })}
+                  >
+                    <View style={{ width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+                      <CatIcon size={13} color={th(chipInk(hex))} strokeWidth={2.4} />
+                    </View>
+                    <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "700", color: category ? th(chipInk(hex)) : th(INK.soft) }}>
+                      {category ?? "Categoria automática"}
+                    </Text>
+                    <ChevronDown size={13} color={th(INK.soft)} strokeWidth={2.4} />
+                  </Pressable>
+                </>
+              )}
             </View>
 
             {/* The number keys, straight on the card; aside while the phone's keyboard is up. */}
@@ -610,10 +797,7 @@ export default function NewEntry({
             <View style={{ width: 46 }} />
           </View>
 
-          {/* What kind, still to change; the amount, a tap away from the keys. */}
-          <View style={{ marginTop: 10, height: 46, alignItems: "center", justifyContent: "center" }}>
-            {locked ? <Text style={{ fontSize: 15, fontWeight: "700", color: th(INK.soft) }}>Compra no cartão</Text> : <KindPill value={kind} onChange={changeKind} />}
-          </View>
+          {/* The amount, a tap away from the keys (and from Despesa / Receita). */}
           <Pressable
             onPress={() => {
               if (saving) return;
@@ -621,7 +805,7 @@ export default function NewEntry({
             }}
             accessibilityRole="button"
             accessibilityLabel={`Valor: ${money(value)}. Alterar`}
-            style={({ pressed }) => ({ marginTop: 10, alignItems: "center", opacity: pressed ? 0.7 : 1 })}
+            style={({ pressed }) => ({ marginTop: 14, alignItems: "center", opacity: pressed ? 0.7 : 1 })}
           >
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[nums, { fontSize: 58, fontWeight: "800", letterSpacing: -2, color: th(income ? INCOME : "#fff") }]}>
               {money(value)}
@@ -642,23 +826,27 @@ export default function NewEntry({
       )}
 
       {stage === "done" && (
-        <Animated.View key="done" onLayout={measure} entering={FadeIn.duration(reduce ? 200 : 260)} style={{ paddingHorizontal: 10, paddingBottom: 6 }}>
-          <View style={{ height: 48 }} />
-          <View style={{ marginTop: 10, height: 46, alignItems: "center", justifyContent: "center" }}>
+        <Animated.View key="done" onLayout={measure} entering={FadeIn.duration(reduce ? 200 : 320)} style={{ paddingHorizontal: 10, paddingBottom: 6 }}>
+          <View style={{ height: 48, alignItems: "center", justifyContent: "center" }}>
             <DoneTag label={income ? "Receita registrada" : "Despesa registrada"} />
           </View>
-          <View style={{ marginTop: 10, alignItems: "center" }}>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[nums, { fontSize: 58, fontWeight: "800", letterSpacing: -2, color: th(income ? INCOME : "#fff") }]}>
-              {money(value)}
-            </Text>
-            {n ? <Text style={[nums, { marginTop: 2, fontSize: 14, color: th(INK.soft) }]}>{`${n}x de ${money(value / n)}`}</Text> : null}
-          </View>
 
-          <View style={{ marginTop: 20, paddingHorizontal: 16, paddingVertical: 2, borderRadius: 22, borderCurve: "continuous", borderWidth: 1, borderColor: th("rgba(255,255,255,0.09)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
-            {detailRows(false)}
-          </View>
+          <ReceiptCard
+            income={income}
+            value={value}
+            parts={n}
+            title={title}
+            category={category ?? "Outros"}
+            date={date}
+            savedAt={savedAt}
+            picked={picked}
+            credit={credit}
+            invoice={credit && picked ? invoiceMonthOf(date, (picked as Card).closing_day).label : null}
+            repeatText={repeat === "fixa" ? "Todo mês" : n ? `${n}x de ${money(value / n)}` : null}
+            paid={credit ? null : { label: paidLabel, waiting: pending || ahead }}
+          />
 
-          <View style={{ marginTop: 24 }}>
+          <View style={{ marginTop: 20 }}>
             <Pressable onPress={onClose} style={({ pressed }) => ({ height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.85 : 1 })}>
               <Text style={{ fontSize: 17, fontWeight: "700", color: th("#0B0B0B") }}>Concluir</Text>
             </Pressable>
@@ -1163,6 +1351,200 @@ function SwipeToConfirm({ label, busy, onDone }: { label: string; busy: boolean;
 }
 
 /* ───────────────────────────── Done ───────────────────────────── */
+
+/** Recording, the way a voice message is: cancel, the time, the voice's own bars, and send. */
+function Recorder({ state, loudness, seconds, onCancel, onStop }: { state: Listen; loudness?: number; seconds: number; onCancel: () => void; onStop: () => void }) {
+  const [bars, setBars] = useState<number[]>(() => Array.from({ length: 26 }, () => 0.05));
+  useEffect(() => {
+    if (state !== "on") return;
+    setBars((b) => [...b.slice(1), Math.max(0.05, loudness ?? 0)]);
+  }, [loudness, state]);
+  const dot = useSharedValue(1);
+  useEffect(() => {
+    dot.set(withRepeat(withTiming(0.3, { duration: 620 }), -1, true));
+    return () => cancelAnimation(dot);
+  }, [dot]);
+  const blink = useAnimatedStyle(() => ({ opacity: dot.get() }));
+  const ink = th("rgba(255,255,255,0.85)");
+  return (
+    <Animated.View
+      entering={FadeIn.duration(160)}
+      style={{ alignSelf: "stretch", marginTop: 12, height: 52, borderRadius: 26, overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.12)", "line") }}
+    >
+      <Glass radius={26} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+      <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 5 }}>
+        {state === "reading" ? (
+          <>
+            <ActivityIndicator style={{ marginLeft: 12 }} color={th("#fff")} />
+            <Text numberOfLines={1} style={{ flex: 1, fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>
+              Entendendo o que você disse…
+            </Text>
+          </>
+        ) : (
+          <>
+            <Pressable
+              onPress={onCancel}
+              accessibilityLabel="Cancelar gravação"
+              hitSlop={4}
+              style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg"), opacity: pressed ? 0.6 : 1 })}
+            >
+              <X size={17} color={th("#fff")} strokeWidth={2.4} />
+            </Pressable>
+            <Animated.View style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: RED }, blink]} />
+            <Text style={[nums, { width: 34, fontSize: 14, fontWeight: "700", color: th("#fff") }]}>{`${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`}</Text>
+            <View style={{ flex: 1, height: 30, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 2.5, overflow: "hidden" }}>
+              {bars.map((v, i) => (
+                <View key={i} style={{ width: 3, height: 3 + v * 26, borderRadius: 1.5, backgroundColor: ink }} />
+              ))}
+            </View>
+            <Pressable
+              onPress={onStop}
+              accessibilityLabel="Parar e preencher"
+              hitSlop={4}
+              style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.8 : 1 })}
+            >
+              <ArrowUp size={19} color={th("#0B0B0B")} strokeWidth={2.6} />
+            </Pressable>
+          </>
+        )}
+      </View>
+    </Animated.View>
+  );
+}
+
+/** The receipt, in the sheet's own glass: what it was and how much, then when, from where, how often, and whether paid. */
+function ReceiptCard({
+  income,
+  value,
+  parts,
+  title,
+  category,
+  date,
+  savedAt,
+  picked,
+  credit,
+  invoice,
+  repeatText,
+  paid,
+}: {
+  income: boolean;
+  value: number;
+  parts: number | null;
+  title: string;
+  category: string;
+  date: string;
+  savedAt: Date | null;
+  picked: Option | null;
+  credit: boolean;
+  invoice: string | null;
+  repeatText: string | null;
+  paid: { label: string; waiting: boolean } | null;
+}) {
+  const d = new Date(`${date}T12:00:00`);
+  const hex = categoryHex(category);
+  const Icon = categoryIcon(category);
+  const at = savedAt ? `${String(savedAt.getHours()).padStart(2, "0")}:${String(savedAt.getMinutes()).padStart(2, "0")}` : "";
+  const line = th("rgba(255,255,255,0.16)", "line");
+  const rows: { key: string; mark: React.ReactNode; label: string; value: string; sub?: string }[] = [
+    {
+      key: "quando",
+      mark: (
+        <View style={{ width: 40, height: 40, borderRadius: 11, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.06)", "bg") }}>
+          <View style={{ height: 14, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.16)", "bg") }}>
+            <Text style={{ fontSize: 9, fontWeight: "800", letterSpacing: 0.4, color: th("#fff") }}>{SHORT[d.getMonth()].toUpperCase()}</Text>
+          </View>
+          <Text style={[nums, { textAlign: "center", fontSize: 16, lineHeight: 25, fontWeight: "800", color: th("#fff") }]}>{d.getDate()}</Text>
+        </View>
+      ),
+      label: "Quando",
+      value: dayLong(date),
+    },
+    {
+      key: "onde",
+      mark: picked ? <BankMark name={picked.name} hex={colorFor(picked.name, picked.color)} size={40} /> : <View style={{ width: 40 }} />,
+      label: income ? "Entrou em" : credit ? "Cartão" : "Pago com",
+      value: picked?.name ?? "—",
+      sub: credit ? (invoice ? `Fatura de ${invoice}` : "Crédito") : income ? undefined : "Débito",
+    },
+    ...(repeatText
+      ? [
+          {
+            key: "repete",
+            mark: (
+              <View style={{ width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
+                <RepeatIcon size={17} color={th("#fff")} strokeWidth={2.2} />
+              </View>
+            ),
+            label: parts ? "Parcelas" : "Repetição",
+            value: repeatText,
+          },
+        ]
+      : []),
+    ...(paid
+      ? [
+          {
+            key: "situacao",
+            mark: (
+              <View style={{ width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: th(paid.waiting ? "rgba(249,206,78,0.12)" : "rgba(103,205,103,0.12)", "bg") }}>
+                {paid.waiting ? <Clock size={17} color={th(AMBER)} strokeWidth={2.4} /> : <CircleCheck size={17} color={th(GREEN)} strokeWidth={2.4} />}
+              </View>
+            ),
+            label: "Situação",
+            value: paid.label,
+          },
+        ]
+      : []),
+  ];
+  return (
+    <View style={{ marginTop: 14, borderRadius: 26, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.10)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
+      <View style={{ paddingHorizontal: 18, paddingTop: 15, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <Text style={{ fontSize: 11.5, fontWeight: "800", letterSpacing: 1.4, color: th(INK.soft) }}>COMPROVANTE</Text>
+        {at ? <Text style={[nums, { fontSize: 12.5, fontWeight: "600", color: th(INK.soft) }]}>{`Hoje, ${at}`}</Text> : null}
+      </View>
+
+      <View style={{ alignItems: "center", paddingTop: 12, paddingBottom: 16, paddingHorizontal: 18 }}>
+        <View style={{ width: 46, height: 46, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+          <Icon size={21} color={th(chipInk(hex))} strokeWidth={2.2} />
+        </View>
+        <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 16, fontWeight: "700", color: th("#fff") }}>
+          {title}
+        </Text>
+        <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 13, color: th(INK.soft) }}>
+          {category}
+        </Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[nums, { marginTop: 8, fontSize: 42, fontWeight: "800", letterSpacing: -1.4, color: th(income ? INCOME : "#fff") }]}>
+          {income ? "+" : "−"}
+          {money(value)}
+        </Text>
+        {parts ? <Text style={[nums, { marginTop: 1, fontSize: 13.5, color: th(INK.soft) }]}>{`${parts}x de ${money(value / parts)}`}</Text> : null}
+      </View>
+
+      {/* The tear line. */}
+      <Svg height={2} width="100%">
+        <Line x1="14" y1="1" x2="100%" y2="1" stroke={line} strokeWidth={1.2} strokeDasharray="5 5" />
+      </Svg>
+
+      <View style={{ paddingHorizontal: 18, paddingVertical: 4 }}>
+        {rows.map((r, i) => (
+          <View key={r.key} style={{ minHeight: 56, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: i === rows.length - 1 ? 0 : 1, borderBottomColor: th("rgba(255,255,255,0.06)", "line") }}>
+            {r.mark}
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>{r.label}</Text>
+              <Text numberOfLines={1} style={[nums, { marginTop: 1, fontSize: 15, fontWeight: "700", color: th("#fff") }]}>
+                {r.value}
+              </Text>
+            </View>
+            {r.sub ? (
+              <Text numberOfLines={1} style={{ maxWidth: 140, textAlign: "right", fontSize: 12.5, color: th(INK.soft) }}>
+                {r.sub}
+              </Text>
+            ) : null}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
 
 /** The success, as a tag of glass where the kind was: a small green check and the words. */
 function DoneTag({ label }: { label: string }) {
