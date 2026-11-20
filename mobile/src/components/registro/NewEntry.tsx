@@ -19,6 +19,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Svg, { Line } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
+import { BlurView } from "expo-blur";
 import { createTransaction, getAccounts, getCreditCards, getRecentTransactions } from "@/services/transactionService";
 import { allowedCategories, readEntry, type ParsedEntry } from "@/services/quickEntry";
 import { parseLocal } from "@/lib/quickEntry/parseLocal";
@@ -55,7 +56,7 @@ import { chipFill, chipInk } from "~/lib/chip";
 import { suggestCategory } from "~/lib/categorize";
 import { money } from "~/lib/money";
 import { tallSheetBody } from "~/lib/sheetRoom";
-import { sheetWave } from "~/lib/sheetWave";
+import { sheetLight } from "~/lib/sheetWave";
 import { playCash, preloadCash } from "~/lib/sounds";
 import { loudnessOf, MicrophoneDenied, useVoice } from "~/lib/voice";
 import { useAuth } from "~/lib/auth";
@@ -73,8 +74,10 @@ import { th } from "~/theme/theme";
  * around them (they step aside while the phone's keyboard is up for the name). Salvar
  * leads to the check — "Confira antes de salvar" — where every line still opens what changes
  * it (Despesa or Receita is changed back on the entry); it is confirmed by sliding. Then the
- * receipt, in the sheet's own glass, as a band of soft light rises through the sheet and out
- * of its top, the money leaving the phone, with a little confetti and the coin.
+ * receipt, in the sheet's own glass. While it is saved the check softens behind a veil and a
+ * warm light gathers at the sheet's foot; saved, the light shoots up through the sheet and out
+ * of its top — the money leaving the phone — and the receipt comes in behind it, with a little
+ * confetti and the coin.
  *
  * The microphone after the name: spoken instead ("vinte reais na padaria"), the Willo fills in
  * what it heard and goes to the check; what was not said is filled there.
@@ -316,6 +319,9 @@ export default function NewEntry({
     if ((!user && !dryRun) || saving || !picked) return;
     setSaving(true);
     setError(null);
+    /* The light gathers at the foot while it is saved, for long enough to be seen. */
+    if (!reduce) sheetLight("charge");
+    const began = Date.now();
     try {
       if (!dryRun && user) {
         await createTransaction(
@@ -339,9 +345,17 @@ export default function NewEntry({
         );
         window.dispatchEvent(new CustomEvent("transaction-created"));
       }
+      if (!reduce) {
+        const left = 1300 - (Date.now() - began);
+        if (left > 0) await new Promise((r) => setTimeout(r, left));
+        /* Saved: it shoots up and out; the receipt comes in behind it. */
+        sheetLight("launch");
+        await new Promise((r) => setTimeout(r, 280));
+      }
       setSavedAt(new Date());
       setStage("done");
     } catch {
+      sheetLight("off");
       setError("Não consegui salvar agora. Tente de novo.");
       setTries((t) => t + 1);
     } finally {
@@ -508,16 +522,12 @@ export default function NewEntry({
   const heightStyle = useAnimatedStyle(() => ({ height: sheetH.get() }));
   const measure = (e: { nativeEvent: { layout: { height: number } } }) => setNatural(Math.ceil(e.nativeEvent.layout.height));
 
-  /* ── Done: the coin, the wave of light from the check, the confetti ── */
+  /* ── Done: the coin and the confetti, as the light leaves ── */
   const [box, setBox] = useState({ w: 0, h: 0 });
-  const { width: screenW } = useWindowDimensions();
   useEffect(() => {
     if (stage !== "done") return;
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
     playCash();
-    if (!reduce) sheetWave(screenW / 2, screenH + 40);
-    // Once, as the success arrives.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage]);
 
 
@@ -822,6 +832,18 @@ export default function NewEntry({
           <View style={{ marginTop: 24 }}>
             <SwipeToConfirm key={tries} label="Deslize para salvar" busy={saving} onDone={() => void register()} />
           </View>
+
+          {/* While it is saved: everything softened behind a veil, and what is happening. */}
+          {saving && (
+            <Animated.View entering={FadeIn.duration(280)} style={{ position: "absolute", top: 0, left: -10, right: -10, bottom: 0 }}>
+              <BlurView intensity={26} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+              <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: th("rgba(10,11,14,0.35)", "bg") }} />
+              <View style={{ position: "absolute", left: 0, right: 0, top: "38%", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                <ActivityIndicator size="small" color={th("#fff")} />
+                <Text style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>{income ? "Registrando receita…" : "Registrando despesa…"}</Text>
+              </View>
+            </Animated.View>
+          )}
         </Animated.View>
       )}
 

@@ -1,36 +1,46 @@
 import { useEffect, useRef, useState, type ComponentRef } from "react";
 import { View } from "react-native";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import Svg, { Defs, LinearGradient, Mask, Rect, Stop } from "react-native-svg";
-import { onSheetWave } from "~/lib/sheetWave";
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
+import Svg, { Defs, Ellipse, RadialGradient, Stop } from "react-native-svg";
+import { onSheetLight, type SheetLight } from "~/lib/sheetWave";
 
 /**
- * Where the success light is drawn: over the whole sheet, touching nothing.
+ * Where the light of a payment going through is drawn: over the whole sheet, touching
+ * nothing.
  *
- * Light rising straight, the way it runs over an iPhone when two are touched together to
- * share: a bright white line across the whole sheet with a glow round it, and behind it a
- * trail of soft colour — rose, lavender, periwinkle, sky — fading away. It comes up from under
- * the foot of the sheet, passes over everything and leaves through the top: the money leaving
- * the phone. Nothing stays behind; once it is out, the sheet is as it was. Only numbers cross
- * into the animated style.
+ * While it is saved a glow gathers at the sheet's foot — violet to one side, warm orange to
+ * the other, rose between and a white heat at its heart — and breathes there. Saved, it shoots
+ * up through the sheet, growing as it goes, presses against the top and fades away there: the
+ * money leaving the phone. Nothing stays behind. Only numbers cross into the animated style.
  */
 
-interface Run {
-  id: number;
+interface Box {
   w: number;
   h: number;
 }
 
 export default function WaveLayer() {
   const ref = useRef<ComponentRef<typeof View>>(null);
-  const [run, setRun] = useState<Run | null>(null);
+  const [box, setBox] = useState<Box | null>(null);
+  const [mode, setMode] = useState<SheetLight>("off");
 
   useEffect(
     () =>
-      onSheetWave((wave) => {
+      onSheetLight((cmd) => {
+        if (cmd !== "charge") return setMode(cmd);
         ref.current?.measureInWindow((_x, _y, w, h) => {
           if (w <= 0 || h <= 0) return;
-          setRun({ id: wave.id, w, h });
+          setBox({ w, h });
+          setMode("charge");
         });
       }),
     [],
@@ -38,74 +48,100 @@ export default function WaveLayer() {
 
   return (
     <View ref={ref} collapsable={false} pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, overflow: "hidden" }}>
-      {run && <Band key={run.id} run={run} onEnd={() => setRun(null)} />}
+      {box && mode !== "off" && <Glow box={box} mode={mode} onGone={() => setMode("off")} />}
     </View>
   );
 }
 
-function Band({ run, onEnd }: { run: Run; onEnd: () => void }) {
-  const { w, h } = run;
-  /* The light's own height: the bright line at its front, the trail of colour behind. */
-  const BH = Math.min(300, Math.max(200, h * 0.5));
-  const EDGE = 34;
-  /* From wholly under the sheet's foot to wholly past its top. */
-  const from = h + 4;
-  const to = -BH - 4;
-  const p = useSharedValue(0);
+function Glow({ box, mode, onGone }: { box: Box; mode: SheetLight; onGone: () => void }) {
+  const { w, h } = box;
+  const GW = w * 1.4;
+  const GH = Math.min(400, Math.max(260, h * 0.62));
+  /* Where it rests while charging: its heart just under the foot of the sheet. */
+  const rest = h - GH * 0.58;
+  /* Where it ends: its heart pressed against the top. */
+  const out = -GH * 0.62;
+
+  const y = useSharedValue(h + 10);
+  const o = useSharedValue(0);
+  const s = useSharedValue(0.92);
+  const drift = useSharedValue(0.5);
+  /* Wide and low while it gathers at the foot; round once it shoots up. */
+  const flat = useSharedValue(1);
 
   useEffect(() => {
-    p.set(withTiming(1, { duration: 1150, easing: Easing.inOut(Easing.quad) }));
-    const t = setTimeout(onEnd, 1300);
-    return () => clearTimeout(t);
-    // Runs once per wave; the parent keys it by the wave's id.
+    if (mode === "charge") {
+      o.set(withTiming(1, { duration: 420 }));
+      y.set(withTiming(rest, { duration: 700, easing: Easing.out(Easing.cubic) }));
+      s.set(withRepeat(withSequence(withTiming(1.05, { duration: 900, easing: Easing.inOut(Easing.sin) }), withTiming(0.96, { duration: 900, easing: Easing.inOut(Easing.sin) })), -1, false));
+      drift.set(withRepeat(withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.sin) }), -1, true));
+      return;
+    }
+    if (mode === "launch") {
+      cancelAnimation(s);
+      cancelAnimation(drift);
+      drift.set(withTiming(0.5, { duration: 300 }));
+      flat.set(withTiming(0, { duration: 320, easing: Easing.out(Easing.quad) }));
+      s.set(withTiming(1.3, { duration: 420, easing: Easing.out(Easing.quad) }));
+      y.set(withTiming(out, { duration: 430, easing: Easing.in(Easing.quad) }));
+      o.set(withSequence(withTiming(1, { duration: 120 }), withDelay(300, withTiming(0, { duration: 650, easing: Easing.out(Easing.quad) }))));
+      const t = setTimeout(onGone, 1150);
+      return () => clearTimeout(t);
+    }
+    // onGone only ends it; rest and out follow the sheet measured when it began.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mode]);
 
-  const style = useAnimatedStyle(() => {
-    const v = p.get();
-    return {
-      opacity: v > 0.82 ? Math.max(0, (1 - v) / 0.18) : 1,
-      transform: [{ translateY: from + (to - from) * v }],
-    };
-  });
+  useEffect(
+    () => () => {
+      cancelAnimation(s);
+      cancelAnimation(drift);
+      cancelAnimation(y);
+      cancelAnimation(o);
+      cancelAnimation(flat);
+    },
+    [s, drift, y, o, flat],
+  );
+
+  const style = useAnimatedStyle(() => ({
+    opacity: o.get(),
+    transform: [
+      { translateY: y.get() },
+      { translateX: (drift.get() - 0.5) * 18 },
+      { scaleX: s.get() * (1 + 0.1 * flat.get()) },
+      { scaleY: s.get() * (1 - 0.24 * flat.get()) },
+    ],
+  }));
 
   return (
-    <Animated.View style={[{ position: "absolute", left: 0, top: 0, width: w, height: BH }, style]}>
-      <Svg width={w} height={BH}>
+    <Animated.View style={[{ position: "absolute", left: (w - GW) / 2, top: 0, width: GW, height: GH }, style]}>
+      <Svg width={GW} height={GH}>
         <Defs>
-          {/* The colour across the light: rose, lavender, periwinkle, sky. */}
-          <LinearGradient id="light-iris" x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor="#FBCFE8" />
-            <Stop offset="0.35" stopColor="#C4B5FD" />
-            <Stop offset="0.65" stopColor="#A5B4FC" />
-            <Stop offset="1" stopColor="#BAE6FD" />
-          </LinearGradient>
-          {/* How strongly it shows, top to bottom: a little ahead of the line, most at it, fading behind. */}
-          <LinearGradient id="light-fade" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#fff" stopOpacity={0} />
-            <Stop offset={String(EDGE / BH)} stopColor="#fff" stopOpacity={1} />
-            <Stop offset={String((EDGE + 60) / BH)} stopColor="#fff" stopOpacity={0.5} />
-            <Stop offset="1" stopColor="#fff" stopOpacity={0} />
-          </LinearGradient>
-          <Mask id="light-mask" x="0" y="0" width={w} height={BH} maskUnits="userSpaceOnUse">
-            <Rect x={0} y={0} width={w} height={BH} fill="url(#light-fade)" />
-          </Mask>
-          {/* The glow round the line itself. */}
-          <LinearGradient id="light-glow" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0} />
-            <Stop offset="0.5" stopColor="#FFFFFF" stopOpacity={0.75} />
-            <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0} />
-          </LinearGradient>
-          {/* The line, brightest across the middle. */}
-          <LinearGradient id="light-line" x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.55} />
-            <Stop offset="0.5" stopColor="#FFFFFF" stopOpacity={1} />
-            <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0.55} />
-          </LinearGradient>
+          <RadialGradient id="glow-violet" cx="50%" cy="50%" r="50%">
+            <Stop offset="0" stopColor="#8B5CF6" stopOpacity={0.85} />
+            <Stop offset="0.6" stopColor="#7C3AED" stopOpacity={0.32} />
+            <Stop offset="1" stopColor="#7C3AED" stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id="glow-orange" cx="50%" cy="50%" r="50%">
+            <Stop offset="0" stopColor="#FDBA74" stopOpacity={0.9} />
+            <Stop offset="0.6" stopColor="#FB923C" stopOpacity={0.32} />
+            <Stop offset="1" stopColor="#FB923C" stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id="glow-rose" cx="50%" cy="50%" r="50%">
+            <Stop offset="0" stopColor="#F9A8D4" stopOpacity={0.9} />
+            <Stop offset="0.6" stopColor="#EC4899" stopOpacity={0.28} />
+            <Stop offset="1" stopColor="#EC4899" stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id="glow-heart" cx="50%" cy="50%" r="50%">
+            <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.95} />
+            <Stop offset="0.5" stopColor="#FFE4F1" stopOpacity={0.6} />
+            <Stop offset="1" stopColor="#FFE4F1" stopOpacity={0} />
+          </RadialGradient>
         </Defs>
-        <Rect x={0} y={0} width={w} height={BH} fill="url(#light-iris)" opacity={0.62} mask="url(#light-mask)" />
-        <Rect x={0} y={EDGE - 16} width={w} height={32} fill="url(#light-glow)" opacity={0.85} />
-        <Rect x={0} y={EDGE - 1.5} width={w} height={3} fill="url(#light-line)" />
+        <Ellipse cx={GW * 0.3} cy={GH * 0.6} rx={GW * 0.34} ry={GH * 0.42} fill="url(#glow-violet)" />
+        <Ellipse cx={GW * 0.7} cy={GH * 0.56} rx={GW * 0.34} ry={GH * 0.42} fill="url(#glow-orange)" />
+        <Ellipse cx={GW * 0.5} cy={GH * 0.58} rx={GW * 0.3} ry={GH * 0.38} fill="url(#glow-rose)" />
+        <Ellipse cx={GW * 0.5} cy={GH * 0.62} rx={GW * 0.24} ry={GH * 0.26} fill="url(#glow-heart)" />
       </Svg>
     </Animated.View>
   );
