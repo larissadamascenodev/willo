@@ -5,6 +5,7 @@ import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "ex
 
 import { isLight, th } from "~/theme/theme";
 import { useGlassEpoch } from "~/lib/glassEpoch";
+import GlassLift from "~/components/GlassLift";
 
 /* The native glass on the light ground: a fine white rim and a soft shadow give it an
    edge, which the dark ground gives it for free. */
@@ -101,6 +102,7 @@ export default function Glass({
   if (NATIVE_GLASS) {
     return (
       <GlassView key={glassEpoch} glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={false} style={[shape, light && LIGHT_EDGE, style]}>
+        {!light && <GlassLift radius={radius} />}
         {children}
       </GlassView>
     );

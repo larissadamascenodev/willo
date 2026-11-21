@@ -5,6 +5,7 @@ import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
 import { isLight, th } from "~/theme/theme";
+import GlassLift from "~/components/GlassLift";
 
 /**
  * A piece of glass of any shape — a capsule holding two buttons, a pill with a word — made
@@ -74,6 +75,7 @@ export default function GlassShape({ radius, style, children }: { radius: number
         ]}
       >
         <GlassView key={epoch} glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={false} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: radius }} />
+        {!light && <GlassLift radius={radius} />}
         {children}
       </View>
     );
