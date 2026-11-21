@@ -9,8 +9,8 @@ import BottomSheet from "~/components/BottomSheet";
 import BankMark from "~/components/BankMark";
 import RaisedButton from "~/components/RaisedButton";
 import { isAhead, todayIso } from "~/components/registro/EntryForm";
-import { AccountSheet, Amount, DateSheet, Keypad, SmallChip, centsOf, dayShort, typeKey } from "~/components/registro/NewEntry";
-import { ArrowDown, CalendarDays, ChevronDown, X } from "~/components/icons";
+import { AccountSheet, Amount, DateSheet, Keypad, centsOf, dayShort, typeKey } from "~/components/registro/NewEntry";
+import { ArrowRight, CalendarDays, ChevronDown, ChevronRight, Clock, X } from "~/components/icons";
 import { money } from "~/lib/money";
 import { showToast } from "~/lib/toast";
 import { tallSheetBody } from "~/lib/sheetRoom";
@@ -19,15 +19,14 @@ import { INK, RED } from "~/theme/tokens";
 import { th } from "~/theme/theme";
 
 /**
- * Moving money between the person's own accounts, drawn as the "+" entry is drawn.
+ * Moving money between the person's own accounts, after Larissa's reference.
  *
- * At the top the two accounts, one over the other, with an arrow between them saying which way
- * the money goes: touching an account chooses another, touching the arrow turns it around. Each
- * shows what it holds and, once there is an amount, what it will hold afterwards. Under them the
- * amount, large, on the app's own number keys, with the day in the corner — a day ahead is
- * scheduled and moves nothing until it comes. Then the one button that does it.
- *
- * It is neither spending nor income: the money only changes place.
+ * The amount first, large, on the app's own number keys. Under it the two accounts side by side
+ * as cards with a dashed edge — where it leaves, where it goes (lit in green) — with an arrow
+ * between them: a touch on a card chooses another account, a touch on the arrow turns it
+ * around; each shows what it holds and, once there is an amount, what it will hold after. Then
+ * the details (the day — a day ahead is scheduled and moves nothing until it comes) and the one
+ * button that does it. It is neither spending nor income: the money only changes place.
  */
 
 interface Account {
@@ -132,14 +131,13 @@ export default function TransferSheet({ open, onClose, fromId: startFrom }: { op
     }
   };
 
-  const fieldH = compact ? 64 : 72;
-  const ARROW = 36;
+  const ARROW = 40;
 
   return (
     <BottomSheet open={open} onClose={onClose} full nearlyFull>
-      <View style={{ height: bodyH, paddingHorizontal: 10 }}>
+      <View style={{ height: bodyH, paddingHorizontal: 12 }}>
         {/* The top row: closing, and the name. */}
-        <View style={{ height: 48, paddingHorizontal: 6, flexDirection: "row", alignItems: "center" }}>
+        <View style={{ height: 48, paddingHorizontal: 4, flexDirection: "row", alignItems: "center" }}>
           <RaisedButton size={46} label="Fechar" onPress={onClose}>
             <X size={20} color={th("#fff")} strokeWidth={2.4} />
           </RaisedButton>
@@ -151,11 +149,20 @@ export default function TransferSheet({ open, onClose, fromId: startFrom }: { op
           <Text style={{ marginTop: 40, paddingHorizontal: 20, textAlign: "center", fontSize: 15, lineHeight: 21, color: th(INK.soft) }}>Para transferir, cadastre pelo menos duas contas.</Text>
         ) : (
           <>
-            {/* From, the arrow, to. */}
-            <View style={{ marginTop: 12, gap: 8 }}>
-              <AccountField caption="De" account={source} after={source ? Number(source.current_balance) - value : 0} showAfter={cents > 0} height={fieldH} onPress={() => setSheet("from")} />
-              <AccountField caption="Para" account={target} after={target ? Number(target.current_balance) + value : 0} showAfter={cents > 0} height={fieldH} onPress={() => setSheet("to")} />
-              {/* Between the two banks' marks, the way the money goes; a touch turns it around. */}
+            {/* The amount first, large. */}
+            <View style={{ marginTop: compact ? 4 : 10, alignItems: "center" }}>
+              <Amount raw={raw} income={false} size={compact ? 46 : 58} />
+              <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: th(error ? RED : INK.soft) }}>
+                {error ?? "Não conta como gasto nem como receita"}
+              </Text>
+            </View>
+
+            {/* The two accounts side by side, the way the money goes between them. */}
+            <View style={{ marginTop: compact ? 12 : 18, flexDirection: "row", alignItems: "center" }}>
+              <AccountCard caption="Sai de" account={source} after={source ? Number(source.current_balance) - value : 0} showAfter={cents > 0} compact={compact} onPress={() => setSheet("from")} />
+              <View style={{ width: 12 }} />
+              <AccountCard caption="Entra em" account={target} after={target ? Number(target.current_balance) + value : 0} showAfter={cents > 0} compact={compact} onPress={() => setSheet("to")} lit />
+              {/* Between them, the arrow; a touch turns it around. */}
               <Pressable
                 onPress={swap}
                 accessibilityRole="button"
@@ -163,49 +170,43 @@ export default function TransferSheet({ open, onClose, fromId: startFrom }: { op
                 hitSlop={6}
                 style={({ pressed }) => ({
                   position: "absolute",
-                  left: 14 + 21 - ARROW / 2,
-                  top: fieldH + 4 - ARROW / 2,
+                  left: "50%",
+                  marginLeft: -ARROW / 2,
                   width: ARROW,
                   height: ARROW,
                   borderRadius: ARROW / 2,
                   alignItems: "center",
                   justifyContent: "center",
                   borderWidth: 1,
-                  borderColor: th("rgba(255,255,255,0.16)", "line"),
+                  borderColor: th("rgba(255,255,255,0.18)", "line"),
                   backgroundColor: th("#1C1E23", "bg"),
                   transform: [{ scale: pressed ? 0.92 : 1 }],
                 })}
               >
                 <Animated.View style={arrowStyle}>
-                  <ArrowDown size={17} color={th("#fff")} strokeWidth={2.4} />
+                  <ArrowRight size={18} color={th("#fff")} strokeWidth={2.4} />
                 </Animated.View>
               </Pressable>
             </View>
 
-            {/* The amount, on the app's keys, with the day in the corner. */}
-            <View
-              style={{
-                flex: 1,
-                marginTop: 12,
-                padding: 12,
-                borderRadius: 34,
-                borderCurve: "continuous",
-                borderWidth: 1,
-                borderColor: th("rgba(255,255,255,0.08)", "line"),
-                backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
-              }}
-            >
-              <View style={{ height: 38, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <Text style={{ paddingLeft: 6, fontSize: 14, fontWeight: "600", color: th(INK.soft) }}>Valor</Text>
-                <SmallChip icon={CalendarDays} label={dayShort(date)} onPress={() => setSheet("date")} />
+            {/* The details. */}
+            <View style={{ marginTop: compact ? 8 : 12, paddingHorizontal: 6 }}>
+              <Pressable onPress={() => setSheet("date")} accessibilityRole="button" style={({ pressed }) => ({ height: compact ? 38 : 42, flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? 0.6 : 1 })}>
+                <CalendarDays size={17} color={th(INK.soft)} strokeWidth={2} />
+                <Text style={{ fontSize: 15, color: th(INK.soft) }}>Data</Text>
+                <Text style={{ marginLeft: "auto", fontSize: 15, fontWeight: "600", color: th("#fff") }}>{dayShort(date)}</Text>
+                <ChevronRight size={16} color={th(INK.softer)} strokeWidth={2.2} />
+              </Pressable>
+              <View style={{ height: compact ? 38 : 42, flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Clock size={17} color={th(INK.soft)} strokeWidth={2} />
+                <Text style={{ fontSize: 15, color: th(INK.soft) }}>Quando cai</Text>
+                <Text numberOfLines={1} style={{ marginLeft: "auto", flexShrink: 1, fontSize: 15, fontWeight: "600", color: th("#fff") }}>{ahead ? "No dia agendado" : "Na hora"}</Text>
               </View>
-              <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 6 }}>
-                <Amount raw={raw} income={false} size={compact ? 50 : 64} />
-                <Text numberOfLines={1} style={{ marginTop: 6, fontSize: 13, color: th(error ? RED : INK.soft) }}>
-                  {error ?? (ahead ? `Agendada para ${dayShort(date)} · o saldo muda nesse dia` : "Não conta como gasto nem como receita")}
-                </Text>
-              </View>
-              <Keypad rowH={compact ? 44 : 54} onKey={press} />
+            </View>
+
+            {/* The app's keys. */}
+            <View style={{ flex: 1, justifyContent: "flex-end" }}>
+              <Keypad rowH={compact ? 42 : 52} onKey={press} />
             </View>
 
             {/* The one button. */}
@@ -213,7 +214,7 @@ export default function TransferSheet({ open, onClose, fromId: startFrom }: { op
               onPress={() => void send()}
               disabled={!ready}
               style={({ pressed }) => ({
-                marginTop: 12,
+                marginTop: 10,
                 height: 56,
                 borderRadius: 28,
                 alignItems: "center",
@@ -223,7 +224,7 @@ export default function TransferSheet({ open, onClose, fromId: startFrom }: { op
               })}
             >
               <Text style={{ fontSize: 17, fontWeight: "700", color: th("#0B0B0B") }}>
-                {sending ? "Transferindo…" : cents > 0 ? `${ahead ? "Agendar" : "Confirmar"} ${money(value)}` : "Confirmar transferência"}
+                {sending ? "Transferindo…" : cents > 0 ? `${ahead ? "Agendar" : "Transferir"} ${money(value)}` : "Transferir"}
               </Text>
             </Pressable>
           </>
@@ -256,45 +257,48 @@ export default function TransferSheet({ open, onClose, fromId: startFrom }: { op
   );
 }
 
-/** One side of the transfer: the bank, its name, and what it holds — now, and after. */
-function AccountField({ caption, account, after, showAfter, height, onPress }: { caption: string; account: Account | null; after: number; showAfter: boolean; height: number; onPress: () => void }) {
+/**
+ * One side of the transfer, as a card with a dashed edge (the side the money goes to lit in
+ * green): the bank's mark, its name, and what it holds — now, or what it will hold after.
+ * A touch chooses another account.
+ */
+function AccountCard({ caption, account, after, showAfter, compact, onPress, lit }: { caption: string; account: Account | null; after: number; showAfter: boolean; compact: boolean; onPress: () => void; lit?: boolean }) {
   const now = account ? Number(account.current_balance) : 0;
+  const shown = showAfter ? after : now;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${caption}: ${account?.name ?? "escolher conta"}. Trocar`}
       style={({ pressed }) => ({
-        height,
-        flexDirection: "row",
+        flex: 1,
+        minWidth: 0,
         alignItems: "center",
-        gap: 12,
-        paddingLeft: 14,
-        paddingRight: 12,
-        borderRadius: 24,
-        borderCurve: "continuous",
-        borderWidth: 1,
-        borderColor: th("rgba(255,255,255,0.09)", "line"),
-        backgroundColor: th(pressed ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.05)", "bg"),
+        paddingVertical: compact ? 12 : 16,
+        paddingHorizontal: 10,
+        borderRadius: 22,
+        borderWidth: 1.5,
+        borderStyle: "dashed",
+        borderColor: th(lit ? "rgba(103,205,103,0.55)" : "rgba(255,255,255,0.22)", "line"),
+        backgroundColor: th(pressed ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.03)", "bg"),
       })}
     >
-      {account ? <BankMark name={account.name} hex={colorFor(account.name, account.color)} size={42} /> : <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: th("rgba(255,255,255,0.08)", "bg") }} />}
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ fontSize: 12.5, fontWeight: "600", color: th(INK.soft) }}>{caption}</Text>
-        <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 16.5, fontWeight: "700", color: th(account ? "#fff" : INK.soft) }}>
-          {account?.name ?? "Escolher conta"}
+      <Text style={{ fontSize: 12, fontWeight: "600", color: th(INK.soft) }}>{caption}</Text>
+      <View style={{ marginTop: 8 }}>
+        {account ? <BankMark name={account.name} hex={colorFor(account.name, account.color)} size={compact ? 36 : 42} /> : <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: th("rgba(255,255,255,0.08)", "bg") }} />}
+      </View>
+      <View style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 3, maxWidth: "100%" }}>
+        <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 16, fontWeight: "700", color: th(account ? "#fff" : INK.soft) }}>
+          {account?.name ?? "Escolher"}
         </Text>
+        <ChevronDown size={14} color={th(INK.softer)} strokeWidth={2.2} />
       </View>
       {account ? (
-        <View style={{ alignItems: "flex-end" }}>
-          <Text style={[nums, { fontSize: 12.5, color: th(INK.soft) }]}>{showAfter ? `Saldo ${money(now)}` : "Saldo"}</Text>
-          <Text style={[nums, { marginTop: 1, fontSize: 15.5, fontWeight: "700", color: th((showAfter ? after : now) < 0 ? RED : "#fff") }]}>
-            {showAfter ? <Text style={{ fontWeight: "500", color: th(INK.soft) }}>fica </Text> : null}
-            {money(showAfter ? after : now)}
-          </Text>
-        </View>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[nums, { marginTop: 3, fontSize: 12.5, color: th(shown < 0 ? RED : INK.soft) }]}>
+          {showAfter ? "fica " : "saldo "}
+          {money(shown)}
+        </Text>
       ) : null}
-      <ChevronDown size={16} color={th(INK.softer)} strokeWidth={2.2} />
     </Pressable>
   );
 }

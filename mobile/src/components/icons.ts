@@ -9,6 +9,7 @@
  * Add to this list as screens need them, and keep it alphabetical.
  */
 export { default as ArrowLeftRight } from "lucide-react-native/icons/arrow-left-right";
+export { default as ArrowRight } from "lucide-react-native/icons/arrow-right";
 export { default as ArrowDownUp } from "lucide-react-native/icons/arrow-down-up";
 export { default as CircleAlert } from "lucide-react-native/icons/circle-alert";
 export { default as ChevronRight } from "lucide-react-native/icons/chevron-right";

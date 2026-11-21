@@ -21,7 +21,7 @@ import { TransactionTabs, type TxTab } from "~/components/transactions/Transacti
 import MonthFlows from "~/components/transactions/MonthFlows";
 import { useHiddenValues } from "@/hooks/useHiddenValues";
 import TransactionSheet, { removeTransaction } from "~/components/transactions/TransactionSheet";
-import { CalendarClock, CheckCheck, Clock, Pencil, Search, SlidersHorizontal, Trash2, X } from "~/components/icons";
+import { CalendarClock, CheckCheck, ChevronLeft, Clock, Pencil, Search, SlidersHorizontal, Trash2, X } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { useNavChrome } from "~/lib/navChrome";
@@ -316,15 +316,11 @@ export default function Transacoes() {
           />
         }
       >
-        {/* The name, small and centred. */}
-        <View style={{ height: 44, alignItems: "center", justifyContent: "center" }}>
-          <Text accessibilityRole="header" numberOfLines={1} style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
-            Transações
-          </Text>
-        </View>
-
-        {/* The month in full, on the right, opening the months to choose from. */}
-        <View style={{ marginTop: 10, flexDirection: "row", justifyContent: "flex-end" }}>
+        {/* The top row: back to the start, and the month in full in the corner (no name). */}
+        <View style={{ height: 50, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <RaisedButton label="Voltar" onPress={goHome} size={50}>
+            <ChevronLeft size={24} color={th("#fff")} strokeWidth={2.4} />
+          </RaisedButton>
           <MonthSelect month={month} year={year} onChange={setMonth} />
         </View>
         <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 14 }}>

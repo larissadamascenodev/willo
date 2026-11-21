@@ -166,11 +166,8 @@ export default function FluxoDeCaixa() {
   return (
     <Room lit sky>
       <Animated.ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: insets.top + 74, paddingBottom: insets.bottom + 60, paddingHorizontal: 16 }}>
-        {/* The month in full, on the right, opening the months to choose from; under it, which money. */}
-        <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
-          <MonthSelect month={month} year={year} onChange={(m, y) => setShown({ month: m, year: y })} />
-        </View>
-        <View style={{ marginTop: 12, flexDirection: "row" }}>
+        {/* Which money. */}
+        <View style={{ flexDirection: "row" }}>
           <PeriodTabs value={view} options={VIEWS} onChange={setView} />
         </View>
 
@@ -233,15 +230,13 @@ export default function FluxoDeCaixa() {
         </View>
       </Animated.ScrollView>
 
-      {/* The top row: back and the page's name, centred. */}
+      {/* The top row: back, and the month in full in the corner (no name). */}
       <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, paddingTop: insets.top + 10, paddingHorizontal: 16, flexDirection: "row", alignItems: "center" }}>
         <RaisedButton label="Voltar" onPress={() => (router.canGoBack() ? router.back() : router.replace("/" as never))} size={50}>
           <ChevronLeft size={24} color={th("#fff")} strokeWidth={2.4} />
         </RaisedButton>
-        <Text numberOfLines={1} style={{ flex: 1, marginHorizontal: 8, textAlign: "center", fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
-          Fluxo de caixa
-        </Text>
-        <View style={{ width: 50 }} />
+        <View style={{ flex: 1 }} />
+        <MonthSelect month={month} year={year} onChange={(m, y) => setShown({ month: m, year: y })} />
       </View>
     </Room>
   );

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, Pressable, Text, View, type TextStyle } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -20,7 +20,7 @@ import BankMark from "~/components/BankMark";
 import RecentEntries from "~/components/transactions/RecentEntries";
 import { banksById, type EntryBank } from "~/components/transactions/WithBank";
 import { FlexBar } from "~/components/Bar";
-import { ArrowLeftRight, ChevronLeft, Eye, EyeOff, Landmark, Plus } from "~/components/icons";
+import { ArrowDownUp, ChevronLeft, Eye, EyeOff, Landmark, Plus } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { INK, RED } from "~/theme/tokens";
@@ -222,11 +222,17 @@ export default function Contas() {
           </>
         )}
 
-        {/* Moving money between them (once there are two), and adding one. */}
-        <View style={{ marginTop: 14, flexDirection: "row", gap: 10 }}>
-          {rows.length >= 2 && <PagePill label="Transferir" icon={<ArrowLeftRight size={18} color={th("#fff")} strokeWidth={2.4} />} onPress={() => setMoving(true)} />}
-          <PagePill label="Adicionar conta" icon={<Plus size={18} color={th("#fff")} strokeWidth={2.4} />} onPress={() => setAdding(true)} />
-        </View>
+        {/* Adding one: a line like an account's, its mark a dashed circle. */}
+        <Pressable
+          onPress={() => setAdding(true)}
+          accessibilityRole="button"
+          style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 4, paddingVertical: 12, opacity: pressed ? 0.6 : 1 })}
+        >
+          <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderStyle: "dashed", borderColor: th("rgba(255,255,255,0.28)", "line") }}>
+            <Plus size={20} color={th("rgba(255,255,255,0.75)")} strokeWidth={2.2} />
+          </View>
+          <Text style={{ fontSize: 16, fontWeight: "600", color: th(INK.soft) }}>Adicionar conta</Text>
+        </Pressable>
 
         {/* The latest entries, as the card's statement lists them. */}
         {latest.length > 0 && (
@@ -244,7 +250,14 @@ export default function Contas() {
         <Text numberOfLines={1} style={{ flex: 1, marginHorizontal: 10, textAlign: "center", fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
           Contas
         </Text>
-        <View style={{ width: 50 }} />
+        {/* Moving money between them, once there are two. */}
+        {rows.length >= 2 ? (
+          <RaisedButton label="Transferir entre contas" onPress={() => setMoving(true)} size={50}>
+            <ArrowDownUp size={21} color={th("#fff")} strokeWidth={2.4} />
+          </RaisedButton>
+        ) : (
+          <View style={{ width: 50 }} />
+        )}
       </View>
 
       <TransferSheet open={moving} onClose={() => setMoving(false)} />
@@ -264,30 +277,3 @@ export default function Contas() {
   );
 }
 
-/** One of the page's actions, as a pill of glass sharing the row. */
-function PagePill({ label, icon, onPress }: { label: string; icon: ReactNode; onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      style={({ pressed }) => ({
-        flex: 1,
-        height: 54,
-        borderRadius: 27,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 8,
-        borderWidth: 1,
-        borderColor: th("rgba(255,255,255,0.10)", "line"),
-        backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
-        opacity: pressed ? 0.7 : 1,
-      })}
-    >
-      {icon}
-      <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "600", color: th("#fff") }}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
