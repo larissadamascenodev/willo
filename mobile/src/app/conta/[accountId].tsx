@@ -24,6 +24,7 @@ import ConfirmGlass from "~/components/ConfirmGlass";
 import { showToast } from "~/lib/toast";
 import GastosPorCategoria from "~/components/home/GastosPorCategoria";
 import CenterModal from "~/components/CenterModal";
+import GlassListSheet from "~/components/GlassListSheet";
 import FluxoPanel from "~/components/financeiro/FluxoPanel";
 import SpendRing from "~/components/analytics/SpendRing";
 import { TopSpendRow } from "~/components/analytics/CategoryViews";
@@ -380,7 +381,7 @@ export default function ContaDetalhe() {
       </CenterModal>
 
       {/* ── Everything that has gone through it ── */}
-      <CenterModal
+      <GlassListSheet
         open={movesOpen}
         onClose={() => {
           setMovesOpen(false);
@@ -408,7 +409,7 @@ export default function ContaDetalhe() {
             )}
           </>
         )}
-      </CenterModal>
+      </GlassListSheet>
 
       {/* ── What you can do to the account ── */}
       <AnchoredMenu open={!!menu} anchor={menu} onClose={() => setMenu(null)}>

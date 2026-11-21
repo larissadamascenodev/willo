@@ -5,6 +5,7 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-g
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
+import GlassShape from "~/components/GlassShape";
 import SparkleLayer from "~/components/SparkleLayer";
 import WaveLayer from "~/components/WaveLayer";
 import { TALL_GAP } from "~/lib/sheetRoom";
@@ -41,6 +42,10 @@ import { isLight, th } from "~/theme/theme";
  */
 
 const EXIT_MS = 240;
+/* A glass sheet floats this far off the sides and the foot, its corners close to the phone's own. */
+const FLOAT = 8;
+const GLASS_RADIUS = 38;
+
 /** How far, or how fast, a pull has to go to send the sheet away. */
 const DISMISS_DISTANCE = 110;
 const DISMISS_VELOCITY = 900;
@@ -55,6 +60,7 @@ export default function BottomSheet({
   above,
   tint,
   nearlyFull = false,
+  glass = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -67,6 +73,9 @@ export default function BottomSheet({
   tint?: string;
   /** Up to just under the status bar, nearly the whole screen (see `tallSheetBody` in lib/sheetRoom). */
   nearlyFull?: boolean;
+  /** One piece of Liquid Glass floating a little off the edges, rounded all round, as the
+      phone's own sheets now are — instead of a blurred slab from edge to edge. */
+  glass?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -190,23 +199,35 @@ export default function BottomSheet({
         style={[
           {
             position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: lift,
+            left: glass ? FLOAT : 0,
+            right: glass ? FLOAT : 0,
+            bottom: lift + (glass ? FLOAT : 0),
             /* Never up under the status bar, however tall the content. */
             maxHeight: nearlyFull ? height - insets.top - TALL_GAP - lift : Math.min(full ? height * 0.92 : height * 0.72, height - insets.top - 16 - lift),
-            borderTopLeftRadius: 30,
-            borderTopRightRadius: 30,
+            borderTopLeftRadius: glass ? GLASS_RADIUS : 30,
+            borderTopRightRadius: glass ? GLASS_RADIUS : 30,
+            borderBottomLeftRadius: glass ? GLASS_RADIUS : 0,
+            borderBottomRightRadius: glass ? GLASS_RADIUS : 0,
             borderCurve: "continuous",
             overflow: "hidden",
             paddingTop: 10,
-            paddingBottom: lift > 0 ? 12 : insets.bottom + 16,
+            paddingBottom: lift > 0 ? 12 : glass ? Math.max(insets.bottom - FLOAT, 0) + 12 : insets.bottom + 16,
           },
           rise,
         ]}
       >
-        <BlurView intensity={isLight() ? 90 : 60} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-        <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: isLight() ? "rgba(246,247,249,0.78)" : "rgba(18,20,26,0.38)" }} />
+        {glass ? (
+          <>
+            <GlassShape radius={GLASS_RADIUS} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+            {/* A light film, so lines of text read the same over whatever the glass bends. */}
+            <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: isLight() ? "rgba(246,247,249,0.35)" : "rgba(14,16,20,0.3)" }} />
+          </>
+        ) : (
+          <>
+            <BlurView intensity={isLight() ? 90 : 60} tint={th("dark", "tint")} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+            <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: isLight() ? "rgba(246,247,249,0.78)" : "rgba(18,20,26,0.38)" }} />
+          </>
+        )}
         {tint && /^#[0-9a-f]{6}$/i.test(tint) && (
           <LinearGradient
             pointerEvents="none"

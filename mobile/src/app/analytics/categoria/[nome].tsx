@@ -12,7 +12,7 @@ import { categoryHex } from "@/lib/categoryData";
 import Room from "~/components/Room";
 import RaisedButton from "~/components/RaisedButton";
 import Surface from "~/components/Surface";
-import CenterModal from "~/components/CenterModal";
+import GlassListSheet from "~/components/GlassListSheet";
 import RecentEntries, { EntryRow } from "~/components/transactions/RecentEntries";
 import { bankOf, banksById, type EntryBank } from "~/components/transactions/WithBank";
 import BottomSheet from "~/components/BottomSheet";
@@ -329,7 +329,7 @@ export default function CategoriaDetalhe() {
         </View>
       </BottomSheet>
 
-      <CenterModal open={allOpen} onClose={() => setAllOpen(false)} title={category} subtitle={`${MONTHS[month]} · ${txs.length} ${txs.length === 1 ? "gasto" : "gastos"}`}>
+      <GlassListSheet open={allOpen} onClose={() => setAllOpen(false)} title={category} subtitle={`${MONTHS[month]} · ${txs.length} ${txs.length === 1 ? "gasto" : "gastos"}`}>
         {txs.map((t) => (
           <EntryRow
             key={t.id}
@@ -342,7 +342,7 @@ export default function CategoriaDetalhe() {
             }}
           />
         ))}
-      </CenterModal>
+      </GlassListSheet>
 
       <TransactionSheet
         tx={opened as never}
