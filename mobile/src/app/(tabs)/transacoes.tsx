@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { removeInitialBalance } from "@/services/transactionService";
 import { loadMonthTransactions, type AccountRow, type TransactionRow as Row } from "@/services/monthTransactions";
-import MonthPill from "~/components/transactions/MonthPill";
+import MonthSelect from "~/components/transactions/MonthSelect";
 import RaisedButton from "~/components/RaisedButton";
 import type { CustomCategory } from "@/services/categoryService";
 import { useFinanceData } from "@/hooks/useFinanceData";
@@ -316,31 +316,22 @@ export default function Transacoes() {
           />
         }
       >
-        {/* The name centred, the month as a small pill of glass in the corner. */}
-        <View style={{ height: 44, flexDirection: "row", alignItems: "center" }}>
-          <View style={{ width: 118 }} />
-          <Text accessibilityRole="header" numberOfLines={1} style={{ flex: 1, textAlign: "center", fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
+        {/* The name, small and centred. */}
+        <View style={{ height: 44, alignItems: "center", justifyContent: "center" }}>
+          <Text accessibilityRole="header" numberOfLines={1} style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
             Transações
           </Text>
-          <View style={{ width: 118, alignItems: "flex-end" }}>
-            <MonthPill compact month={month} year={year} onChange={setMonth} />
-          </View>
         </View>
 
-        {/* The eye, with the figures it hides. */}
-        <View style={{ marginTop: 18, flexDirection: "row", justifyContent: "flex-end" }}>
+        {/* The month in full, opening the months to choose from; the eye, with the figures it hides. */}
+        <View style={{ marginTop: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <MonthSelect month={month} year={year} onChange={setMonth} />
           <Pressable onPress={() => setHiddenValues(!hidden)} hitSlop={12} accessibilityRole="button" accessibilityLabel={hidden ? "Mostrar valores" : "Esconder valores"} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
             {hidden ? <EyeOff size={19} color={th(INK.soft)} strokeWidth={2} /> : <Eye size={19} color={th(INK.soft)} strokeWidth={2} />}
           </Pressable>
         </View>
-        <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 4 }}>
-          <MonthFlows
-            entrou={finance.receitasRecebidas}
-            saiu={finance.despesasPagas}
-            aPagar={Math.max(0, finance.despesas - finance.despesasPagas)}
-            aReceber={Math.max(0, finance.receitas - finance.receitasRecebidas)}
-            hidden={hidden}
-          />
+        <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 22 }}>
+          <MonthFlows receitas={finance.receitas} recebido={finance.receitasRecebidas} despesas={finance.despesas} pago={finance.despesasPagas} hidden={hidden} />
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(70).duration(400)} style={{ marginTop: 26, flexDirection: "row", alignItems: "center", gap: 10 }}>
