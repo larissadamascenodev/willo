@@ -14,6 +14,7 @@ import { type as T } from "~/theme/type";
 
 import { th } from "~/theme/theme";
 import { outlinedInk } from "~/components/StatusTag";
+import WithBank, { type EntryBank } from "~/components/transactions/WithBank";
 /**
  * One movement, written on the page.
  *
@@ -30,6 +31,7 @@ const hexFor = (color: string | null | undefined, fallback: string) =>
 export default function TransactionRow({
   tx,
   accountName,
+  bank,
   customCategories,
   creditCards,
   onPress,
@@ -37,6 +39,8 @@ export default function TransactionRow({
 }: {
   tx: Row;
   accountName?: string;
+  /** The account or card it went through, drawn on the corner of its mark. */
+  bank?: EntryBank | null;
   customCategories?: CustomCategory[];
   creditCards?: any[];
   onPress?: () => void;
@@ -99,7 +103,8 @@ export default function TransactionRow({
         backgroundColor: th(pressed ? "#0A0B0D" : "transparent", "bg"),
       })}
     >
-      {/* A known shop's own logo; otherwise its category's mark. */}
+      {/* A known shop's own logo; otherwise its category's mark. The bank on its corner. */}
+      <WithBank bank={bank} size={44}>
       {!isFatura && !isInitialBalance && knownSub(tx.name) ? (
         <SubLogo name={tx.name} size={44} round />
       ) : (
@@ -116,6 +121,7 @@ export default function TransactionRow({
           <Icon size={18} color={th(chipInk(discHex))} />
         </View>
       )}
+      </WithBank>
 
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>

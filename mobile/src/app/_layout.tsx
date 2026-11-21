@@ -350,6 +350,7 @@ function Door() {
         <Stack.Screen name="categorias" />
         <Stack.Screen name="metas/[goalId]" />
         <Stack.Screen name="fluxo-de-caixa" />
+        <Stack.Screen name="balanco" />
         <Stack.Screen name="analytics/categorias" />
         <Stack.Screen name="analytics/categoria/[nome]" />
         <Stack.Screen name="perfil" />

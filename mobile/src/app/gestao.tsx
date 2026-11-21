@@ -18,6 +18,7 @@ import RaisedButton from "~/components/RaisedButton";
 import Surface from "~/components/Surface";
 import BankMark from "~/components/BankMark";
 import RecentEntries from "~/components/transactions/RecentEntries";
+import { banksById, type EntryBank } from "~/components/transactions/WithBank";
 import { FlexBar } from "~/components/Bar";
 import { ArrowLeftRight, ChevronLeft, Eye, EyeOff, Landmark, Plus } from "~/components/icons";
 import { money } from "~/lib/money";
@@ -117,6 +118,7 @@ export default function Contas() {
   /* The month's latest entries, as Transações lists them. */
   const [latest, setLatest] = useState<Row[]>([]);
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
+  const [banks, setBanks] = useState<Record<string, EntryBank>>({});
   useEffect(() => {
     if (!user) return;
     let alive = true;
@@ -132,6 +134,7 @@ export default function Contas() {
               .slice(0, LATEST),
           );
           setCustomCats(m.customCategories);
+          setBanks(banksById(m.accounts, m.creditCards as { id: string; name: string; color?: string | null }[]));
         })
         .catch(() => undefined);
     void read();
@@ -228,7 +231,7 @@ export default function Contas() {
         {/* The latest entries, as the card's statement lists them. */}
         {latest.length > 0 && (
           <View style={{ marginTop: 32 }}>
-            <RecentEntries items={latest} customCats={customCats} hidden={hidden} onOpen={() => router.push("/transacoes" as never)} onSeeAll={() => router.push("/transacoes" as never)} />
+            <RecentEntries items={latest} banks={banks} customCats={customCats} hidden={hidden} onOpen={() => router.push("/transacoes" as never)} onSeeAll={() => router.push("/transacoes" as never)} />
           </View>
         )}
       </Animated.ScrollView>

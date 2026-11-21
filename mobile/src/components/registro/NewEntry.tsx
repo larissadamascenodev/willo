@@ -112,7 +112,7 @@ const KEYS = [
 ];
 
 /** "1250,5" → 125050. */
-function centsOf(raw: string) {
+export function centsOf(raw: string) {
   const [i, d = ""] = raw.split(",");
   return Number(i || "0") * 100 + Number(`${d}00`.slice(0, 2));
 }
@@ -130,7 +130,7 @@ const ABOVE_FLOOR = 13;
 const grouped = (i: string) => i.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 const capital = (s: string) => s.replace(/^./, (c) => c.toUpperCase());
 
-function dayShort(iso: string) {
+export function dayShort(iso: string) {
   if (iso === todayIso()) return "Hoje";
   if (iso === yesterdayIso()) return "Ontem";
   const d = new Date(`${iso}T12:00:00`);
@@ -240,15 +240,7 @@ export default function NewEntry({
   const press = (key: string) => {
     tick();
     setError(null);
-    setRaw((r) => {
-      if (key === "clear") return "";
-      if (key === "del") return r.slice(0, -1);
-      if (key === ",") return r.includes(",") ? r : r === "" ? "0," : `${r},`;
-      const [i, d] = r.split(",");
-      if (d !== undefined) return d.length >= 2 ? r : r + key;
-      if (i === "0" || i === "") return key === "0" && i === "0" ? r : key;
-      return i.length >= 9 ? r : r + key;
-    });
+    setRaw((r) => typeKey(r, key));
   };
 
   /* ── What it was: the category from the words, as they are typed ── */
@@ -1062,7 +1054,7 @@ function AccountChip({ option, caption, placeholder, onPress, disabled }: { opti
   );
 }
 
-function SmallChip({ icon: Icon, iconColor, label, onPress, disabled }: { icon: IconC; iconColor?: string; label: string; onPress: () => void; disabled?: boolean }) {
+export function SmallChip({ icon: Icon, iconColor, label, onPress, disabled }: { icon: IconC; iconColor?: string; label: string; onPress: () => void; disabled?: boolean }) {
   return (
     <Pressable
       onPress={() => {
@@ -1176,7 +1168,18 @@ function PaidTag({ on, label, disabled, onToggle }: { on: boolean; label: string
 }
 
 /** "R$ 1.250,50" as typed, the cents filled in; faint only while nothing is typed. */
-function Amount({ raw, income, size }: { raw: string; income: boolean; size: number }) {
+/** One key of the app's number keys, applied to what has been typed so far ("1250,5"). */
+export function typeKey(r: string, key: string) {
+  if (key === "clear") return "";
+  if (key === "del") return r.slice(0, -1);
+  if (key === ",") return r.includes(",") ? r : r === "" ? "0," : `${r},`;
+  const [i, d] = r.split(",");
+  if (d !== undefined) return d.length >= 2 ? r : r + key;
+  if (i === "0" || i === "") return key === "0" && i === "0" ? r : key;
+  return i.length >= 9 ? r : r + key;
+}
+
+export function Amount({ raw, income, size }: { raw: string; income: boolean; size: number }) {
   const [i, d] = raw.split(",");
   const empty = raw === "";
   const ink = th(empty ? "rgba(255,255,255,0.32)" : income ? INCOME : "#fff");
@@ -1194,7 +1197,7 @@ function Amount({ raw, income, size }: { raw: string; income: boolean; size: num
 }
 
 /** The numbers on the sheet itself: no boxes; a soft light under a key only while pressed. */
-function Keypad({ rowH, onKey }: { rowH: number; onKey: (k: string) => void }) {
+export function Keypad({ rowH, onKey }: { rowH: number; onKey: (k: string) => void }) {
   const ink = th("#fff");
   const pressFill = th("rgba(255,255,255,0.09)", "bg");
   return (
@@ -1622,7 +1625,7 @@ function CheckDot({ on }: { on: boolean }) {
 }
 
 /** "Selecionar conta": Débito or Crédito for a purchase, then the accounts or the cards. */
-function AccountSheet({
+export function AccountSheet({
   open,
   title,
   method,
@@ -1702,7 +1705,7 @@ function AccountSheet({
   );
 }
 
-function DateSheet({ open, value, onPick, onClose }: { open: boolean; value: string; onPick: (iso: string) => void; onClose: () => void }) {
+export function DateSheet({ open, value, onPick, onClose }: { open: boolean; value: string; onPick: (iso: string) => void; onClose: () => void }) {
   const [cal, setCal] = useState(() => {
     const d = new Date(`${value}T12:00:00`);
     return { m: d.getMonth(), y: d.getFullYear() };

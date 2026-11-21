@@ -4,6 +4,7 @@ import type { CustomCategory } from "@/services/categoryService";
 import { categoryHex } from "@/lib/categoryData";
 import SubLogo from "~/components/SubLogo";
 import { ArrowLeftRight, Receipt } from "~/components/icons";
+import WithBank, { bankOf, type EntryBank } from "~/components/transactions/WithBank";
 import { knownSub } from "~/lib/subscriptionLogos";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
@@ -35,6 +36,9 @@ export interface RecentEntry {
   installment_current?: number | null;
   /** A transfer's destination. */
   to_account_id?: string | null;
+  account_id?: string | null;
+  credit_card_id?: string | null;
+  payment_method?: string | null;
 }
 
 export default function RecentEntries({
@@ -45,8 +49,11 @@ export default function RecentEntries({
   onSeeAll,
   empty = "Nada por aqui neste mês",
   accountId,
+  banks,
 }: {
   items: RecentEntry[];
+  /** Every account and card by id: each entry shows the bank it went through on its mark. */
+  banks?: Record<string, EntryBank>;
   customCats?: CustomCategory[];
   hidden?: boolean;
   /** The list is one account's: a transfer into it reads as money in. */
@@ -68,7 +75,7 @@ export default function RecentEntries({
         <View style={{ marginTop: 6 }}>
           {items.map((entry, i) => (
             <Animated.View key={entry.id} entering={FadeInDown.delay(40 + i * 35).duration(260)}>
-              <EntryRow entry={entry} customCats={customCats} hidden={hidden} accountId={accountId} onPress={onOpen ? () => onOpen(entry) : undefined} />
+              <EntryRow entry={entry} customCats={customCats} hidden={hidden} accountId={accountId} bank={bankOf(entry, banks)} onPress={onOpen ? () => onOpen(entry) : undefined} />
             </Animated.View>
           ))}
         </View>
@@ -97,7 +104,21 @@ export default function RecentEntries({
 }
 
 /** One entry, as a line of the card's statement. */
-export function EntryRow({ entry, customCats, hidden, accountId, onPress }: { entry: RecentEntry; customCats?: CustomCategory[]; hidden?: boolean; accountId?: string; onPress?: () => void }) {
+export function EntryRow({
+  entry,
+  customCats,
+  hidden,
+  accountId,
+  bank,
+  onPress,
+}: {
+  entry: RecentEntry;
+  customCats?: CustomCategory[];
+  hidden?: boolean;
+  accountId?: string;
+  bank?: EntryBank | null;
+  onPress?: () => void;
+}) {
   const transfer = entry.type === "transferencia";
   const income = entry.type === "receita" || (transfer && !!accountId && entry.to_account_id === accountId);
   const hex = transfer ? "#9CA3AF" : categoryHex(entry.category, customCats);
@@ -112,13 +133,15 @@ export function EntryRow({ entry, customCats, hidden, accountId, onPress }: { en
 
   return (
     <Pressable onPress={onPress} disabled={!onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}>
-      {!income && !transfer && knownSub(entry.name) ? (
-        <SubLogo name={entry.name} size={46} round />
-      ) : (
-        <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
-          <Icon size={20} color={th(chipInk(hex))} strokeWidth={2} />
-        </View>
-      )}
+      <WithBank bank={bank} size={46}>
+        {!income && !transfer && knownSub(entry.name) ? (
+          <SubLogo name={entry.name} size={46} round />
+        ) : (
+          <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
+            <Icon size={20} color={th(chipInk(hex))} strokeWidth={2} />
+          </View>
+        )}
+      </WithBank>
 
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>

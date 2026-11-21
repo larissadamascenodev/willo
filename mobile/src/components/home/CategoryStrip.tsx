@@ -54,8 +54,8 @@ export default function CategoryStrip({
 
   const sorted = useMemo(() => [...categories].filter((c) => c.amount > 0).sort((a, b) => b.amount - a.amount), [categories]);
   const total = sorted.reduce((s, c) => s + c.amount, 0);
-  /* The heading opens the month's spending: the total, where it went, the categories. */
-  const open = () => router.push("/gastos" as never);
+  /* The heading opens every category's spending (Gastos do mês has a card of its own). */
+  const open = () => router.push("/analytics/categorias" as never);
 
   return (
     <View>

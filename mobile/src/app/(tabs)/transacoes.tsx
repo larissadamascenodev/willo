@@ -16,6 +16,7 @@ import { showToast } from "~/lib/toast";
 import { behind, listenOptimistic, overlay, showNow, type OptimisticChange } from "~/lib/optimistic";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import TransactionRow from "~/components/transactions/TransactionRow";
+import { bankOf, banksById } from "~/components/transactions/WithBank";
 import { TransactionTabs, type TxTab } from "~/components/transactions/TransactionsSummary";
 import MonthFlows from "~/components/transactions/MonthFlows";
 import { setHiddenValues, useHiddenValues } from "@/hooks/useHiddenValues";
@@ -227,6 +228,7 @@ export default function Transacoes() {
     for (const a of accounts) map[a.id] = a.name;
     return map;
   }, [accounts]);
+  const banks = useMemo(() => banksById(accounts, creditCards), [accounts, creditCards]);
 
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const filtered = useMemo(
@@ -259,6 +261,7 @@ export default function Transacoes() {
       key={tx.id}
       tx={tx}
       accountName={tx.account_id ? accountName[tx.account_id] : undefined}
+      bank={bankOf(tx, banks)}
       customCategories={customCategories}
       creditCards={creditCards}
       onPress={() => {

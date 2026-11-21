@@ -178,7 +178,7 @@ function HomeScreen() {
       /* In the app's quiet colours: the marks white, only the count lit. */
       { key: "hoje", label: "Hoje", Icon: Sun, tone: "#FFFFFF", onPress: () => router.push("/resumo" as never) },
       { key: "contas", label: "Contas a pagar", Icon: CalendarClock, tone: "#FFFFFF", badge: billsOpen, onPress: () => router.push("/eventos" as never) },
-      { key: "balanco", label: "Balanço", Icon: Scale, tone: "#FFFFFF", onPress: () => router.push("/fluxo-de-caixa" as never) },
+      { key: "balanco", label: "Balanço", Icon: Scale, tone: "#FFFFFF", onPress: () => router.push("/balanco" as never) },
       { key: "caixinhas", label: "Caixinhas", Icon: PiggyBank, tone: "#FFFFFF", onPress: () => router.push("/caixinhas" as never) },
       { key: "jornada", label: "Jornada", Icon: Flag, tone: "#FFFFFF", onPress: () => router.push("/jornada" as never) },
     ],

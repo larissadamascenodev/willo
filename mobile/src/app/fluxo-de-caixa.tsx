@@ -16,6 +16,7 @@ import Room from "~/components/Room";
 import RaisedButton from "~/components/RaisedButton";
 import MonthPill from "~/components/transactions/MonthPill";
 import RecentEntries from "~/components/transactions/RecentEntries";
+import { banksById, type EntryBank } from "~/components/transactions/WithBank";
 import { PeriodTabs } from "~/components/charts/PageCharts";
 import { ChevronLeft, Eye, EyeOff } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
@@ -100,6 +101,7 @@ export default function FluxoDeCaixa() {
   /* The month's entries, as Transações lists them, for the latest ones under the chart. */
   const [rows, setRows] = useState<Row[]>([]);
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
+  const [banks, setBanks] = useState<Record<string, EntryBank>>({});
   useEffect(() => {
     if (!user) return;
     let alive = true;
@@ -109,6 +111,7 @@ export default function FluxoDeCaixa() {
           if (!alive) return;
           setRows(m.transactions);
           setCustomCats(m.customCategories);
+          setBanks(banksById(m.accounts, m.creditCards as { id: string; name: string; color?: string | null }[]));
         })
         .catch(() => undefined);
     void load();
@@ -228,6 +231,7 @@ export default function FluxoDeCaixa() {
         <View style={{ marginTop: 26 }}>
           <RecentEntries
             items={latest}
+            banks={banks}
             customCats={customCats}
             hidden={hidden}
             onOpen={() => router.push("/transacoes" as never)}
