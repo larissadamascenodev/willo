@@ -1,9 +1,8 @@
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Platform, Text, View, type TextStyle } from "react-native";
 import { useRouter } from "expo-router";
-import Animated, { Easing, ReduceMotion, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, ReduceMotion, useAnimatedProps, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import Svg, { Circle } from "react-native-svg";
-import { LinearGradient } from "expo-linear-gradient";
 import type { CategoryExpense, FinanceEvent } from "@/types/finance";
 import { categoryHex } from "@/lib/categoryData";
 import Surface from "~/components/Surface";
@@ -28,15 +27,6 @@ const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }
 const HEIGHT = 208;
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
-/** The money in compact form: "R$ 2,8 mil", so it fits inside a ring. */
-function short(v: number) {
-  const a = Math.abs(v);
-  const sign = v < 0 ? "−" : "";
-  if (a >= 1_000_000) return `${sign}R$ ${(a / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
-  if (a >= 10_000) return `${sign}R$ ${(a / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`;
-  return `${sign}${money(a)}`;
-}
 
 /** One coloured stretch of a ring, drawn round from the top when the card arrives. */
 function Arc({ size, stroke, start, share, color, delay }: { size: number; stroke: number; start: number; share: number; color: string; delay: number }) {
@@ -95,66 +85,66 @@ function Head({ label }: { label: string }) {
 }
 
 /**
- * Receitas e despesas, small: what came in and what went out, each large, then the two as
- * thick bars on one scale, and the month's balance at the foot.
+ * Receitas e despesas, small, in the same hand as Gastos do mês: the name in small spaced
+ * capitals, what the month left (or what it lacked, in red) large, then what came in and what
+ * went out, each with its figure and a rule of thin bars on one scale — green for in, red for
+ * out, the rest of the rule in grey. A touch opens Fluxo de caixa.
  */
-export function FluxoCompact({ receitas, despesas }: { receitas: number; despesas: number }) {
+export function FluxoCompact({ receitas, despesas, hidden }: { receitas: number; despesas: number; hidden?: boolean }) {
   const router = useRouter();
+  const [w, setW] = useState(0);
   const scale = Math.max(receitas, despesas, 1);
-  return (
-    <Surface onPress={() => router.push("/fluxo-de-caixa" as never)} style={{ height: HEIGHT, padding: 14 }}>
-      <View style={{ flex: 1, justifyContent: "space-between" }}>
-        <Head label="Receitas e despesas" />
+  const net = receitas - despesas;
+  const show = (v: number) => (hidden ? "R$ •••" : money(v));
+  const count = w > 0 ? Math.max(12, Math.floor((w + TICK_GAP) / (TICK_W + TICK_GAP))) : 0;
 
-        {/* Each figure with its own bar right under it, on one scale. */}
-        <View style={{ gap: 16, marginBottom: 6 }}>
-          <View style={{ gap: 6 }}>
-            <Figure label="Entrou" value={short(receitas)} color={GREEN} />
-            <Meter share={receitas / scale} color={GREEN} delay={0} />
-          </View>
-          <View style={{ gap: 6 }}>
-            <Figure label="Saiu" value={short(despesas)} color={RED} />
-            <Meter share={despesas / scale} color={RED} delay={90} />
-          </View>
-        </View>
+  return (
+    <Surface onPress={() => router.push("/fluxo-de-caixa" as never)} style={{ height: HEIGHT, paddingHorizontal: 14, paddingTop: 15, paddingBottom: 14 }}>
+      <Text numberOfLines={1} style={[T.eyebrow, { color: th(INK.soft) }]}>
+        Fluxo do mês
+      </Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[T.figure, { marginTop: 6, fontSize: 24, letterSpacing: -0.8, color: th(net < 0 ? RED : "#fff") }]}>
+        {net < 0 && !hidden ? "−" : ""}
+        {show(Math.abs(net))}
+      </Text>
+      <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: th(INK.soft) }}>
+        {net < 0 ? "faltou no mês" : "sobrou no mês"}
+      </Text>
+
+      {/* What came in and what went out, each on its own rule, one scale for both. */}
+      <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ marginTop: "auto", gap: 12 }}>
+        <FlowRule label="Entrou" value={show(receitas)} share={receitas / scale} color={GREEN} count={count} delay={80} />
+        <FlowRule label="Saiu" value={hidden ? "R$ •••" : `−${money(despesas)}`} share={despesas / scale} color={RED} count={count} delay={160} />
       </View>
     </Surface>
   );
 }
 
-function Figure({ label, value, color }: { label: string; value: string; color: string }) {
+/* The compact cards' rules: thin bars, evenly spaced across the card. */
+const TICK_W = 3;
+const TICK_GAP = 3.5;
+
+/** One side of the month: its name and figure, and a rule of thin bars filled to its share. */
+function FlowRule({ label, value, share, color, count, delay }: { label: string; value: string; share: number; color: string; count: number; delay: number }) {
+  const filled = Math.round(Math.max(0, Math.min(1, share)) * count);
   return (
     <View>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-        <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: th(color, "bg") }} />
-        <Text style={{ fontSize: 12, color: th(INK.soft) }}>{label}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <View style={{ width: 3, height: 11, borderRadius: 1.5, backgroundColor: th(color, "bg") }} />
+        <Text style={{ fontSize: 12.5, fontWeight: "500", color: th(INK.soft) }}>{label}</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[nums, { flex: 1, textAlign: "right", fontSize: 12.5, fontWeight: "700", color: th(color === RED ? RED : "#fff") }]}>
+          {value}
+        </Text>
       </View>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[nums, { marginTop: 1, fontSize: 20, fontWeight: "800", letterSpacing: -0.6, color: th(color === RED ? RED : "#fff") }]}>
-        {color === RED ? "−" : ""}
-        {value}
-      </Text>
-    </View>
-  );
-}
-
-/** A thick bar that grows into its share when the card arrives. */
-function Meter({ share, color, delay }: { share: number; color: string; delay: number }) {
-  const grow = useSharedValue(0);
-  useEffect(() => {
-    grow.set(withDelay(delay, withTiming(Math.max(0, Math.min(share, 1)), { duration: 650, easing: Easing.out(Easing.cubic), reduceMotion: ReduceMotion.System })));
-  }, [grow, share, delay]);
-  const fill = useAnimatedStyle(() => ({ width: `${grow.get() * 100}%` }));
-  return (
-    <View style={{ height: 8, borderRadius: 999, overflow: "hidden", backgroundColor: th(color === GREEN ? "rgba(103,205,103,0.16)" : "rgba(255,77,77,0.16)", "bg") }}>
-      <Animated.View style={[{ height: "100%", borderRadius: 999, overflow: "hidden" }, fill]}>
-        {/* The colour deepening towards its end, so the bar reads as filled, not painted. */}
-        <LinearGradient
-          colors={th(color === GREEN ? ["#3FB34A", "#67CD67", "#67CD67"] : ["#E0262B", "#FF3B3B", "#FF4D4D"], "grad")}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={{ flex: 1 }}
-        />
-      </Animated.View>
+      <View style={{ marginTop: 7, height: 12, flexDirection: "row", justifyContent: "space-between" }}>
+        {Array.from({ length: count }, (_, i) => (
+          <Animated.View
+            key={i}
+            entering={FadeIn.delay(delay + i * 14).duration(220)}
+            style={{ width: TICK_W, height: "100%", borderRadius: TICK_W / 2, backgroundColor: th(i < filled ? color : "rgba(255,255,255,0.14)", "bg") }}
+          />
+        ))}
+      </View>
     </View>
   );
 }

@@ -81,7 +81,7 @@ export function renderHomeWidget(
       return <PlanoCard />;
 
     case "fluxo":
-      if (size === "half") return <FluxoCompact receitas={ctx.receitas} despesas={ctx.despesas} />;
+      if (size === "half") return <FluxoCompact receitas={ctx.receitas} despesas={ctx.despesas} hidden={ctx.hidden} />;
       return (
         <FluxoCard
           receitas={ctx.receitas}
