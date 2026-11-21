@@ -258,14 +258,13 @@ function HomeScreen() {
       }
     },
   });
-  /* It does not move. What the cards have covered is cut away from below, at the top edge of
-     the first card, so none of it shows through their glass: the window it is seen through
-     rises with the cards while what is in it is held still — both by moving, never by
-     resizing, so nothing is laid out again as the page scrolls. What is still uncovered fades. */
-  const heroWindow = useAnimatedStyle(() => ({ transform: [{ translateY: -Math.min(heroH, Math.max(0, scrollY.get())) }] }));
+  /* It does not move and nothing cuts it away: it stays on the background, whole, and the
+     cards — glass — float up over it as the page scrolls, so it shows through them softened.
+     It quiets as they cover it, so their own figures stay the clearest thing. */
   const heroHeld = useAnimatedStyle(() => {
-    const y = Math.min(heroH, Math.max(0, scrollY.get()));
-    return { transform: [{ translateY: y }], opacity: 1 - (y / heroH) * 0.6 };
+    /* Gone soft well before a card covers it whole, so the card's own words read cleanly. */
+    const p = Math.min(1, Math.max(0, scrollY.get()) / (heroH * 0.6));
+    return { opacity: 1 - p * 0.9 };
   });
 
   /* Willo sits behind the page, so a touch on him is taken by the page over him: it opens
@@ -324,7 +323,7 @@ function HomeScreen() {
       <GroundInkProvider mode={groundMode}>
       {/* Willo speaking, fixed behind the page. Editing is about the board, so he stands down then. */}
       {!editing && (
-        <Animated.View pointerEvents="none" style={[{ position: "absolute", top: insets.top + TOP_ROW + SHORTCUTS_H, left: 0, right: 0, height: heroH, overflow: "hidden" }, heroWindow]}>
+        <Animated.View pointerEvents="none" style={{ position: "absolute", top: insets.top + TOP_ROW + SHORTCUTS_H, left: 0, right: 0 }}>
           <Animated.View style={[{ paddingHorizontal: 16 }, heroHeld]}>
             <View onLayout={(e) => setHeroH(Math.max(120, Math.round(e.nativeEvent.layout.height)))}>
               <HomeHero
@@ -361,9 +360,8 @@ function HomeScreen() {
 
         {!editing && (
           <View style={{ gap: CARD_GAP, marginBottom: 26 }}>
-            <View style={{ height: SHORTCUTS_H, marginBottom: -CARD_GAP }}>
-              <HomeShortcuts items={shortcuts} />
-            </View>
+            {/* The shortcuts' place: they stay fixed at the top, the page passing under them. */}
+            <View style={{ height: SHORTCUTS_H, marginBottom: -CARD_GAP }} pointerEvents="none" />
             {/* Willo's place in the page: a touch on him opens the conversation. */}
             <GestureDetector gesture={heroTap}>
               <View
@@ -389,7 +387,14 @@ function HomeScreen() {
       </Animated.ScrollView>
 
       {/* Above everything: the row that stays, and the soft band the page passes under. */}
-      <ScrollEdge on={moved && !editing} />
+      <ScrollEdge on={moved && !editing} extra={editing ? 0 : SHORTCUTS_H} />
+      {/* The shortcuts, fixed under the top row: the cards pass under them, and the soft band
+          above keeps their words readable over whatever goes by. */}
+      {!editing && (
+        <View style={{ position: "absolute", top: insets.top + TOP_ROW, left: 0, right: 0, height: SHORTCUTS_H, paddingHorizontal: 16, zIndex: 30 }}>
+          <HomeShortcuts items={shortcuts} />
+        </View>
+      )}
       <HomeHeader
         name={name}
         userId={user?.id}
