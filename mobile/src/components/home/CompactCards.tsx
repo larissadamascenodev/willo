@@ -86,7 +86,8 @@ function Head({ label }: { label: string }) {
 
 /**
  * Receitas e despesas, small, in the same hand as Gastos do mês: the name in small spaced
- * capitals, what the month left (or what it lacked, in red) large, then what came in and what
+ * capitals, how much of what came in has already gone out large (in red past all of it — what
+ * is left is the balance card's to say), then what came in and what
  * went out, each with its figure and a rule of thin bars on one scale — green for in, red for
  * out, the rest of the rule in grey. A touch opens Fluxo de caixa.
  */
@@ -94,21 +95,22 @@ export function FluxoCompact({ receitas, despesas, hidden }: { receitas: number;
   const router = useRouter();
   const [w, setW] = useState(0);
   const scale = Math.max(receitas, despesas, 1);
-  const net = receitas - despesas;
   const show = (v: number) => (hidden ? "R$ •••" : money(v));
   const count = w > 0 ? Math.max(12, Math.floor((w + TICK_GAP) / (TICK_W + TICK_GAP))) : 0;
+  /* How much of what came in has already gone out — not what is left, which the balance card
+     above already says. Past all of it, in red. */
+  const used = receitas > 0 ? Math.round((despesas / receitas) * 100) : null;
 
   return (
     <Surface onPress={() => router.push("/fluxo-de-caixa" as never)} style={{ height: HEIGHT, paddingHorizontal: 14, paddingTop: 15, paddingBottom: 14 }}>
       <Text numberOfLines={1} style={[T.eyebrow, { color: th(INK.soft) }]}>
         Fluxo do mês
       </Text>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[T.figure, { marginTop: 6, fontSize: 24, letterSpacing: -0.8, color: th(net < 0 ? RED : "#fff") }]}>
-        {net < 0 && !hidden ? "−" : ""}
-        {show(Math.abs(net))}
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[T.figure, { marginTop: 6, fontSize: 24, letterSpacing: -0.8, color: th(used !== null && used > 100 ? RED : "#fff") }]}>
+        {used === null ? "—" : `${used}%`}
       </Text>
       <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: th(INK.soft) }}>
-        {net < 0 ? "faltou no mês" : "sobrou no mês"}
+        {used === null ? "nada entrou ainda" : "do que entrou já saiu"}
       </Text>
 
       {/* What came in and what went out, each on its own rule, one scale for both. */}
