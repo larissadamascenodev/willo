@@ -394,6 +394,22 @@ export function LineChart({
 
   const floorInk = th("rgba(255,255,255,0.10)", "line");
   const gid = (k: number, c: string) => `lc-fill-${k}-${c.replace(/[^0-9a-z]/gi, "")}`;
+  /* Two lines with a fill (Fluxo: what came in and what went out) would mix their colours
+     into a muddy light. Then there is one light for both: neutral, under the higher of the two,
+     and each line keeps only its own glow. */
+  const filled = series.map((s, k) => (s.fill ? k : -1)).filter((k) => k >= 0);
+  const shared = filled.length > 1;
+  const envelope = useMemo(() => {
+    if (!shared) return "";
+    const n = Math.max(...filled.map((k) => pts[k].length));
+    const top = Array.from({ length: n }, (_, i) => {
+      const ys = filled.filter((k) => i < pts[k].length).map((k) => pts[k][i].y);
+      return { x: x(i), y: Math.min(...ys) };
+    });
+    if (top.length < 2) return "";
+    return `${curve(top)} L ${top[top.length - 1].x.toFixed(1)} ${bottom} L ${top[0].x.toFixed(1)} ${bottom} Z`;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shared, pts, bottom]);
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View entering={FadeIn.duration(360)} style={{ height }}>
@@ -413,7 +429,15 @@ export function LineChart({
                 </SvgGradient>
               ) : null,
             )}
+            {shared ? (
+              <SvgGradient id="lc-fill-shared" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={th("#FFFFFF")} stopOpacity={0.11} />
+                <Stop offset="0.6" stopColor={th("#FFFFFF")} stopOpacity={0.03} />
+                <Stop offset="1" stopColor={th("#FFFFFF")} stopOpacity={0} />
+              </SvgGradient>
+            ) : null}
           </Defs>
+          {envelope ? <Path d={envelope} fill="url(#lc-fill-shared)" /> : null}
           {/* The floor. */}
           <Line x1={0} x2={width} y1={bottom + 0.5} y2={bottom + 0.5} stroke={floorInk} strokeWidth={1} />
           {series.map((s, k) => {
@@ -425,7 +449,7 @@ export function LineChart({
             const rest = s.dashed ? curve(p) : curve(p, split, p.length - 1);
             return (
               <G key={k}>
-                {s.fill && <Path d={area} fill={`url(#${gid(k, s.color)})`} />}
+                {s.fill && !shared && <Path d={area} fill={`url(#${gid(k, s.color)})`} />}
                 {rest ? <Path d={rest} stroke={s.color} strokeOpacity={s.dashed ? 0.55 : 0.7} strokeWidth={s.dashed ? 1.8 : 2.2} strokeDasharray="5 6" fill="none" strokeLinecap="round" /> : null}
                 {solid ? <DrawnPath d={solid} stroke={s.color} strokeWidth={9} opacity={pick !== null ? 0.06 : 0.14} /> : null}
                 {solid ? <DrawnPath d={solid} stroke={s.color} strokeWidth={2.8} opacity={pick !== null ? 0.35 : 1} /> : null}
