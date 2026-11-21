@@ -54,7 +54,8 @@ export default function CategoryStrip({
 
   const sorted = useMemo(() => [...categories].filter((c) => c.amount > 0).sort((a, b) => b.amount - a.amount), [categories]);
   const total = sorted.reduce((s, c) => s + c.amount, 0);
-  const open = () => router.push("/analytics/categorias" as never);
+  /* The heading opens the month's spending: the total, where it went, the categories. */
+  const open = () => router.push("/gastos" as never);
 
   return (
     <View>
@@ -64,7 +65,7 @@ export default function CategoryStrip({
           Gastos <Text style={{ color: gth(INK.faint) }}>·</Text> {MONTHS[month][0].toUpperCase() + MONTHS[month].slice(1)}
         </Text>
         <Pressable onPress={open} hitSlop={8} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, opacity: pressed ? 0.6 : 1 })}>
-          <Text style={{ fontSize: 16, fontWeight: "600", color: gth("#fff") }}>Todas</Text>
+          <Text style={{ fontSize: 16, fontWeight: "600", color: gth("#fff") }}>Ver</Text>
           <ChevronRight size={18} color={gth("#fff")} strokeWidth={2.2} />
         </Pressable>
       </View>
