@@ -323,7 +323,7 @@ export default function Transacoes() {
           </RaisedButton>
           <MonthSelect month={month} year={year} onChange={setMonth} />
         </View>
-        <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 14 }}>
+        <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 26 }}>
           <MonthFlows receitas={finance.receitas} recebido={finance.receitasRecebidas} despesas={finance.despesas} pago={finance.despesasPagas} hidden={hidden} />
         </Animated.View>
 
