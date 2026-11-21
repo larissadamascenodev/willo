@@ -44,6 +44,12 @@ function litOf(title: string, name: string | null): Part[] {
   return [{ text: `${words.slice(0, -keep).join(" ")} ` }, { text: words.slice(-keep).join(" "), lit: true }];
 }
 
+/** Bom dia until noon, Boa tarde until six, Boa noite after (and through the small hours). */
+function helloOf(now: Date) {
+  const h = now.getHours();
+  return h >= 5 && h < 12 ? "Bom dia" : h >= 12 && h < 18 ? "Boa tarde" : "Boa noite";
+}
+
 export default function HomeHero({ name, slides, onLine }: { name: string | null; slides: InsightSlide[]; onLine: (line: WilloLine) => void }) {
   const accent = useHeroAccent();
   const tone = HERO_ACCENTS.find((a) => a.key === accent)?.color ?? null;
@@ -83,8 +89,9 @@ export default function HomeHero({ name, slides, onLine }: { name: string | null
   const lines = useMemo<WilloLine[]>(() => {
     if (!asks) return [];
     const said = asks.filter((g) => g.title.length <= LONGEST).map((g) => ({ ...g, parts: litOf(g.title, name) }));
-    const [hello, ...rest] = said;
-    const out: WilloLine[] = hello ? [hello] : [];
+    /* The hello is fixed above the lines now; the lines start with what he noticed. */
+    const [, ...rest] = said;
+    const out: WilloLine[] = [];
     noticed.forEach((l, n) => {
       out.push(l);
       if (n % 2 === 1 && rest.length) out.push(rest.shift()!);
@@ -128,10 +135,11 @@ export default function HomeHero({ name, slides, onLine }: { name: string | null
 
   return (
     <View style={{ paddingTop: 18, paddingBottom: 20 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: th("#fff", "bg"), shadowColor: "#fff", shadowOpacity: 0.8, shadowRadius: 5, shadowOffset: { width: 0, height: 0 } }} />
-        <Text style={{ fontSize: 11.5, fontWeight: "700", letterSpacing: 1.6, color: th("rgba(255,255,255,0.72)") }}>WILLO · PARA VOCÊ, AGORA</Text>
-      </View>
+      {/* The hello, fixed, by the hour: Bom dia, Boa tarde, Boa noite — with the name. */}
+      <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: "600", letterSpacing: -0.2, color: th("rgba(255,255,255,0.78)") }}>
+        {helloOf(new Date())}
+        {name ? `, ${name}` : ""}
+      </Text>
       {/* Its room is fixed, so the cards under it never move as the lines change. */}
       <Animated.View style={[{ marginTop: 10, height: 104 }, style]}>
         {current && (

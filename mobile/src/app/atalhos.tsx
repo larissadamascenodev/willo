@@ -298,10 +298,19 @@ function WalletCopilotAction() {
             ),
           },
           {
+            title: "Ligue a compra ao Willo",
+            text: (
+              <>
+                Na ação, toque no campo azul <B>Valor</B> e escolha <B>Entrada do Atalho</B>. Sem isso a compra chega vazia e aparece “Valor não encontrado”. É só esse campo: o Willo lê dele o valor, a loja e o cartão.
+              </>
+            ),
+            screen: <MockTrigger kind="carteira" action="Registrar compra no Willo" />,
+          },
+          {
             title: "Volte para salvar",
             text: (
               <>
-                Toque na <B>setinha de voltar</B>, em cima à esquerda. Pronto: a automação fica salva e roda sozinha a cada compra por aproximação. Se o campo <B>Valor</B> aparecer vazio, toque nele e escolha <B>Entrada do Atalho</B> antes de voltar.
+                Toque na <B>setinha de voltar</B>, em cima à esquerda. Pronto: a automação fica salva e roda sozinha a cada compra por aproximação.
               </>
             ),
             screen: <MockTrigger kind="carteira" action="Registrar compra no Willo" />,

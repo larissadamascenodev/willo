@@ -278,9 +278,13 @@ export function LineChart({
   dayName,
   hidden,
   limit,
+  tipValue,
 }: {
   width: number;
   height?: number;
+  /** When given, the card shows only this figure for the point touched (what was spent that
+      day) instead of each line's running figure; null leaves the card off for that point. */
+  tipValue?: (i: number) => number | null;
   /** The last point the axis holds (the month's last day). */
   span: number;
   series: LineSeries[];
@@ -450,7 +454,7 @@ export function LineChart({
               <View key={k} pointerEvents="none" style={{ position: "absolute", left: pts[k][pick].x - 6, top: pts[k][pick].y - 6, width: 12, height: 12, borderRadius: 6, borderWidth: 2.5, borderColor: s.color, backgroundColor: th("#fff", "bg") }} />
             ) : null,
           )}
-        {pick !== null && (
+        {pick !== null && (!tipValue || tipValue(pick) !== null) && (
           <GlassTip
             key={pick}
             anchorX={x(pick)}
@@ -458,7 +462,11 @@ export function LineChart({
             gap={14}
             width={width}
             title={dayName(pick)}
-            rows={series.filter((s) => pick < s.values.length).map((s) => ({ color: s.color, name: series.length > 1 ? s.name : undefined, value: hidden ? "R$ •••" : money(s.values[pick]) }))}
+            rows={
+              tipValue
+                ? [{ color: main.color, value: hidden ? "R$ •••" : money(tipValue(pick) ?? 0) }]
+                : series.filter((s) => pick < s.values.length).map((s) => ({ color: s.color, name: series.length > 1 ? s.name : undefined, value: hidden ? "R$ •••" : money(s.values[pick]) }))
+            }
           />
         )}
         {/* The days. */}

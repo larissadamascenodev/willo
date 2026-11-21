@@ -260,6 +260,11 @@ export default function Gastos() {
               labels={view.line.labels}
               dayName={view.line.dayName}
               hidden={hidden}
+              tipValue={(i) => {
+                /* What was spent on the day touched — this month's only, not the running total. */
+                const c = view.line!.cur;
+                return i >= 1 && i < c.length ? c[i] - c[i - 1] : null;
+              }}
               series={[
                 { values: view.line.prev, color: th(BEFORE, "line"), name: view.line.names[1], dashed: true },
                 { values: view.line.cur, color: th(HEX), name: view.line.names[0], fill: true, dot: true },

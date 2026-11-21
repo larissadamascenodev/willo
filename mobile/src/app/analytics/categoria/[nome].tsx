@@ -442,6 +442,7 @@ function MonthChart({
       dayName={(i) => (i === 0 ? `Início de ${SHORT[month]}` : `${i} de ${SHORT[month]}`)}
       hidden={hidden}
       limit={limit}
+      tipValue={(i) => (i >= 1 && i < cur.length ? cur[i] - cur[i - 1] : null)}
       series={[
         ...(prev ? [{ values: prev, color: th(BEFORE, "line"), name: prevName[0].toUpperCase() + prevName.slice(1), dashed: true }] : []),
         { values: cur, color: hex, name: MONTHS[month][0].toUpperCase() + MONTHS[month].slice(1), fill: true, dot: true },
