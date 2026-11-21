@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Platform, Pressable, Text, View, type TextStyle } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,13 +12,14 @@ import { ensureWallet } from "~/lib/ensureWallet";
 import { showToast } from "~/lib/toast";
 import { colorFor } from "@/lib/banks";
 import AccountSheet from "~/components/accounts/AccountSheet";
+import TransferSheet from "~/components/accounts/TransferSheet";
 import Room from "~/components/Room";
 import RaisedButton from "~/components/RaisedButton";
 import Surface from "~/components/Surface";
 import BankMark from "~/components/BankMark";
 import RecentEntries from "~/components/transactions/RecentEntries";
 import { FlexBar } from "~/components/Bar";
-import { ChevronLeft, Eye, EyeOff, Landmark, Plus } from "~/components/icons";
+import { ArrowLeftRight, ChevronLeft, Eye, EyeOff, Landmark, Plus } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { INK, RED } from "~/theme/tokens";
@@ -30,8 +31,8 @@ import { th, useThemeRedraw } from "~/theme/theme";
  * Drawn as every detail page is, in the app's quiet colours. What is in all the accounts, large,
  * with the eye beside its name and where the month should end under it; one bar split the way the
  * money is split, each share in its bank's colour; then a line per account — its mark, its name,
- * its share and what it holds — a touch opening it. Then the way to add one, and the latest
- * entries with the way to all of them.
+ * its share and what it holds — a touch opening it. Then the way to move money from one to
+ * another and the way to add one, and the latest entries with the way to all of them.
  *
  * The caixinhas have a page of their own now, and the fixed entries live on the home's card; a
  * link that still asks for the caixinhas here is sent on to them.
@@ -71,6 +72,7 @@ export default function Contas() {
 
   const [accounts, setAccounts] = useState<Account[] | null>(null);
   const [adding, setAdding] = useState(false);
+  const [moving, setMoving] = useState(false);
   const announce = () => window.dispatchEvent(new CustomEvent("finance-data-changed"));
 
   const load = useCallback(async () => {
@@ -217,26 +219,11 @@ export default function Contas() {
           </>
         )}
 
-        {/* The way to add one. */}
-        <Pressable
-          onPress={() => setAdding(true)}
-          style={({ pressed }) => ({
-            marginTop: 14,
-            height: 54,
-            borderRadius: 27,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            borderWidth: 1,
-            borderColor: th("rgba(255,255,255,0.10)", "line"),
-            backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
-            opacity: pressed ? 0.7 : 1,
-          })}
-        >
-          <Plus size={18} color={th("#fff")} strokeWidth={2.4} />
-          <Text style={{ fontSize: 16, fontWeight: "600", color: th("#fff") }}>Adicionar conta</Text>
-        </Pressable>
+        {/* Moving money between them (once there are two), and adding one. */}
+        <View style={{ marginTop: 14, flexDirection: "row", gap: 10 }}>
+          {rows.length >= 2 && <PagePill label="Transferir" icon={<ArrowLeftRight size={18} color={th("#fff")} strokeWidth={2.4} />} onPress={() => setMoving(true)} />}
+          <PagePill label="Adicionar conta" icon={<Plus size={18} color={th("#fff")} strokeWidth={2.4} />} onPress={() => setAdding(true)} />
+        </View>
 
         {/* The latest entries, as the card's statement lists them. */}
         {latest.length > 0 && (
@@ -257,6 +244,8 @@ export default function Contas() {
         <View style={{ width: 50 }} />
       </View>
 
+      <TransferSheet open={moving} onClose={() => setMoving(false)} />
+
       <AccountSheet
         open={adding}
         onClose={() => setAdding(false)}
@@ -269,5 +258,33 @@ export default function Contas() {
         }}
       />
     </Room>
+  );
+}
+
+/** One of the page's actions, as a pill of glass sharing the row. */
+function PagePill({ label, icon, onPress }: { label: string; icon: ReactNode; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => ({
+        flex: 1,
+        height: 54,
+        borderRadius: 27,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        borderWidth: 1,
+        borderColor: th("rgba(255,255,255,0.10)", "line"),
+        backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      {icon}
+      <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "600", color: th("#fff") }}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }

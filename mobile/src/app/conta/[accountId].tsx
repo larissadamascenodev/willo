@@ -82,8 +82,12 @@ interface Movement {
   type: string;
   status: string;
   account_id: string | null;
+  to_account_id?: string | null;
   created_at?: string;
 }
+
+/** What moved this account: out of it, or — a transfer — into it. */
+const touches = (t: Movement, id: string) => t.account_id === id || (t.type === "transferencia" && t.to_account_id === id);
 
 /** Newest day first, and within a day the one written down last on top. */
 const newestFirst = (a: Movement, b: Movement) => b.date.localeCompare(a.date) || (b.created_at ?? "").localeCompare(a.created_at ?? "");
@@ -134,7 +138,7 @@ export default function ContaDetalhe() {
       setCustomCats(cats);
 
       const txs = await getTransactions({ month: selectedMonth, year: selectedYear });
-      setMovements((txs as unknown as Movement[]).filter((t) => t.account_id === accountId));
+      setMovements((txs as unknown as Movement[]).filter((t) => touches(t, accountId)));
     } finally {
       setLoading(false);
     }
@@ -186,7 +190,7 @@ export default function ContaDetalhe() {
     void getTransactions()
       .then((txs) => {
         if (!alive) return;
-        const mine = (txs as unknown as Movement[]).filter((t) => t.account_id === accountId);
+        const mine = (txs as unknown as Movement[]).filter((t) => touches(t, accountId));
         setHistory(mine.sort(newestFirst));
       })
       .catch(() => alive && setHistory([]));
@@ -333,7 +337,7 @@ export default function ContaDetalhe() {
 
             {/* ══ The latest few, as on the main cash flow; the button opens the rest ══ */}
             <Animated.View entering={FadeInDown.delay(160).duration(420)} style={{ marginTop: 34 }}>
-              <RecentEntries items={ordered.slice(0, 5)} customCats={customCats} onSeeAll={() => setMovesOpen(true)} />
+              <RecentEntries items={ordered.slice(0, 5)} customCats={customCats} accountId={accountId} onSeeAll={() => setMovesOpen(true)} />
             </Animated.View>
           </>
         )}
@@ -392,7 +396,7 @@ export default function ContaDetalhe() {
         ) : (
           <>
             {history.slice(0, shownCount).map((tx) => (
-              <EntryRow key={tx.id} entry={tx} customCats={customCats} />
+              <EntryRow key={tx.id} entry={tx} customCats={customCats} accountId={accountId} />
             ))}
             {history.length > shownCount && (
               <Pressable

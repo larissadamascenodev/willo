@@ -136,6 +136,41 @@ export async function createTransaction(input: CreateTransactionInput, userId: s
 }
 
 /**
+ * Money moved between two of the person's own accounts: one entry, out of `fromId` and into
+ * `toId`. It is neither spending nor income; the balances of both accounts follow it once it
+ * is settled ("pago") — the database moves them.
+ */
+export async function createTransfer(
+  input: { fromId: string; toId: string; amount: number; date: string; name: string; observation?: string | null; status?: "pago" | "pendente" },
+  userId: string,
+) {
+  const time = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const { data, error } = await supabase
+    .from("transactions")
+    .insert({
+      user_id: userId,
+      name: input.name,
+      type: "transferencia",
+      amount: input.amount,
+      category: "Transferência",
+      date: input.date,
+      time,
+      status: input.status ?? "pago",
+      account_id: input.fromId,
+      to_account_id: input.toId,
+      payment_method: "conta",
+      recurrence_type: "unica",
+      observation: input.observation ?? null,
+    } as never)
+    .select()
+    .single();
+
+  if (error) throw error;
+  notifyFinanceDataChanged();
+  return data;
+}
+
+/**
  * Marks an entry as happened, or as still to happen.
  *
  * The balance is worked out by the database from the entries linked to each account, so an
