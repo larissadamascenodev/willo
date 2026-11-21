@@ -6,8 +6,9 @@ import { BACKDROP_KEYS, LIGHT_BACKDROP_KEYS, type BackdropKey, type LightBackdro
 /**
  * What the screens that wear a sky are wearing.
  *
- * - "horizonte", the default (lib/backdrops): one calm petrol light at the top, washing
- *   down smoothly into the dark, after the big apps' own homes.
+ * - "prisma", the default (lib/backdrops): the Willo icon's three colours — violet, teal
+ *   and a warm orange — pooled softly at the top and washing down into the dark.
+ * - "horizonte": one calm petrol light at the top, washing down smoothly into the dark.
  * - "2": the hour as a picture, with the glow turned down so cards pass over it quietly.
  * - "1": the same hour drawn live, with its fire and its water.
  * - "plain": no sky, only the room's soft lights on the dark ground.
@@ -26,11 +27,11 @@ import { BACKDROP_KEYS, LIGHT_BACKDROP_KEYS, type BackdropKey, type LightBackdro
 export type SkyModel = "1" | "2" | "plain" | "custom" | BackdropKey;
 
 const KEY = "sky-model";
-const DEFAULT: SkyModel = "horizonte";
-/* Set once the old default ("2", "aurora-clara") has been moved to the new one. */
-const MOVED_KEY = "sky-default-horizonte";
+const DEFAULT: SkyModel = "prisma";
+/* Set once the older defaults ("2", "aurora-clara", then Horizonte) have been moved to the new one. */
+const MOVED_KEY = "sky-default-prisma";
 const LIGHT_KEY = "sky-model-light";
-const LIGHT_DEFAULT = "horizonte-claro" as const;
+const LIGHT_DEFAULT = "prisma-claro" as const;
 const PHOTO_KEY = "sky-photo";
 const listeners = new Set<() => void>();
 
@@ -68,8 +69,10 @@ onHydrated(() => {
   try {
     if (!localStorage.getItem(MOVED_KEY)) {
       localStorage.setItem(MOVED_KEY, "1");
-      if (localStorage.getItem(KEY) === "2") localStorage.setItem(KEY, DEFAULT);
-      if (localStorage.getItem(LIGHT_KEY) === "aurora-clara") localStorage.setItem(LIGHT_KEY, LIGHT_DEFAULT);
+      const dark = localStorage.getItem(KEY);
+      if (dark === "2" || dark === "horizonte") localStorage.setItem(KEY, DEFAULT);
+      const light = localStorage.getItem(LIGHT_KEY);
+      if (light === "aurora-clara" || light === "horizonte-claro") localStorage.setItem(LIGHT_KEY, LIGHT_DEFAULT);
     }
   } catch {
     /* Read as they are. */
