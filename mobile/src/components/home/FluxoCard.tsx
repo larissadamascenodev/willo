@@ -61,7 +61,7 @@ export default function FluxoCard({ size, receitas, despesas, hidden }: { size: 
 
       {/* Everything that came in, as one bar: what has gone out of it in red, what is left in green. */}
       <View style={{ marginTop: half ? "auto" : 20 }}>
-        <SplitBar used={Math.min(1, used)} empty={receitas <= 0 && despesas <= 0} height={half ? 12 : 16} />
+        <SplitBar used={Math.min(1, used)} empty={receitas <= 0 && despesas <= 0} height={half ? 8 : 10} />
         <View style={{ marginTop: half ? 8 : 10, flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
           <Text numberOfLines={1} style={[nums, { flexShrink: 1, fontSize: half ? 11.5 : 13, color: th(INK.soft) }]}>
             {pct === null ? (

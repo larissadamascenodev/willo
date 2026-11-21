@@ -67,8 +67,8 @@ export default function GastosCard({ size, hidden }: { size: "half" | "full"; hi
 
   /* The biggest, each with its colour; the rest of the month in grey. */
   const top = view.cats.slice(0, half ? 3 : 4).map((c, i) => ({ ...c, color: catColor(c.name, i, data?.customCats) }));
-  const tickW = half ? 3 : 4.5;
-  const tickGap = half ? 3.5 : 5;
+  const tickW = half ? 3 : 3.5;
+  const tickGap = half ? 3.5 : 4.5;
   const count = w > 0 ? Math.max(12, Math.floor((w + tickGap) / (tickW + tickGap))) : 0;
   const ticks = Array.from({ length: count }, (_, i) => {
     const at = ((i + 0.5) / count) * view.total;
@@ -106,14 +106,14 @@ export default function GastosCard({ size, hidden }: { size: "half" | "full"; hi
       ) : (
         /* The figure, and across from it how the same days of last month compare. */
         <View style={{ marginTop: 8, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[T.figure, { flexShrink: 1, fontSize: 36, letterSpacing: -1.3, opacity: data ? 1 : 0.4 }]}>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[T.figure, { flexShrink: 1, fontSize: 30, letterSpacing: -1, opacity: data ? 1 : 0.4 }]}>
             {show(view.total)}
           </Text>
           {pct && (
             <View style={{ alignItems: "flex-end", paddingBottom: 4 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                <Arrow size={15} color={th(tone)} strokeWidth={2.4} />
-                <Text style={[nums, { fontSize: 17, fontWeight: "700", color: th(tone) }]}>{pct}</Text>
+                <Arrow size={13} color={th(tone)} strokeWidth={2.4} />
+                <Text style={[nums, { fontSize: 15, fontWeight: "700", color: th(tone) }]}>{pct}</Text>
               </View>
               <Text numberOfLines={1} style={[nums, { marginTop: 1, fontSize: 12, color: th(INK.soft) }]}>
                 vs {show(view.same)}
@@ -124,7 +124,7 @@ export default function GastosCard({ size, hidden }: { size: "half" | "full"; hi
       )}
 
       {/* The month as a rule of thin bars, each category's share in its colour. */}
-      <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ marginTop: half ? 12 : 18, height: half ? 18 : 30, flexDirection: "row", justifyContent: "space-between" }}>
+      <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ marginTop: half ? 12 : 16, height: half ? 18 : 22, flexDirection: "row", justifyContent: "space-between" }}>
         {ticks.map((c, i) => (
           <Animated.View
             key={i}
@@ -135,18 +135,18 @@ export default function GastosCard({ size, hidden }: { size: "half" | "full"; hi
       </View>
 
       {/* The categories that took the most. */}
-      <View style={{ marginTop: half ? "auto" : 18, gap: half ? 6 : 12 }}>
+      <View style={{ marginTop: half ? "auto" : 16, gap: half ? 6 : 8 }}>
         {top.length === 0 ? (
           <Text style={{ fontSize: half ? 12.5 : 14, color: th(INK.soft) }}>Nenhum gasto ainda</Text>
         ) : (
           top.map((c) => (
-            <View key={c.name} style={{ flexDirection: "row", alignItems: "center", gap: half ? 7 : 10 }}>
-              <View style={{ width: half ? 3 : 4, height: half ? 12 : 16, borderRadius: 2, backgroundColor: th(c.color, "bg") }} />
-              <Text numberOfLines={1} style={{ flex: 1, fontSize: half ? 12.5 : 15, fontWeight: "500", color: th("#fff") }}>
+            <View key={c.name} style={{ flexDirection: "row", alignItems: "center", gap: half ? 7 : 8 }}>
+              <View style={{ width: 3, height: half ? 12 : 13, borderRadius: 1.5, backgroundColor: th(c.color, "bg") }} />
+              <Text numberOfLines={1} style={{ flex: 1, fontSize: half ? 12.5 : 13.5, fontWeight: "500", color: th("#fff") }}>
                 {c.name}
               </Text>
               {/* Compact, the figure without "R$" — the total above already says it — for room for the name. */}
-              <Text style={[nums, { fontSize: half ? 12.5 : 15, fontWeight: "700", color: th("#fff") }]}>
+              <Text style={[nums, { fontSize: half ? 12.5 : 13.5, fontWeight: "700", color: th("#fff") }]}>
                 {half ? (hidden ? "•••" : money(c.amount).replace(/^R\$\s*/, "")) : show(c.amount)}
               </Text>
             </View>

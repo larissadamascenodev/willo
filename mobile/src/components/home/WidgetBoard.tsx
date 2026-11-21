@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type ComponentRef } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type ComponentRef } from "react";
 import { Pressable, Text, View } from "react-native";
 import Animated, {
   Easing,
@@ -94,7 +94,8 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
     fillSeen.current = fill;
     setSlots((current) => {
       const rows: WidgetSlot[][] = [];
-      for (const slot of current) {
+      for (const raw of current) {
+        const slot = raw.alone ? { id: raw.id, size: raw.size } : raw;
         if (slot.size === "full" || skip?.(slot.id)) {
           rows.push([slot]);
           continue;
@@ -199,13 +200,29 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
     const own = frames.current.get(id);
     if (!nearest || nearest === id || !own || dist(own) - best < 28) return;
     const target: string = nearest;
+    if (target.startsWith(EMPTY)) {
+      const keeper = target.slice(EMPTY.length);
+      setSlots((current) => {
+        const carriedSlot = current.find((s) => s.id === id);
+        if (!carriedSlot || carriedSlot.size !== "half") return current;
+        const rest = current.filter((s) => s.id !== id).map((s) => (s.id === keeper ? { id: s.id, size: s.size } : s));
+        const at = rest.findIndex((s) => s.id === keeper);
+        if (at < 0) return current;
+        rest.splice(at + 1, 0, { id: carriedSlot.id, size: carriedSlot.size });
+        settling.current = Date.now() + 160;
+        void Haptics.selectionAsync().catch(() => undefined);
+        return rest;
+      });
+      return;
+    }
     setSlots((current) => {
       const at = current.findIndex((s) => s.id === id);
       const to = current.findIndex((s) => s.id === target);
       if (at < 0 || to < 0 || at === to) return current;
       const next = [...current];
       const [moved] = next.splice(at, 1);
-      next.splice(to, 0, moved);
+      /* A card carried somewhere new pairs with whatever compact card it lands beside. */
+      next.splice(to, 0, moved.alone ? { id: moved.id, size: moved.size } : moved);
       settling.current = Date.now() + 160;
       void Haptics.selectionAsync().catch(() => undefined);
       return next;
@@ -258,8 +275,10 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
     commit(slots.filter((s) => s.id !== id));
   };
 
+  /* Made compact, a card stays where it is with the other half of its row empty — the card
+     under it never moves up beside it; another compact card can be moved into that space. */
   const setSize = (id: string, size: WidgetSize) => {
-    commit(slots.map((s) => (s.id === id ? { ...s, size } : s)));
+    commit(slots.map((s) => (s.id === id ? (size === "half" ? { id, size, alone: true } : { id, size }) : s)));
   };
 
   const add = (id: string) => {
@@ -280,22 +299,27 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
      otherwise rounds the pair past the row, and the second card drops to the next one. */
   const halfW = width > 0 ? Math.floor(((width - gap) / 2) * 2) / 2 - 0.5 : 0;
 
-  /* A small card with no partner on its row (the next one is large, or there is none) is
-     drawn large across the row instead of leaving half of it empty. Not while editing: there
-     each card shows the size it really has. */
-  const lonely = useMemo(() => {
+  /* A compact card is always drawn compact. One that keeps its row to itself (made compact
+     where it was, or with nothing beside it yet) has an empty half drawn after it, so the card
+     under it stays under it; while editing, that half shows as a dashed space a compact card
+     can be carried into. */
+  const emptyAfter = useMemo(() => {
     const out = new Set<string>();
-    if (editing) return out;
-    for (let i = 0; i < shown.length; i++) {
-      if (shown[i].size !== "half") continue;
-      if (shown[i + 1]?.size === "half") {
-        i++;
+    let open = false;
+    for (const slot of shown) {
+      if (slot.size !== "half") {
+        open = false;
         continue;
       }
-      out.add(shown[i].id);
+      if (open) {
+        open = false;
+        continue;
+      }
+      if (slot.alone) out.add(slot.id);
+      else open = true;
     }
     return out;
-  }, [shown, editing]);
+  }, [shown]);
 
   /* What can be switched on: every card the phone draws. */
   const offered = PHONE_WIDGETS.filter((w) => w.id !== "raiox" && (w.id !== "plano" || FEATURES.plano));
@@ -315,10 +339,10 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
           style={{ flexDirection: "row", flexWrap: "wrap", columnGap: gap, rowGap: gap }}
         >
           {shown.map((slot, i) => {
-            const half = slot.size === "half" && !lonely.has(slot.id);
+            const half = slot.size === "half";
             return (
+            <Fragment key={`${slot.id}:${slot.size}`}>
             <WidgetFrame
-              key={`${slot.id}:${slot.size}`}
               slot={slot}
               editing={editing}
               half={half}
@@ -340,6 +364,8 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
             >
               {render(slot.id, half ? "half" : "full")}
             </WidgetFrame>
+            {emptyAfter.has(slot.id) && <EmptyHalf id={`${EMPTY}${slot.id}`} width={halfW} editing={editing} registerFrame={registerFrame} />}
+            </Fragment>
             );
           })}
         </View>
@@ -577,5 +603,37 @@ function WidgetFrame({
 
       </Animated.View>
     </GestureDetector>
+  );
+}
+
+/* The id an empty half carries in the frames, after the card that keeps it. */
+const EMPTY = "__empty:";
+
+/**
+ * The other half of a compact card's row, left empty. Nothing outside editing; while editing a
+ * dashed space, so it can be seen and a compact card carried into it.
+ */
+function EmptyHalf({ id, width, editing, registerFrame }: { id: string; width: number; editing: boolean; registerFrame: (id: string, box: Rect | null) => void }) {
+  useEffect(() => () => registerFrame(id, null), [id, registerFrame]);
+  return (
+    <View
+      onLayout={(e) => {
+        const { x, y, width: w, height: h } = e.nativeEvent.layout;
+        registerFrame(id, { x, y, w, h });
+      }}
+      pointerEvents="none"
+      style={{
+        width: width || "48%",
+        height: COMPACT_H,
+        borderRadius: 22,
+        borderWidth: editing ? 1.5 : 0,
+        borderStyle: "dashed",
+        borderColor: th("rgba(255,255,255,0.16)", "line"),
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {editing && <Text style={{ fontSize: 12.5, color: th(INK.softer) }}>Espaço livre</Text>}
+    </View>
   );
 }

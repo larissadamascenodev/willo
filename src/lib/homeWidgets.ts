@@ -43,6 +43,8 @@ export const widgetById = (id: string) => WIDGETS.find((w) => w.id === id);
 export interface WidgetSlot {
   id: string;
   size: WidgetSize;
+  /** A compact card that keeps the rest of its row empty until another is moved beside it. */
+  alone?: boolean;
 }
 
 export const defaultLayout = (registry: WidgetDef[] = WIDGETS): WidgetSlot[] =>
