@@ -9,7 +9,7 @@
  * of the screen; `a` is the light's strength at its centre.
  */
 
-export type BackdropKey = "willo" | "ardosia" | "bruma" | "terra" | "violeta" | "azul" | "prisma" | "horizonte" | "aurora" | "oceano" | "ametista" | "brasa" | "grafite" | "meia-noite" | "onda-grafite" | "onda-gelo" | "onda-lilas" | "onda-anil" | "brilho" | "cobre" | "anil" | "neblina";
+export type BackdropKey = "willo" | "ardosia" | "bruma" | "terra" | "violeta" | "azul" | "prisma" | "horizonte" | "aurora" | "oceano" | "ametista" | "brasa" | "grafite" | "meia-noite" | "brilho" | "cobre" | "anil" | "neblina";
 
 export interface Backdrop {
   label: string;
@@ -21,8 +21,6 @@ export interface Backdrop {
   wash?: { colors: string[]; stops: number[] };
   /** How hard the corners close (0 to 1); 0.55 when not said. */
   edge?: number;
-  /** A picture drawn under everything (the Ondas: folded glossy sheets, after the iPhone's own lock screen). */
-  image?: number;
 }
 
 export const BACKDROPS: Record<BackdropKey, Backdrop> = {
@@ -203,15 +201,6 @@ export const BACKDROPS: Record<BackdropKey, Backdrop> = {
     ],
   },
 
-  /* eslint-disable @typescript-eslint/no-require-imports -- bundled pictures, as the room's own sky.png is. */
-  /* ── Ondas: sheets of one colour folding over each other with a lit rim, after the iPhone's
-     own lock screen; pictures, darkened toward the bottom so the cards stay readable. ── */
-  "onda-grafite": { label: "Grafite", ground: "#07090D", edge: 0.2, lights: [], image: require("../../assets/images/backdrops/onda-grafite.jpg") as number },
-  "onda-gelo": { label: "Gelo", ground: "#0B222C", edge: 0.2, lights: [], image: require("../../assets/images/backdrops/onda-gelo.jpg") as number },
-  "onda-lilas": { label: "Lilás", ground: "#1C1434", edge: 0.2, lights: [], image: require("../../assets/images/backdrops/onda-lilas.jpg") as number },
-  "onda-anil": { label: "Anil", ground: "#111B3C", edge: 0.2, lights: [], image: require("../../assets/images/backdrops/onda-anil.jpg") as number },
-  /* eslint-enable @typescript-eslint/no-require-imports */
-
   /* ── Brilhos: blurred light on the dark, as a photo far out of focus. ── */
 
   /* Many colours pooled at the top — red, rose and blue, a little gold in the middle — falling into black. */
@@ -238,14 +227,15 @@ export const BACKDROPS: Record<BackdropKey, Backdrop> = {
       { cx: 0.08, cy: 0.86, rx: 0.6, ry: 0.18, rgb: "100,64,46", a: 0.45 },
     ],
   },
-  /* Near-black navy with a blue light rising from the lower left. */
+  /* The default in the dark: near-black navy, a quiet blue light in the top right corner and
+     its twin in the bottom left — a touch of colour at two corners, the middle left dark. */
   anil: {
     label: "Índigo",
     ground: "#08080D",
     edge: 0.15,
     lights: [
-      { cx: 0.0, cy: 1.02, rx: 0.78, ry: 0.42, rgb: "112,130,214", a: 0.75 },
-      { cx: 1.0, cy: 0.0, rx: 0.6, ry: 0.32, rgb: "44,48,86", a: 0.55 },
+      { cx: 1.0, cy: 0.0, rx: 0.6, ry: 0.32, rgb: "52,58,104", a: 0.6 },
+      { cx: 0.0, cy: 1.0, rx: 0.6, ry: 0.32, rgb: "52,58,104", a: 0.6 },
     ],
   },
   /* Dark petrol at the top clearing into a misty grey-blue toward the lower right. */
@@ -266,7 +256,6 @@ export const BACKDROP_KEYS = Object.keys(BACKDROPS) as BackdropKey[];
 export const OFFERED: { title: string; keys: BackdropKey[] }[] = [
   { title: "Suaves", keys: ["willo", "ardosia", "bruma", "terra"] },
   { title: "Cores", keys: ["violeta", "azul", "prisma"] },
-  { title: "Ondas", keys: ["onda-grafite", "onda-gelo", "onda-lilas", "onda-anil"] },
   { title: "Brilhos", keys: ["brilho", "cobre", "anil", "neblina"] },
 ];
 

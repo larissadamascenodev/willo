@@ -29,7 +29,7 @@ import { BACKDROP_KEYS, LIGHT_BACKDROP_KEYS, type BackdropKey, type LightBackdro
 export type SkyModel = "1" | "2" | "plain" | "custom" | BackdropKey;
 
 const KEY = "sky-model";
-const DEFAULT: SkyModel = "willo";
+const DEFAULT: SkyModel = "anil";
 /* Set once the older defaults ("2", "aurora-clara", Horizonte, then Prisma) have been moved to the new one. */
 const MOVED_KEY = "sky-default-willo";
 const LIGHT_KEY = "sky-model-light";
@@ -37,6 +37,7 @@ const LIGHT_DEFAULT = "willo-claro" as const;
 const PHOTO_KEY = "sky-photo";
 /* Set once the backgrounds that left the list have been moved to the nearest that stayed. */
 const TRIMMED_KEY = "sky-trimmed-v1";
+const INDIGO_KEY = "sky-default-indigo";
 const DARK_NEAREST: Record<string, SkyModel> = {
   horizonte: "bruma",
   aurora: "azul",
@@ -109,6 +110,17 @@ onHydrated(() => {
       const light = localStorage.getItem(LIGHT_KEY);
       const nearLight = light ? LIGHT_NEAREST[light] : undefined;
       if (nearLight) localStorage.setItem(LIGHT_KEY, nearLight);
+    }
+  } catch {
+    /* Read as they are. */
+  }
+  /* Once: Índigo became the default in the dark (2026-11-21); whoever was still on the old
+     default, Willo, moves to it. A background chosen on purpose stays. */
+  try {
+    if (!localStorage.getItem(INDIGO_KEY)) {
+      localStorage.setItem(INDIGO_KEY, "1");
+      const dark = localStorage.getItem(KEY);
+      if (!dark || dark === "willo") localStorage.setItem(KEY, DEFAULT);
     }
   } catch {
     /* Read as they are. */
