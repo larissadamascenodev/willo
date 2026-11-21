@@ -258,11 +258,13 @@ export function useThemeRedraw() {
           redraw();
           return;
         }
+        /* Right after the change has played out — not later: going back to one of them a
+           moment after changing the theme showed it still in the old one. */
         setTimeout(() => {
           if (drawnIn.current === pref) return;
           drawnIn.current = pref;
           redraw();
-        }, 1400);
+        }, THEME_FADE_MS + 60);
       }),
     [],
   );
