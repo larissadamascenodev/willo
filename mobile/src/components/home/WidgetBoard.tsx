@@ -278,7 +278,27 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
   /* Made compact, a card stays where it is with the other half of its row empty — the card
      under it never moves up beside it; another compact card can be moved into that space. */
   const setSize = (id: string, size: WidgetSize) => {
-    commit(slots.map((s) => (s.id === id ? (size === "half" ? { id, size, alone: true } : { id, size }) : s)));
+    if (size === "full") {
+      commit(slots.map((s) => (s.id === id ? { id, size } : s)));
+      return;
+    }
+    /* Made compact next to a compact card that keeps its row to itself — the one just above or
+       just below — the two share that row, in the order they were in. Otherwise it keeps its
+       own row, with the other half empty. */
+    const visible = slots.filter((s) => !skip?.(s.id));
+    const at = visible.findIndex((s) => s.id === id);
+    const before = at > 0 ? visible[at - 1] : null;
+    const after = at >= 0 && at < visible.length - 1 ? visible[at + 1] : null;
+    const lone = (s: WidgetSlot | null) => !!s && s.size === "half" && emptyAfter.has(s.id);
+    if (lone(before)) {
+      commit(slots.map((s) => (s.id === id ? { id, size } : s.id === before!.id ? { id: s.id, size: s.size } : s)));
+      return;
+    }
+    if (lone(after)) {
+      commit(slots.map((s) => (s.id === id ? { id, size } : s.id === after!.id ? { id: s.id, size: s.size } : s)));
+      return;
+    }
+    commit(slots.map((s) => (s.id === id ? { id, size, alone: true } : s)));
   };
 
   const add = (id: string) => {
@@ -322,7 +342,9 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
   }, [shown]);
 
   /* What can be switched on: every card the phone draws. */
-  const offered = PHONE_WIDGETS.filter((w) => w.id !== "raiox" && (w.id !== "plano" || FEATURES.plano));
+  /* Not offered: the old check-up, the Copilot (it comes back once it has a source), and the
+     Radar for now (it is to become one of the shortcuts at the top). */
+  const offered = PHONE_WIDGETS.filter((w) => !["raiox", "copilot", "radar"].includes(w.id) && (w.id !== "plano" || FEATURES.plano));
 
   const floating = useAnimatedStyle(() => ({
     transform: [{ translateX: tx.get() }, { translateY: ty.get() }, { scale: 1 + lift.get() * 0.05 }],

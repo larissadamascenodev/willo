@@ -135,16 +135,18 @@ function firstBoard(userId: string | undefined) {
  * board is put on this once; after that it is the person's again.
  */
 const LEAN: WidgetSlot[] = [
-  /* Every one a card of the board: each can be held, moved, made compact or large, or switched off. */
+  /* Every one a card of the board: each can be held, moved, made compact or large, or switched
+     off. Larissa's starting board (2026-11-22): the balance; Fluxo do mês and the cards side by
+     side, compact; Gastos do mês; the categories; the instalments. */
   { id: "saldo", size: "full" },
-  { id: "fluxo", size: "full" },
+  { id: "fluxo", size: "half" },
+  { id: "cartoes", size: "half" },
   { id: "gastos", size: "full" },
   { id: "categorias", size: "full" },
-  { id: "cartoes", size: "full" },
   { id: "parcelamentos", size: "full" },
 ];
 const LEAN_OFF = ["eventos", "metas", "jornada", "assinaturas", "radar", "copilot", "fixos", "recentes", "plano", "raiox"];
-const LEANED = (userId?: string) => `willo.home.widgets.phone-lean-v4.${userId ?? "anon"}`;
+const LEANED = (userId?: string) => `willo.home.widgets.phone-lean-v5.${userId ?? "anon"}`;
 
 function leanBoard(userId: string | undefined) {
   try {
