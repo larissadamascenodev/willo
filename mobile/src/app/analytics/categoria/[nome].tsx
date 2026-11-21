@@ -3,8 +3,8 @@ import { Platform, Pressable, ScrollView, Share, Text, View, useWindowDimensions
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { Easing, FadeIn, FadeInDown, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from "react-native-reanimated";
-import Svg, { Circle, Defs, Line, LinearGradient as SvgGradient, Path, Rect, Stop } from "react-native-svg";
+import Animated, { Easing, FadeIn, FadeInDown } from "react-native-reanimated";
+import Svg, { Circle, Defs, Line, LinearGradient as SvgGradient, Path, Stop } from "react-native-svg";
 import { supabase } from "~/supabase/client";
 import { getAccounts, getCreditCards } from "@/services/transactionService";
 import type { AnalyticsTransaction } from "@/services/categoryAnalytics";
@@ -19,6 +19,7 @@ import AnchoredMenu, { MenuRow, type AnchorRect } from "~/components/AnchoredMen
 import LimitSheet from "~/components/categorias/LimitSheet";
 import TransactionSheet from "~/components/transactions/TransactionSheet";
 import CountUp from "~/components/CountUp";
+import { Bars, DrawnPath, Legend, PeriodTabs } from "~/components/charts/PageCharts";
 import { ArrowDown, ArrowUp, CalendarDays, ChevronLeft, MoreHorizontal, Pencil, Share2, Wallet } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { useCategoryAnalytics } from "~/lib/warmStart";
@@ -236,7 +237,7 @@ export default function CategoriaDetalhe() {
 
         {/* Which stretch of time, and which month. */}
         <View style={{ marginTop: 18, flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <PeriodTabs value={period} onChange={setPeriod} />
+          <PeriodTabs value={period} options={PERIODS} onChange={setPeriod} />
           <RaisedButton label="Escolher o mês" onPress={() => setPicking(true)} size={50}>
             <CalendarDays size={21} color={th("#fff")} strokeWidth={2} />
           </RaisedButton>
@@ -385,23 +386,6 @@ export default function CategoriaDetalhe() {
   );
 }
 
-function Legend({ color, label, faint, dashed }: { color: string; label: string; faint?: boolean; dashed?: boolean }) {
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-      {dashed ? (
-        <View style={{ flexDirection: "row", gap: 3 }}>
-          {[0, 1, 2].map((i) => (
-            <View key={i} style={{ width: 6, height: 2.5, borderRadius: 2, backgroundColor: color }} />
-          ))}
-        </View>
-      ) : (
-        <View style={{ width: 22, height: 3, borderRadius: 2, backgroundColor: color, opacity: faint ? 0.4 : 1 }} />
-      )}
-      <Text style={{ fontSize: 14, color: th(INK.soft) }}>{label}</Text>
-    </View>
-  );
-}
-
 /* ───────── The month, day by day ───────── */
 
 function MonthChart({
@@ -500,34 +484,6 @@ function MonthsChart({ width, hex, months, current }: { width: number; hex: stri
   return <Bars width={width} hex={hex} bars={months.map((m) => ({ label: SHORT[m.month], value: m.amount, on: m.month === current.month && m.year === current.year }))} />;
 }
 
-function Bars({ width, hex, bars }: { width: number; hex: string; bars: { label: string; value: number; on: boolean }[] }) {
-  const max = Math.max(1, ...bars.map((b) => b.value)) * 1.15;
-  const n = Math.max(1, bars.length);
-  const slot = (width - 36) / n;
-  const bw = Math.min(46, slot * 0.6);
-  const floor = 30;
-  const room = CHART_H - floor - 26;
-  return (
-    <View style={{ height: CHART_H }}>
-      {bars.map((b, i) => {
-        const h = b.value > 0 ? Math.max(6, (b.value / max) * room) : 4;
-        const cx = 18 + slot * i + slot / 2;
-        return (
-          <View key={i} pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-            <GrowBar left={cx - bw / 2} width={bw} height={h} bottom={floor} color={th(hex, "bg")} strong={b.on} delay={i * 55} />
-            {b.on && b.value > 0 && (
-              <Animated.Text entering={FadeIn.delay(300 + i * 55).duration(300)} style={[nums, { position: "absolute", left: cx - 50, width: 100, bottom: floor + h + 6, textAlign: "center", fontSize: 13, fontWeight: "700", color: th("#fff") }]}>
-                {money(b.value)}
-              </Animated.Text>
-            )}
-            <Text style={{ position: "absolute", left: cx - 24, width: 48, bottom: 6, textAlign: "center", fontSize: 13, fontWeight: b.on ? "700" : "400", color: th(b.on ? "#fff" : INK.soft) }}>{b.label}</Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
 /* ───────── The two cards ───────── */
 
 function BudgetCard({
@@ -617,54 +573,3 @@ function InsightsCard({ width, txs, total, average, category }: { width: number;
 }
 
 /* ───────── The stretch of time, with a pill that slides to the one chosen ───────── */
-
-function PeriodTabs({ value, onChange }: { value: Period; onChange: (p: Period) => void }) {
-  const [w, setW] = useState(0);
-  const index = PERIODS.findIndex((p) => p.key === value);
-  const x = useSharedValue(0);
-  const slot = w > 0 ? (w - 8) / PERIODS.length : 0;
-  useEffect(() => {
-    x.set(withSpring(index * slot, { damping: 20, stiffness: 220, mass: 0.8 }));
-  }, [index, slot, x]);
-  const pill = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));
-  return (
-    <View
-      onLayout={(e) => setW(e.nativeEvent.layout.width)}
-      style={{ flex: 1, flexDirection: "row", padding: 4, borderRadius: 26, borderWidth: 1, borderColor: th("rgba(255,255,255,0.10)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}
-    >
-      {slot > 0 && <Animated.View pointerEvents="none" style={[{ position: "absolute", top: 4, left: 4, width: slot, height: 42, borderRadius: 21, backgroundColor: th("rgba(255,255,255,0.16)", "bg") }, pill]} />}
-      {PERIODS.map((p) => {
-        const on = value === p.key;
-        return (
-          <Pressable key={p.key} onPress={() => onChange(p.key)} accessibilityRole="tab" accessibilityState={{ selected: on }} style={{ flex: 1, height: 42, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ fontSize: 16, fontWeight: on ? "700" : "500", color: th(on ? "#fff" : INK.soft) }}>{p.label}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-const DRAW = 4000;
-
-/** The month's line drawing itself in, left to right. */
-function DrawnPath({ d, stroke, strokeWidth }: { d: string; stroke: string; strokeWidth: number }) {
-  const left = useSharedValue(DRAW);
-  useEffect(() => {
-    left.set(withTiming(0, { duration: 900, easing: Easing.out(Easing.cubic) }));
-  }, [left]);
-  const props = useAnimatedProps(() => ({ strokeDashoffset: left.get() }));
-  return <AnimatedPath d={d} stroke={stroke} strokeWidth={strokeWidth} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${DRAW} ${DRAW}`} animatedProps={props} />;
-}
-
-/** A bar that grows up from the floor, a beat after the one before it. */
-function GrowBar({ left, width, height, bottom, color, strong, delay }: { left: number; width: number; height: number; bottom: number; color: string; strong: boolean; delay: number }) {
-  const h = useSharedValue(0);
-  useEffect(() => {
-    /* Eased, not sprung: it rises to its figure and stops there, never past the label above it. */
-    h.set(withDelay(delay, withTiming(height, { duration: 620, easing: Easing.out(Easing.cubic) })));
-  }, [h, height, delay]);
-  const style = useAnimatedStyle(() => ({ height: Math.max(0, h.get()) }));
-  return <Animated.View style={[{ position: "absolute", left, width, bottom, borderRadius: Math.min(12, width / 2), backgroundColor: color, opacity: strong ? 1 : 0.4 }, style]} />;
-}
