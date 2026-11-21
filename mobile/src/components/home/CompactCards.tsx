@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { Platform, Text, View, type TextStyle } from "react-native";
 import { useRouter } from "expo-router";
-import Animated, { Easing, FadeIn, ReduceMotion, useAnimatedProps, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
+import Animated, { Easing, ReduceMotion, useAnimatedProps, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import Svg, { Circle } from "react-native-svg";
 import type { CategoryExpense, FinanceEvent } from "@/types/finance";
 import { categoryHex } from "@/lib/categoryData";
@@ -80,73 +80,6 @@ function Head({ label }: { label: string }) {
     <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
       <Text numberOfLines={1} style={[T.cardLabel, { flex: 1, fontSize: 13 }]}>{label}</Text>
       <ChevronRight size={14} color={th(INK.faint)} />
-    </View>
-  );
-}
-
-/**
- * Receitas e despesas, small, in the same hand as Gastos do mês: the name in small spaced
- * capitals, how much of what came in has already gone out large (in red past all of it — what
- * is left is the balance card's to say), then what came in and what
- * went out, each with its figure and a rule of thin bars on one scale — green for in, red for
- * out, the rest of the rule in grey. A touch opens Fluxo de caixa.
- */
-export function FluxoCompact({ receitas, despesas, hidden }: { receitas: number; despesas: number; hidden?: boolean }) {
-  const router = useRouter();
-  const [w, setW] = useState(0);
-  const scale = Math.max(receitas, despesas, 1);
-  const show = (v: number) => (hidden ? "R$ •••" : money(v));
-  const count = w > 0 ? Math.max(12, Math.floor((w + TICK_GAP) / (TICK_W + TICK_GAP))) : 0;
-  /* How much of what came in has already gone out — not what is left, which the balance card
-     above already says. Past all of it, in red. */
-  const used = receitas > 0 ? Math.round((despesas / receitas) * 100) : null;
-
-  return (
-    <Surface onPress={() => router.push("/fluxo-de-caixa" as never)} style={{ height: HEIGHT, paddingHorizontal: 14, paddingTop: 15, paddingBottom: 14 }}>
-      <Text numberOfLines={1} style={[T.eyebrow, { color: th(INK.soft) }]}>
-        Fluxo do mês
-      </Text>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[T.figure, { marginTop: 6, fontSize: 24, letterSpacing: -0.8, color: th(used !== null && used > 100 ? RED : "#fff") }]}>
-        {used === null ? "—" : `${used}%`}
-      </Text>
-      <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12, color: th(INK.soft) }}>
-        {used === null ? "nada entrou ainda" : "do que entrou já saiu"}
-      </Text>
-
-      {/* What came in and what went out, each on its own rule, one scale for both. */}
-      <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ marginTop: "auto", gap: 12 }}>
-        <FlowRule label="Entrou" value={show(receitas)} share={receitas / scale} color={GREEN} count={count} delay={80} />
-        <FlowRule label="Saiu" value={hidden ? "R$ •••" : `−${money(despesas)}`} share={despesas / scale} color={RED} count={count} delay={160} />
-      </View>
-    </Surface>
-  );
-}
-
-/* The compact cards' rules: thin bars, evenly spaced across the card. */
-const TICK_W = 3;
-const TICK_GAP = 3.5;
-
-/** One side of the month: its name and figure, and a rule of thin bars filled to its share. */
-function FlowRule({ label, value, share, color, count, delay }: { label: string; value: string; share: number; color: string; count: number; delay: number }) {
-  const filled = Math.round(Math.max(0, Math.min(1, share)) * count);
-  return (
-    <View>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        <View style={{ width: 3, height: 11, borderRadius: 1.5, backgroundColor: th(color, "bg") }} />
-        <Text style={{ fontSize: 12.5, fontWeight: "500", color: th(INK.soft) }}>{label}</Text>
-        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[nums, { flex: 1, textAlign: "right", fontSize: 12.5, fontWeight: "700", color: th(color === RED ? RED : "#fff") }]}>
-          {value}
-        </Text>
-      </View>
-      <View style={{ marginTop: 7, height: 12, flexDirection: "row", justifyContent: "space-between" }}>
-        {Array.from({ length: count }, (_, i) => (
-          <Animated.View
-            key={i}
-            entering={FadeIn.delay(delay + i * 14).duration(220)}
-            style={{ width: TICK_W, height: "100%", borderRadius: TICK_W / 2, backgroundColor: th(i < filled ? color : "rgba(255,255,255,0.14)", "bg") }}
-          />
-        ))}
-      </View>
     </View>
   );
 }

@@ -9,7 +9,7 @@ import HomeBalanceCard from "~/components/home/HomeBalanceCard";
 import GastosCard from "~/components/home/GastosCard";
 import CategoryStrip from "~/components/home/CategoryStrip";
 import JornadaCard from "~/components/home/JornadaCard";
-import FluxoCard from "~/components/home/FluxoCard";
+import FluxoWeeksCard from "~/components/home/FluxoWeeksCard";
 import PlanoCard from "~/components/home/PlanoCard";
 import ProximosEventos from "~/components/home/ProximosEventos";
 import CartoesResumoCard from "~/components/home/CartoesResumoCard";
@@ -17,7 +17,7 @@ import SaudeDoMesCard from "~/components/home/SaudeDoMesCard";
 import GastosFixosCard from "~/components/home/GastosFixosCard";
 import TransacoesRecentes from "~/components/home/TransacoesRecentes";
 import { AssinaturasTile, MetasTile, ParcelamentosTile } from "~/components/home/Tiles";
-import { CategoriasCompact, EventosCompact, FluxoCompact } from "~/components/home/CompactCards";
+import { CategoriasCompact, EventosCompact } from "~/components/home/CompactCards";
 import { RadarWidget } from "~/components/home/ShortcutPair";
 import CopilotCard from "~/components/home/CopilotCard";
 
@@ -81,13 +81,15 @@ export function renderHomeWidget(
       return <PlanoCard />;
 
     case "fluxo":
-      if (size === "half") return <FluxoCompact receitas={ctx.receitas} despesas={ctx.despesas} hidden={ctx.hidden} />;
       return (
-        <FluxoCard
+        <FluxoWeeksCard
+          size={size}
           receitas={ctx.receitas}
           despesas={ctx.despesas}
+          transactions={ctx.transactions}
           month={ctx.month}
           isCurrentMonth={ctx.isCurrentMonth}
+          hidden={ctx.hidden}
         />
       );
 
