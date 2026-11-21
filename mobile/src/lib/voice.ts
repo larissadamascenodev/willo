@@ -5,6 +5,7 @@ import {
   useAudioRecorder,
   useAudioRecorderState,
 } from "expo-audio";
+import { useRef } from "react";
 import { File } from "expo-file-system";
 
 /**
@@ -32,6 +33,9 @@ export const loudnessOf = (level: number | undefined) => (typeof level === "numb
 export function useVoice() {
   const recorder = useAudioRecorder(OPTIONS);
   const state = useAudioRecorderState(recorder, 120);
+  /* When the recording began, by the clock: the recorder's own count can read 0 at the stop,
+     which made a whole sentence look like nothing was said. */
+  const began = useRef(0);
 
   const start = async () => {
     const permission = await requestRecordingPermissionsAsync();
@@ -39,11 +43,12 @@ export function useVoice() {
     await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
     await recorder.prepareToRecordAsync();
     recorder.record();
+    began.current = Date.now();
   };
 
   /** Stops, and hands back the clip ready for the reader — or null if nothing was caught. */
   const stop = async (): Promise<{ data: string; mimeType: string; seconds: number } | null> => {
-    const seconds = recorder.currentTime;
+    const seconds = Math.max(Number(recorder.currentTime) || 0, (state.durationMillis ?? 0) / 1000, began.current ? (Date.now() - began.current) / 1000 : 0);
     await recorder.stop();
     await setAudioModeAsync({ allowsRecording: false }).catch(() => undefined);
     const uri = recorder.uri;

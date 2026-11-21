@@ -75,43 +75,13 @@ export default function HomeBalanceCard({ saldoPrevisto, hidden }: { saldoPrevis
 
   return (
     <Surface onPress={() => router.push("/gestao" as never)} style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 }}>
-      {/* The name, and in the corner the banks' marks one over the next. */}
+      {/* The name, and the way in. */}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <Text style={T.cardLabel}>Saldo em contas</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            {rows.slice(0, MAX_BUBBLES).map((a, i) => (
-              <View
-                key={a.id}
-                style={{
-                  marginLeft: i === 0 ? 0 : -8,
-                  width: BUBBLE + 4,
-                  height: BUBBLE + 4,
-                  borderRadius: (BUBBLE + 4) / 2,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: th("#101113", "bg"),
-                  zIndex: MAX_BUBBLES - i,
-                }}
-              >
-                <View style={{ width: BUBBLE, height: BUBBLE, borderRadius: BUBBLE / 2, overflow: "hidden" }}>
-                  <BankMark name={a.name} hex={a.hex} size={BUBBLE} />
-                </View>
-              </View>
-            ))}
-            {rows.length > MAX_BUBBLES && (
-              <View style={{ marginLeft: -8, width: BUBBLE + 4, height: BUBBLE + 4, borderRadius: (BUBBLE + 4) / 2, alignItems: "center", justifyContent: "center", backgroundColor: th("#101113", "bg") }}>
-                <View style={{ width: BUBBLE, height: BUBBLE, borderRadius: BUBBLE / 2, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.12)", "bg") }}>
-                  <Text style={{ fontSize: 10, fontWeight: "700", color: th("#fff") }}>+{rows.length - MAX_BUBBLES}</Text>
-                </View>
-              </View>
-            )}
-          </View>
-          <ChevronRight size={16} color={th(INK.faint)} />
-        </View>
+        <ChevronRight size={16} color={th(INK.faint)} />
       </View>
 
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[T.figure, { marginTop: 4, opacity: accounts ? 1 : 0.4 }, total < 0 && { color: th(RED) }]}>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[T.figure, { marginTop: 4, fontSize: 36, letterSpacing: -1.2, opacity: accounts ? 1 : 0.4 }, total < 0 && { color: th(RED) }]}>
         {show(total)}
       </Text>
 
@@ -134,6 +104,41 @@ export default function HomeBalanceCard({ saldoPrevisto, hidden }: { saldoPrevis
           <View style={{ flex: 1, borderRadius: 999, backgroundColor: th("rgba(255,255,255,0.08)", "bg") }} />
         )}
       </View>
+
+      {/* Under the bar, the banks' marks one over the next, and how many accounts. */}
+      {rows.length > 0 && (
+        <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              {rows.slice(0, MAX_BUBBLES).map((a, i) => (
+                <View
+                  key={a.id}
+                  style={{
+                    marginLeft: i === 0 ? 0 : -8,
+                    width: BUBBLE + 4,
+                    height: BUBBLE + 4,
+                    borderRadius: (BUBBLE + 4) / 2,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: th("#101113", "bg"),
+                    zIndex: MAX_BUBBLES - i,
+                  }}
+                >
+                  <View style={{ width: BUBBLE, height: BUBBLE, borderRadius: BUBBLE / 2, overflow: "hidden" }}>
+                    <BankMark name={a.name} hex={a.hex} size={BUBBLE} />
+                  </View>
+                </View>
+              ))}
+              {rows.length > MAX_BUBBLES && (
+                <View style={{ marginLeft: -8, width: BUBBLE + 4, height: BUBBLE + 4, borderRadius: (BUBBLE + 4) / 2, alignItems: "center", justifyContent: "center", backgroundColor: th("#101113", "bg") }}>
+                  <View style={{ width: BUBBLE, height: BUBBLE, borderRadius: BUBBLE / 2, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.12)", "bg") }}>
+                    <Text style={{ fontSize: 10, fontWeight: "700", color: th("#fff") }}>+{rows.length - MAX_BUBBLES}</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          <Text style={[nums, { fontSize: 12.5, color: th(INK.soft) }]}>{rows.length === 1 ? "1 conta" : `${rows.length} contas`}</Text>
+        </View>
+      )}
     </Surface>
   );
 }

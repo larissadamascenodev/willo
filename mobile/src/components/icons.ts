@@ -10,6 +10,7 @@
  */
 export { default as ArrowLeftRight } from "lucide-react-native/icons/arrow-left-right";
 export { default as ArrowDownUp } from "lucide-react-native/icons/arrow-down-up";
+export { default as CircleAlert } from "lucide-react-native/icons/circle-alert";
 export { default as ChevronRight } from "lucide-react-native/icons/chevron-right";
 export { default as House } from "lucide-react-native/icons/house";
 export { default as Plus } from "lucide-react-native/icons/plus";

@@ -41,6 +41,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsRight,
+  CircleAlert,
   CircleCheck,
   Clock,
   Delete,
@@ -97,6 +98,7 @@ type IconC = ComponentType<{ size?: number; color?: string; strokeWidth?: number
 
 const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }, default: {} }) as TextStyle;
 const tick = () => void Haptics.selectionAsync().catch(() => undefined);
+const NOOP = () => undefined;
 const yesterdayIso = () => isoOf(new Date(Date.now() - 86_400_000));
 const SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const WEEK = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
@@ -197,6 +199,8 @@ export default function NewEntry({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tries, setTries] = useState(0);
+  /* Continuing with nothing said about what it was: the field shows it is missing. */
+  const [missing, setMissing] = useState(false);
 
   const [accounts, setAccounts] = useState<Acc[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
@@ -290,6 +294,12 @@ export default function NewEntry({
     if (!canSave || busy) return;
     Keyboard.dismiss();
     setError(null);
+    /* What it was, before anything else: the category is worked out from it. */
+    if (!name.trim() && !category) {
+      setMissing(true);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
+      return;
+    }
     if (credit) {
       const card = cards.find((c) => c.id === where);
       const room = card?.limit != null ? Number(card.limit) - (Number(card.used_limit) || 0) : null;
@@ -454,6 +464,16 @@ export default function NewEntry({
       setError("Não consegui entender agora. Tente de novo.");
     }
   };
+
+  /* However the phone reports the volume (or does not), the listening never runs past its
+     longest: it is read then, as if the button had been pressed. */
+  useEffect(() => {
+    if (listen !== "on") return;
+    const t = setTimeout(() => void finishVoice(), LONGEST_MS);
+    return () => clearTimeout(t);
+    // finishVoice changes every render; only the listening starting matters here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listen]);
 
   /* A short silence after speaking ends the listening; the button ends it too. */
   useEffect(() => {
@@ -689,11 +709,12 @@ export default function NewEntry({
                         onChangeText={(t) => {
                           setName(t);
                           setError(null);
+                          if (t.trim()) setMissing(false);
                         }}
                         onFocus={() => setTyping(true)}
                         onBlur={() => setTyping(false)}
                         placeholder={income ? "De onde veio?" : "Com o que foi?"}
-                        placeholderTextColor={th(INK.faint)}
+                        placeholderTextColor={th(missing ? RED : INK.faint)}
                         returnKeyType="done"
                         onSubmitEditing={() => Keyboard.dismiss()}
                         textAlign="center"
@@ -702,8 +723,10 @@ export default function NewEntry({
                           Platform.OS === "web" ? ({ outlineStyle: "none" } as never) : null,
                         ]}
                       />
+                      {missing && !name.trim() ? <CircleAlert size={18} color={th(RED)} strokeWidth={2.4} /> : null}
                       <Pressable
-                        onPress={() => void startVoice()}
+                        onPressIn={() => void startVoice()}
+                        onPress={NOOP}
                         accessibilityLabel="Falar em vez de digitar"
                         hitSlop={8}
                         style={({ pressed }) => ({
@@ -721,6 +744,9 @@ export default function NewEntry({
                         <Mic size={15} color={th("#fff")} strokeWidth={2.3} />
                       </Pressable>
                     </View>
+                    {missing && !name.trim() ? (
+                      <Text style={{ marginTop: 2, fontSize: 12.5, fontWeight: "600", color: th(RED) }}>{income ? "Informe de onde veio o dinheiro" : "Informe com o que você gastou"}</Text>
+                    ) : null}
                   </View>
                   <Pressable
                     onPress={() => {
@@ -1207,7 +1233,11 @@ export function Keypad({ rowH, onKey }: { rowH: number; onKey: (k: string) => vo
           {row.map((k) => (
             <Pressable
               key={k}
-              onPress={() => onKey(k)}
+              /* On the touch itself, not its lifting: the sheet's own gesture could take a touch
+                 over before it lifted, and the first press of a key went unheard. */
+              onPressIn={() => onKey(k)}
+              /* Kept so the key is always taken as a button; the figure moved on the touch. */
+              onPress={NOOP}
               onLongPress={k === "del" ? () => onKey("clear") : undefined}
               accessibilityRole="button"
               accessibilityLabel={k === "del" ? "Apagar" : k === "," ? "Vírgula" : k}
