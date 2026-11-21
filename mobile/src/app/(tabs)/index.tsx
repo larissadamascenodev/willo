@@ -33,7 +33,6 @@ import { th, useThemeRedraw } from "~/theme/theme";
 import { GroundInkProvider } from "~/theme/groundInk";
 import { useLightSkyModel, usePhotoLook, useSkyModel, useSkyPhoto } from "~/lib/skyModel";
 import { isLight } from "~/theme/theme";
-import { countUnread, generateNotifications } from "@/services/notificationService";
 import { fetchGoals, type Goal } from "@/services/goalService";
 import { keptValue } from "~/lib/warmStart";
 import { cachedName, rememberName } from "~/lib/warmHome";
@@ -123,19 +122,11 @@ function HomeScreen() {
     [categoryData, data.categories],
   );
   const { profile, refetch: refetchProfile } = useProfile();
-  /* Coming back from the profile, the photo and the name may have changed; and the
-     bell's dot says whether there is something new, worked out as the web does. */
-  const [unread, setUnread] = useState(0);
+  /* Coming back from the profile, the photo and the name may have changed. */
   useFocusEffect(
     useCallback(() => {
       void refetchProfile();
-      if (!user) return;
-      void generateNotifications(user.id)
-        .catch(() => undefined)
-        .then(() => countUnread(user.id))
-        .then(setUnread)
-        .catch(() => undefined);
-    }, [refetchProfile, user]),
+    }, [refetchProfile]),
   );
   const { assinaturas, totalAssinaturas, loading: assinaturasLoading } = useRecorrentes();
   const { ended, keep: keepEnded, cancel: cancelEnded } = useEndedSubscriptions(user?.id);
@@ -405,8 +396,6 @@ function HomeScreen() {
         avatarUrl={profile?.avatar_url}
         collapsed={collapsed && !editing}
         onProfile={() => router.push("/perfil" as never)}
-        unread={unread}
-        onBell={() => router.push("/notificacoes" as never)}
       />
       <EditBar
         open={editing}

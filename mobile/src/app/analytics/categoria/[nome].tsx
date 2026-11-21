@@ -9,11 +9,12 @@ import { supabase } from "~/supabase/client";
 import { getAccounts, getCreditCards } from "@/services/transactionService";
 import type { AnalyticsTransaction } from "@/services/categoryAnalytics";
 import { categoryHex } from "@/lib/categoryData";
-import { colorFor } from "@/lib/banks";
 import Room from "~/components/Room";
 import RaisedButton from "~/components/RaisedButton";
 import Surface from "~/components/Surface";
-import BankMark from "~/components/BankMark";
+import CenterModal from "~/components/CenterModal";
+import RecentEntries, { EntryRow } from "~/components/transactions/RecentEntries";
+import { bankOf, banksById, type EntryBank } from "~/components/transactions/WithBank";
 import BottomSheet from "~/components/BottomSheet";
 import AnchoredMenu, { MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import LimitSheet from "~/components/categorias/LimitSheet";
@@ -101,6 +102,7 @@ export default function CategoriaDetalhe() {
 
   /* ── Where each charge was paid from, by name ── */
   const [names, setNames] = useState<{ accounts: Record<string, string>; cards: Record<string, { name: string; due: number; color: string | null }> }>({ accounts: {}, cards: {} });
+  const [banks, setBanks] = useState<Record<string, EntryBank>>({});
   /* Read through the app's own lists, after the session is there: asked on the first frame
      of a page opened straight from a link, the tables answered for no one. */
   useEffect(() => {
@@ -108,6 +110,7 @@ export default function CategoriaDetalhe() {
     let alive = true;
     void Promise.all([getAccounts(true).catch(() => []), getCreditCards().catch(() => [])]).then(([a, c]) => {
       if (!alive) return;
+      setBanks(banksById(a as unknown as { id: string; name: string; color: string | null }[], c as unknown as { id: string; name: string; color: string | null }[]));
       setNames({
         accounts: Object.fromEntries((a as unknown as { id: string; name: string }[]).map((r) => [r.id, r.name])),
         cards: Object.fromEntries((c as unknown as { id: string; name: string; due_day: number; color: string | null }[]).map((r) => [r.id, { name: r.name, due: r.due_day, color: r.color }])),
@@ -124,6 +127,8 @@ export default function CategoriaDetalhe() {
     return (acc && names.accounts[acc]) || "Conta";
   };
   const [opened, setOpened] = useState<AnalyticsTransaction | null>(null);
+  /* Every charge of the month, when the short list is not enough. */
+  const [allOpen, setAllOpen] = useState(false);
 
   /* ── The figures the header and the cards read ── */
   const dayOf = (t: AnalyticsTransaction) => {
@@ -177,20 +182,6 @@ export default function CategoriaDetalhe() {
     setMenu(null);
     const lines = [`${category} · ${MONTHS[month]} de ${year}`, ...txs.map((t) => `${t.date.split("-").reverse().join("/")};${t.name};${Number(t.amount).toFixed(2).replace(".", ",")};${paidWith(t)}`), `Total;${total.toFixed(2).replace(".", ",")}`];
     void Share.share({ message: lines.join("\n"), title: `${category} — ${MONTHS[month]}` }).catch(() => undefined);
-  };
-
-  const groups = useMemo(() => {
-    const by = new Map<string, AnalyticsTransaction[]>();
-    for (const t of txs) by.set(t.date, [...(by.get(t.date) ?? []), t]);
-    return [...by.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1));
-  }, [txs]);
-  const dayTitle = (d: string) => {
-    if (d === iso(now)) return "Hoje";
-    const y = new Date(now);
-    y.setDate(y.getDate() - 1);
-    if (d === iso(y)) return "Ontem";
-    const [yy, mm, dd] = d.split("-").map(Number);
-    return `${dd} de ${MONTHS[mm - 1]}${yy !== now.getFullYear() ? ` de ${yy}` : ""}`;
   };
 
   return (
@@ -249,47 +240,17 @@ export default function CategoriaDetalhe() {
           <InsightsCard width={width - 32} txs={txs} total={total} average={average} category={category} />
         </ScrollView>
 
-        {/* Every charge, by day. */}
-        {groups.length === 0 ? (
-          <Text style={{ marginTop: 26, textAlign: "center", fontSize: 15, color: th(INK.soft) }}>Nenhum gasto em {category} em {MONTHS[month]}.</Text>
-        ) : (
-          groups.map(([d, list]) => (
-            <Animated.View key={d} entering={FadeIn.duration(260)} style={{ marginTop: 24 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 20, marginBottom: 10 }}>
-                <Text style={{ fontSize: 17, fontWeight: "700", color: th(INK.soft) }}>{dayTitle(d)}</Text>
-                <Text style={[nums, { fontSize: 16, color: th(INK.soft) }]}>−{money(list.reduce((s, t) => s + Number(t.amount), 0))}</Text>
-              </View>
-              <Surface radius={26} style={{ paddingVertical: 4 }}>
-                {list.map((t, i) => {
-                  const card = onCard(t);
-                  const where = card ? names.cards[t.credit_card_id!]?.name ?? "Cartão" : paidWith(t);
-                  return (
-                    <Pressable
-                      key={t.id}
-                      onPress={() => setOpened(t)}
-                      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: th("rgba(255,255,255,0.06)", "line"), opacity: pressed ? 0.6 : 1 })}
-                    >
-                      <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th(hex, "bg") }}>
-                        <Icon size={20} color="#FFFFFF" strokeWidth={2.2} />
-                      </View>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: "600", color: th("#fff") }}>{t.name}</Text>
-                        <View style={{ marginTop: 3, flexDirection: "row", alignItems: "center", gap: 6 }}>
-                          <BankMark name={where} hex={colorFor(where, card ? names.cards[t.credit_card_id!]?.color : null)} size={18} />
-                          <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 14, color: th(INK.soft) }}>
-                            {where}
-                            {t.installments && t.installments > 1 && t.installment_current ? ` · ${t.installment_current}/${t.installments}` : ""}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={[nums, { fontSize: 17, fontWeight: "700", color: th("#fff") }]}>−{money(Number(t.amount))}</Text>
-                    </Pressable>
-                  );
-                })}
-              </Surface>
-            </Animated.View>
-          ))
-        )}
+        {/* The latest charges, as every list of entries is drawn, and the way to all of them. */}
+        <View style={{ marginTop: 28 }}>
+          <RecentEntries
+            items={txs.slice(0, 5)}
+            customCats={customCats}
+            banks={banks}
+            onOpen={(entry) => setOpened(entry as AnalyticsTransaction)}
+            onSeeAll={() => setAllOpen(true)}
+            empty={`Nenhum gasto em ${category} em ${MONTHS[month]}`}
+          />
+        </View>
       </Animated.ScrollView>
 
       {/* The top row: back, the name once scrolled, and the menu. */}
@@ -367,6 +328,21 @@ export default function CategoriaDetalhe() {
           </View>
         </View>
       </BottomSheet>
+
+      <CenterModal open={allOpen} onClose={() => setAllOpen(false)} title={category} subtitle={`${MONTHS[month]} · ${txs.length} ${txs.length === 1 ? "gasto" : "gastos"}`}>
+        {txs.map((t) => (
+          <EntryRow
+            key={t.id}
+            entry={t}
+            customCats={customCats}
+            bank={bankOf(t, banks)}
+            onPress={() => {
+              setAllOpen(false);
+              setOpened(t);
+            }}
+          />
+        ))}
+      </CenterModal>
 
       <TransactionSheet
         tx={opened as never}

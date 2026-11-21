@@ -16,7 +16,7 @@ import { th } from "~/theme/theme";
 /**
  * The month by category, as the home now shows it.
  *
- * Not one card holding a list: a heading on the page — the month, its total and the line in
+ * Not one card holding a list: a heading on the page — Categorias · Esse mês, and the line in
  * the categories' colours — and under it a row of cards, one per category, that the thumb
  * slides through. Each says its name, what it took and its share of the month, the share
  * drawn as a ring round its colour.
@@ -62,17 +62,12 @@ export default function CategoryStrip({
       {/* The heading lives on the page, not in a card. */}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4 }}>
         <Text style={{ fontSize: 20, fontWeight: "700", letterSpacing: -0.4, color: gth("#fff") }}>
-          Gastos <Text style={{ color: gth(INK.faint) }}>·</Text> {MONTHS[month][0].toUpperCase() + MONTHS[month].slice(1)}
+          Categorias <Text style={{ color: gth(INK.faint) }}>·</Text> Esse mês
         </Text>
         <Pressable onPress={open} hitSlop={8} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, opacity: pressed ? 0.6 : 1 })}>
           <Text style={{ fontSize: 16, fontWeight: "600", color: gth("#fff") }}>Ver</Text>
           <ChevronRight size={18} color={gth("#fff")} strokeWidth={2.2} />
         </Pressable>
-      </View>
-      <View style={{ marginTop: 4, paddingHorizontal: 4, flexDirection: "row", alignItems: "baseline", gap: 8 }}>
-        <Text style={[nums, { fontSize: 15, color: gth(INK.soft) }]}>
-          {hidden ? "R$ •••" : money(total)} no mês
-        </Text>
       </View>
 
       {/* The month's line, in the categories' colours. */}
