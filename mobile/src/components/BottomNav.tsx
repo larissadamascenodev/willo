@@ -107,7 +107,8 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
         bottom: 0,
         paddingLeft: 20,
         paddingRight: 28,
-        paddingBottom: insets.bottom + 14,
+        /* Close to the edge, as the phone's own floating bars sit: the home bar's room, less a little. */
+        paddingBottom: Math.max(12, insets.bottom - 8),
       }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
