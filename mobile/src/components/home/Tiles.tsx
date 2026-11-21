@@ -693,7 +693,7 @@ export function MetasTile({ size = "full" }: { size?: WidgetSize }) {
   }, [user]);
 
   if (goals === null) return <Skeleton size={size} />;
-  return <MetasCard goals={goals} size={size} onOpen={() => router.push("/gestao")} onOpenGoal={(id) => router.push(`/metas/${id}` as never)} />;
+  return <MetasCard goals={goals} size={size} onOpen={() => router.push("/caixinhas" as never)} onOpenGoal={(id) => router.push(`/metas/${id}` as never)} />;
 }
 
 

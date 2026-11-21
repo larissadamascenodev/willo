@@ -1,52 +1,44 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Platform, Pressable, Text, View, type TextStyle } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { getAccounts } from "@/services/transactionService";
 import { useFinanceData } from "@/hooks/useFinanceData";
+import { setHiddenValues, useHiddenValues } from "@/hooks/useHiddenValues";
+import { loadMonthTransactions, type TransactionRow as Row } from "@/services/monthTransactions";
+import type { CustomCategory } from "@/services/categoryService";
 import { ensureWallet } from "~/lib/ensureWallet";
 import { showToast } from "~/lib/toast";
-import { fetchGoals, type Goal } from "@/services/goalService";
 import { colorFor } from "@/lib/banks";
-import { ensureReserve } from "~/lib/ensureReserve";
-import {
-  catchUpYields,
-  earns,
-  estimate,
-  latestCdi,
-  yieldEarned,
-} from "~/lib/yields";
 import AccountSheet from "~/components/accounts/AccountSheet";
-import CaixinhaSheet from "~/components/accounts/CaixinhaSheet";
-import GastosFixosCard from "~/components/home/GastosFixosCard";
-import FixedSheet from "~/components/home/FixedSheet";
-import CaixinhaTile, {
-  NewCaixinhaTile,
-  TILE_W,
-} from "~/components/accounts/CaixinhaTile";
 import Room from "~/components/Room";
-import RoundButton from "~/components/RoundButton";
-import PageHeader from "~/components/PageHeader";
+import RaisedButton from "~/components/RaisedButton";
 import Surface from "~/components/Surface";
 import BankMark from "~/components/BankMark";
+import TransactionRow from "~/components/transactions/TransactionRow";
 import { FlexBar } from "~/components/Bar";
-import { ChevronRight, Landmark, PiggyBank, Plus } from "~/components/icons";
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Landmark, Plus } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
-import { GREEN, INK, RED } from "~/theme/tokens";
-import { type as T } from "~/theme/type";
-
+import { INK, RED } from "~/theme/tokens";
 import { th, useThemeRedraw } from "~/theme/theme";
+
 /**
- * Where the money is.
+ * Contas: where the money is.
  *
- * The total leads, then one bar split the way the money is split, then a line per
- * account. It scrolls with the page: the wallet pins its total because a long list
- * of cards would carry it off screen, and a handful of accounts never does — pinning
- * a header a page does not need is just a header that blurs for no reason.
+ * Drawn as every detail page is, in the app's quiet colours. What is in all the accounts, large,
+ * with the eye beside its name and where the month should end under it; one bar split the way the
+ * money is split, each share in its bank's colour; then a line per account — its mark, its name,
+ * its share and what it holds — a touch opening it. Then the way to add one, and the latest
+ * entries with the way to all of them.
+ *
+ * The caixinhas have a page of their own now, and the fixed entries live on the home's card; a
+ * link that still asks for the caixinhas here is sent on to them.
  */
 
+const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }, default: {} }) as TextStyle;
+const LATEST = 5;
 const TYPE_LABEL: Record<string, string> = {
   checking: "Conta corrente",
   savings: "Poupança",
@@ -63,69 +55,37 @@ interface Account {
   is_default: boolean;
 }
 
-export default function Gestao() {
-  /* Drawn again in place when the theme changes. */
+export default function Contas() {
   useThemeRedraw();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  /* Opened from the home's Caixinhas shortcut: the page goes straight to them. */
-  const { ver } = useLocalSearchParams<{ ver?: string }>();
-  const scroller = useRef<ComponentRef<typeof ScrollView>>(null);
-  const jumped = useRef(false);
-  const [accounts, setAccounts] = useState<Account[] | null>(null);
-  const [goals, setGoals] = useState<Goal[]>([]);
-  /* What the caixinhas have earned so far, and the day's CDI the estimates are read from. */
-  const [earned, setEarned] = useState(0);
-  const [cdi, setCdi] = useState<number | null>(null);
-  const [addingAccount, setAddingAccount] = useState(false);
-  const [addingCaixinha, setAddingCaixinha] = useState(false);
-  /* A fixed income or cost, asked the way a new account's setup asks it. */
-  const [addingFixed, setAddingFixed] = useState<"despesa" | "receita" | null>(
-    null,
-  );
+  const hidden = useHiddenValues();
+  const show = (v: number) => (hidden ? "R$ •••" : money(v));
 
-  const announceChange = () =>
-    window.dispatchEvent(new CustomEvent("finance-data-changed"));
-  const announce = announceChange;
+  /* The caixinhas moved to a page of their own. */
+  const { ver } = useLocalSearchParams<{ ver?: string }>();
+  useEffect(() => {
+    if (ver === "caixinhas") router.replace("/caixinhas" as never);
+  }, [ver, router]);
+
+  const [accounts, setAccounts] = useState<Account[] | null>(null);
+  const [adding, setAdding] = useState(false);
+  const announce = () => window.dispatchEvent(new CustomEvent("finance-data-changed"));
 
   const load = useCallback(async () => {
     if (!user) {
       setAccounts([]);
-      setGoals([]);
       return;
     }
     try {
       const read = (await getAccounts()) as unknown as Account[];
       setAccounts(read);
-      /* The wallet is made once for anyone with accounts; the change it announces
-         brings the list back with it in. */
-      if (await ensureWallet(user.id, read)) announceChange();
+      /* The wallet is made once for anyone with accounts; the change it announces brings the
+         list back with it in. */
+      if (await ensureWallet(user.id, read)) announce();
     } catch {
       setAccounts([]);
-    }
-    /* The caixinhas are the goals; the accounts do not wait on them. */
-    try {
-      let list = await fetchGoals();
-      /* The reserve is there from the start, and any days of yield missed while the app
-         was closed are credited before the figures are shown. */
-      const made = await ensureReserve(user.id, list);
-      const credited = await catchUpYields(list);
-      if (made || credited) list = await fetchGoals();
-      setGoals(list);
-      if (list.some(earns)) {
-        const [sum, rate] = await Promise.all([
-          yieldEarned(user.id),
-          latestCdi(),
-        ]);
-        setEarned(sum);
-        setCdi(rate?.rate ?? null);
-      } else {
-        setEarned(0);
-      }
-      if (made || credited) announceChange();
-    } catch {
-      setGoals([]);
     }
   }, [user]);
 
@@ -139,643 +99,194 @@ export default function Gestao() {
   const rows = useMemo(
     () =>
       (accounts ?? [])
-        .map((a) => ({
-          account: a,
-          balance: Number(a.current_balance) || 0,
-          hex: colorFor(a.name, a.color, "#6B7280"),
-          typeLabel: TYPE_LABEL[a.type] ?? TYPE_LABEL.checking,
-        }))
+        .map((a) => ({ account: a, balance: Number(a.current_balance) || 0, hex: colorFor(a.name, a.color, "#6B7280"), typeLabel: TYPE_LABEL[a.type] ?? TYPE_LABEL.checking }))
         .sort((a, b) => b.balance - a.balance),
     [accounts],
   );
+  const saldo = rows.reduce((s, r) => s + r.balance, 0);
+  /* Only what is actually in hand takes room on the share rule; an account in the red still
+     gets its line, so the list stays the whole truth. */
+  const positive = rows.reduce((s, r) => s + Math.max(r.balance, 0), 0);
 
   /* Where the month lands: the figure the home card shows, read the same way. */
   const now = useMemo(() => new Date(), []);
-  const { data: month } = useFinanceData(now.getMonth(), now.getFullYear(), {
-    includeHistorical: false,
-  });
-  const previsto = month?.saldoPrevisto;
+  const { data: month } = useFinanceData(now.getMonth(), now.getFullYear(), { includeHistorical: false });
 
-  const saldo = rows.reduce((s, r) => s + r.balance, 0);
-  /* Money in a caixinha has left the account's balance but is still the person's, so
-     the whole of what they have is the two together. */
-  const guardado = goals.reduce(
-    (s, g) => s + (Number(g.current_amount) || 0),
-    0,
-  );
-  const total = saldo + guardado;
-  /* What the caixinhas that earn are expected to add in a month, from the latest CDI. */
-  const rendem = goals.some(earns);
-  const noMes =
-    cdi === null
-      ? 0
-      : goals
-          .filter(earns)
-          .reduce(
-            (s, g) =>
-              s +
-              estimate(
-                Number(g.current_amount) || 0,
-                cdi,
-                Number(g.yield_percent),
-              ).month,
-            0,
+  /* The month's latest entries, as Transações lists them. */
+  const [latest, setLatest] = useState<Row[]>([]);
+  const [cards, setCards] = useState<unknown[]>([]);
+  const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const read = () =>
+      loadMonthTransactions(now.getMonth(), now.getFullYear())
+        .then((m) => {
+          if (!alive) return;
+          setLatest(
+            m.transactions
+              .filter((t) => t.date <= todayKey)
+              .sort((a, b) => b.date.localeCompare(a.date) || (b.created_at ?? "").localeCompare(a.created_at ?? ""))
+              .slice(0, LATEST),
           );
-  /* Only what is actually in hand can take up room on a share rule; an account in
-     the red still gets its line, so the list stays the whole truth. */
-  const positive = rows.reduce((s, r) => s + Math.max(r.balance, 0), 0);
+          setCards(m.creditCards);
+          setCustomCats(m.customCategories);
+        })
+        .catch(() => undefined);
+    void read();
+    window.addEventListener("finance-data-changed", read);
+    window.addEventListener("transaction-created", read);
+    return () => {
+      alive = false;
+      window.removeEventListener("finance-data-changed", read);
+      window.removeEventListener("transaction-created", read);
+    };
+  }, [user, now]);
+  const accountName = useMemo(() => Object.fromEntries((accounts ?? []).map((a) => [a.id, a.name])), [accounts]);
 
   return (
     <Room lit sky>
-      <ScrollView
-        ref={scroller}
-        contentContainerStyle={{
-          paddingTop: insets.top + 8,
-          paddingBottom: insets.bottom + 40,
-          paddingHorizontal: 16,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        <PageHeader
-          title="Carteira"
-          back="/"
-          right={
-            <RoundButton
-              label="Adicionar conta"
-              onPress={() => setAddingAccount(true)}
-            >
-              <Plus
-                size={18}
-                color={th("rgba(255,255,255,0.9)")}
-                strokeWidth={2.4}
-              />
-            </RoundButton>
-          }
-        />
-
-        {accounts === null ? (
-          <View style={{ marginTop: 20, gap: 16 }}>
-            <View
-              style={{
-                height: 96,
-                borderRadius: 24,
-                backgroundColor: th("rgba(255,255,255,0.04)", "bg"),
-              }}
-            />
-            <Surface style={{ height: 170 }}>
-              <View />
-            </Surface>
-          </View>
-        ) : rows.length === 0 ? (
-          <Surface
-            radius={26}
-            style={{
-              marginTop: 16,
-              paddingHorizontal: 20,
-              paddingTop: 24,
-              paddingBottom: 20,
-              alignItems: "center",
-            }}
-          >
-            <View
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 24,
-                alignItems: "center",
-                justifyContent: "center",
-                borderWidth: 1,
-                borderColor: th(INK.edge, "line"),
-                backgroundColor: th("rgba(255,255,255,0.04)", "bg"),
-              }}
-            >
-              <Landmark
-                size={22}
-                color={th("rgba(255,255,255,0.7)")}
-                strokeWidth={2}
-              />
+      <Animated.ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: insets.top + 74, paddingBottom: insets.bottom + 60, paddingHorizontal: 16 }}>
+        {accounts !== null && rows.length === 0 ? (
+          <Surface radius={26} style={{ marginTop: 6, paddingHorizontal: 20, paddingTop: 24, paddingBottom: 20, alignItems: "center" }}>
+            <View style={{ width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: th(INK.edge, "line"), backgroundColor: th("rgba(255,255,255,0.04)", "bg") }}>
+              <Landmark size={22} color={th("rgba(255,255,255,0.7)")} strokeWidth={2} />
             </View>
-            <Text
-              style={{
-                marginTop: 14,
-                fontSize: 17,
-                fontWeight: "700",
-                color: th("#fff"),
-              }}
-            >
-              Nenhuma conta cadastrada
-            </Text>
-            <Text
-              style={{
-                marginTop: 6,
-                maxWidth: 256,
-                textAlign: "center",
-                fontSize: 13.5,
-                lineHeight: 18,
-                color: th(INK.soft),
-              }}
-            >
-              Cadastre uma conta para acompanhar o saldo e o que entra e sai
-              dela.
-            </Text>
-            <Pressable
-              onPress={() => setAddingAccount(true)}
-              style={({ pressed }) => ({
-                marginTop: 18,
-                height: 46,
-                paddingHorizontal: 24,
-                borderRadius: 23,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: th("#fff", "bg"),
-                opacity: pressed ? 0.85 : 1,
-              })}
-            >
-              <Text
-                style={{
-                  fontSize: 15,
-                  fontWeight: "700",
-                  color: th("#0B0B0B"),
-                }}
-              >
-                Adicionar conta
-              </Text>
-            </Pressable>
+            <Text style={{ marginTop: 14, fontSize: 17, fontWeight: "700", color: th("#fff") }}>Nenhuma conta cadastrada</Text>
+            <Text style={{ marginTop: 6, maxWidth: 256, textAlign: "center", fontSize: 13.5, lineHeight: 18, color: th(INK.soft) }}>Cadastre uma conta para acompanhar o saldo e o que entra e sai dela.</Text>
           </Surface>
         ) : (
           <>
-            {/* ══ Everything you hold ══ */}
-            <Animated.View
-              entering={FadeInDown.duration(400)}
-              style={{ paddingHorizontal: 4, paddingTop: 12 }}
-            >
-              <Text
-                style={{ fontSize: 13.5, color: th("rgba(255,255,255,0.62)") }}
-              >
-                Saldo em contas
-              </Text>
-              <Text
-                numberOfLines={1}
-                style={{
-                  marginTop: 4,
-                  fontSize: 40,
-                  fontWeight: "800",
-                  letterSpacing: -1.6,
-                  color: th(saldo < 0 ? RED : "#fff"),
-                }}
-              >
-                {money(saldo)}
-              </Text>
-              {/* Two small readings side by side under the balance: where the month lands,
-                  and — once something is set aside — everything the person holds. */}
-              <View style={{ marginTop: 14, flexDirection: "row", gap: 28 }}>
-                {previsto !== undefined && (
-                  <View style={{ flexShrink: 1, minWidth: 0 }}>
-                    <Text
-                      numberOfLines={1}
-                      style={{ fontSize: 12, color: th(INK.softer) }}
-                    >
-                      Previsto no final do mês
-                    </Text>
-                    <Text
-                      numberOfLines={1}
-                      style={{
-                        marginTop: 3,
-                        fontSize: 16,
-                        fontWeight: "700",
-                        letterSpacing: -0.3,
-                        color: th(previsto < 0 ? RED : "#fff"),
-                      }}
-                    >
-                      {money(previsto)}
-                    </Text>
-                  </View>
-                )}
-                {guardado > 0 && (
-                  <View style={{ flexShrink: 1, minWidth: 0 }}>
-                    <Text
-                      numberOfLines={1}
-                      style={{ fontSize: 12, color: th(INK.softer) }}
-                    >
-                      Patrimônio total
-                    </Text>
-                    <Text
-                      numberOfLines={1}
-                      style={{
-                        marginTop: 3,
-                        fontSize: 16,
-                        fontWeight: "700",
-                        letterSpacing: -0.3,
-                        color: th("#fff"),
-                      }}
-                    >
-                      {money(total)}
-                    </Text>
-                  </View>
-                )}
+            {/* What is in all the accounts. */}
+            <Animated.View entering={FadeInDown.duration(380)} style={{ paddingHorizontal: 4 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <Text style={{ fontSize: 17, color: th(INK.soft) }}>{rows.length > 0 ? `Saldo em ${rows.length} ${rows.length === 1 ? "conta" : "contas"}` : "Saldo em contas"}</Text>
+                <Pressable onPress={() => setHiddenValues(!hidden)} hitSlop={12} accessibilityRole="button" accessibilityLabel={hidden ? "Mostrar valores" : "Esconder valores"} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                  {hidden ? <EyeOff size={19} color={th(INK.soft)} strokeWidth={2} /> : <Eye size={19} color={th(INK.soft)} strokeWidth={2} />}
+                </Pressable>
               </View>
-              <Text
-                style={{ marginTop: 10, fontSize: 12.5, color: th(INK.soft) }}
-              >
-                {rows.length} {rows.length === 1 ? "conta" : "contas"}
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[nums, { marginTop: 4, fontSize: 44, fontWeight: "700", letterSpacing: -1.6, color: th(saldo < 0 ? RED : "#fff"), opacity: accounts ? 1 : 0.4 }]}>
+                {show(saldo)}
               </Text>
+              {month?.saldoPrevisto !== undefined && (
+                <Text style={[nums, { marginTop: 4, fontSize: 14.5, color: th(INK.soft) }]}>
+                  Previsto no final do mês: <Text style={{ fontWeight: "700", color: th(month.saldoPrevisto < 0 ? RED : "#fff") }}>{show(month.saldoPrevisto)}</Text>
+                </Text>
+              )}
             </Animated.View>
 
-            {/* ══ The accounts, one line each ══ */}
-            <Animated.View
-              entering={FadeInDown.delay(60).duration(420)}
-              style={{ marginTop: 24 }}
-            >
-              {/* One bar split the way the money is, each share in its bank's colour. */}
-              <View
-                style={{
-                  flexDirection: "row",
-                  height: 8,
-                  gap: 3,
-                  paddingHorizontal: 4,
-                  marginBottom: 4,
-                }}
-              >
-                {positive > 0 ? (
-                  rows
-                    .filter((r) => r.balance > 0)
-                    .map((r, i) => (
-                      <FlexBar
-                        key={r.account.id}
-                        share={r.balance / positive}
-                        color={r.hex}
-                        delay={0.05 * i}
-                      />
-                    ))
-                ) : (
-                  <View
-                    style={{
-                      flex: 1,
-                      borderRadius: 999,
-                      backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
-                    }}
-                  />
-                )}
-              </View>
+            {/* One bar split the way the money is, each share in its bank's colour. */}
+            <View style={{ marginTop: 18, flexDirection: "row", height: 8, gap: 3, paddingHorizontal: 4 }}>
+              {positive > 0 ? (
+                rows.filter((r) => r.balance > 0).map((r, i) => <FlexBar key={r.account.id} share={r.balance / positive} color={r.hex} delay={0.05 * i} />)
+              ) : (
+                <View style={{ flex: 1, borderRadius: 999, backgroundColor: th("rgba(255,255,255,0.08)", "bg") }} />
+              )}
+            </View>
 
+            {/* A line per account. */}
+            <View style={{ marginTop: 8 }}>
               {rows.map((r, i) => {
-                const share =
-                  positive > 0 ? Math.max(r.balance, 0) / positive : 0;
+                const share = positive > 0 ? Math.max(r.balance, 0) / positive : 0;
                 return (
-                  <Animated.View
-                    key={r.account.id}
-                    entering={FadeInDown.delay(40 + i * 50).duration(350)}
-                  >
+                  <Animated.View key={r.account.id} entering={FadeInDown.delay(40 + i * 50).duration(350)}>
                     <Pressable
-                      onPress={() =>
-                        router.push(`/conta/${r.account.id}` as never)
-                      }
-                      style={({ pressed }) => ({
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 14,
-                        paddingHorizontal: 4,
-                        paddingVertical: 16,
-                        borderTopWidth: i > 0 ? 1 : 0,
-                        borderTopColor: th("rgba(255,255,255,0.06)", "line"),
-                        opacity: pressed ? 0.6 : 1,
-                      })}
+                      onPress={() => router.push(`/conta/${r.account.id}` as never)}
+                      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 4, paddingVertical: 14, opacity: pressed ? 0.6 : 1 })}
                     >
-                      <BankMark name={r.account.name} hex={r.hex} size={40} />
-
+                      <BankMark name={r.account.name} hex={r.hex} size={48} />
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 8,
-                          }}
-                        >
-                          <Text
-                            numberOfLines={1}
-                            style={{
-                              flexShrink: 1,
-                              fontSize: 15.5,
-                              fontWeight: "600",
-                              color: th("#fff"),
-                            }}
-                          >
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                          <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 17, fontWeight: "600", color: th("#fff") }}>
                             {r.account.name}
                           </Text>
                           {r.account.is_default && (
-                            <Text
-                              style={{
-                                borderRadius: 999,
-                                overflow: "hidden",
-                                paddingHorizontal: 8,
-                                paddingVertical: 2,
-                                fontSize: 10,
-                                fontWeight: "700",
-                                backgroundColor: th(
-                                  "rgba(255,255,255,0.08)",
-                                  "bg",
-                                ),
-                                color: th(INK.soft),
-                              }}
-                            >
-                              Principal
-                            </Text>
+                            <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
+                              <Text style={{ fontSize: 10.5, fontWeight: "700", color: th(INK.soft) }}>Principal</Text>
+                            </View>
                           )}
                         </View>
-                        <Text
-                          numberOfLines={1}
-                          style={{
-                            marginTop: 2,
-                            fontSize: 12,
-                            color: th(INK.softer),
-                          }}
-                        >
-                          {r.typeLabel}
+                        <Text numberOfLines={1} style={[nums, { marginTop: 3, fontSize: 14, color: th(INK.soft) }]}>
+                          {`${Math.round(share * 100)}% · ${r.typeLabel}`}
                         </Text>
                       </View>
-
-                      <View style={{ alignItems: "flex-end" }}>
-                        <Text
-                          style={{
-                            fontSize: 15.5,
-                            fontWeight: "700",
-                            color: th(
-                              r.balance < 0
-                                ? RED
-                                : r.balance > 0
-                                  ? "#fff"
-                                  : INK.softer,
-                            ),
-                          }}
-                        >
-                          {money(r.balance)}
-                        </Text>
-                        <Text
-                          style={{
-                            marginTop: 2,
-                            fontSize: 12,
-                            color: th(share > 0 ? r.hex : INK.faint),
-                          }}
-                        >
-                          {Math.round(share * 100)}%
-                        </Text>
-                      </View>
+                      <Text style={[nums, { fontSize: 17, fontWeight: "700", color: th(r.balance < 0 ? RED : r.balance > 0 ? "#fff" : INK.softer) }]}>{show(r.balance)}</Text>
                     </Pressable>
                   </Animated.View>
                 );
               })}
-            </Animated.View>
-
-            {/* ══ What comes in and goes out every month: the home's own card, with a way to add one ══ */}
-            <Animated.View
-              entering={FadeInDown.delay(80).duration(420)}
-              style={{ marginTop: 30 }}
-            >
-              <GastosFixosCard onAdd={(kind) => setAddingFixed(kind)} />
-            </Animated.View>
-
-            {/* ══ Caixinhas: money set aside for something, still yours ══ */}
-            <Animated.View
-              entering={FadeInDown.delay(120).duration(420)}
-              style={{ marginTop: 30 }}
-              onLayout={(e) => {
-                if (ver !== "caixinhas" || jumped.current) return;
-                jumped.current = true;
-                const y = e.nativeEvent.layout.y;
-                setTimeout(() => scroller.current?.scrollTo({ y: Math.max(0, y - insets.top - 64), animated: true }), 380);
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  paddingHorizontal: 4,
-                  marginBottom: 4,
-                }}
-              >
-                <View>
-                  <Text style={T.eyebrow}>Caixinhas</Text>
-                  <Text
-                    style={{
-                      marginTop: 3,
-                      fontSize: 12.5,
-                      color: th(INK.soft),
-                    }}
-                  >
-                    Organize seus objetivos
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={() => setAddingCaixinha(true)}
-                  hitSlop={8}
-                  style={({ pressed }) => ({
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 4,
-                    opacity: pressed ? 0.6 : 1,
-                  })}
-                >
-                  <Plus size={14} color={th("#fff")} strokeWidth={2.6} />
-                  <Text
-                    style={{
-                      fontSize: 13.5,
-                      fontWeight: "600",
-                      color: th("#fff"),
-                    }}
-                  >
-                    Criar nova
-                  </Text>
-                </Pressable>
-              </View>
-
-              {goals.length === 0 ? (
-                <Pressable
-                  onPress={() => setAddingCaixinha(true)}
-                  style={({ pressed }) => ({
-                    marginTop: 8,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 14,
-                    borderRadius: 22,
-                    borderWidth: 1,
-                    borderColor: th("rgba(255,255,255,0.08)", "line"),
-                    backgroundColor: th("rgba(255,255,255,0.04)", "bg"),
-                    padding: 16,
-                    opacity: pressed ? 0.7 : 1,
-                  })}
-                >
-                  <View
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 22,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: th("rgba(255,255,255,0.07)", "bg"),
-                    }}
-                  >
-                    <PiggyBank size={20} color={th("#fff")} strokeWidth={2} />
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text
-                      style={{
-                        fontSize: 15,
-                        fontWeight: "700",
-                        color: th("#fff"),
-                      }}
-                    >
-                      Crie sua primeira caixinha
-                    </Text>
-                    <Text
-                      style={{
-                        marginTop: 2,
-                        fontSize: 12.5,
-                        lineHeight: 17,
-                        color: th(INK.soft),
-                      }}
-                    >
-                      Para a viagem, a reserva de emergência, o carro. O
-                      dinheiro sai da conta, mas continua seu.
-                    </Text>
-                  </View>
-                  <ChevronRight size={16} color={th(INK.softer)} />
-                </Pressable>
-              ) : (
-                <>
-                  {/* The caixinhas as numbers first, the way the accounts are. Each one keeps its
-                      own goal and pace on its own page, so only the total and what it earns are here. */}
-                  <View style={{ paddingHorizontal: 4, paddingTop: 10 }}>
-                    <Text
-                      style={{
-                        fontSize: 13.5,
-                        color: th("rgba(255,255,255,0.62)"),
-                      }}
-                    >
-                      Total em caixinhas
-                    </Text>
-                    <Text
-                      numberOfLines={1}
-                      style={{
-                        marginTop: 4,
-                        fontSize: 32,
-                        fontWeight: "800",
-                        letterSpacing: -1.2,
-                        color: th("#fff"),
-                      }}
-                    >
-                      {money(guardado)}
-                    </Text>
-                    {rendem && (
-                      <View
-                        style={{ marginTop: 12, flexDirection: "row", gap: 26 }}
-                      >
-                        <View style={{ flexShrink: 1, minWidth: 0 }}>
-                          <Text
-                            numberOfLines={1}
-                            style={{ fontSize: 12, color: th(INK.softer) }}
-                          >
-                            Rendimentos
-                          </Text>
-                          <Text
-                            numberOfLines={1}
-                            style={{
-                              marginTop: 3,
-                              fontSize: 16,
-                              fontWeight: "700",
-                              letterSpacing: -0.3,
-                              color: th(GREEN),
-                            }}
-                          >
-                            {money(earned)}
-                          </Text>
-                        </View>
-                        {noMes > 0 && (
-                          <View style={{ flexShrink: 1, minWidth: 0 }}>
-                            <Text
-                              numberOfLines={1}
-                              style={{ fontSize: 12, color: th(INK.softer) }}
-                            >
-                              Estimado em um mês
-                            </Text>
-                            <Text
-                              numberOfLines={1}
-                              style={{
-                                marginTop: 3,
-                                fontSize: 16,
-                                fontWeight: "700",
-                                letterSpacing: -0.3,
-                                color: th("#fff"),
-                              }}
-                            >
-                              {money(noMes)}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    )}
-                  </View>
-
-                  {/* A shelf of them, each its own picture, running off the edge so it reads as more. */}
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    decelerationRate="fast"
-                    snapToInterval={TILE_W + 12}
-                    snapToAlignment="start"
-                    style={{ marginTop: 20, marginHorizontal: -16 }}
-                    contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
-                  >
-                    {goals.map((g, i) => (
-                      <Animated.View
-                        key={g.id}
-                        entering={FadeInDown.delay(60 + i * 70).duration(420)}
-                      >
-                        <CaixinhaTile
-                          goal={g}
-                          delay={0.06 * i}
-                          onPress={() => router.push(`/metas/${g.id}` as never)}
-                        />
-                      </Animated.View>
-                    ))}
-                    <Animated.View
-                      entering={FadeInDown.delay(
-                        60 + goals.length * 70,
-                      ).duration(420)}
-                    >
-                      <NewCaixinhaTile
-                        onPress={() => setAddingCaixinha(true)}
-                      />
-                    </Animated.View>
-                  </ScrollView>
-                </>
-              )}
-            </Animated.View>
+            </View>
           </>
         )}
-      </ScrollView>
+
+        {/* The way to add one. */}
+        <Pressable
+          onPress={() => setAdding(true)}
+          style={({ pressed }) => ({
+            marginTop: 14,
+            height: 54,
+            borderRadius: 27,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            borderWidth: 1,
+            borderColor: th("rgba(255,255,255,0.10)", "line"),
+            backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Plus size={18} color={th("#fff")} strokeWidth={2.4} />
+          <Text style={{ fontSize: 16, fontWeight: "600", color: th("#fff") }}>Adicionar conta</Text>
+        </Pressable>
+
+        {/* The latest entries. */}
+        {latest.length > 0 && (
+          <>
+            <View style={{ marginTop: 30, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4 }}>
+              <Text style={{ fontSize: 17, fontWeight: "700", color: th(INK.soft) }}>Últimos lançamentos</Text>
+              <Pressable onPress={() => router.push("/transacoes" as never)} hitSlop={8} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, opacity: pressed ? 0.6 : 1 })}>
+                <Text style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>Ver mais</Text>
+                <ChevronRight size={16} color={th("#fff")} strokeWidth={2.2} />
+              </Pressable>
+            </View>
+            <Surface radius={26} style={{ marginTop: 10, paddingHorizontal: 12, paddingVertical: 4 }}>
+              {latest.map((tx) => (
+                <TransactionRow
+                  key={tx.id}
+                  tx={tx}
+                  accountName={tx.account_id ? accountName[tx.account_id] : undefined}
+                  customCategories={customCats}
+                  creditCards={cards as never}
+                  onPress={() => router.push("/transacoes" as never)}
+                />
+              ))}
+            </Surface>
+          </>
+        )}
+      </Animated.ScrollView>
+
+      {/* The top row: back, and the page's name. */}
+      <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, paddingTop: insets.top + 10, paddingHorizontal: 16, flexDirection: "row", alignItems: "center" }}>
+        <RaisedButton label="Voltar" onPress={() => (router.canGoBack() ? router.back() : router.replace("/" as never))} size={50}>
+          <ChevronLeft size={24} color={th("#fff")} strokeWidth={2.4} />
+        </RaisedButton>
+        <Text numberOfLines={1} style={{ flex: 1, marginHorizontal: 10, textAlign: "center", fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
+          Contas
+        </Text>
+        <View style={{ width: 50 }} />
+      </View>
 
       <AccountSheet
-        open={addingAccount}
-        onClose={() => setAddingAccount(false)}
+        open={adding}
+        onClose={() => setAdding(false)}
         existingNames={rows.map((r) => r.account.name)}
         onCreated={() => {
-          setAddingAccount(false);
+          setAdding(false);
           void load();
           announce();
           showToast("Conta adicionada");
-        }}
-      />
-      <FixedSheet kind={addingFixed} onClose={() => setAddingFixed(null)} />
-      <CaixinhaSheet
-        open={addingCaixinha}
-        onClose={() => setAddingCaixinha(false)}
-        existingNames={goals.map((g) => g.name)}
-        onCreated={() => {
-          setAddingCaixinha(false);
-          void load();
-          announce();
-          showToast("Caixinha criada");
         }}
       />
     </Room>

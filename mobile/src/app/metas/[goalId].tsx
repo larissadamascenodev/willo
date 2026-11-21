@@ -151,7 +151,7 @@ export default function MetaDetalhe() {
         setAccountNames(names);
       }
     } catch {
-      router.replace("/gestao" as never);
+      router.replace("/caixinhas" as never);
     } finally {
       setLoading(false);
     }
@@ -246,7 +246,7 @@ export default function MetaDetalhe() {
       await deleteGoal(goalId);
       announce();
       showToast(goal?.name ? `Caixinha “${goal.name}” excluída` : "Caixinha excluída");
-      router.replace("/gestao" as never);
+      router.replace("/caixinhas" as never);
     } catch {
       setError("Não foi possível excluir a caixinha.");
       setConfirming(null);
@@ -302,7 +302,7 @@ export default function MetaDetalhe() {
       <Room>
         <ScrollView contentContainerStyle={{ paddingTop: insets.top + 8, paddingHorizontal: 16 }}>
           <View style={{ height: 44, justifyContent: "center" }}>
-            <BackButton to="/gestao" />
+            <BackButton to="/caixinhas" />
           </View>
           <View style={{ marginTop: 16, gap: 12 }}>
             <View style={{ height: 200, borderRadius: 24, backgroundColor: th("rgba(255,255,255,0.04)", "bg") }} />
@@ -602,7 +602,7 @@ export default function MetaDetalhe() {
       </ScrollView>
 
       <View style={{ position: "absolute", top: insets.top + 8, left: 16, right: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <HeroButton label="Voltar" onPress={() => router.replace("/gestao" as never)}>
+        <HeroButton label="Voltar" onPress={() => router.replace("/caixinhas" as never)}>
           <ChevronLeft size={21} color={th("#fff")} strokeWidth={2.4} />
         </HeroButton>
         <HeroButton label="Opções da caixinha" hostRef={dots} onPress={openMenu}>
