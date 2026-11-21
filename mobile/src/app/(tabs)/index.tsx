@@ -262,9 +262,10 @@ function HomeScreen() {
      cards — glass — float up over it as the page scrolls, so it shows through them softened.
      It quiets as they cover it, so their own figures stay the clearest thing. */
   const heroHeld = useAnimatedStyle(() => {
-    /* Gone soft well before a card covers it whole, so the card's own words read cleanly. */
-    const p = Math.min(1, Math.max(0, scrollY.get()) / (heroH * 0.6));
-    return { opacity: 1 - p * 0.9 };
+    /* It fades out entirely as the cards come up over it — nothing of it left to read through
+       their glass — and comes back as they go down again. */
+    const p = Math.min(1, Math.max(0, scrollY.get()) / (heroH * 0.45));
+    return { opacity: 1 - p };
   });
 
   /* Willo sits behind the page, so a touch on him is taken by the page over him: it opens
