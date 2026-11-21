@@ -49,7 +49,7 @@ export default function HomeShortcuts({ items }: { items: Shortcut[] }) {
                 {s.label}
               </Text>
               {s.badge ? (
-                <View style={{ minWidth: 20, height: 20, paddingHorizontal: 6, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: th(s.tone ?? GREEN, "bg") }}>
+                <View style={{ minWidth: 20, height: 20, paddingHorizontal: 6, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: th(GREEN, "bg") }}>
                   <Text style={[nums, { fontSize: 11.5, fontWeight: "800", color: "#111" }]}>{s.badge > 99 ? "99+" : s.badge}</Text>
                 </View>
               ) : null}

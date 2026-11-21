@@ -9,19 +9,21 @@ import { ArrowDown, ArrowUp, ChevronRight } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
 import { useCategoryAnalytics } from "~/lib/warmStart";
-import { INK } from "~/theme/tokens";
+import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 import { th } from "~/theme/theme";
 
 /**
  * Gastos do mês, on the home: what the month has cost so far, how it compares with the same
- * days of last month, and its line adding up day by day with last month faint behind it — in
- * Willo's violet, as on its page, which a touch opens. Compact, the figure and the comparison
- * with a smaller line under them.
+ * days of last month (the change in green when it went down, in red when it went up), and its
+ * line adding up day by day in the one green with last month a grey dashed line behind it, as on
+ * its page, which a touch opens. Compact, the figure and the comparison with a smaller line.
  */
 
 const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }, default: {} }) as TextStyle;
-const HEX = "#8B5CF6";
+/* The line in the one green, last month a grey dashed line behind it. */
+const HEX = GREEN;
+const BEFORE = "rgba(255,255,255,0.38)";
 
 const spent = (list: AnalyticsTransaction[]) => list.filter((t) => t.type === "despesa");
 
@@ -77,14 +79,15 @@ export default function GastosCard({ size, hidden }: { size: "half" | "full"; hi
       </Text>
       {pct && (
         <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", gap: 4 }}>
-          {up ? <ArrowUp size={13} color={th(INK.soft)} strokeWidth={2.2} /> : <ArrowDown size={13} color={th(INK.soft)} strokeWidth={2.2} />}
+          {up ? <ArrowUp size={13} color={th(RED)} strokeWidth={2.4} /> : <ArrowDown size={13} color={th(GREEN)} strokeWidth={2.4} />}
           <Text numberOfLines={1} style={[nums, { flexShrink: 1, fontSize: half ? 12 : 13.5, color: th(INK.soft) }]}>
-            {half ? `${pct} até hoje vs mês anterior` : `${pct} até hoje vs o mesmo período do mês anterior`}
+            <Text style={{ fontWeight: "700", color: th(up ? RED : GREEN) }}>{pct}</Text>
+            {half ? " vs mês anterior" : ` vs ${show(view.same)} no mesmo período do mês anterior`}
           </Text>
         </View>
       )}
       <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ marginTop: half ? "auto" : 6, marginHorizontal: half ? -14 : -16 }}>
-        {w > 0 && <PileChart width={w} hex={th(HEX)} cur={view.cur} prev={view.prev} span={view.span} labels={[]} height={half ? 92 : 120} />}
+        {w > 0 && <PileChart width={w} hex={th(HEX)} cur={view.cur} prev={view.prev} prevColor={th(BEFORE, "line")} span={view.span} labels={[]} height={half ? 92 : 120} />}
       </View>
     </Surface>
   );

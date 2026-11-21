@@ -3,14 +3,15 @@ import { Platform, Text, View, type TextStyle } from "react-native";
 import Animated, { Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { money } from "~/lib/money";
-import { AMBER, GREEN, INK } from "~/theme/tokens";
+import { GREEN, INK } from "~/theme/tokens";
 import { th } from "~/theme/theme";
 
 /**
  * The top of Transações: what came in, what went out, and what is still pending.
  *
- * Loose on the page, no cards: three lines, each its name with a dot of its colour on the
- * left and the figure on the right, and under it a lit bar — all three on one scale, so which
+ * Loose on the page, no cards: three lines, each its name with a dot on the left and the figure
+ * on the right, and under it a lit bar — green in, red out, a quiet white for what is pending,
+ * the app's only colours — all three on one scale, so which
  * is bigger is seen before a figure is read. Only what has happened counts as in and out; the
  * scheduled and the unpaid wait under Pendente (what is still to pay, with what is still to come
  * in beside it when there is some). No balance and no forecast: this screen is the movements.
@@ -23,7 +24,7 @@ const LIVE_RED = "#FF4D4D";
 const SHADES: Record<string, [string, string]> = {
   in: ["#3FB34A", GREEN],
   out: ["#E0262B", LIVE_RED],
-  wait: ["#E0A92E", AMBER],
+  wait: ["rgba(255,255,255,0.45)", "rgba(255,255,255,0.7)"],
 };
 
 export default function MonthFlows({
@@ -45,7 +46,7 @@ export default function MonthFlows({
     <View style={{ gap: 16 }}>
       <Line kind="in" color={GREEN} label="Entrou" value={show(entrou)} share={entrou / scale} delay={0} />
       <Line kind="out" color={LIVE_RED} label="Saiu" value={hidden ? "R$ •••" : `−${money(saiu)}`} share={saiu / scale} delay={80} />
-      <Line kind="wait" color={AMBER} label="Pendente" note={aReceber > 0.004 ? `+${show(aReceber)} a receber` : "a pagar"} value={show(aPagar)} share={aPagar / scale} delay={160} />
+      <Line kind="wait" color="rgba(255,255,255,0.7)" label="Pendente" note={aReceber > 0.004 ? `+${show(aReceber)} a receber` : "a pagar"} value={show(aPagar)} share={aPagar / scale} delay={160} />
     </View>
   );
 }

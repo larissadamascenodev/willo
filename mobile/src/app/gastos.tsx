@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Platform, Pressable, ScrollView, Text, View, useWindowDimensions, type TextStyle } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import Animated, { Easing, Extrapolation, FadeIn, FadeInDown, interpolate, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import type { AnalyticsTransaction, HistoricalMap } from "@/services/categoryAnalytics";
 import type { CustomCategory } from "@/services/categoryService";
@@ -18,19 +17,21 @@ import { categoryIcon } from "~/lib/categoryIcon";
 import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
 import { useCategoryAnalytics } from "~/lib/warmStart";
-import { INK } from "~/theme/tokens";
+import { GREEN, INK, RED } from "~/theme/tokens";
 import { th, useThemeRedraw } from "~/theme/theme";
 
 /**
  * Gastos: what the month has cost, and where it went — drawn the way a category's own page
  * is, the pattern every detail page follows.
  *
- * Willo's violet pooled at the top. Under the way back, the page's name and the eye: what was
- * spent in the period, large, with how it compares with the same stretch before. Its line
- * across the whole width, adding up day by day with the stretch before faintly behind it — or,
- * over a week, six months or a year, a bar a day or a month. The period under it. Then the
- * places money went most often (the week and the month, where each purchase is known) and the
- * categories that took the most, with the way to all of them.
+ * In the app's own quiet colours. Under the way back and the page's name: what was spent in
+ * the period, large, with the eye beside its name, and how it compares with the same stretch
+ * before — the change in green when it went down, in red when it went up. Its line across the
+ * whole width in the one green, adding up day by day, the stretch before a grey dashed line
+ * behind it — or, over a week, six months or a year, a bar a day or a month. The period under
+ * it. Then the places money went most often (the week and the month, where each purchase is
+ * known; a touch opens every visit to one) and the categories that took the most, with the way
+ * to all of them.
  */
 
 type Period = "1s" | "1m" | "6m" | "1a";
@@ -44,8 +45,9 @@ const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }
 const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 const SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const WEEK = ["D", "S", "T", "Q", "Q", "S", "S"];
-/** The page's colour: Willo's violet. */
-const HEX = "#8B5CF6";
+/** The line and the bars: the one green. The stretch before: a quiet grey. */
+const HEX = GREEN;
+const BEFORE = "rgba(255,255,255,0.38)";
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const dayOf = (t: AnalyticsTransaction) => (t.date ?? "").slice(0, 10);
@@ -115,7 +117,7 @@ export default function Gastos() {
       return {
         label: `Gastos em ${MONTHS[month]}`,
         total,
-        compare: same > 0 ? { arrow: toDate > same ? ("up" as const) : ("down" as const), text: `Até hoje, ${pct(toDate, same)} vs ${v(same)} até o dia ${today} de ${SHORT[prevIdx]}` } : null,
+        compare: same > 0 ? { arrow: toDate > same ? ("up" as const) : ("down" as const), pct: pct(toDate, same), text: ` vs ${v(same)} até o dia ${today} de ${SHORT[prevIdx]}` } : null,
         line: { cur: line, prev: before, span: last, labels: [1, 6, 11, 16, 21, 26, last].filter((d, i, a) => a.indexOf(d) === i).map((d) => ({ at: d, text: String(d) })) },
         bars: null,
         legend: [cap(MONTHS[month]), cap(MONTHS[prevIdx])],
@@ -134,7 +136,7 @@ export default function Gastos() {
       return {
         label: "Gastos nos últimos 7 dias",
         total,
-        compare: before > 0 ? { arrow: total > before ? ("up" as const) : ("down" as const), text: `${pct(total, before)} vs ${v(before)} nos 7 dias antes` } : null,
+        compare: before > 0 ? { arrow: total > before ? ("up" as const) : ("down" as const), pct: pct(total, before), text: ` vs ${v(before)} nos 7 dias antes` } : null,
         line: null,
         bars: week.map((d, i) => ({ label: WEEK[new Date(`${d}T12:00:00`).getDay()], value: per[7 + i], on: i === 6 })),
         legend: null,
@@ -152,7 +154,7 @@ export default function Gastos() {
     return {
       label: `Gastos nos últimos ${n} meses`,
       total,
-      compare: { arrow: null, text: `Média de ${v(total / n)} por mês` },
+      compare: { arrow: null, pct: "", text: `Média de ${v(total / n)} por mês` },
       line: null,
       bars: months.map((m, i) => ({ label: SHORT[m.month - 1], value: totals[i], on: i === n - 1 })),
       legend: null,
@@ -213,16 +215,19 @@ export default function Gastos() {
   const small = useAnimatedStyle(() => ({ opacity: interpolate(y.get(), [70, 110], [0, 1], Extrapolation.CLAMP) }));
 
   return (
-    <Room>
-      {/* Willo's violet, pooled at the top. */}
-      <LinearGradient pointerEvents="none" colors={["rgba(139,92,246,0.38)", "rgba(139,92,246,0.12)", "rgba(139,92,246,0)"]} locations={[0, 0.25, 0.5]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: "70%" }} />
+    <Room lit sky>
 
       <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: insets.top + 74, paddingBottom: insets.bottom + 60, paddingHorizontal: 16 }}>
         {/* What was spent; the figure travels to the new one when the period changes. */}
         <View style={{ paddingHorizontal: 4 }}>
-          <Animated.Text key={view.label} entering={FadeIn.duration(260)} style={{ fontSize: 17, color: th(INK.soft) }}>
-            {view.label}
-          </Animated.Text>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+            <Animated.Text key={view.label} entering={FadeIn.duration(260)} numberOfLines={1} style={{ flexShrink: 1, fontSize: 17, color: th(INK.soft) }}>
+              {view.label}
+            </Animated.Text>
+            <Pressable onPress={() => setHiddenValues(!hidden)} hitSlop={12} accessibilityRole="button" accessibilityLabel={hidden ? "Mostrar valores" : "Esconder valores"} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+              {hidden ? <EyeOff size={19} color={th(INK.soft)} strokeWidth={2} /> : <Eye size={19} color={th(INK.soft)} strokeWidth={2} />}
+            </Pressable>
+          </View>
           {hidden ? (
             <Text style={[nums, { marginTop: 4, fontSize: 44, fontWeight: "700", letterSpacing: -1.6, color: th("#fff") }]}>R$ •••</Text>
           ) : (
@@ -230,9 +235,10 @@ export default function Gastos() {
           )}
           {view.compare && (
             <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", gap: 4 }}>
-              {view.compare.arrow === "up" && <ArrowUp size={14} color={th(INK.soft)} strokeWidth={2.2} />}
-              {view.compare.arrow === "down" && <ArrowDown size={14} color={th(INK.soft)} strokeWidth={2.2} />}
+              {view.compare.arrow === "up" && <ArrowUp size={15} color={th(RED)} strokeWidth={2.4} />}
+              {view.compare.arrow === "down" && <ArrowDown size={15} color={th(GREEN)} strokeWidth={2.4} />}
               <Text numberOfLines={2} style={[nums, { flexShrink: 1, fontSize: 14.5, color: th(INK.soft) }]}>
+                {view.compare.pct ? <Text style={{ fontWeight: "700", color: th(view.compare.arrow === "up" ? RED : GREEN) }}>{view.compare.pct}</Text> : null}
                 {view.compare.text}
               </Text>
             </View>
@@ -242,7 +248,7 @@ export default function Gastos() {
         {/* The chart, across the whole width. */}
         <Animated.View key={period} entering={FadeInDown.duration(420).easing(Easing.out(Easing.cubic))} style={{ marginTop: 24, marginHorizontal: -16 }}>
           {view.line ? (
-            <PileChart width={width} hex={th(HEX)} cur={view.line.cur} prev={view.line.prev} span={view.line.span} labels={view.line.labels} />
+            <PileChart width={width} hex={th(HEX)} cur={view.line.cur} prev={view.line.prev} prevColor={th(BEFORE, "line")} span={view.line.span} labels={view.line.labels} />
           ) : (
             <Bars width={width} hex={HEX} bars={view.bars ?? []} />
           )}
@@ -251,7 +257,7 @@ export default function Gastos() {
         {view.legend && (
           <View style={{ marginTop: 10, flexDirection: "row", gap: 18, paddingHorizontal: 4 }}>
             <Legend color={th(HEX)} label={view.legend[0]} />
-            <Legend color={th(HEX)} faint label={view.legend[1]} />
+            <Legend color={th(BEFORE, "line")} dashed label={view.legend[1]} />
           </View>
         )}
 
@@ -269,7 +275,12 @@ export default function Gastos() {
                 const color = catColor(p.category, i, custom);
                 const Icon = categoryIcon(p.category, custom);
                 return (
-                  <Surface key={p.name} radius={26} style={{ width: 140, paddingVertical: 18, paddingHorizontal: 12, alignItems: "center" }}>
+                  <Surface
+                    key={p.name}
+                    radius={26}
+                    onPress={() => router.push({ pathname: "/estabelecimento", params: { nome: p.name, periodo: period } } as never)}
+                    style={{ width: 140, paddingVertical: 18, paddingHorizontal: 12, alignItems: "center" }}
+                  >
                     <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th(color, "bg") }}>
                       <Icon size={20} color="#FFFFFF" strokeWidth={2.2} />
                     </View>
@@ -348,7 +359,7 @@ export default function Gastos() {
         {!data && <Text style={{ marginTop: 30, textAlign: "center", fontSize: 15, color: th(INK.soft) }}>Carregando seus gastos…</Text>}
       </Animated.ScrollView>
 
-      {/* The top row: back, the page's name (and the figure under it once scrolled), the eye. */}
+      {/* The top row: back, and the page's name (with the figure under it once scrolled). */}
       <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, paddingTop: insets.top + 10, paddingHorizontal: 16, flexDirection: "row", alignItems: "center" }}>
         <RaisedButton label="Voltar" onPress={() => (router.canGoBack() ? router.back() : router.replace("/" as never))} size={50}>
           <ChevronLeft size={24} color={th("#fff")} strokeWidth={2.4} />
@@ -361,9 +372,7 @@ export default function Gastos() {
             {show(view.total)}
           </Animated.Text>
         </View>
-        <RaisedButton label={hidden ? "Mostrar valores" : "Esconder valores"} onPress={() => setHiddenValues(!hidden)} size={50}>
-          {hidden ? <EyeOff size={21} color={th("#fff")} strokeWidth={2} /> : <Eye size={21} color={th("#fff")} strokeWidth={2} />}
-        </RaisedButton>
+        <View style={{ width: 50 }} />
       </View>
     </Room>
   );

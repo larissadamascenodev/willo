@@ -30,7 +30,7 @@ import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * The month's movements.
  *
- * On top, the screen's name centred, and under it the month as one pill of glass. Then what
+ * On top, the screen's name centred, the month as a small pill of glass in the corner. Then what
  * came in, what went out and what is still pending (MonthFlows), loose on the page with lit
  * bars — no balance and no forecast, this screen is the movements. Then three tabs (Todas,
  * Receitas, Despesas) with a filter beside them for the rest (Pendentes, Agendadas, Pagas),
@@ -313,21 +313,24 @@ export default function Transacoes() {
           />
         }
       >
-        {/* The name, centred, with the eye beside it; the month as a pill of glass under it. */}
-        <View style={{ height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <View style={{ width: 44 }} />
-          <Text accessibilityRole="header" style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
+        {/* The name centred, the month as a small pill of glass in the corner. */}
+        <View style={{ height: 44, flexDirection: "row", alignItems: "center" }}>
+          <View style={{ width: 118 }} />
+          <Text accessibilityRole="header" numberOfLines={1} style={{ flex: 1, textAlign: "center", fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
             Transações
           </Text>
-          <RaisedButton label={hidden ? "Mostrar valores" : "Esconder valores"} onPress={() => setHiddenValues(!hidden)} size={44}>
-            {hidden ? <EyeOff size={19} color={th("#fff")} strokeWidth={2} /> : <Eye size={19} color={th("#fff")} strokeWidth={2} />}
-          </RaisedButton>
-        </View>
-        <View style={{ marginTop: 14 }}>
-          <MonthPill month={month} year={year} onChange={setMonth} />
+          <View style={{ width: 118, alignItems: "flex-end" }}>
+            <MonthPill compact month={month} year={year} onChange={setMonth} />
+          </View>
         </View>
 
-        <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 26 }}>
+        {/* The eye, with the figures it hides. */}
+        <View style={{ marginTop: 18, flexDirection: "row", justifyContent: "flex-end" }}>
+          <Pressable onPress={() => setHiddenValues(!hidden)} hitSlop={12} accessibilityRole="button" accessibilityLabel={hidden ? "Mostrar valores" : "Esconder valores"} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+            {hidden ? <EyeOff size={19} color={th(INK.soft)} strokeWidth={2} /> : <Eye size={19} color={th(INK.soft)} strokeWidth={2} />}
+          </Pressable>
+        </View>
+        <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 4 }}>
           <MonthFlows
             entrou={finance.receitasRecebidas}
             saiu={finance.despesasPagas}

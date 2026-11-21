@@ -128,11 +128,14 @@ export function PileChart({
   labels,
   limit,
   height = H,
+  prevColor,
 }: {
   width: number;
   hex: string;
   cur: number[];
   prev?: number[] | null;
+  /** The stretch before in its own quiet colour, dashed — grey on Gastos; the line's own, faint, when not given. */
+  prevColor?: string;
   span: number;
   labels: { at: number; text: string }[];
   limit?: number | null;
@@ -167,7 +170,7 @@ export function PileChart({
             <Stop offset="1" stopColor={hex} stopOpacity={0} />
           </SvgGradient>
         </Defs>
-        {prev && prev.length > 1 && <Path d={path(prev)} stroke={hex} strokeOpacity={0.35} strokeWidth={2} fill="none" strokeLinecap="round" />}
+        {prev && prev.length > 1 && (prevColor ? <Path d={path(prev)} stroke={prevColor} strokeWidth={1.8} strokeDasharray="5 6" fill="none" strokeLinecap="round" /> : <Path d={path(prev)} stroke={hex} strokeOpacity={0.35} strokeWidth={2} fill="none" strokeLinecap="round" />)}
         <Path d={area} fill={`url(#${gid})`} />
         <DrawnPath d={line} stroke={hex} strokeWidth={3} />
         {limit != null && <Line x1={x(0)} x2={x(span)} y1={y(limit)} y2={y(limit)} stroke={ink} strokeOpacity={0.55} strokeWidth={1.6} strokeDasharray="6 6" />}

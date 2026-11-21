@@ -27,7 +27,7 @@ import { useEndedSubscriptions } from "~/lib/subscriptionCheck";
 import { useAuth } from "~/lib/auth";
 import { asCategoryExpenses, keepDashboard, seedDashboard, useCategoryAnalytics } from "~/lib/warmStart";
 import { useNavChrome } from "~/lib/navChrome";
-import { AMBER, GREEN, INK } from "~/theme/tokens";
+import { INK } from "~/theme/tokens";
 
 import { th, useThemeRedraw } from "~/theme/theme";
 import { GroundInkProvider } from "~/theme/groundInk";
@@ -175,11 +175,12 @@ function HomeScreen() {
   const shortcuts = useMemo<Shortcut[]>(
     () => [
       /* From now outwards: the day, what is due, the month, what is kept, the long run. */
-      { key: "hoje", label: "Hoje", Icon: Sun, tone: "#F9A54E", onPress: () => router.push("/resumo" as never) },
-      { key: "contas", label: "Contas a pagar", Icon: CalendarClock, tone: AMBER, badge: billsOpen, onPress: () => router.push("/eventos" as never) },
-      { key: "balanco", label: "Balanço", Icon: Scale, tone: "#7DD3FC", onPress: () => router.push("/fluxo-de-caixa" as never) },
-      { key: "caixinhas", label: "Caixinhas", Icon: PiggyBank, tone: GREEN, onPress: () => router.push({ pathname: "/gestao", params: { ver: "caixinhas" } } as never) },
-      { key: "jornada", label: "Jornada", Icon: Flag, tone: "#C4B5FD", onPress: () => router.push("/jornada" as never) },
+      /* In the app's quiet colours: the marks white, only the count lit. */
+      { key: "hoje", label: "Hoje", Icon: Sun, tone: "#FFFFFF", onPress: () => router.push("/resumo" as never) },
+      { key: "contas", label: "Contas a pagar", Icon: CalendarClock, tone: "#FFFFFF", badge: billsOpen, onPress: () => router.push("/eventos" as never) },
+      { key: "balanco", label: "Balanço", Icon: Scale, tone: "#FFFFFF", onPress: () => router.push("/fluxo-de-caixa" as never) },
+      { key: "caixinhas", label: "Caixinhas", Icon: PiggyBank, tone: "#FFFFFF", onPress: () => router.push({ pathname: "/gestao", params: { ver: "caixinhas" } } as never) },
+      { key: "jornada", label: "Jornada", Icon: Flag, tone: "#FFFFFF", onPress: () => router.push("/jornada" as never) },
     ],
     [billsOpen, router],
   );
