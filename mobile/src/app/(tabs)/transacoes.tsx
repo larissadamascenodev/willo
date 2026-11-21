@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { removeInitialBalance } from "@/services/transactionService";
 import { loadMonthTransactions, type AccountRow, type TransactionRow as Row } from "@/services/monthTransactions";
-import { useMonth } from "@/contexts/MonthContext";
-import MonthStrip from "~/components/MonthStrip";
+import MonthPill from "~/components/transactions/MonthPill";
+import RaisedButton from "~/components/RaisedButton";
 import type { CustomCategory } from "@/services/categoryService";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import Room from "~/components/Room";
@@ -16,23 +16,30 @@ import { showToast } from "~/lib/toast";
 import { behind, listenOptimistic, overlay, showNow, type OptimisticChange } from "~/lib/optimistic";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import TransactionRow from "~/components/transactions/TransactionRow";
-import TransactionsSummary, { TransactionTabs } from "~/components/transactions/TransactionsSummary";
+import { TransactionTabs, type TxTab } from "~/components/transactions/TransactionsSummary";
+import MonthFlows from "~/components/transactions/MonthFlows";
+import { setHiddenValues, useHiddenValues } from "@/hooks/useHiddenValues";
 import TransactionSheet, { removeTransaction } from "~/components/transactions/TransactionSheet";
-import { Pencil, Search, Trash2 } from "~/components/icons";
+import { CalendarClock, CheckCheck, Clock, Eye, EyeOff, Pencil, Search, SlidersHorizontal, Trash2, X } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { useNavChrome } from "~/lib/navChrome";
 import { GREEN, INK, RED } from "~/theme/tokens";
-import { type as T } from "~/theme/type";
 
 import { th, useThemeRedraw } from "~/theme/theme";
 /**
  * The month's movements.
  *
- * Carried over whole: the balance loose at the top with the two flows on one scale
- * under it, the three tabs, the search, and the days written out with their own
- * running total. The rows sit on the page rather than inside a card, which is how
- * this screen was rebuilt on the web and why the ground here is the dimmed one.
+ * On top, the screen's name centred, and under it the month as one pill of glass. Then what
+ * came in, what went out and what is still pending (MonthFlows), loose on the page with lit
+ * bars — no balance and no forecast, this screen is the movements. Then three tabs (Todas,
+ * Receitas, Despesas) with a filter beside them for the rest (Pendentes, Agendadas, Pagas),
+ * the search, and the list: what is scheduled ahead first, soonest first, then the days that
+ * have happened, newest first — Hoje, Ontem, the week's days by name — each with what it did
+ * to the balance. The rows sit on the page rather than inside a card.
+ *
+ * The month chosen here is this screen's own: leaving it on a month ahead does not move any
+ * other screen, and the screen opens on the current month.
  *
  * The list itself is assembled by the shared service, so a fixed entry appears in
  * the month it belongs to and a card's purchases arrive as one invoice line, exactly
@@ -45,13 +52,19 @@ import { th, useThemeRedraw } from "~/theme/theme";
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MONTHS_SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
+type Only = "pendente" | "agendada" | "paga" | null;
+const ONLY_LABEL: Record<Exclude<Only, null>, string> = { pendente: "Pendentes", agendada: "Agendadas", paga: "Pagas e recebidas" };
+
+const WEEKDAYS_LONG = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+
+/** A day as a person says it: Hoje, Ontem, Amanhã, the week's days by name, else the date. */
 const formatDateHeader = (dateStr: string, today = new Date()) => {
   const [y, m, d] = dateStr.split("-").map(Number);
   const date = new Date(y, m - 1, d);
-  return {
-    label: `${WEEKDAYS[date.getDay()]}, ${d} de ${MONTHS_SHORT[date.getMonth()]}`,
-    isToday: date.toDateString() === today.toDateString(),
-  };
+  const n = Math.round((date.getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / 86400000);
+  const full = `${WEEKDAYS[date.getDay()]}, ${d} de ${MONTHS_SHORT[date.getMonth()]}`;
+  const label = n === 0 ? "Hoje" : n === -1 ? "Ontem" : n === 1 ? "Amanhã" : n < 0 && n > -7 ? WEEKDAYS_LONG[date.getDay()] : full;
+  return { label, full, isToday: n === 0 };
 };
 
 export default function Transacoes() {
@@ -64,10 +77,16 @@ export default function Transacoes() {
   const goHome = useCallback(() => router.navigate("/" as never), [router]);
   const today = useMemo(() => new Date(), []);
 
-  /* The month is the app's, not this screen's: chosen here, it is the month the
-     dashboard and the analysis screens read too, as on the web. */
-  const { selectedMonth: month, selectedYear: year, setMonth } = useMonth();
-  const [tab, setTab] = useState<"todos" | "receita" | "despesa">("todos");
+  /* The month is this screen's own: it opens on the current one, and one chosen here moves
+     nothing else in the app. */
+  const [{ month, year }, setShown] = useState(() => ({ month: today.getMonth(), year: today.getFullYear() }));
+  const setMonth = useCallback((m: number, y: number) => setShown({ month: m, year: y }), []);
+  const hidden = useHiddenValues();
+  const [tab, setTab] = useState<TxTab>("todos");
+  /* The filter beside the tabs: what is still pending, what is scheduled ahead, what is paid. */
+  const [only, setOnly] = useState<Only>(null);
+  const [filterAt, setFilterAt] = useState<AnchorRect | null>(null);
+  const filterRef = useRef<ComponentRef<typeof View>>(null);
   const [search, setSearch] = useState("");
 
   const [transactions, setTransactions] = useState<Row[]>([]);
@@ -209,26 +228,64 @@ export default function Transacoes() {
     return map;
   }, [accounts]);
 
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const filtered = useMemo(
     () =>
       shownRows.filter((tx) => {
         if (tab !== "todos" && tx.type !== tab) return false;
+        if (only === "pendente" && tx.status === "pago") return false;
+        if (only === "agendada" && (tx.status === "pago" || tx.date <= todayKey)) return false;
+        if (only === "paga" && tx.status !== "pago") return false;
         if (search && !tx.name.toLowerCase().includes(search.toLowerCase())) return false;
         return true;
       }),
-    [shownRows, tab, search],
+    [shownRows, tab, only, search, todayKey],
   );
 
-  /* Grouped by day, newest first, each day carrying what it did to the balance — and
+  /* What is scheduled ahead (a day still to come), soonest first, apart from the rest. */
+  const ahead = useMemo(() => filtered.filter((tx) => tx.date > todayKey).sort((a, b) => a.date.localeCompare(b.date)), [filtered, todayKey]);
+
+  /* The rest grouped by day, newest first, each day carrying what it did to the balance — and
      within a day by the hour it was written down, the latest on top. */
   const days = useMemo(() => {
     const groups: Record<string, Row[]> = {};
-    for (const tx of filtered) (groups[tx.date] ??= []).push(tx);
+    for (const tx of filtered) if (tx.date <= todayKey) (groups[tx.date] ??= []).push(tx);
     for (const rows of Object.values(groups)) rows.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
     return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
-  }, [filtered]);
+  }, [filtered, todayKey]);
 
-  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const rowOf = (tx: Row) => (
+    <TransactionRow
+      key={tx.id}
+      tx={tx}
+      accountName={tx.account_id ? accountName[tx.account_id] : undefined}
+      customCategories={customCategories}
+      creditCards={creditCards}
+      onPress={() => {
+        if (tx.id.startsWith("fatura-") && tx.credit_card_id) {
+          router.push(`/fatura/${tx.credit_card_id}` as never);
+          return;
+        }
+        if (isOpening(tx)) {
+          setOpening(tx);
+          return;
+        }
+        if (isReal(tx)) setDetail(tx);
+      }}
+      onHold={
+        isOpening(tx)
+          ? () => setOpening(tx)
+          : isReal(tx)
+          ? (rect) => {
+              setHeld(tx);
+              setHeldRect(rect);
+              setAsking(false);
+              setHoldError(null);
+            }
+          : undefined
+      }
+    />
+  );
   const isThisMonth = month === today.getMonth() && year === today.getFullYear();
 
   return (
@@ -256,29 +313,57 @@ export default function Transacoes() {
           />
         }
       >
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <Text style={T.title}>Transações</Text>
-          <MonthStrip month={month} year={year} onChange={setMonth} />
+        {/* The name, centred, with the eye beside it; the month as a pill of glass under it. */}
+        <View style={{ height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <View style={{ width: 44 }} />
+          <Text accessibilityRole="header" style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
+            Transações
+          </Text>
+          <RaisedButton label={hidden ? "Mostrar valores" : "Esconder valores"} onPress={() => setHiddenValues(!hidden)} size={44}>
+            {hidden ? <EyeOff size={19} color={th("#fff")} strokeWidth={2} /> : <Eye size={19} color={th("#fff")} strokeWidth={2} />}
+          </RaisedButton>
+        </View>
+        <View style={{ marginTop: 14 }}>
+          <MonthPill month={month} year={year} onChange={setMonth} />
         </View>
 
-        <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 18 }}>
-          <TransactionsSummary
-            month={month}
-            kind={isThisMonth ? "current" : year * 12 + month < today.getFullYear() * 12 + today.getMonth() ? "past" : "future"}
-            abertura={finance.previousMonthEndingBalance ?? 0}
-            balanco={finance.balanco}
-            saldoAtual={finance.saldoAtual}
-            saldoPrevisto={finance.saldoPrevisto}
-            receitas={finance.receitas}
-            despesas={finance.despesas}
-            recebidas={finance.receitasRecebidas}
-            pagas={finance.despesasPagas}
+        <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 26 }}>
+          <MonthFlows
+            entrou={finance.receitasRecebidas}
+            saiu={finance.despesasPagas}
+            aPagar={Math.max(0, finance.despesas - finance.despesasPagas)}
+            aReceber={Math.max(0, finance.receitas - finance.receitasRecebidas)}
+            hidden={hidden}
           />
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(70).duration(400)} style={{ marginTop: 22 }}>
-          <TransactionTabs value={tab} onChange={setTab} />
+        <Animated.View entering={FadeInDown.delay(70).duration(400)} style={{ marginTop: 26, flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <View style={{ flex: 1 }}>
+            <TransactionTabs value={tab} onChange={setTab} />
+          </View>
+          <View ref={filterRef} collapsable={false}>
+            <RaisedButton
+              label={only ? `Filtro: ${ONLY_LABEL[only]}` : "Mais filtros"}
+              size={44}
+              onPress={() =>
+                filterRef.current?.measureInWindow((x, y, w, h) => setFilterAt({ top: y, bottom: y + h, left: x, width: w }))
+              }
+            >
+              <SlidersHorizontal size={19} color={th(only ? GREEN : "#fff")} strokeWidth={2.2} />
+            </RaisedButton>
+          </View>
         </Animated.View>
+        {only && (
+          <Pressable
+            onPress={() => setOnly(null)}
+            accessibilityRole="button"
+            accessibilityLabel={`Tirar o filtro ${ONLY_LABEL[only]}`}
+            style={({ pressed }) => ({ marginTop: 10, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, height: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: th("rgba(103,205,103,0.16)", "bg"), opacity: pressed ? 0.6 : 1 })}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "700", color: th(GREEN) }}>{ONLY_LABEL[only]}</Text>
+            <X size={13} color={th(GREEN)} strokeWidth={2.6} />
+          </Pressable>
+        )}
 
         <View
           style={{
@@ -308,9 +393,17 @@ export default function Transacoes() {
           <ActivityIndicator color={th(GREEN)} style={{ marginTop: 40 }} />
         ) : (
           <View style={{ marginTop: 22, gap: 18 }}>
+            {/* Scheduled ahead: not done yet, so apart, soonest first. */}
+            {ahead.length > 0 && (
+              <Animated.View entering={FadeInDown.delay(100).duration(380)}>
+                <DayHeader label="Agendadas" note={`${ahead.length} ${ahead.length === 1 ? "lançamento" : "lançamentos"}`} />
+                {ahead.map(rowOf)}
+              </Animated.View>
+            )}
+
             {isThisMonth && !days.some(([date]) => date === todayKey) && (
               <View>
-                <DayHeader label={`Hoje · ${formatDateHeader(todayKey).label}`} today />
+                <DayHeader label="Hoje" today />
                 <Text style={{ paddingVertical: 20, textAlign: "center", fontSize: 13.5, color: th(INK.softer) }}>
                   Nada registrado hoje
                 </Text>
@@ -322,44 +415,13 @@ export default function Transacoes() {
               const net = rows.reduce((sum, t) => sum + (t.type === "receita" ? Number(t.amount) : -Number(t.amount)), 0);
               return (
                 <Animated.View key={date} entering={FadeInDown.delay(120 + i * 45).duration(380)}>
-                  <DayHeader label={isToday ? `Hoje · ${label}` : label} today={isToday} net={net} />
-                  {rows.map((tx) => (
-                    <TransactionRow
-                      key={tx.id}
-                      tx={tx}
-                      accountName={tx.account_id ? accountName[tx.account_id] : undefined}
-                      customCategories={customCategories}
-                      creditCards={creditCards}
-                      onPress={() => {
-                        if (tx.id.startsWith("fatura-") && tx.credit_card_id) {
-                          router.push(`/fatura/${tx.credit_card_id}` as never);
-                          return;
-                        }
-                        if (isOpening(tx)) {
-                          setOpening(tx);
-                          return;
-                        }
-                        if (isReal(tx)) setDetail(tx);
-                      }}
-                      onHold={
-                        isOpening(tx)
-                          ? () => setOpening(tx)
-                          : isReal(tx)
-                          ? (rect) => {
-                              setHeld(tx);
-                              setHeldRect(rect);
-                              setAsking(false);
-                              setHoldError(null);
-                            }
-                          : undefined
-                      }
-                    />
-                  ))}
+                  <DayHeader label={label} today={isToday} net={hidden ? undefined : net} />
+                  {rows.map(rowOf)}
                 </Animated.View>
               );
             })}
 
-            {days.length === 0 && !loading && (
+            {days.length === 0 && ahead.length === 0 && !loading && (
               <Text style={{ marginTop: 30, textAlign: "center", fontSize: 14, color: th(INK.softer) }}>
                 {user ? "Nada encontrado neste mês." : "Entre na sua conta para ver os seus lançamentos."}
               </Text>
@@ -368,6 +430,15 @@ export default function Transacoes() {
         )}
       </ScrollView>
       </SwipeHome>
+
+      {/* The filter beside the tabs. */}
+      <AnchoredMenu open={!!filterAt} anchor={filterAt} onClose={() => setFilterAt(null)}>
+        <MenuHeader title="Mostrar só" />
+        <MenuRow icon={Clock} label="Pendentes" onPress={() => { setOnly("pendente"); setFilterAt(null); }} />
+        <MenuRow icon={CalendarClock} label="Agendadas" onPress={() => { setOnly("agendada"); setFilterAt(null); }} />
+        <MenuRow icon={CheckCheck} label="Pagas e recebidas" last={!only} onPress={() => { setOnly("paga"); setFilterAt(null); }} />
+        {only && <MenuRow icon={X} label="Tirar filtro" last onPress={() => { setOnly(null); setFilterAt(null); }} />}
+      </AnchoredMenu>
 
       {/* Holding a row is the short way round: both answers act at once. */}
       <AnchoredMenu open={!!held} anchor={heldRect} onClose={() => setHeld(null)}>
@@ -489,8 +560,8 @@ function HoldButton({
   );
 }
 
-/** A day, with what it did to the balance. */
-function DayHeader({ label, today, net }: { label: string; today?: boolean; net?: number }) {
+/** A day, with what it did to the balance (or, for what is scheduled, how many). */
+function DayHeader({ label, today, net, note }: { label: string; today?: boolean; net?: number; note?: string }) {
   return (
     <View
       style={{
@@ -499,20 +570,11 @@ function DayHeader({ label, today, net }: { label: string; today?: boolean; net?
         justifyContent: "space-between",
         gap: 12,
         paddingHorizontal: 4,
-        marginBottom: 4,
+        marginBottom: 6,
       }}
     >
-      <Text
-        style={{
-          fontSize: 10.5,
-          fontWeight: "600",
-          letterSpacing: 1.4,
-          textTransform: "uppercase",
-          color: th(today ? "#fff" : INK.softer),
-        }}
-      >
-        {label}
-      </Text>
+      <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: th(today ? "#fff" : "rgba(255,255,255,0.92)") }}>{label}</Text>
+      {note !== undefined && <Text style={{ fontSize: 12.5, fontWeight: "600", color: th(INK.softer) }}>{note}</Text>}
       {net !== undefined && (
         <Text style={{ fontSize: 12, fontWeight: "600", color: th(net >= 0 ? GREEN : INK.softer) }}>
           {net >= 0 ? "+" : "−"}

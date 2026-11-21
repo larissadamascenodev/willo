@@ -3,7 +3,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { RefreshControl, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { LinearTransition, runOnJS, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from "react-native-reanimated";
+import Animated, { runOnJS, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { useProfile } from "@/hooks/useProfile";
 import { useHiddenValues } from "@/hooks/useHiddenValues";
@@ -12,14 +12,8 @@ import ScrollEdge from "~/components/ScrollEdge";
 import HomeHeader from "~/components/home/HomeHeader";
 import HomeHero from "~/components/home/HomeHero";
 import HomeShortcuts, { type Shortcut } from "~/components/home/HomeShortcuts";
-import AttentionCard from "~/components/home/AttentionCard";
-import HomeBalanceCard from "~/components/home/HomeBalanceCard";
-import FluxoCard from "~/components/home/FluxoCard";
-import TodayCard from "~/components/home/TodayCard";
-import CategoryStrip from "~/components/home/CategoryStrip";
 import { paramsForLine } from "~/components/home/OrbHero";
 import { CalendarClock, Flag, PiggyBank, Scale, Sun } from "~/components/icons";
-import { useCopilot } from "~/lib/copilot";
 import { isIncome, isSettled } from "~/lib/events";
 import type { Greeting } from "~/lib/greeting";
 import { useGreeting } from "@/lib/greeting";
@@ -59,10 +53,11 @@ const CARD_GAP = 12;
  * the eye and the bell (the name comes in beside the photo once the page scrolls). Under it a
  * row of shortcuts as pills of glass (Hoje, Contas a pagar, Balanço, Caixinhas, Jornada) that
  * scrolls with the page, and Willo speaking, fixed on the background (HomeHero): his lines in
- * turn, a touch opening the conversation on the one on show. The cards scroll up over him: Hoje
- * (what can be spent today and what falls today), what needs attention (only when something
- * does), the balance in the accounts, Fluxo de caixa, the month's spending by category, then the
- * board — the cards, the instalments, and whatever the person has switched on.
+ * turn, a touch opening the conversation on the one on show. The board scrolls up over him: the
+ * balance in the accounts, Fluxo de caixa, Gastos do mês, the month by category, the cards, the
+ * instalments, and whatever the person has switched on — each one held to move it, make it
+ * compact or large, or take it off. (Hoje and Precisa da
+ * sua atenção are built and wait in components/home until those features come in.)
  */
 /**
  * The home loads its widgets only once it has been on screen. Opened straight onto a page
@@ -144,8 +139,6 @@ function HomeScreen() {
   );
   const { assinaturas, totalAssinaturas, loading: assinaturasLoading } = useRecorrentes();
   const { ended, keep: keepEnded, cancel: cancelEnded } = useEndedSubscriptions(user?.id);
-  /* Purchases the Copilot caught, waiting for a yes: one of the things that need attention. */
-  const { items: copilotItems } = useCopilot();
   /* Whether the caixinhas card has anything to say: money in one, or more than the reserve
      every account starts with. The last answer kept on the phone first. */
   const goalsWorth = (rows: Goal[] | null) => (rows ? rows.some((g) => Number(g.current_amount) > 0) || rows.length > 1 : null);
@@ -316,12 +309,14 @@ function HomeScreen() {
       keepEnded,
       cancelEnded,
       hasGoals,
+      hidden,
+      counts,
     }),
-    [data, categories, month, assinaturas, assinaturasLoading, totalAssinaturas, ended, keepEnded, cancelEnded, hasGoals],
+    [data, categories, month, assinaturas, assinaturasLoading, totalAssinaturas, ended, keepEnded, cancelEnded, hasGoals, hidden, counts],
   );
 
-  /* The balance, Fluxo de caixa and the categories live above the board, drawn their own way. */
-  const skipWidget = useCallback((id: string) => id === "saldo" || id === "fluxo" || id === "categorias" || widgetIsEmpty(id, widgetContext), [widgetContext]);
+  /* Every card is the board's; only those with nothing to say are left off. */
+  const skipWidget = useCallback((id: string) => widgetIsEmpty(id, widgetContext), [widgetContext]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -387,17 +382,6 @@ function HomeScreen() {
                 style={{ height: heroH, marginBottom: -CARD_GAP }}
               />
             </GestureDetector>
-            <TodayCard events={events} hidden={hidden} />
-            <AttentionCard events={events} categories={categories} copilot={copilotItems?.length ?? 0} hidden={hidden} />
-            <Animated.View layout={LinearTransition.duration(320)}>
-              <HomeBalanceCard saldoPrevisto={data.saldoPrevisto} hidden={hidden} />
-            </Animated.View>
-            <Animated.View layout={LinearTransition.duration(320)}>
-              <FluxoCard receitas={data.receitas} despesas={data.despesas} month={month} isCurrentMonth />
-            </Animated.View>
-            <Animated.View layout={LinearTransition.duration(320)} style={{ marginTop: 10 }}>
-              <CategoryStrip categories={categories} counts={counts} month={month} hidden={hidden} />
-            </Animated.View>
           </View>
         )}
 

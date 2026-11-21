@@ -107,12 +107,15 @@ export default function Gastos() {
       };
       const line = run(cur, last, today);
       const before = run(prev, prevLast, prevLast);
-      const total = line[today];
+      /* The month's total is the categories' own (scheduled spending included); the
+         comparison is fair only day for day, so it uses the days so far. */
+      const total = sum(cur);
+      const toDate = line[today];
       const same = before[Math.min(today, prevLast)];
       return {
         label: `Gastos em ${MONTHS[month]}`,
         total,
-        compare: same > 0 ? { arrow: total > same ? ("up" as const) : ("down" as const), text: `${pct(total, same)} vs ${v(same)} até o dia ${today} de ${SHORT[prevIdx]}` } : null,
+        compare: same > 0 ? { arrow: toDate > same ? ("up" as const) : ("down" as const), text: `Até hoje, ${pct(toDate, same)} vs ${v(same)} até o dia ${today} de ${SHORT[prevIdx]}` } : null,
         line: { cur: line, prev: before, span: last, labels: [1, 6, 11, 16, 21, 26, last].filter((d, i, a) => a.indexOf(d) === i).map((d) => ({ at: d, text: String(d) })) },
         bars: null,
         legend: [cap(MONTHS[month]), cap(MONTHS[prevIdx])],

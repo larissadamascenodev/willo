@@ -1,4 +1,3 @@
-import { View } from "react-native";
 import { type ReactNode } from "react";
 import type { WidgetSize } from "@/lib/homeWidgets";
 import type { CategoryExpense, FinanceEvent, Transaction } from "@/types/finance";
@@ -6,7 +5,9 @@ import type { RecurringItem } from "@/hooks/useRecorrentes";
 import type { EndedSubscription } from "~/lib/subscriptionCheck";
 import { FEATURES } from "~/lib/features";
 import { upcoming } from "~/lib/events";
-import SaldoContasCard from "~/components/home/SaldoContasCard";
+import HomeBalanceCard from "~/components/home/HomeBalanceCard";
+import GastosCard from "~/components/home/GastosCard";
+import CategoryStrip from "~/components/home/CategoryStrip";
 import JornadaCard from "~/components/home/JornadaCard";
 import FluxoCard from "~/components/home/FluxoCard";
 import PlanoCard from "~/components/home/PlanoCard";
@@ -14,9 +15,7 @@ import ProximosEventos from "~/components/home/ProximosEventos";
 import CartoesResumoCard from "~/components/home/CartoesResumoCard";
 import SaudeDoMesCard from "~/components/home/SaudeDoMesCard";
 import GastosFixosCard from "~/components/home/GastosFixosCard";
-import GastosPorCategoria from "~/components/home/GastosPorCategoria";
 import TransacoesRecentes from "~/components/home/TransacoesRecentes";
-import SpendTodayCard from "~/components/home/SpendTodayCard";
 import { AssinaturasTile, MetasTile, ParcelamentosTile } from "~/components/home/Tiles";
 import { CategoriasCompact, EventosCompact, FluxoCompact } from "~/components/home/CompactCards";
 import { RadarWidget } from "~/components/home/ShortcutPair";
@@ -47,6 +46,10 @@ export interface HomeWidgetContext {
   cancelEnded: (e: EndedSubscription) => void;
   /** Whether there is a caixinha worth a card: money in one, or more than the reserve made at sign-up. Null while unknown. */
   hasGoals?: boolean | null;
+  /** Figures masked with dots. */
+  hidden?: boolean;
+  /** How many charges each category had this month, for the category cards. */
+  counts?: Record<string, number>;
 }
 
 /**
@@ -69,13 +72,10 @@ export function renderHomeWidget(
 ): ReactNode {
   switch (id) {
     case "saldo":
-      /* What can be spent today rides with the balance, so it always sits right under it. */
-      return (
-        <View style={{ gap: 12 }}>
-          <SaldoContasCard saldoPrevisto={ctx.saldoPrevisto} />
-          {FEATURES.gastarHoje && ctx.isCurrentMonth && <SpendTodayCard />}
-        </View>
-      );
+      return <HomeBalanceCard saldoPrevisto={ctx.saldoPrevisto} hidden={ctx.hidden} />;
+
+    case "gastos":
+      return <GastosCard size={size} hidden={ctx.hidden} />;
 
     case "plano":
       return <PlanoCard />;
@@ -133,7 +133,7 @@ export function renderHomeWidget(
 
     case "categorias":
       if (size === "half") return <CategoriasCompact categories={ctx.categories} />;
-      return <GastosPorCategoria categories={ctx.categories} month={ctx.month} />;
+      return <CategoryStrip categories={ctx.categories} counts={ctx.counts} month={ctx.month} hidden={ctx.hidden} />;
 
     case "copilot":
       return <CopilotCard size={size} />;

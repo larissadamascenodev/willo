@@ -267,12 +267,15 @@ function FlowCard({
 }
 
 /** Todas / Receitas / Despesas. */
+/** Which movements are on show: all, or one way. (What is pending or scheduled is a filter beside it.) */
+export type TxTab = "todos" | "receita" | "despesa";
+
 export function TransactionTabs({
   value,
   onChange,
 }: {
-  value: "todos" | "receita" | "despesa";
-  onChange: (v: "todos" | "receita" | "despesa") => void;
+  value: TxTab;
+  onChange: (v: TxTab) => void;
 }) {
   return (
     <SegmentedTabs

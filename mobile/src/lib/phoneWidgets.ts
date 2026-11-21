@@ -17,6 +17,7 @@ const PHONE_ONLY: WidgetDef[] = [
   { id: "copilot", label: "Willo Copilot", description: "Compras captadas dos bancos, esperando sua confirmação", resizable: true, defaultSize: "half" },
   { id: "radar", label: "Radar financeiro", description: "As seis áreas do mês num radar", resizable: true, defaultSize: "half" },
   { id: "jornada", label: "Sua jornada", description: "Sua etapa, as mini-metas, os pontos e as medalhas", resizable: true, defaultSize: "full" },
+  { id: "gastos", label: "Gastos do mês", description: "O que o mês custou até aqui, comparado com o anterior", resizable: true, defaultSize: "full" },
 ];
 
 const DROPPED = new Set(["raiox"]);
@@ -24,7 +25,7 @@ const DROPPED = new Set(["raiox"]);
 /** Cards with a small version on the phone, though the web keeps them whole. */
 const SHRINKS = new Set(["fluxo", "categorias", "eventos", "metas"]);
 
-const LABEL: Record<string, string> = { metas: "Caixinhas", eventos: "Contas a pagar" };
+const LABEL: Record<string, string> = { metas: "Caixinhas", eventos: "Contas a pagar", fluxo: "Fluxo de caixa", categorias: "Gastos por categoria" };
 const DESCRIPTION: Record<string, string> = {
   metas: "Quanto está guardado em cada caixinha",
   fluxo: "O que entrou e o que saiu no mês",

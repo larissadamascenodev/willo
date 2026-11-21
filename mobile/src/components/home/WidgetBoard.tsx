@@ -297,8 +297,8 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
     return out;
   }, [shown, editing]);
 
-  /* What can be switched on: every card but the three drawn above the board. */
-  const offered = PHONE_WIDGETS.filter((w) => w.id !== "saldo" && w.id !== "categorias" && w.id !== "fluxo" && w.id !== "raiox" && (w.id !== "plano" || FEATURES.plano));
+  /* What can be switched on: every card the phone draws. */
+  const offered = PHONE_WIDGETS.filter((w) => w.id !== "raiox" && (w.id !== "plano" || FEATURES.plano));
 
   const floating = useAnimatedStyle(() => ({
     transform: [{ translateX: tx.get() }, { translateY: ty.get() }, { scale: 1 + lift.get() * 0.05 }],
