@@ -5,7 +5,7 @@ import Animated, { FadeInDown, LinearTransition } from "react-native-reanimated"
 import type { CategoryExpense, FinanceEvent } from "@/types/finance";
 import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
-import { AlertTriangle, CalendarDays, ChartPie, ChevronRight, Sparkles } from "~/components/icons";
+import { AlertTriangle, CalendarDays, ChartPie, Check, ChevronRight, Sparkles } from "~/components/icons";
 import { daysFrom, isIncome, isOverdue, isSettled, whenLabel } from "~/lib/events";
 import { money } from "~/lib/money";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
@@ -15,9 +15,9 @@ import { th } from "~/theme/theme";
  * Precisa da sua atenção: what needs a look now, the most pressing first.
  *
  * Bills gone past their day, purchases the Copilot caught waiting for a yes, bills due in the
- * next three days, and categories at or past four fifths of their limit. Up to three rows; the
- * rest are counted at the foot and open the notifications. With nothing to say, the card is
- * not drawn at all.
+ * next seven days (today's are on the Hoje card), and categories at or past four fifths of
+ * their limit. Up to three rows; the rest are counted at the foot and open the notifications.
+ * With nothing to say, it says so: everything is in order.
  *
  * Each row: a round mark tinted in its colour, what it is, and under it when, in that colour
  * (Venceu há 2 dias, Vence amanhã); on the right, how much. For a category, how much of its
@@ -85,7 +85,7 @@ export default function AttentionCard({
     const soon = bills
       .filter((e) => !isOverdue(e, now))
       .map((e) => ({ e, n: daysFrom(e, now) }))
-      .filter(({ n }) => n >= 0 && n <= 3)
+      .filter(({ n }) => n >= 1 && n <= 7)
       .sort((a, b) => a.n - b.n);
     for (const { e, n } of soon) {
       out.push({
@@ -119,13 +119,40 @@ export default function AttentionCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events, categories, copilot, hidden]);
 
-  if (items.length === 0) return null;
   const rest = items.length - SHOWN;
 
   return (
     <Animated.View entering={FadeInDown.duration(360)} layout={LinearTransition.duration(320)}>
       <Surface radius={26} style={{ paddingHorizontal: 16, paddingTop: 15, paddingBottom: rest > 0 ? 6 : 8 }}>
         <Text style={{ fontSize: 11.5, fontWeight: "700", letterSpacing: 1.4, color: th(INK.softer) }}>PRECISA DA SUA ATENÇÃO</Text>
+        {items.length === 0 && (
+          <Pressable
+            onPress={() => router.push("/eventos" as never)}
+            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 13, opacity: pressed ? 0.6 : 1 })}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: th(`${GREEN}66`, "line"),
+                backgroundColor: th(`${GREEN}24`, "bg"),
+              }}
+            >
+              <Check size={18} color={th(GREEN)} strokeWidth={2.6} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>Tudo em dia</Text>
+              <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 13, color: th(INK.softer) }}>
+                Nada vencendo nos próximos 7 dias
+              </Text>
+            </View>
+            <ChevronRight size={17} color={th(INK.faint)} />
+          </Pressable>
+        )}
         {items.slice(0, SHOWN).map((it, i) => (
           <Pressable
             key={it.key}

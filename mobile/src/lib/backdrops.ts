@@ -24,28 +24,25 @@ export interface Backdrop {
 }
 
 export const BACKDROPS: Record<BackdropKey, Backdrop> = {
-  /* The default, in the Willo icon's own colours — the three cards in its pocket: violet
-     across the top left, teal in the middle, a warm orange to the right. Broad and soft, so
-     they melt into one another and into the dark well above the cards, and the glass of the
-     buttons and the bar has colour to bend. Held in from the corners, where the edge darkens. */
+  /* The default: the petrol of Horizonte washing down from the top, and in it the Willo
+     icon's colours as soft lights — violet pooled to the right, a little orange high in the
+     right corner, teal across the middle. Broad and faint, so they melt into the petrol and
+     into the dark well above the cards, and the glass of the buttons has colour to bend. */
   prisma: {
     label: "Willo",
-    ground: "#06060A",
-    edge: 0.28,
+    ground: "#07090A",
+    edge: 0.3,
     wash: {
-      colors: ["#171230", "#120F28", "#0C0B1A", "#08080F", "#06060A"],
-      stops: [0, 0.15, 0.3, 0.45, 0.6],
+      colors: ["#2B5560", "#1F434D", "#15313B", "#0D1D24", "#090F12", "#07090A"],
+      stops: [0, 0.14, 0.28, 0.42, 0.56, 0.7],
     },
     lights: [
-      { cx: 0.22, cy: 0.0, rx: 0.95, ry: 0.42, rgb: "124,58,237", a: 0.85 },
-      { cx: 0.56, cy: 0.13, rx: 0.7, ry: 0.28, rgb: "20,184,166", a: 0.42 },
-      { cx: 0.92, cy: 0.07, rx: 0.62, ry: 0.32, rgb: "249,115,22", a: 0.58 },
-      { cx: 0.5, cy: 0.33, rx: 1.0, ry: 0.2, rgb: "139,92,246", a: 0.2 },
+      { cx: 0.2, cy: -0.06, rx: 0.9, ry: 0.32, rgb: "150,192,198", a: 0.22 },
+      { cx: 0.84, cy: 0.27, rx: 0.62, ry: 0.24, rgb: "124,58,237", a: 0.52 },
+      { cx: 0.98, cy: 0.1, rx: 0.42, ry: 0.2, rgb: "249,115,22", a: 0.36 },
+      { cx: 0.55, cy: 0.2, rx: 0.55, ry: 0.2, rgb: "45,212,191", a: 0.22 },
     ],
   },
-  /* The default, after the big apps' own homes: one calm colour at the top — petrol, a
-     little grey, like a photo out of focus — running down in one smooth wash into the
-     dark where the cards are, with a soft haze where the light is strongest. */
   horizonte: {
     label: "Horizonte",
     ground: "#07090A",
@@ -139,20 +136,20 @@ export const STARS = (() => {
 export type LightBackdropKey = "prisma-claro" | "horizonte-claro" | "nevoa" | "aurora-clara" | "ceu-claro" | "lavanda" | "pessego" | "areia" | "perola";
 
 export const LIGHT_BACKDROPS: Record<LightBackdropKey, Backdrop> = {
-  /* The default in the light: the icon's three colours as pastel washes on a pale ground,
-     strongest at the top and gone to near white where the cards are. */
+  /* The default in the light: Horizonte's petrol washed pale, with the icon's colours as
+     pastel lights — lavender to the right, peach in the corner, mint across the middle. */
   "prisma-claro": {
     label: "Willo",
-    ground: "#F4F3F8",
+    ground: "#F3F5F6",
     wash: {
-      colors: ["#EAE4FB", "#EFEBFA", "#F2F0F8", "#F4F3F8"],
+      colors: ["#C9DDE0", "#D8E7E9", "#E7EFF0", "#F3F5F6"],
       stops: [0, 0.18, 0.36, 0.55],
     },
     lights: [
-      { cx: 0.22, cy: 0.0, rx: 0.95, ry: 0.42, rgb: "167,139,250", a: 0.6 },
-      { cx: 0.56, cy: 0.13, rx: 0.7, ry: 0.28, rgb: "94,234,212", a: 0.42 },
-      { cx: 0.92, cy: 0.07, rx: 0.62, ry: 0.32, rgb: "253,186,116", a: 0.6 },
-      { cx: 0.5, cy: 0.33, rx: 1.0, ry: 0.2, rgb: "196,181,253", a: 0.25 },
+      { cx: 0.2, cy: -0.06, rx: 0.9, ry: 0.3, rgb: "255,255,255", a: 0.5 },
+      { cx: 0.84, cy: 0.27, rx: 0.62, ry: 0.24, rgb: "196,181,253", a: 0.5 },
+      { cx: 0.98, cy: 0.1, rx: 0.42, ry: 0.2, rgb: "253,186,116", a: 0.42 },
+      { cx: 0.55, cy: 0.2, rx: 0.55, ry: 0.2, rgb: "153,246,228", a: 0.35 },
     ],
   },
   /* The default in the light: the same petrol, washed pale, fading to the light ground. */

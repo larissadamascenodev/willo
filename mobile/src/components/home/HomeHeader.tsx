@@ -2,24 +2,39 @@ import { Pressable, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { lastHeaderAvatar, rememberHeaderAvatar } from "~/lib/headerAvatar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { Easing, withTiming, type EntryExitAnimationFunction } from "react-native-reanimated";
 import { Bell, Eye, EyeOff, User } from "~/components/icons";
 import RaisedButton from "~/components/RaisedButton";
 import GlassShape from "~/components/GlassShape";
 import { setHiddenValues, useHiddenValues } from "@/hooks/useHiddenValues";
-import { GREEN, INK } from "~/theme/tokens";
+import { GREEN } from "~/theme/tokens";
 
 import { useGroundTh } from "~/theme/groundInk";
 
 /**
  * The row that stays put while everything else scrolls under it.
  *
- * Who is signed in — the photo, the first name and the day — and, on the right, one capsule
- * of glass holding the two things that act on the whole screen: the eye that hides every
- * figure, and the bell with what is waiting.
+ * Who is signed in — the photo, and the first name once the page has scrolled — and, on the
+ * right, one capsule of glass holding the two things that act on the whole screen: the eye
+ * that hides every figure, and the bell with what is waiting.
  */
 
-const WEEK = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+const ease = Easing.bezier(0.22, 1, 0.36, 1);
+/* The same ten pixels and the same curve the web uses. */
+const enter: EntryExitAnimationFunction = () => {
+  "worklet";
+  return {
+    initialValues: { opacity: 0, transform: [{ translateX: -10 }] },
+    animations: { opacity: withTiming(1, { duration: 220, easing: ease }), transform: [{ translateX: withTiming(0, { duration: 220, easing: ease }) }] },
+  };
+};
+const leave: EntryExitAnimationFunction = () => {
+  "worklet";
+  return {
+    initialValues: { opacity: 1, transform: [{ translateX: 0 }] },
+    animations: { opacity: withTiming(0, { duration: 180, easing: ease }), transform: [{ translateX: withTiming(-10, { duration: 180, easing: ease }) }] },
+  };
+};
 
 
 export default function HomeHeader({
@@ -27,6 +42,7 @@ export default function HomeHeader({
   userId,
   avatarUrl,
   unread = 0,
+  collapsed = false,
   onProfile,
   onBell,
 }: {
@@ -35,6 +51,8 @@ export default function HomeHeader({
   userId?: string;
   avatarUrl?: string | null;
   unread?: number;
+  /** The page has scrolled: the name comes in beside the photo. */
+  collapsed?: boolean;
   /** Opens who is signed in, and the way out. */
   onProfile?: () => void;
   /** Opens the notifications. */
@@ -47,8 +65,6 @@ export default function HomeHeader({
   const hidden = useHiddenValues();
   const firstName = name?.trim().split(" ")[0] ?? "";
   const initial = firstName ? firstName[0].toUpperCase() : "";
-  const now = new Date();
-  const day = `${WEEK[now.getDay()]}, ${now.getDate()} de ${MONTHS[now.getMonth()]}`;
 
   return (
     <View
@@ -78,16 +94,13 @@ export default function HomeHeader({
         </RaisedButton>
       )}
 
-      <Pressable onPress={onProfile} accessibilityRole="button" accessibilityLabel={firstName ? `Perfil de ${firstName}` : "Perfil"} style={{ flex: 1, minWidth: 0 }}>
-        {firstName ? (
-          <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        {collapsed && firstName ? (
+          <Animated.Text entering={enter} exiting={leave} numberOfLines={1} style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>
             {firstName}
-          </Text>
+          </Animated.Text>
         ) : null}
-        <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 13, color: th(INK.soft) }}>
-          {day}
-        </Text>
-      </Pressable>
+      </View>
 
       {/* One capsule of glass: the eye and the bell. */}
       <GlassShape radius={26} style={{ height: 52, flexDirection: "row", alignItems: "center", paddingHorizontal: 3 }}>

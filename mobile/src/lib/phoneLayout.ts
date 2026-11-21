@@ -127,8 +127,40 @@ function firstBoard(userId: string | undefined) {
   }
 }
 
+/**
+ * The home made lean (Larissa, 2026-11-20): above the board, the balance with the month's in
+ * and out, and the categories; on the board Receitas e despesas beside the cards, both
+ * compact, then the instalments. What used to
+ * be a card of its own — the bills to pay, the caixinhas, the journey — is now a
+ * shortcut at the top; it and everything else waits switched off in "Ativar widgets". Every
+ * board is put on this once; after that it is the person's again.
+ */
+const LEAN: WidgetSlot[] = [
+  { id: "saldo", size: "full" },
+  { id: "categorias", size: "full" },
+  /* Receitas e despesas and the cards, compact, side by side; either can be made large. */
+  { id: "fluxo", size: "half" },
+  { id: "cartoes", size: "half" },
+  { id: "parcelamentos", size: "full" },
+];
+const LEAN_OFF = ["eventos", "metas", "jornada", "assinaturas", "radar", "copilot", "fixos", "recentes", "plano", "raiox"];
+const LEANED = (userId?: string) => `willo.home.widgets.phone-lean-v2.${userId ?? "anon"}`;
+
+function leanBoard(userId: string | undefined) {
+  try {
+    if (localStorage.getItem(LEANED(userId))) return;
+    saveLayout(userId, LEAN);
+    for (const id of LEAN_OFF) setDismissed(userId, id, true);
+    for (const id of LEAN.map((x) => x.id)) setDismissed(userId, id, false);
+    localStorage.setItem(LEANED(userId), "1");
+  } catch {
+    /* Without storage the board is read as it is. */
+  }
+}
+
 export function loadPhoneLayout(userId?: string): WidgetSlot[] {
   firstBoard(userId);
+  leanBoard(userId);
   const slots = journeyInPlace(userId, radarPairInPlace(userId, categoriesUnderFlows(userId, widened(userId))));
   /* Never the same card twice. */
   const seen = new Set<string>();

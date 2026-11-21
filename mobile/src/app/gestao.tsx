@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { getAccounts } from "@/services/transactionService";
@@ -69,6 +69,10 @@ export default function Gestao() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  /* Opened from the home's Caixinhas shortcut: the page goes straight to them. */
+  const { ver } = useLocalSearchParams<{ ver?: string }>();
+  const scroller = useRef<ComponentRef<typeof ScrollView>>(null);
+  const jumped = useRef(false);
   const [accounts, setAccounts] = useState<Account[] | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   /* What the caixinhas have earned so far, and the day's CDI the estimates are read from. */
@@ -184,6 +188,7 @@ export default function Gestao() {
   return (
     <Room lit sky>
       <ScrollView
+        ref={scroller}
         contentContainerStyle={{
           paddingTop: insets.top + 8,
           paddingBottom: insets.bottom + 40,
@@ -533,6 +538,12 @@ export default function Gestao() {
             <Animated.View
               entering={FadeInDown.delay(120).duration(420)}
               style={{ marginTop: 30 }}
+              onLayout={(e) => {
+                if (ver !== "caixinhas" || jumped.current) return;
+                jumped.current = true;
+                const y = e.nativeEvent.layout.y;
+                setTimeout(() => scroller.current?.scrollTo({ y: Math.max(0, y - insets.top - 64), animated: true }), 380);
+              }}
             >
               <View
                 style={{

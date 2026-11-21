@@ -1,24 +1,29 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Platform, RefreshControl, View, type LayoutRectangle } from "react-native";
+import { RefreshControl, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { LinearTransition, runOnJS, useAnimatedProps, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from "react-native-reanimated";
-import { BlurView } from "expo-blur";
+import Animated, { LinearTransition, runOnJS, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { useProfile } from "@/hooks/useProfile";
 import { useHiddenValues } from "@/hooks/useHiddenValues";
 import Room from "~/components/Room";
 import ScrollEdge from "~/components/ScrollEdge";
 import HomeHeader from "~/components/home/HomeHeader";
-import HomeHero, { type HeroChip } from "~/components/home/HomeHero";
+import HomeHero from "~/components/home/HomeHero";
+import HomeShortcuts, { type Shortcut } from "~/components/home/HomeShortcuts";
 import AttentionCard from "~/components/home/AttentionCard";
 import HomeBalanceCard from "~/components/home/HomeBalanceCard";
+import TodayCard from "~/components/home/TodayCard";
 import CategoryStrip from "~/components/home/CategoryStrip";
+import { paramsForLine } from "~/components/home/OrbHero";
+import { CalendarClock, Flag, PiggyBank, Scale, Sun } from "~/components/icons";
 import { useCopilot } from "~/lib/copilot";
-import { homeLine } from "~/lib/homeLine";
 import { isIncome, isSettled } from "~/lib/events";
-import { useSpendable } from "~/lib/spendable";
+import type { Greeting } from "~/lib/greeting";
+import { useGreeting } from "@/lib/greeting";
+import { buildInsights } from "@/lib/insights";
+import { useCardsOverview, invoiceDueDate } from "@/hooks/useCardsOverview";
 import WidgetBoard from "~/components/home/WidgetBoard";
 import EditBar from "~/components/home/EditBar";
 import { renderHomeWidget, widgetIsEmpty } from "~/components/home/HomeWidgets";
@@ -27,7 +32,7 @@ import { useEndedSubscriptions } from "~/lib/subscriptionCheck";
 import { useAuth } from "~/lib/auth";
 import { asCategoryExpenses, keepDashboard, seedDashboard, useCategoryAnalytics } from "~/lib/warmStart";
 import { useNavChrome } from "~/lib/navChrome";
-import { AMBER, INK } from "~/theme/tokens";
+import { AMBER, GREEN, INK } from "~/theme/tokens";
 
 import { th, useThemeRedraw } from "~/theme/theme";
 import { GroundInkProvider } from "~/theme/groundInk";
@@ -36,22 +41,27 @@ import { isLight } from "~/theme/theme";
 import { countUnread, generateNotifications } from "@/services/notificationService";
 import { fetchGoals, type Goal } from "@/services/goalService";
 import { keptValue } from "~/lib/warmStart";
-/** The top's room before it is measured: the pills and Willo's line. */
-const HERO_GUESS = 250;
+import { cachedName, rememberName } from "~/lib/warmHome";
+/** Willo's line's room before it is measured. */
+const HERO_GUESS = 200;
 /** The row with the photo and the capsule, under the status bar. */
 const TOP_ROW = 74;
+/** The row of shortcuts under it, which stays with it. */
+const SHORTCUTS_H = 46;
 /** The space between the cards at the top. */
 const CARD_GAP = 12;
-const AnimatedBlur = Animated.createAnimatedComponent(BlurView);
 
 /**
  * The home.
  *
  * On top, the row that stays: the photo, the name and the day, and one capsule of glass with
- * the eye and the bell. Under it, fixed on the background (HomeHero), a few shortcuts as pills
- * of glass and Willo's line for right now. The cards scroll up over it: what needs attention
- * (only when something does), the balance in the accounts with the month's in, out and end in
- * three lines, the month by category, then the board of cards the person arranges.
+ * the eye and the bell (the name comes in beside the photo once the page scrolls), and under it
+ * a row of shortcuts as pills of glass (Contas a pagar, Hoje, Balanço, Caixinhas, Jornada) that
+ * stays with it. Then Willo speaking, fixed on the background (HomeHero): his lines in turn, a
+ * touch opening the conversation on the one on show. The cards scroll up over him: Hoje (what
+ * can be spent today and what falls today), what needs attention, the balance in the accounts,
+ * the month by category, then the board — Receitas e despesas beside the cards, the
+ * instalments, and whatever the person has switched on.
  */
 /**
  * The home loads its widgets only once it has been on screen. Opened straight onto a page
@@ -155,24 +165,76 @@ function HomeScreen() {
   }, [user]);
 
   const name = profile?.display_name || user?.email?.split("@")[0] || "";
-  const firstName = name.trim().split(" ")[0] ?? "";
+  /* Willo calls the person by the name they gave, never by their e-mail: until the profile
+     arrives, the one kept from last time, or the one on the account. */
+  const meta = user?.user_metadata as { display_name?: string; full_name?: string } | undefined;
+  const known = profile?.display_name || cachedName(user?.id) || meta?.display_name || meta?.full_name || "";
+  useEffect(() => {
+    if (user?.id && profile?.display_name) rememberName(user.id, profile.display_name);
+  }, [user?.id, profile?.display_name]);
+  const firstName = known.trim().split(" ")[0] ?? "";
 
-  /* Willo's line for right now, and the shortcuts over it. */
-  const spend = useSpendable();
   const events = useMemo(() => data.events ?? [], [data.events]);
-  const line = useMemo(
-    () => homeLine({ events, free: spend.free, leftToday: spend.leftToday, tomorrow: spend.tomorrow, daysLeft: spend.daysLeft, firstName, hidden }),
-    [events, spend.free, spend.leftToday, spend.tomorrow, spend.daysLeft, firstName, hidden],
-  );
+
+  /* The shortcuts: what used to be a card of its own, now a touch away. */
   const billsOpen = useMemo(() => events.filter((e) => !isIncome(e) && !isSettled(e)).length, [events]);
-  const chips = useMemo<HeroChip[]>(
+  const shortcuts = useMemo<Shortcut[]>(
     () => [
-      { key: "contas", label: "Contas a pagar", badge: billsOpen, badgeColor: AMBER, onPress: () => router.push("/eventos" as never) },
-      { key: "hoje", label: "Hoje", onPress: () => router.push("/resumo" as never) },
-      { key: "cartoes", label: "Cartões", onPress: () => router.push("/cartoes" as never) },
+      { key: "contas", label: "Contas a pagar", Icon: CalendarClock, tone: AMBER, badge: billsOpen, onPress: () => router.push("/eventos" as never) },
+      { key: "hoje", label: "Hoje", Icon: Sun, tone: "#F9A54E", onPress: () => router.push("/resumo" as never) },
+      { key: "balanco", label: "Balanço", Icon: Scale, tone: "#7DD3FC", onPress: () => router.push("/fluxo-de-caixa" as never) },
+      { key: "caixinhas", label: "Caixinhas", Icon: PiggyBank, tone: GREEN, onPress: () => router.push({ pathname: "/gestao", params: { ver: "caixinhas" } } as never) },
+      { key: "jornada", label: "Jornada", Icon: Flag, tone: "#C4B5FD", onPress: () => router.push("/jornada" as never) },
     ],
     [billsOpen, router],
   );
+
+  /* What Willo says up top: his hello, what he noticed in the numbers, what he can do. */
+  const { greeting, dateStr } = useGreeting();
+  const { cards, invoices } = useCardsOverview();
+  /* The one reading this screen works out for itself: which invoice is next. */
+  const invoice = useMemo(() => {
+    const now = new Date();
+    const pending = cards
+      .map((card) => {
+        const rolls = now.getDate() > card.closingDay ? 1 : 0;
+        const i = now.getFullYear() * 12 + now.getMonth() + rolls;
+        const found = invoices.find((x) => x.cardId === card.id && x.month === (i % 12) + 1 && x.year === Math.floor(i / 12));
+        return { card, invoice: found, due: invoiceDueDate(card, Math.floor(i / 12), (i % 12) + 1) };
+      })
+      .filter((x) => x.invoice && !x.invoice.isPaid && x.invoice.total > 0)
+      .sort((a, b) => a.due.getTime() - b.due.getTime())[0];
+    if (!pending) return null;
+    return {
+      cardId: pending.card.id,
+      cardName: pending.card.name,
+      /* What it still asks for: a payment made ahead has already left it. */
+      total: Math.max(0, pending.invoice!.total - pending.invoice!.paid),
+      days: Math.round((new Date(pending.due).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000),
+    };
+  }, [cards, invoices]);
+  const slides = useMemo(
+    () =>
+        buildInsights({
+          greeting,
+          dateStr,
+          firstName,
+          receitas: data.receitas,
+          despesas: data.despesas,
+          saldoPrevisto: data.saldoPrevisto,
+          saldoAtual: data.saldoAtual,
+          categories,
+          events,
+          transactions: data.transactions ?? [],
+          month,
+          isCurrentMonth: true,
+          invoice,
+          hidden,
+        }),
+    [greeting, dateStr, firstName, data, categories, events, month, invoice, hidden],
+  );
+  /* The line on show, for a touch on it to open the conversation there. */
+  const lineOnShow = useRef<Greeting | null>(null);
   /* How many charges each category had this month, for the cards under the line. */
   const counts = useMemo(() => {
     const out: Record<string, number> = {};
@@ -193,57 +255,46 @@ function HomeScreen() {
   /* The top stays where it is, behind the page: the cards scroll up over it and it goes soft
      as they do, the way the home always moved. */
   const [heroH, setHeroH] = useState(HERO_GUESS);
+  const [collapsed, setCollapsed] = useState(false);
   const scrollY = useSharedValue(0);
+  const folded = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler({
     onScroll: (e) => {
-      scrollY.set(e.contentOffset.y);
-      runOnJS(report)(e.contentOffset.y);
+      const y = e.contentOffset.y;
+      scrollY.set(y);
+      runOnJS(report)(y);
+      /* The name comes in up top once the cards have covered most of Willo — told only when it changes. */
+      const now = y > heroH * 0.55 ? 1 : 0;
+      if (now !== folded.get()) {
+        folded.set(now);
+        runOnJS(setCollapsed)(now === 1);
+      }
     },
   });
-  /* It does not move. What the cards have covered is cut away from below, at the top edge
-     of the first card, so none of it shows through their glass; what is still uncovered
-     blurs as the cards rise. (No fading: the pills are glass, and glass fades flat.) */
-  const heroClip = useAnimatedStyle(() => ({ height: Math.max(0, heroH - Math.max(0, scrollY.get())) }));
-  const heroBlur = useAnimatedProps(() => ({ intensity: Math.min(Math.max(scrollY.get() / heroH, 0), 1) * 24 }));
+  /* It does not move. What the cards have covered is cut away from below, at the top edge of
+     the first card, so none of it shows through their glass: the window it is seen through
+     rises with the cards while what is in it is held still — both by moving, never by
+     resizing, so nothing is laid out again as the page scrolls. What is still uncovered fades. */
+  const heroWindow = useAnimatedStyle(() => ({ transform: [{ translateY: -Math.min(heroH, Math.max(0, scrollY.get())) }] }));
+  const heroHeld = useAnimatedStyle(() => {
+    const y = Math.min(heroH, Math.max(0, scrollY.get()));
+    return { transform: [{ translateY: y }], opacity: 1 - (y / heroH) * 0.6 };
+  });
 
-  /* The pills sit behind the page, so a touch on them is taken by the page over them and
-     matched to where each pill is drawn (the page has moved up by what it has scrolled). */
-  const chipRects = useRef<Record<string, LayoutRectangle>>({});
-  const [pressedChip, setPressedChip] = useState<string | null>(null);
-  const chipAt = useCallback(
-    (x: number, y: number) => {
-      const at = y - scrollY.get();
-      for (const [key, r] of Object.entries(chipRects.current)) {
-        if (x >= r.x - 6 && x <= r.x + r.width + 6 && at >= r.y - 6 && at <= r.y + r.height + 6) return key;
-      }
-      return null;
-    },
-    [scrollY],
-  );
-  const pressAt = useCallback((x: number, y: number) => setPressedChip(chipAt(x, y)), [chipAt]);
-  const tapAt = useCallback(
-    (x: number, y: number) => {
-      const key = chipAt(x, y);
-      setPressedChip(null);
-      chips.find((c) => c.key === key)?.onPress();
-    },
-    [chipAt, chips],
-  );
-  const letGo = useCallback(() => setPressedChip(null), []);
+  /* Willo sits behind the page, so a touch on him is taken by the page over him: it opens
+     the conversation on the line on show. */
+  const talk = useCallback(() => {
+    const line = lineOnShow.current;
+    router.push(line ? paramsForLine(line) : ("/registro" as never));
+  }, [router]);
   const heroTap = useMemo(
     () =>
       Gesture.Tap()
         .maxDistance(12)
-        .onBegin((e) => {
-          runOnJS(pressAt)(e.x, e.y);
-        })
-        .onEnd((e, ok) => {
-          if (ok) runOnJS(tapAt)(e.x, e.y);
-        })
-        .onFinalize(() => {
-          runOnJS(letGo)();
+        .onEnd((_e, ok) => {
+          if (ok) runOnJS(talk)();
         }),
-    [pressAt, tapAt, letGo],
+    [talk],
   );
 
   const widgetContext = useMemo(
@@ -267,8 +318,8 @@ function HomeScreen() {
     [data, categories, month, assinaturas, assinaturasLoading, totalAssinaturas, ended, keepEnded, cancelEnded, hasGoals],
   );
 
-  /* The balance, the month's in and out and the categories now live above the board, drawn their new way. */
-  const skipWidget = useCallback((id: string) => id === "saldo" || id === "categorias" || id === "fluxo" || id === "copilot" || widgetIsEmpty(id, widgetContext), [widgetContext]);
+  /* The balance and the categories live above the board, drawn their own way. */
+  const skipWidget = useCallback((id: string) => id === "saldo" || id === "categorias" || widgetIsEmpty(id, widgetContext), [widgetContext]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -282,23 +333,20 @@ function HomeScreen() {
   return (
     <Room lit sky home>
       <GroundInkProvider mode={groundMode}>
-      {/* The pills and Willo's line, fixed behind the page. Editing is about the board, so it stands down then. */}
+      {/* Willo speaking, fixed behind the page. Editing is about the board, so he stands down then. */}
       {!editing && (
-        <Animated.View pointerEvents="none" style={[{ position: "absolute", top: insets.top + TOP_ROW, left: 0, right: 0, overflow: "hidden" }, heroClip]}>
-          <View style={{ paddingHorizontal: 16 }}>
-            <View onLayout={(e) => setHeroH(Math.max(160, Math.round(e.nativeEvent.layout.height)))}>
+        <Animated.View pointerEvents="none" style={[{ position: "absolute", top: insets.top + TOP_ROW + SHORTCUTS_H, left: 0, right: 0, height: heroH, overflow: "hidden" }, heroWindow]}>
+          <Animated.View style={[{ paddingHorizontal: 16 }, heroHeld]}>
+            <View onLayout={(e) => setHeroH(Math.max(120, Math.round(e.nativeEvent.layout.height)))}>
               <HomeHero
-                chips={chips}
-                pressed={pressedChip}
-                line={line}
-                onChipRects={(rects) => {
-                  chipRects.current = rects;
+                name={firstName || null}
+                slides={slides}
+                onLine={(line) => {
+                  lineOnShow.current = line;
                 }}
               />
             </View>
-            {/* On the web a blur at rest still tints what is under it, so it is the phone's only. */}
-            {Platform.OS !== "web" && <AnimatedBlur tint={th("dark", "tint")} animatedProps={heroBlur} style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0 }} />}
-          </View>
+          </Animated.View>
         </Animated.View>
       )}
       <Animated.ScrollView
@@ -319,22 +367,25 @@ function HomeScreen() {
           />
         }
       >
-        {/* Under the row at the top. */}
-        <View style={{ height: insets.top + TOP_ROW }} pointerEvents="none" />
+        {/* Under the row at the top and the shortcuts. */}
+        <View style={{ height: insets.top + TOP_ROW + (editing ? 0 : SHORTCUTS_H) }} pointerEvents="none" />
 
         {!editing && (
           <View style={{ gap: CARD_GAP, marginBottom: 26 }}>
-            {/* The top's place in the page: a touch on a pill goes to it. */}
+            {/* Willo's place in the page: a touch on him opens the conversation. */}
             <GestureDetector gesture={heroTap}>
-              <View style={{ height: heroH, marginBottom: -CARD_GAP }}>
-                {chips.map((c) => (
-                  <View key={c.key} accessible accessibilityRole="button" accessibilityLabel={c.badge ? `${c.label}, ${c.badge}` : c.label} onAccessibilityTap={c.onPress} style={{ position: "absolute", width: 1, height: 1, opacity: 0 }} />
-                ))}
-              </View>
+              <View
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Falar com o Willo"
+                onAccessibilityTap={talk}
+                style={{ height: heroH, marginBottom: -CARD_GAP }}
+              />
             </GestureDetector>
+            <TodayCard events={events} hidden={hidden} />
             <AttentionCard events={events} categories={categories} copilot={copilotItems?.length ?? 0} hidden={hidden} />
             <Animated.View layout={LinearTransition.duration(320)}>
-              <HomeBalanceCard receitas={data.receitas} despesas={data.despesas} saldoPrevisto={data.saldoPrevisto} hidden={hidden} />
+              <HomeBalanceCard saldoPrevisto={data.saldoPrevisto} hidden={hidden} />
             </Animated.View>
             <Animated.View layout={LinearTransition.duration(320)} style={{ marginTop: 10 }}>
               <CategoryStrip categories={categories} counts={counts} month={month} hidden={hidden} />
@@ -353,12 +404,18 @@ function HomeScreen() {
         />
       </Animated.ScrollView>
 
-      {/* Above everything: the row that stays, and the band the page passes under. */}
-      <ScrollEdge on={moved && !editing} />
+      {/* Above everything: the row that stays with its shortcuts, and the band the page passes under. */}
+      <ScrollEdge on={moved && !editing} extra={editing ? 0 : SHORTCUTS_H} />
+      {!editing && (
+        <View pointerEvents="box-none" style={{ position: "absolute", top: insets.top + TOP_ROW, left: 0, right: 0, height: SHORTCUTS_H, paddingHorizontal: 16, zIndex: 30 }}>
+          <HomeShortcuts items={shortcuts} />
+        </View>
+      )}
       <HomeHeader
         name={name}
         userId={user?.id}
         avatarUrl={profile?.avatar_url}
+        collapsed={collapsed && !editing}
         onProfile={() => router.push("/perfil" as never)}
         unread={unread}
         onBell={() => router.push("/notificacoes" as never)}

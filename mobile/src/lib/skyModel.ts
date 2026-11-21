@@ -6,8 +6,8 @@ import { BACKDROP_KEYS, LIGHT_BACKDROP_KEYS, type BackdropKey, type LightBackdro
 /**
  * What the screens that wear a sky are wearing.
  *
- * - "prisma", the default (lib/backdrops): the Willo icon's three colours — violet, teal
- *   and a warm orange — pooled softly at the top and washing down into the dark.
+ * - "prisma", the default (lib/backdrops): Horizonte's petrol with the Willo icon's colours
+ *   in it as soft lights — violet, a little orange, teal — washing down into the dark.
  * - "horizonte": one calm petrol light at the top, washing down smoothly into the dark.
  * - "2": the hour as a picture, with the glow turned down so cards pass over it quietly.
  * - "1": the same hour drawn live, with its fire and its water.

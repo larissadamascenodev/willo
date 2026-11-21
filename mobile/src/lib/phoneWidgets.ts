@@ -24,8 +24,13 @@ const DROPPED = new Set(["raiox"]);
 /** Cards with a small version on the phone, though the web keeps them whole. */
 const SHRINKS = new Set(["fluxo", "categorias", "eventos", "metas"]);
 
-const LABEL: Record<string, string> = { metas: "Caixinhas" };
-const DESCRIPTION: Record<string, string> = { metas: "Quanto está guardado em cada caixinha" };
+/* Receitas e despesas is the balance now (the shortcut on top opens the same page). */
+const LABEL: Record<string, string> = { metas: "Caixinhas", fluxo: "Balanço", eventos: "Contas a pagar" };
+const DESCRIPTION: Record<string, string> = {
+  metas: "Quanto está guardado em cada caixinha",
+  fluxo: "O que entrou, o que saiu e o que sobra no mês",
+  eventos: "O que vence e o que cai nos próximos dias",
+};
 
 export const PHONE_WIDGETS: WidgetDef[] = [
   ...WIDGETS.filter((w) => !DROPPED.has(w.id)).map((w) => ({

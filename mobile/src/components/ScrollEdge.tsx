@@ -29,13 +29,13 @@ const LAYERS: { to: number; intensity: number }[] = [
   { to: 1, intensity: 2 },
 ];
 
-export default function ScrollEdge({ on }: { on: boolean }) {
+export default function ScrollEdge({ on, extra = 0 }: { on: boolean; /** More fixed rows under the top one. */ extra?: number }) {
   /* Over a photo the band takes the veil's colour, not the theme's: a dark veil in the
      light theme gets a dark band, so no white smear opens over it. */
   const th = useGroundTh();
   const insets = useSafeAreaInsets();
   const shown = useSharedValue(0);
-  const height = insets.top + 104;
+  const height = insets.top + 104 + extra;
 
   useEffect(() => {
     shown.value = withTiming(on ? 1 : 0, { duration: 260 });

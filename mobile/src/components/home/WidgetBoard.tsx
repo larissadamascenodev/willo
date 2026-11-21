@@ -23,9 +23,9 @@ import { loadPhoneLayout } from "~/lib/phoneLayout";
 import { PHONE_WIDGETS, phoneWidgetById } from "~/lib/phoneWidgets";
 import { dismissedIds, saveLayout, setDismissed, type WidgetSize, type WidgetSlot } from "@/lib/homeWidgets";
 import BottomSheet from "~/components/BottomSheet";
-import { Plus } from "~/components/icons";
+import { Check, LayoutGrid } from "~/components/icons";
 import WidgetMenu, { type WidgetMenuTarget } from "~/components/home/WidgetMenu";
-import { INK } from "~/theme/tokens";
+import { GREEN, INK } from "~/theme/tokens";
 
 import { th } from "~/theme/theme";
 import { FEATURES } from "~/lib/features";
@@ -37,8 +37,8 @@ import { FEATURES } from "~/lib/features";
  * a "−" to take it off and, where it has a small version, a grip in its corner to swap
  * between the two. The card held comes up off the board and follows the finger; the
  * others open a space for it one seat at a time as it passes over them, and when it is
- * let go it settles into the space. A card taken off is only set aside — "Adicionar
- * widgets" lists the ones off the board, to put back.
+ * let go it settles into the space. A card taken off is only set aside — "Ativar widgets"
+ * lists every card with a switch: on, it comes to the board; off, it is set aside.
  *
  * The card under the finger is a copy floating above the board; its own place in the
  * list is an empty seat that moves through the others. Moving the card itself made it
@@ -296,7 +296,8 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
     return out;
   }, [shown, editing]);
 
-  const missing = PHONE_WIDGETS.filter((w) => !slots.some((s) => s.id === w.id) && (w.id !== "plano" || FEATURES.plano));
+  /* What can be switched on: every card but the two drawn above the board. */
+  const offered = PHONE_WIDGETS.filter((w) => w.id !== "saldo" && w.id !== "categorias" && w.id !== "raiox" && (w.id !== "plano" || FEATURES.plano));
 
   const floating = useAnimatedStyle(() => ({
     transform: [{ translateX: tx.get() }, { translateY: ty.get() }, { scale: 1 + lift.get() * 0.05 }],
@@ -357,8 +358,8 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          <Plus size={18} color={th("rgba(255,255,255,0.8)")} strokeWidth={2.4} />
-          <Text style={{ fontSize: 14, fontWeight: "600", color: th("rgba(255,255,255,0.8)") }}>Adicionar widgets</Text>
+          <LayoutGrid size={17} color={th("rgba(255,255,255,0.8)")} strokeWidth={2.2} />
+          <Text style={{ fontSize: 14, fontWeight: "600", color: th("rgba(255,255,255,0.8)") }}>Ativar widgets</Text>
         </Pressable>
 
         {/* The card being carried, above everything, under the finger. */}
@@ -402,16 +403,16 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
         }}
       />
 
-      {/* The ones currently off the board. */}
+      {/* Every card, each with its switch. */}
       <BottomSheet open={adding} onClose={() => setAdding(false)} full>
         <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
-          <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>Adicionar widgets</Text>
-          <Text style={{ marginTop: 4, fontSize: 13, lineHeight: 18, color: th("rgba(255,255,255,0.62)") }}>
-            {missing.length > 0 ? "Tudo que não está na sua tela agora." : "Todos os widgets já estão na sua tela."}
-          </Text>
+          <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>Widgets</Text>
+          <Text style={{ marginTop: 4, fontSize: 13, lineHeight: 18, color: th("rgba(255,255,255,0.62)") }}>Ative o que você quer ver na tela inicial.</Text>
 
           <View style={{ marginTop: 20, gap: 10 }}>
-            {missing.map((w, i) => (
+            {offered.map((w, i) => {
+              const on = slots.some((s) => s.id === w.id);
+              return (
               <Animated.View
                 key={w.id}
                 entering={FadeIn.delay(i * 40).duration(240)}
@@ -432,13 +433,27 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
                   <Text numberOfLines={1} style={{ fontSize: 12.5, color: th(INK.softer) }}>{w.description}</Text>
                 </View>
                 <Pressable
-                  onPress={() => add(w.id)}
-                  style={({ pressed }) => ({ borderRadius: 999, backgroundColor: th("#fff", "bg"), paddingHorizontal: 16, paddingVertical: 8, opacity: pressed ? 0.8 : 1 })}
+                  onPress={() => (on ? remove(w.id) : add(w.id))}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: on }}
+                  accessibilityLabel={w.label}
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 5,
+                    borderRadius: 999,
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    backgroundColor: on ? th(GREEN, "bg") : th("#fff", "bg"),
+                    opacity: pressed ? 0.8 : 1,
+                  })}
                 >
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: th("#0B0B0B") }}>Adicionar</Text>
+                  {on && <Check size={14} color="#0B0B0B" strokeWidth={3} />}
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: on ? "#0B0B0B" : th("#0B0B0B") }}>{on ? "Ativo" : "Ativar"}</Text>
                 </Pressable>
               </Animated.View>
-            ))}
+              );
+            })}
           </View>
         </View>
       </BottomSheet>
