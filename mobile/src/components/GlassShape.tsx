@@ -56,10 +56,26 @@ export default function GlassShape({ radius, style, children }: { radius: number
     );
   }
   if (NATIVE) {
+    /* The shape never rests on the system glass alone: under it, a faint fill and a hairline
+       rim of its own, so that if iOS ever fails to draw the glass the pill is still a pill
+       and not words on nothing. Over working glass they barely show. */
     return (
-      <GlassView key={epoch} glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={false} style={[{ borderRadius: radius }, style]}>
+      <View
+        style={[
+          {
+            borderRadius: radius,
+            borderCurve: "continuous",
+            overflow: "hidden",
+            borderWidth: 0.75,
+            borderColor: light ? "rgba(17,19,24,0.08)" : "rgba(255,255,255,0.14)",
+            backgroundColor: light ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.07)",
+          },
+          style,
+        ]}
+      >
+        <GlassView key={epoch} glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={false} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: radius }} />
         {children}
-      </GlassView>
+      </View>
     );
   }
   return (
