@@ -12,7 +12,7 @@ import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Glass from "~/components/Glass";
-import Svg, { Path, Rect } from "react-native-svg";
+import ParticleOrb from "~/components/registro/ParticleOrb";
 import { ArrowLeftRight, House, Plus } from "~/components/icons";
 
 import { th } from "~/theme/theme";
@@ -192,8 +192,18 @@ export default function BottomNav({ state, navigateToTab }: TabBarProps) {
               justifyContent: "center",
             }}
           >
-            {/* Willo's head in a line, drawn as the other glyphs are. */}
-            <WilloGlyph size={28} color={th("rgba(255,255,255,0.78)")} />
+            <View
+              style={{
+                width: SIZE - 8,
+                height: SIZE - 8,
+                borderRadius: (SIZE - 8) / 2,
+                overflow: "hidden",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <ParticleOrb size={SIZE - 12} density={130} />
+            </View>
           </Glass>
         </Pressable>
       </View>
@@ -280,22 +290,5 @@ function NavButton({
           ))}
       </View>
     </Pressable>
-  );
-}
-
-/**
- * Willo in a line, after the other glyphs of the bar (the house, the arrows): his round helmet
- * with the ear pads either side, the visor, the two eyes and the small smile.
- */
-function WilloGlyph({ size, color }: { size: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <Rect x={4} y={4.5} width={16} height={15} rx={7.5} />
-      <Path d="M4 10.5h-0.5a1.5 1.5 0 0 0-1.5 1.5v2a1.5 1.5 0 0 0 1.5 1.5H4" />
-      <Path d="M20 10.5h0.5a1.5 1.5 0 0 1 1.5 1.5v2a1.5 1.5 0 0 1-1.5 1.5H20" />
-      <Rect x={6.5} y={8.5} width={11} height={8.5} rx={4.25} />
-      <Path d="M10 10.9v1.8M14 10.9v1.8" strokeWidth={2.2} />
-      <Path d="M10.9 14.6q1.1 .7 2.2 0" strokeWidth={1.6} />
-    </Svg>
   );
 }
