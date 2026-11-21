@@ -10,7 +10,7 @@ import { setHiddenValues, useHiddenValues } from "@/hooks/useHiddenValues";
 import { loadMonthTransactions, type TransactionRow as Row } from "@/services/monthTransactions";
 import Room from "~/components/Room";
 import RaisedButton from "~/components/RaisedButton";
-import MonthPill from "~/components/transactions/MonthPill";
+import MonthSelect from "~/components/transactions/MonthSelect";
 import RecentEntries from "~/components/transactions/RecentEntries";
 import { banksById, type EntryBank } from "~/components/transactions/WithBank";
 import { LineChart, PeriodTabs, monthLabels } from "~/components/charts/PageCharts";
@@ -166,7 +166,13 @@ export default function FluxoDeCaixa() {
   return (
     <Room lit sky>
       <Animated.ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: insets.top + 74, paddingBottom: insets.bottom + 60, paddingHorizontal: 16 }}>
-        <PeriodTabs value={view} options={VIEWS} onChange={setView} />
+        {/* The month in full, opening the months to choose from; under it, which money. */}
+        <View style={{ flexDirection: "row" }}>
+          <MonthSelect month={month} year={year} onChange={(m, y) => setShown({ month: m, year: y })} />
+        </View>
+        <View style={{ marginTop: 12, flexDirection: "row" }}>
+          <PeriodTabs value={view} options={VIEWS} onChange={setView} />
+        </View>
 
         {/* The figure, with the eye beside its name. */}
         <View style={{ marginTop: 22, paddingHorizontal: 4 }}>
@@ -227,7 +233,7 @@ export default function FluxoDeCaixa() {
         </View>
       </Animated.ScrollView>
 
-      {/* The top row: back, the page's name, the month in the corner. */}
+      {/* The top row: back and the page's name, centred. */}
       <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, paddingTop: insets.top + 10, paddingHorizontal: 16, flexDirection: "row", alignItems: "center" }}>
         <RaisedButton label="Voltar" onPress={() => (router.canGoBack() ? router.back() : router.replace("/" as never))} size={50}>
           <ChevronLeft size={24} color={th("#fff")} strokeWidth={2.4} />
@@ -235,7 +241,7 @@ export default function FluxoDeCaixa() {
         <Text numberOfLines={1} style={{ flex: 1, marginHorizontal: 8, textAlign: "center", fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
           Fluxo de caixa
         </Text>
-        <MonthPill compact month={month} year={year} onChange={(m, y) => setShown({ month: m, year: y })} />
+        <View style={{ width: 50 }} />
       </View>
     </Room>
   );
