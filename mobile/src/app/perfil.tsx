@@ -25,6 +25,7 @@ import { BACKDROPS, LIGHT_BACKDROPS, LIGHT_OFFERED, OFFERED } from "~/lib/backdr
 import { showToast } from "~/lib/toast";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
+import { HERO_ACCENTS, setHeroAccent, useHeroAccent } from "~/lib/heroAccent";
 
 import { isLight, switchTheme, th, useThemeRedraw, prepareThemeShot } from "~/theme/theme";
 /**
@@ -59,6 +60,7 @@ const LIGHT_BACKGROUNDS = LIGHT_BACKGROUND_GROUPS.flatMap((g) => g.items);
 const BACKGROUNDS = BACKGROUND_GROUPS.flatMap((g) => g.items);
 
 export default function Perfil() {
+  const heroAccent = useHeroAccent();
   /* Drawn again in place when the theme changes. */
   useThemeRedraw();
   const insets = useSafeAreaInsets();
@@ -305,6 +307,39 @@ export default function Perfil() {
             }}
             chevron
           />
+          <Hairline style={{ marginLeft: 64 }} />
+          {/* How Willo's line on the home lights its key words. */}
+          <View style={{ paddingHorizontal: 16, paddingVertical: 14 }}>
+            <Text style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>Destaque da frase do Willo</Text>
+            <Text style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>
+              {heroAccent === "branco" ? "Tudo branco, as palavras-chave em negrito" : "As palavras-chave na cor escolhida"}
+            </Text>
+            <View style={{ marginTop: 12, flexDirection: "row", gap: 12 }}>
+              {HERO_ACCENTS.map((a) => {
+                const on = a.key === heroAccent;
+                return (
+                  <Pressable
+                    key={a.key}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: on }}
+                    accessibilityLabel={a.label}
+                    onPress={() => {
+                      tick();
+                      setHeroAccent(a.key);
+                    }}
+                    style={{ alignItems: "center", gap: 5 }}
+                  >
+                    <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: th(on ? "#fff" : "rgba(255,255,255,0.12)", "line") }}>
+                      <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: a.color ? th(a.color, "bg") : th("rgba(255,255,255,0.1)", "bg") }}>
+                        {a.color ? null : <Text style={{ fontSize: 13, fontWeight: "800", color: th("#fff") }}>Aa</Text>}
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 11.5, fontWeight: on ? "700" : "500", color: th(on ? "#fff" : INK.soft) }}>{a.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
         </Surface>
 
         {/* What Willo tells the person, and the iPhone's own ways in. */}

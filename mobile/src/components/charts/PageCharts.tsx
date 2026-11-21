@@ -8,6 +8,7 @@ import Svg, { Circle, Defs, G, Line, LinearGradient as SvgGradient, Path, Stop }
 import { money } from "~/lib/money";
 import { INK } from "~/theme/tokens";
 import { th } from "~/theme/theme";
+import GlassShape from "~/components/GlassShape";
 
 /**
  * The pieces the detail pages share — first drawn for a category's own page, which Larissa
@@ -68,12 +69,20 @@ export function GrowBar({ left, width, height, bottom, color, strong, delay }: {
     h.set(withDelay(delay, withTiming(height, { duration: 620, easing: Easing.out(Easing.cubic) })));
   }, [h, height, delay]);
   const style = useAnimatedStyle(() => ({ height: Math.max(0, h.get()) }));
-  return <Animated.View style={[{ position: "absolute", left, width, bottom, borderRadius: Math.min(12, width / 2), backgroundColor: color, opacity: strong ? 1 : 0.4 }, style]} />;
+  return (
+    <Animated.View style={[{ position: "absolute", left, width, bottom, borderRadius: width / 2, overflow: "hidden", backgroundColor: color, opacity: strong ? 1 : 0.4 }, style]}>
+      {/* Lit from the left, deeper to the right: a capsule, not a flat block. */}
+      <LinearGradient colors={["rgba(255,255,255,0.10)", "rgba(0,0,0,0)", "rgba(0,0,0,0.5)"]} locations={[0, 0.35, 1]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ flex: 1 }} />
+    </Animated.View>
+  );
 }
 
 /**
- * A bar for each stretch. The one chosen is lit and its figure reads in a pill at the top of the
- * chart — the latest at first; a touch on another bar reads that one.
+ * A bar for each stretch, after Larissa's reference: rounded capsules lit from the left in the
+ * chart's colour (an empty stretch is a dot of the same colour), a quiet scale up the right side,
+ * the stretch's name under each. The bars rise from the floor whenever the chart is drawn anew (a
+ * new period). The one chosen — the latest at first — carries its figure in a small card of glass
+ * floating beside it; a touch (or a finger slid along) chooses another.
  */
 export function Bars({
   width,
@@ -84,76 +93,131 @@ export function Bars({
 }: {
   width: number;
   hex: string;
-  /** `title`, when given, is what the pill names the bar by ("Quarta, 19 de nov"); the label otherwise. */
+  /** `title`, when given, is what the card names the bar by ("Qua, 19 de nov"); the label otherwise. */
   bars: { label: string; value: number; on: boolean; title?: string }[];
   height?: number;
   hidden?: boolean;
 }) {
-  const max = Math.max(1, ...bars.map((b) => b.value)) * 1.08;
+  const AXIS = 48;
+  const max = Math.max(1, ...bars.map((b) => b.value));
   const n = Math.max(1, bars.length);
-  const slot = (width - 36) / n;
-  const bw = Math.min(40, slot * 0.56);
-  const floor = 30;
-  const room = height - floor - 58;
-  const initial = Math.max(0, bars.findIndex((b) => b.on));
+  const left = 14;
+  const slot = (width - left - AXIS) / n;
+  const bw = Math.max(10, Math.min(34, slot * 0.5));
+  const floor = 34;
+  const room = height - floor - 20;
+  /* The card opens on the latest stretch that had spending; on the one on show if none had. */
+  let initial = -1;
+  for (let i = bars.length - 1; i >= 0; i--) if (bars[i].value > 0) { initial = i; break; }
+  if (initial < 0) initial = Math.max(0, bars.findIndex((b) => b.on));
   const [sel, setSel] = useState(initial);
   useEffect(() => setSel(initial), [initial, bars.length]);
+  const lastIdx = useSharedValue(-1);
   const choose = useCallback((i: number) => {
     setSel(i);
     void Haptics.selectionAsync().catch(() => undefined);
   }, []);
-  const tap = useMemo(
-    () =>
-      Gesture.Tap()
-        .maxDistance(14)
-        .onEnd((e) => {
-          const i = Math.max(0, Math.min(n - 1, Math.floor((e.x - 18) / slot)));
-          runOnJS(choose)(i);
-        }),
-    [n, slot, choose],
-  );
+  const gesture = useMemo(() => {
+    const at = (px: number) => {
+      "worklet";
+      const i = Math.max(0, Math.min(n - 1, Math.floor((px - left) / slot)));
+      if (i === lastIdx.get()) return;
+      lastIdx.set(i);
+      runOnJS(choose)(i);
+    };
+    const pan = Gesture.Pan()
+      .activeOffsetX([-6, 6])
+      .failOffsetY([-14, 14])
+      .onStart((e) => {
+        lastIdx.set(-1);
+        at(e.x);
+      })
+      .onUpdate((e) => at(e.x));
+    const tap = Gesture.Tap()
+      .maxDistance(14)
+      .onEnd((e) => {
+        lastIdx.set(-1);
+        at(e.x);
+      });
+    return Gesture.Exclusive(pan, tap);
+  }, [n, slot, choose, lastIdx]);
+  const heightOf = (v: number) => (v > 0 ? Math.max(bw, (v / max) * room) : bw);
   const picked = bars[sel];
+  const pickedX = left + slot * sel + slot / 2;
+  const scale = [max, max / 2, max / 4, 0];
+  const fill = th(hex, "bg");
   return (
-    <GestureDetector gesture={tap}>
+    <GestureDetector gesture={gesture}>
       <View style={{ height }}>
+        {/* The scale, quiet, up the right side. */}
+        {scale.map((v, i) => (
+          <Text key={i} style={[nums, { position: "absolute", right: 6, width: AXIS - 6, textAlign: "right", bottom: floor + (v / max) * room - 9, fontSize: 12.5, color: th(INK.softer) }]}>
+            {hidden && v > 0 ? "•••" : compact(v)}
+          </Text>
+        ))}
         {bars.map((b, i) => {
-          const h = b.value > 0 ? Math.max(6, (b.value / max) * room) : 4;
-          const cx = 18 + slot * i + slot / 2;
+          const cx = left + slot * i + slot / 2;
           const on = i === sel;
           return (
             <View key={i} pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-              <GrowBar left={cx - bw / 2} width={bw} height={h} bottom={floor} color={th(hex, "bg")} strong={on} delay={i * 55} />
-              <Text style={{ position: "absolute", left: cx - 24, width: 48, bottom: 6, textAlign: "center", fontSize: 12.5, fontWeight: on ? "700" : "400", color: th(on ? "#fff" : INK.soft) }}>{b.label}</Text>
+              <GrowBar left={cx - bw / 2} width={bw} height={heightOf(b.value)} bottom={floor} color={fill} strong delay={i * 45} />
+              <Text style={{ position: "absolute", left: cx - 30, width: 60, bottom: 6, textAlign: "center", fontSize: 13, fontWeight: on ? "700" : "500", color: th(on ? "#fff" : INK.soft) }}>{b.label}</Text>
             </View>
           );
         })}
-        {picked && <ReadPill x={18 + slot * sel + slot / 2} width={width} title={picked.title ?? picked.label} rows={[{ color: th(hex), value: hidden ? "R$ •••" : money(picked.value) }]} />}
+        {picked && (
+          <GlassTip
+            key={sel}
+            anchorX={pickedX}
+            anchorY={height - floor - heightOf(picked.value)}
+            gap={bw / 2 + 10}
+            width={width - AXIS}
+            title={picked.title ?? picked.label}
+            rows={[{ color: fill, value: hidden ? "R$ •••" : money(picked.value) }]}
+          />
+        )}
       </View>
     </GestureDetector>
   );
 }
 
-/** The figure a finger is on, in a small pill at the top of a chart. */
-function ReadPill({ x, width, title, rows }: { x: number; width: number; title: string; rows: { color: string; value: string; name?: string }[] }) {
-  const W = 176;
-  const left = Math.max(8, Math.min(width - W - 8, x - W / 2));
+/** A figure on a scale, short: 417, 1,2 mil. */
+function compact(v: number) {
+  if (v >= 10_000) return `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 })} mil`;
+  if (v >= 1000) return `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`;
+  return String(Math.round(v));
+}
+
+/**
+ * The figure a finger is on, in a small card of Liquid Glass floating beside the point — to its
+ * right, or to its left near the right edge — never across a line break: the name above, the
+ * figure (or each line's, with its colour) under it, each on one line.
+ */
+function GlassTip({ anchorX, anchorY, gap, width, title, rows }: { anchorX: number; anchorY: number; gap: number; width: number; title: string; rows: { color: string; value: string; name?: string }[] }) {
+  const [w, setW] = useState(0);
+  const right = anchorX + gap + w + 8 <= width || w === 0;
+  /* Measured first at the left edge, where nothing squeezes it; then set beside the point. */
+  const left = w === 0 ? 0 : right ? anchorX + gap : anchorX - gap - w;
+  const top = Math.max(0, anchorY - 26);
   return (
-    <View pointerEvents="none" style={{ position: "absolute", top: 0, left, width: W, alignItems: "center" }}>
-      <View style={{ minWidth: 112, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, borderCurve: "continuous", backgroundColor: th("rgba(28,30,34,0.94)", "bg"), borderWidth: 1, borderColor: th("rgba(255,255,255,0.12)", "line") }}>
-        <Text numberOfLines={1} style={{ textAlign: "center", fontSize: 11.5, fontWeight: "600", color: th(INK.soft) }}>
+    <Animated.View entering={FadeIn.duration(140)} pointerEvents="none" style={{ position: "absolute", left: Math.max(4, left), top, opacity: w ? 1 : 0 }} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
+      <GlassShape radius={18}>
+        <View style={{ paddingHorizontal: 14, paddingVertical: 9 }}>
+        <Text numberOfLines={1} style={{ fontSize: 12.5, fontWeight: "500", color: th(INK.soft) }}>
           {title}
         </Text>
         {rows.map((r, i) => (
-          <View key={i} style={{ marginTop: 2, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
-            <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: r.color }} />
-            {r.name ? <Text style={{ fontSize: 12, color: th(INK.soft) }}>{r.name}</Text> : null}
-            <Text numberOfLines={1} style={[nums, { fontSize: 14, fontWeight: "700", color: th("#fff") }]}>
+          <View key={i} style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 6 }}>
+            {rows.length > 1 ? <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: r.color }} /> : null}
+            {r.name ? <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>{r.name}</Text> : null}
+            <Text numberOfLines={1} style={[nums, { fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: th("#fff"), flexShrink: 0 }]}>
               {r.value}
             </Text>
           </View>
         ))}
-      </View>
-    </View>
+        </View>
+      </GlassShape>
+    </Animated.View>
   );
 }
 
@@ -220,8 +284,9 @@ export function LineChart({
   /** The last point the axis holds (the month's last day). */
   span: number;
   series: LineSeries[];
-  labels: { at: number; text: string }[];
-  /** What the pill calls a point ("19 de nov"). */
+  /** Kept for the callers; the axis now names the days that had movement. */
+  labels?: { at: number; text: string }[];
+  /** What the card calls a point ("19 de nov"). */
   dayName: (i: number) => string;
   hidden?: boolean;
   /** A dashed line across, for a limit. */
@@ -234,6 +299,34 @@ export function LineChart({
   const y = (v: number) => bottom - (v / max) * (bottom - L_TOP);
   const pts = series.map((s) => s.values.map((v, i) => ({ x: x(i), y: y(v) })));
   const longest = Math.max(1, ...series.map((s) => s.values.length));
+  /* The line the card and the light follow: the one with a point of light (this month), or the first. */
+  const mainK = Math.max(0, series.findIndex((s) => s.dot));
+  const main = series[mainK];
+
+  /* Under the floor, only the days something moved — the first, every day a figure changed (kept
+     apart enough to read) and today. */
+  const days = useMemo(() => {
+    const at: number[] = [1];
+    const n = Math.max(...series.filter((s) => !s.dashed).map((s) => s.values.length), 2);
+    for (let i = 2; i < n; i++) if (series.some((s) => !s.dashed && i < s.values.length && Math.abs(s.values[i] - s.values[i - 1]) > 0.004)) at.push(i);
+    const last = Math.min(n - 1, span);
+    if (!at.includes(last)) at.push(last);
+    const kept: number[] = [];
+    for (const d of at) {
+      const px = L_PAD + (d / Math.max(1, span)) * inner;
+      const prev = kept.length ? L_PAD + (kept[kept.length - 1] / Math.max(1, span)) * inner : -99;
+      if (px - prev >= 30) kept.push(d);
+      else if (d === last) kept[kept.length - 1] = d;
+    }
+    return kept.map((d) => ({ at: d, text: String(d).padStart(2, "0") }));
+  }, [series, span, inner]);
+
+  /* Drawn anew (a new period, a new month), the chart rises from the floor. */
+  const rise = useSharedValue(0);
+  useEffect(() => {
+    rise.set(withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) }));
+  }, [rise]);
+  const rising = useAnimatedStyle(() => ({ opacity: 0.2 + rise.get() * 0.8, transform: [{ translateY: (1 - rise.get()) * 60 }, { scaleY: 0.35 + rise.get() * 0.65 }] }));
 
   const [pick, setPick] = useState<number | null>(null);
   const cx = useSharedValue(0);
@@ -300,6 +393,7 @@ export function LineChart({
         <Animated.View pointerEvents="none" style={[{ position: "absolute", top: L_TOP - 10, bottom: L_FLOOR, width: 32, borderRadius: 12, overflow: "hidden" }, band]}>
           <LinearGradient colors={["rgba(255,255,255,0.14)", "rgba(255,255,255,0.02)"]} style={{ flex: 1 }} />
         </Animated.View>
+        <Animated.View style={[{ width, height, transformOrigin: "bottom" }, rising]}>
         <Svg width={width} height={height}>
           <Defs>
             {series.map((s, k) =>
@@ -325,8 +419,10 @@ export function LineChart({
               <G key={k}>
                 {s.fill && <Path d={area} fill={`url(#${gid(k, s.color)})`} />}
                 {rest ? <Path d={rest} stroke={s.color} strokeOpacity={s.dashed ? 0.55 : 0.7} strokeWidth={s.dashed ? 1.8 : 2.2} strokeDasharray="5 6" fill="none" strokeLinecap="round" /> : null}
-                {solid ? <DrawnPath d={solid} stroke={s.color} strokeWidth={9} opacity={0.14} /> : null}
-                {solid ? <DrawnPath d={solid} stroke={s.color} strokeWidth={2.8} /> : null}
+                {solid ? <DrawnPath d={solid} stroke={s.color} strokeWidth={9} opacity={pick !== null ? 0.06 : 0.14} /> : null}
+                {solid ? <DrawnPath d={solid} stroke={s.color} strokeWidth={2.8} opacity={pick !== null ? 0.35 : 1} /> : null}
+                {/* Under the finger, the line is lit up to the day touched. */}
+                {pick !== null && !s.dashed && pick > 0 ? <Path d={curve(p, 0, Math.min(pick, split))} stroke={s.color} strokeWidth={3} fill="none" strokeLinecap="round" /> : null}
               </G>
             );
           })}
@@ -346,6 +442,7 @@ export function LineChart({
             );
           })}
         </Svg>
+        </Animated.View>
         {/* The points under the finger. */}
         {pick !== null &&
           series.map((s, k) =>
@@ -354,8 +451,11 @@ export function LineChart({
             ) : null,
           )}
         {pick !== null && (
-          <ReadPill
-            x={x(pick)}
+          <GlassTip
+            key={pick}
+            anchorX={x(pick)}
+            anchorY={pick < main.values.length ? y(main.values[pick]) : bottom}
+            gap={14}
             width={width}
             title={dayName(pick)}
             rows={series.filter((s) => pick < s.values.length).map((s) => ({ color: s.color, name: series.length > 1 ? s.name : undefined, value: hidden ? "R$ •••" : money(s.values[pick]) }))}
@@ -363,8 +463,8 @@ export function LineChart({
         )}
         {/* The days. */}
         <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 4, height: 18 }}>
-          {labels.map((l) => (
-            <Text key={`${l.at}-${l.text}`} style={[nums, { position: "absolute", left: x(l.at) - 20, width: 40, textAlign: "center", fontSize: 12.5, color: th(INK.soft) }]}>
+          {days.map((l) => (
+            <Text key={`${l.at}-${l.text}`} style={[nums, { position: "absolute", left: x(l.at) - 20, width: 40, textAlign: "center", fontSize: 12.5, color: th(l.at === pick ? "#fff" : INK.soft) }]}>
               {l.text}
             </Text>
           ))}

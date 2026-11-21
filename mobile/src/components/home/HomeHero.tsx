@@ -5,6 +5,7 @@ import type { InsightSlide } from "@/lib/insights";
 import { greetings, longestUnsaid, markSaid, type Greeting } from "~/lib/greeting";
 import { useGroundTh } from "~/theme/groundInk";
 import { INK } from "~/theme/tokens";
+import { HERO_ACCENTS, useHeroAccent } from "~/lib/heroAccent";
 
 /**
  * Willo, speaking, at the top of the home.
@@ -44,6 +45,8 @@ function litOf(title: string, name: string | null): Part[] {
 }
 
 export default function HomeHero({ name, slides, onLine }: { name: string | null; slides: InsightSlide[]; onLine: (line: WilloLine) => void }) {
+  const accent = useHeroAccent();
+  const tone = HERO_ACCENTS.find((a) => a.key === accent)?.color ?? null;
   const th = useGroundTh();
 
   /* The hello and the things he does, chosen once the name is known (it gets a moment). */
@@ -133,10 +136,11 @@ export default function HomeHero({ name, slides, onLine }: { name: string | null
       <Animated.View style={[{ marginTop: 10, height: 104 }, style]}>
         {current && (
           <>
-            <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.72} style={[nums, { maxWidth: 340, fontSize: 31, lineHeight: 35, fontWeight: "800", letterSpacing: -0.9, color: th("#fff") }]}>
+            <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.72} style={[nums, { maxWidth: 340, fontSize: 31, lineHeight: 35, fontWeight: tone ? "800" : "400", letterSpacing: -0.9, color: th("#fff") }]}>
               {current.parts.map((p, i) =>
                 p.lit ? (
-                  <Text key={i} style={{ color: th("#C4B5FD") }}>
+                  /* The key words: in the colour chosen in Aparência, or — all white, the default — bold against a lighter line. */
+                  <Text key={i} style={tone ? { color: th(tone) } : { fontWeight: "800" }}>
                     {p.text}
                   </Text>
                 ) : (
