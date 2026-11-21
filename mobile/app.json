@@ -17,7 +17,12 @@
       "usesAppleSignIn": true,
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": false,
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDevelopmentRegion": "pt-BR",
+        "CFBundleLocalizations": [
+          "pt-BR"
+        ],
+        "CFBundleAllowMixedLocalizations": true
       },
       "config": {
         "usesNonExemptEncryption": false
@@ -91,6 +96,9 @@
     },
     "runtimeVersion": {
       "policy": "appVersion"
+    },
+    "locales": {
+      "pt-BR": "./locales/pt-BR.json"
     }
   }
 }
