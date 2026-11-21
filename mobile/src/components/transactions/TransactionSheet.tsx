@@ -157,7 +157,7 @@ export default function TransactionSheet({
   const where = accountName || (isCard ? "Cartão" : "Conta");
 
   return (
-    <BottomSheet open={!!asked} onClose={onClose} tint={hex} full>
+    <BottomSheet open={!!asked} onClose={onClose} full>
       <View style={{ paddingHorizontal: 18 }}>
         {/* Anywhere outside the menu closes it. */}
         {menuOpen && <Pressable onPress={() => setMenuOpen(false)} accessibilityLabel="Fechar menu" style={{ position: "absolute", top: 0, bottom: 0, left: 0, right: 0, zIndex: 15 }} />}
