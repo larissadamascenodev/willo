@@ -4,10 +4,13 @@ import Surface from "~/components/Surface";
 import Bar from "~/components/Bar";
 import { ChevronRight } from "~/components/icons";
 import { money } from "~/lib/money";
-import { GREEN, INK, RED } from "~/theme/tokens";
+import { GREEN, INK } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 import { th } from "~/theme/theme";
+/* The red of money going out, at full strength: the softer one reads grey on the dark. */
+const LIVE_RED = "#FF4D4D";
+
 /* Figures line up in columns, so their digits have to be the same width. */
 const nums: TextStyle = Platform.select({
   ios: { fontVariant: ["tabular-nums"] },
@@ -21,15 +24,11 @@ const nums: TextStyle = Platform.select({
  * card is: both on one scale, so their lengths answer which side is bigger before
  * a figure is read.
  *
- * What is left over closes the card as one row of a statement: its name on the
- * left with the sentence the bars cannot draw under it — two near-equal lengths look
- * fine until you are told they are 96% — and the figure on the right, centred on
- * the pair. The figure is one step larger than the rows above, enough to read as
- * the result and no more, because the balance in the accounts is the headline of
- * the home and should not have a rival one card below.
+ * Called Fluxo de caixa: only money that came into and went out of the accounts (a card
+ * purchase counts when its invoice is paid). The balance is on its own page, a touch away.
  *
  * Colour is in the bars only. The figures are white, the outgoing one carrying its
- * minus sign; the leftover turns red only when the month falls short.
+ * minus sign in red.
  *
  * The whole card is one way in, to the cash-flow screen.
  */
@@ -45,20 +44,7 @@ export default function FluxoCard({
   isCurrentMonth?: boolean;
 }) {
   const router = useRouter();
-  const balanco = receitas - despesas;
-  const pct = receitas > 0 ? Math.round((despesas / receitas) * 100) : 0;
   const scale = Math.max(receitas, despesas, 1);
-
-  const verdict =
-    receitas <= 0 && despesas <= 0
-      ? "Nada entrou nem saiu ainda"
-      : receitas <= 0
-        ? "Saiu dinheiro sem nenhuma entrada"
-        : balanco < 0
-          ? "Você gastou mais do que entrou"
-          : `Você gastou ${pct}% do que entrou`;
-
-  const short = balanco < 0;
 
   return (
     <Surface
@@ -67,8 +53,7 @@ export default function FluxoCard({
     >
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <Text numberOfLines={1} style={[T.cardLabel, { flex: 1 }]}>
-          Receitas e despesas <Text style={{ color: th(INK.faint) }}>·</Text>{" "}
-          {isCurrentMonth ? "este mês" : "no mês"}
+          Fluxo de caixa <Text style={{ color: th(INK.faint) }}>·</Text> {isCurrentMonth ? "este mês" : "no mês"}
         </Text>
         <ChevronRight size={16} color={th(INK.faint)} />
       </View>
@@ -78,25 +63,6 @@ export default function FluxoCard({
         <Flow label="Saída" amount={despesas} scale={scale} delay={0.12} />
       </View>
 
-      {/* What is left of the month, as the last line of a statement. */}
-      <View
-        style={{
-          marginTop: 18,
-          paddingTop: 16,
-          borderTopWidth: 1,
-          borderTopColor: th("rgba(255,255,255,0.07)", "line"),
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-        }}
-      >
-        <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.2, color: th("#fff") }}>Fluxo de caixa</Text>
-        <Text numberOfLines={1} style={[nums, { flexShrink: 0, fontSize: 18, fontWeight: "700", letterSpacing: -0.3, color: th(short ? RED : "#fff") }]}>
-          {short ? "−" : ""}
-          {money(Math.abs(balanco))}
-        </Text>
-      </View>
     </Surface>
   );
 }
@@ -119,13 +85,13 @@ function Flow({
     <View>
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
         <Text style={{ fontSize: 17, fontWeight: "700", letterSpacing: -0.2, color: th("#fff") }}>{label}</Text>
-        <Text style={[nums, { fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: th(inflow ? "#fff" : RED) }]}>
+        <Text style={[nums, { fontSize: 16, fontWeight: "700", letterSpacing: -0.3, color: th(inflow ? "#fff" : LIVE_RED) }]}>
           {inflow ? "" : "−"}
           {money(amount)}
         </Text>
       </View>
       <View style={{ marginTop: 10, height: 7, borderRadius: 999, backgroundColor: th("rgba(255,255,255,0.06)", "bg"), overflow: "hidden" }}>
-        <Bar share={Math.max(amount / scale, amount > 0 ? 0.03 : 0)} color={inflow ? GREEN : RED} delay={delay} />
+        <Bar share={Math.max(amount / scale, amount > 0 ? 0.03 : 0)} color={inflow ? GREEN : LIVE_RED} delay={delay} />
       </View>
     </View>
   );

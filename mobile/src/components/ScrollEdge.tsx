@@ -67,9 +67,9 @@ export default function ScrollEdge({ on, extra = 0 }: { on: boolean; /** More fi
       <Svg width="100%" height="100%" style={{ position: "absolute", top: 0, left: 0 }}>
         <Defs>
           <LinearGradient id="edge-tint" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={th("#0E0E0F", "grad")} stopOpacity={0.8} />
-            <Stop offset="0.5" stopColor={th("#0E0E0F", "grad")} stopOpacity={0.3} />
-            <Stop offset="0.8" stopColor={th("#0E0E0F", "grad")} stopOpacity={0.08} />
+            <Stop offset="0" stopColor={th("#0E0E0F", "grad")} stopOpacity={0.32} />
+            <Stop offset="0.5" stopColor={th("#0E0E0F", "grad")} stopOpacity={0.12} />
+            <Stop offset="0.8" stopColor={th("#0E0E0F", "grad")} stopOpacity={0.03} />
             <Stop offset="1" stopColor={th("#0E0E0F", "grad")} stopOpacity={0} />
           </LinearGradient>
         </Defs>

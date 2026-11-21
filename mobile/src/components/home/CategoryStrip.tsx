@@ -60,7 +60,9 @@ export default function CategoryStrip({
     <View>
       {/* The heading lives on the page, not in a card. */}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4 }}>
-        <Text style={{ fontSize: 20, fontWeight: "700", letterSpacing: -0.4, color: gth("#fff") }}>Gastos por categoria</Text>
+        <Text style={{ fontSize: 20, fontWeight: "700", letterSpacing: -0.4, color: gth("#fff") }}>
+          Gastos <Text style={{ color: gth(INK.faint) }}>·</Text> {MONTHS[month][0].toUpperCase() + MONTHS[month].slice(1)}
+        </Text>
         <Pressable onPress={open} hitSlop={8} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, opacity: pressed ? 0.6 : 1 })}>
           <Text style={{ fontSize: 16, fontWeight: "600", color: gth("#fff") }}>Todas</Text>
           <ChevronRight size={18} color={gth("#fff")} strokeWidth={2.2} />
@@ -68,7 +70,7 @@ export default function CategoryStrip({
       </View>
       <View style={{ marginTop: 4, paddingHorizontal: 4, flexDirection: "row", alignItems: "baseline", gap: 8 }}>
         <Text style={[nums, { fontSize: 15, color: gth(INK.soft) }]}>
-          {MONTHS[month][0].toUpperCase() + MONTHS[month].slice(1)} · {hidden ? "R$ •••" : money(total)}
+          {hidden ? "R$ •••" : money(total)} no mês
         </Text>
       </View>
 

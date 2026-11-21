@@ -21,8 +21,6 @@ import { INK } from "~/theme/tokens";
 
 const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }, default: {} }) as TextStyle;
 const HOLD_MS = 7000;
-const WEEK = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
-const MONTHS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 /* Longer than this does not read at this size. */
 const LONGEST = 64;
 
@@ -47,8 +45,6 @@ function litOf(title: string, name: string | null): Part[] {
 
 export default function HomeHero({ name, slides, onLine }: { name: string | null; slides: InsightSlide[]; onLine: (line: WilloLine) => void }) {
   const th = useGroundTh();
-  const now = new Date();
-  const today = `${WEEK[now.getDay()]}, ${now.getDate()} ${MONTHS[now.getMonth()]}`;
 
   /* The hello and the things he does, chosen once the name is known (it gets a moment). */
   const [asks, setAsks] = useState<Greeting[] | null>(null);
@@ -131,8 +127,7 @@ export default function HomeHero({ name, slides, onLine }: { name: string | null
     <View style={{ paddingTop: 18, paddingBottom: 20 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: th("#fff", "bg"), shadowColor: "#fff", shadowOpacity: 0.8, shadowRadius: 5, shadowOffset: { width: 0, height: 0 } }} />
-        <Text style={{ flex: 1, fontSize: 11.5, fontWeight: "700", letterSpacing: 1.6, color: th("rgba(255,255,255,0.72)") }}>WILLO · PARA VOCÊ, AGORA</Text>
-        <Text style={[nums, { fontSize: 11.5, fontWeight: "700", letterSpacing: 1.4, color: th("rgba(255,255,255,0.55)") }]}>{today}</Text>
+        <Text style={{ fontSize: 11.5, fontWeight: "700", letterSpacing: 1.6, color: th("rgba(255,255,255,0.72)") }}>WILLO · PARA VOCÊ, AGORA</Text>
       </View>
       {/* Its room is fixed, so the cards under it never move as the lines change. */}
       <Animated.View style={[{ marginTop: 10, height: 104 }, style]}>

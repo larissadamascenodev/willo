@@ -14,6 +14,7 @@ import HomeHero from "~/components/home/HomeHero";
 import HomeShortcuts, { type Shortcut } from "~/components/home/HomeShortcuts";
 import AttentionCard from "~/components/home/AttentionCard";
 import HomeBalanceCard from "~/components/home/HomeBalanceCard";
+import FluxoCard from "~/components/home/FluxoCard";
 import TodayCard from "~/components/home/TodayCard";
 import CategoryStrip from "~/components/home/CategoryStrip";
 import { paramsForLine } from "~/components/home/OrbHero";
@@ -46,7 +47,7 @@ import { cachedName, rememberName } from "~/lib/warmHome";
 const HERO_GUESS = 200;
 /** The row with the photo and the capsule, under the status bar. */
 const TOP_ROW = 74;
-/** The row of shortcuts under it, which stays with it. */
+/** The row of shortcuts under it, which scrolls with the page. */
 const SHORTCUTS_H = 46;
 /** The space between the cards at the top. */
 const CARD_GAP = 12;
@@ -55,13 +56,13 @@ const CARD_GAP = 12;
  * The home.
  *
  * On top, the row that stays: the photo, the name and the day, and one capsule of glass with
- * the eye and the bell (the name comes in beside the photo once the page scrolls), and under it
- * a row of shortcuts as pills of glass (Contas a pagar, Hoje, Balanço, Caixinhas, Jornada) that
- * stays with it. Then Willo speaking, fixed on the background (HomeHero): his lines in turn, a
- * touch opening the conversation on the one on show. The cards scroll up over him: Hoje (what
- * can be spent today and what falls today), what needs attention, the balance in the accounts,
- * the month by category, then the board — Receitas e despesas beside the cards, the
- * instalments, and whatever the person has switched on.
+ * the eye and the bell (the name comes in beside the photo once the page scrolls). Under it a
+ * row of shortcuts as pills of glass (Hoje, Contas a pagar, Balanço, Caixinhas, Jornada) that
+ * scrolls with the page, and Willo speaking, fixed on the background (HomeHero): his lines in
+ * turn, a touch opening the conversation on the one on show. The cards scroll up over him: Hoje
+ * (what can be spent today and what falls today), what needs attention (only when something
+ * does), the balance in the accounts, Fluxo de caixa, the month's spending by category, then the
+ * board — the cards, the instalments, and whatever the person has switched on.
  */
 /**
  * The home loads its widgets only once it has been on screen. Opened straight onto a page
@@ -180,8 +181,9 @@ function HomeScreen() {
   const billsOpen = useMemo(() => events.filter((e) => !isIncome(e) && !isSettled(e)).length, [events]);
   const shortcuts = useMemo<Shortcut[]>(
     () => [
-      { key: "contas", label: "Contas a pagar", Icon: CalendarClock, tone: AMBER, badge: billsOpen, onPress: () => router.push("/eventos" as never) },
+      /* From now outwards: the day, what is due, the month, what is kept, the long run. */
       { key: "hoje", label: "Hoje", Icon: Sun, tone: "#F9A54E", onPress: () => router.push("/resumo" as never) },
+      { key: "contas", label: "Contas a pagar", Icon: CalendarClock, tone: AMBER, badge: billsOpen, onPress: () => router.push("/eventos" as never) },
       { key: "balanco", label: "Balanço", Icon: Scale, tone: "#7DD3FC", onPress: () => router.push("/fluxo-de-caixa" as never) },
       { key: "caixinhas", label: "Caixinhas", Icon: PiggyBank, tone: GREEN, onPress: () => router.push({ pathname: "/gestao", params: { ver: "caixinhas" } } as never) },
       { key: "jornada", label: "Jornada", Icon: Flag, tone: "#C4B5FD", onPress: () => router.push("/jornada" as never) },
@@ -318,8 +320,8 @@ function HomeScreen() {
     [data, categories, month, assinaturas, assinaturasLoading, totalAssinaturas, ended, keepEnded, cancelEnded, hasGoals],
   );
 
-  /* The balance and the categories live above the board, drawn their own way. */
-  const skipWidget = useCallback((id: string) => id === "saldo" || id === "categorias" || widgetIsEmpty(id, widgetContext), [widgetContext]);
+  /* The balance, Fluxo de caixa and the categories live above the board, drawn their own way. */
+  const skipWidget = useCallback((id: string) => id === "saldo" || id === "fluxo" || id === "categorias" || widgetIsEmpty(id, widgetContext), [widgetContext]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -367,11 +369,14 @@ function HomeScreen() {
           />
         }
       >
-        {/* Under the row at the top and the shortcuts. */}
-        <View style={{ height: insets.top + TOP_ROW + (editing ? 0 : SHORTCUTS_H) }} pointerEvents="none" />
+        {/* Under the row at the top. */}
+        <View style={{ height: insets.top + TOP_ROW }} pointerEvents="none" />
 
         {!editing && (
           <View style={{ gap: CARD_GAP, marginBottom: 26 }}>
+            <View style={{ height: SHORTCUTS_H, marginBottom: -CARD_GAP }}>
+              <HomeShortcuts items={shortcuts} />
+            </View>
             {/* Willo's place in the page: a touch on him opens the conversation. */}
             <GestureDetector gesture={heroTap}>
               <View
@@ -386,6 +391,9 @@ function HomeScreen() {
             <AttentionCard events={events} categories={categories} copilot={copilotItems?.length ?? 0} hidden={hidden} />
             <Animated.View layout={LinearTransition.duration(320)}>
               <HomeBalanceCard saldoPrevisto={data.saldoPrevisto} hidden={hidden} />
+            </Animated.View>
+            <Animated.View layout={LinearTransition.duration(320)}>
+              <FluxoCard receitas={data.receitas} despesas={data.despesas} month={month} isCurrentMonth />
             </Animated.View>
             <Animated.View layout={LinearTransition.duration(320)} style={{ marginTop: 10 }}>
               <CategoryStrip categories={categories} counts={counts} month={month} hidden={hidden} />
@@ -404,13 +412,8 @@ function HomeScreen() {
         />
       </Animated.ScrollView>
 
-      {/* Above everything: the row that stays with its shortcuts, and the band the page passes under. */}
-      <ScrollEdge on={moved && !editing} extra={editing ? 0 : SHORTCUTS_H} />
-      {!editing && (
-        <View pointerEvents="box-none" style={{ position: "absolute", top: insets.top + TOP_ROW, left: 0, right: 0, height: SHORTCUTS_H, paddingHorizontal: 16, zIndex: 30 }}>
-          <HomeShortcuts items={shortcuts} />
-        </View>
-      )}
+      {/* Above everything: the row that stays, and the soft band the page passes under. */}
+      <ScrollEdge on={moved && !editing} />
       <HomeHeader
         name={name}
         userId={user?.id}

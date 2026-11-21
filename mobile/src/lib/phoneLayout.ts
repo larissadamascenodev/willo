@@ -129,22 +129,22 @@ function firstBoard(userId: string | undefined) {
 
 /**
  * The home made lean (Larissa, 2026-11-20): above the board, the balance with the month's in
- * and out, and the categories; on the board Receitas e despesas beside the cards, both
- * compact, then the instalments. What used to
+ * and out (Fluxo de caixa), and the month's spending; on the board the cards and the
+ * instalments. What used to
  * be a card of its own — the bills to pay, the caixinhas, the journey — is now a
  * shortcut at the top; it and everything else waits switched off in "Ativar widgets". Every
  * board is put on this once; after that it is the person's again.
  */
 const LEAN: WidgetSlot[] = [
+  /* Drawn above the board, in this order: the balance, Fluxo de caixa, the month's spending. */
   { id: "saldo", size: "full" },
+  { id: "fluxo", size: "full" },
   { id: "categorias", size: "full" },
-  /* Receitas e despesas and the cards, compact, side by side; either can be made large. */
-  { id: "fluxo", size: "half" },
-  { id: "cartoes", size: "half" },
+  { id: "cartoes", size: "full" },
   { id: "parcelamentos", size: "full" },
 ];
 const LEAN_OFF = ["eventos", "metas", "jornada", "assinaturas", "radar", "copilot", "fixos", "recentes", "plano", "raiox"];
-const LEANED = (userId?: string) => `willo.home.widgets.phone-lean-v2.${userId ?? "anon"}`;
+const LEANED = (userId?: string) => `willo.home.widgets.phone-lean-v3.${userId ?? "anon"}`;
 
 function leanBoard(userId: string | undefined) {
   try {
