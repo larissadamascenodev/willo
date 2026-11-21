@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { Easing, FadeIn, FadeInDown } from "react-native-reanimated";
-import Svg, { Circle, Defs, Line, LinearGradient as SvgGradient, Path, RadialGradient, Rect, Stop } from "react-native-svg";
+import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import { supabase } from "~/supabase/client";
 import { getAccounts, getCreditCards } from "@/services/transactionService";
 import type { AnalyticsTransaction } from "@/services/categoryAnalytics";
@@ -20,12 +20,13 @@ import AnchoredMenu, { MenuRow, type AnchorRect } from "~/components/AnchoredMen
 import LimitSheet from "~/components/categorias/LimitSheet";
 import TransactionSheet from "~/components/transactions/TransactionSheet";
 import CountUp from "~/components/CountUp";
-import { Bars, DrawnPath, Legend, PeriodTabs } from "~/components/charts/PageCharts";
+import { Bars, Legend, LineChart, PeriodTabs, monthLabels } from "~/components/charts/PageCharts";
 import { ArrowDown, ArrowUp, CalendarDays, ChevronLeft, MoreHorizontal, Pencil, Share2, Wallet } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { useCategoryAnalytics } from "~/lib/warmStart";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
+import { useHiddenValues } from "@/hooks/useHiddenValues";
 import { AMBER, GREEN, INK, RED } from "~/theme/tokens";
 import { th, useThemeRedraw } from "~/theme/theme";
 
@@ -51,6 +52,9 @@ const PERIODS: { key: Period; label: string }[] = [
 const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 const SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const WEEK = ["D", "S", "T", "Q", "Q", "S", "S"];
+const WEEKDAY = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+/* The month before, behind the line: a quiet grey, dashed. */
+const BEFORE = "rgba(255,255,255,0.38)";
 const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }, default: {} }) as TextStyle;
 const CHART_H = 210;
 /** A colour at some strength, for the wash at the top; a colour not in #rrggbb is used as it is. */
@@ -70,6 +74,7 @@ export default function CategoriaDetalhe() {
   const { width } = useWindowDimensions();
   const { user } = useAuth();
   const { nome } = useLocalSearchParams<{ nome: string }>();
+  const hidden = useHiddenValues();
   const category = decodeURIComponent(String(nome ?? ""));
 
   const now = useMemo(() => new Date(), []);
@@ -142,8 +147,8 @@ export default function CategoriaDetalhe() {
     /* A card purchase of last month counted in this one: it sits on the first day. */
     return y === year && m === month + 1 ? d : 1;
   };
-  const spentToDay = txs.filter((t) => dayOf(t) <= dayNow).reduce((s, t) => s + Number(t.amount), 0);
-  const prevToSameDay = prevTxs.filter((t) => Number(t.date.split("-")[2]) <= dayNow).reduce((s, t) => s + Number(t.amount), 0);
+  /* How last month closed in this category: what this month is set against. */
+  const prevClosed = prevTxs.reduce((s, t) => s + Number(t.amount), 0);
   const prevMonthIdx = month === 0 ? 11 : month - 1;
   const pastMonths = history.filter((h) => !(h.month === month && h.year === year) && h.amount > 0);
   const average = pastMonths.length ? pastMonths.reduce((s, h) => s + h.amount, 0) / pastMonths.length : 0;
@@ -171,12 +176,11 @@ export default function CategoriaDetalhe() {
       const shown = Math.max(1, history.slice(-n).length);
       return n ? `Média de ${money(header.value / shown)} por mês` : "Dia a dia, de uma semana atrás até hoje";
     }
-    if (prevToSameDay <= 0) return "Sem gastos nessa categoria no mês anterior";
-    const diff = spentToDay - prevToSameDay;
-    if (Math.abs(diff) < 0.01) return `Igual a ${MONTHS[prevMonthIdx]} até o dia ${dayNow}`;
-    return `${money(Math.abs(diff))} ${diff > 0 ? "a mais" : "a menos"} que ${MONTHS[prevMonthIdx]} até o dia ${dayNow}`;
+    if (prevClosed <= 0) return "Sem gastos nessa categoria no mês anterior";
+    return ` vs ${money(prevClosed)} mês anterior`;
   })();
-  const up = period === "mes" && prevToSameDay > 0 && spentToDay > prevToSameDay;
+  const up = total > prevClosed;
+  const changed = period === "mes" && prevClosed > 0 ? `${Math.abs(((total - prevClosed) / prevClosed) * 100).toFixed(1).replace(".", ",")}%` : null;
 
   /* ── The menu and the month picker ── */
   const moreRef = useRef<ComponentRef<typeof View>>(null);
@@ -227,8 +231,9 @@ export default function CategoriaDetalhe() {
             </Animated.Text>
             <CountUp value={header.value} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[nums, { marginTop: 4, fontSize: 44, fontWeight: "700", letterSpacing: -1.6, color: th("#fff") }]} />
             <View style={{ marginTop: 4, flexDirection: "row", alignItems: "center", gap: 4 }}>
-              {period === "mes" && prevToSameDay > 0 && (up ? <ArrowUp size={14} color={th(INK.soft)} strokeWidth={2.2} /> : <ArrowDown size={14} color={th(INK.soft)} strokeWidth={2.2} />)}
+              {changed && (up ? <ArrowUp size={15} color={th(RED)} strokeWidth={2.4} /> : <ArrowDown size={15} color={th(GREEN)} strokeWidth={2.4} />)}
               <Text numberOfLines={2} style={[nums, { flexShrink: 1, fontSize: 14.5, color: th(INK.soft) }]}>
+                {changed ? <Text style={{ fontWeight: "700", color: th(up ? RED : GREEN) }}>{changed}</Text> : null}
                 {compare}
               </Text>
             </View>
@@ -238,19 +243,19 @@ export default function CategoriaDetalhe() {
         {/* The chart, across the whole width. */}
         <Animated.View key={`${period}-${year}-${month}`} entering={FadeInDown.duration(420).easing(Easing.out(Easing.cubic))} style={{ marginTop: 24, marginHorizontal: -16 }}>
           {period === "mes" ? (
-            <MonthChart width={width} hex={hex} txs={txs} prevTxs={prevTxs} dayOf={dayOf} lastDay={lastDay} dayNow={dayNow} limit={limit} />
+            <MonthChart width={width} hex={hex} txs={txs} prevTxs={prevTxs} dayOf={dayOf} lastDay={lastDay} dayNow={dayNow} limit={limit} month={month} hidden={hidden} />
           ) : period === "1s" ? (
-            <WeekChart width={width} hex={hex} all={[...(data?.transactions ?? []), ...(data?.prevTransactions ?? [])].filter(mine)} now={now} />
+            <WeekChart width={width} hex={hex} all={[...(data?.transactions ?? []), ...(data?.prevTransactions ?? [])].filter(mine)} now={now} hidden={hidden} />
           ) : (
-            <MonthsChart width={width} hex={hex} months={history.slice(period === "3m" ? -3 : -6)} current={{ month, year }} />
+            <MonthsChart width={width} hex={hex} months={history.slice(period === "3m" ? -3 : -6)} current={{ month, year }} hidden={hidden} />
           )}
         </Animated.View>
 
         {/* Legend. */}
         {period === "mes" && (
           <View style={{ marginTop: 10, flexDirection: "row", gap: 18, paddingHorizontal: 4 }}>
-            <Legend color={hex} label="Real" />
-            {prevTxs.length > 0 && <Legend color={hex} faint label={MONTHS[prevMonthIdx][0].toUpperCase() + MONTHS[prevMonthIdx].slice(1)} />}
+            <Legend color={hex} label={MONTHS[month][0].toUpperCase() + MONTHS[month].slice(1)} />
+            {prevTxs.length > 0 && <Legend color={th(BEFORE, "line")} dashed label={MONTHS[prevMonthIdx][0].toUpperCase() + MONTHS[prevMonthIdx].slice(1)} />}
             {limit !== null && <Legend color={th("rgba(255,255,255,0.7)")} dashed label="Orçamento" />}
           </View>
         )}
@@ -402,6 +407,8 @@ function MonthChart({
   lastDay,
   dayNow,
   limit,
+  month,
+  hidden,
 }: {
   width: number;
   hex: string;
@@ -411,6 +418,8 @@ function MonthChart({
   lastDay: number;
   dayNow: number;
   limit: number | null;
+  month: number;
+  hidden?: boolean;
 }) {
   const run = (list: AnalyticsTransaction[], day: (t: AnalyticsTransaction) => number, upTo: number) => {
     const per = new Array<number>(lastDay + 1).fill(0);
@@ -424,78 +433,39 @@ function MonthChart({
   };
   const cur = run(txs, dayOf, dayNow);
   const prev = prevTxs.length ? run(prevTxs, (t) => Number(t.date.split("-")[2]), lastDay) : null;
-  const max = Math.max(1, ...cur, ...(prev ?? [0]), limit ?? 0) * 1.12;
-  const top = 12;
-  const bottom = CHART_H - 30;
-  const x = (d: number) => 18 + (d / lastDay) * (width - 36);
-  const y = (v: number) => bottom - (v / max) * (bottom - top);
-  const path = (pts: number[]) => {
-    let p = `M ${x(0)} ${y(pts[0])}`;
-    const step = Math.min(((width - 36) / lastDay) * 0.8, 14);
-    for (let d = 1; d < pts.length; d++) {
-      const a = y(pts[d - 1]);
-      const b = y(pts[d]);
-      if (Math.abs(a - b) < 0.5) p += ` L ${x(d)} ${b}`;
-      else p += ` L ${x(d) - step} ${a} C ${x(d) - step / 2} ${a} ${x(d) - step / 2} ${b} ${x(d)} ${b}`;
-    }
-    return p;
-  };
-  const line = path(cur);
-  const area = `${line} L ${x(cur.length - 1)} ${bottom} L ${x(0)} ${bottom} Z`;
-  const labels = [1, 6, 11, 16, 21, 26, lastDay].filter((d, i, a) => d <= lastDay && a.indexOf(d) === i);
-  const ink = th("#fff");
+  const prevName = MONTHS[(month + 11) % 12];
   return (
-    <Animated.View entering={FadeIn.duration(360)}>
-      <Svg width={width} height={CHART_H}>
-        <Defs>
-          <SvgGradient id={`catFill-${hex}`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={hex} stopOpacity={0.4} />
-            <Stop offset="0.55" stopColor={hex} stopOpacity={0.12} />
-            <Stop offset="1" stopColor={hex} stopOpacity={0} />
-          </SvgGradient>
-          <RadialGradient id={`catDot-${hex}`} cx="0.5" cy="0.5" r="0.5">
-            <Stop offset="0" stopColor={hex} stopOpacity={0.55} />
-            <Stop offset="1" stopColor={hex} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        {prev && <Path d={path(prev)} stroke={hex} strokeOpacity={0.35} strokeWidth={2} fill="none" strokeLinecap="round" />}
-        <Path d={area} fill={`url(#catFill-${hex})`} />
-        {/* The line's own light: a broad, faint stroke of the same colour under it. */}
-        <DrawnPath d={line} stroke={hex} strokeWidth={10} opacity={0.18} />
-        <DrawnPath d={line} stroke={hex} strokeWidth={3} />
-        {limit !== null && <Line x1={x(0)} x2={x(lastDay)} y1={y(limit)} y2={y(limit)} stroke={ink} strokeOpacity={0.55} strokeWidth={1.6} strokeDasharray="6 6" />}
-        {/* Today, glowing in the category's colour. */}
-        <Circle cx={x(cur.length - 1)} cy={y(cur[cur.length - 1])} r={18} fill={`url(#catDot-${hex})`} />
-        <Circle cx={x(cur.length - 1)} cy={y(cur[cur.length - 1])} r={7} fill={ink} />
-        <Circle cx={x(cur.length - 1)} cy={y(cur[cur.length - 1])} r={4} fill={hex} />
-      </Svg>
-      <View style={{ position: "absolute", left: 0, right: 0, top: CHART_H - 22, height: 20 }}>
-        {labels.map((d) => (
-          <Text key={d} style={[nums, { position: "absolute", left: x(d) - 14, width: 28, textAlign: "center", fontSize: 13, color: th(INK.soft) }]}>
-            {d}
-          </Text>
-        ))}
-      </View>
-    </Animated.View>
+    <LineChart
+      width={width}
+      span={lastDay}
+      labels={monthLabels(lastDay)}
+      dayName={(i) => (i === 0 ? `Início de ${SHORT[month]}` : `${i} de ${SHORT[month]}`)}
+      hidden={hidden}
+      limit={limit}
+      series={[
+        ...(prev ? [{ values: prev, color: th(BEFORE, "line"), name: prevName[0].toUpperCase() + prevName.slice(1), dashed: true }] : []),
+        { values: cur, color: hex, name: MONTHS[month][0].toUpperCase() + MONTHS[month].slice(1), fill: true, dot: true },
+      ]}
+    />
   );
 }
 
 /* ───────── The last seven days ───────── */
 
-function WeekChart({ width, hex, all, now }: { width: number; hex: string; all: AnalyticsTransaction[]; now: Date }) {
+function WeekChart({ width, hex, all, now, hidden }: { width: number; hex: string; all: AnalyticsTransaction[]; now: Date; hidden?: boolean }) {
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(now);
     d.setDate(d.getDate() - (6 - i));
     const key = iso(d);
     return { d, value: all.filter((t) => t.date === key).reduce((s, t) => s + Number(t.amount), 0) };
   });
-  return <Bars width={width} hex={hex} bars={days.map((x, i) => ({ label: WEEK[x.d.getDay()], value: x.value, on: i === 6 }))} />;
+  return <Bars width={width} hex={hex} hidden={hidden} bars={days.map((x, i) => ({ label: WEEK[x.d.getDay()], title: `${i === 6 ? "Hoje" : WEEKDAY[x.d.getDay()]}, ${x.d.getDate()} de ${SHORT[x.d.getMonth()]}`, value: x.value, on: i === 6 }))} />;
 }
 
 /* ───────── Months ───────── */
 
-function MonthsChart({ width, hex, months, current }: { width: number; hex: string; months: { month: number; year: number; amount: number }[]; current: { month: number; year: number } }) {
-  return <Bars width={width} hex={hex} bars={months.map((m) => ({ label: SHORT[m.month], value: m.amount, on: m.month === current.month && m.year === current.year }))} />;
+function MonthsChart({ width, hex, months, current, hidden }: { width: number; hex: string; months: { month: number; year: number; amount: number }[]; current: { month: number; year: number }; hidden?: boolean }) {
+  return <Bars width={width} hex={hex} hidden={hidden} bars={months.map((m) => ({ label: SHORT[m.month], title: `${MONTHS[m.month][0].toUpperCase() + MONTHS[m.month].slice(1)} de ${m.year}`, value: m.amount, on: m.month === current.month && m.year === current.year }))} />;
 }
 
 /* ───────── The two cards ───────── */

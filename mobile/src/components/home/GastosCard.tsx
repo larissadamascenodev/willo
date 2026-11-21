@@ -44,13 +44,10 @@ export default function GastosCard({ size, hidden }: { size: "half" | "full"; hi
     const prevLast = new Date(year, month, 0).getDate();
     const mine = spent(data?.transactions ?? []);
     /* The month's total is the categories' own (what is scheduled for later in the month
-       included); the comparison is fair only day for day, so it uses the days so far. */
+       included), set against how last month closed — as its page does. */
     const total = mine.reduce((s, t) => s + (Number(t.amount) || 0), 0);
-    const day = (t: AnalyticsTransaction) => Number((t.date ?? "").slice(8, 10)) || 1;
-    const toDate = mine.filter((t) => day(t) <= today).reduce((s, t) => s + (Number(t.amount) || 0), 0);
-    const same = spent(data?.prevTransactions ?? [])
-      .filter((t) => Math.min(day(t), prevLast) <= Math.min(today, prevLast))
-      .reduce((s, t) => s + (Number(t.amount) || 0), 0);
+    const toDate = total;
+    const same = spent(data?.prevTransactions ?? []).reduce((s, t) => s + (Number(t.amount) || 0), 0);
     /* The categories that took the most. */
     const byCat = new Map<string, number>();
     for (const t of mine) byCat.set(t.category || "Outros", (byCat.get(t.category || "Outros") ?? 0) + (Number(t.amount) || 0));

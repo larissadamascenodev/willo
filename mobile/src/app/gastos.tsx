@@ -10,15 +10,17 @@ import Room from "~/components/Room";
 import RaisedButton from "~/components/RaisedButton";
 import Surface from "~/components/Surface";
 import CountUp from "~/components/CountUp";
-import { Bars, Legend, PeriodTabs, PileChart } from "~/components/charts/PageCharts";
+import { Bars, Legend, LineChart, PeriodTabs, monthLabels } from "~/components/charts/PageCharts";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Eye, EyeOff } from "~/components/icons";
 import { catColor } from "~/components/home/GastosPorCategoria";
-import { inkOn } from "@/lib/tone";
 import { categoryIcon } from "~/lib/categoryIcon";
+import { chipFill, chipInk } from "~/lib/chip";
+import { toTitleCase } from "@/lib/textCase";
 import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
 import { useCategoryAnalytics } from "~/lib/warmStart";
 import { GREEN, INK, RED } from "~/theme/tokens";
+import { type as T } from "~/theme/type";
 import { th, useThemeRedraw } from "~/theme/theme";
 
 /**
@@ -46,6 +48,7 @@ const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }
 const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 const SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const WEEK = ["D", "S", "T", "Q", "Q", "S", "S"];
+const WEEKDAY = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 /** The line and the bars: the one green. The stretch before: a quiet grey. */
 const HEX = GREEN;
 const BEFORE = "rgba(255,255,255,0.38)";
@@ -110,16 +113,15 @@ export default function Gastos() {
       };
       const line = run(cur, last, today);
       const before = run(prev, prevLast, prevLast);
-      /* The month's total is the categories' own (scheduled spending included); the
-         comparison is fair only day for day, so it uses the days so far. */
+      /* The month's total is the categories' own (scheduled spending included), set against
+         how last month closed. */
       const total = sum(cur);
-      const toDate = line[today];
-      const same = before[Math.min(today, prevLast)];
+      const closed = before[prevLast];
       return {
         label: `Gastos em ${MONTHS[month]}`,
         total,
-        compare: same > 0 ? { arrow: toDate > same ? ("up" as const) : ("down" as const), pct: pct(toDate, same), text: ` vs ${v(same)} até o dia ${today} de ${SHORT[prevIdx]}` } : null,
-        line: { cur: line, prev: before, span: last, labels: [1, 6, 11, 16, 21, 26, last].filter((d, i, a) => a.indexOf(d) === i).map((d) => ({ at: d, text: String(d) })) },
+        compare: closed > 0 ? { arrow: total > closed ? ("up" as const) : ("down" as const), pct: pct(total, closed), text: ` vs ${v(closed)} mês anterior` } : null,
+        line: { cur: line, prev: before, span: last, labels: monthLabels(last), dayName: (i: number) => (i === 0 ? `Início de ${SHORT[month]}` : `${i} de ${SHORT[month]}`), names: [cap(MONTHS[month]), cap(MONTHS[prevIdx])] },
         bars: null,
         legend: [cap(MONTHS[month]), cap(MONTHS[prevIdx])],
         list: cur,
@@ -139,7 +141,10 @@ export default function Gastos() {
         total,
         compare: before > 0 ? { arrow: total > before ? ("up" as const) : ("down" as const), pct: pct(total, before), text: ` vs ${v(before)} nos 7 dias antes` } : null,
         line: null,
-        bars: week.map((d, i) => ({ label: WEEK[new Date(`${d}T12:00:00`).getDay()], value: per[7 + i], on: i === 6 })),
+        bars: week.map((d, i) => {
+          const day = new Date(`${d}T12:00:00`);
+          return { label: WEEK[day.getDay()], title: `${i === 6 ? "Hoje" : WEEKDAY[day.getDay()]}, ${day.getDate()} de ${SHORT[day.getMonth()]}`, value: per[7 + i], on: i === 6 };
+        }),
         legend: null,
         list: all.filter((t) => week.includes(dayOf(t))),
       };
@@ -157,7 +162,7 @@ export default function Gastos() {
       total,
       compare: { arrow: null, pct: "", text: `Média de ${v(total / n)} por mês` },
       line: null,
-      bars: months.map((m, i) => ({ label: SHORT[m.month - 1], value: totals[i], on: i === n - 1 })),
+      bars: months.map((m, i) => ({ label: SHORT[m.month - 1], title: `${cap(MONTHS[m.month - 1])} de ${m.year}`, value: totals[i], on: i === n - 1 })),
       legend: null,
       list: [] as AnalyticsTransaction[],
     };
@@ -249,9 +254,19 @@ export default function Gastos() {
         {/* The chart, across the whole width. */}
         <Animated.View key={period} entering={FadeInDown.duration(420).easing(Easing.out(Easing.cubic))} style={{ marginTop: 24, marginHorizontal: -16 }}>
           {view.line ? (
-            <PileChart width={width} hex={th(HEX)} cur={view.line.cur} prev={view.line.prev} prevColor={th(BEFORE, "line")} span={view.line.span} labels={view.line.labels} />
+            <LineChart
+              width={width}
+              span={view.line.span}
+              labels={view.line.labels}
+              dayName={view.line.dayName}
+              hidden={hidden}
+              series={[
+                { values: view.line.prev, color: th(BEFORE, "line"), name: view.line.names[1], dashed: true },
+                { values: view.line.cur, color: th(HEX), name: view.line.names[0], fill: true, dot: true },
+              ]}
+            />
           ) : (
-            <Bars width={width} hex={HEX} bars={view.bars ?? []} />
+            <Bars width={width} hex={HEX} bars={view.bars ?? []} hidden={hidden} />
           )}
         </Animated.View>
 
@@ -270,7 +285,7 @@ export default function Gastos() {
         {/* Where it went most often. */}
         {places.length > 0 && (
           <>
-            <Text style={{ marginTop: 28, marginLeft: 4, fontSize: 17, fontWeight: "700", color: th(INK.soft) }}>Principais estabelecimentos</Text>
+            <Text style={[T.eyebrow, { marginTop: 30, paddingHorizontal: 4 }]}>Principais estabelecimentos</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12, marginHorizontal: -16 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>
               {places.map((p, i) => {
                 const color = catColor(p.category, i, custom);
@@ -278,20 +293,20 @@ export default function Gastos() {
                 return (
                   <Surface
                     key={p.name}
-                    radius={26}
+                    radius={22}
                     onPress={() => router.push({ pathname: "/estabelecimento", params: { nome: p.name, periodo: period } } as never)}
-                    style={{ width: 140, paddingVertical: 18, paddingHorizontal: 12, alignItems: "center" }}
+                    style={{ width: 128, paddingVertical: 14, paddingHorizontal: 12 }}
                   >
-                    <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th(color, "bg") }}>
-                      <Icon size={20} color={inkOn(color)} strokeWidth={2.2} />
+                    <View style={{ width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(color), "bg") }}>
+                      <Icon size={17} color={th(chipInk(color))} strokeWidth={2.2} />
                     </View>
-                    <Text numberOfLines={1} style={{ marginTop: 12, fontSize: 13.5, fontWeight: "500", color: th(INK.soft) }}>
-                      {p.name}
+                    <Text numberOfLines={2} style={{ marginTop: 10, minHeight: 34, fontSize: 13, lineHeight: 17, fontWeight: "600", color: th("#fff") }}>
+                      {toTitleCase(p.name)}
                     </Text>
-                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[nums, { marginTop: 6, fontSize: 17, fontWeight: "700", color: th("#fff") }]}>
+                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[nums, { marginTop: 6, fontSize: 15.5, fontWeight: "700", color: th("#fff") }]}>
                       {show(p.amount)}
                     </Text>
-                    <Text style={{ marginTop: 3, fontSize: 13, color: th(INK.softer) }}>{p.count === 1 ? "1 vez" : `${p.count} vezes`}</Text>
+                    <Text style={{ marginTop: 2, fontSize: 12, color: th(INK.softer) }}>{p.count === 1 ? "1 vez" : `${p.count} vezes`}</Text>
                   </Surface>
                 );
               })}
@@ -302,39 +317,36 @@ export default function Gastos() {
         {/* The categories that took the most. */}
         {cats.length > 0 && (
           <>
-            <Text style={{ marginTop: 28, marginLeft: 4, fontSize: 17, fontWeight: "700", color: th(INK.soft) }}>Principais gastos por categoria</Text>
-            <Surface radius={26} style={{ marginTop: 12, paddingVertical: 4 }}>
+            <Text style={[T.eyebrow, { marginTop: 30, paddingHorizontal: 4 }]}>Principais gastos por categoria</Text>
+            <View style={{ marginTop: 6 }}>
               {cats.map((c, i) => {
                 const Icon = categoryIcon(c.name, custom);
                 return (
-                  <Pressable
-                    key={c.name}
-                    onPress={() => router.push(`/analytics/categoria/${encodeURIComponent(c.name)}` as never)}
-                    style={({ pressed }) => ({
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 14,
-                      paddingHorizontal: 16,
-                      paddingVertical: 14,
-                      borderTopWidth: i > 0 ? 1 : 0,
-                      borderTopColor: th("rgba(255,255,255,0.06)", "line"),
-                      opacity: pressed ? 0.6 : 1,
-                    })}
-                  >
-                    <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th(c.color, "bg") }}>
-                      <Icon size={20} color={inkOn(c.color)} strokeWidth={2.2} />
-                    </View>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: "600", color: th("#fff") }}>
-                        {c.name}
-                      </Text>
-                      <Text style={[nums, { marginTop: 3, fontSize: 14, color: th(INK.soft) }]}>{`${(c.share * 100).toFixed(1).replace(".", ",")}% do período`}</Text>
-                    </View>
-                    <Text style={[nums, { fontSize: 17, fontWeight: "700", color: th("#fff") }]}>{show(c.amount)}</Text>
-                  </Pressable>
+                  <Animated.View key={c.name} entering={FadeInDown.delay(40 + i * 35).duration(260)}>
+                    <Pressable
+                      onPress={() => router.push(`/analytics/categoria/${encodeURIComponent(c.name)}` as never)}
+                      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}
+                    >
+                      <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(c.color), "bg") }}>
+                        <Icon size={20} color={th(chipInk(c.color))} strokeWidth={2} />
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>
+                          {c.name}
+                        </Text>
+                        <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                          <View style={{ flex: 1, maxWidth: 120, height: 4, borderRadius: 2, backgroundColor: th("rgba(255,255,255,0.10)", "bg") }}>
+                            <View style={{ width: `${Math.max(3, c.share * 100)}%`, height: 4, borderRadius: 2, backgroundColor: th(c.color, "bg") }} />
+                          </View>
+                          <Text style={[nums, { fontSize: 12, fontWeight: "600", color: th(INK.soft) }]}>{`${Math.round(c.share * 100)}%`}</Text>
+                        </View>
+                      </View>
+                      <Text style={[nums, { fontSize: 15, fontWeight: "600", color: th("#fff") }]}>{show(c.amount)}</Text>
+                    </Pressable>
+                  </Animated.View>
                 );
               })}
-            </Surface>
+            </View>
             <Pressable
               onPress={() => router.push("/analytics/categorias" as never)}
               style={({ pressed }) => ({
@@ -367,7 +379,7 @@ export default function Gastos() {
         </RaisedButton>
         <View pointerEvents="none" style={{ flex: 1, marginHorizontal: 10, alignItems: "center" }}>
           <Text numberOfLines={1} style={{ fontSize: 19, fontWeight: "700", letterSpacing: -0.3, color: th("#fff") }}>
-            Gastos
+            Gastos do mês
           </Text>
           <Animated.Text numberOfLines={1} style={[nums, small, { marginTop: 1, fontSize: 13, fontWeight: "600", color: th(INK.soft) }]}>
             {show(view.total)}

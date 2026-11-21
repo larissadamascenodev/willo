@@ -10,7 +10,6 @@ import { colorFor } from "@/lib/banks";
 import { setHiddenValues, useHiddenValues } from "@/hooks/useHiddenValues";
 import Room from "~/components/Room";
 import RaisedButton from "~/components/RaisedButton";
-import Surface from "~/components/Surface";
 import BankMark from "~/components/BankMark";
 import CountUp from "~/components/CountUp";
 import TransactionSheet from "~/components/transactions/TransactionSheet";
@@ -22,6 +21,7 @@ import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
 import { useCategoryAnalytics } from "~/lib/warmStart";
 import { INK } from "~/theme/tokens";
+import { type as T } from "~/theme/type";
 import { th, useThemeRedraw } from "~/theme/theme";
 
 /**
@@ -160,13 +160,13 @@ export default function Estabelecimento() {
         </View>
 
         {/* Every time, newest first. */}
-        <Text style={{ marginTop: 26, marginLeft: 4, fontSize: 17, fontWeight: "700", color: th(INK.soft) }}>Cada vez</Text>
+        <Text style={[T.eyebrow, { marginTop: 28, paddingHorizontal: 4 }]}>Cada compra</Text>
         {visits.length === 0 ? (
           <Text style={{ marginTop: 14, marginLeft: 4, fontSize: 15, color: th(INK.soft) }}>{data ? "Nada neste período." : "Carregando…"}</Text>
         ) : (
           <Animated.View entering={FadeIn.duration(260)}>
-            <Surface radius={26} style={{ marginTop: 12, paddingVertical: 4 }}>
-              {visits.map((t, i) => {
+            <View style={{ marginTop: 6 }}>
+              {visits.map((t) => {
                 const where = source(t);
                 const card = onCard(t);
                 const how = PAID[t.payment_method ?? ""] ?? (card ? "Crédito" : "Débito");
@@ -175,24 +175,24 @@ export default function Estabelecimento() {
                   <Pressable
                     key={t.id}
                     onPress={() => setOpened(t)}
-                    style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: th("rgba(255,255,255,0.06)", "line"), opacity: pressed ? 0.6 : 1 })}
+                    style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, opacity: pressed ? 0.7 : 1 })}
                   >
                     <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
                       <BankMark name={where} hex={colorFor(where, card ? names.cards[t.credit_card_id!]?.color : null)} size={46} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text numberOfLines={1} style={{ fontSize: 16.5, fontWeight: "600", color: th("#fff") }}>
+                      <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>
                         {dateOf(t)}
                       </Text>
-                      <Text numberOfLines={1} style={{ marginTop: 3, fontSize: 13.5, color: th(INK.soft) }}>
+                      <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>
                         {`${how} · ${where}${parts}`}
                       </Text>
                     </View>
-                    <Text style={[nums, { fontSize: 17, fontWeight: "700", color: th("#fff") }]}>−{show(Number(t.amount))}</Text>
+                    <Text style={[nums, { fontSize: 15, fontWeight: "600", color: th("#fff") }]}>{show(Number(t.amount))}</Text>
                   </Pressable>
                 );
               })}
-            </Surface>
+            </View>
           </Animated.View>
         )}
       </Animated.ScrollView>

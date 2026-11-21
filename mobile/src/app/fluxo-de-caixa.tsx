@@ -1,12 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Platform, Pressable, Text, View, useWindowDimensions, type TextStyle } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import Animated, { Easing, FadeIn, FadeInDown, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import * as Haptics from "expo-haptics";
-import Svg, { Defs, LinearGradient as SvgGradient, Path, Stop } from "react-native-svg";
+import Animated, { Easing, FadeIn, FadeInDown } from "react-native-reanimated";
 import type { Transaction } from "@/types/finance";
 import type { CustomCategory } from "@/services/categoryService";
 import { useFinanceData } from "@/hooks/useFinanceData";
@@ -17,7 +13,7 @@ import RaisedButton from "~/components/RaisedButton";
 import MonthPill from "~/components/transactions/MonthPill";
 import RecentEntries from "~/components/transactions/RecentEntries";
 import { banksById, type EntryBank } from "~/components/transactions/WithBank";
-import { PeriodTabs } from "~/components/charts/PageCharts";
+import { LineChart, PeriodTabs, monthLabels } from "~/components/charts/PageCharts";
 import { ChevronLeft, Eye, EyeOff } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
@@ -61,26 +57,6 @@ const VIEWS: { key: View3; label: string }[] = [
 ];
 
 const dayOf = (t: Transaction) => Number((t.rawDate ?? "").slice(8, 10)) || 1;
-
-/** A curve through the points that never swings past them. */
-function curve(pts: { x: number; y: number }[], from = 0, to = pts.length - 1) {
-  const n = pts.length;
-  if (n === 0) return "";
-  const s: number[] = [];
-  for (let i = 0; i < n - 1; i++) s[i] = (pts[i + 1].y - pts[i].y) / (pts[i + 1].x - pts[i].x || 1);
-  const t = new Array<number>(n).fill(0);
-  if (n > 1) {
-    t[0] = s[0];
-    t[n - 1] = s[n - 2];
-  }
-  for (let i = 1; i < n - 1; i++) t[i] = s[i - 1] * s[i] <= 0 ? 0 : (s[i - 1] + s[i]) / 2;
-  let d = `M ${pts[from].x.toFixed(1)} ${pts[from].y.toFixed(1)}`;
-  for (let i = from; i < to; i++) {
-    const h = pts[i + 1].x - pts[i].x;
-    d += ` C ${(pts[i].x + h / 3).toFixed(1)} ${(pts[i].y + (t[i] * h) / 3).toFixed(1)} ${(pts[i + 1].x - h / 3).toFixed(1)} ${(pts[i + 1].y - (t[i + 1] * h) / 3).toFixed(1)} ${pts[i + 1].x.toFixed(1)} ${pts[i + 1].y.toFixed(1)}`;
-  }
-  return d;
-}
 
 export default function FluxoDeCaixa() {
   useThemeRedraw();
@@ -182,7 +158,7 @@ export default function FluxoDeCaixa() {
       inn: run(inPer),
       out: run(outPer),
       split: when < 0 ? last : when > 0 ? 0 : now.getDate(),
-      labels: [1, 8, 15, 22, last].map((d) => ({ at: d, text: String(d).padStart(2, "0") })),
+      labels: monthLabels(last),
       name: (i: number) => (i === 0 ? `Início de ${SHORT[month]}` : `${i} de ${SHORT[month]}`),
     };
   }, [data, month, year, when, now]);
@@ -224,7 +200,17 @@ export default function FluxoDeCaixa() {
 
         {/* The month, day by day. */}
         <Animated.View key={`${view}-${month}-${year}`} entering={FadeInDown.duration(420).easing(Easing.out(Easing.cubic))} style={{ marginTop: 10, marginHorizontal: -16 }}>
-          <FlowChart width={width} series={series} view={view} hidden={hidden} />
+          <LineChart
+            width={width}
+            span={series.inn.length - 1}
+            labels={series.labels}
+            dayName={series.name}
+            hidden={hidden}
+            series={[
+              ...(view !== "entradas" ? [{ values: series.out, color: th(OUT), name: "Saídas", fill: true, split: series.split, dot: true }] : []),
+              ...(view !== "saidas" ? [{ values: series.inn, color: th(IN), name: "Entradas", fill: true, split: series.split, dot: true }] : []),
+            ]}
+          />
         </Animated.View>
 
         {/* The month's latest entries, as the card's statement lists them. */}
@@ -252,132 +238,5 @@ export default function FluxoDeCaixa() {
         <MonthPill compact month={month} year={year} onChange={(m, y) => setShown({ month: m, year: y })} />
       </View>
     </Room>
-  );
-}
-
-/**
- * The month as soft lines adding up day by day — green for what came in, red for what went out
- * (one or both, by the view) — solid for what has happened, dashed for what is still to come. A
- * finger slid across reads the day under it.
- */
-function FlowChart({
-  width,
-  series,
-  view,
-  hidden,
-}: {
-  width: number;
-  series: { inn: number[]; out: number[]; split: number; labels: { at: number; text: string }[]; name: (i: number) => string };
-  view: View3;
-  hidden?: boolean;
-}) {
-  const n = series.inn.length;
-  const showIn = view !== "saidas";
-  const showOut = view !== "entradas";
-  const max = Math.max(1, ...(showIn ? series.inn : [0]), ...(showOut ? series.out : [0])) * 1.1;
-  const bottom = CHART_H - FLOOR;
-  const x = (i: number) => PAD_X + (i / Math.max(1, n - 1)) * (width - PAD_X * 2);
-  const y = (v: number) => bottom - (v / max) * (bottom - TOP);
-  const pin = series.inn.map((v, i) => ({ x: x(i), y: y(v) }));
-  const pout = series.out.map((v, i) => ({ x: x(i), y: y(v) }));
-  const split = Math.max(0, Math.min(n - 1, series.split));
-  const green = th(IN);
-  const red = th(OUT);
-
-  const [pick, setPick] = useState<number | null>(null);
-  const cx = useSharedValue(0);
-  const shown = useSharedValue(0);
-  const lastIdx = useSharedValue(-1);
-  const xs = pin.map((p) => p.x);
-  const choose = useCallback((i: number) => {
-    setPick(i);
-    void Haptics.selectionAsync().catch(() => undefined);
-  }, []);
-  const release = useCallback(() => setPick(null), []);
-  const pan = useMemo(() => {
-    const go = (px: number) => {
-      "worklet";
-      const i = Math.max(0, Math.min(n - 1, Math.round(((px - PAD_X) / (width - PAD_X * 2)) * (n - 1))));
-      if (i === lastIdx.get()) return;
-      lastIdx.set(i);
-      cx.set(withTiming(xs[i], { duration: 90 }));
-      runOnJS(choose)(i);
-    };
-    return Gesture.Pan()
-      .activeOffsetX([-6, 6])
-      .failOffsetY([-14, 14])
-      .onStart((e) => {
-        lastIdx.set(-1);
-        shown.set(withTiming(1, { duration: 140 }));
-        go(e.x);
-      })
-      .onUpdate((e) => go(e.x))
-      .onFinalize(() => {
-        shown.set(withTiming(0, { duration: 260 }));
-        runOnJS(release)();
-      });
-  }, [width, n, xs, cx, shown, lastIdx, choose, release]);
-  const band = useAnimatedStyle(() => ({ opacity: shown.get(), transform: [{ translateX: cx.get() - 18 }] }));
-
-  const area = (pts: { x: number; y: number }[]) => `${curve(pts)} L ${pts[pts.length - 1].x.toFixed(1)} ${bottom} L ${pts[0].x.toFixed(1)} ${bottom} Z`;
-  const solid = (pts: { x: number; y: number }[]) => (split > 0 ? curve(pts, 0, split) : "");
-  const ahead = (pts: { x: number; y: number }[]) => (split < n - 1 ? curve(pts, split, n - 1) : "");
-  const tip = pick !== null ? { x: Math.max(70, Math.min(width - 70, xs[pick])), name: series.name(pick), inn: series.inn[pick], out: series.out[pick] } : null;
-
-  return (
-    <GestureDetector gesture={pan}>
-      <View style={{ height: CHART_H }}>
-        {/* The lit band under the finger. */}
-        <Animated.View pointerEvents="none" style={[{ position: "absolute", top: TOP - 14, bottom: FLOOR, width: 36, borderRadius: 12, overflow: "hidden" }, band]}>
-          <LinearGradient colors={["rgba(255,255,255,0.16)", "rgba(255,255,255,0.03)"]} style={{ flex: 1 }} />
-        </Animated.View>
-        <Svg width={width} height={CHART_H}>
-          <Defs>
-            <SvgGradient id="flow-in" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={green} stopOpacity={0.2} />
-              <Stop offset="1" stopColor={green} stopOpacity={0} />
-            </SvgGradient>
-            <SvgGradient id="flow-out" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={red} stopOpacity={0.14} />
-              <Stop offset="1" stopColor={red} stopOpacity={0} />
-            </SvgGradient>
-          </Defs>
-          {showOut && <Path d={area(pout)} fill="url(#flow-out)" />}
-          {showIn && <Path d={area(pin)} fill="url(#flow-in)" />}
-          {showOut && solid(pout) ? <Path d={solid(pout)} stroke={red} strokeWidth={2.6} fill="none" strokeLinecap="round" /> : null}
-          {showOut && ahead(pout) ? <Path d={ahead(pout)} stroke={red} strokeOpacity={0.7} strokeWidth={2.2} strokeDasharray="5 6" fill="none" strokeLinecap="round" /> : null}
-          {showIn && solid(pin) ? <Path d={solid(pin)} stroke={green} strokeWidth={2.8} fill="none" strokeLinecap="round" /> : null}
-          {showIn && ahead(pin) ? <Path d={ahead(pin)} stroke={green} strokeOpacity={0.75} strokeWidth={2.2} strokeDasharray="5 6" fill="none" strokeLinecap="round" /> : null}
-        </Svg>
-        {/* The points under the finger. */}
-        {pick !== null && showIn && <View pointerEvents="none" style={{ position: "absolute", left: xs[pick] - 7, top: pin[pick].y - 7, width: 14, height: 14, borderRadius: 7, borderWidth: 3, borderColor: green, backgroundColor: th("#fff", "bg") }} />}
-        {pick !== null && showOut && <View pointerEvents="none" style={{ position: "absolute", left: xs[pick] - 7, top: pout[pick].y - 7, width: 14, height: 14, borderRadius: 7, borderWidth: 3, borderColor: red, backgroundColor: th("#fff", "bg") }} />}
-        {/* The pill reading the day. */}
-        {tip && (
-          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: tip.x - 70, width: 140, alignItems: "center" }}>
-            <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, backgroundColor: th("rgba(30,32,36,0.92)", "bg"), borderWidth: 1, borderColor: th("rgba(255,255,255,0.14)", "line") }}>
-              <Text numberOfLines={1} style={{ textAlign: "center", fontSize: 11, fontWeight: "600", color: th(INK.soft) }}>
-                {tip.name}
-              </Text>
-              <Text numberOfLines={1} style={[nums, { textAlign: "center", fontSize: 12.5, fontWeight: "700", color: th("#fff") }]}>
-                {showIn && <Text style={{ color: green }}>● </Text>}
-                {showIn && (hidden ? "•••" : money(tip.inn))}
-                {showIn && showOut && "  "}
-                {showOut && <Text style={{ color: red }}>● </Text>}
-                {showOut && (hidden ? "•••" : money(tip.out))}
-              </Text>
-            </View>
-          </View>
-        )}
-        {/* The axis. */}
-        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 4, height: 18 }}>
-          {series.labels.map((l) => (
-            <Text key={`${l.at}-${l.text}`} style={[nums, { position: "absolute", left: x(l.at) - 20, width: 40, textAlign: "center", fontSize: 12.5, color: th(INK.soft) }]}>
-              {l.text}
-            </Text>
-          ))}
-        </View>
-      </View>
-    </GestureDetector>
   );
 }
