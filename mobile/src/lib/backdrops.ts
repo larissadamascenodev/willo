@@ -9,7 +9,7 @@
  * of the screen; `a` is the light's strength at its centre.
  */
 
-export type BackdropKey = "willo" | "prisma" | "horizonte" | "aurora" | "oceano" | "ametista" | "brasa" | "grafite" | "meia-noite";
+export type BackdropKey = "willo" | "ardosia" | "bruma" | "terra" | "violeta" | "azul" | "prisma" | "horizonte" | "aurora" | "oceano" | "ametista" | "brasa" | "grafite" | "meia-noite";
 
 export interface Backdrop {
   label: string;
@@ -24,22 +24,94 @@ export interface Backdrop {
 }
 
 export const BACKDROPS: Record<BackdropKey, Backdrop> = {
-  /* The default: quiet, so the figures and the cards are what the eye finds. A graphite that
-     is a little lighter at the top and settles into near-black by the middle of the screen, one
-     soft cool-white light high on the left and a faint slate one on the right — no colour of its
-     own, only enough light and shade for the glass of the bars and buttons to bend. */
+  /* ── Suaves: a colour taken down to almost grey, lighter at the top and settling into the
+     dark by the middle of the screen, the way an app tints its top with the blurred light of a
+     photo. Two broad lights in slightly different tones give it the soft, uneven glow of that
+     blur, and the glass of the bars and buttons something to bend. ── */
+
+  /* The default: no colour of its own, only a soft grey light. */
   willo: {
     label: "Willo",
     ground: "#08090B",
-    edge: 0.35,
+    edge: 0.28,
     wash: {
-      colors: ["#1E2125", "#181A1E", "#121417", "#0D0E11", "#08090B"],
-      stops: [0, 0.16, 0.32, 0.5, 0.68],
+      colors: ["#46494E", "#383B3F", "#2A2C30", "#1C1D20", "#101113", "#08090B"],
+      stops: [0, 0.12, 0.24, 0.36, 0.48, 0.6],
     },
     lights: [
-      { cx: 0.16, cy: -0.08, rx: 0.95, ry: 0.36, rgb: "214,220,230", a: 0.22 },
-      { cx: 0.94, cy: 0.12, rx: 0.62, ry: 0.28, rgb: "122,134,154", a: 0.26 },
-      { cx: 0.5, cy: 0.64, rx: 1.0, ry: 0.4, rgb: "150,160,178", a: 0.05 },
+      { cx: 0.18, cy: -0.06, rx: 0.9, ry: 0.32, rgb: "225,228,235", a: 0.2 },
+      { cx: 0.92, cy: 0.1, rx: 0.6, ry: 0.28, rgb: "130,138,150", a: 0.22 },
+    ],
+  },
+  /* Slate: a grey with blue in it, like a mountain sky through haze. */
+  ardosia: {
+    label: "Ardósia",
+    ground: "#08090B",
+    edge: 0.28,
+    wash: {
+      colors: ["#5B6873", "#48535D", "#353E47", "#232930", "#121519", "#08090B"],
+      stops: [0, 0.12, 0.24, 0.36, 0.48, 0.6],
+    },
+    lights: [
+      { cx: 0.18, cy: -0.06, rx: 0.9, ry: 0.32, rgb: "175,195,212", a: 0.3 },
+      { cx: 0.92, cy: 0.12, rx: 0.6, ry: 0.28, rgb: "88,104,122", a: 0.32 },
+    ],
+  },
+  /* Mist: a grey with green-blue in it, like sea air. */
+  bruma: {
+    label: "Bruma",
+    ground: "#08090B",
+    edge: 0.28,
+    wash: {
+      colors: ["#506B70", "#3F565B", "#2F4145", "#1F2B2E", "#111718", "#08090B"],
+      stops: [0, 0.12, 0.24, 0.36, 0.48, 0.6],
+    },
+    lights: [
+      { cx: 0.16, cy: -0.06, rx: 0.9, ry: 0.32, rgb: "165,208,212", a: 0.28 },
+      { cx: 0.94, cy: 0.12, rx: 0.6, ry: 0.28, rgb: "64,104,112", a: 0.34 },
+    ],
+  },
+  /* Earth: a warm taupe to the left and a little teal to the right, like old stone in the sun. */
+  terra: {
+    label: "Terra",
+    ground: "#09090A",
+    edge: 0.28,
+    wash: {
+      colors: ["#655C55", "#514A44", "#3D3834", "#292522", "#151312", "#09090A"],
+      stops: [0, 0.12, 0.24, 0.36, 0.48, 0.6],
+    },
+    lights: [
+      { cx: 0.14, cy: -0.04, rx: 0.8, ry: 0.34, rgb: "205,170,135", a: 0.34 },
+      { cx: 0.96, cy: 0.06, rx: 0.62, ry: 0.3, rgb: "70,118,122", a: 0.3 },
+    ],
+  },
+
+  /* ── Cores: the colour itself, full, at the top, falling into black. ── */
+
+  violeta: {
+    label: "Violeta",
+    ground: "#08080A",
+    edge: 0.25,
+    wash: {
+      colors: ["#8656DA", "#6A40BE", "#4D2C92", "#311C60", "#180E30", "#0A0810", "#08080A"],
+      stops: [0, 0.1, 0.2, 0.31, 0.43, 0.55, 0.66],
+    },
+    lights: [
+      { cx: 0.3, cy: -0.06, rx: 1.0, ry: 0.32, rgb: "205,170,255", a: 0.28 },
+      { cx: 0.95, cy: 0.12, rx: 0.6, ry: 0.26, rgb: "110,60,210", a: 0.3 },
+    ],
+  },
+  azul: {
+    label: "Azul",
+    ground: "#08090B",
+    edge: 0.25,
+    wash: {
+      colors: ["#3A66EC", "#2D52C8", "#21409C", "#162B6A", "#0B1636", "#080A12", "#08090B"],
+      stops: [0, 0.1, 0.2, 0.31, 0.43, 0.55, 0.66],
+    },
+    lights: [
+      { cx: 0.5, cy: -0.06, rx: 1.0, ry: 0.32, rgb: "160,190,255", a: 0.26 },
+      { cx: 0.05, cy: 0.14, rx: 0.6, ry: 0.26, rgb: "50,100,235", a: 0.3 },
     ],
   },
   /* The petrol of Horizonte washing down from the top, and in it the Willo
@@ -131,6 +203,12 @@ export const BACKDROPS: Record<BackdropKey, Backdrop> = {
 };
 
 export const BACKDROP_KEYS = Object.keys(BACKDROPS) as BackdropKey[];
+
+/** What the profile offers, in two groups; the others are kept only for whoever still wears one. */
+export const OFFERED: { title: string; keys: BackdropKey[] }[] = [
+  { title: "Suaves", keys: ["willo", "ardosia", "bruma", "terra"] },
+  { title: "Cores", keys: ["violeta", "azul", "prisma"] },
+];
 
 /* The same stars every time: a fixed little generator, not Math.random. */
 export const STARS = (() => {
@@ -262,3 +340,9 @@ export const LIGHT_BACKDROPS: Record<LightBackdropKey, Backdrop> = {
 };
 
 export const LIGHT_BACKDROP_KEYS = Object.keys(LIGHT_BACKDROPS) as LightBackdropKey[];
+
+/** The light theme's offer, grouped the same way. */
+export const LIGHT_OFFERED: { title: string; keys: LightBackdropKey[] }[] = [
+  { title: "Suaves", keys: ["willo-claro", "perola", "nevoa", "areia"] },
+  { title: "Cores", keys: ["lavanda", "ceu-claro", "prisma-claro"] },
+];

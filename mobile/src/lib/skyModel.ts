@@ -35,6 +35,25 @@ const MOVED_KEY = "sky-default-willo";
 const LIGHT_KEY = "sky-model-light";
 const LIGHT_DEFAULT = "willo-claro" as const;
 const PHOTO_KEY = "sky-photo";
+/* Set once the backgrounds that left the list have been moved to the nearest that stayed. */
+const TRIMMED_KEY = "sky-trimmed-v1";
+const DARK_NEAREST: Record<string, SkyModel> = {
+  horizonte: "bruma",
+  aurora: "azul",
+  oceano: "azul",
+  "meia-noite": "azul",
+  ametista: "violeta",
+  brasa: "terra",
+  grafite: "willo",
+  plain: "willo",
+  "1": "willo",
+  "2": "willo",
+};
+const LIGHT_NEAREST: Record<string, LightBackdropKey> = {
+  "horizonte-claro": "nevoa",
+  "aurora-clara": "lavanda",
+  pessego: "areia",
+};
 const listeners = new Set<() => void>();
 
 const readModel = (): SkyModel => {
@@ -75,6 +94,21 @@ onHydrated(() => {
       if (dark === "2" || dark === "horizonte" || dark === "prisma") localStorage.setItem(KEY, DEFAULT);
       const light = localStorage.getItem(LIGHT_KEY);
       if (light === "aurora-clara" || light === "horizonte-claro" || light === "prisma-claro") localStorage.setItem(LIGHT_KEY, LIGHT_DEFAULT);
+    }
+  } catch {
+    /* Read as they are. */
+  }
+  /* Once: the list was trimmed to two groups; whoever wore one that left it moves to the
+     nearest one still offered. */
+  try {
+    if (!localStorage.getItem(TRIMMED_KEY)) {
+      localStorage.setItem(TRIMMED_KEY, "1");
+      const dark = localStorage.getItem(KEY);
+      const near = dark ? DARK_NEAREST[dark] : undefined;
+      if (near) localStorage.setItem(KEY, near);
+      const light = localStorage.getItem(LIGHT_KEY);
+      const nearLight = light ? LIGHT_NEAREST[light] : undefined;
+      if (nearLight) localStorage.setItem(LIGHT_KEY, nearLight);
     }
   } catch {
     /* Read as they are. */

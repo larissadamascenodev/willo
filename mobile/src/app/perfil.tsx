@@ -21,7 +21,7 @@ import { usePlanInfo, type PlanInfo } from "~/lib/purchases";
 import { useAuth } from "~/lib/auth";
 import { setSkyPhoto, useLightSkyModel, useSkyModel, useSkyPhoto, type LightSkyModel, type SkyModel } from "~/lib/skyModel";
 import { PhotoError, pickAvatar, pickBackground } from "~/lib/profilePhotos";
-import { BACKDROPS, BACKDROP_KEYS, LIGHT_BACKDROPS, LIGHT_BACKDROP_KEYS } from "~/lib/backdrops";
+import { BACKDROPS, LIGHT_BACKDROPS, LIGHT_OFFERED, OFFERED } from "~/lib/backdrops";
 import { showToast } from "~/lib/toast";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
@@ -46,21 +46,17 @@ const PAD = 16;
 const WILLO_ICON = require("../../assets/willo-icon.png") as number;
 const SHEET_GAP = 10;
 
-const LIGHT_BACKGROUNDS: { key: LightSkyModel; label: string }[] = [
-  ...LIGHT_BACKDROP_KEYS.map((key) => ({ key, label: LIGHT_BACKDROPS[key].label })),
-  { key: "custom", label: "Sua foto" },
-];
-
-const BACKGROUNDS: { key: SkyModel; label: string }[] = [
-  { key: "willo", label: BACKDROPS.willo.label },
-  { key: "prisma", label: BACKDROPS.prisma.label },
-  { key: "horizonte", label: BACKDROPS.horizonte.label },
-  { key: "2", label: "Céu" },
-  { key: "1", label: "Céu vivo" },
-  ...BACKDROP_KEYS.filter((key) => key !== "willo" && key !== "prisma" && key !== "horizonte").map((key) => ({ key, label: BACKDROPS[key].label })),
-  { key: "plain", label: "Escuro" },
-  { key: "custom", label: "Sua foto" },
-];
+/* The backgrounds offered, in two groups — the quiet ones, then the colours and one's own photo. */
+const LIGHT_BACKGROUND_GROUPS: { title: string; items: { key: LightSkyModel; label: string }[] }[] = LIGHT_OFFERED.map((g, i, all) => ({
+  title: g.title,
+  items: [...g.keys.map((key) => ({ key: key as LightSkyModel, label: LIGHT_BACKDROPS[key].label })), ...(i === all.length - 1 ? [{ key: "custom" as LightSkyModel, label: "Sua foto" }] : [])],
+}));
+const BACKGROUND_GROUPS: { title: string; items: { key: SkyModel; label: string }[] }[] = OFFERED.map((g, i, all) => ({
+  title: g.title,
+  items: [...g.keys.map((key) => ({ key: key as SkyModel, label: BACKDROPS[key].label })), ...(i === all.length - 1 ? [{ key: "custom" as SkyModel, label: "Sua foto" }] : [])],
+}));
+const LIGHT_BACKGROUNDS = LIGHT_BACKGROUND_GROUPS.flatMap((g) => g.items);
+const BACKGROUNDS = BACKGROUND_GROUPS.flatMap((g) => g.items);
 
 export default function Perfil() {
   /* Drawn again in place when the theme changes. */
@@ -176,10 +172,10 @@ export default function Perfil() {
     }
   };
 
-  /* Each preview is the whole screen, drawn at full size and shrunk into its tile:
-     three to a row in the sheet. */
-  const sheetTileW = Math.floor((screenW - 40 - SHEET_GAP * 2) / 3);
-  const sheetTileH = Math.round(sheetTileW * 1.72);
+  /* Each preview is the whole screen, drawn at full size and shrunk into its tile: four to a
+     row in the sheet, showing the upper part, where the colour is. */
+  const sheetTileW = Math.floor((screenW - 40 - SHEET_GAP * 3) / 4);
+  const sheetTileH = Math.round(sheetTileW * 1.45);
   const wornKey: SkyModel | LightSkyModel = light ? lightSky : sky;
   const wornLabel = (light ? LIGHT_BACKGROUNDS : BACKGROUNDS).find((b) => b.key === wornKey)?.label ?? "";
 
@@ -381,8 +377,11 @@ export default function Perfil() {
         <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
           <Text style={{ fontSize: 22, fontWeight: "700", letterSpacing: -0.5, color: th("#fff") }}>Fundo</Text>
           <Text style={{ marginTop: 4, fontSize: 14, color: th(INK.soft) }}>{light ? "O que fica atrás das telas no tema claro." : "O que fica atrás das telas no tema escuro."}</Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: SHEET_GAP, marginTop: 18 }}>
-            {(light ? LIGHT_BACKGROUNDS : BACKGROUNDS).map(({ key, label }) => {
+          {(light ? LIGHT_BACKGROUND_GROUPS : BACKGROUND_GROUPS).map((group) => (
+          <View key={group.title}>
+          <Text style={[T.eyebrow, { marginTop: 18 }]}>{group.title}</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: SHEET_GAP, marginTop: 10 }}>
+            {(group.items as { key: SkyModel | LightSkyModel; label: string }[]).map(({ key, label }) => {
               const on = wornKey === key;
               const empty = key === "custom" && !photo;
               return (
@@ -429,7 +428,7 @@ export default function Perfil() {
                           </View>
                         )}
                       </View>
-                      <Text numberOfLines={1} style={{ marginTop: 8, fontSize: 13, fontWeight: on ? "600" : "500", color: th(on ? "#fff" : INK.soft) }}>
+                      <Text numberOfLines={1} style={{ marginTop: 7, fontSize: 12, fontWeight: on ? "600" : "500", color: th(on ? "#fff" : INK.soft) }}>
                         {key === "custom" && on ? "Trocar foto" : label}
                       </Text>
                     </>
@@ -438,6 +437,8 @@ export default function Perfil() {
               );
             })}
           </View>
+          </View>
+          ))}
           {/* One's own photo is adjusted right here, under the choice of it. */}
           {wornKey === "custom" && !!photo && (
             <Pressable
