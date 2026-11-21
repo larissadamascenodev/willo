@@ -166,8 +166,8 @@ export default function FluxoDeCaixa() {
   return (
     <Room lit sky>
       <Animated.ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: insets.top + 74, paddingBottom: insets.bottom + 60, paddingHorizontal: 16 }}>
-        {/* The month in full, opening the months to choose from; under it, which money. */}
-        <View style={{ flexDirection: "row" }}>
+        {/* The month in full, on the right, opening the months to choose from; under it, which money. */}
+        <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
           <MonthSelect month={month} year={year} onChange={(m, y) => setShown({ month: m, year: y })} />
         </View>
         <View style={{ marginTop: 12, flexDirection: "row" }}>

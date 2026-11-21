@@ -10,6 +10,7 @@ import SegmentedTabs from "~/components/SegmentedTabs";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { chipFill, chipInk } from "~/lib/chip";
 import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import { Eye, EyeOff, Info } from "~/components/icons";
 import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
@@ -62,24 +63,17 @@ function Column({
 
   const animated = useAnimatedStyle(() => ({ height: grow.value }));
 
+  /* An empty stretch is a dot of the column's colour, as on a category's page. */
   if (value <= 0) {
-    return sparse ? (
-      <View
-        style={{
-          width: 22,
-          height: 22,
-          borderRadius: 11,
-          borderWidth: 1,
-          borderStyle: "dashed",
-          borderColor: th("rgba(255,255,255,0.25)", "line"),
-        }}
-      />
-    ) : (
-      <View style={{ width, height: 2, borderRadius: 999, backgroundColor: th(color, "bg"), opacity: 0.6 }} />
-    );
+    return <View style={{ width, height: width, borderRadius: width / 2, backgroundColor: th(color, "bg"), opacity: sparse ? 0.35 : 0.5 }} />;
   }
 
-  return <Animated.View style={[{ width, borderRadius: 999, backgroundColor: th(color, "bg") }, animated]} />;
+  /* A capsule lit from the left, deeper to the right — the same bars as a category's page. */
+  return (
+    <Animated.View style={[{ width, borderRadius: width / 2, overflow: "hidden", backgroundColor: th(color, "bg") }, animated]}>
+      <LinearGradient colors={["rgba(255,255,255,0.10)", "rgba(0,0,0,0)", "rgba(0,0,0,0.5)"]} locations={[0, 0.35, 1]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ flex: 1 }} />
+    </Animated.View>
+  );
 }
 
 export default function FluxoPanel({
@@ -157,7 +151,7 @@ export default function FluxoPanel({
         : totals.saidas;
   const pickedColor = picked?.kind === "entrada" ? GREEN : "#EF4444";
   const single = subTab !== "geral";
-  const barWidth = single ? 40 : 18;
+  const barWidth = single ? 30 : 16;
   const slot = single ? 52 : 58;
 
   const subject = subTab === "geral" ? "Fluxo geral" : subTab === "entradas" ? "Entradas" : "Saídas";

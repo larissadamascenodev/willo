@@ -286,8 +286,8 @@ export function LineChart({
 }: {
   width: number;
   height?: number;
-  /** When given, the card shows only this figure for the point touched (what was spent that
-      day) instead of each line's running figure; null leaves the card off for that point. */
+  /** When given, the card shows only this figure for the point touched (this month's running
+      total) instead of every line's; null leaves the card off for that point. */
   tipValue?: (i: number) => number | null;
   /** The last point the axis holds (the month's last day). */
   span: number;

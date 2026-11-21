@@ -19,9 +19,9 @@ import TransactionRow from "~/components/transactions/TransactionRow";
 import { bankOf, banksById } from "~/components/transactions/WithBank";
 import { TransactionTabs, type TxTab } from "~/components/transactions/TransactionsSummary";
 import MonthFlows from "~/components/transactions/MonthFlows";
-import { setHiddenValues, useHiddenValues } from "@/hooks/useHiddenValues";
+import { useHiddenValues } from "@/hooks/useHiddenValues";
 import TransactionSheet, { removeTransaction } from "~/components/transactions/TransactionSheet";
-import { CalendarClock, CheckCheck, Clock, Eye, EyeOff, Pencil, Search, SlidersHorizontal, Trash2, X } from "~/components/icons";
+import { CalendarClock, CheckCheck, Clock, Pencil, Search, SlidersHorizontal, Trash2, X } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
 import { useNavChrome } from "~/lib/navChrome";
@@ -323,18 +323,15 @@ export default function Transacoes() {
           </Text>
         </View>
 
-        {/* The month in full, opening the months to choose from; the eye, with the figures it hides. */}
-        <View style={{ marginTop: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        {/* The month in full, on the right, opening the months to choose from. */}
+        <View style={{ marginTop: 10, flexDirection: "row", justifyContent: "flex-end" }}>
           <MonthSelect month={month} year={year} onChange={setMonth} />
-          <Pressable onPress={() => setHiddenValues(!hidden)} hitSlop={12} accessibilityRole="button" accessibilityLabel={hidden ? "Mostrar valores" : "Esconder valores"} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
-            {hidden ? <EyeOff size={19} color={th(INK.soft)} strokeWidth={2} /> : <Eye size={19} color={th(INK.soft)} strokeWidth={2} />}
-          </Pressable>
         </View>
-        <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 22 }}>
+        <Animated.View entering={FadeInDown.duration(400)} style={{ marginTop: 14 }}>
           <MonthFlows receitas={finance.receitas} recebido={finance.receitasRecebidas} despesas={finance.despesas} pago={finance.despesasPagas} hidden={hidden} />
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(70).duration(400)} style={{ marginTop: 26, flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <Animated.View entering={FadeInDown.delay(70).duration(400)} style={{ marginTop: 20, flexDirection: "row", alignItems: "center", gap: 10 }}>
           <View style={{ flex: 1 }}>
             <TransactionTabs value={tab} onChange={setTab} />
           </View>
