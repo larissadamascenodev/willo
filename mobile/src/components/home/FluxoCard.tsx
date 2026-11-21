@@ -46,7 +46,7 @@ export default function FluxoCard({ size, receitas, despesas, hidden }: { size: 
       {half ? (
         <View style={{ marginTop: 10, gap: 8 }}>
           <Figure label="Entrou" value={show(receitas)} color={GREEN} size={19} />
-          <Figure label="Saiu" value={hidden ? "R$ •••" : `−${money(despesas)}`} color={RED} size={19} />
+          <Figure label="Saiu" value={show(despesas)} color={RED} size={19} />
         </View>
       ) : (
         <View style={{ marginTop: 14, flexDirection: "row", gap: 16 }}>
@@ -54,7 +54,7 @@ export default function FluxoCard({ size, receitas, despesas, hidden }: { size: 
             <Figure label="Entrou" value={show(receitas)} color={GREEN} size={22} />
           </View>
           <View style={{ flex: 1 }}>
-            <Figure label="Saiu" value={hidden ? "R$ •••" : `−${money(despesas)}`} color={RED} size={22} />
+            <Figure label="Saiu" value={show(despesas)} color={RED} size={22} />
           </View>
         </View>
       )}

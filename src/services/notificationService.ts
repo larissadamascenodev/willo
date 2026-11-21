@@ -45,17 +45,22 @@ export async function fetchNotifications(userId: string, limit = 30): Promise<Ap
     .from("notifications")
     .select("*")
     .eq("user_id", userId)
+    .in("category", USEFUL_KINDS)
     .order("created_at", { ascending: false })
     .limit(limit);
   return (data as AppNotification[] | null) ?? [];
 }
+
+/** The kinds shown for now: bills and invoices coming due. */
+export const USEFUL_KINDS = ["vencimento", "fatura"];
 
 export async function countUnread(userId: string): Promise<number> {
   const { count } = await supabase
     .from("notifications")
     .select("*", { count: "exact", head: true })
     .eq("user_id", userId)
-    .eq("is_read", false);
+    .eq("is_read", false)
+    .in("category", USEFUL_KINDS);
   return count ?? 0;
 }
 
@@ -124,7 +129,9 @@ export function generateNotifications(userId: string) {
 const RENOTIFY_AFTER_MS = 24 * 60 * 60 * 1000;
 
 async function runGenerateNotifications(userId: string) {
-  const settings = await getOrCreateSettings(userId);
+  /* Only what is worth a notice, for now (Larissa): bills and invoices coming due. A balance
+     running low and goals near their date no longer notify. */
+  const settings = { ...(await getOrCreateSettings(userId)), goal_reminder: false, low_balance_alert: false };
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
   const noDataResult = Promise.resolve({ data: null } as const);

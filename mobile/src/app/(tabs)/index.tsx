@@ -10,6 +10,7 @@ import { useHiddenValues } from "@/hooks/useHiddenValues";
 import Room from "~/components/Room";
 import ScrollEdge from "~/components/ScrollEdge";
 import HomeHeader from "~/components/home/HomeHeader";
+import { countUnread, generateNotifications } from "@/services/notificationService";
 import HomeHero from "~/components/home/HomeHero";
 import HomeShortcuts, { type Shortcut } from "~/components/home/HomeShortcuts";
 import { paramsForLine } from "~/components/home/OrbHero";
@@ -122,11 +123,19 @@ function HomeScreen() {
     [categoryData, data.categories],
   );
   const { profile, refetch: refetchProfile } = useProfile();
-  /* Coming back from the profile, the photo and the name may have changed. */
+  /* Coming back from the profile, the photo and the name may have changed; and the bell's
+     dot says whether there is something new (bills and invoices coming due, for now). */
+  const [unread, setUnread] = useState(0);
   useFocusEffect(
     useCallback(() => {
       void refetchProfile();
-    }, [refetchProfile]),
+      if (!user) return;
+      void generateNotifications(user.id)
+        .catch(() => undefined)
+        .then(() => countUnread(user.id))
+        .then(setUnread)
+        .catch(() => undefined);
+    }, [refetchProfile, user]),
   );
   const { assinaturas, totalAssinaturas, loading: assinaturasLoading } = useRecorrentes();
   const { ended, keep: keepEnded, cancel: cancelEnded } = useEndedSubscriptions(user?.id);
@@ -402,6 +411,8 @@ function HomeScreen() {
         avatarUrl={profile?.avatar_url}
         collapsed={collapsed && !editing}
         onProfile={() => router.push("/perfil" as never)}
+        unread={unread}
+        onBell={() => router.push("/notificacoes" as never)}
       />
       <EditBar
         open={editing}
