@@ -4,6 +4,7 @@ import { BlurView } from "expo-blur";
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
 
 import { isLight, th } from "~/theme/theme";
+import { useGlassEpoch } from "~/lib/glassEpoch";
 
 /* The native glass on the light ground: a fine white rim and a soft shadow give it an
    edge, which the dark ground gives it for free. */
@@ -56,6 +57,8 @@ export default function Glass({
   interactive?: boolean;
 }) {
   const [reduceTransparency, setReduceTransparency] = useState(false);
+  /* Built afresh whenever iOS may have dropped the glass (see lib/glassEpoch). */
+  const glassEpoch = useGlassEpoch(NATIVE_GLASS);
 
   useEffect(() => {
     /* Only iOS can say; the browser build has no such setting and no such call. */
@@ -97,7 +100,7 @@ export default function Glass({
 
   if (NATIVE_GLASS) {
     return (
-      <GlassView glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={false} style={[shape, light && LIGHT_EDGE, style]}>
+      <GlassView key={glassEpoch} glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={false} style={[shape, light && LIGHT_EDGE, style]}>
         {children}
       </GlassView>
     );

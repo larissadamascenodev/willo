@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { AccessibilityInfo, View, type StyleProp, type ViewStyle } from "react-native";
+import { useGlassEpoch } from "~/lib/glassEpoch";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
@@ -28,6 +29,8 @@ const NATIVE = (() => {
 
 export default function GlassShape({ radius, style, children }: { radius: number; style?: StyleProp<ViewStyle>; children?: ReactNode }) {
   const light = isLight();
+  /* Built afresh whenever iOS may have dropped the glass (see lib/glassEpoch). */
+  const epoch = useGlassEpoch(NATIVE);
   const [plain, setPlain] = useState(false);
   useEffect(() => {
     if (typeof AccessibilityInfo.isReduceTransparencyEnabled !== "function") return;
@@ -54,7 +57,7 @@ export default function GlassShape({ radius, style, children }: { radius: number
   }
   if (NATIVE) {
     return (
-      <GlassView glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={false} style={[{ borderRadius: radius }, style]}>
+      <GlassView key={epoch} glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={false} style={[{ borderRadius: radius }, style]}>
         {children}
       </GlassView>
     );

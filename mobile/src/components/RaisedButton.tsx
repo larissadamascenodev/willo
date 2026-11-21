@@ -4,6 +4,7 @@ import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
 import { isLight, th } from "~/theme/theme";
+import { useGlassEpoch } from "~/lib/glassEpoch";
 
 /**
  * A round button of glass, the phone's own.
@@ -39,6 +40,8 @@ export default function RaisedButton({
   const light = isLight();
   const r = size / 2;
   const [plain, setPlain] = useState(false);
+  /* Built afresh whenever iOS may have dropped the glass (see lib/glassEpoch). */
+  const glassEpoch = useGlassEpoch(NATIVE);
   useEffect(() => {
     if (typeof AccessibilityInfo.isReduceTransparencyEnabled !== "function") return;
     let alive = true;
@@ -61,7 +64,7 @@ export default function RaisedButton({
     );
   } else if (NATIVE) {
     body = (
-      <GlassView glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={false} style={{ width: size, height: size, borderRadius: r }}>
+      <GlassView key={glassEpoch} glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={false} style={{ width: size, height: size, borderRadius: r }}>
         {content}
       </GlassView>
     );
