@@ -9,7 +9,7 @@ import HomeBalanceCard from "~/components/home/HomeBalanceCard";
 import GastosCard from "~/components/home/GastosCard";
 import CategoryStrip from "~/components/home/CategoryStrip";
 import JornadaCard from "~/components/home/JornadaCard";
-import FluxoWeeksCard from "~/components/home/FluxoWeeksCard";
+import FluxoCard from "~/components/home/FluxoCard";
 import PlanoCard from "~/components/home/PlanoCard";
 import ProximosEventos from "~/components/home/ProximosEventos";
 import CartoesResumoCard from "~/components/home/CartoesResumoCard";
@@ -82,15 +82,7 @@ export function renderHomeWidget(
 
     case "fluxo":
       return (
-        <FluxoWeeksCard
-          size={size}
-          receitas={ctx.receitas}
-          despesas={ctx.despesas}
-          transactions={ctx.transactions}
-          month={ctx.month}
-          isCurrentMonth={ctx.isCurrentMonth}
-          hidden={ctx.hidden}
-        />
+        <FluxoCard size={size} receitas={ctx.receitas} despesas={ctx.despesas} hidden={ctx.hidden} />
       );
 
     case "eventos":
