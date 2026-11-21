@@ -85,7 +85,7 @@ export default function Room({
   const [chosen] = useSkyModel();
   const [chosenLight] = useLightSkyModel();
   /* Off the home, a photo gives way to the theme's own ground: Céu vivo in the dark. */
-  const model = (preview as SkyModel | undefined) ?? (chosen === "custom" && !home ? "prisma" : chosen);
+  const model = (preview as SkyModel | undefined) ?? (chosen === "custom" && !home ? "willo" : chosen);
   const storedPhoto = useSkyPhoto();
   const photo = previewPhoto ?? storedPhoto;
   /* A photo of one's own is worn one way, chosen to suit any photo: blurred, under a
@@ -116,9 +116,9 @@ export default function Room({
   /* In the light, its own backgrounds: a light ground with soft colour pooled near
      the top for the glass to pick up, or the person's photo under a pale veil. */
   if (isLight()) {
-    const lightModel = (preview as LightSkyModel | undefined) ?? (chosenLight === "custom" && !home ? "prisma-claro" : chosenLight);
+    const lightModel = (preview as LightSkyModel | undefined) ?? (chosenLight === "custom" && !home ? "willo-claro" : chosenLight);
     const ownLight = lightModel === "custom" && !!photo;
-    const pale = LIGHT_BACKDROPS[lightModel as LightBackdropKey] ?? LIGHT_BACKDROPS["prisma-claro"];
+    const pale = LIGHT_BACKDROPS[lightModel as LightBackdropKey] ?? LIGHT_BACKDROPS["willo-claro"];
     const lid = (name: string) => `${name}-light-${lightModel}`;
     return (
       <View style={[{ flex: 1, backgroundColor: ownLight ? LIGHT_GROUND : pale.ground }, style]}>

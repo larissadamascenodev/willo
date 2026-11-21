@@ -6,8 +6,10 @@ import { BACKDROP_KEYS, LIGHT_BACKDROP_KEYS, type BackdropKey, type LightBackdro
 /**
  * What the screens that wear a sky are wearing.
  *
- * - "prisma", the default (lib/backdrops): Horizonte's petrol with the Willo icon's colours
- *   in it as soft lights — violet, a little orange, teal — washing down into the dark.
+ * - "willo", the default (lib/backdrops): a quiet graphite, a little lighter at the top,
+ *   with soft colourless lights for the glass — nothing that competes with the figures.
+ * - "prisma": Horizonte's petrol with the Willo icon's colours in it as soft lights —
+ *   violet, a little orange, teal — washing down into the dark.
  * - "horizonte": one calm petrol light at the top, washing down smoothly into the dark.
  * - "2": the hour as a picture, with the glow turned down so cards pass over it quietly.
  * - "1": the same hour drawn live, with its fire and its water.
@@ -27,11 +29,11 @@ import { BACKDROP_KEYS, LIGHT_BACKDROP_KEYS, type BackdropKey, type LightBackdro
 export type SkyModel = "1" | "2" | "plain" | "custom" | BackdropKey;
 
 const KEY = "sky-model";
-const DEFAULT: SkyModel = "prisma";
-/* Set once the older defaults ("2", "aurora-clara", then Horizonte) have been moved to the new one. */
-const MOVED_KEY = "sky-default-prisma";
+const DEFAULT: SkyModel = "willo";
+/* Set once the older defaults ("2", "aurora-clara", Horizonte, then Prisma) have been moved to the new one. */
+const MOVED_KEY = "sky-default-willo";
 const LIGHT_KEY = "sky-model-light";
-const LIGHT_DEFAULT = "prisma-claro" as const;
+const LIGHT_DEFAULT = "willo-claro" as const;
 const PHOTO_KEY = "sky-photo";
 const listeners = new Set<() => void>();
 
@@ -70,9 +72,9 @@ onHydrated(() => {
     if (!localStorage.getItem(MOVED_KEY)) {
       localStorage.setItem(MOVED_KEY, "1");
       const dark = localStorage.getItem(KEY);
-      if (dark === "2" || dark === "horizonte") localStorage.setItem(KEY, DEFAULT);
+      if (dark === "2" || dark === "horizonte" || dark === "prisma") localStorage.setItem(KEY, DEFAULT);
       const light = localStorage.getItem(LIGHT_KEY);
-      if (light === "aurora-clara" || light === "horizonte-claro") localStorage.setItem(LIGHT_KEY, LIGHT_DEFAULT);
+      if (light === "aurora-clara" || light === "horizonte-claro" || light === "prisma-claro") localStorage.setItem(LIGHT_KEY, LIGHT_DEFAULT);
     }
   } catch {
     /* Read as they are. */

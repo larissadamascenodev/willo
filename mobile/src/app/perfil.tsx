@@ -52,11 +52,12 @@ const LIGHT_BACKGROUNDS: { key: LightSkyModel; label: string }[] = [
 ];
 
 const BACKGROUNDS: { key: SkyModel; label: string }[] = [
+  { key: "willo", label: BACKDROPS.willo.label },
   { key: "prisma", label: BACKDROPS.prisma.label },
   { key: "horizonte", label: BACKDROPS.horizonte.label },
   { key: "2", label: "Céu" },
   { key: "1", label: "Céu vivo" },
-  ...BACKDROP_KEYS.filter((key) => key !== "prisma" && key !== "horizonte").map((key) => ({ key, label: BACKDROPS[key].label })),
+  ...BACKDROP_KEYS.filter((key) => key !== "willo" && key !== "prisma" && key !== "horizonte").map((key) => ({ key, label: BACKDROPS[key].label })),
   { key: "plain", label: "Escuro" },
   { key: "custom", label: "Sua foto" },
 ];

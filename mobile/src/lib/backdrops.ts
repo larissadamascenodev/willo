@@ -9,7 +9,7 @@
  * of the screen; `a` is the light's strength at its centre.
  */
 
-export type BackdropKey = "prisma" | "horizonte" | "aurora" | "oceano" | "ametista" | "brasa" | "grafite" | "meia-noite";
+export type BackdropKey = "willo" | "prisma" | "horizonte" | "aurora" | "oceano" | "ametista" | "brasa" | "grafite" | "meia-noite";
 
 export interface Backdrop {
   label: string;
@@ -24,12 +24,30 @@ export interface Backdrop {
 }
 
 export const BACKDROPS: Record<BackdropKey, Backdrop> = {
-  /* The default: the petrol of Horizonte washing down from the top, and in it the Willo
+  /* The default: quiet, so the figures and the cards are what the eye finds. A graphite that
+     is a little lighter at the top and settles into near-black by the middle of the screen, one
+     soft cool-white light high on the left and a faint slate one on the right — no colour of its
+     own, only enough light and shade for the glass of the bars and buttons to bend. */
+  willo: {
+    label: "Willo",
+    ground: "#08090B",
+    edge: 0.35,
+    wash: {
+      colors: ["#1E2125", "#181A1E", "#121417", "#0D0E11", "#08090B"],
+      stops: [0, 0.16, 0.32, 0.5, 0.68],
+    },
+    lights: [
+      { cx: 0.16, cy: -0.08, rx: 0.95, ry: 0.36, rgb: "214,220,230", a: 0.22 },
+      { cx: 0.94, cy: 0.12, rx: 0.62, ry: 0.28, rgb: "122,134,154", a: 0.26 },
+      { cx: 0.5, cy: 0.64, rx: 1.0, ry: 0.4, rgb: "150,160,178", a: 0.05 },
+    ],
+  },
+  /* The petrol of Horizonte washing down from the top, and in it the Willo
      icon's colours as soft lights — violet pooled to the right, a little orange high in the
      right corner, teal across the middle. Broad and faint, so they melt into the petrol and
      into the dark well above the cards, and the glass of the buttons has colour to bend. */
   prisma: {
-    label: "Willo",
+    label: "Prisma",
     ground: "#07090A",
     edge: 0.3,
     wash: {
@@ -133,13 +151,28 @@ export const STARS = (() => {
  * for the bars and buttons to pick up as the page scrolls under them, fading to near
  * white where the cards and figures are.
  */
-export type LightBackdropKey = "prisma-claro" | "horizonte-claro" | "nevoa" | "aurora-clara" | "ceu-claro" | "lavanda" | "pessego" | "areia" | "perola";
+export type LightBackdropKey = "willo-claro" | "prisma-claro" | "horizonte-claro" | "nevoa" | "aurora-clara" | "ceu-claro" | "lavanda" | "pessego" | "areia" | "perola";
 
 export const LIGHT_BACKDROPS: Record<LightBackdropKey, Backdrop> = {
-  /* The default in the light: Horizonte's petrol washed pale, with the icon's colours as
+  /* The default in the light, Willo's quiet graphite turned pale: a soft grey at the top that
+     settles into the light ground, a white light high on the left and a faint slate one on the
+     right — no colour, only light and shade for the glass. */
+  "willo-claro": {
+    label: "Willo",
+    ground: "#F2F3F5",
+    wash: {
+      colors: ["#E0E3E8", "#E7E9ED", "#EDEFF2", "#F2F3F5"],
+      stops: [0, 0.18, 0.36, 0.55],
+    },
+    lights: [
+      { cx: 0.18, cy: -0.06, rx: 0.9, ry: 0.3, rgb: "255,255,255", a: 0.7 },
+      { cx: 0.92, cy: 0.14, rx: 0.6, ry: 0.26, rgb: "176,186,204", a: 0.32 },
+    ],
+  },
+  /* Horizonte's petrol washed pale, with the icon's colours as
      pastel lights — lavender to the right, peach in the corner, mint across the middle. */
   "prisma-claro": {
-    label: "Willo",
+    label: "Prisma",
     ground: "#F3F5F6",
     wash: {
       colors: ["#C9DDE0", "#D8E7E9", "#E7EFF0", "#F3F5F6"],
