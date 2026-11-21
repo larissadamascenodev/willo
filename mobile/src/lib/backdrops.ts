@@ -31,7 +31,7 @@ export const BACKDROPS: Record<BackdropKey, Backdrop> = {
 
   /* The default: no colour of its own, only a soft grey light. */
   willo: {
-    label: "Willo",
+    label: "Cinza",
     ground: "#08090B",
     edge: 0.28,
     wash: {
@@ -230,7 +230,7 @@ export const BACKDROPS: Record<BackdropKey, Backdrop> = {
   /* The default in the dark: near-black navy, a quiet blue light in the top right corner and
      its twin in the bottom left — a touch of colour at two corners, the middle left dark. */
   anil: {
-    label: "Índigo",
+    label: "Willo",
     ground: "#08080D",
     edge: 0.15,
     lights: [
@@ -252,12 +252,9 @@ export const BACKDROPS: Record<BackdropKey, Backdrop> = {
 
 export const BACKDROP_KEYS = Object.keys(BACKDROPS) as BackdropKey[];
 
-/** What the profile offers, in two groups; the others are kept only for whoever still wears one. */
-export const OFFERED: { title: string; keys: BackdropKey[] }[] = [
-  { title: "Suaves", keys: ["willo", "ardosia", "bruma", "terra"] },
-  { title: "Cores", keys: ["violeta", "azul", "prisma"] },
-  { title: "Brilhos", keys: ["brilho", "cobre", "anil", "neblina"] },
-];
+/** What the profile offers, all together, the default (Willo, the indigo) first; the others are
+    kept only for whoever still wears one. */
+export const OFFERED: { title: string; keys: BackdropKey[] }[] = [{ title: "", keys: ["anil", "willo", "ardosia", "bruma", "terra", "cobre"] }];
 
 /* The same stars every time: a fixed little generator, not Math.random. */
 export const STARS = (() => {
@@ -391,7 +388,4 @@ export const LIGHT_BACKDROPS: Record<LightBackdropKey, Backdrop> = {
 export const LIGHT_BACKDROP_KEYS = Object.keys(LIGHT_BACKDROPS) as LightBackdropKey[];
 
 /** The light theme's offer, grouped the same way. */
-export const LIGHT_OFFERED: { title: string; keys: LightBackdropKey[] }[] = [
-  { title: "Suaves", keys: ["willo-claro", "perola", "nevoa", "areia"] },
-  { title: "Cores", keys: ["lavanda", "ceu-claro", "prisma-claro"] },
-];
+export const LIGHT_OFFERED: { title: string; keys: LightBackdropKey[] }[] = [{ title: "", keys: ["willo-claro", "perola", "nevoa", "areia", "lavanda", "ceu-claro", "prisma-claro"] }];

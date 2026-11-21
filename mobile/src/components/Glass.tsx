@@ -102,7 +102,7 @@ export default function Glass({
   if (NATIVE_GLASS) {
     return (
       <GlassView key={glassEpoch} glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={false} style={[shape, light && LIGHT_EDGE, style]}>
-        {!light && <GlassLift radius={radius} />}
+        <GlassLift radius={radius} light={light} />
         {children}
       </GlassView>
     );

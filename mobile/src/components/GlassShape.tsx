@@ -75,7 +75,7 @@ export default function GlassShape({ radius, style, children }: { radius: number
         ]}
       >
         <GlassView key={epoch} glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={false} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: radius }} />
-        {!light && <GlassLift radius={radius} />}
+        <GlassLift radius={radius} light={light} />
         {children}
       </View>
     );

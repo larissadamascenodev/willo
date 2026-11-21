@@ -414,8 +414,8 @@ export default function Perfil() {
           <Text style={{ marginTop: 4, fontSize: 14, color: th(INK.soft) }}>{light ? "O que fica atrás das telas no tema claro." : "O que fica atrás das telas no tema escuro."}</Text>
           {(light ? LIGHT_BACKGROUND_GROUPS : BACKGROUND_GROUPS).map((group) => (
           <View key={group.title}>
-          <Text style={[T.eyebrow, { marginTop: 18 }]}>{group.title}</Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: SHEET_GAP, marginTop: 10 }}>
+          {group.title ? <Text style={[T.eyebrow, { marginTop: 18 }]}>{group.title}</Text> : null}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: SHEET_GAP, marginTop: group.title ? 10 : 18 }}>
             {(group.items as { key: SkyModel | LightSkyModel; label: string }[]).map(({ key, label }) => {
               const on = wornKey === key;
               const empty = key === "custom" && !photo;

@@ -38,6 +38,9 @@ const PHOTO_KEY = "sky-photo";
 /* Set once the backgrounds that left the list have been moved to the nearest that stayed. */
 const TRIMMED_KEY = "sky-trimmed-v1";
 const INDIGO_KEY = "sky-default-indigo";
+const TRIMMED2_KEY = "sky-trimmed-v2";
+/* The colours and two of the glows left the list (2026-11-21): whoever wore one moves to the default. */
+const GONE_V2 = ["violeta", "azul", "prisma", "brilho", "neblina"];
 const DARK_NEAREST: Record<string, SkyModel> = {
   horizonte: "bruma",
   aurora: "azul",
@@ -121,6 +124,15 @@ onHydrated(() => {
       localStorage.setItem(INDIGO_KEY, "1");
       const dark = localStorage.getItem(KEY);
       if (!dark || dark === "willo") localStorage.setItem(KEY, DEFAULT);
+    }
+  } catch {
+    /* Read as they are. */
+  }
+  try {
+    if (!localStorage.getItem(TRIMMED2_KEY)) {
+      localStorage.setItem(TRIMMED2_KEY, "1");
+      const dark = localStorage.getItem(KEY);
+      if (dark && GONE_V2.includes(dark)) localStorage.setItem(KEY, DEFAULT);
     }
   } catch {
     /* Read as they are. */

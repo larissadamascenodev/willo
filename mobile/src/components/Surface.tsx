@@ -3,6 +3,7 @@ import { Pressable, View, type ViewStyle } from "react-native";
 import { INK } from "~/theme/tokens";
 
 import { isLight, th } from "~/theme/theme";
+import GlassLift from "~/components/GlassLift";
 /**
  * A card, one step up from the ground.
  *
@@ -39,13 +40,24 @@ export default function Surface({
     overflow: "hidden",
   };
 
-  if (!onPress) return <View style={[skin, style]}>{children}</View>;
+  /* In the light a card is raised like the glass buttons: a bright rim along the top, a sheen
+     over its upper half and the lower edge a hair darker — not a flat white plate. */
+  const lift = isLight() ? <GlassLift radius={radius} light /> : null;
+
+  if (!onPress)
+    return (
+      <View style={[skin, style]}>
+        {lift}
+        {children}
+      </View>
+    );
 
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [skin, style, pressed && { transform: [{ scale: 0.99 }] }]}
     >
+      {lift}
       {children}
     </Pressable>
   );

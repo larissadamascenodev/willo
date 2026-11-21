@@ -69,7 +69,7 @@ export default function RaisedButton({
          ever fails to draw the glass. */
       <View style={{ width: size, height: size, borderRadius: r, overflow: "hidden", borderWidth: 0.75, borderColor: light ? "rgba(17,19,24,0.08)" : "rgba(255,255,255,0.14)", backgroundColor: light ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.07)" }}>
         <GlassView key={glassEpoch} glassEffectStyle="regular" colorScheme={th("dark", "tint")} isInteractive={false} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: r }} />
-        {!light && <GlassLift radius={r} />}
+        <GlassLift radius={r} light={light} />
         {content}
       </View>
     );
