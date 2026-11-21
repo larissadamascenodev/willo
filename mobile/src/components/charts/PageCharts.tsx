@@ -8,7 +8,6 @@ import Svg, { Circle, Defs, G, Line, LinearGradient as SvgGradient, Path, Stop }
 import { money } from "~/lib/money";
 import { INK } from "~/theme/tokens";
 import { th } from "~/theme/theme";
-import GlassShape from "~/components/GlassShape";
 
 /**
  * The pieces the detail pages share — first drawn for a category's own page, which Larissa
@@ -18,7 +17,7 @@ import GlassShape from "~/components/GlassShape";
  */
 
 const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }, default: {} }) as TextStyle;
-const H = 210;
+const H = 240;
 
 /** Which stretch of time: equal slots, a pill sliding to the one chosen. */
 export function PeriodTabs<T extends string>({ value, options, onChange }: { value: T; options: { key: T; label: string }[]; onChange: (p: T) => void }) {
@@ -105,7 +104,8 @@ export function Bars({
   const slot = (width - left - AXIS) / n;
   const bw = Math.max(10, Math.min(34, slot * 0.5));
   const floor = 34;
-  const room = height - floor - 20;
+  /* Room above the tallest bar for the card that reads it. */
+  const room = height - floor - 58;
   /* The card opens on the latest stretch that had spending; on the one on show if none had. */
   let initial = -1;
   for (let i = bars.length - 1; i >= 0; i--) if (bars[i].value > 0) { initial = i; break; }
@@ -170,7 +170,7 @@ export function Bars({
             key={sel}
             anchorX={pickedX}
             anchorY={height - floor - heightOf(picked.value)}
-            gap={bw / 2 + 10}
+            gap={10}
             width={width - AXIS}
             title={picked.title ?? picked.label}
             rows={[{ color: fill, value: hidden ? "R$ •••" : money(picked.value) }]}
@@ -189,34 +189,38 @@ function compact(v: number) {
 }
 
 /**
- * The figure a finger is on, in a small card of Liquid Glass floating beside the point — to its
- * right, or to its left near the right edge — never across a line break: the name above, the
- * figure (or each line's, with its colour) under it, each on one line.
+ * The figure a finger is on, after Larissa's reference: a small dark card set above the point
+ * (above every line there), centred on it and kept inside the chart, so it never covers what
+ * it reads. The day above, the figure under it — each line's, with its colour dot, side by side
+ * on one row — never across a line break.
  */
 function GlassTip({ anchorX, anchorY, gap, width, title, rows }: { anchorX: number; anchorY: number; gap: number; width: number; title: string; rows: { color: string; value: string; name?: string }[] }) {
-  const [w, setW] = useState(0);
-  const right = anchorX + gap + w + 8 <= width || w === 0;
-  /* Measured first at the left edge, where nothing squeezes it; then set beside the point. */
-  const left = w === 0 ? 0 : right ? anchorX + gap : anchorX - gap - w;
-  const top = Math.max(0, anchorY - 26);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  /* Measured first, unseen, at the left edge; then centred over the point. */
+  const left = size.w === 0 ? 0 : Math.max(4, Math.min(width - size.w - 4, anchorX - size.w / 2));
+  const top = Math.max(0, anchorY - gap - size.h);
   return (
-    <Animated.View entering={FadeIn.duration(140)} pointerEvents="none" style={{ position: "absolute", left: Math.max(4, left), top, opacity: w ? 1 : 0 }} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
-      <GlassShape radius={18}>
-        <View style={{ paddingHorizontal: 14, paddingVertical: 9 }}>
-        <Text numberOfLines={1} style={{ fontSize: 12.5, fontWeight: "500", color: th(INK.soft) }}>
+    <Animated.View
+      entering={FadeIn.duration(140)}
+      pointerEvents="none"
+      style={{ position: "absolute", left, top, opacity: size.w ? 1 : 0 }}
+      onLayout={(e) => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+    >
+      <View style={{ paddingHorizontal: 13, paddingVertical: 8, borderRadius: 15, backgroundColor: th("rgba(26,27,31,0.96)", "bg"), borderWidth: 1, borderColor: th("rgba(255,255,255,0.10)", "line"), shadowColor: "#000", shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } }}>
+        <Text numberOfLines={1} style={{ fontSize: 11.5, fontWeight: "500", color: th(INK.soft) }}>
           {title}
         </Text>
-        {rows.map((r, i) => (
-          <View key={i} style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 6 }}>
-            {rows.length > 1 ? <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: r.color }} /> : null}
-            {r.name ? <Text style={{ fontSize: 12.5, color: th(INK.soft) }}>{r.name}</Text> : null}
-            <Text numberOfLines={1} style={[nums, { fontSize: 17, fontWeight: "700", letterSpacing: -0.3, color: th("#fff"), flexShrink: 0 }]}>
-              {r.value}
-            </Text>
-          </View>
-        ))}
+        <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 10 }}>
+          {rows.map((r, i) => (
+            <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              {rows.length > 1 ? <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: r.color }} /> : null}
+              <Text numberOfLines={1} style={[nums, { fontSize: rows.length > 1 ? 14 : 16, fontWeight: "700", letterSpacing: -0.3, color: th("#fff"), flexShrink: 0 }]}>
+                {r.value}
+              </Text>
+            </View>
+          ))}
         </View>
-      </GlassShape>
+      </View>
     </Animated.View>
   );
 }
@@ -458,8 +462,8 @@ export function LineChart({
           <GlassTip
             key={pick}
             anchorX={x(pick)}
-            anchorY={pick < main.values.length ? y(main.values[pick]) : bottom}
-            gap={14}
+            anchorY={Math.min(...series.filter((s) => pick < s.values.length).map((s) => y(s.values[pick])), bottom)}
+            gap={12}
             width={width}
             title={dayName(pick)}
             rows={
