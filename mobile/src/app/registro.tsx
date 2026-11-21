@@ -20,6 +20,7 @@ import ParticleOrb, { type OrbMode } from "~/components/registro/ParticleOrb";
 import { ArrowUp, Camera, ChevronLeft, Clock, Mic, PenLine, SlidersHorizontal, Sparkles, X } from "~/components/icons";
 import ReceiptCard, { type ReceiptLine } from "~/components/registro/ReceiptCard";
 import { commentAfter } from "~/lib/afterEntry";
+import RaisedButton from "~/components/RaisedButton";
 import WilloSettings from "~/components/willo/WilloSettings";
 import ChatHistory from "~/components/willo/ChatHistory";
 import RadarPanel from "~/components/willo/RadarPanel";
@@ -890,21 +891,21 @@ function Registro() {
                 setAtSphere(true);
               }}
             >
-              <ChevronLeft size={18} color={th("rgba(255,255,255,0.88)")} strokeWidth={2.4} />
+              <ChevronLeft size={24} color={th("#fff")} strokeWidth={2.4} />
             </HeaderButton>
           ) : (
             <HeaderButton label={hasEntries ? "Concluir" : "Fechar"} onPress={close}>
-              <X size={17} color={th("rgba(255,255,255,0.88)")} strokeWidth={2.4} />
+              <X size={21} color={th("#fff")} strokeWidth={2.4} />
             </HeaderButton>
           )}
           <View style={{ flex: 1, minWidth: 0, alignItems: "center" }}>
             {/* The conversation stands alone: the Radar has a page of its own, reached from the home. */}
           </View>
           <HeaderButton label="Conversas anteriores" onPress={() => setHistoryOpen(true)}>
-            <Clock size={16} color={th("rgba(255,255,255,0.88)")} strokeWidth={2.2} />
+            <Clock size={21} color={th("#fff")} strokeWidth={2.2} />
           </HeaderButton>
           <HeaderButton label="Personalizar o Willo" onPress={() => setSettingsOpen(true)}>
-            <SlidersHorizontal size={16} color={th("rgba(255,255,255,0.88)")} strokeWidth={2.2} />
+            <SlidersHorizontal size={21} color={th("#fff")} strokeWidth={2.2} />
           </HeaderButton>
         </View>
 
@@ -1343,14 +1344,12 @@ function SendButton({ disabled, onPress }: { disabled: boolean; onPress: () => v
   );
 }
 
-/** One round button of the header. */
+/** One round button of the header, the size of every page's back button. */
 function HeaderButton({ label, onPress, children }: { label: string; onPress: () => void; children: ReactNode }) {
   return (
-    <Pressable onPress={onPress} accessibilityLabel={label} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-      <Glass radius={17} interactive style={{ width: 34, height: 34, alignItems: "center", justifyContent: "center" }}>
-        {children}
-      </Glass>
-    </Pressable>
+    <RaisedButton label={label} onPress={onPress} size={50}>
+      {children}
+    </RaisedButton>
   );
 }
 
