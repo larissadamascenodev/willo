@@ -13,6 +13,7 @@ import CountUp from "~/components/CountUp";
 import { Bars, Legend, PeriodTabs, PileChart } from "~/components/charts/PageCharts";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Eye, EyeOff } from "~/components/icons";
 import { catColor } from "~/components/home/GastosPorCategoria";
+import { inkOn } from "@/lib/tone";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
@@ -282,7 +283,7 @@ export default function Gastos() {
                     style={{ width: 140, paddingVertical: 18, paddingHorizontal: 12, alignItems: "center" }}
                   >
                     <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th(color, "bg") }}>
-                      <Icon size={20} color="#FFFFFF" strokeWidth={2.2} />
+                      <Icon size={20} color={inkOn(color)} strokeWidth={2.2} />
                     </View>
                     <Text numberOfLines={1} style={{ marginTop: 12, fontSize: 13.5, fontWeight: "500", color: th(INK.soft) }}>
                       {p.name}
@@ -321,7 +322,7 @@ export default function Gastos() {
                     })}
                   >
                     <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th(c.color, "bg") }}>
-                      <Icon size={20} color="#FFFFFF" strokeWidth={2.2} />
+                      <Icon size={20} color={inkOn(c.color)} strokeWidth={2.2} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: "600", color: th("#fff") }}>

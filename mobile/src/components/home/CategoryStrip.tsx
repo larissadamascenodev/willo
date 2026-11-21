@@ -7,6 +7,7 @@ import type { CategoryExpense } from "@/types/finance";
 import Surface from "~/components/Surface";
 import { ChevronRight } from "~/components/icons";
 import { catColor } from "~/components/home/GastosPorCategoria";
+import { inkOn } from "@/lib/tone";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { money } from "~/lib/money";
 import { useGroundTh } from "~/theme/groundInk";
@@ -119,7 +120,7 @@ export default function CategoryStrip({
                     />
                   </Svg>
                   <View style={{ width: ICON - 4, height: ICON - 4, borderRadius: (ICON - 4) / 2, alignItems: "center", justifyContent: "center", backgroundColor: th(color, "bg") }}>
-                    <Icon size={18} color="#FFFFFF" strokeWidth={2.2} />
+                    <Icon size={18} color={inkOn(color)} strokeWidth={2.2} />
                   </View>
                 </View>
                 <Text numberOfLines={1} style={{ marginTop: 10, fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>

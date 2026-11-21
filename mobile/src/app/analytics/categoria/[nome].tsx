@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { Easing, FadeIn, FadeInDown } from "react-native-reanimated";
-import Svg, { Circle, Defs, Line, LinearGradient as SvgGradient, Path, Stop } from "react-native-svg";
+import Svg, { Circle, Defs, Line, LinearGradient as SvgGradient, Path, RadialGradient, Rect, Stop } from "react-native-svg";
 import { supabase } from "~/supabase/client";
 import { getAccounts, getCreditCards } from "@/services/transactionService";
 import type { AnalyticsTransaction } from "@/services/categoryAnalytics";
@@ -54,6 +54,12 @@ const WEEK = ["D", "S", "T", "Q", "Q", "S", "S"];
 const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }, default: {} }) as TextStyle;
 const CHART_H = 210;
 /** A colour at some strength, for the wash at the top; a colour not in #rrggbb is used as it is. */
+/** The colour carried part of the way to white, for the paler of the page's two lights. */
+const lighten = (hex: string, t: number) => {
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) return hex;
+  const ch = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  return `#${ch.map((c) => Math.round(c + (255 - c) * t).toString(16).padStart(2, "0")).join("")}`;
+};
 const alpha = (hex: string, a: number) => (/^#[0-9a-f]{6}$/i.test(hex) ? `${hex}${Math.round(a * 255).toString(16).padStart(2, "0")}` : a > 0.2 ? hex : "transparent");
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
@@ -185,9 +191,32 @@ export default function CategoriaDetalhe() {
   };
 
   return (
-    <Room>
-      {/* The category's colour, pooled at the top. */}
-      <LinearGradient pointerEvents="none" colors={[alpha(hex, 0.4), alpha(hex, 0.13), alpha(hex, 0)]} locations={[0, 0.25, 0.5]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: "70%" }} />
+    /* The plain room, not the background chosen for the app: only the category's own colour is
+       on this page, so nothing of another hue (a violet light, say) shows through it. */
+    <Room sky={false}>
+      {/* The category's colour washing down from the top into the dark, and two broad lights of
+          it — a paler one high on the left, the colour itself on the right — for the soft, uneven
+          glow of a blurred light and for the glass of the buttons to bend. */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={[alpha(hex, 0.5), alpha(hex, 0.3), alpha(hex, 0.13), alpha(hex, 0.04), alpha(hex, 0)]}
+        locations={[0, 0.18, 0.36, 0.52, 0.66]}
+        style={{ position: "absolute", top: 0, left: 0, right: 0, height: "78%" }}
+      />
+      <Svg pointerEvents="none" width="100%" height="60%" style={{ position: "absolute", top: 0, left: 0, right: 0 }}>
+        <Defs>
+          <RadialGradient id={`catGlowA-${hex}`} cx="0.18" cy="-0.04" rx="0.85" ry="0.5">
+            <Stop offset="0" stopColor={lighten(hex, 0.45)} stopOpacity={0.32} />
+            <Stop offset="1" stopColor={lighten(hex, 0.45)} stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id={`catGlowB-${hex}`} cx="0.95" cy="0.2" rx="0.6" ry="0.42">
+            <Stop offset="0" stopColor={hex} stopOpacity={0.34} />
+            <Stop offset="1" stopColor={hex} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill={`url(#catGlowA-${hex})`} />
+        <Rect x="0" y="0" width="100%" height="100%" fill={`url(#catGlowB-${hex})`} />
+      </Svg>
 
       <Animated.ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: insets.top + 74, paddingBottom: insets.bottom + 60, paddingHorizontal: 16 }}>
         {/* What it took; the figure travels to the new one when the period changes. */}
@@ -419,15 +448,24 @@ function MonthChart({
     <Animated.View entering={FadeIn.duration(360)}>
       <Svg width={width} height={CHART_H}>
         <Defs>
-          <SvgGradient id="catFill" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={hex} stopOpacity={0.32} />
+          <SvgGradient id={`catFill-${hex}`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={hex} stopOpacity={0.4} />
+            <Stop offset="0.55" stopColor={hex} stopOpacity={0.12} />
             <Stop offset="1" stopColor={hex} stopOpacity={0} />
           </SvgGradient>
+          <RadialGradient id={`catDot-${hex}`} cx="0.5" cy="0.5" r="0.5">
+            <Stop offset="0" stopColor={hex} stopOpacity={0.55} />
+            <Stop offset="1" stopColor={hex} stopOpacity={0} />
+          </RadialGradient>
         </Defs>
         {prev && <Path d={path(prev)} stroke={hex} strokeOpacity={0.35} strokeWidth={2} fill="none" strokeLinecap="round" />}
-        <Path d={area} fill="url(#catFill)" />
+        <Path d={area} fill={`url(#catFill-${hex})`} />
+        {/* The line's own light: a broad, faint stroke of the same colour under it. */}
+        <DrawnPath d={line} stroke={hex} strokeWidth={10} opacity={0.18} />
         <DrawnPath d={line} stroke={hex} strokeWidth={3} />
         {limit !== null && <Line x1={x(0)} x2={x(lastDay)} y1={y(limit)} y2={y(limit)} stroke={ink} strokeOpacity={0.55} strokeWidth={1.6} strokeDasharray="6 6" />}
+        {/* Today, glowing in the category's colour. */}
+        <Circle cx={x(cur.length - 1)} cy={y(cur[cur.length - 1])} r={18} fill={`url(#catDot-${hex})`} />
         <Circle cx={x(cur.length - 1)} cy={y(cur[cur.length - 1])} r={7} fill={ink} />
         <Circle cx={x(cur.length - 1)} cy={y(cur[cur.length - 1])} r={4} fill={hex} />
       </Svg>

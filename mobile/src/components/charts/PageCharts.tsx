@@ -48,13 +48,13 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const DRAW = 4000;
 
 /** A line drawing itself in, left to right. */
-export function DrawnPath({ d, stroke, strokeWidth }: { d: string; stroke: string; strokeWidth: number }) {
+export function DrawnPath({ d, stroke, strokeWidth, opacity = 1 }: { d: string; stroke: string; strokeWidth: number; /** Under 1, a soft light rather than the line. */ opacity?: number }) {
   const left = useSharedValue(DRAW);
   useEffect(() => {
     left.set(withTiming(0, { duration: 900, easing: Easing.out(Easing.cubic) }));
   }, [left]);
   const props = useAnimatedProps(() => ({ strokeDashoffset: left.get() }));
-  return <AnimatedPath d={d} stroke={stroke} strokeWidth={strokeWidth} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${DRAW} ${DRAW}`} animatedProps={props} />;
+  return <AnimatedPath d={d} stroke={stroke} strokeWidth={strokeWidth} strokeOpacity={opacity} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${DRAW} ${DRAW}`} animatedProps={props} />;
 }
 
 /** A bar that grows up from the floor, a beat after the one before it. */

@@ -15,6 +15,7 @@ import BankMark from "~/components/BankMark";
 import CountUp from "~/components/CountUp";
 import TransactionSheet from "~/components/transactions/TransactionSheet";
 import { catColor } from "~/components/home/GastosPorCategoria";
+import { inkOn } from "@/lib/tone";
 import { ChevronLeft, Eye, EyeOff } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { useAuth } from "~/lib/auth";
@@ -152,7 +153,7 @@ export default function Estabelecimento() {
           </Text>
           <View style={{ marginTop: 12, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 8, height: 32, paddingLeft: 4, paddingRight: 12, borderRadius: 16, borderWidth: 1, borderColor: th("rgba(255,255,255,0.10)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
             <View style={{ width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: th(color, "bg") }}>
-              <Icon size={13} color="#FFFFFF" strokeWidth={2.4} />
+              <Icon size={13} color={inkOn(color)} strokeWidth={2.4} />
             </View>
             <Text style={{ fontSize: 13.5, fontWeight: "600", color: th("#fff") }}>{category}</Text>
           </View>

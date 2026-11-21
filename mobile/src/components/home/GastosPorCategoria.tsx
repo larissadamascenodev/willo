@@ -3,7 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { getCustomCategories, type CustomCategory } from "@/services/categoryService";
-import { getCategoryColor } from "@/lib/categoryData";
+import { categoryHex } from "@/lib/categoryData";
 import type { CategoryExpense } from "@/types/finance";
 import Surface from "~/components/Surface";
 import { ChevronRight } from "~/components/icons";
@@ -41,10 +41,14 @@ function hsl(spec: string): string {
   return `rgb(${to(r)}, ${to(g)}, ${to(b)})`;
 }
 
+/* The category's own registered colour — the one its chips, its page and its chart wear — so
+   the home's cards and rules never show it in another. A name with no colour of its own takes
+   one of a few distinct ones by its place in the list. */
 export const catColor = (name: string, fallbackIdx: number, customCats?: CustomCategory[]) => {
-  const c = getCategoryColor(name, customCats);
-  return hsl(c !== "220 10% 55%" ? c : FALLBACK_COLORS[fallbackIdx % FALLBACK_COLORS.length]);
+  const hex = categoryHex(name, customCats);
+  return hex !== UNKNOWN_HEX ? hex : hsl(FALLBACK_COLORS[fallbackIdx % FALLBACK_COLORS.length]);
 };
+const UNKNOWN_HEX = "#64748b";
 
 /**
  * The month repartido by category.
