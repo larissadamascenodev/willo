@@ -15,7 +15,7 @@ import Surface from "~/components/Surface";
 import GlassListSheet from "~/components/GlassListSheet";
 import RecentEntries, { EntryRow } from "~/components/transactions/RecentEntries";
 import { bankOf, banksById, type EntryBank } from "~/components/transactions/WithBank";
-import BottomSheet from "~/components/BottomSheet";
+import MonthSelect from "~/components/transactions/MonthSelect";
 import AnchoredMenu, { MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import LimitSheet from "~/components/categorias/LimitSheet";
 import TransactionSheet from "~/components/transactions/TransactionSheet";
@@ -185,7 +185,6 @@ export default function CategoriaDetalhe() {
   /* ── The menu and the month picker ── */
   const moreRef = useRef<ComponentRef<typeof View>>(null);
   const [menu, setMenu] = useState<AnchorRect | null>(null);
-  const [picking, setPicking] = useState(false);
   const openMenu = () =>
     moreRef.current?.measureInWindow((x: number, y: number, w: number, h: number) => setMenu({ left: x + w - 258, top: y, bottom: y + h, width: 258 }));
   const exportList = () => {
@@ -263,9 +262,21 @@ export default function CategoriaDetalhe() {
         {/* Which stretch of time, and which month. */}
         <View style={{ marginTop: 18, flexDirection: "row", alignItems: "center", gap: 10 }}>
           <PeriodTabs value={period} options={PERIODS} onChange={setPeriod} />
-          <RaisedButton label="Escolher o mês" onPress={() => setPicking(true)} size={50}>
-            <CalendarDays size={21} color={th("#fff")} strokeWidth={2} />
-          </RaisedButton>
+          <MonthSelect
+            month={month}
+            year={year}
+            ahead={0}
+            onChange={(m, y) => {
+              setMonth(m);
+              setYear(y);
+              setPeriod("mes");
+            }}
+            trigger={(open) => (
+              <RaisedButton label="Escolher o mês" onPress={open} size={50}>
+                <CalendarDays size={21} color={th("#fff")} strokeWidth={2} />
+              </RaisedButton>
+            )}
+          />
         </View>
 
         {/* The limit, and what the Willo sees: two cards to slide through. */}
@@ -334,34 +345,6 @@ export default function CategoriaDetalhe() {
         }}
       />
 
-      <BottomSheet open={picking} onClose={() => setPicking(false)}>
-        <View style={{ paddingHorizontal: 20, paddingBottom: 6 }}>
-          <Text style={{ fontSize: 18, fontWeight: "700", color: th("#fff") }}>Qual mês?</Text>
-          <View style={{ marginTop: 14, flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {Array.from({ length: 12 }, (_, i) => {
-              const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-              const on = d.getMonth() === month && d.getFullYear() === year;
-              return (
-                <Pressable
-                  key={i}
-                  onPress={() => {
-                    setMonth(d.getMonth());
-                    setYear(d.getFullYear());
-                    setPeriod("mes");
-                    setPicking(false);
-                  }}
-                  style={({ pressed }) => ({ width: "31.5%", height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: th(on ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.10)", "line"), backgroundColor: th(on ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.04)", "bg"), opacity: pressed ? 0.7 : 1 })}
-                >
-                  <Text style={{ fontSize: 15, fontWeight: on ? "700" : "500", color: th("#fff") }}>
-                    {SHORT[d.getMonth()]}
-                    {d.getFullYear() !== now.getFullYear() ? ` ${String(d.getFullYear()).slice(2)}` : ""}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-      </BottomSheet>
 
       <GlassListSheet open={allOpen} onClose={() => setAllOpen(false)} title={category} subtitle={`${MONTHS[month]} · ${txs.length} ${txs.length === 1 ? "gasto" : "gastos"}`}>
         {txs.map((t) => (
