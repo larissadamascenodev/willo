@@ -24,8 +24,8 @@ import { th } from "~/theme/theme";
 
 const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }, default: {} }) as TextStyle;
-const CARD_W = 164;
-const ICON = 52;
+const CARD_W = 142;
+const ICON = 42;
 
 export default function CategoryStrip({
   categories,
@@ -104,7 +104,7 @@ export default function CategoryStrip({
             const r = (ICON + 8) / 2 - 2;
             const c = 2 * Math.PI * r;
             return (
-              <Surface key={cat.name} onPress={() => router.push(`/analytics/categoria/${encodeURIComponent(cat.name)}` as never)} radius={26} style={{ width: CARD_W, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 }}>
+              <Surface key={cat.name} onPress={() => router.push(`/analytics/categoria/${encodeURIComponent(cat.name)}` as never)} radius={22} style={{ width: CARD_W, paddingHorizontal: 13, paddingTop: 13, paddingBottom: 13 }}>
                 <View style={{ width: ICON + 8, height: ICON + 8, alignItems: "center", justifyContent: "center" }}>
                   <Svg width={ICON + 8} height={ICON + 8} style={{ position: "absolute", transform: [{ rotate: "-90deg" }] }}>
                     <Circle cx={(ICON + 8) / 2} cy={(ICON + 8) / 2} r={r} stroke={th(color, "line")} strokeOpacity={0.22} strokeWidth={3} fill="none" />
@@ -121,16 +121,16 @@ export default function CategoryStrip({
                     />
                   </Svg>
                   <View style={{ width: ICON - 4, height: ICON - 4, borderRadius: (ICON - 4) / 2, alignItems: "center", justifyContent: "center", backgroundColor: th(color, "bg") }}>
-                    <Icon size={22} color="#FFFFFF" strokeWidth={2.2} />
+                    <Icon size={18} color="#FFFFFF" strokeWidth={2.2} />
                   </View>
                 </View>
-                <Text numberOfLines={1} style={{ marginTop: 14, fontSize: 16, fontWeight: "600", color: th("#fff") }}>
+                <Text numberOfLines={1} style={{ marginTop: 10, fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>
                   {cat.name}
                 </Text>
-                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[nums, { marginTop: 18, fontSize: 19, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }]}>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[nums, { marginTop: 10, fontSize: 17, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }]}>
                   {hidden ? "R$ •••" : money(cat.amount)}
                 </Text>
-                <Text numberOfLines={1} style={[nums, { marginTop: 2, fontSize: 13.5, color: th(INK.soft) }]}>
+                <Text numberOfLines={1} style={[nums, { marginTop: 2, fontSize: 12.5, color: th(INK.soft) }]}>
                   {`${Math.round(share * 100)}%${n ? ` · ${n} ${n === 1 ? "gasto" : "gastos"}` : " do mês"}`}
                 </Text>
               </Surface>

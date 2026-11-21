@@ -23,9 +23,10 @@ import { loadPhoneLayout } from "~/lib/phoneLayout";
 import { PHONE_WIDGETS, phoneWidgetById } from "~/lib/phoneWidgets";
 import { dismissedIds, saveLayout, setDismissed, type WidgetSize, type WidgetSlot } from "@/lib/homeWidgets";
 import BottomSheet from "~/components/BottomSheet";
-import { Check, LayoutGrid } from "~/components/icons";
+import { LayoutGrid } from "~/components/icons";
+import { Toggle } from "~/components/registro/entryParts";
 import WidgetMenu, { type WidgetMenuTarget } from "~/components/home/WidgetMenu";
-import { GREEN, INK } from "~/theme/tokens";
+import { INK } from "~/theme/tokens";
 
 import { th } from "~/theme/theme";
 import { FEATURES } from "~/lib/features";
@@ -38,7 +39,7 @@ import { FEATURES } from "~/lib/features";
  * between the two. The card held comes up off the board and follows the finger; the
  * others open a space for it one seat at a time as it passes over them, and when it is
  * let go it settles into the space. A card taken off is only set aside — "Ativar widgets"
- * lists every card with a switch: on, it comes to the board; off, it is set aside.
+ * lists every card with the phone's own switch: on, it comes to the board; off, it is set aside.
  *
  * The card under the finger is a copy floating above the board; its own place in the
  * list is an empty seat that moves through the others. Moving the card itself made it
@@ -432,25 +433,8 @@ export default function WidgetBoard({ userId, render, skip, gap = 16, editing, o
                   <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>{w.label}</Text>
                   <Text numberOfLines={1} style={{ fontSize: 12.5, color: th(INK.softer) }}>{w.description}</Text>
                 </View>
-                <Pressable
-                  onPress={() => (on ? remove(w.id) : add(w.id))}
-                  accessibilityRole="switch"
-                  accessibilityState={{ checked: on }}
-                  accessibilityLabel={w.label}
-                  style={({ pressed }) => ({
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 5,
-                    borderRadius: 999,
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    backgroundColor: on ? th(GREEN, "bg") : th("#fff", "bg"),
-                    opacity: pressed ? 0.8 : 1,
-                  })}
-                >
-                  {on && <Check size={14} color="#0B0B0B" strokeWidth={3} />}
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: on ? "#0B0B0B" : th("#0B0B0B") }}>{on ? "Ativo" : "Ativar"}</Text>
-                </Pressable>
+                {/* The phone's own switch, the same as Pago and Recebido. */}
+                <Toggle value={on} label={w.label} onChange={(next) => (next ? add(w.id) : remove(w.id))} />
               </Animated.View>
               );
             })}
