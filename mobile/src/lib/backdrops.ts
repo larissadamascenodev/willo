@@ -9,7 +9,7 @@
  * of the screen; `a` is the light's strength at its centre.
  */
 
-export type BackdropKey = "willo" | "ardosia" | "bruma" | "terra" | "violeta" | "azul" | "prisma" | "horizonte" | "aurora" | "oceano" | "ametista" | "brasa" | "grafite" | "meia-noite";
+export type BackdropKey = "willo" | "ardosia" | "bruma" | "terra" | "violeta" | "azul" | "prisma" | "horizonte" | "aurora" | "oceano" | "ametista" | "brasa" | "grafite" | "meia-noite" | "onda-grafite" | "onda-gelo" | "onda-lilas" | "onda-anil" | "brilho" | "cobre" | "anil" | "neblina";
 
 export interface Backdrop {
   label: string;
@@ -21,6 +21,8 @@ export interface Backdrop {
   wash?: { colors: string[]; stops: number[] };
   /** How hard the corners close (0 to 1); 0.55 when not said. */
   edge?: number;
+  /** A picture drawn under everything (the Ondas: folded glossy sheets, after the iPhone's own lock screen). */
+  image?: number;
 }
 
 export const BACKDROPS: Record<BackdropKey, Backdrop> = {
@@ -200,6 +202,62 @@ export const BACKDROPS: Record<BackdropKey, Backdrop> = {
       { cx: 0.85, cy: 0.12, rx: 0.6, ry: 0.3, rgb: "100,120,210", a: 0.29 },
     ],
   },
+
+  /* eslint-disable @typescript-eslint/no-require-imports -- bundled pictures, as the room's own sky.png is. */
+  /* ── Ondas: sheets of one colour folding over each other with a lit rim, after the iPhone's
+     own lock screen; pictures, darkened toward the bottom so the cards stay readable. ── */
+  "onda-grafite": { label: "Grafite", ground: "#07090D", edge: 0.2, lights: [], image: require("../../assets/images/backdrops/onda-grafite.jpg") as number },
+  "onda-gelo": { label: "Gelo", ground: "#0B222C", edge: 0.2, lights: [], image: require("../../assets/images/backdrops/onda-gelo.jpg") as number },
+  "onda-lilas": { label: "Lilás", ground: "#1C1434", edge: 0.2, lights: [], image: require("../../assets/images/backdrops/onda-lilas.jpg") as number },
+  "onda-anil": { label: "Anil", ground: "#111B3C", edge: 0.2, lights: [], image: require("../../assets/images/backdrops/onda-anil.jpg") as number },
+  /* eslint-enable @typescript-eslint/no-require-imports */
+
+  /* ── Brilhos: blurred light on the dark, as a photo far out of focus. ── */
+
+  /* Many colours pooled at the top — red, rose and blue, a little gold in the middle — falling into black. */
+  brilho: {
+    label: "Brilho",
+    ground: "#050506",
+    edge: 0.2,
+    lights: [
+      { cx: 0.02, cy: 0.1, rx: 0.34, ry: 0.6, rgb: "240,60,50", a: 0.95 },
+      { cx: 0.44, cy: 0.04, rx: 0.32, ry: 0.55, rgb: "246,166,186", a: 0.88 },
+      { cx: 0.92, cy: 0.05, rx: 0.34, ry: 0.6, rgb: "80,130,255", a: 0.95 },
+      { cx: 0.48, cy: 0.33, rx: 0.36, ry: 0.14, rgb: "200,172,96", a: 0.42 },
+    ],
+  },
+  /* Teal high on the left, warm copper low down, as a lamp seen out of focus. */
+  cobre: {
+    label: "Cobre",
+    ground: "#0A0908",
+    edge: 0.25,
+    lights: [
+      { cx: 0.0, cy: 0.06, rx: 0.75, ry: 0.36, rgb: "122,168,150", a: 0.55 },
+      { cx: 0.85, cy: 0.16, rx: 0.7, ry: 0.32, rgb: "40,74,76", a: 0.55 },
+      { cx: 0.78, cy: 0.52, rx: 0.6, ry: 0.14, rgb: "112,70,50", a: 0.55 },
+      { cx: 0.08, cy: 0.86, rx: 0.6, ry: 0.18, rgb: "100,64,46", a: 0.45 },
+    ],
+  },
+  /* Near-black navy with a blue light rising from the lower left. */
+  anil: {
+    label: "Índigo",
+    ground: "#08080D",
+    edge: 0.15,
+    lights: [
+      { cx: 0.0, cy: 1.02, rx: 0.78, ry: 0.42, rgb: "112,130,214", a: 0.75 },
+      { cx: 1.0, cy: 0.0, rx: 0.6, ry: 0.32, rgb: "44,48,86", a: 0.55 },
+    ],
+  },
+  /* Dark petrol at the top clearing into a misty grey-blue toward the lower right. */
+  neblina: {
+    label: "Neblina",
+    ground: "#020608",
+    edge: 0.12,
+    lights: [
+      { cx: 1.0, cy: 1.0, rx: 1.15, ry: 0.85, rgb: "140,170,180", a: 0.75 },
+      { cx: 0.6, cy: 0.55, rx: 0.7, ry: 0.4, rgb: "46,78,88", a: 0.45 },
+    ],
+  },
 };
 
 export const BACKDROP_KEYS = Object.keys(BACKDROPS) as BackdropKey[];
@@ -208,6 +266,8 @@ export const BACKDROP_KEYS = Object.keys(BACKDROPS) as BackdropKey[];
 export const OFFERED: { title: string; keys: BackdropKey[] }[] = [
   { title: "Suaves", keys: ["willo", "ardosia", "bruma", "terra"] },
   { title: "Cores", keys: ["violeta", "azul", "prisma"] },
+  { title: "Ondas", keys: ["onda-grafite", "onda-gelo", "onda-lilas", "onda-anil"] },
+  { title: "Brilhos", keys: ["brilho", "cobre", "anil", "neblina"] },
 ];
 
 /* The same stars every time: a fixed little generator, not Math.random. */

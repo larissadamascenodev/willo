@@ -159,6 +159,7 @@ export default function Room({
   if (drawn) {
     return (
       <View style={[{ flex: 1, backgroundColor: th(drawn.ground, "bg") }, style]}>
+        {drawn.image ? <Image source={drawn.image} contentFit="cover" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} /> : null}
         {drawn.wash && <Wash wash={drawn.wash} />}
         <Svg width="100%" height="100%" pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
           <Defs>
