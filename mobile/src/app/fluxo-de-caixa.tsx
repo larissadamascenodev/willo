@@ -11,14 +11,13 @@ import type { Transaction } from "@/types/finance";
 import type { CustomCategory } from "@/services/categoryService";
 import { useFinanceData } from "@/hooks/useFinanceData";
 import { setHiddenValues, useHiddenValues } from "@/hooks/useHiddenValues";
-import { loadMonthTransactions, type AccountRow, type TransactionRow as Row } from "@/services/monthTransactions";
+import { loadMonthTransactions, type TransactionRow as Row } from "@/services/monthTransactions";
 import Room from "~/components/Room";
 import RaisedButton from "~/components/RaisedButton";
-import Surface from "~/components/Surface";
 import MonthPill from "~/components/transactions/MonthPill";
-import TransactionRow from "~/components/transactions/TransactionRow";
+import RecentEntries from "~/components/transactions/RecentEntries";
 import { PeriodTabs } from "~/components/charts/PageCharts";
-import { ChevronLeft, ChevronRight, Eye, EyeOff } from "~/components/icons";
+import { ChevronLeft, Eye, EyeOff } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
@@ -100,8 +99,6 @@ export default function FluxoDeCaixa() {
 
   /* The month's entries, as Transações lists them, for the latest ones under the chart. */
   const [rows, setRows] = useState<Row[]>([]);
-  const [accounts, setAccounts] = useState<AccountRow[]>([]);
-  const [cards, setCards] = useState<unknown[]>([]);
   const [customCats, setCustomCats] = useState<CustomCategory[]>([]);
   useEffect(() => {
     if (!user) return;
@@ -111,8 +108,6 @@ export default function FluxoDeCaixa() {
         .then((m) => {
           if (!alive) return;
           setRows(m.transactions);
-          setAccounts(m.accounts);
-          setCards(m.creditCards);
           setCustomCats(m.customCategories);
         })
         .catch(() => undefined);
@@ -125,7 +120,6 @@ export default function FluxoDeCaixa() {
       window.removeEventListener("transaction-created", load);
     };
   }, [user, month, year]);
-  const accountName = useMemo(() => Object.fromEntries(accounts.map((a) => [a.id, a.name])), [accounts]);
   const latest = useMemo(() => {
     const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     return rows
@@ -230,30 +224,17 @@ export default function FluxoDeCaixa() {
           <FlowChart width={width} series={series} view={view} hidden={hidden} />
         </Animated.View>
 
-        {/* The month's latest entries. */}
-        <View style={{ marginTop: 22, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4 }}>
-          <Text style={{ fontSize: 17, fontWeight: "700", color: th(INK.soft) }}>Últimos lançamentos</Text>
-          <Pressable onPress={() => router.push("/transacoes" as never)} hitSlop={8} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 2, opacity: pressed ? 0.6 : 1 })}>
-            <Text style={{ fontSize: 15, fontWeight: "600", color: th("#fff") }}>Ver mais</Text>
-            <ChevronRight size={16} color={th("#fff")} strokeWidth={2.2} />
-          </Pressable>
+        {/* The month's latest entries, as the card's statement lists them. */}
+        <View style={{ marginTop: 26 }}>
+          <RecentEntries
+            items={latest}
+            customCats={customCats}
+            hidden={hidden}
+            onOpen={() => router.push("/transacoes" as never)}
+            onSeeAll={() => router.push("/transacoes" as never)}
+            empty={future ? "Nada lançado para este mês ainda" : "Nada lançado neste mês"}
+          />
         </View>
-        {latest.length === 0 ? (
-          <Text style={{ marginTop: 14, paddingHorizontal: 4, fontSize: 14, color: th(INK.softer) }}>Nada lançado {future ? "para este mês ainda" : "neste mês"}.</Text>
-        ) : (
-          <Surface radius={26} style={{ marginTop: 10, paddingHorizontal: 12, paddingVertical: 4 }}>
-            {latest.map((tx) => (
-              <TransactionRow
-                key={tx.id}
-                tx={tx}
-                accountName={tx.account_id ? accountName[tx.account_id] : undefined}
-                customCategories={customCats}
-                creditCards={cards as never}
-                onPress={() => router.push("/transacoes" as never)}
-              />
-            ))}
-          </Surface>
-        )}
       </Animated.ScrollView>
 
       {/* The top row: back, the page's name, the month in the corner. */}

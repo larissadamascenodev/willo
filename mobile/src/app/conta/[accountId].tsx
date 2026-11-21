@@ -27,6 +27,7 @@ import CenterModal from "~/components/CenterModal";
 import FluxoPanel from "~/components/financeiro/FluxoPanel";
 import SpendRing from "~/components/analytics/SpendRing";
 import { TopSpendRow } from "~/components/analytics/CategoryViews";
+import RecentEntries, { EntryRow } from "~/components/transactions/RecentEntries";
 import { EXPAND } from "~/lib/expand";
 import AnchoredMenu, { MenuHeader, MenuRow, type AnchorRect } from "~/components/AnchoredMenu";
 import { categoryIcon } from "~/lib/categoryIcon";
@@ -34,7 +35,7 @@ import { chipFill, chipInk } from "~/lib/chip";
 import { ChevronDown, MoreVertical, Pencil, Trash2 } from "~/components/icons";
 import { money } from "~/lib/money";
 import { useAuth } from "~/lib/auth";
-import { GREEN, INK, RED } from "~/theme/tokens";
+import { INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
 
 import { th, useThemeRedraw } from "~/theme/theme";
@@ -332,36 +333,7 @@ export default function ContaDetalhe() {
 
             {/* ══ The latest few, as on the main cash flow; the button opens the rest ══ */}
             <Animated.View entering={FadeInDown.delay(160).duration(420)} style={{ marginTop: 34 }}>
-              <Text style={[T.eyebrow, { paddingHorizontal: 4 }]}>Últimos lançamentos</Text>
-              {ordered.length === 0 ? (
-                <Text style={{ paddingVertical: 32, textAlign: "center", fontSize: 14, color: th(INK.soft) }}>
-                  Nada por aqui neste mês
-                </Text>
-              ) : (
-                <View style={{ marginTop: 6 }}>
-                  {ordered.slice(0, 5).map((tx) => (
-                    <MovementRow key={tx.id} tx={tx} customCats={customCats} />
-                  ))}
-                </View>
-              )}
-              {ordered.length > 0 && (
-                <Pressable
-                  onPress={() => setMovesOpen(true)}
-                  style={({ pressed }) => ({
-                    marginTop: 16,
-                    height: 52,
-                    borderRadius: 26,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderWidth: 1,
-                    borderColor: th("rgba(255,255,255,0.08)", "line"),
-                    backgroundColor: th("rgba(255,255,255,0.05)", "bg"),
-                    opacity: pressed ? 0.7 : 1,
-                  })}
-                >
-                  <Text style={{ fontSize: 15.5, fontWeight: "500", color: th("#fff") }}>Ver todos os lançamentos</Text>
-                </Pressable>
-              )}
+              <RecentEntries items={ordered.slice(0, 5)} customCats={customCats} onSeeAll={() => setMovesOpen(true)} />
             </Animated.View>
           </>
         )}
@@ -420,7 +392,7 @@ export default function ContaDetalhe() {
         ) : (
           <>
             {history.slice(0, shownCount).map((tx) => (
-              <MovementRow key={tx.id} tx={tx} customCats={customCats} />
+              <EntryRow key={tx.id} entry={tx} customCats={customCats} />
             ))}
             {history.length > shownCount && (
               <Pressable
@@ -482,34 +454,6 @@ export default function ContaDetalhe() {
         As transações lançadas nela passam para a sua outra conta, e o saldo delas vai junto.
       </ConfirmGlass>
     </Room>
-  );
-}
-
-/** One movement, drawn as the main cash flow draws its entries. */
-function MovementRow({ tx, customCats }: { tx: Movement; customCats: CustomCategory[] }) {
-  const Icon = categoryIcon(tx.category, customCats);
-  const catHex = categoryHex(tx.category, customCats);
-  const isReceita = tx.type === "receita";
-  const day = new Date(`${tx.date.slice(0, 10)}T12:00:00`);
-  const sameYear = day.getFullYear() === new Date().getFullYear();
-  const date = day.toLocaleDateString("pt-BR", { day: "numeric", month: "long", ...(sameYear ? {} : { year: "numeric" }) });
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12 }}>
-      <View style={{ width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(catHex), "bg") }}>
-        <Icon size={20} color={th(chipInk(catHex))} strokeWidth={2} />
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ fontSize: 15.5, fontWeight: "600", color: th("#fff") }}>{tx.name}</Text>
-        <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>
-          {date} · {tx.category}
-          {tx.status !== "pago" ? " · pendente" : ""}
-        </Text>
-      </View>
-      <Text style={{ fontSize: 15, fontWeight: "600", color: th(isReceita ? GREEN : RED) }}>
-        {isReceita ? "+" : "−"}
-        {money(Number(tx.amount))}
-      </Text>
-    </View>
   );
 }
 
