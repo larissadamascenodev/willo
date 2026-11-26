@@ -55,6 +55,8 @@ export function playCash() {
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const CONFIRM = require("../../assets/sounds/willo-confirm.mp3") as number;
 let confirmPlayer: AudioPlayer | null = null;
+/* The coin's speed: 1 is as recorded, which sounded hurried. */
+const COIN_RATE = 0.82;
 
 /** Have the Pass's coin ready before the confirmation, so it starts the moment it is asked. */
 export function preloadConfirm() {
@@ -85,6 +87,14 @@ export function playConfirm() {
       const p = confirmPlayer!;
       p.volume = 0.45;
       const go = () => {
+        /* A touch slower than recorded, the pitch falling with it (varispeed): a coin settling,
+           not a quick tinkle. Set once the file is loaded, when the player has its item. */
+        try {
+          p.shouldCorrectPitch = false;
+          p.setPlaybackRate(COIN_RATE);
+        } catch {
+          /* At its own speed, then. */
+        }
         if (p.currentTime > 0.02) void p.seekTo(0).then(() => p.play());
         else p.play();
       };

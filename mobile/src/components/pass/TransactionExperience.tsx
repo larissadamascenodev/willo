@@ -86,6 +86,8 @@ export default function TransactionExperience({
   const fade = useSharedValue(1);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.get(), transform: [{ scale: 0.985 + 0.015 * fade.get() }] }));
   const [slideAt, setSlideAt] = useState({ x: 0, y: 0, w: 0 });
+  /* The light keeps flying after the Pass is in, so it lands on the seal of the Pass on screen. */
+  const [flying, setFlying] = useState(false);
 
   const confirm = async () => {
     if (sending.current || phase !== "review") return;
@@ -97,17 +99,21 @@ export default function TransactionExperience({
     playConfirm();
     const began = Date.now();
     if (!reduce) {
-      fade.set(withTiming(0, { duration: 320 }));
+      fade.set(withTiming(0, { duration: 260 }));
       setPhase("flow");
+      setFlying(true);
     } else setPhase("saving");
     try {
       const done = await onConfirm(id.current);
       setSaved(done);
-      const left = reduce ? 0 : Math.max(0, FLOW_MS - (Date.now() - began));
+      /* The Pass — seal, title and card together — the moment the entry is written, while the
+         light is still rising, so it rises onto the receipt. Only a beat for the review to go. */
+      const left = reduce ? 0 : Math.max(0, 200 - (Date.now() - began));
       if (left > 0) await new Promise((r) => setTimeout(r, left));
       setPhase("pass");
     } catch {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined);
+      setFlying(false);
       fade.set(withTiming(1, { duration: 220 }));
       setError("Não consegui salvar agora. Tente de novo.");
       setPhase("review");
@@ -117,15 +123,27 @@ export default function TransactionExperience({
     }
   };
 
+  /* Done flying a little after the last point lands. */
+  useEffect(() => {
+    if (!flying) return;
+    const t = setTimeout(() => setFlying(false), FLOW_MS * 1.3);
+    return () => clearTimeout(t);
+  }, [flying]);
+
+  const end = slideKnobEnd(slideAt.w);
+  const flow = flying && box.w > 0 && <WilloFlow width={box.w} height={box.h} from={{ x: slideAt.x + end.x, y: slideAt.y + end.y }} to={{ x: box.w / 2, y: 30 }} />;
+
   if (phase === "pass" && saved) {
     return (
-      <Animated.View entering={FadeIn.duration(reduce ? 160 : 120)} style={{ paddingBottom: 6 }}>
-        <WilloPass data={{ ...data, id: saved.id, time: saved.time ?? data.time }} onDone={onDone} links={links} sound={false} />
-      </Animated.View>
+      <View>
+        <Animated.View entering={FadeIn.duration(reduce ? 160 : 120)} style={{ paddingBottom: 6 }}>
+          <WilloPass data={{ ...data, id: saved.id, time: saved.time ?? data.time }} onDone={onDone} links={links} sound={false} />
+        </Animated.View>
+        {flow}
+      </View>
     );
   }
 
-  const end = slideKnobEnd(slideAt.w);
   /* 38–64 for the review's amount, fitting the width. */
   const reviewSize = Math.max(38, amountSize(data.amount, (box.w || 340) - 20, 64));
   return (
@@ -162,7 +180,7 @@ export default function TransactionExperience({
         </View>
       </Animated.View>
 
-      {phase === "flow" && box.w > 0 && <WilloFlow width={box.w} height={box.h} from={{ x: slideAt.x + end.x, y: slideAt.y + end.y }} to={{ x: box.w / 2, y: 30 }} />}
+      {flow}
     </View>
   );
 }

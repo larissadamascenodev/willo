@@ -101,14 +101,14 @@ export default function WilloPass({
     if (!reduce) {
       seal.set(withTiming(1, { duration: 500, easing: OUT }));
       ripple.set(withTiming(1, { duration: 850, easing: Easing.out(Easing.quad) }));
-      /* Tighter than the spec's clock, so the card rises while the coin is still ringing. */
+      /* The seal and the card come in together — one receipt, not a seal and then a card. */
       check.set(withDelay(60, withTiming(1, { duration: 420, easing: Easing.out(Easing.cubic) })));
-      sparks.set(withDelay(80, withTiming(1, { duration: 1100, easing: Easing.out(Easing.cubic) })));
-      card.set(withDelay(60, withTiming(1, { duration: 780, easing: OUT })));
-      shine.set(withDelay(300, withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.quad) })));
-      amount.set(withDelay(200, withTiming(1, { duration: 600, easing: OUT })));
-      details.set(withDelay(340, withTiming(1, { duration: 600, easing: OUT })));
-      acts.set(withDelay(480, withTiming(1, { duration: 480, easing: OUT })));
+      sparks.set(withDelay(60, withTiming(1, { duration: 1100, easing: Easing.out(Easing.cubic) })));
+      card.set(withTiming(1, { duration: 560, easing: OUT }));
+      shine.set(withDelay(260, withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.quad) })));
+      amount.set(withDelay(80, withTiming(1, { duration: 480, easing: OUT })));
+      details.set(withDelay(160, withTiming(1, { duration: 480, easing: OUT })));
+      acts.set(withDelay(320, withTiming(1, { duration: 420, easing: OUT })));
     }
     return () => {
       if (coin) clearTimeout(coin);
@@ -128,7 +128,7 @@ export default function WilloPass({
   const cardStyle = useAnimatedStyle(() => {
     const v = card.get();
     return {
-      opacity: Math.min(1, v / 0.45),
+      opacity: Math.min(1, v / 0.25),
       transform: [{ perspective: 700 }, { translateY: 40 * (1 - v) }, { rotateX: `${17 * (1 - v)}deg` }, { scale: 0.9 + 0.1 * v }],
     };
   });
