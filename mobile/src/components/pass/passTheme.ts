@@ -60,6 +60,13 @@ export function passTheme(): PassTheme {
 
 export type PassKind = "despesa" | "receita" | "transferencia";
 
+/** A small link under the Pass's actions: another entry, the transactions. */
+export interface PassLink {
+  icon: "novo" | "escanear" | "transacoes";
+  label: string;
+  onPress: () => void;
+}
+
 /** What a row of the review or of the Pass says; `bank` puts the institution's mark before the name. */
 export interface PassRow {
   icon: "descricao" | "tipo-saida" | "tipo-entrada" | "tipo-transferencia" | "categoria" | "instituicao" | "pagamento" | "data" | "origem" | "destino";

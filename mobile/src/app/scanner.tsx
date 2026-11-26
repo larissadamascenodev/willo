@@ -484,6 +484,10 @@ function Scanner() {
               }}
               onConfirm={register}
               onDone={finish}
+              links={[
+                { icon: "escanear", label: "Escanear outro", onPress: again },
+                { icon: "transacoes", label: cartao ? "Ver na fatura" : "Ver transações", onPress: () => (cartao ? router.replace(`/fatura/${cartao}/lancamentos` as never) : router.dismissTo("/transacoes" as never)) },
+              ]}
               left={
                 <RaisedButtonBack onPress={() => !confirming && setPhase("result")} />
               }

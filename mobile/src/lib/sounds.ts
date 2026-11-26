@@ -72,15 +72,32 @@ export function preloadConfirm() {
   }
 }
 
-/** The coin, once, at the Pass's 120 ms. */
+/**
+ * The coin, once, at the Pass's 120 ms. Played on the speaker even after the microphone was used
+ * (the session is set back to playback first), and if the file has not finished loading yet it
+ * starts the moment it has — instead of the play being lost, which left the Pass silent.
+ */
 export function playConfirm() {
-  try {
-    preloadConfirm();
-    const p = confirmPlayer!;
-    p.volume = 0.8;
-    if (p.currentTime > 0.02) void p.seekTo(0).then(() => p.play());
-    else p.play();
-  } catch {
-    /* No sound this time. */
-  }
+  void (async () => {
+    try {
+      preloadConfirm();
+      await playback();
+      const p = confirmPlayer!;
+      p.volume = 1;
+      const go = () => {
+        if (p.currentTime > 0.02) void p.seekTo(0).then(() => p.play());
+        else p.play();
+      };
+      if (p.isLoaded) return go();
+      const sub = p.addListener("playbackStatusUpdate", (status) => {
+        if (!status.isLoaded) return;
+        sub.remove();
+        go();
+      });
+      /* Never waits long: past half a second the moment has gone. */
+      setTimeout(() => sub.remove(), 500);
+    } catch {
+      /* No sound this time. */
+    }
+  })();
 }

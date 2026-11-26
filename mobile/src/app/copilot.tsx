@@ -340,6 +340,16 @@ function CopilotScreen() {
               }}
               onPhase={(p) => setWriting(p === "saving" || p === "flow")}
               onDone={() => setReviewing(null)}
+              links={[
+                {
+                  icon: "transacoes",
+                  label: "Ver transações",
+                  onPress: () => {
+                    setReviewing(null);
+                    setTimeout(() => router.push("/(tabs)/transacoes" as never), 260);
+                  },
+                },
+              ]}
             />
           </View>
         ) : null}

@@ -9,7 +9,7 @@ import { RED } from "~/theme/tokens";
 import WilloFlow, { FLOW_MS } from "./WilloFlow";
 import WilloPass from "./WilloPass";
 import WilloSlide, { slideKnobEnd } from "./WilloSlide";
-import { KIND_LABEL, amountSize, passAmount, passTheme, type PassData, type PassRow } from "./passTheme";
+import { KIND_LABEL, amountSize, passAmount, passTheme, type PassData, type PassLink, type PassRow } from "./passTheme";
 
 /**
  * The Willo Transaction Experience (Implementação 001), the same on every screen that writes an
@@ -46,6 +46,7 @@ export default function TransactionExperience({
   left,
   title = "Confirmar transação",
   onPhase,
+  links,
 }: {
   /** What is about to be written (id and time come once it is). */
   data: PassData;
@@ -58,6 +59,8 @@ export default function TransactionExperience({
   title?: string;
   /** Told when the review gives way to the Pass, so a sheet can resize or lock. */
   onPhase?: (p: Phase) => void;
+  /** Under the Pass's Concluir: another entry, the transactions. */
+  links?: PassLink[];
 }) {
   const t = passTheme();
   const reduce = useReducedMotion();
@@ -103,7 +106,7 @@ export default function TransactionExperience({
   if (phase === "pass" && saved) {
     return (
       <Animated.View entering={FadeIn.duration(reduce ? 160 : 120)} style={{ paddingBottom: 6 }}>
-        <WilloPass data={{ ...data, id: saved.id, time: saved.time ?? data.time }} onDone={onDone} />
+        <WilloPass data={{ ...data, id: saved.id, time: saved.time ?? data.time }} onDone={onDone} links={links} />
       </Animated.View>
     );
   }

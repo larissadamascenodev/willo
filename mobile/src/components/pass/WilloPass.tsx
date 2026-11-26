@@ -8,11 +8,11 @@ import * as Sharing from "expo-sharing";
 import { captureRef } from "react-native-view-shot";
 import { categoryHex } from "@/lib/categoryData";
 import BankMark from "~/components/BankMark";
-import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, CalendarDays, CreditCard, Download, FileText, Landmark, Tag, Wallet } from "~/components/icons";
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, CalendarDays, CreditCard, Download, FileText, Landmark, Plus, Receipt, ScanLine, Tag, Wallet } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { playConfirm, preloadConfirm } from "~/lib/sounds";
 import { showToast } from "~/lib/toast";
-import { PASS_TITLE, amountSize, passAmount, passId, passTheme, type PassData, type PassRow, type PassTheme } from "./passTheme";
+import { PASS_TITLE, amountSize, passAmount, passId, passTheme, type PassData, type PassLink, type PassRow, type PassTheme } from "./passTheme";
 
 /**
  * Willo Pass V9 Signature (Implementação 001): the Willo's own record of an entry just written —
@@ -59,6 +59,7 @@ export default function WilloPass({
   onDone,
   width,
   bare = false,
+  links = [],
 }: {
   data: PassData;
   /** Played in (the confirmation just happened); otherwise shown still. */
@@ -71,6 +72,8 @@ export default function WilloPass({
   width?: number;
   /** For the picture: no buttons and no link under the card. */
   bare?: boolean;
+  /** Under Concluir: Registrar outra / Escanear outro, Ver transações. */
+  links?: PassLink[];
 }) {
   const t = passTheme();
   const reduce = useReducedMotion();
@@ -137,12 +140,26 @@ export default function WilloPass({
   const detailsStyle = rise(details);
   const actsStyle = rise(acts);
 
-  /* The download: a still copy of the record, without buttons, drawn off screen on the Pass's
-     own ground, captured as a picture and handed to the share sheet (Salvar imagem, WhatsApp…).
-     Nothing is written again. */
-  const exportPass = () => {
+  /* The download: the record as it is on screen — seal, title and card, on the Pass's own
+     ground, without the buttons — captured as a picture and handed to the share sheet (Salvar
+     imagem, WhatsApp…). Nothing is written again. */
+  const shot = useRef<ComponentRef<typeof View>>(null);
+  const exportPass = async () => {
     if (saving) return;
     setSaving(true);
+    try {
+      /* A frame for the ground to be painted behind it. */
+      await new Promise((r) => setTimeout(r, 120));
+      const uri = await captureRef(shot, { format: "png", quality: 1, result: "tmpfile" });
+      setSaving(false);
+      if (!(await Sharing.isAvailableAsync())) throw new Error("share unavailable");
+      await Sharing.shareAsync(uri, { mimeType: "image/png", UTI: "public.png", dialogTitle: "Comprovante do Willo" });
+    } catch (e) {
+      /* Closing the share sheet is not a failure. */
+      if (!/cancel/i.test(String((e as Error)?.message ?? ""))) showToast("Não consegui gerar a imagem agora.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const big = amountSize(data.amount, cardW - 38);
@@ -152,17 +169,25 @@ export default function WilloPass({
   return (
     <View>
       {/* What the download keeps: the seal, the title and the card, on the Pass's ground. */}
-      {saving && <PassShot data={data} width={cardW} onEnd={() => setSaving(false)} />}
-      <View style={{ paddingVertical: 4 }}>
+      <View ref={shot} collapsable={false} style={{ paddingVertical: 4, backgroundColor: saving ? t.ground : "transparent" }}>
         <View style={{ alignItems: "center", marginTop: 6, marginBottom: 18 }}>
-          <View style={{ width: 39, height: 39 }}>
-            {!still && <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, top: 0, width: 39, height: 39, borderRadius: 20, borderWidth: 1, borderColor: t.success }, rippleStyle]} />}
-            <Animated.View style={[{ width: 39, height: 39, borderRadius: 20, borderWidth: 1, borderColor: t.success, alignItems: "center", justifyContent: "center" }, sealStyle]}>
+          {still ? (
+            /* Drawn plain when still — and so in the downloaded picture, seal and all. */
+            <View style={{ width: 39, height: 39, borderRadius: 20, borderWidth: 1, borderColor: t.success, alignItems: "center", justifyContent: "center" }}>
               <Svg width={20} height={20} viewBox="0 0 24 24">
-                <AnimatedPath d="M5 12.5l4.5 4.5L19 7.5" stroke={t.success} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" fill="none" strokeDasharray="22" animatedProps={checkProps} />
+                <Path d="M5 12.5l4.5 4.5L19 7.5" stroke={t.success} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" fill="none" />
               </Svg>
-            </Animated.View>
-          </View>
+            </View>
+          ) : (
+            <View style={{ width: 39, height: 39 }}>
+              <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, top: 0, width: 39, height: 39, borderRadius: 20, borderWidth: 1, borderColor: t.success }, rippleStyle]} />
+              <Animated.View style={[{ width: 39, height: 39, borderRadius: 20, borderWidth: 1, borderColor: t.success, alignItems: "center", justifyContent: "center" }, sealStyle]}>
+                <Svg width={20} height={20} viewBox="0 0 24 24">
+                  <AnimatedPath d="M5 12.5l4.5 4.5L19 7.5" stroke={t.success} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" fill="none" strokeDasharray="22" animatedProps={checkProps} />
+                </Svg>
+              </Animated.View>
+            </View>
+          )}
           <Text style={{ marginTop: 10, fontSize: 20, fontWeight: "600", letterSpacing: -0.6, color: t.text }}>{PASS_TITLE[data.kind]}</Text>
           <Text style={{ marginTop: 5, fontSize: 12, color: t.muted }}>Prontinho. Tudo organizado.</Text>
         </View>
@@ -230,12 +255,26 @@ export default function WilloPass({
             <Download size={20} color={t.text} strokeWidth={1.7} />
           </Pressable>
         </Animated.View>
-      ) : bare ? null : (
+      ) : null}
+      {actions && links.length > 0 ? (
+        <Animated.View style={[{ marginTop: 14, flexDirection: "row", justifyContent: "center", gap: 22 }, actsStyle]}>
+          {links.map((l) => {
+            const Glyph = l.icon === "escanear" ? ScanLine : l.icon === "novo" ? Plus : Receipt;
+            return (
+              <Pressable key={l.label} onPress={l.onPress} accessibilityRole="button" hitSlop={8} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 6, opacity: pressed ? 0.6 : 1 })}>
+                <Glyph size={14} color={t.muted} strokeWidth={1.8} />
+                <Text style={{ fontSize: 12.5, fontWeight: "500", color: t.muted }}>{l.label}</Text>
+              </Pressable>
+            );
+          })}
+        </Animated.View>
+      ) : null}
+      {!actions && !bare ? (
         <Pressable onPress={() => void exportPass()} accessibilityRole="button" accessibilityLabel="Baixar comprovante" style={({ pressed }) => ({ alignSelf: "center", marginTop: 10, flexDirection: "row", alignItems: "center", gap: 6, opacity: pressed || saving ? 0.6 : 1 })}>
           <Download size={15} color={t.muted} strokeWidth={1.8} />
           <Text style={{ fontSize: 12.5, color: t.muted }}>Baixar comprovante</Text>
         </Pressable>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -289,32 +328,3 @@ function SealSpark({ i, clock }: { i: number; clock: SharedValue<number> }) {
   );
 }
 
-/** The record drawn still, off screen, on the Pass's ground: captured once laid out, then shared. */
-function PassShot({ data, width, onEnd }: { data: PassData; width: number; onEnd: () => void }) {
-  const t = passTheme();
-  const ref = useRef<ComponentRef<typeof View>>(null);
-  const done = useRef(false);
-  const shoot = async () => {
-    if (done.current) return;
-    done.current = true;
-    try {
-      /* A frame for the logo and the marks to be painted. */
-      await new Promise((r) => setTimeout(r, 250));
-      const uri = await captureRef(ref, { format: "png", quality: 1, result: "tmpfile" });
-      if (!(await Sharing.isAvailableAsync())) throw new Error("share unavailable");
-      await Sharing.shareAsync(uri, { mimeType: "image/png", UTI: "public.png", dialogTitle: "Comprovante do Willo" });
-    } catch (e) {
-      /* Closing the share sheet is not a failure. */
-      if (!/cancel/i.test(String((e as Error)?.message ?? ""))) showToast("Não consegui gerar a imagem agora.");
-    } finally {
-      onEnd();
-    }
-  };
-  return (
-    <View pointerEvents="none" style={{ position: "absolute", left: -10000, top: 0 }}>
-      <View ref={ref} collapsable={false} onLayout={() => void shoot()} style={{ width: width + 40, paddingHorizontal: 20, paddingTop: 22, paddingBottom: 26, backgroundColor: t.ground }}>
-        <WilloPass data={data} play={false} sound={false} actions={false} bare width={width} />
-      </View>
-    </View>
-  );
-}

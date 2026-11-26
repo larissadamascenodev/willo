@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
 import { Platform, Pressable, Text, View, useWindowDimensions, type TextStyle } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -45,6 +46,7 @@ const tick = () => void Haptics.selectionAsync().catch(() => undefined);
 
 export default function TransferSheet({ open, onClose, fromId: startFrom }: { open: boolean; onClose: () => void; /** The account it starts from, when opened from one. */ fromId?: string }) {
   const { user } = useAuth();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { height: screenH } = useWindowDimensions();
   const bodyH = tallSheetBody(screenH, insets.top, insets.bottom, 0);
@@ -155,6 +157,25 @@ export default function TransferSheet({ open, onClose, fromId: startFrom }: { op
             onConfirm={register}
             onPhase={(p) => setSending(p === "saving" || p === "flow")}
             onDone={onClose}
+            links={[
+              {
+                icon: "novo",
+                label: "Nova transferência",
+                onPress: () => {
+                  setRaw("");
+                  setDate(todayIso());
+                  setStage("edit");
+                },
+              },
+              {
+                icon: "transacoes",
+                label: "Ver transações",
+                onPress: () => {
+                  onClose();
+                  setTimeout(() => router.push("/(tabs)/transacoes" as never), 260);
+                },
+              },
+            ]}
             left={
               <RaisedButton size={46} label="Voltar" onPress={() => !sending && setStage("edit")}>
                 <ChevronLeft size={20} color={th("#fff")} strokeWidth={2.4} />

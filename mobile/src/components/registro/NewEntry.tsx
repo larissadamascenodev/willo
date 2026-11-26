@@ -481,6 +481,19 @@ export default function NewEntry({
 
   const [nameW, setNameW] = useState(0);
 
+  /** Another one: the entry again, empty, today. */
+  const again = () => {
+    setStage("edit");
+    setRaw("");
+    setName("");
+    setCategory(null);
+    setByHand(false);
+    setDate(todayIso());
+    setRepeat("unica");
+    setPending(false);
+    setError(null);
+  };
+
   /* ── The sheet's height: nearly the whole screen for the entry (riding the keyboard at
      once), and on the check and the success only what they hold, the sheet easing down to
      it and back up when the entry is opened again. ── */
@@ -724,6 +737,10 @@ export default function NewEntry({
             onConfirm={register}
             onPhase={(p) => setSaving(p === "saving" || p === "flow")}
             onDone={onClose}
+            links={[
+              { icon: "novo", label: income ? "Registrar outra" : "Registrar outro", onPress: again },
+              { icon: "transacoes", label: "Ver transações", onPress: onSeeTransactions },
+            ]}
             left={
               <RaisedButton
                 size={46}
