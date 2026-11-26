@@ -91,6 +91,7 @@ export default function WilloPass({
   const details = useSharedValue(still ? 1 : 0);
   const acts = useSharedValue(still ? 1 : 0);
   const sparks = useSharedValue(still ? 1 : 0);
+  const head = useSharedValue(still ? 1 : 0);
 
   useEffect(() => {
     if (sound) preloadConfirm();
@@ -99,16 +100,18 @@ export default function WilloPass({
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft).catch(() => undefined);
     const coin = sound ? setTimeout(playConfirm, 120) : null;
     if (!reduce) {
-      seal.set(withTiming(1, { duration: 500, easing: OUT }));
-      ripple.set(withTiming(1, { duration: 850, easing: Easing.out(Easing.quad) }));
-      /* The seal and the card come in together — one receipt, not a seal and then a card. */
-      check.set(withDelay(60, withTiming(1, { duration: 420, easing: Easing.out(Easing.cubic) })));
-      sparks.set(withDelay(60, withTiming(1, { duration: 1100, easing: Easing.out(Easing.cubic) })));
-      card.set(withTiming(1, { duration: 560, easing: OUT }));
-      shine.set(withDelay(260, withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.quad) })));
-      amount.set(withDelay(80, withTiming(1, { duration: 480, easing: OUT })));
-      details.set(withDelay(160, withTiming(1, { duration: 480, easing: OUT })));
-      acts.set(withDelay(320, withTiming(1, { duration: 420, easing: OUT })));
+      /* One soft arrival: the seal, its title and the card rise together and settle, slowly
+         enough to be seen — never a seal first and a card after. */
+      seal.set(withTiming(1, { duration: 760, easing: OUT }));
+      head.set(withTiming(1, { duration: 760, easing: OUT }));
+      ripple.set(withDelay(120, withTiming(1, { duration: 1200, easing: Easing.out(Easing.quad) })));
+      check.set(withDelay(180, withTiming(1, { duration: 560, easing: Easing.out(Easing.cubic) })));
+      sparks.set(withDelay(140, withTiming(1, { duration: 1300, easing: Easing.out(Easing.cubic) })));
+      card.set(withTiming(1, { duration: 980, easing: OUT }));
+      shine.set(withDelay(480, withTiming(1, { duration: 1300, easing: Easing.inOut(Easing.quad) })));
+      amount.set(withDelay(180, withTiming(1, { duration: 760, easing: OUT })));
+      details.set(withDelay(320, withTiming(1, { duration: 760, easing: OUT })));
+      acts.set(withDelay(600, withTiming(1, { duration: 620, easing: OUT })));
     }
     return () => {
       if (coin) clearTimeout(coin);
@@ -120,16 +123,16 @@ export default function WilloPass({
   const sealStyle = useAnimatedStyle(() => {
     const v = seal.get();
     /* pop: from 0.4, past 1.08, to 1 */
-    const s = v < 0.75 ? 0.4 + (1.08 - 0.4) * (v / 0.75) : 1.08 - 0.08 * ((v - 0.75) / 0.25);
-    return { opacity: Math.min(1, v * 1.6), transform: [{ scale: s }] };
+    const s = v < 0.75 ? 0.6 + (1.05 - 0.6) * (v / 0.75) : 1.05 - 0.05 * ((v - 0.75) / 0.25);
+    return { opacity: Math.min(1, v * 1.4), transform: [{ scale: s }] };
   });
   const rippleStyle = useAnimatedStyle(() => ({ opacity: still ? 0 : 1 - ripple.get(), transform: [{ scale: 1 + 0.9 * ripple.get() }] }));
   const checkProps = useAnimatedProps(() => ({ strokeDashoffset: 22 * (1 - check.get()) }));
   const cardStyle = useAnimatedStyle(() => {
     const v = card.get();
     return {
-      opacity: Math.min(1, v / 0.25),
-      transform: [{ perspective: 700 }, { translateY: 40 * (1 - v) }, { rotateX: `${17 * (1 - v)}deg` }, { scale: 0.9 + 0.1 * v }],
+      opacity: Math.min(1, v / 0.45),
+      transform: [{ perspective: 900 }, { translateY: 30 * (1 - v) }, { rotateX: `${10 * (1 - v)}deg` }, { scale: 0.94 + 0.06 * v }],
     };
   });
   const cardW = width ?? Math.min(screenW - 32, 400);
@@ -137,6 +140,7 @@ export default function WilloPass({
   const rise = (v: SharedValue<number>) =>
     // eslint-disable-next-line react-hooks/rules-of-hooks
     useAnimatedStyle(() => ({ opacity: v.get(), transform: [{ translateY: 6 * (1 - v.get()) }] }));
+  const headStyle = rise(head);
   const amountStyle = rise(amount);
   const detailsStyle = rise(details);
   const actsStyle = rise(acts);
@@ -186,8 +190,10 @@ export default function WilloPass({
               </Animated.View>
             </View>
           )}
-          <Text style={{ marginTop: 10, fontSize: 20, fontWeight: "600", letterSpacing: -0.6, color: t.text }}>{PASS_TITLE[data.kind]}</Text>
-          <Text style={{ marginTop: 5, fontSize: 12, color: t.muted }}>Prontinho. Tudo organizado.</Text>
+          <Animated.View style={[{ alignItems: "center" }, headStyle]}>
+            <Text style={{ marginTop: 10, fontSize: 20, fontWeight: "600", letterSpacing: -0.6, color: t.text }}>{PASS_TITLE[data.kind]}</Text>
+            <Text style={{ marginTop: 5, fontSize: 12, color: t.muted }}>Prontinho. Tudo organizado.</Text>
+          </Animated.View>
         </View>
 
         <Animated.View style={[{ width: cardW, alignSelf: "center", borderRadius: 23, shadowColor: "#000", shadowOpacity: t.cardShadow * 1.5, shadowRadius: 15, shadowOffset: { width: 0, height: 15 } }, cardStyle]}>

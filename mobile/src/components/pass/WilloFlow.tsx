@@ -7,10 +7,10 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming, type Sh
  * — not solid confetti — leave the centre of the knob where it stopped and gather at the seal of
  * the Pass, spreading sideways up to ±47.5 % of the width on the way, each 1 to 3.3 across, in
  * #c8aaff, #79e2ca, #ffc08b and #eee0ff, on a smoothed path, their opacity rising and falling as
- * a sine. 820 ms; the Pass comes in under it once the entry is written, so the light lands on its seal. Drawn over everything, touching nothing.
+ * a sine. 1 s; the Pass comes in under it once the entry is written, so the light lands on its seal. Drawn over everything, touching nothing.
  */
 
-export const FLOW_MS = 820;
+export const FLOW_MS = 1000;
 const COLORS = ["#c8aaff", "#79e2ca", "#ffc08b", "#eee0ff"];
 
 interface Spark {

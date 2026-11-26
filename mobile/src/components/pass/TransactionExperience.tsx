@@ -88,6 +88,9 @@ export default function TransactionExperience({
   const [slideAt, setSlideAt] = useState({ x: 0, y: 0, w: 0 });
   /* The light keeps flying after the Pass is in, so it lands on the seal of the Pass on screen. */
   const [flying, setFlying] = useState(false);
+  /* The Pass's height, measured from an unseen copy while the review is read: the space it needs
+     is held from the start, so the sheet does not grow — and cut the receipt off — as it comes in. */
+  const [passH, setPassH] = useState(0);
 
   const confirm = async () => {
     if (sending.current || phase !== "review") return;
@@ -99,7 +102,8 @@ export default function TransactionExperience({
     playConfirm();
     const began = Date.now();
     if (!reduce) {
-      fade.set(withTiming(0, { duration: 260 }));
+      /* Dimmed, not gone: never an empty sheet while the entry is written. */
+      fade.set(withTiming(0.1, { duration: 380 }));
       setPhase("flow");
       setFlying(true);
     } else setPhase("saving");
@@ -108,7 +112,7 @@ export default function TransactionExperience({
       setSaved(done);
       /* The Pass — seal, title and card together — the moment the entry is written, while the
          light is still rising, so it rises onto the receipt. Only a beat for the review to go. */
-      const left = reduce ? 0 : Math.max(0, 200 - (Date.now() - began));
+      const left = reduce ? 0 : Math.max(0, 260 - (Date.now() - began));
       if (left > 0) await new Promise((r) => setTimeout(r, left));
       setPhase("pass");
     } catch {
@@ -137,7 +141,7 @@ export default function TransactionExperience({
     return (
       /* Keyed apart from the review: otherwise the review's faded view (opacity 0) is reused for
          the Pass and the receipt stays invisible on the phone. */
-      <View key="pass">
+      <View key="pass" style={{ minHeight: passH }}>
         <Animated.View key="pass-in" entering={FadeIn.duration(reduce ? 160 : 120)} style={{ paddingBottom: 6 }}>
           <WilloPass data={{ ...data, id: saved.id, time: saved.time ?? data.time }} onDone={onDone} links={links} sound={false} />
         </Animated.View>
@@ -149,7 +153,13 @@ export default function TransactionExperience({
   /* 38–64 for the review's amount, fitting the width. */
   const reviewSize = Math.max(38, amountSize(data.amount, (box.w || 340) - 20, 64));
   return (
-    <View key="review" onLayout={(e) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+    <View key="review" style={{ minHeight: passH }} onLayout={(e) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+      {/* The unseen copy of the Pass, measured once. */}
+      {passH === 0 && (
+        <View pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden style={{ position: "absolute", left: 0, right: 0, top: 0, opacity: 0 }} onLayout={(e) => setPassH(Math.ceil(e.nativeEvent.layout.height) + 6)}>
+          <WilloPass data={{ ...data, id: data.id || "00000000", time: data.time ?? "00:00" }} onDone={() => undefined} links={links} sound={false} play={false} />
+        </View>
+      )}
       <Animated.View key="review-in" style={fadeStyle}>
         {/* The top: back (when there is one), the title. */}
         <View style={{ height: 48, flexDirection: "row", alignItems: "center" }}>

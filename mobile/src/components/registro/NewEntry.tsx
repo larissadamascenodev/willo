@@ -499,8 +499,16 @@ export default function NewEntry({
   }, [listen, voice.level]);
 
 
+  /* Leaving the entry with the name field focused leaves no blur behind: without this the entry
+     came back as if the keyboard were up — the amount small and no number keys. */
+  useEffect(() => {
+    if (stage !== "edit") setTyping(false);
+  }, [stage]);
+
   /** Another one: the entry again, empty, today. */
   const again = () => {
+    Keyboard.dismiss();
+    setTyping(false);
     setStage("edit");
     setRaw("");
     setName("");
