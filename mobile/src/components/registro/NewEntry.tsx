@@ -103,7 +103,7 @@ const KEYS = [
   ["1", "2", "3"],
   ["4", "5", "6"],
   ["7", "8", "9"],
-  [",", "0", "del"],
+  ["00", "0", "del"],
 ];
 
 /** "1250,5" → 125050. */
@@ -111,11 +111,10 @@ export function centsOf(raw: string) {
   const [i, d = ""] = raw.split(",");
   return Number(i || "0") * 100 + Number(`${d}00`.slice(0, 2));
 }
-/** 125050 → "1250,5", the way it would have been typed. */
+/** 125050 → "1250,50": always the two cents, the way the keys now build it. */
 function rawOf(cents: number) {
-  const i = Math.floor(cents / 100);
-  const d = cents % 100;
-  return d === 0 ? String(i) : `${i},${String(d).padStart(2, "0").replace(/0$/, "")}`;
+  if (cents <= 0) return "";
+  return `${Math.floor(cents / 100)},${String(cents % 100).padStart(2, "0")}`;
 }
 /* Knowing when someone has stopped talking, as Registro rápido does. */
 const QUIET_MS = 900;
@@ -1007,15 +1006,20 @@ function MiniSwitch({ on, big = false }: { on: boolean; /** The phone's own swit
   );
 }
 
-/** One key of the app's number keys, applied to what has been typed so far ("1250,5"). */
+/**
+ * One key of the app's number keys, applied to what has been typed so far — from the cents up, as
+ * a card machine does: 2, 4, 9, 0 is 24,90 with no comma to find; "00" closes whole reais (2 and
+ * 00 and 00 is 200,00). Apagar takes the last digit back off.
+ */
 export function typeKey(r: string, key: string) {
   if (key === "clear") return "";
-  if (key === "del") return r.slice(0, -1);
-  if (key === ",") return r.includes(",") ? r : r === "" ? "0," : `${r},`;
-  const [i, d] = r.split(",");
-  if (d !== undefined) return d.length >= 2 ? r : r + key;
-  if (i === "0" || i === "") return key === "0" && i === "0" ? r : key;
-  return i.length >= 9 ? r : r + key;
+  const cents = centsOf(r);
+  if (key === "del") return rawOf(Math.floor(cents / 10));
+  const digits = key === "00" ? "00" : /^\d$/.test(key) ? key : "";
+  if (!digits) return r;
+  const next = Number(`${cents}${digits}`);
+  /* Up to R$ 9.999.999,99. */
+  return next > 999_999_999 ? r : rawOf(next);
 }
 
 /** "R$ 1.250,50" as typed, the cents filled in; faint only while nothing is typed. */
@@ -1054,7 +1058,7 @@ export function Keypad({ rowH, onKey }: { rowH: number; onKey: (k: string) => vo
               onPress={NOOP}
               onLongPress={k === "del" ? () => onKey("clear") : undefined}
               accessibilityRole="button"
-              accessibilityLabel={k === "del" ? "Apagar" : k === "," ? "Vírgula" : k}
+              accessibilityLabel={k === "del" ? "Apagar" : k === "00" ? "Dois zeros" : k}
               style={{ flex: 1, height: rowH, alignItems: "center", justifyContent: "center" }}
             >
               {({ pressed }) => (
@@ -1063,7 +1067,7 @@ export function Keypad({ rowH, onKey }: { rowH: number; onKey: (k: string) => vo
                   {k === "del" ? (
                     <Delete size={28} color={ink} strokeWidth={1.9} />
                   ) : (
-                    <Text style={[nums, { fontSize: k === "," ? 38 : 34, fontWeight: "500", color: ink, marginTop: k === "," ? -12 : 0 }]}>{k}</Text>
+                    <Text style={[nums, { fontSize: k === "00" ? 30 : 34, fontWeight: "500", color: ink }]}>{k}</Text>
                   )}
                 </>
               )}

@@ -209,8 +209,9 @@ export default function WilloPass({
               </View>
               <Animated.View style={[{ alignItems: "center", paddingTop: 16, paddingBottom: 18 }, amountStyle]}>
                 <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={{ color: t.text }}>
-                  <Text style={{ fontSize: big * 0.68, fontWeight: "500", letterSpacing: -1 }}>R$ </Text>
-                  <Text style={{ fontSize: big, fontWeight: "600", letterSpacing: -2.8, fontVariant: ["tabular-nums"] }}>{passAmount(data.amount)}</Text>
+                  {/* The same type as the amount typed and reviewed: R$ soft and bold, the figure heavy. */}
+                  <Text style={{ fontSize: Math.round(big * 0.42), fontWeight: "700", color: t.muted }}>R$ </Text>
+                  <Text style={{ fontSize: big, fontWeight: "800", letterSpacing: -big * 0.035, fontVariant: ["tabular-nums"] }}>{passAmount(data.amount)}</Text>
                 </Text>
                 <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 8, maxWidth: "100%" }}>
                   {Icon && data.kind !== "transferencia" ? (

@@ -88,8 +88,10 @@ export default function TransactionExperience({
   const [slideAt, setSlideAt] = useState({ x: 0, y: 0, w: 0 });
   /* The light keeps flying after the Pass is in, so it lands on the seal of the Pass on screen. */
   const [flying, setFlying] = useState(false);
-  /* The Pass's height, measured from an unseen copy while the review is read: the space it needs
-     is held from the start, so the sheet does not grow — and cut the receipt off — as it comes in. */
+  /* The Pass's height, measured from an unseen copy while the review is read. The review stays
+     compact (the slide low, no empty room); the moment the slide is done the space grows to the
+     Pass's while the review dims and the light rises, so the receipt arrives whole, never cut off
+     by a sheet still growing. */
   const [passH, setPassH] = useState(0);
 
   const confirm = async () => {
@@ -112,7 +114,8 @@ export default function TransactionExperience({
       setSaved(done);
       /* The Pass — seal, title and card together — the moment the entry is written, while the
          light is still rising, so it rises onto the receipt. Only a beat for the review to go. */
-      const left = reduce ? 0 : Math.max(0, 260 - (Date.now() - began));
+      /* The sheet's growing (420 ms) done before the receipt comes in. */
+      const left = Math.max(0, (reduce ? 0 : 420) - (Date.now() - began));
       if (left > 0) await new Promise((r) => setTimeout(r, left));
       setPhase("pass");
     } catch {
@@ -153,7 +156,7 @@ export default function TransactionExperience({
   /* 38–64 for the review's amount, fitting the width. */
   const reviewSize = Math.max(38, amountSize(data.amount, (box.w || 340) - 20, 64));
   return (
-    <View key="review" style={{ minHeight: passH }} onLayout={(e) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+    <View key="review" style={{ minHeight: phase === "review" ? 0 : passH }} onLayout={(e) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
       {/* The unseen copy of the Pass, measured once. */}
       {passH === 0 && (
         <View pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden style={{ position: "absolute", left: 0, right: 0, top: 0, opacity: 0 }} onLayout={(e) => setPassH(Math.ceil(e.nativeEvent.layout.height) + 6)}>

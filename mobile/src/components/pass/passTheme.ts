@@ -1,3 +1,4 @@
+import { CATEGORY_GROUP_DEFS } from "@/lib/categoryGroups";
 import { isLight } from "~/theme/theme";
 
 /**
@@ -152,11 +153,18 @@ export function passRows(e: {
   const pay = income ? "Na conta" : e.method === "cartao" ? (e.installments && e.installments > 1 ? `Crédito · ${e.installments}x` : "Crédito") : "Débito";
   return [
     { icon: income ? "tipo-entrada" : "tipo-saida", label: "Tipo", value: KIND_LABEL[e.kind] },
-    { icon: "categoria", label: "Categoria", value: e.category || "Outros" },
+    categoryRow(e.category),
     { icon: "instituicao", label: "Instituição", value: e.bank?.name ?? "—", bank: e.bank ?? undefined },
     { icon: "pagamento", label: income ? "Recebimento" : "Pagamento", value: pay },
     date,
   ];
+}
+
+/** The category by its group — Alimentação, with Cafeteria under it; on its own when it has none. */
+function categoryRow(category?: string | null): PassRow {
+  const c = category || "Outros";
+  const group = CATEGORY_GROUP_DEFS.find((g) => g.categories.includes(c))?.name;
+  return group && group !== c ? { icon: "categoria", label: "Categoria", value: group, sub: c } : { icon: "categoria", label: "Categoria", value: c };
 }
 
 /** The time of day now, HH:MM, for an entry written just now. */

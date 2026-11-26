@@ -52,7 +52,7 @@ export const KNOWN_SUBS: KnownSub[] = [
   { name: "Notion", domain: "notion.so", hex: "#111111", match: ["notion"], accent: "#A1A1AA" },
   { name: "Wellhub", domain: "wellhub.com", hex: "#D4FF00", match: ["wellhub", "gympass"] },
   { name: "Smart Fit", domain: "smartfit.com.br", hex: "#FFD100", match: ["smart fit", "smartfit"] },
-  { name: "Mercado Livre", domain: "mercadolivre.com.br", hex: "#FFE600", match: ["meli+", "mercado livre", "mercado"] },
+  { name: "Mercado Livre", domain: "mercadolivre.com.br", hex: "#FFE600", match: ["meli+", "mercado livre", "mercadolivre"] },
   { name: "iFood", domain: "ifood.com.br", hex: "#EA1D2C", match: ["ifood"] },
   { name: "Uber One", domain: "uber.com", hex: "#111111", match: ["uber"], accent: "#A1A1AA" },
   { name: "Twitch", domain: "twitch.tv", hex: "#9146FF", match: ["twitch"] },
@@ -68,7 +68,8 @@ export function knownSub(name: string): KnownSub | null {
   let best: { sub: KnownSub; len: number } | null = null;
   for (const sub of KNOWN_SUBS) {
     for (const m of sub.match) {
-      const hit = m.length <= 3 ? new RegExp(`\\b${m}\\b`).test(n) : n.includes(m);
+      /* Whole words only, always: "mercado" inside "supermercado" is not Mercado Livre. */
+      const hit = new RegExp(`(^|[^a-z0-9])${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^a-z0-9])`).test(n);
       if (hit && (!best || m.length > best.len)) best = { sub, len: m.length };
     }
   }
