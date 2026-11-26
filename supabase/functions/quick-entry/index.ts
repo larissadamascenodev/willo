@@ -19,8 +19,12 @@ const corsHeaders = {
  */
 
 const GEMINI_MODELS = ["gemini-3.5-flash-lite", "gemini-3.6-flash"];
-/* The lite model answers text in a second but hangs on audio until the clock runs out. */
-const GEMINI_AUDIO_MODELS = ["gemini-3.6-flash"];
+/* The lite model answers text in a second but hangs on audio until the clock runs out. When the
+   model says it is busy (503, "high demand") it is asked once more a moment later, and then a
+   second model is tried, before the person is told it did not work. */
+const GEMINI_AUDIO_MODELS = ["gemini-3.6-flash", "gemini-3.6-flash", "gemini-3.5-flash"];
+/* A busy answer is worth a short wait before the next try. */
+const BUSY = new Set([429, 500, 503]);
 const GEMINI_TIMEOUT_MS = 12_000;
 
 const FALLBACK_CATEGORIES = [
@@ -68,6 +72,7 @@ async function callGemini(system: string, parts: Part[], schema: Record<string, 
       if (!res.ok) {
         lastError = `${model}: ${res.status} ${(await res.text()).slice(0, 300)}`;
         console.error(lastError);
+        if (BUSY.has(res.status)) await new Promise((r) => setTimeout(r, 700));
         continue;
       }
       const data = await res.json();
