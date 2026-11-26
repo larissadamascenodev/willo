@@ -39,12 +39,16 @@ export async function listPending(): Promise<CopilotItem[]> {
   return ((data ?? []) as CopilotItem[]).map((r) => ({ ...r, amount: Number(r.amount) }));
 }
 
-/** Confirmed as it stands, or as it was changed: a transaction now, and off the list. */
-export async function confirmPending(item: CopilotItem, userId: string) {
+/**
+ * Confirmed as it stands, or as it was changed: a transaction now, and off the list. `id` is
+ * the review's own (so a retry writes it once); resolves with the entry once it is written.
+ */
+export async function confirmPending(item: CopilotItem, userId: string, id?: string) {
   const credit = item.type === "despesa" && item.payment_method === "cartao" && !!item.credit_card_id;
   const day = item.occurred_at.slice(0, 10);
   const tx = (await createTransaction(
     {
+      id,
       name: item.name,
       type: item.type,
       amount: item.amount,
@@ -59,10 +63,11 @@ export async function confirmPending(item: CopilotItem, userId: string) {
       observation: item.raw ? `Willo Copilot · ${item.raw}`.slice(0, 280) : "Willo Copilot",
     },
     userId,
-  )) as { id?: string } | null;
+  )) as { id?: string; time?: string | null } | null;
   await table().update({ status: "confirmado", transaction_id: tx?.id ?? null }).eq("id", item.id);
   window.dispatchEvent(new CustomEvent("transaction-created"));
   window.dispatchEvent(new CustomEvent("copilot-changed"));
+  return { id: tx?.id ?? id ?? "", time: tx?.time ? String(tx.time).slice(0, 5) : null };
 }
 
 export async function discardPending(id: string) {

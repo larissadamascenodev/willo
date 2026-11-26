@@ -22,6 +22,10 @@ import { confirmPending, discardPending, listHistory, useCopilot, type CopilotIt
 import { useAuth } from "~/lib/auth";
 import { syncDeviceNotifications } from "~/lib/deviceNotifications";
 import { showToast } from "~/lib/toast";
+import TransactionExperience from "~/components/pass/TransactionExperience";
+import { nowTime, passRows } from "~/components/pass/passTheme";
+import { colorFor } from "@/lib/banks";
+import { preloadConfirm } from "~/lib/sounds";
 import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
@@ -153,7 +157,24 @@ function CopilotScreen() {
       setBusy(null);
     }
   };
-  const confirm = (item: CopilotItem) => void save(item);
+  /* One purchase confirmed: the Willo review, the slide and the Pass. */
+  const [reviewing, setReviewing] = useState<CopilotItem | null>(null);
+  const [writing, setWriting] = useState(false);
+  const confirm = (item: CopilotItem) => {
+    if (!user) return;
+    if (!modeOf(item)) {
+      showToast(`${item.name}: escolha débito ou crédito antes de confirmar.`);
+      return;
+    }
+    preloadConfirm();
+    setReviewing(withAccount(withGuess(item)));
+  };
+  const reviewBank = (item: CopilotItem) => {
+    const card = item.credit_card_id ? cards.find((c) => c.id === item.credit_card_id) : null;
+    const acc = !card && item.account_id ? accounts.find((a) => a.id === item.account_id) : null;
+    const it = card ?? acc;
+    return it ? { name: it.name, hex: colorFor(it.name, (it as { color?: string | null }).color ?? null) } : null;
+  };
 
   const list = items ?? [];
   /* The reminders follow the list: one fewer waiting, the evening's notice says so. */
@@ -296,6 +317,34 @@ function CopilotScreen() {
       </BottomSheet>
 
       {/* What came before. */}
+      <BottomSheet open={!!reviewing} onClose={() => !writing && setReviewing(null)} full>
+        {reviewing && user ? (
+          <View style={{ paddingHorizontal: 14, paddingTop: 4, paddingBottom: 8 }}>
+            <TransactionExperience
+              data={{
+                kind: reviewing.type === "receita" ? "receita" : "despesa",
+                amount: reviewing.amount,
+                title: reviewing.name,
+                category: reviewing.category || "Outros",
+                rows: passRows({
+                  kind: reviewing.type === "receita" ? "receita" : "despesa",
+                  category: reviewing.category || "Outros",
+                  bank: reviewBank(reviewing),
+                  method: reviewing.credit_card_id ? "cartao" : "conta",
+                  date: reviewing.occurred_at.slice(0, 10),
+                }),
+              }}
+              onConfirm={async (id) => {
+                const done = await confirmPending(reviewing, user.id, id);
+                return { id: done.id || id, time: done.time ?? nowTime() };
+              }}
+              onPhase={(p) => setWriting(p === "saving" || p === "flow")}
+              onDone={() => setReviewing(null)}
+            />
+          </View>
+        ) : null}
+      </BottomSheet>
+
       <BottomSheet open={showHistory} onClose={() => setShowHistory(false)} full>
         <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
           <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>Histórico do Copilot</Text>

@@ -1,5 +1,6 @@
 import type { AnswerCard } from "~/components/willo/AnswerCards";
 import type { ReceiptLine } from "~/components/registro/ReceiptCard";
+import type { PassData } from "~/components/pass/passTheme";
 
 /**
  * The conversations with Willo, kept on the phone.
@@ -13,7 +14,8 @@ export type ChatItem =
   | { kind: "msg"; id: string; role: "bot" | "user"; text: string }
   | { kind: "done"; id: string; text: string; total?: number; income?: boolean }
   | { kind: "card"; id: string; card: AnswerCard }
-  | { kind: "receipt"; id: string; line: ReceiptLine; when: string };
+  /* `pass`: the Willo Pass the chat showed (older chats keep their slip). */
+  | { kind: "receipt"; id: string; line: ReceiptLine; when: string; pass?: PassData };
 
 export interface SavedChat {
   id: string;

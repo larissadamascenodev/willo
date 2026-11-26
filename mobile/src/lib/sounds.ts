@@ -49,3 +49,38 @@ export function playCash() {
     /* No sound this time. */
   }
 }
+
+/* ── The confirmation of the Willo Pass: the coin, at the moment the receipt appears. ── */
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const CONFIRM = require("../../assets/sounds/willo-confirm.mp3") as number;
+let confirmPlayer: AudioPlayer | null = null;
+
+/** Have the Pass's coin ready before the confirmation, so it starts the moment it is asked. */
+export function preloadConfirm() {
+  try {
+    if (!confirmPlayer) {
+      const made = createAudioPlayer(CONFIRM);
+      made.addListener("playbackStatusUpdate", (status) => {
+        if (status.didJustFinish) void made.seekTo(0);
+      });
+      confirmPlayer = made;
+    }
+    void playback();
+  } catch {
+    /* No sound this time. */
+  }
+}
+
+/** The coin, once, at the Pass's 120 ms. */
+export function playConfirm() {
+  try {
+    preloadConfirm();
+    const p = confirmPlayer!;
+    p.volume = 0.8;
+    if (p.currentTime > 0.02) void p.seekTo(0).then(() => p.play());
+    else p.play();
+  } catch {
+    /* No sound this time. */
+  }
+}

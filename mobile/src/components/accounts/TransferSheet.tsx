@@ -10,9 +10,11 @@ import BankMark from "~/components/BankMark";
 import RaisedButton from "~/components/RaisedButton";
 import { isAhead, todayIso } from "~/components/registro/EntryForm";
 import { AccountSheet, Amount, DateSheet, Keypad, centsOf, dayShort, typeKey } from "~/components/registro/NewEntry";
-import { ArrowRight, CalendarDays, ChevronDown, ChevronRight, Clock, X } from "~/components/icons";
+import { ArrowRight, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock, X } from "~/components/icons";
+import TransactionExperience from "~/components/pass/TransactionExperience";
+import { nowTime, passRows } from "~/components/pass/passTheme";
+import { preloadConfirm } from "~/lib/sounds";
 import { money } from "~/lib/money";
-import { showToast } from "~/lib/toast";
 import { tallSheetBody } from "~/lib/sheetRoom";
 import { useAuth } from "~/lib/auth";
 import { INK, RED } from "~/theme/tokens";
@@ -56,6 +58,8 @@ export default function TransferSheet({ open, onClose, fromId: startFrom }: { op
   const [sheet, setSheet] = useState<null | "from" | "to" | "date">(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /* The amount and the accounts first; then the Willo review, the slide and the Pass. */
+  const [stage, setStage] = useState<"edit" | "confirm">("edit");
 
   /* Fresh each time it opens: the balances as they are now, the main account first. */
   useEffect(() => {
@@ -64,6 +68,8 @@ export default function TransferSheet({ open, onClose, fromId: startFrom }: { op
     setDate(todayIso());
     setSheet(null);
     setError(null);
+    setStage("edit");
+    preloadConfirm();
     getAccounts()
       .then((list) => {
         const all = list as unknown as Account[];
@@ -115,26 +121,48 @@ export default function TransferSheet({ open, onClose, fromId: startFrom }: { op
     setRaw((r) => typeKey(r, key));
   };
 
-  const send = async () => {
+  const send = () => {
     if (!ready || !source || !target || !user) return;
-    setSending(true);
     setError(null);
-    try {
-      await createTransfer({ fromId: source.id, toId: target.id, amount: value, date, name: `Transferência para ${target.name}`, status: ahead ? "pendente" : "pago" }, user.id);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-      onClose();
-      showToast(ahead ? `Transferência agendada · ${money(value)}` : `${money(value)} transferidos para ${target.name}`);
-    } catch {
-      setError("Não foi possível transferir. Tente de novo.");
-    } finally {
-      setSending(false);
-    }
+    setStage("confirm");
+  };
+
+  /* Written once, under the review's id, and only then the Pass. */
+  const register = async (id: string) => {
+    if (!source || !target || !user) throw new Error("not ready");
+    const tx = (await createTransfer({ id, fromId: source.id, toId: target.id, amount: value, date, name: `Transferência para ${target.name}`, status: ahead ? "pendente" : "pago" }, user.id)) as { id: string; time?: string | null };
+    return { id: tx.id, time: tx.time ? String(tx.time).slice(0, 5) : nowTime() };
   };
 
   const ARROW = 40;
 
   return (
-    <BottomSheet open={open} onClose={onClose} full nearlyFull>
+    <BottomSheet open={open} onClose={() => !sending && onClose()} full nearlyFull>
+      {stage === "confirm" && source && target ? (
+        <View style={{ height: bodyH, paddingHorizontal: 12, justifyContent: "center" }}>
+          <TransactionExperience
+            data={{
+              kind: "transferencia",
+              amount: value,
+              title: `Para ${target.name}`,
+              rows: passRows({
+                kind: "transferencia",
+                date,
+                from: { name: source.name, hex: colorFor(source.name, source.color) },
+                to: { name: target.name, hex: colorFor(target.name, target.color) },
+              }),
+            }}
+            onConfirm={register}
+            onPhase={(p) => setSending(p === "saving" || p === "flow")}
+            onDone={onClose}
+            left={
+              <RaisedButton size={46} label="Voltar" onPress={() => !sending && setStage("edit")}>
+                <ChevronLeft size={20} color={th("#fff")} strokeWidth={2.4} />
+              </RaisedButton>
+            }
+          />
+        </View>
+      ) : (
       <View style={{ height: bodyH, paddingHorizontal: 12 }}>
         {/* The top row: closing, and the name. */}
         <View style={{ height: 48, paddingHorizontal: 4, flexDirection: "row", alignItems: "center" }}>
@@ -224,12 +252,13 @@ export default function TransferSheet({ open, onClose, fromId: startFrom }: { op
               })}
             >
               <Text style={{ fontSize: 17, fontWeight: "700", color: th("#0B0B0B") }}>
-                {sending ? "Transferindo…" : cents > 0 ? `${ahead ? "Agendar" : "Transferir"} ${money(value)}` : "Transferir"}
+                {cents > 0 ? `${ahead ? "Agendar" : "Transferir"} ${money(value)}` : "Transferir"}
               </Text>
             </Pressable>
           </>
         )}
       </View>
+      )}
 
       {/* ── The smaller sheets: an account for either side, and the day ── */}
       <AccountSheet

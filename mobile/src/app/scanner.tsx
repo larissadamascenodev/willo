@@ -24,11 +24,15 @@ import { createTransaction, getAccounts, getCreditCards } from "@/services/trans
 import { resolveReceiptDate } from "@/lib/receiptDate";
 import ScanResultCard, { type ScanAccount, type ScanItem } from "~/components/scan/ScanResultCard";
 import BottomSheet from "~/components/BottomSheet";
-import { SavedView, type Card } from "~/components/registro/entryParts";
-import type { ReceiptLine } from "~/components/registro/ReceiptCard";
-import { Camera, ImageIcon, PenLine, X } from "~/components/icons";
+import { type Card } from "~/components/registro/entryParts";
+import TransactionExperience from "~/components/pass/TransactionExperience";
+import { nowTime, passRows } from "~/components/pass/passTheme";
+import RaisedButton from "~/components/RaisedButton";
+import { colorFor } from "@/lib/banks";
+import { preloadConfirm } from "~/lib/sounds";
+import * as Crypto from "expo-crypto";
+import { Camera, ChevronLeft, ImageIcon, PenLine, X } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
-import { sparkle } from "~/lib/sparkles";
 import { processScanPhoto, type PickedPhoto } from "~/lib/scanUpload";
 import { INK } from "~/theme/tokens";
 
@@ -48,7 +52,7 @@ const th = <T,>(color: T, role?: Role): T => thIn("dark", color, role);
  * the form, never a spinner left turning.
  */
 
-type Phase = "camera" | "reading" | "result" | "failed" | "saved";
+type Phase = "camera" | "reading" | "result" | "failed" | "review";
 
 function Scanner() {
   /* Drawn again in place when the theme changes. */
@@ -74,7 +78,8 @@ function Scanner() {
   const cardsRef = useRef<Card[]>([]);
   cardsRef.current = cards;
   /* What was written, as the receipt shows it, and when. */
-  const [saved, setSaved] = useState<{ lines: ReceiptLine[]; at: Date } | null>(null);
+  /* The ids the review writes the chosen lines under — fixed for the review, so a retry never doubles them. */
+  const lineIds = useRef<string[]>([]);
   /* A reading the person walked away from must not land on the next photo. */
   const attempt = useRef(0);
 
@@ -152,19 +157,29 @@ function Scanner() {
     setPhoto(null);
     setItems([]);
     setFailure("");
-    setSaved(null);
     setPhase("camera");
   };
 
-  const confirm = async () => {
-    const chosen = items.filter((i) => i.selected !== false);
+  const chosen = items.filter((i) => i.selected !== false);
+  const confirm = () => {
     if (!user || chosen.length === 0) return;
+    lineIds.current = [];
+    preloadConfirm();
+    setPhase("review");
+  };
+
+  /** Each chosen line written once — the first under the review's id — and only then the Pass. */
+  const register = async (id: string) => {
+    if (!user) throw new Error("signed out");
     setConfirming(true);
     try {
-      for (const item of chosen) {
+      if (lineIds.current.length !== chosen.length) lineIds.current = chosen.map((_, i) => (i === 0 ? id : Crypto.randomUUID()));
+      let first: { id: string; time?: string | null } | null = null;
+      for (const [i, item] of chosen.entries()) {
         const credit = item.type !== "receita" && item.payment_method === "cartao" && !!item.credit_card_id;
-        await createTransaction(
+        const tx = (await createTransaction(
           {
+            id: lineIds.current[i],
             name: item.merchant || item.description,
             type: (item.type as "receita" | "despesa") || "despesa",
             amount: item.amount,
@@ -184,39 +199,25 @@ function Scanner() {
             installment_current: item.installment_current || null,
           } as never,
           user.id,
-        );
+        )) as { id: string; time?: string | null };
+        first ??= tx;
       }
       window.dispatchEvent(new CustomEvent("transaction-created"));
-      setSaved({
-        at: new Date(),
-        lines: chosen.map((item, i) => {
-          const credit = item.type !== "receita" && item.payment_method === "cartao" && !!item.credit_card_id;
-          const where = credit
-            ? cards.find((c) => c.id === item.credit_card_id)?.name
-            : accounts.find((a) => a.id === (item.account_id || accountId))?.name;
-          return {
-            id: String(i),
-            name: item.merchant || item.description,
-            category: item.category || "Outros",
-            amount: item.amount,
-            type: item.type === "receita" ? "receita" : "despesa",
-            method: where ? (item.type === "receita" ? where : `${credit ? "Crédito" : "Débito"} · ${where}`) : null,
-            installments: item.installment_total && item.installment_total > 1 ? item.installment_total : null,
-            day: resolveReceiptDate(item.date),
-            repeat: item.is_recurring ? "fixa" : item.installment_total && item.installment_total > 1 ? "parcelado" : "unica",
-            scheduled: !credit && item.status === "pendente",
-          };
-        }),
-      });
-      setPhase("saved");
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-    } catch (err) {
-      setFailure(err instanceof Error ? err.message : "Não consegui salvar agora.");
-      setPhase("failed");
+      return { id: first!.id, time: first!.time ? String(first!.time).slice(0, 5) : nowTime() };
     } finally {
       setConfirming(false);
     }
   };
+
+  /* What the review and the Pass show: the first line read (a receipt is nearly always one). */
+  const lead = chosen[0];
+  const leadCredit = !!lead && lead.type !== "receita" && lead.payment_method === "cartao" && !!lead.credit_card_id;
+  const leadBank = lead
+    ? leadCredit
+      ? cards.find((c) => c.id === lead.credit_card_id)
+      : accounts.find((a) => a.id === (lead.account_id || accountId))
+    : null;
+  const leadKind = lead?.type === "receita" ? ("receita" as const) : ("despesa" as const);
 
   /* Done: everything closes and the home is what is left. */
   const finish = () => (cartao ? router.back() : router.dismissTo("/" as never));
@@ -463,19 +464,29 @@ function Scanner() {
           bring up a second sheet while the first is still leaving, so the receipt never
           came and the screen was left stuck on the photo. Pulled down while checking, it
           goes back to the camera; once written, it is done. ── */}
-      <BottomSheet open={phase === "result" || (phase === "saved" && !!saved)} full={phase === "saved"} onClose={phase === "saved" ? finish : again}>
-        {phase === "saved" && saved && saved.lines[0] ? (
-          <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 }}>
-            <SavedView
-              line={saved.lines[0]}
-              lines={saved.lines}
-              savedAt={saved.at}
-              title={saved.lines.length > 1 ? `${saved.lines.length} lançamentos registrados` : undefined}
-              onLanded={sparkle}
-              onClose={finish}
-              onSee={() => (cartao ? router.replace(`/fatura/${cartao}/lancamentos` as never) : router.dismissTo("/transacoes" as never))}
-              seeLabel={cartao ? "Ver na fatura" : "Ver transações"}
-              more={{ label: "Escanear outro", onPress: again }}
+      <BottomSheet open={phase === "result" || phase === "review"} full={phase === "review"} onClose={phase === "review" ? () => !confirming && finish() : again}>
+        {phase === "review" && lead ? (
+          <View style={{ paddingHorizontal: 14, paddingTop: 4, paddingBottom: 8 }}>
+            <TransactionExperience
+              data={{
+                kind: leadKind,
+                amount: chosen.length > 1 ? chosen.reduce((n, i) => n + (Number(i.amount) || 0), 0) : lead.amount,
+                title: chosen.length > 1 ? `${lead.merchant || lead.description} e mais ${chosen.length - 1}` : lead.merchant || lead.description,
+                category: lead.category || "Outros",
+                rows: passRows({
+                  kind: leadKind,
+                  category: lead.category || "Outros",
+                  bank: leadBank ? { name: leadBank.name, hex: colorFor(leadBank.name, (leadBank as { color?: string | null }).color ?? null) } : null,
+                  method: leadCredit ? "cartao" : "conta",
+                  installments: lead.installment_total || null,
+                  date: resolveReceiptDate(lead.date),
+                }),
+              }}
+              onConfirm={register}
+              onDone={finish}
+              left={
+                <RaisedButtonBack onPress={() => !confirming && setPhase("result")} />
+              }
             />
           </View>
         ) : (
@@ -488,7 +499,7 @@ function Scanner() {
             onAccountChange={setAccountId}
             lowConfidence={confidence > 0 && confidence < 0.7}
             confirming={confirming}
-            onConfirm={() => void confirm()}
+            onConfirm={confirm}
           />
         )}
       </BottomSheet>
@@ -597,3 +608,12 @@ function StatusPill({ label }: { label: string }) {
 }
 
 export default withPro(Scanner);
+
+/** Back to the lines read, from the Willo review. */
+function RaisedButtonBack({ onPress }: { onPress: () => void }) {
+  return (
+    <RaisedButton size={46} label="Voltar" onPress={onPress}>
+      <ChevronLeft size={21} color={themed("#fff")} strokeWidth={2.4} />
+    </RaisedButton>
+  );
+}

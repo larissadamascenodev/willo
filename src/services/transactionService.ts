@@ -31,6 +31,22 @@ export interface CreateTransactionInput {
   observation?: string | null;
   credit_card_id?: string | null;
   parent_transaction_id?: string | null;
+  /**
+   * The entry's own id, chosen by the screen before it is sent (one per review). Sent again
+   * after a failure whose answer never came, it finds the entry already written and returns
+   * it instead of writing a second one.
+   */
+  id?: string;
+}
+
+/** The database's "already exists" for a repeated id: the first try had in fact been written. */
+const DUPLICATE = "23505";
+
+/** The entry written under `id`, when a repeated send finds it already there. */
+async function existing(id: string) {
+  const { data, error } = await supabase.from("transactions").select().eq("id", id).single();
+  if (error) throw error;
+  return data;
 }
 
 export interface TransactionFilters {
@@ -110,6 +126,7 @@ export async function createTransaction(input: CreateTransactionInput, userId: s
   const { data, error } = await supabase
     .from("transactions")
     .insert({
+      ...(input.id ? { id: input.id } : {}),
       user_id: userId,
       name: toTitleCase(input.name),
       type: input.type,
@@ -130,7 +147,10 @@ export async function createTransaction(input: CreateTransactionInput, userId: s
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (input.id && error.code === DUPLICATE) return existing(input.id);
+    throw error;
+  }
   notifyFinanceDataChanged();
   return data;
 }
@@ -141,13 +161,14 @@ export async function createTransaction(input: CreateTransactionInput, userId: s
  * is settled ("pago") — the database moves them.
  */
 export async function createTransfer(
-  input: { fromId: string; toId: string; amount: number; date: string; name: string; observation?: string | null; status?: "pago" | "pendente" },
+  input: { fromId: string; toId: string; amount: number; date: string; name: string; observation?: string | null; status?: "pago" | "pendente"; /** As createTransaction's: one per review, so a repeat never writes twice. */ id?: string },
   userId: string,
 ) {
   const time = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false });
   const { data, error } = await supabase
     .from("transactions")
     .insert({
+      ...(input.id ? { id: input.id } : {}),
       user_id: userId,
       name: input.name,
       type: "transferencia",
@@ -165,7 +186,10 @@ export async function createTransfer(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (input.id && error.code === DUPLICATE) return existing(input.id);
+    throw error;
+  }
   notifyFinanceDataChanged();
   return data;
 }

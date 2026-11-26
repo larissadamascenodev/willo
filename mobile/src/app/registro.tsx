@@ -20,6 +20,9 @@ import ParticleOrb, { type OrbMode } from "~/components/registro/ParticleOrb";
 import { ArrowUp, Camera, ChevronLeft, Clock, Mic, PenLine, SlidersHorizontal, Sparkles, X } from "~/components/icons";
 import ReceiptCard, { type ReceiptLine } from "~/components/registro/ReceiptCard";
 import { commentAfter } from "~/lib/afterEntry";
+import WilloPass from "~/components/pass/WilloPass";
+import { nowTime, passRows, type PassData } from "~/components/pass/passTheme";
+import { colorFor } from "@/lib/banks";
 import RaisedButton from "~/components/RaisedButton";
 import WilloSettings from "~/components/willo/WilloSettings";
 import ChatHistory from "~/components/willo/ChatHistory";
@@ -92,7 +95,8 @@ type Item =
   | { kind: "batch"; id: string }
   | { kind: "done"; id: string; text: string; total?: number; income?: boolean }
   | { kind: "card"; id: string; card: AnswerCard }
-  | { kind: "receipt"; id: string; line: ReceiptLine; when: Date };
+  /* `pass`: the Willo Pass, sent in the conversation; `fresh` plays it in (just written). */
+  | { kind: "receipt"; id: string; line: ReceiptLine; when: Date; pass?: PassData; fresh?: boolean };
 
 interface Line {
   batchId: string;
@@ -603,7 +607,7 @@ function Registro() {
     for (const i of items) {
       if (i.kind === "msg") kept.push({ kind: "msg", id: i.id, role: i.role, text: i.text });
       else if (i.kind === "done" || i.kind === "card") kept.push(i);
-      else if (i.kind === "receipt") kept.push({ ...i, when: i.when.toISOString() });
+      else if (i.kind === "receipt") kept.push({ kind: "receipt", id: i.id, line: i.line, when: i.when.toISOString(), pass: i.pass });
     }
     saveChat(user.id, { id: chatId.current, items: kept });
   }, [items, user]);
@@ -784,21 +788,72 @@ function Registro() {
     const saved = justSaved.current;
     if (entry.state !== "idle" || !saved) return;
     justSaved.current = null;
-    setItems((m) => [...m, { kind: "receipt", id: uid(), line: saved.line, when: saved.when }]);
+    {
+      /* As its Willo Pass, like everything written from the chat. */
+      const l = saved.line;
+      const kind = l.type === "receita" ? ("receita" as const) : ("despesa" as const);
+      const bankName = l.method?.includes("·") ? l.method.split("·").pop()!.trim() : l.method && !/^(Débito|Crédito)$/.test(l.method) ? l.method : null;
+      const credit = !!l.method?.startsWith("Crédito");
+      const pass: PassData = {
+        kind,
+        amount: l.amount,
+        title: l.name,
+        category: l.category,
+        rows: passRows({ kind, category: l.category, bank: bankName ? { name: bankName, hex: colorFor(bankName, null) } : null, method: credit ? "cartao" : "conta", installments: l.installments, date: l.day ?? saved.when.toISOString().slice(0, 10) }),
+        time: nowTime(),
+      };
+      setItems((m) => [...m, { kind: "receipt", id: uid(), line: l, when: saved.when, pass, fresh: true }]);
+    }
     const { name, category, amount, type, installments, day, repeat, scheduled } = saved.line;
     void commentAfter({ name, category, amount, type, installments, day: day ?? saved.when.toISOString().slice(0, 10), repeat: repeat ?? "unica", scheduled }, radar?.forecast.endBalance).then((said) => pushBot(said));
   }, [entry.state, pushBot, radar]);
 
-  /* What was written lands in the thread as a line from him once it is in. */
+  /* Understood whole (nothing to ask): written at once, no sheet — once per round, so a failed
+     save is not retried by itself but left to the sheet to try again. */
+  const autoConfirmed = useRef<string | null>(null);
+  useEffect(() => {
+    if (entry.state !== "confirm" || entry.question || entry.lines.length === 0) return;
+    const key = entry.lines.map((l) => l.draft.id).join(",");
+    if (autoConfirmed.current === key) return;
+    autoConfirmed.current = key;
+    void entry.confirm();
+  }, [entry.state, entry.question, entry.lines, entry]);
+
+  /* What was written lands in the conversation as its Willo Pass, and he says what he makes of it. */
   const lastSaved = useRef<string | null>(null);
   useEffect(() => {
     if (entry.state !== "saved" || entry.lines.length === 0) return;
     const key = entry.lines.map((l) => l.txId ?? l.draft.id).join(",");
     if (lastSaved.current === key) return;
     lastSaved.current = key;
-    const what = entry.lines.map((l) => `${l.draft.name}, ${money(l.draft.amount)}`).join("; ");
-    pushBot(entry.lines.length > 1 ? `Anotei: ${what}.` : `Anotado: ${what}.`);
-  }, [entry.state, entry.lines, pushBot]);
+    const when = new Date();
+    const passes: Item[] = entry.lines.map((l) => {
+      const d = l.draft;
+      const credit = d.paymentMethod === "cartao" && !!d.creditCardId;
+      const bank = credit ? setup.cards.find((c) => c.id === d.creditCardId) : setup.accounts.find((a) => a.id === d.accountId);
+      const kind = d.type === "receita" ? ("receita" as const) : ("despesa" as const);
+      return {
+        kind: "receipt",
+        id: uid(),
+        when,
+        fresh: true,
+        line: { id: d.id, name: d.name, category: d.category ?? "Outros", amount: d.amount, type: d.type, day: d.date },
+        pass: {
+          kind,
+          amount: d.amount,
+          title: d.name,
+          category: d.category ?? "Outros",
+          rows: passRows({ kind, category: d.category ?? "Outros", bank: bank ? { name: bank.name, hex: colorFor(bank.name, null) } : null, method: credit ? "cartao" : "conta", date: d.date }),
+          id: l.txId ?? null,
+          time: nowTime(),
+        },
+      };
+    });
+    setItems((m) => [...m, ...passes]);
+    const first = entry.lines[0].draft;
+    void commentAfter({ name: first.name, category: first.category ?? "Outros", amount: first.amount, type: first.type, installments: null, day: first.date, repeat: "unica", scheduled: first.status === "pendente" }, radar?.forecast.endBalance).then((said) => pushBot(said));
+    entry.reset();
+  }, [entry.state, entry.lines, pushBot, setup, radar, entry]);
 
   const submitText = useCallback(() => {
     const said = text.trim();
@@ -1022,7 +1077,7 @@ function Registro() {
                 </View>
               ) : item.kind === "receipt" ? (
                 <View key={item.id} style={{ paddingVertical: 8 }}>
-                  <ReceiptCard sound={false} lines={[item.line]} when={item.when} />
+                  {item.pass ? <WilloPass data={item.pass} play={!!item.fresh} actions={false} width={Math.min(width - 32, 380)} /> : <ReceiptCard sound={false} lines={[item.line]} when={item.when} />}
                 </View>
               ) : item.kind === "card" ? (
                 <AnswerCardView key={item.id} card={item.card} />
@@ -1221,6 +1276,7 @@ function Registro() {
       {/* What was heard, for a look before it is written. */}
       <VoiceEntrySheet
         entry={entry}
+        direct
         onSaved={(line, when) => {
           justSaved.current = { line, when };
         }}

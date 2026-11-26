@@ -75,7 +75,17 @@ function how(draft: QuickDraft, setup: QuickSetup) {
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export default function VoiceEntrySheet({ entry, onSaved }: { entry: VoiceEntry; onSaved?: (line: ReceiptLine, when: Date) => void }) {
+export default function VoiceEntrySheet({
+  entry,
+  onSaved,
+  direct = false,
+}: {
+  entry: VoiceEntry;
+  onSaved?: (line: ReceiptLine, when: Date) => void;
+  /** In the chat: what was understood whole is written straight away, its Pass sent in the
+      conversation; the sheet only comes up when something has to be asked, or a save failed. */
+  direct?: boolean;
+}) {
   const router = useRouter();
   const { state, lines, transcript, question, categoryChips, setup, message } = entry;
   const open = state === "confirm" || state === "saving" || state === "saved";
@@ -110,6 +120,8 @@ export default function VoiceEntrySheet({ entry, onSaved }: { entry: VoiceEntry;
   const total = lines.reduce((t, l) => t + (l.draft.type === "receita" ? l.draft.amount : -l.draft.amount), 0);
   const options = question && question.kind !== "category" ? question.options : [];
   const single = lines.length === 1 ? lines[0].draft : null;
+
+  if (direct && !(state === "confirm" && (question || message))) return null;
 
   if (flow) {
     return (

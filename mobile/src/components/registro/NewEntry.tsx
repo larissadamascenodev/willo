@@ -1,23 +1,16 @@
-import { useEffect, useMemo, useRef, useState, type ComponentRef, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { ActivityIndicator, Keyboard, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions, type TextStyle } from "react-native";
 import Animated, {
   cancelAnimation,
   Easing,
   FadeIn,
   FadeOut,
-  runOnJS,
-  useAnimatedProps,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withDelay,
   withRepeat,
-  withSpring,
   withTiming,
-  type SharedValue,
 } from "react-native-reanimated";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Svg, { Path } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { createTransaction, getAccounts, getCreditCards, getRecentTransactions } from "@/services/transactionService";
@@ -32,7 +25,7 @@ import Glass from "~/components/Glass";
 import RaisedButton from "~/components/RaisedButton";
 import MonthCalendar from "~/components/eventos/MonthCalendar";
 import { isoOf, todayIso } from "~/components/registro/EntryForm";
-import { invoiceMonthOf, MONTH_NAMES, type Account, type Card } from "~/components/registro/entryParts";
+import { MONTH_NAMES, type Account, type Card } from "~/components/registro/entryParts";
 import {
   ArrowUp,
   CalendarDays,
@@ -40,10 +33,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronsRight,
   CircleAlert,
-  CircleCheck,
-  Clock,
   Delete,
   Mic,
   Repeat as RepeatIcon,
@@ -57,11 +47,12 @@ import { chipFill, chipInk } from "~/lib/chip";
 import { suggestCategory } from "~/lib/categorize";
 import { money } from "~/lib/money";
 import { tallSheetBody } from "~/lib/sheetRoom";
-import { sheetLight } from "~/lib/sheetWave";
-import { playCash, preloadCash } from "~/lib/sounds";
+import TransactionExperience from "~/components/pass/TransactionExperience";
+import { nowTime, passRows } from "~/components/pass/passTheme";
+import { preloadCash, preloadConfirm } from "~/lib/sounds";
 import { loudnessOf, MicrophoneDenied, useVoice } from "~/lib/voice";
 import { useAuth } from "~/lib/auth";
-import { AMBER, GREEN, INCOME, INK, RED } from "~/theme/tokens";
+import { GREEN, INCOME, INK, RED } from "~/theme/tokens";
 import { th } from "~/theme/theme";
 
 /**
@@ -87,13 +78,12 @@ import { th } from "~/theme/theme";
 
 type Kind = "despesa" | "receita";
 type Method = "conta" | "cartao";
-type Stage = "edit" | "confirm" | "done";
+type Stage = "edit" | "confirm";
 type Repeat = "unica" | "fixa" | "parcelado";
 type Sheet = null | "conta" | "data" | "repetir" | "nome";
 type Listen = "off" | "on" | "reading";
 type Acc = Account & { current_balance?: number | string | null };
 type Option = Acc | Card;
-const AnimatedPath = Animated.createAnimatedComponent(Path);
 type IconC = ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
 
 const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }, default: {} }) as TextStyle;
@@ -209,6 +199,7 @@ export default function NewEntry({
 
   useEffect(() => {
     preloadCash();
+    preloadConfirm();
     getAccounts()
       .then((list) => setAccounts((list as unknown as Acc[]).filter((a) => a.type !== "investment")))
       .catch(() => undefined);
@@ -318,51 +309,35 @@ export default function NewEntry({
     setStage("confirm");
   };
 
-  const register = async () => {
-    if ((!user && !dryRun) || saving || !picked) return;
-    setSaving(true);
-    setError(null);
-    /* Let go: the light comes up at the foot and stays a moment while it is saved, then
-       rises and leaves, and the success comes in behind it. No words in the middle. */
-    if (!reduce) sheetLight("charge");
-    const began = Date.now();
-    try {
-      if (!dryRun && user) {
-        await createTransaction(
-          {
-            name: title,
-            type: kind,
-            /* In instalments the purchase carries one instalment's value; the instalments repeat it. */
-            amount: n ? Math.round(cents / n) / 100 : value,
-            category: category ?? "Outros",
-            date,
-            status,
-            payment_method: how,
-            account_id: credit ? null : picked.id,
-            credit_card_id: credit ? picked.id : null,
-            recurrence_type: n ? "parcelado" : repeat === "fixa" ? "fixa" : "unica",
-            installments: n,
-            installment_current: n ? 1 : null,
-            observation: null,
-          } as never,
-          user.id,
-        );
-        window.dispatchEvent(new CustomEvent("transaction-created"));
-      }
-      if (!reduce) {
-        const left = 950 - (Date.now() - began);
-        if (left > 0) await new Promise((r) => setTimeout(r, left));
-        sheetLight("launch");
-        await new Promise((r) => setTimeout(r, 420));
-      }
-      setStage("done");
-    } catch {
-      sheetLight("off");
-      setError("Não consegui salvar agora. Tente de novo.");
-      setTries((t) => t + 1);
-    } finally {
-      setSaving(false);
-    }
+  /**
+   * Writes the entry under the review's own id (so a repeat finds it instead of writing a
+   * second) and resolves only once the database has it; the Pass plays after that.
+   */
+  const register = async (id: string) => {
+    if (!picked) throw new Error("no account");
+    if (dryRun || !user) return { id, time: nowTime() };
+    const tx = (await createTransaction(
+      {
+        id,
+        name: title,
+        type: kind,
+        /* In instalments the purchase carries one instalment's value; the instalments repeat it. */
+        amount: n ? Math.round(cents / n) / 100 : value,
+        category: category ?? "Outros",
+        date,
+        status,
+        payment_method: how,
+        account_id: credit ? null : picked.id,
+        credit_card_id: credit ? picked.id : null,
+        recurrence_type: n ? "parcelado" : repeat === "fixa" ? "fixa" : "unica",
+        installments: n,
+        installment_current: n ? 1 : null,
+        observation: null,
+      } as never,
+      user.id,
+    )) as { id: string; time?: string | null };
+    window.dispatchEvent(new CustomEvent("transaction-created"));
+    return { id: tx.id, time: tx.time ? String(tx.time).slice(0, 5) : nowTime() };
   };
 
   /* ── Spoken instead: the Willo fills in what it heard and goes to the check; what was not
@@ -506,18 +481,6 @@ export default function NewEntry({
 
   const [nameW, setNameW] = useState(0);
 
-  const again = () => {
-    setStage("edit");
-    setRaw("");
-    setName("");
-    setCategory(null);
-    setByHand(false);
-    setDate(todayIso());
-    setRepeat("unica");
-    setPending(false);
-    setError(null);
-  };
-
   /* ── The sheet's height: nearly the whole screen for the entry (riding the keyboard at
      once), and on the check and the success only what they hold, the sheet easing down to
      it and back up when the entry is opened again. ── */
@@ -534,13 +497,6 @@ export default function NewEntry({
   const heightStyle = useAnimatedStyle(() => ({ height: sheetH.get() }));
   const measure = (e: { nativeEvent: { layout: { height: number } } }) => setNatural(Math.ceil(e.nativeEvent.layout.height));
 
-  /* ── Done: the coin and the confetti, as the light leaves ── */
-  const [box, setBox] = useState({ w: 0, h: 0 });
-  useEffect(() => {
-    if (stage !== "done") return;
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-    playCash();
-  }, [stage]);
 
 
   const hex = category ? categoryHex(category) : "#8A8F98";
@@ -548,57 +504,6 @@ export default function NewEntry({
   const rowH = compact ? 50 : 60;
   const repeatLabel = repeat === "fixa" ? "Todo mês" : n ? (cents > 0 ? `${n}x de ${money(value / n)}` : `${n}x`) : credit ? "À vista" : "Única";
   const paidLabel = ahead ? "Agendado" : pending ? (income ? "A receber" : "Pendente") : income ? "Recebido" : "Pago";
-  /* What will be (and was) written, row by row. On the check each row opens what changes it
-     (the name, the category, the account, the day, how often) and the last one flips whether
-     it is paid; on the success they only read. */
-  const detailRows = (editable: boolean) => {
-    const rows: { label: string; value: string; faint?: boolean; sub?: string; mark?: Option | null; cat?: string; right?: React.ReactNode; onPress?: () => void }[] = [
-      { label: "Descrição", value: name.trim() ? title : editable ? "Adicionar" : title, faint: editable && !name.trim(), onPress: () => setSheet("nome") },
-      { label: "Categoria", value: category ?? "Outros", cat: category ?? "Outros", onPress: () => setPicking(true) },
-      {
-        label: credit ? "Cartão" : income ? "Entra em" : "Conta",
-        value: picked?.name ?? "Escolher",
-        mark: picked,
-        sub: credit && picked ? `Crédito · fatura de ${invoiceMonthOf(date, (picked as Card).closing_day).label}` : income ? undefined : "Débito",
-        onPress: locked ? undefined : () => setSheet("conta"),
-      },
-      { label: "Data", value: dayLong(date), onPress: () => setSheet("data") },
-      {
-        label: n ? "Parcelas" : "Repetição",
-        value: repeat === "fixa" ? "Todo mês" : n ? `${n}x de ${money(value / n)}` : credit ? "À vista" : "Só desta vez",
-        onPress: () => setSheet("repetir"),
-      },
-      ...(!credit
-        ? [
-            {
-              label: "Situação",
-              value: paidLabel,
-              right: editable && !ahead ? <MiniSwitch on={!pending} /> : undefined,
-              onPress: ahead
-                ? undefined
-                : () => {
-                    tick();
-                    setPending((p) => !p);
-                  },
-            },
-          ]
-        : []),
-    ];
-    return rows.map((r, i) => (
-      <DetailRow
-        key={r.label}
-        label={r.label}
-        value={r.value}
-        faint={r.faint}
-        sub={r.sub}
-        mark={r.mark ?? null}
-        cat={r.cat}
-        right={r.right}
-        onPress={editable ? r.onPress : undefined}
-        last={i === rows.length - 1}
-      />
-    ));
-  };
   const accountNote = (o: Option) => {
     if ("limit" in o && o.limit != null) return `Disponível ${money(Number(o.limit) - (Number(o.used_limit) || 0))}`;
     if ("closing_day" in o && o.closing_day) return `Fecha dia ${o.closing_day}`;
@@ -607,13 +512,7 @@ export default function NewEntry({
   };
 
   return (
-    <Animated.View
-      onLayout={(e) => {
-        const { width, height } = e.nativeEvent.layout;
-        setBox({ w: width, h: height });
-      }}
-      style={[{ paddingHorizontal: 10, overflow: "hidden" }, heightStyle]}
-    >
+    <Animated.View style={[{ paddingHorizontal: 10, overflow: "hidden" }, heightStyle]}>
       {stage === "edit" && (
         <Animated.View key="edit" entering={FadeIn.duration(200)} exiting={FadeOut.duration(120)} style={{ height: bodyH }}>
           <View style={{ height: 48, paddingHorizontal: 6, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -807,116 +706,40 @@ export default function NewEntry({
 
       {stage === "confirm" && (
         <Animated.View key="confirm" onLayout={measure} entering={FadeIn.duration(220)} exiting={FadeOut.duration(220)} style={{ paddingHorizontal: 10, paddingBottom: 6 }}>
-          <View style={{ height: 48, flexDirection: "row", alignItems: "center" }}>
-            <RaisedButton
-              size={46}
-              label="Voltar"
-              onPress={() => {
-                if (saving) return;
-                setError(null);
-                setStage("edit");
-              }}
-            >
-              <ChevronLeft size={21} color={th("#fff")} strokeWidth={2.4} />
-            </RaisedButton>
-            <Text numberOfLines={1} style={{ flex: 1, textAlign: "center", fontSize: 16, fontWeight: "700", color: th("#fff") }}>
-              Confira antes de salvar
-            </Text>
-            <View style={{ width: 46 }} />
-          </View>
-
-          {/* The amount, a tap away from the keys (and from Despesa / Receita). */}
-          <Pressable
-            onPress={() => {
-              if (saving) return;
-              setStage("edit");
+          <TransactionExperience
+            data={{
+              kind: income ? "receita" : "despesa",
+              amount: value,
+              title,
+              category: category ?? "Outros",
+              rows: passRows({
+                kind: income ? "receita" : "despesa",
+                category: category ?? "Outros",
+                bank: picked ? { name: picked.name, hex: colorFor(picked.name, picked.color) } : null,
+                method: how,
+                installments: n,
+                date,
+              }),
             }}
-            accessibilityRole="button"
-            accessibilityLabel={`Valor: ${money(value)}. Alterar`}
-            style={({ pressed }) => ({ marginTop: 14, alignItems: "center", opacity: pressed ? 0.7 : 1 })}
-          >
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[nums, { fontSize: 58, fontWeight: "800", letterSpacing: -2, color: th(income ? INCOME : "#fff") }]}>
-              {money(value)}
-            </Text>
-            {n ? <Text style={[nums, { marginTop: 2, fontSize: 14, color: th(INK.soft) }]}>{`${n}x de ${money(value / n)}`}</Text> : null}
-          </Pressable>
-
-          <View style={{ marginTop: 20, paddingHorizontal: 16, paddingVertical: 2, borderRadius: 22, borderCurve: "continuous", borderWidth: 1, borderColor: th("rgba(255,255,255,0.09)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
-            {detailRows(true)}
-          </View>
-
-          {error && <Text style={{ marginTop: 10, textAlign: "center", fontSize: 13.5, color: th(RED) }}>{error}</Text>}
-
-          <View style={{ marginTop: 24 }}>
-            <SwipeToConfirm key={tries} label="Deslize para salvar" busy={saving} onDone={() => void register()} />
-          </View>
+            onConfirm={register}
+            onPhase={(p) => setSaving(p === "saving" || p === "flow")}
+            onDone={onClose}
+            left={
+              <RaisedButton
+                size={46}
+                label="Voltar"
+                onPress={() => {
+                  if (saving) return;
+                  setError(null);
+                  setStage("edit");
+                }}
+              >
+                <ChevronLeft size={21} color={th("#fff")} strokeWidth={2.4} />
+              </RaisedButton>
+            }
+          />
         </Animated.View>
       )}
-
-      {stage === "done" && (
-        <Animated.View key="done" onLayout={measure} entering={FadeIn.duration(reduce ? 200 : 360)} style={{ paddingHorizontal: 10, paddingTop: 14, paddingBottom: 6 }}>
-          {/* One focus: the check, then how much. */}
-          <View style={{ alignItems: "center" }}>
-            <SuccessBadge />
-            <Text style={{ marginTop: 14, fontSize: 15, fontWeight: "600", color: th(INK.soft) }}>{income ? "Receita registrada" : "Despesa registrada"}</Text>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[nums, { marginTop: 2, fontSize: 52, fontWeight: "800", letterSpacing: -1.8, color: th(income ? INCOME : "#fff") }]}>
-              {money(value)}
-            </Text>
-            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 16.5, fontWeight: "600", color: th("rgba(255,255,255,0.88)") }}>
-              {title}
-            </Text>
-            {n ? <Text style={[nums, { marginTop: 3, fontSize: 13.5, color: th(INK.soft) }]}>{`${n}x de ${money(value / n)}`}</Text> : null}
-          </View>
-
-          {/* The rest, quietly, in one glass card. */}
-          <View
-            style={{
-              marginTop: 24,
-              paddingHorizontal: 16,
-              borderRadius: 22,
-              borderCurve: "continuous",
-              borderWidth: 1,
-              borderColor: th("rgba(255,255,255,0.08)", "line"),
-              backgroundColor: th("rgba(255,255,255,0.045)", "bg"),
-            }}
-          >
-            <DoneRow label="Categoria" value={category ?? "Outros"} lead={<View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: categoryHex(category ?? "Outros") }} />} />
-            <DoneRow
-              label={income ? "Entrou em" : credit ? "Cartão" : "Conta"}
-              value={picked ? `${picked.name}${income ? "" : credit ? " · Crédito" : " · Débito"}` : "—"}
-              lead={picked ? <BankMark name={picked.name} hex={colorFor(picked.name, picked.color)} size={20} /> : null}
-            />
-            <DoneRow label="Data" value={dayLong(date)} />
-            {credit && picked ? <DoneRow label="Fatura" value={capital(invoiceMonthOf(date, (picked as Card).closing_day).label)} /> : null}
-            {repeat === "fixa" ? <DoneRow label="Repetição" value="Todo mês" /> : null}
-            {!credit ? (
-              <DoneRow
-                label="Situação"
-                value={paidLabel}
-                lead={<View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: pending || ahead ? AMBER : GREEN }} />}
-                last
-              />
-            ) : null}
-          </View>
-
-          <View style={{ marginTop: 22 }}>
-            <Pressable onPress={onClose} style={({ pressed }) => ({ height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.85 : 1 })}>
-              <Text style={{ fontSize: 17, fontWeight: "700", color: th("#0B0B0B") }}>Concluir</Text>
-            </Pressable>
-            <View style={{ marginTop: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 14 }}>
-              <Pressable onPress={again} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-                <Text style={{ fontSize: 14.5, fontWeight: "600", color: th(INK.soft) }}>Registrar outra</Text>
-              </Pressable>
-              <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: th(INK.softer) }} />
-              <Pressable onPress={onSeeTransactions} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-                <Text style={{ fontSize: 14.5, fontWeight: "600", color: th(INK.soft) }}>Ver transações</Text>
-              </Pressable>
-            </View>
-          </View>
-        </Animated.View>
-      )}
-
-      {stage === "done" && !reduce && box.w > 0 && <Confetti w={box.w} h={box.h} />}
 
       {/* ── The smaller sheets ── */}
       <AccountSheet
@@ -1263,168 +1086,6 @@ export function Keypad({ rowH, onKey }: { rowH: number; onKey: (k: string) => vo
 
 /* ───────────────────────────── The check ───────────────────────────── */
 
-function DetailRow({
-  label,
-  value,
-  faint,
-  sub,
-  warn,
-  mark,
-  cat,
-  right,
-  onPress,
-  last,
-}: {
-  label: string;
-  value: string;
-  faint?: boolean;
-  sub?: string;
-  warn?: boolean;
-  mark: Option | null;
-  cat?: string;
-  /** Drawn in place of the arrow: a switch, say. */
-  right?: React.ReactNode;
-  /** Changes the row; without it the row only reads. */
-  onPress?: () => void;
-  last: boolean;
-}) {
-  const hex = cat ? categoryHex(cat) : null;
-  const Icon = cat ? categoryIcon(cat) : null;
-  const body = (
-    <>
-      <Text style={{ width: 90, fontSize: 14.5, color: th(INK.soft) }}>{label}</Text>
-      <View style={{ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-        {mark ? <BankMark name={mark.name} hex={colorFor(mark.name, mark.color)} size={24} /> : null}
-        {hex && Icon ? (
-          <View style={{ width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
-            <Icon size={13} color={th(chipInk(hex))} strokeWidth={2.4} />
-          </View>
-        ) : null}
-        <View style={{ flexShrink: 1, alignItems: "flex-end" }}>
-          <Text numberOfLines={1} style={[nums, { fontSize: 15, fontWeight: "700", color: th(faint ? INK.soft : "#fff") }]}>
-            {value}
-          </Text>
-          {sub ? (
-            <Text numberOfLines={1} style={[nums, { marginTop: 1, fontSize: 12.5, color: th(warn ? AMBER : INK.soft) }]}>
-              {sub}
-            </Text>
-          ) : null}
-        </View>
-        {right ?? (onPress ? <ChevronRight size={15} color={th(INK.softer)} strokeWidth={2.4} /> : null)}
-      </View>
-    </>
-  );
-  const row = { minHeight: 46, paddingVertical: 8, flexDirection: "row" as const, alignItems: "center" as const, gap: 12, borderBottomWidth: last ? 0 : 1, borderBottomColor: th("rgba(255,255,255,0.07)", "line") };
-  if (!onPress) return <View style={row}>{body}</View>;
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${label}: ${value}. Alterar`}
-      style={({ pressed }) => [row, { opacity: pressed ? 0.6 : 1 }]}
-    >
-      {body}
-    </Pressable>
-  );
-}
-
-/**
- * Slid across to save: a white knob on glass. Only once it is let go at the end does the light
- * rise through the sheet (WaveLayer); let go before it and the knob springs back. VoiceOver can
- * still activate it.
- */
-function SwipeToConfirm({ label, busy, onDone }: { label: string; busy: boolean; onDone: () => void }) {
-  const KNOB = 56;
-  const PAD = 4;
-  const [w, setW] = useState(0);
-  const max = Math.max(0, w - KNOB - PAD * 2);
-  const x = useSharedValue(0);
-  const shine = useSharedValue(0);
-  const fired = useRef(false);
-
-  useEffect(() => {
-    shine.set(withRepeat(withTiming(1, { duration: 1300, easing: Easing.inOut(Easing.quad) }), -1, true));
-    return () => cancelAnimation(shine);
-  }, [shine]);
-
-  const fire = () => {
-    if (fired.current) return;
-    fired.current = true;
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
-    onDone();
-  };
-
-  const pan = Gesture.Pan()
-    .enabled(!busy && max > 0)
-    .activeOffsetX([-4, 4])
-    .failOffsetY([-26, 26])
-    .onUpdate((e) => {
-      x.set(Math.min(max, Math.max(0, e.translationX)));
-    })
-    .onEnd(() => {
-      if (x.get() >= max * 0.85) {
-        x.set(withTiming(max, { duration: 120 }));
-        runOnJS(fire)();
-      } else {
-        x.set(withSpring(0, { duration: 420, dampingRatio: 0.82 }));
-      }
-    });
-
-  const knob = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));
-  const fill = useAnimatedStyle(() => ({ width: x.get() + KNOB + PAD * 2 }));
-  const hint = useAnimatedStyle(() => ({ opacity: max > 0 ? Math.max(0, 1 - (x.get() / max) * 1.6) : 1 }));
-  const chevrons = useAnimatedStyle(() => ({ opacity: 0.35 + shine.get() * 0.65, transform: [{ translateX: shine.get() * 4 }] }));
-
-  const H = KNOB + PAD * 2;
-  const trail = th("rgba(255,255,255,0.14)", "bg");
-  const a11y = Platform.OS === "web" ? {} : { accessibilityActions: [{ name: "activate" as const }], onAccessibilityAction: () => fire() };
-  return (
-    <View style={{ height: H }}>
-      <GestureDetector gesture={pan}>
-        <View
-          onLayout={(e) => setW(e.nativeEvent.layout.width)}
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel={label}
-          {...a11y}
-          style={{ height: H, borderRadius: H / 2, overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.14)", "line") }}
-        >
-          <Glass radius={H / 2} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-          <Animated.View style={[{ position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: H / 2, backgroundColor: trail }, fill]} />
-          <Animated.View style={[{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, paddingLeft: KNOB, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }, hint]}>
-            <Text style={{ fontSize: 15.5, fontWeight: "700", color: th("#fff") }}>{label}</Text>
-            <Animated.View style={chevrons}>
-              <ChevronsRight size={18} color={th(INK.soft)} strokeWidth={2.4} />
-            </Animated.View>
-          </Animated.View>
-          <Animated.View
-            style={[
-              {
-                position: "absolute",
-                left: PAD,
-                top: PAD,
-                width: KNOB,
-                height: KNOB,
-                borderRadius: KNOB / 2,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: th("#fff", "bg"),
-                shadowColor: "#000",
-                shadowOpacity: 0.28,
-                shadowRadius: 8,
-                shadowOffset: { width: 0, height: 2 },
-              },
-              knob,
-            ]}
-          >
-            <ChevronRight size={26} color={th("#0B0B0B")} strokeWidth={2.8} />
-          </Animated.View>
-        </View>
-      </GestureDetector>
-    </View>
-  );
-}
-
 /* ───────────────────────────── Done ───────────────────────────── */
 
 /** Recording, the way a voice message is: cancel, the time, the voice's own bars, and send. */
@@ -1488,118 +1149,6 @@ function Recorder({ state, loudness, seconds, onCancel, onStop }: { state: Liste
 }
 
 /** The check, in a disc of glass with a soft green light inside; it pops in and draws itself. */
-function SuccessBadge() {
-  const pop = useSharedValue(0);
-  const draw = useSharedValue(0);
-  useEffect(() => {
-    pop.set(withSpring(1, { duration: 560, dampingRatio: 0.62 }));
-    draw.set(withDelay(240, withTiming(1, { duration: 440, easing: Easing.out(Easing.cubic) })));
-  }, [pop, draw]);
-  const badge = useAnimatedStyle(() => ({ opacity: Math.min(1, pop.get() * 1.6), transform: [{ scale: 0.6 + 0.4 * pop.get() }] }));
-  const stroke = useAnimatedProps(() => ({ strokeDashoffset: 24 * (1 - draw.get()) }));
-  return (
-    <Animated.View
-      style={[
-        { width: 68, height: 68, borderRadius: 34, overflow: "hidden", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: th("rgba(255,255,255,0.16)", "line") },
-        badge,
-      ]}
-    >
-      <Glass radius={34} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-      <View style={{ position: "absolute", width: 46, height: 46, borderRadius: 23, backgroundColor: "rgba(103,205,103,0.16)" }} />
-      <Svg width={30} height={30} viewBox="0 0 28 28">
-        <AnimatedPath d="M7 14.5 L12 19.5 L21 9.5" stroke={GREEN} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" fill="none" strokeDasharray="24" animatedProps={stroke} />
-      </Svg>
-    </Animated.View>
-  );
-}
-
-/** One line of the success card: the label, and the value with what marks it. */
-function DoneRow({ label, value, lead, last }: { label: string; value: string; lead?: React.ReactNode; last?: boolean }) {
-  return (
-    <View style={{ minHeight: 48, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: last ? 0 : 1, borderBottomColor: th("rgba(255,255,255,0.06)", "line") }}>
-      <Text style={{ fontSize: 14.5, color: th(INK.soft) }}>{label}</Text>
-      <View style={{ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-        {lead ?? null}
-        <Text numberOfLines={1} style={[nums, { flexShrink: 1, fontSize: 15, fontWeight: "600", color: th("#fff") }]}>
-          {value}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-interface Bit {
-  x0: number;
-  y0: number;
-  vx: number;
-  vy: number;
-  w: number;
-  h: number;
-  color: string;
-  spin: number;
-  flip: number;
-  phase: number;
-  delay: number;
-  life: number;
-}
-
-const CONFETTI = ["#FFFFFF", "#FFFFFF", "#FFB3EA", "#A9E4FF", "#C9B8FF", "#FFE7A3"];
-
-/** A few, thrown up from the foot of the sheet with the wave, fluttering back down. */
-function Confetti({ w, h }: { w: number; h: number }) {
-  /* The sheet's height when they were thrown; it may still be easing. */
-  const [floor] = useState(h);
-  const clock = useSharedValue(0);
-  useEffect(() => {
-    clock.set(withDelay(260, withTiming(4, { duration: 4000, easing: Easing.linear })));
-  }, [clock]);
-  const bits = useMemo<Bit[]>(() => {
-    let s = Math.floor(Math.random() * 1e9) >>> 0;
-    const r = () => {
-      s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-      return s / 4294967296;
-    };
-    return Array.from({ length: 22 }, () => ({
-      x0: w / 2 + (r() - 0.5) * w * 0.6,
-      y0: floor + 10,
-      vx: (r() - 0.5) * 220,
-      vy: -(520 + r() * 420),
-      w: 4 + r() * 3,
-      h: 7 + r() * 5,
-      color: CONFETTI[Math.floor(r() * CONFETTI.length)],
-      spin: (r() - 0.5) * 900,
-      flip: 6 + r() * 8,
-      phase: r() * Math.PI * 2,
-      delay: r() * 0.25,
-      life: 2.6 + r() * 0.9,
-    }));
-  }, [w, floor]);
-  return (
-    <View pointerEvents="none" style={{ position: "absolute", left: 0, top: 0, width: w, height: h, overflow: "hidden" }}>
-      {bits.map((b, i) => (
-        <ConfettiBit key={i} b={b} clock={clock} />
-      ))}
-    </View>
-  );
-}
-
-function ConfettiBit({ b, clock }: { b: Bit; clock: SharedValue<number> }) {
-  const style = useAnimatedStyle(() => {
-    const t = clock.get() - b.delay;
-    if (t <= 0 || t >= b.life) return { opacity: 0 };
-    const drag = 1.7;
-    const e = Math.exp(-drag * t);
-    const x = b.x0 + (b.vx * (1 - e)) / drag + Math.sin(t * 3 + b.phase) * 9;
-    const y = b.y0 + (b.vy * (1 - e)) / drag + (330 / drag) * (t - (1 - e) / drag);
-    const fade = Math.min(1, (b.life - t) / (b.life * 0.3));
-    return {
-      opacity: Math.min(1, t / 0.06) * fade,
-      transform: [{ translateX: x }, { translateY: y }, { rotate: `${b.spin * t}deg` }, { scaleX: Math.cos(t * b.flip + b.phase) }],
-    };
-  });
-  return <Animated.View style={[{ position: "absolute", left: 0, top: 0, width: b.w, height: b.h, borderRadius: 1.5, backgroundColor: b.color }, style]} />;
-}
-
 /* ───────────────────────────── The smaller sheets ───────────────────────────── */
 
 function SheetHead({ title, onClose }: { title: string; onClose: () => void }) {
