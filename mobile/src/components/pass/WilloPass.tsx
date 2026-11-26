@@ -101,13 +101,14 @@ export default function WilloPass({
     if (!reduce) {
       seal.set(withTiming(1, { duration: 500, easing: OUT }));
       ripple.set(withTiming(1, { duration: 850, easing: Easing.out(Easing.quad) }));
-      check.set(withDelay(120, withTiming(1, { duration: 450, easing: Easing.out(Easing.cubic) })));
-      sparks.set(withDelay(160, withTiming(1, { duration: 1200, easing: Easing.out(Easing.cubic) })));
-      card.set(withDelay(200, withTiming(1, { duration: 850, easing: OUT })));
-      shine.set(withDelay(380, withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) })));
-      amount.set(withDelay(340, withTiming(1, { duration: 650, easing: OUT })));
-      details.set(withDelay(510, withTiming(1, { duration: 650, easing: OUT })));
-      acts.set(withDelay(660, withTiming(1, { duration: 500, easing: OUT })));
+      /* Tighter than the spec's clock, so the card rises while the coin is still ringing. */
+      check.set(withDelay(60, withTiming(1, { duration: 420, easing: Easing.out(Easing.cubic) })));
+      sparks.set(withDelay(80, withTiming(1, { duration: 1100, easing: Easing.out(Easing.cubic) })));
+      card.set(withDelay(60, withTiming(1, { duration: 780, easing: OUT })));
+      shine.set(withDelay(300, withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.quad) })));
+      amount.set(withDelay(200, withTiming(1, { duration: 600, easing: OUT })));
+      details.set(withDelay(340, withTiming(1, { duration: 600, easing: OUT })));
+      acts.set(withDelay(480, withTiming(1, { duration: 480, easing: OUT })));
     }
     return () => {
       if (coin) clearTimeout(coin);

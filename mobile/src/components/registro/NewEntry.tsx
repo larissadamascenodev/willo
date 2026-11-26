@@ -48,9 +48,10 @@ import { suggestCategory } from "~/lib/categorize";
 import { money } from "~/lib/money";
 import { tallSheetBody } from "~/lib/sheetRoom";
 import TransactionExperience from "~/components/pass/TransactionExperience";
+import VoiceOverlay from "~/components/registro/VoiceOverlay";
 import { nowTime, passRows } from "~/components/pass/passTheme";
 import { preloadCash, preloadConfirm } from "~/lib/sounds";
-import { loudnessOf, MicrophoneDenied, useVoice } from "~/lib/voice";
+import { MicrophoneDenied, useVoice } from "~/lib/voice";
 import { useAuth } from "~/lib/auth";
 import { GREEN, INCOME, INK, RED } from "~/theme/tokens";
 import { th } from "~/theme/theme";
@@ -84,6 +85,8 @@ type Sheet = null | "conta" | "data" | "repetir" | "nome";
 type Listen = "off" | "on" | "reading";
 type Acc = Account & { current_balance?: number | string | null };
 type Option = Acc | Card;
+/* The lilac of "Categoria automática": the Willo will choose. */
+const LILAC_SOFT = "#C4B5FD";
 type IconC = ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
 
 const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }, default: {} }) as TextStyle;
@@ -402,13 +405,29 @@ export default function NewEntry({
     }
     if (e.date) setDate(e.date);
     if (e.settled === false && m === "conta") setPending(true);
-    if (m !== "cartao" && repeat === "parcelado") setRepeat("unica");
+    /* How often, from the words: "em 3x", "3 vezes", "em 10 parcelas" on a card; "todo mês",
+       "mensal", "fixo" every month; nothing said, once. */
+    const split = /(\d{1,2})\s*(x\b|vezes|parcelas?)/.exec(said);
+    const times = split ? Number(split[1]) : 0;
+    if (m === "cartao" && times >= 2 && times <= 24) {
+      setRepeat("parcelado");
+      setParts(times);
+    } else if (/todo m[eê]s|todos os meses|mensal|\bfix[oa]\b|recorrente/.test(said)) setRepeat("fixa");
+    else setRepeat("unica");
     setListen("off");
     if (total <= 0) {
       setError("Faltou o valor: diga de novo ou digite nos números.");
       return;
     }
     if (pool.length === 0) {
+      setSheet("conta");
+      return;
+    }
+    /* Which account was not clear — not said with several to choose from, or a bank that has both
+       an account and a card without saying débito or crédito: everything else is filled in and the
+       accounts open, to pick it. */
+    const both = !!named && !e.paymentMethod && accounts.some((a) => a.name.toLowerCase() === named.name.toLowerCase()) && cards.some((c) => c.name.toLowerCase() === named.name.toLowerCase());
+    if (!locked && ((!named && pool.length > 1) || both)) {
       setSheet("conta");
       return;
     }
@@ -479,7 +498,6 @@ export default function NewEntry({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listen, voice.level]);
 
-  const [nameW, setNameW] = useState(0);
 
   /** Another one: the entry again, empty, today. */
   const again = () => {
@@ -578,119 +596,126 @@ export default function NewEntry({
               />
             </View>
 
-            {/* Over the amount, how often and whether it is paid; under it, what it was and its category. */}
+            {/* The amount; under it what it was — a wide field with the microphone at its end — and its category. */}
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 6 }}>
-              <View style={{ marginBottom: typing ? 2 : 8, flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <MiniChip
-                  icon={RepeatIcon}
-                  label={repeatLabel}
+              <Amount raw={raw} income={income} size={typing ? 40 : compact ? 50 : 64} />
+              <View style={{ alignSelf: "stretch", marginTop: typing ? 6 : 14, paddingHorizontal: 8 }}>
+                <View style={{ height: 50, flexDirection: "row", alignItems: "center", gap: 10, borderBottomWidth: 1, borderBottomColor: th(missing && !name.trim() ? RED : "rgba(255,255,255,0.10)", "line") }}>
+                  <View style={{ width: 44 }} />
+                  <TextInput
+                    value={name}
+                    onChangeText={(t) => {
+                      setName(t);
+                      setError(null);
+                      if (t.trim()) setMissing(false);
+                    }}
+                    onFocus={() => setTyping(true)}
+                    onBlur={() => setTyping(false)}
+                    placeholder={income ? "De onde veio?" : "Com o que foi?"}
+                    placeholderTextColor={th(missing ? RED : INK.faint)}
+                    returnKeyType="done"
+                    onSubmitEditing={() => Keyboard.dismiss()}
+                    textAlign="center"
+                    style={[
+                      { flex: 1, minWidth: 0, width: 0, height: 48, padding: 0, textAlign: "center", fontSize: 21, fontWeight: "600", color: th("#fff") },
+                      Platform.OS === "web" ? ({ outlineStyle: "none" } as never) : null,
+                    ]}
+                  />
+                  <Pressable
+                    onPressIn={() => void startVoice()}
+                    onPress={NOOP}
+                    accessibilityLabel="Falar em vez de digitar"
+                    hitSlop={8}
+                    style={({ pressed }) => ({
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderWidth: 1,
+                      borderColor: th("rgba(255,255,255,0.12)", "line"),
+                      backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
+                      opacity: pressed ? 0.6 : 1,
+                    })}
+                  >
+                    <Mic size={19} color={th("#fff")} strokeWidth={2.2} />
+                  </Pressable>
+                </View>
+                {missing && !name.trim() ? (
+                  <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                    <CircleAlert size={15} color={th(RED)} strokeWidth={2.4} />
+                    <Text style={{ fontSize: 12.5, fontWeight: "600", color: th(RED) }}>{income ? "Informe de onde veio o dinheiro" : "Informe com o que você gastou"}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Pressable
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setPicking(true);
+                }}
+                accessibilityLabel={`Categoria: ${category ?? "automática"}. Trocar`}
+                hitSlop={6}
+                style={({ pressed }) => ({
+                  marginTop: 14,
+                  height: 40,
+                  paddingLeft: 6,
+                  paddingRight: 14,
+                  borderRadius: 20,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                  borderWidth: 1,
+                  borderColor: th(category ? "transparent" : "rgba(255,255,255,0.08)", "line"),
+                  backgroundColor: th(category ? chipFill(hex) : "rgba(255,255,255,0.05)", "bg"),
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: th(category ? chipFill(hex) : "transparent", "bg") }}>
+                  <CatIcon size={15} color={category ? th(chipInk(hex)) : th(LILAC_SOFT)} strokeWidth={2.2} />
+                </View>
+                <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: "600", color: category ? th(chipInk(hex)) : th(LILAC_SOFT) }}>
+                  {category ?? "Categoria automática"}
+                </Text>
+                <ChevronDown size={15} color={th(INK.soft)} strokeWidth={2.2} />
+              </Pressable>
+            </View>
+
+            {/* How often and whether it is paid, in one line between two rules, just over the keys. */}
+            {!typing && (
+              <View style={{ marginHorizontal: 8, height: 54, flexDirection: "row", alignItems: "center", borderTopWidth: 1, borderBottomWidth: 1, borderColor: th("rgba(255,255,255,0.08)", "line") }}>
+                <Pressable
                   onPress={() => {
                     Keyboard.dismiss();
                     setSheet("repetir");
                   }}
-                />
+                  accessibilityRole="button"
+                  accessibilityLabel={`Repetição: ${repeatLabel}. Trocar`}
+                  hitSlop={6}
+                  style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, opacity: pressed ? 0.6 : 1 })}
+                >
+                  <RepeatIcon size={19} color={th(INK.soft)} strokeWidth={2} />
+                  <Text style={{ fontSize: 16, fontWeight: "500", color: th("#fff") }}>{repeatLabel}</Text>
+                  <ChevronDown size={15} color={th(INK.soft)} strokeWidth={2.2} />
+                </Pressable>
+                <View style={{ flex: 1 }} />
                 {!credit && (
-                  <PaidTag
-                    on={!pending && !ahead}
-                    disabled={ahead}
-                    label={ahead ? "Agendado" : pending ? (income ? "A receber" : "Pendente") : income ? "Recebido" : "Pago"}
-                    onToggle={() => {
+                  <Pressable
+                    onPress={() => {
+                      if (ahead) return;
                       tick();
                       setPending((p) => !p);
                     }}
-                  />
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: !pending && !ahead, disabled: ahead }}
+                    hitSlop={6}
+                    style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 10, opacity: ahead ? 0.5 : pressed ? 0.7 : 1 })}
+                  >
+                    <Text style={{ fontSize: 16, fontWeight: "500", color: th("#fff") }}>{ahead ? "Agendado" : pending ? (income ? "A receber" : "Pendente") : income ? "Recebido" : "Pago"}</Text>
+                    <MiniSwitch big on={!pending && !ahead} />
+                  </Pressable>
                 )}
               </View>
-              <Amount raw={raw} income={income} size={typing ? 42 : compact ? 56 : 72} />
-              {listen !== "off" ? (
-                <Recorder state={listen} loudness={loudnessOf(voice.level)} seconds={voice.seconds} onCancel={() => void cancelVoice()} onStop={() => void finishVoice()} />
-              ) : (
-                <>
-                  {/* The name sized to its words, so the microphone sits right after them. */}
-                  <View style={{ alignSelf: "stretch", alignItems: "center", marginTop: typing ? 4 : 10 }}>
-                    <Text
-                      numberOfLines={1}
-                      onLayout={(e) => setNameW(Math.ceil(e.nativeEvent.layout.width))}
-                      style={{ position: "absolute", opacity: 0, fontSize: 20, fontWeight: "600" }}
-                    >
-                      {name || (income ? "De onde veio?" : "Com o que foi?")}
-                    </Text>
-                    <View style={{ height: 36, flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      <TextInput
-                        value={name}
-                        onChangeText={(t) => {
-                          setName(t);
-                          setError(null);
-                          if (t.trim()) setMissing(false);
-                        }}
-                        onFocus={() => setTyping(true)}
-                        onBlur={() => setTyping(false)}
-                        placeholder={income ? "De onde veio?" : "Com o que foi?"}
-                        placeholderTextColor={th(missing ? RED : INK.faint)}
-                        returnKeyType="done"
-                        onSubmitEditing={() => Keyboard.dismiss()}
-                        textAlign="center"
-                        style={[
-                          { width: Math.min(Math.max(nameW + 8, 60), 250), height: 36, padding: 0, textAlign: "center", fontSize: 20, fontWeight: "600", color: th("#fff") },
-                          Platform.OS === "web" ? ({ outlineStyle: "none" } as never) : null,
-                        ]}
-                      />
-                      {missing && !name.trim() ? <CircleAlert size={18} color={th(RED)} strokeWidth={2.4} /> : null}
-                      <Pressable
-                        onPressIn={() => void startVoice()}
-                        onPress={NOOP}
-                        accessibilityLabel="Falar em vez de digitar"
-                        hitSlop={8}
-                        style={({ pressed }) => ({
-                          width: 32,
-                          height: 32,
-                          borderRadius: 16,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          borderWidth: 1,
-                          borderColor: th("rgba(255,255,255,0.12)", "line"),
-                          backgroundColor: th("rgba(255,255,255,0.08)", "bg"),
-                          opacity: pressed ? 0.6 : 1,
-                        })}
-                      >
-                        <Mic size={15} color={th("#fff")} strokeWidth={2.3} />
-                      </Pressable>
-                    </View>
-                    {missing && !name.trim() ? (
-                      <Text style={{ marginTop: 2, fontSize: 12.5, fontWeight: "600", color: th(RED) }}>{income ? "Informe de onde veio o dinheiro" : "Informe com o que você gastou"}</Text>
-                    ) : null}
-                  </View>
-                  <Pressable
-                    onPress={() => {
-                      Keyboard.dismiss();
-                      setPicking(true);
-                    }}
-                    accessibilityLabel={`Categoria: ${category ?? "automática"}. Trocar`}
-                    hitSlop={6}
-                    style={({ pressed }) => ({
-                      marginTop: 8,
-                      height: 32,
-                      paddingLeft: 4,
-                      paddingRight: 12,
-                      borderRadius: 16,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 7,
-                      backgroundColor: th(category ? chipFill(hex) : "rgba(255,255,255,0.06)", "bg"),
-                      opacity: pressed ? 0.7 : 1,
-                    })}
-                  >
-                    <View style={{ width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: th(chipFill(hex), "bg") }}>
-                      <CatIcon size={13} color={th(chipInk(hex))} strokeWidth={2.4} />
-                    </View>
-                    <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: "700", color: category ? th(chipInk(hex)) : th(INK.soft) }}>
-                      {category ?? "Categoria automática"}
-                    </Text>
-                    <ChevronDown size={13} color={th(INK.soft)} strokeWidth={2.4} />
-                  </Pressable>
-                </>
-              )}
-            </View>
+            )}
 
             {/* The number keys, straight on the card; aside while the phone's keyboard is up. */}
             {!typing && <Keypad rowH={rowH} onKey={press} />}
@@ -757,6 +782,9 @@ export default function NewEntry({
           />
         </Animated.View>
       )}
+
+      {/* Speaking instead of typing: the blurred screen with the voice's own light. */}
+      <VoiceOverlay stage={listen} level={voice.level} onCancel={() => void cancelVoice()} onStop={() => void finishVoice()} />
 
       {/* ── The smaller sheets ── */}
       <AccountSheet
@@ -951,89 +979,26 @@ export function SmallChip({ icon: Icon, iconColor, label, onPress, disabled }: {
   );
 }
 
-/** Over the amount: how often, small. */
-function MiniChip({ icon: Icon, label, onPress }: { icon: IconC; label: string; onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={() => {
-        tick();
-        onPress();
-      }}
-      accessibilityRole="button"
-      accessibilityLabel={`Repetição: ${label}. Trocar`}
-      hitSlop={6}
-      style={({ pressed }) => ({
-        height: 32,
-        paddingLeft: 11,
-        paddingRight: 9,
-        borderRadius: 16,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-        borderWidth: 1,
-        borderColor: th("rgba(255,255,255,0.08)", "line"),
-        backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
-        opacity: pressed ? 0.7 : 1,
-      })}
-    >
-      <Icon size={14} color={th(INK.soft)} strokeWidth={2.3} />
-      <Text numberOfLines={1} style={[nums, { fontSize: 13, fontWeight: "700", color: th("#fff") }]}>
-        {label}
-      </Text>
-      <ChevronDown size={12} color={th(INK.soft)} strokeWidth={2.4} />
-    </Pressable>
-  );
-}
-
 /** Over the amount: whether it is paid, a small tag with its own switch; the whole tag flips it. */
 /** A small switch, green when on; it only shows, the row or tag around it does the flipping. */
-function MiniSwitch({ on }: { on: boolean }) {
+function MiniSwitch({ on, big = false }: { on: boolean; /** The phone's own switch size, for the line over the keys. */ big?: boolean }) {
+  const w = big ? 50 : 30;
+  const h = big ? 30 : 18;
+  const k = h - 4;
   const x = useSharedValue(on ? 1 : 0);
   useEffect(() => {
     x.set(withTiming(on ? 1 : 0, { duration: 180, easing: Easing.out(Easing.quad) }));
   }, [on, x]);
-  const knob = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() * 12 }] }));
+  const knob = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() * (w - k - 4) }] }));
   const lit = useAnimatedStyle(() => ({ opacity: x.get() }));
   return (
-    <View style={{ width: 30, height: 18, borderRadius: 9, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.2)", "bg") }}>
+    <View style={{ width: w, height: h, borderRadius: h / 2, overflow: "hidden", backgroundColor: th("rgba(255,255,255,0.2)", "bg") }}>
       <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: GREEN }, lit]} />
-      <Animated.View style={[{ position: "absolute", top: 2, left: 2, width: 14, height: 14, borderRadius: 7, backgroundColor: "#FFFFFF" }, knob]} />
+      <Animated.View style={[{ position: "absolute", top: 2, left: 2, width: k, height: k, borderRadius: k / 2, backgroundColor: "#FFFFFF" }, knob]} />
     </View>
   );
 }
 
-function PaidTag({ on, label, disabled, onToggle }: { on: boolean; label: string; disabled?: boolean; onToggle: () => void }) {
-  return (
-    <Pressable
-      onPress={onToggle}
-      disabled={disabled}
-      accessibilityRole="switch"
-      accessibilityState={{ checked: on, disabled }}
-      accessibilityLabel={label}
-      hitSlop={6}
-      style={({ pressed }) => ({
-        height: 32,
-        paddingLeft: 11,
-        paddingRight: 7,
-        borderRadius: 16,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-        borderWidth: 1,
-        borderColor: th("rgba(255,255,255,0.08)", "line"),
-        backgroundColor: th("rgba(255,255,255,0.06)", "bg"),
-        opacity: disabled ? 0.6 : pressed ? 0.7 : 1,
-      })}
-    >
-      <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: "700", color: th("#fff") }}>
-        {label}
-      </Text>
-      <MiniSwitch on={on} />
-    </Pressable>
-  );
-}
-
-/** "R$ 1.250,50" as typed, the cents filled in; faint only while nothing is typed. */
 /** One key of the app's number keys, applied to what has been typed so far ("1250,5"). */
 export function typeKey(r: string, key: string) {
   if (key === "clear") return "";
@@ -1045,6 +1010,7 @@ export function typeKey(r: string, key: string) {
   return i.length >= 9 ? r : r + key;
 }
 
+/** "R$ 1.250,50" as typed, the cents filled in; faint only while nothing is typed. */
 export function Amount({ raw, income, size }: { raw: string; income: boolean; size: number }) {
   const [i, d] = raw.split(",");
   const empty = raw === "";
@@ -1104,66 +1070,6 @@ export function Keypad({ rowH, onKey }: { rowH: number; onKey: (k: string) => vo
 /* ───────────────────────────── The check ───────────────────────────── */
 
 /* ───────────────────────────── Done ───────────────────────────── */
-
-/** Recording, the way a voice message is: cancel, the time, the voice's own bars, and send. */
-function Recorder({ state, loudness, seconds, onCancel, onStop }: { state: Listen; loudness?: number; seconds: number; onCancel: () => void; onStop: () => void }) {
-  const [bars, setBars] = useState<number[]>(() => Array.from({ length: 26 }, () => 0.05));
-  useEffect(() => {
-    if (state !== "on") return;
-    setBars((b) => [...b.slice(1), Math.max(0.05, loudness ?? 0)]);
-  }, [loudness, state]);
-  const dot = useSharedValue(1);
-  useEffect(() => {
-    dot.set(withRepeat(withTiming(0.3, { duration: 620 }), -1, true));
-    return () => cancelAnimation(dot);
-  }, [dot]);
-  const blink = useAnimatedStyle(() => ({ opacity: dot.get() }));
-  const ink = th("rgba(255,255,255,0.85)");
-  return (
-    <Animated.View
-      entering={FadeIn.duration(160)}
-      style={{ alignSelf: "stretch", marginTop: 12, height: 52, borderRadius: 26, overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.12)", "line") }}
-    >
-      <Glass radius={26} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
-      <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 5 }}>
-        {state === "reading" ? (
-          <>
-            <ActivityIndicator style={{ marginLeft: 12 }} color={th("#fff")} />
-            <Text numberOfLines={1} style={{ flex: 1, fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>
-              Entendendo o que você disse…
-            </Text>
-          </>
-        ) : (
-          <>
-            <Pressable
-              onPress={onCancel}
-              accessibilityLabel="Cancelar gravação"
-              hitSlop={4}
-              style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg"), opacity: pressed ? 0.6 : 1 })}
-            >
-              <X size={17} color={th("#fff")} strokeWidth={2.4} />
-            </Pressable>
-            <Animated.View style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: RED }, blink]} />
-            <Text style={[nums, { width: 34, fontSize: 14, fontWeight: "700", color: th("#fff") }]}>{`${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`}</Text>
-            <View style={{ flex: 1, height: 30, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 2.5, overflow: "hidden" }}>
-              {bars.map((v, i) => (
-                <View key={i} style={{ width: 3, height: 3 + v * 26, borderRadius: 1.5, backgroundColor: ink }} />
-              ))}
-            </View>
-            <Pressable
-              onPress={onStop}
-              accessibilityLabel="Parar e preencher"
-              hitSlop={4}
-              style={({ pressed }) => ({ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: pressed ? 0.8 : 1 })}
-            >
-              <ArrowUp size={19} color={th("#0B0B0B")} strokeWidth={2.6} />
-            </Pressable>
-          </>
-        )}
-      </View>
-    </Animated.View>
-  );
-}
 
 /** The check, in a disc of glass with a soft green light inside; it pops in and draws itself. */
 /* ───────────────────────────── The smaller sheets ───────────────────────────── */

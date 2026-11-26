@@ -3,14 +3,14 @@ import { View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming, type SharedValue } from "react-native-reanimated";
 
 /**
- * Willo Flow (Implementação 001): the convergence. Once the entry is written, 65 points of light
+ * Willo Flow (Implementação 001): the convergence. As the slide is done, 65 points of light
  * — not solid confetti — leave the centre of the knob where it stopped and gather at the seal of
  * the Pass, spreading sideways up to ±47.5 % of the width on the way, each 1 to 3.3 across, in
  * #c8aaff, #79e2ca, #ffc08b and #eee0ff, on a smoothed path, their opacity rising and falling as
- * a sine. 740 ms, then the Pass. Drawn over everything, touching nothing.
+ * a sine. 560 ms, then the Pass (once the entry is written). Drawn over everything, touching nothing.
  */
 
-export const FLOW_MS = 740;
+export const FLOW_MS = 560;
 const COLORS = ["#c8aaff", "#79e2ca", "#ffc08b", "#eee0ff"];
 
 interface Spark {

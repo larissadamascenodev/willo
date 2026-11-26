@@ -19,10 +19,10 @@ import { KIND_LABEL, amountSize, passAmount, passTheme, type PassData, type Pass
  * Willo Review: "Confirmar transação", the amount large, and six lines (description, type,
  * category, institution with its mark, payment, date). Willo Slide under it. Let go at 96 % and
  * the entry is written — once: the review carries its own id, so a retry after a failure that
- * never answered finds the entry already there instead of writing a second. Only when the
- * database has said yes does the success begin: the review fades, the 65 points of light leave
- * the knob for the seal (Willo Flow, 740 ms), and the Willo Pass plays in with its coin and its
- * tap. A failure keeps the review, says so, and the slide is ready again — the same id still.
+ * never answered finds the entry already there instead of writing a second. The instant the
+ * slide is done the coin and the light begin — the review fades and the 65 points of light leave
+ * the knob for the seal (Willo Flow, 560 ms) while the entry is written — and the Willo Pass plays
+ * in once the database has it. A failure keeps the review, says so, and the slide is ready again — the same id still.
  */
 
 type Phase = "review" | "saving" | "flow" | "pass";
@@ -91,16 +91,24 @@ export default function TransactionExperience({
     if (sending.current || phase !== "review") return;
     sending.current = true;
     setError(null);
-    setPhase("saving");
+    /* The coin and the light start the instant the slide is done, while the entry is written;
+       the Pass comes once the database has it and the light has reached the seal — one gesture,
+       from the knob to the receipt, on one sound. */
+    playConfirm();
+    const began = Date.now();
+    if (!reduce) {
+      fade.set(withTiming(0, { duration: 320 }));
+      setPhase("flow");
+    } else setPhase("saving");
     try {
       const done = await onConfirm(id.current);
-      playConfirm();
       setSaved(done);
-      if (!reduce) fade.set(withTiming(0, { duration: 400 }));
-      setPhase(reduce ? "pass" : "flow");
-      if (!reduce) setTimeout(() => setPhase("pass"), FLOW_MS);
+      const left = reduce ? 0 : Math.max(0, FLOW_MS - (Date.now() - began));
+      if (left > 0) await new Promise((r) => setTimeout(r, left));
+      setPhase("pass");
     } catch {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined);
+      fade.set(withTiming(1, { duration: 220 }));
       setError("Não consegui salvar agora. Tente de novo.");
       setPhase("review");
       setTries((n) => n + 1);
@@ -135,8 +143,9 @@ export default function TransactionExperience({
         <View style={{ alignItems: "center", paddingTop: 14, paddingBottom: 18 }}>
           <Text style={{ fontSize: 12, color: t.muted }}>{KIND_LABEL[data.kind]}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={{ marginTop: 2, color: t.text }}>
-            <Text style={{ fontSize: reviewSize * 0.62, fontWeight: "500", letterSpacing: -1 }}>R$ </Text>
-            <Text style={{ fontSize: reviewSize, fontWeight: "600", letterSpacing: -2.4, fontVariant: ["tabular-nums"] }}>{passAmount(data.amount)}</Text>
+            {/* The same type as the amount being typed: R$ soft and bold, the figure heavy. */}
+            <Text style={{ fontSize: Math.round(reviewSize * 0.42), fontWeight: "700", color: t.muted }}>R$ </Text>
+            <Text style={{ fontSize: reviewSize, fontWeight: "800", letterSpacing: -reviewSize * 0.035, fontVariant: ["tabular-nums"] }}>{passAmount(data.amount)}</Text>
           </Text>
         </View>
 
