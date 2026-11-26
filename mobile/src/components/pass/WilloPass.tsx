@@ -140,17 +140,14 @@ export default function WilloPass({
   const detailsStyle = rise(details);
   const actsStyle = rise(acts);
 
-  /* The download: a still copy of the record — seal, title and card, on the Pass's own ground,
-     without the buttons — drawn in a clipped box of no height (so nothing changes on screen),
-     captured as a picture and handed to the share sheet (Salvar imagem, WhatsApp…). Nothing is
-     written again. */
+  /* The download: the card itself — the Willo's mark, the amount, the details — captured as it
+     is on screen and handed to the share sheet (Salvar imagem, WhatsApp…). Nothing on screen
+     changes and nothing is written again. */
   const shot = useRef<ComponentRef<typeof View>>(null);
   const exportPass = async () => {
     if (saving) return;
     setSaving(true);
     try {
-      /* Time for the still copy to be laid out and painted. */
-      await new Promise((r) => setTimeout(r, 400));
       const uri = await captureRef(shot, { format: "png", quality: 1, result: "tmpfile" });
       setSaving(false);
       if (!(await Sharing.isAvailableAsync())) throw new Error("share unavailable");
@@ -169,14 +166,6 @@ export default function WilloPass({
 
   return (
     <View>
-      {/* What the download keeps: the seal, the title and the card, on the Pass's ground. */}
-      {saving && (
-        <View pointerEvents="none" style={{ position: "absolute", left: 0, top: 0, width: cardW + 40, height: 0, overflow: "hidden" }}>
-          <View ref={shot} collapsable={false} style={{ width: cardW + 40, paddingHorizontal: 20, paddingTop: 22, paddingBottom: 26, backgroundColor: t.ground }}>
-            <WilloPass data={data} play={false} sound={false} actions={false} bare width={cardW} />
-          </View>
-        </View>
-      )}
       <View style={{ paddingVertical: 4 }}>
         <View style={{ alignItems: "center", marginTop: 6, marginBottom: 18 }}>
           {still ? (
@@ -201,7 +190,8 @@ export default function WilloPass({
         </View>
 
         <Animated.View style={[{ width: cardW, alignSelf: "center", borderRadius: 23, shadowColor: "#000", shadowOpacity: t.cardShadow * 1.5, shadowRadius: 15, shadowOffset: { width: 0, height: 15 } }, cardStyle]}>
-          <View style={{ borderRadius: 23, borderWidth: 1, borderColor: t.cardBorder, overflow: "hidden" }}>
+          {/* What the download keeps: this card alone, as it is. */}
+          <View ref={shot} collapsable={false} style={{ borderRadius: 23, borderWidth: 1, borderColor: t.cardBorder, overflow: "hidden" }}>
             <LinearGradient colors={t.card} locations={[0, 0.47, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
             {/* The inner highlight along the top edge. */}
             <View pointerEvents="none" style={{ position: "absolute", left: 18, right: 18, top: 0, height: 1, backgroundColor: t.light ? "#ffffff" : "rgba(255,255,255,0.22)" }} />

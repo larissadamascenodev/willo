@@ -81,7 +81,7 @@ export function playConfirm() {
   void (async () => {
     try {
       preloadConfirm();
-      await playback();
+      void playback();
       const p = confirmPlayer!;
       p.volume = 0.45;
       const go = () => {

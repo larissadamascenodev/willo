@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Text, View } from "react-native";
 import Animated, { FadeIn, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
 import * as Crypto from "expo-crypto";
@@ -9,6 +9,7 @@ import { RED } from "~/theme/tokens";
 import WilloFlow, { FLOW_MS } from "./WilloFlow";
 import WilloPass from "./WilloPass";
 import WilloSlide, { slideKnobEnd } from "./WilloSlide";
+import { playConfirm, preloadConfirm } from "~/lib/sounds";
 import { KIND_LABEL, amountSize, passAmount, passTheme, type PassData, type PassLink, type PassRow } from "./passTheme";
 
 /**
@@ -74,6 +75,10 @@ export default function TransactionExperience({
   const [saved, setSaved] = useState<{ id: string; time?: string | null } | null>(null);
   /* One id per review: what makes a second send the same entry, never a new one. */
   const id = useRef(Crypto.randomUUID());
+  /* The coin loaded while the review is read, so it starts the instant it is asked. */
+  useEffect(() => {
+    preloadConfirm();
+  }, []);
   const sending = useRef(false);
 
   const [box, setBox] = useState({ w: 0, h: 0 });
@@ -89,6 +94,7 @@ export default function TransactionExperience({
     setPhase("saving");
     try {
       const done = await onConfirm(id.current);
+      playConfirm();
       setSaved(done);
       if (!reduce) fade.set(withTiming(0, { duration: 400 }));
       setPhase(reduce ? "pass" : "flow");
@@ -106,7 +112,7 @@ export default function TransactionExperience({
   if (phase === "pass" && saved) {
     return (
       <Animated.View entering={FadeIn.duration(reduce ? 160 : 120)} style={{ paddingBottom: 6 }}>
-        <WilloPass data={{ ...data, id: saved.id, time: saved.time ?? data.time }} onDone={onDone} links={links} />
+        <WilloPass data={{ ...data, id: saved.id, time: saved.time ?? data.time }} onDone={onDone} links={links} sound={false} />
       </Animated.View>
     );
   }
