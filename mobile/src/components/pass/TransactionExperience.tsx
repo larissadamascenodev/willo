@@ -135,8 +135,10 @@ export default function TransactionExperience({
 
   if (phase === "pass" && saved) {
     return (
-      <View>
-        <Animated.View entering={FadeIn.duration(reduce ? 160 : 120)} style={{ paddingBottom: 6 }}>
+      /* Keyed apart from the review: otherwise the review's faded view (opacity 0) is reused for
+         the Pass and the receipt stays invisible on the phone. */
+      <View key="pass">
+        <Animated.View key="pass-in" entering={FadeIn.duration(reduce ? 160 : 120)} style={{ paddingBottom: 6 }}>
           <WilloPass data={{ ...data, id: saved.id, time: saved.time ?? data.time }} onDone={onDone} links={links} sound={false} />
         </Animated.View>
         {flow}
@@ -147,8 +149,8 @@ export default function TransactionExperience({
   /* 38–64 for the review's amount, fitting the width. */
   const reviewSize = Math.max(38, amountSize(data.amount, (box.w || 340) - 20, 64));
   return (
-    <View onLayout={(e) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
-      <Animated.View style={fadeStyle}>
+    <View key="review" onLayout={(e) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+      <Animated.View key="review-in" style={fadeStyle}>
         {/* The top: back (when there is one), the title. */}
         <View style={{ height: 48, flexDirection: "row", alignItems: "center" }}>
           <View style={{ width: 46 }}>{left}</View>

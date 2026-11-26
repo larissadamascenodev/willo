@@ -87,11 +87,11 @@ export function playConfirm() {
       const p = confirmPlayer!;
       p.volume = 0.45;
       const go = () => {
-        /* A touch slower than recorded, the pitch falling with it (varispeed): a coin settling,
-           not a quick tinkle. Set once the file is loaded, when the player has its item. */
+        /* A touch slower than recorded but in its own tone (pitch kept): the same coin, less
+           hurried. Set once the file is loaded, when the player has its item. */
         try {
-          p.shouldCorrectPitch = false;
-          p.setPlaybackRate(COIN_RATE);
+          p.shouldCorrectPitch = true;
+          p.setPlaybackRate(COIN_RATE, "high");
         } catch {
           /* At its own speed, then. */
         }
