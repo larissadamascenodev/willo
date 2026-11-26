@@ -83,7 +83,7 @@ export function playConfirm() {
       preloadConfirm();
       await playback();
       const p = confirmPlayer!;
-      p.volume = 1;
+      p.volume = 0.45;
       const go = () => {
         if (p.currentTime > 0.02) void p.seekTo(0).then(() => p.play());
         else p.play();

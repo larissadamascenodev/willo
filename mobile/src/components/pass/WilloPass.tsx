@@ -140,16 +140,17 @@ export default function WilloPass({
   const detailsStyle = rise(details);
   const actsStyle = rise(acts);
 
-  /* The download: the record as it is on screen — seal, title and card, on the Pass's own
-     ground, without the buttons — captured as a picture and handed to the share sheet (Salvar
-     imagem, WhatsApp…). Nothing is written again. */
+  /* The download: a still copy of the record — seal, title and card, on the Pass's own ground,
+     without the buttons — drawn in a clipped box of no height (so nothing changes on screen),
+     captured as a picture and handed to the share sheet (Salvar imagem, WhatsApp…). Nothing is
+     written again. */
   const shot = useRef<ComponentRef<typeof View>>(null);
   const exportPass = async () => {
     if (saving) return;
     setSaving(true);
     try {
-      /* A frame for the ground to be painted behind it. */
-      await new Promise((r) => setTimeout(r, 120));
+      /* Time for the still copy to be laid out and painted. */
+      await new Promise((r) => setTimeout(r, 400));
       const uri = await captureRef(shot, { format: "png", quality: 1, result: "tmpfile" });
       setSaving(false);
       if (!(await Sharing.isAvailableAsync())) throw new Error("share unavailable");
@@ -169,7 +170,14 @@ export default function WilloPass({
   return (
     <View>
       {/* What the download keeps: the seal, the title and the card, on the Pass's ground. */}
-      <View ref={shot} collapsable={false} style={{ paddingVertical: 4, backgroundColor: saving ? t.ground : "transparent" }}>
+      {saving && (
+        <View pointerEvents="none" style={{ position: "absolute", left: 0, top: 0, width: cardW + 40, height: 0, overflow: "hidden" }}>
+          <View ref={shot} collapsable={false} style={{ width: cardW + 40, paddingHorizontal: 20, paddingTop: 22, paddingBottom: 26, backgroundColor: t.ground }}>
+            <WilloPass data={data} play={false} sound={false} actions={false} bare width={cardW} />
+          </View>
+        </View>
+      )}
+      <View style={{ paddingVertical: 4 }}>
         <View style={{ alignItems: "center", marginTop: 6, marginBottom: 18 }}>
           {still ? (
             /* Drawn plain when still — and so in the downloaded picture, seal and all. */
