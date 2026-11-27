@@ -68,6 +68,9 @@ const EXAMPLES = (): CopilotItem[] => {
     { ...base, id: "ex-1", name: "Padaria Cleide", amount: 15.5, type: "despesa", occurred_at: at(4), raw: JSON.stringify({ card: "Nubank Débito" }) },
     { ...base, id: "ex-2", name: "H J Damasceno Empreendimentos e Bebidas", amount: 120, type: "receita", occurred_at: at(38), raw: JSON.stringify({ card: "Débito" }) },
     { ...base, id: "ex-3", name: "Transferência entre suas contas", amount: 200, type: "receita", occurred_at: at(95), raw: JSON.stringify({ transfer: true, notice: "Você depositou R$ 200 via Pix e o valor já está rendendo na sua conta." }) },
+    { ...base, id: "ex-6", name: "Transferência entre suas contas", amount: 1, type: "receita", occurred_at: at(10), raw: JSON.stringify({ transfer: true, from: "Nubank PJ", to: "Nubank", notice: "Você recebeu uma transferência de R$ 1,00 de LARISSA DIAS DAMASCENO." }) },
+    { ...base, id: "ex-7", name: "Pix enviado", amount: 25, type: "despesa", occurred_at: at(20), raw: JSON.stringify({ bank: "Nubank", notice: "Pix de R$ 25,00 enviado!" }) },
+    { ...base, id: "ex-8", name: "Cerelo Consórcios", amount: 350, type: "despesa", occurred_at: at(30), raw: JSON.stringify({ bill: true, bank: "Nubank", notice: "Você tem um novo boleto de CERELO CONSÓRCIOS no valor de R$ 350,00." }) },
     { ...base, id: "ex-4", name: "Drogasil", amount: 42.9, type: "despesa", occurred_at: at(60 * 26), raw: JSON.stringify({ card: "Nubank Crédito" }) },
     { ...base, id: "ex-5", name: "iFood", amount: 37.8, type: "despesa", occurred_at: at(60 * 27), raw: JSON.stringify({ card: "Nubank Crédito" }) },
   ] as CopilotItem[];
@@ -99,6 +102,7 @@ const fromValues = (item: CopilotItem, v: EntryValues): CopilotItem => ({
   account_id: v.method === "cartao" ? null : v.whereId,
   credit_card_id: v.method === "cartao" ? v.whereId : null,
   occurred_at: v.date === item.occurred_at.slice(0, 10) ? item.occurred_at : `${v.date}T12:00:00`,
+  entryStatus: v.status === "pendente" ? "pendente" : "pago",
 });
 
 const SOURCE: Record<string, string> = { atalho: "Aproximação", notificacao: "Aviso do banco", email: "E-mail do banco", open_finance: "Open Finance" };
@@ -214,7 +218,8 @@ function CopilotScreen() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       /* Said by Willo, with where it went: debit out of the account, credit onto the invoice. */
       const card = ready.credit_card_id ? cards.find((c) => c.id === ready.credit_card_id)?.name : null;
-      const said = doneLine(ready.type === "receita" ? "entrada" : "compra", { amount: money(ready.amount), who: ready.name, where: card ? `na fatura do ${card}` : ready.category ? `em ${ready.category}` : null });
+      const k = kindOf(ready);
+      const said = doneLine(k === "transferencia" ? "compra" : k, { amount: money(ready.amount), who: ready.name, where: k === "boleto" ? `pra ${new Date(`${ready.occurred_at.slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}` : card ? `na fatura do ${card}` : ready.category ? `em ${ready.category}` : null });
       done(said);
       return true;
     } catch {
@@ -230,7 +235,7 @@ function CopilotScreen() {
      it; no writes it as sent out of the account Willo keeps, which is not counted as spending. */
   const [adding, setAdding] = useState<{ item: CopilotItem; bank: string } | null>(null);
   /* A business account (PJ, Empresas) only matches a business account, and the other way round. */
-  const isBusiness = (name: string) => /pj|empresa/i.test(name);
+  const isBusiness = (name: string) => /\bpj\b|empresa/i.test(name);
   const accountOfBank = (bank: string) =>
     accounts.find((a) => isBusiness(a.name) === isBusiness(bank) && (bankFor(a.name)?.name === bankFor(bank)?.name || plainWords(a.name).some((w) => plainWords(bank).includes(w)))) ?? null;
   const otherThan = (id: string | null) => {
@@ -239,18 +244,13 @@ function CopilotScreen() {
     const kind = (a: Account) => (a as { type?: string }).type;
     return rest.find((a) => a.is_default) ?? rest.find((a) => kind(a) === "checking") ?? rest.find((a) => kind(a) !== "cash" && kind(a) !== "savings") ?? rest[0] ?? null;
   };
-  const writeTransfer = async (item: CopilotItem, there: string | null, quiet = false): Promise<boolean> => {
+  const writeEnds = async (item: CopilotItem, fromId: string | null, toId: string | null, quiet = false): Promise<boolean> => {
     if (examples) {
       if (!quiet) done(doneLine("transferencia", { amount: money(item.amount), who: item.name }));
       leave(item.id);
       return true;
     }
     if (!user) return false;
-    const here = otherThan(there);
-    const incoming = item.type === "receita";
-    /* In: from the account Willo keeps into the bank's; out: the other way. Either end may be outside Willo. */
-    const fromId = incoming ? (here?.id ?? null) : there;
-    const toId = incoming ? there : (here?.id ?? null);
     if (!fromId && !toId) {
       if (!quiet) showToast("Não achei nenhuma conta sua para essa transferência. Crie uma conta primeiro.");
       return false;
@@ -274,35 +274,59 @@ function CopilotScreen() {
       setBusy(null);
     }
   };
-  const transfer = (item: CopilotItem) => {
-    const bank = bankOfNotice(item);
+  /* Both ends of the transfer: the account each bank is in Willo, or the main one for an end the
+     notices did not name. A bank not in Willo yet is asked about first. */
+  const transfer = (item: CopilotItem, extra: Account[] = []) => {
+    const pool = [...accounts, ...extra];
+    const find = (bank: string | null) => (bank ? (pool.find((a) => isBusiness(a.name) === isBusiness(bank) && (bankFor(a.name)?.name === bankFor(bank)?.name || plainWords(a.name).some((w) => plainWords(bank).includes(w)))) ?? null) : null);
+    const route = routeOf(item);
+    const missing = [route.from, route.to].find((b) => b && !find(b));
+    if (missing) return setAdding({ item, bank: missing });
+    const from = find(route.from);
+    const to = find(route.to);
     if (examples) {
-      if (bank && !accountOfBank(bank)) return setAdding({ item, bank });
-      const said = doneLine("transferencia", { amount: money(item.amount), who: item.name });
-      done(said);
+      done(doneLine("transferencia", { amount: money(item.amount), who: item.name, where: [route.from, route.to].every(Boolean) ? `do ${route.from} pro ${route.to}` : null }));
       return leave(item.id);
     }
-    if (!bank) return void writeTransfer(item, otherThan(null)?.id ?? null);
-    const there = accountOfBank(bank);
-    if (there) return void writeTransfer(item, there.id);
-    setAdding({ item, bank });
+    const ends = { from: from?.id ?? null, to: to?.id ?? null };
+    /* An end the notices did not name: the main account, never the same one twice. */
+    if (!route.from && ends.to) ends.from = item.type === "receita" ? (otherThan(ends.to)?.id ?? null) : null;
+    if (!route.to && ends.from) ends.to = item.type === "despesa" ? (otherThan(ends.from)?.id ?? null) : null;
+    void writeEnds(item, ends.from, ends.to);
   };
   const answerAdd = async (yes: boolean) => {
     if (!adding || !user) return;
     const { item, bank } = adding;
     setAdding(null);
+    const route = routeOf(item);
     if (examples) {
-      done(yes ? { title: `${bank} adicionado!`, body: `Já coloquei ${money(item.amount)} lá.` } : { title: "Transferência anotada", body: "Saiu da sua conta, sem contar como gasto." });
+      done(yes ? { title: `${bank} adicionado!`, body: `Já coloquei ${money(item.amount)} lá.` } : { title: "Transferência anotada", body: "Registrei sem criar conta nova, sem contar como gasto." });
       return leave(item.id);
     }
-    if (!yes) return void writeTransfer(item, null);
+    if (!yes) {
+      /* Without that account: only the end Willo keeps moves, never counted as spending. */
+      const keep = (b: string | null) => (b && b !== bank ? (accounts.find((a) => isBusiness(a.name) === isBusiness(b) && bankFor(a.name)?.name === bankFor(b)?.name) ?? null) : null);
+      const from = route.from === bank ? null : (keep(route.from)?.id ?? (item.type === "despesa" ? null : (otherThan(null)?.id ?? null)));
+      const to = route.to === bank ? null : (keep(route.to)?.id ?? null);
+      return void writeEnds(item, from, to);
+    }
     try {
       const made = (await createAccount(user.id, { name: bank, color: bankFor(bank)?.hex ?? null })) as unknown as Account;
       setAccounts((l) => [...l, made]);
-      await writeTransfer(item, made.id);
+      transfer(item, [made]);
     } catch {
       showToast(`Não consegui adicionar o ${bank} agora. Tente de novo.`);
     }
+  };
+
+  /* A new bill: opened to be scheduled — the date it is due (and the amount, if the notice had none)
+     filled in by the person; saved as a bill to pay, not as paid. */
+  const schedule = (item: CopilotItem) => {
+    const raw = rawOf(item);
+    const v = toValues(withAccount(withGuess(item)));
+    setEditing(item);
+    /* Paid from an account when due, never a card's invoice. */
+    setValues({ ...v, method: "conta", whereId: mainAccount(), status: "pendente", cents: raw.noAmount === true ? 0 : v.cents });
   };
 
   /* One purchase confirmed: the Willo review, the slide and the Pass. */
@@ -340,11 +364,14 @@ function CopilotScreen() {
     let moves = 0;
     for (const item of list) {
       const kind = kindOf(item);
+      if (kind === "boleto") continue;
       if (kind === "transferencia") {
-        const bank = bankOfNotice(item);
-        const there = bank ? accountOfBank(bank) : null;
-        if (bank && !there) continue;
-        if (await writeTransfer(item, there?.id ?? otherThan(null)?.id ?? null, true)) {
+        const route = routeOf(item);
+        const from = route.from ? accountOfBank(route.from) : null;
+        const to = route.to ? accountOfBank(route.to) : null;
+        if ((route.from && !from) || (route.to && !to)) continue;
+        const ends = { from: from?.id ?? (item.type === "receita" ? (otherThan(to?.id ?? null)?.id ?? null) : null), to: to?.id ?? (item.type === "despesa" ? (otherThan(from?.id ?? null)?.id ?? null) : null) };
+        if (await writeEnds(item, ends.from, ends.to, true)) {
           count++;
           moves++;
         }
@@ -433,19 +460,19 @@ function CopilotScreen() {
                   <PendingCard
                     item={item}
                     kind={kindOf(item)}
-                    bank={kindOf(item) === "transferencia" ? bankOfNotice(item) : (placeOf(item)?.name ?? null)}
+                    bank={bankOfNotice(item) ?? placeOf(item)?.name ?? null}
                     mode={modeOf(item)}
                     canCredit={kindOf(item) === "compra" && cards.length > 0 && (!modeOf(item) || !!modes[item.id])}
                     onMode={(m) => pickMode(item, m)}
                     busy={busy === item.id}
-                    onConfirm={() => (kindOf(item) === "transferencia" ? transfer(item) : void save(item))}
+                    onConfirm={() => (kindOf(item) === "transferencia" ? transfer(item) : kindOf(item) === "boleto" ? schedule(item) : void save(item))}
                     onDiscard={() => {
                       void Haptics.selectionAsync().catch(() => undefined);
                       setReaction(skipLine(item.id));
                       if (examples) return leave(item.id);
                       void discardPending(item.id);
                     }}
-                    onReview={() => (kindOf(item) === "transferencia" || examples ? (kindOf(item) === "transferencia" ? transfer(item) : void save(item)) : confirm(item))}
+                    onReview={() => (kindOf(item) === "transferencia" ? transfer(item) : kindOf(item) === "boleto" ? schedule(item) : examples ? void save(item) : confirm(item))}
                     onEdit={() => {
                       if (kindOf(item) === "transferencia") return transfer(item);
                       setEditing(item);
@@ -478,9 +505,10 @@ function CopilotScreen() {
         {editing && values && (
           <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
             <Text style={{ fontSize: 22, fontWeight: "800", letterSpacing: -0.5, color: th("#fff") }}>Confira antes de confirmar</Text>
-            {editing.raw ? (
+            {/* What the bank said, as it said it — never the data behind it. */}
+            {typeof rawOf(editing).notice === "string" && rawOf(editing).notice ? (
               <Text numberOfLines={2} style={{ marginTop: 4, fontSize: 12.5, color: th(INK.softer) }}>
-                Aviso do banco: {editing.raw}
+                Aviso do banco: {String(rawOf(editing).notice)}
               </Text>
             ) : null}
             <EntryForm values={values} onChange={(patch) => setValues((v) => (v ? { ...v, ...patch } : v))} accounts={accounts} cards={cards} onPickCategory={() => setPicking(true)} />
@@ -715,7 +743,7 @@ function PendingCard({
   onEdit: () => void;
 }) {
   const income = item.type === "receita";
-  const title = kind === "transferencia" ? "Transferência entre contas" : income ? "Registrar entrada" : "Registrar gasto";
+  const title = kind === "transferencia" ? "Transferência entre contas" : kind === "boleto" ? "Novo boleto" : kind === "saida" ? "Registrar saída" : income ? "Registrar entrada" : "Registrar gasto";
   const blocked = canCredit && !mode;
   return (
     <Pressable
@@ -746,18 +774,18 @@ function PendingCard({
               </Pressable>
             </View>
             {/* Willo asking, a line of his own for this one. */}
-            <Text style={{ marginTop: 1, fontSize: 15, lineHeight: 20, color: th("rgba(255,255,255,0.9)") }}>{askLine(kind, bank, item.id)}</Text>
+            <Text style={{ marginTop: 1, fontSize: 15, lineHeight: 20, color: th("rgba(255,255,255,0.9)") }}>{askLine(kind, bank, item.id, kind === "transferencia" ? routeOf(item) : undefined)}</Text>
           </View>
         </View>
 
         {/* The amount first and larger, then who or what. */}
         <View style={{ marginTop: 12, flexDirection: "row", alignItems: "baseline", gap: 10 }}>
           <Text style={{ color: th("#fff") }}>
-            <Text style={{ fontSize: 14, fontWeight: "700", color: th(INK.softer) }}>{income ? "+ R$ " : "R$ "}</Text>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: th(INK.softer) }}>{income && kind !== "transferencia" ? "+ R$ " : "R$ "}</Text>
             <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1, fontVariant: ["tabular-nums"] }}>{money(item.amount).replace(/^R\$\s?/, "")}</Text>
           </Text>
           <Text numberOfLines={2} style={{ flex: 1, fontSize: 15, lineHeight: 19, fontWeight: "500", color: th("rgba(255,255,255,0.85)") }}>
-            {kind === "transferencia" ? (bank ?? "Entre suas contas") : item.name}
+            {kind === "transferencia" ? [routeOf(item).from, routeOf(item).to].filter(Boolean).join(" → ") || "Entre suas contas" : item.name}
           </Text>
         </View>
 
@@ -810,21 +838,39 @@ function PendingCard({
 type Mode = "conta" | "cartao";
 
 /** A transfer between the person's own accounts, money in, or a purchase. */
-function kindOf(item: CopilotItem): LineKind {
+function rawOf(item: CopilotItem): Record<string, unknown> {
   try {
-    const raw = item.raw ? (JSON.parse(item.raw) as { transfer?: unknown }) : null;
-    if (raw?.transfer === true || /^transfer[eê]ncia entre/i.test(item.name)) return "transferencia";
+    return item.raw ? (JSON.parse(item.raw) as Record<string, unknown>) : {};
   } catch {
-    /* As it reads. */
+    return {};
   }
-  return item.type === "receita" ? "entrada" : "compra";
+}
+
+/** A new bill, a transfer between the person's own accounts, money in, a Pix sent, or a purchase. */
+function kindOf(item: CopilotItem): LineKind {
+  const raw = rawOf(item);
+  if (raw.bill === true) return "boleto";
+  if (raw.transfer === true || /^transfer[eê]ncia entre/i.test(item.name)) return "transferencia";
+  if (item.type === "receita") return "entrada";
+  const said = `${typeof raw.notice === "string" ? raw.notice : ""} ${item.name}`.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  return /\bpix\b|transfer|\bted\b/.test(said) ? "saida" : "compra";
+}
+
+/** The two ends of a transfer, when the notices told them. */
+function routeOf(item: CopilotItem): { from: string | null; to: string | null } {
+  const raw = rawOf(item);
+  const end = (v: unknown) => (typeof v === "string" && v ? v : null);
+  if (raw.from || raw.to) return { from: end(raw.from), to: end(raw.to) };
+  const bank = bankOfNotice(item);
+  return item.type === "receita" ? { from: null, to: bank } : { from: bank, to: null };
 }
 
 /** The bank a notice came from, by how each one words it, or by its name. */
 function bankOfNotice(item: CopilotItem): string | null {
   try {
     const raw = item.raw ? (JSON.parse(item.raw) as { notice?: unknown; app?: unknown; card?: unknown; bank?: unknown }) : null;
-    const text = [raw?.bank, raw?.app, raw?.card, raw?.notice].filter((x) => typeof x === "string").join(" ");
+    if (typeof raw?.bank === "string" && raw.bank) return raw.bank;
+    const text = [raw?.app, raw?.card, raw?.notice].filter((x) => typeof x === "string").join(" ");
     const plain = text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
     /* The business account is an account of its own: "na conta Nu Empresas", "conta PJ". */
     if (/nu empresas|conta pj/.test(plain)) return "Nubank PJ";

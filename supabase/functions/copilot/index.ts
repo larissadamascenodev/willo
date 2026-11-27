@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { amountOf, plain, readNotice } from "./notice.ts";
+import { amountOf, bankOf, plain, readNotice } from "./notice.ts";
 import { guessCategory } from "./category.ts";
 
 /**
@@ -255,6 +255,22 @@ serve(async (req) => {
       return json({ ok: true, ignored: true });
     }
 
+    /* A new bill found by the CPF: offered to be scheduled. The amount may not be in the notice. */
+    if (n.bill) {
+      const { error: billError } = await admin.from("copilot_pending").insert({
+        user_id: userId,
+        name: n.name.slice(0, 80),
+        amount: n.amount > 0 ? Math.round(n.amount * 100) / 100 : 0.01,
+        type: "despesa",
+        payment_method: "conta",
+        occurred_at: new Date().toISOString(),
+        source: "aviso",
+        raw: JSON.stringify({ bill: true, noAmount: !(n.amount > 0), bank: bankOf(whole), notice: whole.slice(0, 300) }).slice(0, 500),
+      });
+      if (billError) return json({ error: "Não foi possível guardar o boleto" }, 500);
+      return json({ ok: true, message: `Novo boleto de ${n.name} no Willo Copilot` });
+    }
+
     /* Money between the person's own accounts: the bank that received it names the sender, and
        that is them; or both banks tell of it (one out, one in, the same amount, within minutes).
        Kept once, as a transfer of their own, never as spending and income twice. */
@@ -271,31 +287,6 @@ serve(async (req) => {
     };
     /* "Você depositou R$ 1 via Pix" (Mercado Pago): money the person put in themselves. */
     const ownTransfer = /voce depositou|recebemos sua transferencia/.test(plain(whole)) || (/transfer|pix|ted\b|doc\b/.test(plain(whole)) && isOwn(n.name));
-    const since = new Date(Date.now() - 5 * 60_000).toISOString();
-    const { data: other } = await admin
-      .from("copilot_pending")
-      .select("id, raw, type")
-      .eq("user_id", userId)
-      .eq("status", "pendente")
-      .eq("source", "aviso")
-      .eq("amount", Math.round(n.amount * 100) / 100)
-      .gte("occurred_at", since)
-      .order("occurred_at", { ascending: false })
-      .limit(5);
-    const mirror = ((other ?? []) as { id: string; raw: string | null; type: string }[]).find((o) => o.type !== n.type);
-    if (mirror) {
-      let raw: Record<string, unknown> = {};
-      try {
-        raw = mirror.raw ? JSON.parse(mirror.raw) : {};
-      } catch {
-        raw = {};
-      }
-      await admin
-        .from("copilot_pending")
-        .update({ name: "Transferência entre suas contas", raw: JSON.stringify({ ...raw, transfer: true, other: whole.slice(0, 200) }).slice(0, 500) })
-        .eq("id", mirror.id);
-      return json({ ok: true, merged: true, message: `Transferência entre suas contas · R$ ${n.amount.toFixed(2).replace(".", ",")} no Willo Copilot` });
-    }
     const word = n.method === "conta" ? "Débito" : n.method === "cartao" ? "Crédito" : "";
     const cardText = [app, word].filter(Boolean).join(" ");
     const cards = n.method === "cartao" ? await cardsOf() : [];
@@ -322,7 +313,8 @@ serve(async (req) => {
       return json({ ok: true, merged: true, message: `${n.name} · R$ ${n.amount.toFixed(2).replace(".", ",")} ${n.method === "conta" ? "no débito" : n.method === "cartao" ? "no crédito" : ""} no Willo Copilot`.replace("  ", " ") });
     }
 
-    const { error } = await admin.from("copilot_pending").insert({
+    const bank = bankOf(whole);
+    const { data: made, error } = await admin.from("copilot_pending").insert({
       user_id: userId,
       name: (ownTransfer ? "Transferência entre suas contas" : n.name).slice(0, 80),
       amount: Math.round(n.amount * 100) / 100,
@@ -331,9 +323,51 @@ serve(async (req) => {
       credit_card_id: creditCardId,
       occurred_at: new Date().toISOString(),
       source: "aviso",
-      raw: JSON.stringify({ card: cardText, notice: whole.slice(0, 300), app, ...(ownTransfer ? { transfer: true } : {}) }).slice(0, 500),
-    });
-    if (error) return json({ error: "Não foi possível guardar o aviso" }, 500);
+      raw: JSON.stringify({ card: cardText, notice: whole.slice(0, 300), app, bank, ...(ownTransfer ? { transfer: true } : {}) }).slice(0, 500),
+    }).select("id, occurred_at").single();
+    if (error || !made) return json({ error: "Não foi possível guardar o aviso" }, 500);
+
+    /* The two halves of one transfer: money out of one of the person's accounts and the same amount
+       into another within minutes — both banks' notices, often in the same second. They are kept
+       once, as a transfer from one to the other. Whichever notice sees the pair folds the later one
+       into the earlier, so two arriving together still end as one. */
+    const since = new Date(Date.now() - 5 * 60_000).toISOString();
+    const { data: near } = await admin
+      .from("copilot_pending")
+      .select("id, raw, type, occurred_at")
+      .eq("user_id", userId)
+      .eq("status", "pendente")
+      .eq("source", "aviso")
+      .eq("amount", Math.round(n.amount * 100) / 100)
+      .neq("type", n.type)
+      .neq("id", made.id)
+      .gte("occurred_at", since)
+      .order("occurred_at", { ascending: true })
+      .limit(1);
+    const pair = (near ?? [])[0] as { id: string; raw: string | null; type: string; occurred_at: string } | undefined;
+    if (pair) {
+      const mine = { id: made.id, occurred_at: made.occurred_at, type: n.type, raw: { bank, notice: whole.slice(0, 200) } as Record<string, unknown> };
+      let theirs: Record<string, unknown> = {};
+      try {
+        theirs = pair.raw ? JSON.parse(pair.raw) : {};
+      } catch {
+        theirs = {};
+      }
+      const out = n.type === "despesa" ? mine.raw : theirs;
+      const inn = n.type === "despesa" ? theirs : mine.raw;
+      const [keep, drop] = pair.occurred_at <= mine.occurred_at ? [pair.id, mine.id] : [mine.id, pair.id];
+      const keepType = keep === pair.id ? pair.type : n.type;
+      await admin
+        .from("copilot_pending")
+        .update({
+          name: "Transferência entre suas contas",
+          type: keepType,
+          raw: JSON.stringify({ transfer: true, from: out.bank ?? null, to: inn.bank ?? null, notice: String(inn.notice ?? out.notice ?? "").slice(0, 160), other: String(out.notice ?? "").slice(0, 160) }).slice(0, 500),
+        })
+        .eq("id", keep);
+      await admin.from("copilot_pending").update({ status: "ignorado" }).eq("id", drop);
+      return json({ ok: true, merged: true, message: `Transferência entre suas contas · R$ ${n.amount.toFixed(2).replace(".", ",")} no Willo Copilot` });
+    }
     if (ownTransfer) return json({ ok: true, message: `Transferência entre suas contas · R$ ${n.amount.toFixed(2).replace(".", ",")} no Willo Copilot` });
     const what = n.type === "receita" ? "entrada" : n.method === "conta" ? "no débito" : n.method === "cartao" ? "no crédito" : "";
     return json({ ok: true, message: `${n.name} · R$ ${n.amount.toFixed(2).replace(".", ",")} ${what} no Willo Copilot`.replace("  ", " ") });

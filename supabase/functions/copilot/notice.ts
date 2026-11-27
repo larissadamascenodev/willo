@@ -13,6 +13,8 @@ export interface Notice {
   /** "conta" for debit, Pix and transfers; "cartao" for credit; null when it does not say. */
   method: "conta" | "cartao" | null;
   name: string;
+  /** A new bill found by the person's CPF ("Você tem um novo boleto"): to be scheduled, not paid. */
+  bill?: boolean;
 }
 
 export const plain = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -48,11 +50,43 @@ function after(text: string, word: string): string | null {
   return v && v.length >= 2 && !/^r\$/i.test(v) ? v : null;
 }
 
+/**
+ * The account a notice speaks of, by how each bank words it: Nubank's business account ("conta Nu
+ * Empresas", "conta PJ"), Nubank, Mercado Pago, or a bank named in it. Null when it does not say.
+ */
+export function bankOf(text: string): string | null {
+  const p = plain(text);
+  if (/nu empresas|conta pj\b/.test(p)) return "Nubank PJ";
+  if (/nubank|recebemos sua transferencia|voce recebeu uma transferencia de|pix de r\$ ?[\d.,]+ enviado|compra no (debito|credito) aprovada/.test(p)) return "Nubank";
+  if (/mercado pago|voce depositou|rendendo na sua conta/.test(p)) return "Mercado Pago";
+  const named: [RegExp, string][] = [
+    [/\bitau\b/, "Itaú"],
+    [/bradesco/, "Bradesco"],
+    [/santander/, "Santander"],
+    [/\binter\b/, "Inter"],
+    [/caixa/, "Caixa"],
+    [/banco do brasil/, "Banco do Brasil"],
+    [/\bc6\b/, "C6 Bank"],
+    [/picpay/, "PicPay"],
+  ];
+  return named.find(([re]) => re.test(p))?.[1] ?? null;
+}
+
 export function readNotice(text: string, app?: string | null): Notice | null {
   /* Inside a name in capitals the "E" belongs to it ("EMPREENDIMENTOS E BEBIDAS"): held aside so
      the name is not cut there as it would be at "R$ 10 em X e ...". */
-  const t = String(text ?? "").replace(/([A-ZÀ-Ý]{2,}) E (?=[A-ZÀ-Ý]{2,})/g, "$1  ");
+  const t = String(text ?? "")
+    /* A CPF or CNPJ before a name ("de 59.261.159 LARISSA ..."), masked or not, is not the name. */
+    .replace(/(?:\*{3}|\d{2,3})(?:[.\s]?(?:\d{3}|\*{3})){1,3}(?:\/\d{4})?(?:-(?:\d{2}|\*{2}))?\s+(?=[A-Za-zÀ-ÿ])/g, "")
+    .replace(/([A-ZÀ-Ý]{2,}) E (?=[A-ZÀ-Ý]{2,})/g, "$1  ");
   const p = plain(t);
+  /* A new bill the bank found by the CPF: no money moved yet, but something to schedule. Its amount
+     may be missing (0 then), and the payee is who it is from. */
+  if (/novo boleto|boleto novo|boleto (foi )?(registrado|emitido|gerado|encontrado)|\bdda\b/.test(p) && !/pago com sucesso|boleto pago|pagamento (do boleto )?(realizado|efetuado|confirmado)/.test(p)) {
+    const bm = /R\$\s*-?\d(?:[\d.,]*\d)?/.exec(t);
+    const payee = after(t, "de") ?? after(t, "para") ?? after(t, "emitido por");
+    return { amount: bm ? amountOf(bm[0]) : 0, type: "despesa", method: "conta", name: payee ? titleCase(payee).replace(/\u0001/g, "e").slice(0, 60) : "Novo boleto", bill: true };
+  }
   if (!MOVED.test(p) || NOT_MOVED.test(p)) return null;
 
   const m = /R\$\s*-?\d(?:[\d.,]*\d)?/.exec(t) ?? /\d+[.,]\d{2}\b/.exec(t);

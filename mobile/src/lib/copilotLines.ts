@@ -4,7 +4,7 @@
  * page the line for an item is chosen by its id, so it does not change each time the page draws.
  */
 
-export type LineKind = "compra" | "entrada" | "transferencia";
+export type LineKind = "compra" | "entrada" | "saida" | "transferencia" | "boleto";
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -15,15 +15,20 @@ const greeting = () => {
 const seedOf = (id: string) => [...id].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7);
 const choose = <T,>(list: T[], seed?: string) => list[seed ? seedOf(seed) % list.length : Math.floor(Math.random() * list.length)];
 
-export function askLine(kind: LineKind, bank: string | null, seed?: string) {
+export function askLine(kind: LineKind, bank: string | null, seed?: string, route?: { from: string | null; to: string | null }) {
   const at = bank ? ` no ${bank}` : "";
+  const way = route?.from && route?.to ? `do ${route.from} pro ${route.to}` : route?.to ? `pro ${route.to}` : route?.from ? `do ${route.from}` : "entre suas contas";
   /* Short: on the iPhone this is the notification's title, one line. */
   const lines =
     kind === "transferencia"
-      ? ["Transferência entre suas contas. Registro?", "Dinheiro mudando de casa! Registro?", "Vi você movendo dinheiro. Anoto?", `${greeting()} Registro essa transferência?`]
-      : kind === "entrada"
-        ? ["Olha só, caiu um Pix! Anoto?", "Pix na área! Posso registrar?", "Chegou dinheirinho! Anoto?", `Dinheiro novo${at}! Bora anotar?`, `${greeting()} Caiu um Pix. Anoto?`]
-        : ["Opa, gastinho novo! Anoto?", `Compra nova${at}. Anoto?`, "Passou o cartão, eu vi! Registro?", "Mais uma comprinha! Deixo anotada?", "Comprinha à vista! Bora anotar?", `${greeting()} Anoto essa compra?`];
+      ? [`Dinheiro indo ${way}. Registro?`, `Transferência ${way}. Anoto?`, `Vi você movendo dinheiro ${way}. Anoto?`]
+      : kind === "boleto"
+        ? [`Chegou um boleto novo${at}. Agendo?`, "Boleto novo no seu CPF! Quer agendar?", "Achei um boleto pra você. Agendo?"]
+        : kind === "saida"
+          ? [`Saiu um Pix${bank ? ` do ${bank}` : ""}. Anoto?`, `Pix enviado${bank ? ` pelo ${bank}` : ""}! Registro?`, `Dinheiro saindo${bank ? ` do ${bank}` : ""}. Anoto?`]
+          : kind === "entrada"
+            ? [`Caiu dinheiro${at}! Anoto?`, `Pix na área${at}! Registro?`, `Entrou dinheirinho${at}. Anoto?`, `${greeting()} Chegou dinheiro${at}. Anoto?`]
+            : ["Opa, gastinho novo! Anoto?", `Compra nova${at}. Anoto?`, "Passou o cartão, eu vi! Registro?", "Mais uma comprinha! Deixo anotada?", "Comprinha à vista! Bora anotar?", `${greeting()} Anoto essa compra?`];
   return choose(lines, seed);
 }
 
@@ -31,7 +36,17 @@ export function askLine(kind: LineKind, bank: string | null, seed?: string) {
 export function doneLine(kind: LineKind, e: { amount: string; who: string; where?: string | null }) {
   const where = e.where ?? "";
   const lines =
-    kind === "transferencia"
+    kind === "boleto"
+      ? [
+          { title: "Boleto agendado!", body: `${e.who}, ${e.amount}${where ? `, ${where}` : ""}. Eu te lembro antes de vencer.` },
+          { title: "Tá na agenda", body: `Boleto de ${e.who} agendado${where ? ` ${where}` : ""}.` },
+        ]
+      : kind === "saida"
+        ? [
+            { title: "Anotado!", body: `Pix de ${e.amount} saiu${where ? ` ${where}` : ""}.` },
+            { title: "Pix registrado", body: `${e.amount} enviado${where ? ` ${where}` : ""}. Tá tudo no lugar.` },
+          ]
+        : kind === "transferencia"
       ? [
           { title: "Transferência anotada", body: `${e.amount} mudou de conta${where ? `, ${where}` : ""}.` },
           { title: "Tudo no lugar", body: `Registrei a transferência de ${e.amount}${where ? ` ${where}` : ""}.` },

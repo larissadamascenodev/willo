@@ -23,6 +23,8 @@ export interface CopilotItem {
   occurred_at: string;
   source: string;
   raw: string | null;
+  /** Set when changed before confirming: a bill is scheduled ("pendente"), not paid. */
+  entryStatus?: "pago" | "pendente";
 }
 
 /* Not in the generated types until the table is created. */
@@ -55,7 +57,7 @@ export async function confirmPending(item: CopilotItem, userId: string, id?: str
       category: item.category || "Outros",
       date: day,
       time: new Date(item.occurred_at).toTimeString().slice(0, 5),
-      status: credit ? "pendente" : "pago",
+      status: item.entryStatus ?? (credit ? "pendente" : "pago"),
       payment_method: credit ? "cartao" : "conta",
       account_id: credit ? null : item.account_id,
       credit_card_id: credit ? item.credit_card_id : null,
