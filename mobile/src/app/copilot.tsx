@@ -229,7 +229,10 @@ function CopilotScreen() {
      makes the account (the bank's name and colour, nothing else to fill) and moves the money into
      it; no writes it as sent out of the account Willo keeps, which is not counted as spending. */
   const [adding, setAdding] = useState<{ item: CopilotItem; bank: string } | null>(null);
-  const accountOfBank = (bank: string) => accounts.find((a) => bankFor(a.name)?.name === bank || plainWords(a.name).some((w) => plainWords(bank).includes(w))) ?? null;
+  /* A business account (PJ, Empresas) only matches a business account, and the other way round. */
+  const isBusiness = (name: string) => /pj|empresa/i.test(name);
+  const accountOfBank = (bank: string) =>
+    accounts.find((a) => isBusiness(a.name) === isBusiness(bank) && (bankFor(a.name)?.name === bankFor(bank)?.name || plainWords(a.name).some((w) => plainWords(bank).includes(w)))) ?? null;
   const otherThan = (id: string | null) => {
     const rest = (accounts as (Account & { is_default?: boolean })[]).filter((a) => a.id !== id);
     /* The main account; without one marked, a current account before a cash box or savings. */
@@ -823,6 +826,8 @@ function bankOfNotice(item: CopilotItem): string | null {
     const raw = item.raw ? (JSON.parse(item.raw) as { notice?: unknown; app?: unknown; card?: unknown; bank?: unknown }) : null;
     const text = [raw?.bank, raw?.app, raw?.card, raw?.notice].filter((x) => typeof x === "string").join(" ");
     const plain = text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    /* The business account is an account of its own: "na conta Nu Empresas", "conta PJ". */
+    if (/nu empresas|conta pj/.test(plain)) return "Nubank PJ";
     if (/recebemos sua transferencia/.test(plain)) return "Nubank";
     if (/voce depositou .* rendendo/.test(plain)) return "Mercado Pago";
     return bankFor(text)?.name ?? null;
