@@ -279,7 +279,7 @@ serve(async (req) => {
       .gte("occurred_at", since)
       .order("occurred_at", { ascending: false })
       .limit(5);
-    const mirror = ((other ?? []) as { id: string; raw: string | null; type: string }[]).find((o) => o.type !== n.type || (ownTransfer && /"transfer":true/.test(o.raw ?? "")));
+    const mirror = ((other ?? []) as { id: string; raw: string | null; type: string }[]).find((o) => o.type !== n.type);
     if (mirror) {
       let raw: Record<string, unknown> = {};
       try {
