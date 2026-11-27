@@ -26,7 +26,6 @@ const ICON = require("../../assets/images/app-icon.png") as number;
 type Scene = "bloqueada" | "app";
 type Step = "nada" | "aviso" | "notificacao";
 type Kind = "debito" | "credito" | "pix";
-type Size = "compacto" | "normal";
 
 /* What came in: a purchase from the Wallet or the bank, or a Pix received (from the bank's notice). */
 const EVENTS: Record<Kind, { who: string; amount: number; bank: string; category: string; income: boolean }> = {
@@ -48,44 +47,53 @@ function askFor(kind: Kind) {
   const e = EVENTS[kind];
   const lines = e.income
     ? [
-        `Você recebeu um Pix no ${e.bank}. Posso anotar?`,
-        "Caiu um Pix na sua conta! Anoto como entrada?",
-        `Dinheiro chegando no ${e.bank}. Registro pra você?`,
-        `${greeting()} Chegou um Pix pra você. Quer que eu anote?`,
-        `Pix recebido no ${e.bank}! Deixo anotado?`,
-        "Entrou um dinheirinho agora. Conto no seu mês?",
+        "Olha só, caiu um Pix! Anoto como entrada?",
+        "Pix na área! Posso registrar?",
+        `Opa, Pix recebido no ${e.bank}! Bora anotar?`,
+        `${greeting()} Pingou um Pix na sua conta. Registro?`,
+        "Chegou dinheirinho! Deixo anotado?",
+        `Dinheiro novo no ${e.bank}. Anoto pra você?`,
       ]
     : [
-        `Vi um gasto novo no seu ${e.bank}. Posso anotar?`,
-        "Compra nova por aqui! Quer que eu registre?",
-        `Acabou de passar uma compra no ${e.bank}. Anoto pra você?`,
-        `${greeting()} Já peguei sua compra. Confirma pra eu anotar?`,
-        `Mais uma no ${e.bank}. Registro agora?`,
-        "Peguei essa compra no caminho. Deixo anotada?",
-        "Gasto novo à vista! Anoto no seu mês?",
+        `Opa, gastinho novo no ${e.bank}! Anoto?`,
+        "Vi você passando o cartão por aí. Posso anotar?",
+        "Mais uma comprinha na conta! Deixo registrada?",
+        `Psiu! Rolou uma compra no ${e.bank}. Anoto pra você?`,
+        "Comprinha à vista! Bora anotar?",
+        `${greeting()} Já tô de olho nessa compra. Anoto?`,
+        "Passou o cartão, eu vi! Registro?",
       ];
   const next = pick(lines.filter((l) => l !== lastAsk));
   lastAsk = next;
   return next;
 }
 
-/* After a confirmation: Willo speaking, never a system receipt. */
+/* After a confirmation: Willo speaking, never a system receipt. A purchase or a Pix received,
+   a different line each time. */
+let lastDone = "";
 function doneFor(kind: Kind) {
   const e = EVENTS[kind];
   const v = `R$ ${brl(e.amount)}`;
-  if (e.income)
-    return pick([
-      { title: "Entrada anotada", body: `${v} de ${e.who} já estão no seu saldo do ${e.bank}.` },
-      { title: "Prontinho", body: `Contei os ${v} do Pix de ${e.who} como seus.` },
-      { title: "Dinheiro na conta", body: `Anotei ${v} de ${e.who}. Seu saldo já está em dia.` },
-    ]);
   const where = kind === "credito" ? `na fatura do ${e.bank}` : `em ${e.category}`;
-  return pick([
-    { title: "Prontinho, anotei", body: `${v} na ${e.who}, ${where}.` },
-    { title: "Deixei tudo certinho", body: `${v} na ${e.who} já estão ${where}.` },
-    { title: "Anotado por aqui", body: `Registrei ${v} da ${e.who} ${where}. Pode seguir.` },
-    { title: "Feito!", body: `${v} na ${e.who}, ${where}. Eu cuido do resto.` },
-  ]);
+  const lines = e.income
+    ? [
+        { title: "Oba, dinheiro no bolso!", body: `${v} de ${e.who} já estão no seu saldo.` },
+        { title: "Anotadinho!", body: `Pix de ${v} de ${e.who} registrado.` },
+        { title: "Saldo feliz", body: `${v} de ${e.who} entraram no seu mês.` },
+        { title: "Chegou e tá anotado", body: `${v} de ${e.who}, direto pro seu saldo.` },
+        { title: "Que beleza!", body: `Pix de ${e.who} registrado: ${v} a mais por aqui.` },
+      ]
+    : [
+        { title: "Anotadinho!", body: `${v} na ${e.who}, ${where}.` },
+        { title: "Pode deixar comigo", body: `${v} na ${e.who} já tá ${where}.` },
+        { title: "Missão cumprida", body: `${v} na ${e.who} registrados. Segue o jogo!` },
+        { title: "Tá anotado!", body: `${v} na ${e.who}, ${where}. Eu cuido do resto.` },
+        { title: "Prontinho!", body: `${v} na ${e.who} já entrou no seu mês.` },
+        { title: "Deixa comigo", body: `Anotei ${v} na ${e.who}, ${where}.` },
+      ];
+  const next = pick(lines.filter((l) => l.title !== lastDone));
+  lastDone = next.title;
+  return next;
 }
 
 export default function SimulacaoAviso() {
@@ -95,11 +103,11 @@ export default function SimulacaoAviso() {
   const [step, setStep] = useState<Step>("nada");
   /* Debit or credit comes from the bank's own notice, so the card never asks. */
   const [kind, setKind] = useState<Kind>("debito");
-  const [size, setSize] = useState<Size>("compacto");
   const [ask, setAsk] = useState(() => askFor("debito"));
   const [said, setSaid] = useState(() => doneFor("debito"));
   const e = EVENTS[kind];
-  const compact = size === "compacto";
+  /* Compact, always (her choice). */
+  const compact = true;
   const [opened, setOpened] = useState(false);
   const [writing, setWriting] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -242,7 +250,6 @@ export default function SimulacaoAviso() {
               <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 0.5, color: "rgba(255,255,255,0.5)", textAlign: "center" }}>SIMULAÇÃO DO AVISO DO COPILOT</Text>
               <Segment options={[["bloqueada", "Tela bloqueada"], ["app", "Em outro app"]]} value={scene} onChange={(v) => setScene(v as Scene)} />
               <Segment options={[["debito", "Débito"], ["credito", "Crédito"], ["pix", "Pix recebido"]]} value={kind} onChange={(v) => setKind(v as Kind)} />
-              <Segment options={[["compacto", "Compacto"], ["normal", "Normal"]]} value={size} onChange={(v) => setSize(v as Size)} />
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace("/" as never))} style={{ flex: 1, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.1)" }}>
                   <Text style={{ fontSize: 14.5, fontWeight: "600", color: "#fff" }}>Sair</Text>
