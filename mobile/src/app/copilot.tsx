@@ -860,9 +860,11 @@ function kindOf(item: CopilotItem): LineKind {
 function routeOf(item: CopilotItem): { from: string | null; to: string | null } {
   const raw = rawOf(item);
   const end = (v: unknown) => (typeof v === "string" && v ? v : null);
-  if (raw.from || raw.to) return { from: end(raw.from), to: end(raw.to) };
+  /* Both ends when both notices came; otherwise the bank of the notice on its side, and what the
+     notice told of the other (a company account in the person's name: "Conta PJ"). */
+  if (raw.from && raw.to) return { from: end(raw.from), to: end(raw.to) };
   const bank = bankOfNotice(item);
-  return item.type === "receita" ? { from: null, to: bank } : { from: bank, to: null };
+  return item.type === "receita" ? { from: end(raw.from), to: end(raw.to) ?? bank } : { from: end(raw.from) ?? bank, to: end(raw.to) };
 }
 
 /** The bank a notice came from, by how each one words it, or by its name. */

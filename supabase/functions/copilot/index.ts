@@ -314,6 +314,10 @@ serve(async (req) => {
     }
 
     const bank = bankOf(whole);
+    /* Sent by a company in the person's own name — a CNPJ before their name ("de 59.261.159 LARISSA
+       DIAS DAMASCENO"): their business account, wherever it is. Someone else's company is just who
+       sent it. */
+    const fromCompany = ownTransfer && n.type === "receita" && /\bde\s+\d{2}[.\s]?\d{3}[.\s]?\d{3}(?:[\/.\s]?\d{4}-?\d{2})?\s+[A-Za-zÀ-ÿ]/.test(whole);
     const { data: made, error } = await admin.from("copilot_pending").insert({
       user_id: userId,
       name: (ownTransfer ? "Transferência entre suas contas" : n.name).slice(0, 80),
@@ -323,7 +327,7 @@ serve(async (req) => {
       credit_card_id: creditCardId,
       occurred_at: new Date().toISOString(),
       source: "aviso",
-      raw: JSON.stringify({ card: cardText, notice: whole.slice(0, 300), app, bank, ...(ownTransfer ? { transfer: true } : {}) }).slice(0, 500),
+      raw: JSON.stringify({ card: cardText, notice: whole.slice(0, 300), app, bank, ...(ownTransfer ? { transfer: true } : {}), ...(fromCompany ? { from: "Conta PJ" } : {}) }).slice(0, 500),
     }).select("id, occurred_at").single();
     if (error || !made) return json({ error: "Não foi possível guardar o aviso" }, 500);
 
@@ -385,7 +389,7 @@ serve(async (req) => {
   let amount = justNumber(body.amount) ? amountOf(body.amount) : 0;
   if (!(amount > 0)) {
     for (const t of texts) {
-      const m = /R\$\s*-?\d(?:[\d.,]*\d)?/.exec(t) ?? /\d+[.,]\d{2}/.exec(t);
+      const m = /R\$\s*-?\d(?:[\d.,]*\d)?/.exec(t) ?? /\d+[.,]\d{2}\b/.exec(t);
       if (m) {
         amount = amountOf(m[0]);
         if (amount > 0) break;
