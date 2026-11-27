@@ -235,9 +235,64 @@ serve(async (req) => {
     const whole = [second, String(body.notice)].filter(Boolean).join(". ");
     console.log("copilot notice", JSON.stringify({ notice: `text(${String(body.notice).length})`, app: `text(${second.length})` }));
     const n = readNotice(whole, app);
-    /* For now, while the bank notices are being set up: what came in, its digits hidden, when it was left alone. */
-    if (!n) console.log("copilot notice ignored", whole.replace(/\d/g, "#").slice(0, 200));
-    if (!n) return json({ ok: true, ignored: true });
+    /* Nothing a bank says is thrown away: a notice Willo could not read as money moving is kept
+       (status "ignorado", never shown in the app) so the next ways banks word things can be
+       learned from what actually came in. */
+    if (!n) {
+      await admin.from("copilot_pending").insert({
+        user_id: userId,
+        name: "Aviso não lido",
+        amount: 0,
+        type: "despesa",
+        occurred_at: new Date().toISOString(),
+        source: "aviso",
+        status: "ignorado",
+        raw: JSON.stringify({ notice: whole.slice(0, 400), app: second }).slice(0, 500),
+      });
+      return json({ ok: true, ignored: true });
+    }
+
+    /* Money between the person's own accounts: the bank that received it names the sender, and
+       that is them; or both banks tell of it (one out, one in, the same amount, within minutes).
+       Kept once, as a transfer of their own, never as spending and income twice. */
+    const ownNames = await (async () => {
+      const { data: prof } = await admin.from("profiles").select("display_name").eq("id", userId).maybeSingle();
+      const { data: who } = await admin.auth.admin.getUserById(userId);
+      const meta = (who?.user?.user_metadata ?? {}) as Record<string, unknown>;
+      return [prof?.display_name, meta.full_name, meta.name].filter((x): x is string => typeof x === "string" && x.trim().length > 1).map((x) => plain(x).split(/\s+/).filter((w) => w.length > 2));
+    })();
+    const isOwn = (name: string) => {
+      const words = plain(name).split(/\s+/);
+      /* The first name and, when known, one more of the person's names. */
+      return ownNames.some((own) => own.length > 0 && words.includes(own[0]) && (own.length === 1 || own.slice(1).some((w) => words.includes(w))));
+    };
+    /* "Você depositou R$ 1 via Pix" (Mercado Pago): money the person put in themselves. */
+    const ownTransfer = /voce depositou/.test(plain(whole)) || (/transfer|pix|ted\b|doc\b/.test(plain(whole)) && isOwn(n.name));
+    const since = new Date(Date.now() - 5 * 60_000).toISOString();
+    const { data: other } = await admin
+      .from("copilot_pending")
+      .select("id, raw, type")
+      .eq("user_id", userId)
+      .eq("status", "pendente")
+      .eq("source", "aviso")
+      .eq("amount", Math.round(n.amount * 100) / 100)
+      .neq("type", n.type)
+      .gte("occurred_at", since)
+      .limit(1);
+    const mirror = other?.[0] as { id: string; raw: string | null; type: string } | undefined;
+    if (mirror) {
+      let raw: Record<string, unknown> = {};
+      try {
+        raw = mirror.raw ? JSON.parse(mirror.raw) : {};
+      } catch {
+        raw = {};
+      }
+      await admin
+        .from("copilot_pending")
+        .update({ name: "Transferência entre suas contas", raw: JSON.stringify({ ...raw, transfer: true, other: whole.slice(0, 200) }).slice(0, 500) })
+        .eq("id", mirror.id);
+      return json({ ok: true, merged: true, message: `Transferência entre suas contas · R$ ${n.amount.toFixed(2).replace(".", ",")} no Willo Copilot` });
+    }
     const word = n.method === "conta" ? "Débito" : n.method === "cartao" ? "Crédito" : "";
     const cardText = [app, word].filter(Boolean).join(" ");
     const cards = n.method === "cartao" ? await cardsOf() : [];
@@ -266,16 +321,17 @@ serve(async (req) => {
 
     const { error } = await admin.from("copilot_pending").insert({
       user_id: userId,
-      name: n.name.slice(0, 80),
+      name: (ownTransfer ? "Transferência entre suas contas" : n.name).slice(0, 80),
       amount: Math.round(n.amount * 100) / 100,
       type: n.type,
       payment_method: n.method === "cartao" && creditCardId ? "cartao" : n.method === "conta" ? "conta" : null,
       credit_card_id: creditCardId,
       occurred_at: new Date().toISOString(),
       source: "aviso",
-      raw: JSON.stringify({ card: cardText, notice: whole.slice(0, 300), app }).slice(0, 500),
+      raw: JSON.stringify({ card: cardText, notice: whole.slice(0, 300), app, ...(ownTransfer ? { transfer: true } : {}) }).slice(0, 500),
     });
     if (error) return json({ error: "Não foi possível guardar o aviso" }, 500);
+    if (ownTransfer) return json({ ok: true, message: `Transferência entre suas contas · R$ ${n.amount.toFixed(2).replace(".", ",")} no Willo Copilot` });
     const what = n.type === "receita" ? "entrada" : n.method === "conta" ? "no débito" : n.method === "cartao" ? "no crédito" : "";
     return json({ ok: true, message: `${n.name} · R$ ${n.amount.toFixed(2).replace(".", ",")} ${what} no Willo Copilot`.replace("  ", " ") });
   }
