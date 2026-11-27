@@ -17,12 +17,13 @@ const choose = <T,>(list: T[], seed?: string) => list[seed ? seedOf(seed) % list
 
 export function askLine(kind: LineKind, bank: string | null, seed?: string) {
   const at = bank ? ` no ${bank}` : "";
+  /* Short: on the iPhone this is the notification's title, one line. */
   const lines =
     kind === "transferencia"
-      ? ["Identifiquei uma transferência sua entre contas. Posso registrar?", "Dinheiro mudando de casa! Registro essa transferência?", "Vi você movendo dinheiro entre suas contas. Anoto?", `${greeting()} Rolou uma transferência entre suas contas. Registro?`]
+      ? ["Transferência entre suas contas. Registro?", "Dinheiro mudando de casa! Registro?", "Vi você movendo dinheiro. Anoto?", `${greeting()} Registro essa transferência?`]
       : kind === "entrada"
-        ? ["Olha só, caiu um Pix! Anoto como entrada?", "Pix na área! Posso registrar?", `Opa, dinheiro novo${at}! Bora anotar?`, `${greeting()} Pingou um dinheirinho na sua conta. Registro?`, "Chegou dinheirinho! Deixo anotado?"]
-        : [`Opa, gastinho novo${at}! Anoto?`, "Vi você passando o cartão por aí. Posso anotar?", "Mais uma comprinha na conta! Deixo registrada?", `Psiu! Rolou uma compra${at}. Anoto pra você?`, "Comprinha à vista! Bora anotar?", `${greeting()} Já tô de olho nessa compra. Anoto?`];
+        ? ["Olha só, caiu um Pix! Anoto?", "Pix na área! Posso registrar?", "Chegou dinheirinho! Anoto?", `Dinheiro novo${at}! Bora anotar?`, `${greeting()} Caiu um Pix. Anoto?`]
+        : ["Opa, gastinho novo! Anoto?", `Compra nova${at}. Anoto?`, "Passou o cartão, eu vi! Registro?", "Mais uma comprinha! Deixo anotada?", "Comprinha à vista! Bora anotar?", `${greeting()} Anoto essa compra?`];
   return choose(lines, seed);
 }
 
