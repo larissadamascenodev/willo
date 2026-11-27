@@ -267,7 +267,7 @@ serve(async (req) => {
       return ownNames.some((own) => own.length > 0 && words.includes(own[0]) && (own.length === 1 || own.slice(1).some((w) => words.includes(w))));
     };
     /* "Você depositou R$ 1 via Pix" (Mercado Pago): money the person put in themselves. */
-    const ownTransfer = /voce depositou/.test(plain(whole)) || (/transfer|pix|ted\b|doc\b/.test(plain(whole)) && isOwn(n.name));
+    const ownTransfer = /voce depositou|recebemos sua transferencia/.test(plain(whole)) || (/transfer|pix|ted\b|doc\b/.test(plain(whole)) && isOwn(n.name));
     const since = new Date(Date.now() - 5 * 60_000).toISOString();
     const { data: other } = await admin
       .from("copilot_pending")
@@ -276,10 +276,10 @@ serve(async (req) => {
       .eq("status", "pendente")
       .eq("source", "aviso")
       .eq("amount", Math.round(n.amount * 100) / 100)
-      .neq("type", n.type)
       .gte("occurred_at", since)
-      .limit(1);
-    const mirror = other?.[0] as { id: string; raw: string | null; type: string } | undefined;
+      .order("occurred_at", { ascending: false })
+      .limit(5);
+    const mirror = ((other ?? []) as { id: string; raw: string | null; type: string }[]).find((o) => o.type !== n.type || (ownTransfer && /"transfer":true/.test(o.raw ?? "")));
     if (mirror) {
       let raw: Record<string, unknown> = {};
       try {
@@ -348,7 +348,7 @@ serve(async (req) => {
   let amount = justNumber(body.amount) ? amountOf(body.amount) : 0;
   if (!(amount > 0)) {
     for (const t of texts) {
-      const m = /R\$\s*-?\d[\d.,]*/.exec(t) ?? /\d+[.,]\d{2}/.exec(t);
+      const m = /R\$\s*-?\d(?:[\d.,]*\d)?/.exec(t) ?? /\d+[.,]\d{2}/.exec(t);
       if (m) {
         amount = amountOf(m[0]);
         if (amount > 0) break;
@@ -356,11 +356,11 @@ serve(async (req) => {
     }
   }
   if (!(amount > 0)) return json({ error: "A compra chegou sem valor. Na automação, toque em Valor, escolha Transação (não Entrada do Atalho), toque nela de novo e escolha Valor." }, 400);
-  const firstLine = (v: unknown) => String(v ?? "").split(/\r?\n/)[0].replace(/R\$\s*-?\d[\d.,]*/g, "").trim();
+  const firstLine = (v: unknown) => String(v ?? "").split(/\r?\n/)[0].replace(/R\$\s*-?\d(?:[\d.,]*\d)?/g, "").trim();
   /* With the whole purchase in one field, the shop is its first line that is not the amount. */
   const fromWhole = texts
     .flatMap((t) => t.split(/\r?\n/))
-    .map((l) => l.replace(/R\$\s*-?\d[\d.,]*/g, "").replace(/[{}"\[\]]/g, "").trim())
+    .map((l) => l.replace(/R\$\s*-?\d(?:[\d.,]*\d)?/g, "").replace(/[{}"\[\]]/g, "").trim())
     .find((l) => l.length >= 2 && !/^\d[\d.,\s]*$/.test(l));
   const merchant = firstLine(body.merchant ?? body.name) || fromWhole || "Compra no cartão";
   const card = firstLine(body.card) || texts.join(" ");

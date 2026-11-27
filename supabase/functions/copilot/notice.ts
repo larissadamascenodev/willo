@@ -30,6 +30,7 @@ export function amountOf(raw: unknown): number {
 
 const MOVED = /(compra|pagamento|pagou|gastou|debitad|transacao|enviou|transferiu|pix|transfer|ted\b|doc\b|debito|credito|recebeu|recebid|aprovad|enviad|saque|deposito)/;
 const NOT_MOVED = /(fatura (fechou|fechada|disponivel|vence)|limite|vence (hoje|amanha|em)|lembrete|oferta|promoc|cashback|rendeu|rendimento|investimento|boleto disponivel|nao aprovad|recusad|negad|estornad|cancelad)/;
+const OUT = /(recebemos sua transferencia|sua transferencia foi (enviada|realizada|concluida)|transferencia enviada|pix enviado|voce enviou|voce transferiu)/;
 const INCOME = /(voce depositou|depositou r\$|ja esta disponivel|esta rendendo na sua conta|rendendo na sua conta|voce recebeu|recebeu (um|uma|r\$)|pix recebido|transferencia recebida|deposito recebido|caiu na sua conta|recebido de|entrou na sua conta)/;
 const STOP = "(?:foi|com|no|na|nos|nas|pelo|pela|via|para|as|às|ao|em|e|do cartao|cartao|final|hoje|agora)";
 
@@ -52,11 +53,13 @@ export function readNotice(text: string, app?: string | null): Notice | null {
   const p = plain(t);
   if (!MOVED.test(p) || NOT_MOVED.test(p)) return null;
 
-  const m = /R\$\s*-?\d[\d.,]*/.exec(t) ?? /\d+[.,]\d{2}\b/.exec(t);
+  const m = /R\$\s*-?\d(?:[\d.,]*\d)?/.exec(t) ?? /\d+[.,]\d{2}\b/.exec(t);
   const amount = m ? amountOf(m[0]) : 0;
   if (!(amount > 0)) return null;
 
-  const income = INCOME.test(p);
+  /* "Recebemos sua transferência" (Nubank) is the bank taking the person's own transfer out —
+     not money received, though it says "recebida". */
+  const income = INCOME.test(p) && !OUT.test(p);
   const method: Notice["method"] = income || /(debito|pix|transfer|ted\b|doc\b|saque)/.test(p) ? "conta" : /credito/.test(p) ? "cartao" : null;
 
   /* Who: "em PADARIA X" for a purchase, "de MARIA" for money received, "para JOÃO" for money sent. */
@@ -71,6 +74,8 @@ export function readNotice(text: string, app?: string | null): Notice | null {
       : "Transferência recebida"
     : /pix/.test(p)
       ? "Pix enviado"
+      : /transfer/.test(p)
+        ? "Transferência enviada"
       : /saque/.test(p)
         ? "Saque"
         : method === "cartao"
