@@ -25,20 +25,59 @@ const ICON = require("../../assets/images/app-icon.png") as number;
 
 type Scene = "bloqueada" | "app";
 type Step = "nada" | "aviso" | "notificacao";
-type Method = "conta" | "cartao";
+type Kind = "debito" | "credito" | "pix";
+type Size = "compacto" | "normal";
 
-const BUY = { shop: "Padaria Cleide", amount: 15.5, bank: "Nubank", category: "Alimentação" };
+/* What came in: a purchase from the Wallet or the bank, or a Pix received (from the bank's notice). */
+const EVENTS: Record<Kind, { who: string; amount: number; bank: string; category: string; income: boolean }> = {
+  debito: { who: "Padaria Cleide", amount: 15.5, bank: "Nubank", category: "Alimentação", income: false },
+  credito: { who: "Drogasil", amount: 42.9, bank: "Nubank", category: "Farmácia", income: false },
+  pix: { who: "Maria Silva", amount: 10, bank: "Nubank", category: "Outros", income: true },
+};
 const brl = (v: number) => v.toFixed(2).replace(".", ",");
+const pick = <T,>(list: T[]) => list[Math.floor(Math.random() * list.length)];
+const greeting = () => {
+  const h = new Date().getHours();
+  return h < 12 ? "Bom dia!" : h < 18 ? "Boa tarde!" : "Boa noite!";
+};
 
-/* After a confirmation: Willo speaking, never a system receipt. One of these, at random. */
-function lineFor(method: Method) {
-  const where = method === "cartao" ? `na fatura do ${BUY.bank}` : `em ${BUY.category}`;
-  const lines = [
-    { title: "Prontinho, anotei", body: `Seus R$ ${brl(BUY.amount)} na ${BUY.shop} já estão ${where}. Pode seguir, eu cuido do resto.` },
-    { title: "Deixei tudo certinho", body: `R$ ${brl(BUY.amount)} na ${BUY.shop}, ${where}. Seu saldo já está em dia.` },
-    { title: "Anotado por aqui", body: `Registrei os R$ ${brl(BUY.amount)} da ${BUY.shop} ${where}. Bom ${new Date().getHours() < 12 ? "dia" : new Date().getHours() < 18 ? "resto de tarde" : "resto de noite"}!` },
-  ];
-  return lines[Math.floor(Math.random() * lines.length)];
+/* What Willo says on the card: never the same line twice in a row, so it reads as someone, not a form. */
+function askFor(kind: Kind) {
+  const e = EVENTS[kind];
+  if (e.income)
+    return pick([
+      `Caiu um Pix de ${e.who} no seu ${e.bank}. Esse dinheiro é seu?`,
+      `${e.who} te mandou um Pix. Entra nas suas finanças?`,
+      `Chegou dinheiro no ${e.bank}. Conto como seu?`,
+      `${greeting()} Recebi um aviso de Pix de ${e.who}. Anoto como entrada?`,
+    ]);
+  const how = kind === "credito" ? "no crédito" : "no débito";
+  return pick([
+    `Vi uma compra ${how} do ${e.bank}. Posso anotar?`,
+    `Passou um gasto ${how} no ${e.bank}. Anoto pra você?`,
+    `Opa, gasto novo no ${e.bank}. Registro?`,
+    `Acabei de ver essa compra ${how}. Quer que eu anote?`,
+    `${greeting()} Vi uma compra no ${e.bank}. Posso anotar?`,
+  ]);
+}
+
+/* After a confirmation: Willo speaking, never a system receipt. */
+function doneFor(kind: Kind) {
+  const e = EVENTS[kind];
+  const v = `R$ ${brl(e.amount)}`;
+  if (e.income)
+    return pick([
+      { title: "Entrada anotada", body: `${v} de ${e.who} já estão no seu saldo do ${e.bank}.` },
+      { title: "Prontinho", body: `Contei os ${v} do Pix de ${e.who} como seus.` },
+      { title: "Dinheiro na conta", body: `Anotei ${v} de ${e.who}. Seu saldo já está em dia.` },
+    ]);
+  const where = kind === "credito" ? `na fatura do ${e.bank}` : `em ${e.category}`;
+  return pick([
+    { title: "Prontinho, anotei", body: `${v} na ${e.who}, ${where}.` },
+    { title: "Deixei tudo certinho", body: `${v} na ${e.who} já estão ${where}.` },
+    { title: "Anotado por aqui", body: `Registrei ${v} da ${e.who} ${where}. Pode seguir.` },
+    { title: "Feito!", body: `${v} na ${e.who}, ${where}. Eu cuido do resto.` },
+  ]);
 }
 
 export default function SimulacaoAviso() {
@@ -47,8 +86,12 @@ export default function SimulacaoAviso() {
   const [scene, setScene] = useState<Scene>("bloqueada");
   const [step, setStep] = useState<Step>("nada");
   /* Debit or credit comes from the bank's own notice, so the card never asks. */
-  const [method, setMethod] = useState<Method>("conta");
-  const [said, setSaid] = useState(() => lineFor("conta"));
+  const [kind, setKind] = useState<Kind>("debito");
+  const [size, setSize] = useState<Size>("compacto");
+  const [ask, setAsk] = useState(() => askFor("debito"));
+  const [said, setSaid] = useState(() => doneFor("debito"));
+  const e = EVENTS[kind];
+  const compact = size === "compacto";
   const [opened, setOpened] = useState(false);
   const [writing, setWriting] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -65,22 +108,23 @@ export default function SimulacaoAviso() {
   const pay = () => {
     clear();
     setStep("nada");
+    setAsk(askFor(kind));
     later(700, () => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       setStep("aviso");
     });
   };
   /* Confirmed: the card goes, and the one notification that stays is Willo's. */
-  const confirmed = (m: Method) => {
-    setSaid(lineFor(m));
+  const confirmed = () => {
+    setSaid(doneFor(kind));
     setStep("nada");
-    later(650, () => setStep("notificacao"));
+    later(180, () => setStep("notificacao"));
     later(6500, () => setStep((s) => (s === "notificacao" ? "nada" : s)));
   };
   const confirm = () => {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     playConfirm();
-    confirmed(method);
+    confirmed();
   };
   const open = () => {
     clear();
@@ -91,6 +135,7 @@ export default function SimulacaoAviso() {
   /* Unlocked, it drops from the top; locked, it sits with the other notifications, under the clock. */
   const locked = scene === "bloqueada";
   const top = locked ? insets.top + 300 : insets.top + 6;
+  const pad = compact ? 14 : 18;
   const side = locked ? 12 : 8;
   const enter = (damping: number) => (locked ? FadeInDown.springify().damping(damping) : SlideInUp.springify().damping(damping).stiffness(170));
   const leave = locked ? FadeOut.duration(260) : SlideOutUp.duration(300);
@@ -102,36 +147,55 @@ export default function SimulacaoAviso() {
       {step === "aviso" && (
         <Animated.View key={`card-${scene}`} entering={enter(19)} exiting={leave} style={{ position: "absolute", left: side, right: side, top }}>
           <Glass>
-            <Pressable onPress={open} accessibilityLabel="Abrir no Willo" style={{ paddingHorizontal: 18, paddingTop: 16, paddingBottom: 16 }}>
+            <Pressable onPress={open} accessibilityLabel="Abrir no Willo" style={{ paddingHorizontal: pad, paddingTop: compact ? 12 : 16, paddingBottom: pad }}>
               {/* Willo, and the pencil in the corner. */}
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Image source={ICON} style={{ width: 30, height: 30, borderRadius: 8 }} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>Registrar gasto</Text>
-                  <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>Willo · agora</Text>
-                </View>
-                <Pressable onPress={open} hitSlop={10} accessibilityRole="button" accessibilityLabel="Editar" style={({ pressed }) => ({ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)" })}>
-                  <Pencil size={15} color="#fff" strokeWidth={2.2} />
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
+                <Image source={ICON} style={{ width: compact ? 24 : 30, height: compact ? 24 : 30, borderRadius: compact ? 6 : 8 }} />
+                {compact ? (
+                  <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: "#fff" }}>
+                    {e.income ? "Registrar entrada" : "Registrar gasto"}
+                    <Text style={{ fontWeight: "400", color: "rgba(255,255,255,0.5)" }}> · agora</Text>
+                  </Text>
+                ) : (
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>{e.income ? "Registrar entrada" : "Registrar gasto"}</Text>
+                    <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>Willo · agora</Text>
+                  </View>
+                )}
+                <Pressable onPress={open} hitSlop={10} accessibilityRole="button" accessibilityLabel="Editar" style={({ pressed }) => ({ width: compact ? 28 : 34, height: compact ? 28 : 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)" })}>
+                  <Pencil size={compact ? 13 : 15} color="#fff" strokeWidth={2.2} />
                 </Pressable>
               </View>
 
-              {/* What Willo saw, said as Willo. */}
-              <Text style={{ marginTop: 16, fontSize: 14, color: "rgba(255,255,255,0.72)" }}>
-                Vi uma compra no {method === "conta" ? "débito" : "crédito"} do {BUY.bank}. Posso anotar?
-              </Text>
-              <Text style={{ marginTop: 4, color: "#fff" }}>
-                <Text style={{ fontSize: 15, fontWeight: "700", color: "rgba(255,255,255,0.55)" }}>R$ </Text>
-                <Text style={{ fontSize: 34, fontWeight: "800", letterSpacing: -1.2 }}>{brl(BUY.amount)}</Text>
-              </Text>
-              <Text style={{ fontSize: 15, fontWeight: "500", color: "rgba(255,255,255,0.85)" }}>{BUY.shop}</Text>
+              {/* What Willo saw, said as Willo — a different line each time. */}
+              <Text style={{ marginTop: compact ? 10 : 16, fontSize: compact ? 13.5 : 14, lineHeight: compact ? 18 : 19, color: "rgba(255,255,255,0.75)" }}>{ask}</Text>
+              {compact ? (
+                <View style={{ marginTop: 6, flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "600", color: "#fff" }}>
+                    {e.who}
+                  </Text>
+                  <Text style={{ color: "#fff" }}>
+                    <Text style={{ fontSize: 12.5, fontWeight: "700", color: "rgba(255,255,255,0.55)" }}>R$ </Text>
+                    <Text style={{ fontSize: 24, fontWeight: "800", letterSpacing: -0.8 }}>{brl(e.amount)}</Text>
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <Text style={{ marginTop: 4, color: "#fff" }}>
+                    <Text style={{ fontSize: 15, fontWeight: "700", color: "rgba(255,255,255,0.55)" }}>R$ </Text>
+                    <Text style={{ fontSize: 34, fontWeight: "800", letterSpacing: -1.2 }}>{brl(e.amount)}</Text>
+                  </Text>
+                  <Text style={{ fontSize: 15, fontWeight: "500", color: "rgba(255,255,255,0.85)" }}>{e.who}</Text>
+                </>
+              )}
 
               {/* Confirmar first, Cancelar after. */}
-              <View style={{ marginTop: 16, flexDirection: "row", gap: 8 }}>
-                <Pressable onPress={confirm} accessibilityRole="button" accessibilityLabel="Confirmar" style={({ pressed }) => ({ flex: 1, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: "#fff", opacity: pressed ? 0.85 : 1 })}>
-                  <Text style={{ fontSize: 15, fontWeight: "700", color: "#0B0B0B" }}>Confirmar</Text>
+              <View style={{ marginTop: compact ? 12 : 16, flexDirection: "row", gap: 8 }}>
+                <Pressable onPress={confirm} accessibilityRole="button" accessibilityLabel="Confirmar" style={({ pressed }) => ({ flex: 1, height: compact ? 38 : 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: "#fff", opacity: pressed ? 0.85 : 1 })}>
+                  <Text style={{ fontSize: compact ? 14 : 15, fontWeight: "700", color: "#0B0B0B" }}>Confirmar</Text>
                 </Pressable>
-                <Pressable onPress={() => setStep("nada")} accessibilityRole="button" accessibilityLabel="Cancelar" style={({ pressed }) => ({ flex: 1, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)" })}>
-                  <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>Cancelar</Text>
+                <Pressable onPress={() => setStep("nada")} accessibilityRole="button" accessibilityLabel="Cancelar" style={({ pressed }) => ({ flex: 1, height: compact ? 38 : 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)" })}>
+                  <Text style={{ fontSize: compact ? 14 : 15, fontWeight: "600", color: "#fff" }}>Cancelar</Text>
                 </Pressable>
               </View>
             </Pressable>
@@ -143,15 +207,17 @@ export default function SimulacaoAviso() {
       {step === "notificacao" && (
         <Animated.View key={`note-${scene}`} entering={enter(20)} exiting={leave} style={{ position: "absolute", left: side, right: side, top }}>
           <Pressable onPress={() => setStep("nada")}>
-            <Glass radius={26}>
-              <View style={{ padding: 13, flexDirection: "row", gap: 11, alignItems: "center" }}>
-                <Image source={ICON} style={{ width: 38, height: 38, borderRadius: 9 }} />
+            <Glass radius={compact ? 22 : 26}>
+              <View style={{ padding: compact ? 10 : 13, flexDirection: "row", gap: 10, alignItems: "center" }}>
+                <Image source={ICON} style={{ width: compact ? 30 : 38, height: compact ? 30 : 38, borderRadius: compact ? 7 : 9 }} />
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>{said.title}</Text>
+                    <Text style={{ fontSize: compact ? 13.5 : 14, fontWeight: "700", color: "#fff" }}>{said.title}</Text>
                     <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>agora</Text>
                   </View>
-                  <Text style={{ marginTop: 2, fontSize: 13.5, lineHeight: 18, color: "rgba(255,255,255,0.85)" }}>{said.body}</Text>
+                  <Text numberOfLines={compact ? 2 : 3} style={{ marginTop: 1, fontSize: compact ? 13 : 13.5, lineHeight: compact ? 17 : 18, color: "rgba(255,255,255,0.85)" }}>
+                    {said.body}
+                  </Text>
                 </View>
               </View>
             </Glass>
@@ -166,13 +232,14 @@ export default function SimulacaoAviso() {
             <View style={{ padding: 12, gap: 8 }}>
               <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 0.5, color: "rgba(255,255,255,0.5)", textAlign: "center" }}>SIMULAÇÃO DO AVISO DO COPILOT</Text>
               <Segment options={[["bloqueada", "Tela bloqueada"], ["app", "Em outro app"]]} value={scene} onChange={(v) => setScene(v as Scene)} />
-              <Segment options={[["conta", "Débito"], ["cartao", "Crédito"]]} value={method} onChange={(v) => setMethod(v as Method)} />
+              <Segment options={[["debito", "Débito"], ["credito", "Crédito"], ["pix", "Pix recebido"]]} value={kind} onChange={(v) => setKind(v as Kind)} />
+              <Segment options={[["compacto", "Compacto"], ["normal", "Normal"]]} value={size} onChange={(v) => setSize(v as Size)} />
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace("/" as never))} style={{ flex: 1, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.1)" }}>
                   <Text style={{ fontSize: 14.5, fontWeight: "600", color: "#fff" }}>Sair</Text>
                 </Pressable>
                 <Pressable onPress={pay} style={{ flex: 1.4, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
-                  <Text style={{ fontSize: 14.5, fontWeight: "700", color: "#0B0B0B" }}>Simular compra</Text>
+                  <Text style={{ fontSize: 14.5, fontWeight: "700", color: "#0B0B0B" }}>{kind === "pix" ? "Simular Pix" : "Simular compra"}</Text>
                 </Pressable>
               </View>
             </View>
@@ -186,11 +253,11 @@ export default function SimulacaoAviso() {
           <View style={{ paddingHorizontal: 14, paddingTop: 4, paddingBottom: 8 }}>
             <TransactionExperience
               data={{
-                kind: "despesa",
-                amount: BUY.amount,
-                title: BUY.shop,
-                category: BUY.category,
-                rows: passRows({ kind: "despesa", category: BUY.category, bank: { name: BUY.bank, hex: colorFor(BUY.bank, null) }, method, date: new Date().toISOString().slice(0, 10) }),
+                kind: e.income ? "receita" : "despesa",
+                amount: e.amount,
+                title: e.who,
+                category: e.category,
+                rows: passRows({ kind: e.income ? "receita" : "despesa", category: e.category, bank: { name: e.bank, hex: colorFor(e.bank, null) }, method: kind === "credito" ? "cartao" : "conta", date: new Date().toISOString().slice(0, 10) }),
               }}
               onConfirm={async (id) => {
                 await new Promise((r) => setTimeout(r, 450));
@@ -199,7 +266,7 @@ export default function SimulacaoAviso() {
               onPhase={(p) => setWriting(p === "saving" || p === "flow")}
               onDone={() => {
                 setOpened(false);
-                confirmed(method);
+                confirmed();
               }}
             />
           </View>
