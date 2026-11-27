@@ -20,6 +20,8 @@ import { categoryIcon } from "~/lib/categoryIcon";
 import { confirmPending, discardPending, listHistory, settlePending, useCopilot, type CopilotItem, type CopilotPast } from "~/lib/copilot";
 import { askLine, doneLine, moodLine, skipLine, type LineKind } from "~/lib/copilotLines";
 import { isLight } from "~/theme/theme";
+import { BlurView } from "expo-blur";
+import { HERO_ACCENTS, useHeroAccent } from "~/lib/heroAccent";
 import { useAuth } from "~/lib/auth";
 import { syncDeviceNotifications } from "~/lib/deviceNotifications";
 import { showToast } from "~/lib/toast";
@@ -175,7 +177,7 @@ function CopilotScreen() {
       const c = item.raw && /cr[eé]dito/i.test(item.raw) ? "na fatura do Nubank" : guessOf(item) ? `em ${guessOf(item)}` : null;
       const said = doneLine(item.type === "receita" ? "entrada" : "compra", { amount: money(item.amount), who: item.name, where: c });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-      setReaction(`${said.title} ${said.body}`);
+      setReaction(`**${said.title}** ${said.body}`);
       return leave(item.id);
     }
     if (!user) return;
@@ -191,7 +193,7 @@ function CopilotScreen() {
       /* Said by Willo, with where it went: debit out of the account, credit onto the invoice. */
       const card = ready.credit_card_id ? cards.find((c) => c.id === ready.credit_card_id)?.name : null;
       const said = doneLine(ready.type === "receita" ? "entrada" : "compra", { amount: money(ready.amount), who: ready.name, where: card ? `na fatura do ${card}` : ready.category ? `em ${ready.category}` : null });
-      setReaction(`${said.title} ${said.body}`);
+      setReaction(`**${said.title}** ${said.body}`);
     } catch {
       showToast("Não consegui confirmar agora. Tente de novo.");
     } finally {
@@ -228,7 +230,7 @@ function CopilotScreen() {
       await settlePending(item.id, tx?.id ?? null);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       const said = doneLine("transferencia", { amount: money(item.amount), who: item.name });
-      setReaction(`${said.title} ${said.body}`);
+      setReaction(`**${said.title}** ${said.body}`);
     } catch {
       showToast("Não consegui registrar agora. Tente de novo.");
     } finally {
@@ -240,7 +242,7 @@ function CopilotScreen() {
     if (examples) {
       if (bank && !accountOfBank(bank)) return setAdding({ item, bank });
       const said = doneLine("transferencia", { amount: money(item.amount), who: item.name });
-      setReaction(`${said.title} ${said.body}`);
+      setReaction(`**${said.title}** ${said.body}`);
       return leave(item.id);
     }
     if (!bank) return void writeTransfer(item, otherThan(null)?.id ?? null);
@@ -356,7 +358,7 @@ function CopilotScreen() {
           </View>
         )}
 
-        <Hero list={list} loading={items === null} say={reaction ?? moodLine(list.length)} onSetup={() => router.push("/atalhos" as never)} />
+        <Hero list={list} loading={items === null} say={reaction ?? moodLine(list.length)} />
 
         {days.map((d) => (
           <View key={d.label} style={{ marginTop: 22 }}>
@@ -392,7 +394,13 @@ function CopilotScreen() {
           </View>
         ))}
 
-        {list.length > 0 && <Text style={{ marginTop: 16, textAlign: "center", fontSize: 12.5, color: th(INK.softer) }}>Toque num card para conferir antes, ou no lápis para mudar.</Text>}
+        {/* Quietly, at the foot: nothing goes in without a yes; where the sources are set up. */}
+        <View style={{ marginTop: 22, alignItems: "center", gap: 6 }}>
+          <Text style={{ fontSize: 12.5, color: th(INK.softer) }}>Nada entra antes de você confirmar.</Text>
+          <Pressable onPress={() => router.push("/atalhos" as never)} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+            <Text style={{ fontSize: 12.5, fontWeight: "700", color: th(INK.soft) }}>Configurar o Copilot ›</Text>
+          </Pressable>
+        </View>
       </ScrollView>
 
       {list.length > 1 && (
@@ -544,67 +552,48 @@ function CopilotScreen() {
 }
 
 /**
- * The top of the page: Willo talking — about what is waiting, or about what was just answered —
- * and what is waiting at a glance: how many, what goes out, what comes in, what only moves.
+ * The top of the page, on its own ground as the home's is: Willo talking, large, his key words
+ * lit — about what is waiting (a line for the day) or about what was just answered — and under
+ * it, smaller, what goes out and comes in. No card: his words sit on the background.
  */
-function Hero({ list, loading, say, onSetup }: { list: CopilotItem[]; loading: boolean; say: string; onSetup: () => void }) {
+function Hero({ list, loading, say }: { list: CopilotItem[]; loading: boolean; say: string }) {
+  const accent = useHeroAccent();
+  const tone = HERO_ACCENTS.find((a) => a.key === accent)?.color ?? null;
   const out = list.filter((i) => kindOf(i) === "compra").reduce((t, i) => t + i.amount, 0);
   const inn = list.filter((i) => kindOf(i) === "entrada").reduce((t, i) => t + i.amount, 0);
   const moves = list.filter((i) => kindOf(i) === "transferencia").length;
+  const sub = [out ? `${money(out)} saindo` : null, inn ? `${money(inn)} entrando` : null, moves ? `${moves} ${moves === 1 ? "transferência" : "transferências"}` : null].filter(Boolean).join(" · ");
+  /* "Juntei **5 coisinhas** pra você": the words between the stars are lit. */
+  const parts = (loading ? "Deixa eu dar uma **olhada**…" : say).split("**").map((text, i) => ({ text, lit: i % 2 === 1 }));
   return (
-    <View style={{ marginTop: 14, borderRadius: 28, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.1)", "line"), backgroundColor: th("rgba(255,255,255,0.06)", "bg") }}>
-      <View style={{ padding: 16 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Wordmark height={13} />
-          <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.3, color: th(INK.softer) }}>COPILOT · AGORA</Text>
-        </View>
-        {/* What Willo says, changing as things are answered. */}
-        <Animated.Text key={say} entering={FadeInDown.duration(300)} style={{ marginTop: 10, fontSize: 19, lineHeight: 25, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>
-          {loading ? "Deixa eu dar uma olhada…" : say}
-        </Animated.Text>
-
-        {loading ? (
-          <ActivityIndicator style={{ marginTop: 14 }} color={th(INK.soft)} />
-        ) : list.length ? (
-          <View style={{ marginTop: 14, flexDirection: "row", gap: 8 }}>
-            <Stat label="Esperando" value={String(list.length)} />
-            <Stat label="Saídas" value={money(out)} />
-            {inn > 0 ? <Stat label="Entradas" value={money(inn)} /> : moves > 0 ? <Stat label="Transferências" value={String(moves)} /> : null}
-          </View>
-        ) : null}
-      </View>
-      <View style={{ paddingHorizontal: 16, paddingVertical: 11, borderTopWidth: 1, borderTopColor: th("rgba(255,255,255,0.07)", "line"), flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-        <Text numberOfLines={1} style={{ flex: 1, fontSize: 12.5, color: th(INK.softer) }}>
-          Nada entra antes de você confirmar.
+    <View style={{ paddingTop: 22, paddingBottom: 8 }}>
+      <Text style={{ fontSize: 15, fontWeight: "600", letterSpacing: -0.2, color: th("rgba(255,255,255,0.7)") }}>Seu copiloto financeiro</Text>
+      <Animated.View key={say} entering={FadeInDown.duration(320)} style={{ marginTop: 8, minHeight: 74 }}>
+        <Text style={{ fontSize: 29, lineHeight: 34, fontWeight: tone ? "800" : "400", letterSpacing: -0.9, color: th("#fff") }}>
+          {parts.map((p, i) =>
+            p.lit ? (
+              <Text key={i} style={tone ? { color: th(tone) } : { fontWeight: "800" }}>
+                {p.text}
+              </Text>
+            ) : (
+              p.text
+            ),
+          )}
         </Text>
-        <Pressable onPress={onSetup} hitSlop={6} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-          <Text style={{ fontSize: 12.5, fontWeight: "700", color: th(INK.soft) }}>Configurar ›</Text>
-        </Pressable>
-      </View>
+      </Animated.View>
+      {!loading && sub ? <Text style={{ marginTop: 8, fontSize: 14.5, lineHeight: 20, color: th(INK.soft), fontVariant: ["tabular-nums"] }}>{sub}</Text> : null}
     </View>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+/** The glass of the notification card: blurred, dark, a fine edge. */
+function Glass({ children }: { children: React.ReactNode }) {
+  const light = isLight();
   return (
-    <View style={{ flex: 1, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 16, backgroundColor: th("rgba(255,255,255,0.06)", "bg") }}>
-      <Text numberOfLines={1} style={{ fontSize: 11.5, color: th(INK.softer) }}>
-        {label}
-      </Text>
-      <Text numberOfLines={1} adjustsFontSizeToFit style={{ marginTop: 2, fontSize: 15, fontWeight: "800", letterSpacing: -0.3, color: th("#fff"), fontVariant: ["tabular-nums"] }}>
-        {value}
-      </Text>
-    </View>
-  );
-}
-
-function Chip({ icon, text }: { icon: React.ReactNode; text: string }) {
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 5, height: 26, paddingHorizontal: 10, borderRadius: 13, backgroundColor: th("rgba(255,255,255,0.07)", "bg") }}>
-      {icon}
-      <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: "600", color: th(INK.soft) }}>
-        {text}
-      </Text>
+    <View style={{ borderRadius: 28, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: light ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.14)" }}>
+      <BlurView intensity={60} tint={light ? "light" : "dark"} style={{ backgroundColor: light ? "rgba(255,255,255,0.7)" : "rgba(24,24,28,0.6)" }}>
+        {children}
+      </BlurView>
     </View>
   );
 }
@@ -648,15 +637,9 @@ function PendingCard({
       onPress={busy ? undefined : onReview}
       accessibilityRole="button"
       accessibilityLabel={`${item.name}, ${money(item.amount)}. Conferir`}
-      style={({ pressed }) => ({
-        borderRadius: 26,
-        borderCurve: "continuous",
-        overflow: "hidden",
-        borderWidth: 1,
-        borderColor: th("rgba(255,255,255,0.1)", "line"),
-        backgroundColor: th(pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)", "bg"),
-      })}
+      style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}
     >
+      <Glass>
       <View style={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14 }}>
         {/* Who, and the pencil in the corner. */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
@@ -731,6 +714,7 @@ function PendingCard({
           </Pressable>
         </View>
       </View>
+      </Glass>
     </Pressable>
   );
 }
