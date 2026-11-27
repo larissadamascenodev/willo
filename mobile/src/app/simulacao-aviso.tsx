@@ -24,7 +24,7 @@ import { playConfirm, preloadConfirm } from "~/lib/sounds";
 const ICON = require("../../assets/images/app-icon.png") as number;
 
 type Scene = "bloqueada" | "app";
-type Step = "nada" | "aviso" | "aberta" | "notificacao";
+type Step = "nada" | "aviso" | "notificacao";
 type Kind = "debito" | "credito" | "pix";
 
 /* What came in: a purchase from the Wallet or the bank, or a Pix received (from the bank's notice). */
@@ -168,77 +168,53 @@ export default function SimulacaoAviso() {
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       {scene === "bloqueada" ? <LockScreen top={insets.top} /> : <OtherApp top={insets.top} />}
 
-      {/* The notice, as the iPhone shows any app's: the icon, Willo's words as the title, the amount and
-          the name under them. A tap opens the app on the confirmation; holding it opens it in place. */}
+      {/* The confirmation as the Atalhos action shows it: a card of our own design that drops from the
+          top with the two answers in view. Then the second one, Willo's own iPhone notification. */}
+      {/* The confirmation, as a notification: the app's icon, its title and the time, the text; then
+          the amount and the two answers. A tap on it opens the app's own confirmation. */}
       {step === "aviso" && (
         <Animated.View key={`card-${scene}`} entering={dropIn(locked)} exiting={liftOut(locked)} style={{ position: "absolute", left: side, right: side, top }}>
-          <Pressable
-            onPress={open}
-            onLongPress={() => {
-              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              setStep("aberta");
-            }}
-            delayLongPress={350}
-            accessibilityLabel="Notificação do Willo"
-          >
-            <Glass>
-              <View style={{ paddingHorizontal: 14, paddingVertical: 14, flexDirection: "row", gap: 11, alignItems: "center" }}>
+          <Glass>
+            <Pressable onPress={open} accessibilityLabel="Abrir no Willo" style={{ paddingHorizontal: 14, paddingTop: 14, paddingBottom: 14 }}>
+              <View style={{ flexDirection: "row", gap: 11 }}>
                 <Image source={ICON} style={{ width: 38, height: 38, borderRadius: 9 }} />
                 <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "600", color: "#fff" }}>
-                      {ask}
+                      {e.income ? "Registrar entrada" : "Registrar gasto"}
                     </Text>
                     <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.55)" }}>agora</Text>
+                    <Pressable onPress={open} hitSlop={10} accessibilityRole="button" accessibilityLabel="Editar" style={({ pressed }) => ({ width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.12)" })}>
+                      <Pencil size={12} color="#fff" strokeWidth={2.3} />
+                    </Pressable>
                   </View>
-                  <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 15, lineHeight: 20, color: "rgba(255,255,255,0.9)" }}>
-                    R$ {brl(e.amount)} · {e.who}
-                  </Text>
+                  {/* What Willo saw, said as Willo — a different line each time. */}
+                  <Text style={{ marginTop: 1, fontSize: 15, lineHeight: 20, color: "rgba(255,255,255,0.9)" }}>{ask}</Text>
                 </View>
               </View>
-            </Glass>
-          </Pressable>
-        </Animated.View>
-      )}
 
-      {/* Held open: the rest of the screen blurs; our layout in the notification, the iPhone's two
-          actions under it. A tap outside closes it and the purchase stays in the Copilot. */}
-      {step === "aberta" && (
-        <Animated.View entering={FadeIn.duration(220)} exiting={FadeOut.duration(200)} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}>
-          <Pressable onPress={() => setStep("nada")} style={{ flex: 1 }}>
-            <BlurView intensity={45} tint="dark" style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.25)" }} />
-          </Pressable>
-          <Animated.View entering={dropIn(true)} style={{ position: "absolute", left: 12, right: 12, top: insets.top + 90, gap: 10 }}>
-            <Glass>
-              <View style={{ padding: 16 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <Image source={ICON} style={{ width: 22, height: 22, borderRadius: 5 }} />
-                  <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", letterSpacing: 0.3, color: "rgba(255,255,255,0.6)" }}>WILLO</Text>
-                  <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>agora</Text>
-                </View>
-                <Text style={{ marginTop: 14, fontSize: 17, lineHeight: 22, fontWeight: "600", color: "#fff" }}>{ask}</Text>
-                <Text style={{ marginTop: 10, color: "#fff" }}>
-                  <Text style={{ fontSize: 16, fontWeight: "700", color: "rgba(255,255,255,0.55)" }}>R$ </Text>
-                  <Text style={{ fontSize: 40, fontWeight: "800", letterSpacing: -1.4 }}>{brl(e.amount)}</Text>
+              {/* The amount first and larger, then who or what it was. */}
+              <View style={{ marginTop: 12, flexDirection: "row", alignItems: "baseline", gap: 10 }}>
+                <Text style={{ color: "#fff" }}>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.55)" }}>R$ </Text>
+                  <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1 }}>{brl(e.amount)}</Text>
                 </Text>
-                <Text style={{ marginTop: 2, fontSize: 16, fontWeight: "500", color: "rgba(255,255,255,0.85)" }}>{e.who}</Text>
-                <Text style={{ marginTop: 6, fontSize: 13.5, color: "rgba(255,255,255,0.55)" }}>
-                  {e.bank} · {kind === "credito" ? "Crédito" : kind === "pix" ? "Pix" : "Débito"}
-                  {e.income ? "" : ` · ${e.category}`}
+                <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "500", color: "rgba(255,255,255,0.85)" }}>
+                  {e.who}
                 </Text>
               </View>
-            </Glass>
-            {/* The iPhone's own action list. */}
-            <Glass radius={20}>
-              <Pressable onPress={confirm} style={({ pressed }) => ({ height: 50, paddingHorizontal: 18, justifyContent: "center", backgroundColor: pressed ? "rgba(255,255,255,0.12)" : "transparent" })}>
-                <Text style={{ fontSize: 17, color: "#fff" }}>Confirmar</Text>
-              </Pressable>
-              <View style={{ height: 0.5, backgroundColor: "rgba(255,255,255,0.15)" }} />
-              <Pressable onPress={() => setStep("nada")} style={({ pressed }) => ({ height: 50, paddingHorizontal: 18, justifyContent: "center", backgroundColor: pressed ? "rgba(255,255,255,0.12)" : "transparent" })}>
-                <Text style={{ fontSize: 17, color: "#FF453A" }}>Cancelar</Text>
-              </Pressable>
-            </Glass>
-          </Animated.View>
+
+              {/* Confirmar first, Cancelar after. */}
+              <View style={{ marginTop: 12, flexDirection: "row", gap: 8 }}>
+                <Pressable onPress={confirm} accessibilityRole="button" accessibilityLabel="Confirmar" style={({ pressed }) => ({ flex: 1, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "#fff", opacity: pressed ? 0.85 : 1 })}>
+                  <Text style={{ fontSize: 15, fontWeight: "700", color: "#0B0B0B" }}>Confirmar</Text>
+                </Pressable>
+                <Pressable onPress={() => setStep("nada")} accessibilityRole="button" accessibilityLabel="Cancelar" style={({ pressed }) => ({ flex: 1, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.12)" })}>
+                  <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>Cancelar</Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          </Glass>
         </Animated.View>
       )}
 
@@ -267,11 +243,11 @@ export default function SimulacaoAviso() {
       )}
 
       {/* The controls of the simulation, at the foot. */}
-      {!opened && step !== "aberta" && (
+      {!opened && (
         <Animated.View entering={FadeIn} exiting={FadeOut} style={{ position: "absolute", left: 12, right: 12, bottom: insets.bottom + 10 }}>
           <Glass radius={24}>
             <View style={{ padding: 12, gap: 8 }}>
-              <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 0.5, color: "rgba(255,255,255,0.5)", textAlign: "center" }}>SIMULAÇÃO · TOQUE ABRE O APP · SEGURE PARA ABRIR</Text>
+              <Text style={{ fontSize: 11, fontWeight: "600", letterSpacing: 0.5, color: "rgba(255,255,255,0.5)", textAlign: "center" }}>SIMULAÇÃO DO AVISO DO COPILOT</Text>
               <Segment options={[["bloqueada", "Tela bloqueada"], ["app", "Em outro app"]]} value={scene} onChange={(v) => setScene(v as Scene)} />
               <Segment options={[["debito", "Débito"], ["credito", "Crédito"], ["pix", "Pix recebido"]]} value={kind} onChange={(v) => setKind(v as Kind)} />
               <View style={{ flexDirection: "row", gap: 8 }}>
