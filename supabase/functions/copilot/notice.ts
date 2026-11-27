@@ -49,7 +49,9 @@ function after(text: string, word: string): string | null {
 }
 
 export function readNotice(text: string, app?: string | null): Notice | null {
-  const t = String(text ?? "");
+  /* Inside a name in capitals the "E" belongs to it ("EMPREENDIMENTOS E BEBIDAS"): held aside so
+     the name is not cut there as it would be at "R$ 10 em X e ...". */
+  const t = String(text ?? "").replace(/([A-ZÀ-Ý]{2,}) E (?=[A-ZÀ-Ý]{2,})/g, "$1  ");
   const p = plain(t);
   if (!MOVED.test(p) || NOT_MOVED.test(p)) return null;
 
@@ -81,6 +83,6 @@ export function readNotice(text: string, app?: string | null): Notice | null {
         : method === "cartao"
           ? "Compra no crédito"
           : "Compra no débito";
-  const name = who ? titleCase(who).slice(0, 60) : app ? `${fallback} · ${app}` : fallback;
+  const name = who ? titleCase(who).replace(//g, "e").slice(0, 60) : app ? `${fallback} · ${app}` : fallback;
   return { amount, type: income ? "receita" : "despesa", method, name };
 }
