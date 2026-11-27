@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { amountOf, plain, readNotice } from "./notice.ts";
+import { guessCategory } from "./category.ts";
 
 /**
  * Willo Copilot's door for the iPhone's Wallet shortcut.
@@ -16,6 +17,9 @@ import { amountOf, plain, readNotice } from "./notice.ts";
  *   code, to paste into the shortcut. It is their user id signed with the server's own
  *   key, so it needs no table and cannot be guessed or forged.
  * - { code, amount, merchant, card?, name? }, from the shortcut: one purchase, queued.
+ * - { code, action: "confirm" | "discard", id, method? }, from the confirmation card the
+ *   iPhone shows over any screen: the waiting purchase written as a transaction (debit out of
+ *   the account, credit onto the card's open invoice), or let go.
  * - { code, notice, app? }, from a bank-notification automation: the notification's text,
  *   read for the amount, debit or credit, Pix sent or received and the shop or person.
  *   Anything that is not money moving is ignored. The same purchase arriving from the
@@ -102,6 +106,124 @@ serve(async (req) => {
       .limit(1);
     return (data?.[0] ?? null) as { id: string; raw: string | null; payment_method: string | null; credit_card_id: string | null } | null;
   };
+
+  /* What the confirmation card shows for a waiting purchase: the shop, the amount, where it was
+     paid and its category, and whether debit or credit still has to be asked. */
+  async function cardOf(id: string) {
+    const { data } = await admin.from("copilot_pending").select("id, name, amount, category, raw").eq("id", id).maybeSingle();
+    if (!data) return null;
+    let raw: Record<string, unknown> = {};
+    try {
+      raw = data.raw ? JSON.parse(data.raw) : {};
+    } catch {
+      raw = {};
+    }
+    const text = `${raw.card ?? ""} ${raw.notice ?? ""}`;
+    const known = /d[eé]bito|debit/i.test(text) ? "Débito" : /cr[eé]dito|credit/i.test(text) ? "Crédito" : "";
+    const ask = !known && (await cardsOf()).length > 0;
+    const where = String(raw.card ?? "").split(/\r?\n/)[0].replace(/\s*(d[eé]bito|cr[eé]dito)\s*/gi, " ").trim().slice(0, 30);
+    return {
+      id: data.id,
+      name: String(data.name),
+      amount: `R$ ${Number(data.amount).toFixed(2).replace(".", ",")}`,
+      detail: [where, known || (ask ? "" : "Débito"), data.category].filter(Boolean).join(" · "),
+      ask,
+    };
+  }
+
+  /* The answer given on the confirmation card. */
+  if (body.action === "confirm" || body.action === "discard") {
+    const id = String(body.id ?? "");
+    const { data: row } = await admin
+      .from("copilot_pending")
+      .select("id, name, amount, type, category, payment_method, account_id, credit_card_id, occurred_at, raw, status")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!row) return json({ error: "Essa compra não está mais no Willo Copilot." }, 404);
+    const p = row as { id: string; name: string; amount: number; type: "despesa" | "receita"; category: string | null; payment_method: string | null; account_id: string | null; credit_card_id: string | null; occurred_at: string; raw: string | null; status: string };
+    /* Answered already (tapped twice, or in the app): nothing new. */
+    if (p.status !== "pendente") return json({ ok: true, already: p.status });
+    if (body.action === "discard") {
+      await admin.from("copilot_pending").update({ status: "descartado" }).eq("id", p.id);
+      return json({ ok: true, message: "Não registrado." });
+    }
+
+    let raw: Record<string, unknown> = {};
+    try {
+      raw = p.raw ? JSON.parse(p.raw) : {};
+    } catch {
+      raw = {};
+    }
+    const walletText = `${raw.card ?? ""} ${raw.notice ?? ""}`;
+    const asked = body.method === "conta" || body.method === "cartao" ? (body.method as "conta" | "cartao") : null;
+    const cards = await cardsOf();
+    const method: "conta" | "cartao" | null =
+      p.type === "receita" ? "conta" : (asked ?? (/d[eé]bito|debit/i.test(walletText) ? "conta" : /cr[eé]dito|credit/i.test(walletText) ? "cartao" : cards.length ? null : "conta"));
+    if (!method) return json({ error: "Escolha débito ou crédito." }, 400);
+
+    const words = plain(walletText).split(/[^a-z0-9]+/).filter((w) => w.length > 2);
+    let accountId: string | null = null;
+    let cardId: string | null = null;
+    if (method === "cartao") {
+      cardId = p.credit_card_id ?? cards.find((c) => words.some((w) => plain(c.name).includes(w)))?.id ?? cards[0]?.id ?? null;
+      if (!cardId) return json({ error: "Nenhum cartão de crédito no Willo para essa compra." }, 400);
+    } else {
+      const { data: accs } = await admin.from("accounts").select("id, name, type, is_default, is_active").eq("user_id", userId);
+      const usable = ((accs ?? []) as { id: string; name: string; type: string | null; is_default: boolean | null; is_active: boolean | null }[]).filter((a) => a.type !== "investment" && a.is_active !== false);
+      accountId = p.account_id ?? usable.find((a) => words.some((w) => plain(a.name).includes(w)))?.id ?? usable.find((a) => a.is_default)?.id ?? usable[0]?.id ?? null;
+    }
+
+    const category =
+      p.category ??
+      (await guessCategory(p.name, async () => {
+        const { data } = await admin.from("transactions").select("category").eq("user_id", userId).ilike("name", p.name).order("created_at", { ascending: false }).limit(1);
+        return (data?.[0]?.category as string | undefined) ?? null;
+      })) ??
+      "Outros";
+    /* The day and the hour where the person is. */
+    const at = new Date(p.occurred_at);
+    const local = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", ...o }).format(at);
+    const date = local({ year: "numeric", month: "2-digit", day: "2-digit" });
+    const time = local({ hour: "2-digit", minute: "2-digit", hour12: false }).replace(/^24/, "00");
+    const credit = method === "cartao";
+    /* As the app writes names: "PADARIA CLEIDE" → "Padaria Cleide", "iFood" kept. */
+    const name = p.name
+      .trim()
+      .replace(/\s+/g, " ")
+      .split(" ")
+      .map((w) => (/[a-zà-ý]/.test(w) && /[A-ZÀ-Ý]/.test(w.slice(1))) || /\d/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+
+    const { data: tx, error: txError } = await admin
+      .from("transactions")
+      .insert({
+        user_id: userId,
+        name,
+        type: p.type,
+        amount: Number(p.amount),
+        category,
+        date,
+        time,
+        status: credit ? "pendente" : "pago",
+        payment_method: credit ? "cartao" : "conta",
+        account_id: credit ? null : accountId,
+        credit_card_id: credit ? cardId : null,
+        recurrence_type: "unica",
+        observation: p.raw ? `Willo Copilot · ${p.raw}`.slice(0, 280) : "Willo Copilot",
+      })
+      .select("id")
+      .single();
+    if (txError || !tx) return json({ error: "Não foi possível registrar agora. A compra continua no Willo Copilot." }, 500);
+    await admin
+      .from("copilot_pending")
+      .update({ status: "confirmado", transaction_id: tx.id, category, payment_method: credit ? "cartao" : "conta", account_id: accountId, credit_card_id: cardId })
+      .eq("id", p.id);
+
+    const value = `R$ ${Number(p.amount).toFixed(2).replace(".", ",")}`;
+    const title = p.type === "receita" ? "Receita registrada" : /pix/i.test(walletText) ? "Pix registrado" : "Compra registrada";
+    return json({ ok: true, title, message: `${value} ${p.type === "receita" ? "de" : "na"} ${name}, em ${category}.` });
+  }
 
   /* A bank's notification. */
   if (typeof body.notice === "string") {
@@ -196,21 +318,26 @@ serve(async (req) => {
       .from("copilot_pending")
       .update({ name: merchant.slice(0, 80), raw: JSON.stringify({ ...raw, merchant: body.merchant ?? null, card: [body.card ?? "", raw.card ?? ""].join(" ").trim() }).slice(0, 500) })
       .eq("id", seen.id);
-    return json({ ok: true, merged: true, message: `${merchant} · R$ ${amount.toFixed(2).replace(".", ",")} no Willo Copilot` });
+    return json({ ok: true, merged: true, message: `${merchant} · R$ ${amount.toFixed(2).replace(".", ",")} no Willo Copilot`, pending: await cardOf(seen.id) });
   }
 
-  const { error } = await admin.from("copilot_pending").insert({
+  const category = await guessCategory(merchant, async () => {
+    const { data } = await admin.from("transactions").select("category").eq("user_id", userId).ilike("name", merchant).order("created_at", { ascending: false }).limit(1);
+    return (data?.[0]?.category as string | undefined) ?? null;
+  });
+  const { data: made, error } = await admin.from("copilot_pending").insert({
     user_id: userId,
     name: merchant.slice(0, 80),
     amount: Math.round(amount * 100) / 100,
     type: "despesa",
+    category,
     payment_method: creditCardId ? "cartao" : null,
     credit_card_id: creditCardId,
     occurred_at: new Date().toISOString(),
     source: "atalho",
     raw: JSON.stringify({ merchant: body.merchant ?? null, amount: body.amount ?? null, card: body.card ?? null, name: body.name ?? null }).slice(0, 500),
-  });
-  if (error) return json({ error: "Não foi possível guardar a compra" }, 500);
+  }).select("id").single();
+  if (error || !made) return json({ error: "Não foi possível guardar a compra" }, 500);
 
-  return json({ ok: true, message: `${merchant} · R$ ${amount.toFixed(2).replace(".", ",")} no Willo Copilot` });
+  return json({ ok: true, message: `${merchant} · R$ ${amount.toFixed(2).replace(".", ",")} no Willo Copilot`, pending: await cardOf(made.id) });
 });

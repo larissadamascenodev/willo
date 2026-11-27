@@ -232,6 +232,13 @@ function CopilotScreen() {
           </RoundButton>
         </View>
 
+        {/* Only in Expo Go: the simulation of the confirmation that will drop from the top. */}
+        {__DEV__ && (
+          <Pressable onPress={() => router.push("/simulacao-aviso" as never)} style={{ marginTop: 10, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(103,205,103,0.16)" }}>
+            <Text style={{ fontSize: 13.5, fontWeight: "600", color: GREEN }}>Ver simulação do aviso na tela</Text>
+          </Pressable>
+        )}
+
         <Hero count={list.length} loading={items === null} total={total} latest={list[0]?.occurred_at ?? null} onSetup={() => router.push("/atalhos" as never)} />
 
         {days.map((d) => (
