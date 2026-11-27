@@ -46,10 +46,10 @@ function askFor(kind: Kind) {
   const e = EVENTS[kind];
   if (e.income)
     return pick([
-      `Caiu um Pix de ${e.who} no seu ${e.bank}. Esse dinheiro é seu?`,
-      `${e.who} te mandou um Pix. Entra nas suas finanças?`,
-      `Chegou dinheiro no ${e.bank}. Conto como seu?`,
-      `${greeting()} Recebi um aviso de Pix de ${e.who}. Anoto como entrada?`,
+      `Você recebeu um Pix no ${e.bank}. Posso anotar?`,
+      `Caiu um Pix na sua conta do ${e.bank}. Anoto pra você?`,
+      `Chegou um Pix agora no ${e.bank}. Registro como entrada?`,
+      `${greeting()} Entrou um Pix no ${e.bank}. Posso anotar?`,
     ]);
   const how = kind === "credito" ? "no crédito" : "no débito";
   return pick([
@@ -170,13 +170,14 @@ export default function SimulacaoAviso() {
               {/* What Willo saw, said as Willo — a different line each time. */}
               <Text style={{ marginTop: compact ? 10 : 16, fontSize: compact ? 13.5 : 14, lineHeight: compact ? 18 : 19, color: "rgba(255,255,255,0.75)" }}>{ask}</Text>
               {compact ? (
-                <View style={{ marginTop: 6, flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "600", color: "#fff" }}>
-                    {e.who}
-                  </Text>
+                /* The amount first and larger, then who or what it was. */
+                <View style={{ marginTop: 6, flexDirection: "row", alignItems: "baseline", gap: 10 }}>
                   <Text style={{ color: "#fff" }}>
-                    <Text style={{ fontSize: 12.5, fontWeight: "700", color: "rgba(255,255,255,0.55)" }}>R$ </Text>
-                    <Text style={{ fontSize: 24, fontWeight: "800", letterSpacing: -0.8 }}>{brl(e.amount)}</Text>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: "rgba(255,255,255,0.55)" }}>R$ </Text>
+                    <Text style={{ fontSize: 28, fontWeight: "800", letterSpacing: -1 }}>{brl(e.amount)}</Text>
+                  </Text>
+                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "500", color: "rgba(255,255,255,0.85)" }}>
+                    {e.who}
                   </Text>
                 </View>
               ) : (
