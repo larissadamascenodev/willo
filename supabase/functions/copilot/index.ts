@@ -169,7 +169,7 @@ serve(async (req) => {
       }
     }
   }
-  if (!(amount > 0)) return json({ error: "A compra chegou sem valor. Na automação, toque em Valor, escolha Entrada do Atalho, toque nela de novo e escolha Valor." }, 400);
+  if (!(amount > 0)) return json({ error: "A compra chegou sem valor. Na automação, toque em Valor, escolha Transação (não Entrada do Atalho), toque nela de novo e escolha Valor." }, 400);
   const firstLine = (v: unknown) => String(v ?? "").split(/\r?\n/)[0].replace(/R\$\s*-?\d[\d.,]*/g, "").trim();
   /* With the whole purchase in one field, the shop is its first line that is not the amount. */
   const fromWhole = texts

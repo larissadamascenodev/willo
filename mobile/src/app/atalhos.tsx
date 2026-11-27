@@ -301,7 +301,7 @@ function WalletCopilotAction() {
             title: "Ligue o valor",
             text: (
               <>
-                Na ação, toque no campo <B>Valor</B> e escolha <B>Entrada do Atalho</B>. Agora toque de novo no botão azul <B>Entrada do Atalho</B> que apareceu no campo e, na lista, escolha <B>Valor</B>. O campo tem que mostrar <B>Valor</B>, não “Entrada do Atalho”: a compra inteira chega vazia e aparece “Valor não encontrado”.
+                Na ação, toque no campo <B>Valor</B>. Acima do teclado aparece o botão azul <B>Transação</B>, com um cartãozinho: toque nele. Depois toque no <B>Transação</B> que entrou no campo e, na lista, escolha <B>Valor</B>. Não use “Entrada do Atalho”: ela não vem da compra e chega vazia.
               </>
             ),
             screen: <MockTrigger kind="carteira" action="Registrar compra no Willo" />,
@@ -310,7 +310,7 @@ function WalletCopilotAction() {
             title: "Ligue a loja e o cartão",
             text: (
               <>
-                Toque na setinha da ação para ver os outros campos. Faça igual: em <B>Comerciante</B>, escolha Entrada do Atalho e depois <B>Comerciante</B>; em <B>Cartão</B>, Entrada do Atalho e depois <B>Cartão ou Passe</B>.
+                Toque na setinha da ação para ver os outros campos. Faça igual: em <B>Comerciante</B>, Transação e depois <B>Comerciante</B>; em <B>Cartão</B>, Transação e depois <B>Cartão ou Passe</B>.
               </>
             ),
             screen: <MockTrigger kind="carteira" action="Registrar compra no Willo" />,
@@ -374,7 +374,7 @@ function BankNotices() {
             title: "Volte para salvar",
             text: (
               <>
-                Toque na <B>setinha de voltar</B>, em cima à esquerda. Pronto. Se o campo <B>Aviso</B> aparecer vazio, toque nele e escolha <B>Entrada do Atalho</B> antes de voltar.
+                Toque na <B>setinha de voltar</B>, em cima à esquerda. Pronto. Se o campo <B>Aviso</B> aparecer vazio, toque nele e escolha o botão azul <B>Notificação</B>, acima do teclado, antes de voltar. Não use “Entrada do Atalho”.
               </>
             ),
             screen: <MockTrigger kind="notificacao" action="Registrar aviso do banco no Willo" />,
