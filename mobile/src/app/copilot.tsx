@@ -18,7 +18,7 @@ import SubLogo from "~/components/SubLogo";
 import { ChevronLeft, Clock, CreditCard, Landmark, Pencil } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { confirmPending, discardPending, listHistory, settlePending, useCopilot, type CopilotItem, type CopilotPast } from "~/lib/copilot";
-import { askLine, doneLine, moodLine, skipLine, type LineKind } from "~/lib/copilotLines";
+import { allDoneLine, askLine, doneLine, moodLine, skipLine, type LineKind } from "~/lib/copilotLines";
 import { isLight } from "~/theme/theme";
 import { BlurView } from "expo-blur";
 import { HERO_ACCENTS, useHeroAccent } from "~/lib/heroAccent";
@@ -122,7 +122,7 @@ function CopilotScreen() {
   /* Written: the coin, the small notice of the app, and Willo saying it at the top. */
   const done = (said: { title: string; body: string }) => {
     playConfirm();
-    showToast(`${said.title}${/[!.?]$/.test(said.title) ? "" : "."} ${said.body}`);
+    showToast(`${said.title}\n${said.body}`);
     setReaction(`**${said.title}** ${said.body}`);
   };
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -146,7 +146,11 @@ function CopilotScreen() {
   }, []);
 
   /* With no account named, the main one. */
-  const mainAccount = () => (accounts as (Account & { is_default?: boolean })[]).find((a) => a.is_default)?.id ?? accounts[0]?.id ?? null;
+  const mainAccount = () => {
+    /* The main account; without one marked, a current account before a cash box or savings. */
+    const all = accounts as (Account & { is_default?: boolean; type?: string })[];
+    return (all.find((a) => a.is_default) ?? all.find((a) => a.type === "checking") ?? all.find((a) => a.type !== "cash" && a.type !== "savings") ?? all[0])?.id ?? null;
+  };
 
   /* Debit or credit. The Wallet does not say which; the card's name sometimes does
      ("Débito", "Crédito") and then Willo decides. Otherwise nothing is chosen and the
@@ -183,30 +187,39 @@ function CopilotScreen() {
     setModes((m) => ({ ...m, [item.id]: mode }));
   };
 
-  const save = async (item: CopilotItem) => {
+  /* Quiet: one of many confirmed at once, said together at the end. Resolves true once written. */
+  const save = async (item: CopilotItem, quiet = false): Promise<boolean> => {
     if (examples) {
+      if (quiet) {
+        leave(item.id);
+        return true;
+      }
       const c = item.raw && /cr[eé]dito/i.test(item.raw) ? "na fatura do Nubank" : guessOf(item) ? `em ${guessOf(item)}` : null;
       const said = doneLine(item.type === "receita" ? "entrada" : "compra", { amount: money(item.amount), who: item.name, where: c });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       done(said);
-      return leave(item.id);
+      leave(item.id);
+      return true;
     }
-    if (!user) return;
+    if (!user) return false;
     if (!modeOf(item)) {
-      showToast(`${item.name}: escolha débito ou crédito antes de confirmar.`);
-      return;
+      if (!quiet) showToast(`${item.name}: escolha débito ou crédito antes de confirmar.`);
+      return false;
     }
     setBusy(item.id);
     try {
       const ready = withAccount(withGuess(item));
       await confirmPending(ready, user.id);
+      if (quiet) return true;
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       /* Said by Willo, with where it went: debit out of the account, credit onto the invoice. */
       const card = ready.credit_card_id ? cards.find((c) => c.id === ready.credit_card_id)?.name : null;
       const said = doneLine(ready.type === "receita" ? "entrada" : "compra", { amount: money(ready.amount), who: ready.name, where: card ? `na fatura do ${card}` : ready.category ? `em ${ready.category}` : null });
       done(said);
+      return true;
     } catch {
-      showToast("Não consegui confirmar agora. Tente de novo.");
+      if (!quiet) showToast("Não consegui confirmar agora. Tente de novo.");
+      return false;
     } finally {
       setBusy(null);
     }
@@ -223,16 +236,21 @@ function CopilotScreen() {
     const kind = (a: Account) => (a as { type?: string }).type;
     return rest.find((a) => a.is_default) ?? rest.find((a) => kind(a) === "checking") ?? rest.find((a) => kind(a) !== "cash" && kind(a) !== "savings") ?? rest[0] ?? null;
   };
-  const writeTransfer = async (item: CopilotItem, there: string | null) => {
-    if (!user) return;
+  const writeTransfer = async (item: CopilotItem, there: string | null, quiet = false): Promise<boolean> => {
+    if (examples) {
+      if (!quiet) done(doneLine("transferencia", { amount: money(item.amount), who: item.name }));
+      leave(item.id);
+      return true;
+    }
+    if (!user) return false;
     const here = otherThan(there);
     const incoming = item.type === "receita";
     /* In: from the account Willo keeps into the bank's; out: the other way. Either end may be outside Willo. */
     const fromId = incoming ? (here?.id ?? null) : there;
     const toId = incoming ? there : (here?.id ?? null);
     if (!fromId && !toId) {
-      showToast("Não achei nenhuma conta sua para essa transferência. Crie uma conta primeiro.");
-      return;
+      if (!quiet) showToast("Não achei nenhuma conta sua para essa transferência. Crie uma conta primeiro.");
+      return false;
     }
     setBusy(item.id);
     try {
@@ -241,11 +259,14 @@ function CopilotScreen() {
         user.id,
       )) as { id?: string } | null;
       await settlePending(item.id, tx?.id ?? null);
+      if (quiet) return true;
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       const said = doneLine("transferencia", { amount: money(item.amount), who: item.name });
       done(said);
+      return true;
     } catch {
-      showToast("Não consegui registrar agora. Tente de novo.");
+      if (!quiet) showToast("Não consegui registrar agora. Tente de novo.");
+      return false;
     } finally {
       setBusy(null);
     }
@@ -307,10 +328,37 @@ function CopilotScreen() {
     const t = setTimeout(() => void syncDeviceNotifications(user.id), 1500);
     return () => clearTimeout(t);
   }, [items?.length, user]);
+  /* All at once: each written as its own entry, and one notice for all of them. Transfers whose
+     bank is not in Willo yet, and purchases still waiting for debit or credit, stay to be answered. */
   const confirmAll = async () => {
-    const open = list.filter((i) => !modeOf(i));
-    for (const item of list) if (kindOf(item) !== "transferencia" && modeOf(item)) await save(item);
-    if (open.length) showToast(`Escolha débito ou crédito em ${open.length === 1 ? "1 compra" : `${open.length} compras`} para confirmar.`);
+    let count = 0;
+    let out = 0;
+    let inn = 0;
+    let moves = 0;
+    for (const item of list) {
+      const kind = kindOf(item);
+      if (kind === "transferencia") {
+        const bank = bankOfNotice(item);
+        const there = bank ? accountOfBank(bank) : null;
+        if (bank && !there) continue;
+        if (await writeTransfer(item, there?.id ?? otherThan(null)?.id ?? null, true)) {
+          count++;
+          moves++;
+        }
+        continue;
+      }
+      if (await save(item, true)) {
+        count++;
+        if (kind === "entrada") inn += item.amount;
+        else out += item.amount;
+      }
+    }
+    if (count) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+      done(allDoneLine({ count, out: out ? money(out) : null, inn: inn ? money(inn) : null, moves }));
+    }
+    const left = list.length - count;
+    if (left > 0) setTimeout(() => showToast(`Ficaram ${left === 1 ? "1 para" : `${left} para`} você conferir uma a uma.`), count ? 2600 : 0);
   };
   const cardName = (id: string | null) => cards.find((c) => c.id === id)?.name ?? null;
   const accountName = (id: string | null) => accounts.find((a) => a.id === id)?.name ?? null;
@@ -705,7 +753,7 @@ function PendingCard({
             <Text style={{ fontSize: 14, fontWeight: "700", color: th(INK.softer) }}>{income ? "+ R$ " : "R$ "}</Text>
             <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1, fontVariant: ["tabular-nums"] }}>{money(item.amount).replace(/^R\$\s?/, "")}</Text>
           </Text>
-          <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "500", color: th("rgba(255,255,255,0.85)") }}>
+          <Text numberOfLines={2} style={{ flex: 1, fontSize: 15, lineHeight: 19, fontWeight: "500", color: th("rgba(255,255,255,0.85)") }}>
             {kind === "transferencia" ? (bank ?? "Entre suas contas") : item.name}
           </Text>
         </View>

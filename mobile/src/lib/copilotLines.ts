@@ -69,3 +69,15 @@ export function moodLine(count: number) {
 export function skipLine(seed?: string) {
   return choose(["Beleza, deixei esse de fora.", "Tranquilo, esse não entra.", "Ok! Esse eu esqueço.", "Combinado, não vou anotar esse."], seed);
 }
+
+/** Many confirmed at once: one notice for all of them, never one each. */
+export function allDoneLine(e: { count: number; out: string | null; inn: string | null; moves: number }) {
+  const what = [e.out ? `${e.out} em gastos` : null, e.inn ? `${e.inn} em entradas` : null, e.moves ? `${e.moves} ${e.moves === 1 ? "transferência" : "transferências"}` : null].filter(Boolean);
+  const list = what.length > 1 ? `${what.slice(0, -1).join(", ")} e ${what[what.length - 1]}` : (what[0] ?? "");
+  const n = `${e.count} ${e.count === 1 ? "movimentação" : "movimentações"}`;
+  return choose([
+    { title: "Tudo anotado!", body: `Registrei suas ${n}: ${list}.` },
+    { title: "Fila zerada!", body: `${n} registradas de uma vez: ${list}.` },
+    { title: "Missão cumprida!", body: `Anotei ${n}: ${list}. Pode seguir.` },
+  ]);
+}

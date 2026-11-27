@@ -175,7 +175,20 @@ export default function ToastHost({ quiet = false }: { quiet?: boolean }) {
                 <Text style={{ fontSize: 13, fontWeight: "700", color: th("#fff") }}>Willo</Text>
                 <Text style={{ fontSize: 12, color: th("rgba(255,255,255,0.55)") }}>agora</Text>
               </View>
-              <Text numberOfLines={2} style={{ marginTop: 1, fontSize: 14.5, color: th("rgba(255,255,255,0.92)") }}>{text}</Text>
+              {/* "Title / what happened": the first line bold, and the whole of it shown — a long name
+                  goes on to the next line, as the banks' own notifications do. */}
+              {text.includes("\n") ? (
+                <>
+                  <Text style={{ marginTop: 1, fontSize: 14.5, fontWeight: "700", color: th("#fff") }}>{text.split("\n")[0]}</Text>
+                  <Text numberOfLines={4} style={{ marginTop: 1, fontSize: 14.5, lineHeight: 19, color: th("rgba(255,255,255,0.92)") }}>
+                    {text.split("\n").slice(1).join(" ")}
+                  </Text>
+                </>
+              ) : (
+                <Text numberOfLines={4} style={{ marginTop: 1, fontSize: 14.5, lineHeight: 19, color: th("rgba(255,255,255,0.92)") }}>
+                  {text}
+                </Text>
+              )}
             </View>
           </View>
         </Pressable>

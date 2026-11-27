@@ -199,7 +199,7 @@ export default function SimulacaoAviso() {
                   <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.55)" }}>R$ </Text>
                   <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1 }}>{brl(e.amount)}</Text>
                 </Text>
-                <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "500", color: "rgba(255,255,255,0.85)" }}>
+                <Text numberOfLines={2} style={{ flex: 1, fontSize: 15, lineHeight: 19, fontWeight: "500", color: "rgba(255,255,255,0.85)" }}>
                   {e.who}
                 </Text>
               </View>
@@ -232,7 +232,7 @@ export default function SimulacaoAviso() {
                     </Text>
                     <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.55)" }}>agora</Text>
                   </View>
-                  <Text numberOfLines={4} style={{ marginTop: 1, fontSize: 15, lineHeight: 20, color: "rgba(255,255,255,0.9)" }}>
+                  <Text style={{ marginTop: 1, fontSize: 15, lineHeight: 20, color: "rgba(255,255,255,0.9)" }}>
                     {said.body}
                   </Text>
                 </View>

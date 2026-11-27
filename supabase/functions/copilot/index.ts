@@ -242,7 +242,8 @@ serve(async (req) => {
       const { error: keepError } = await admin.from("copilot_pending").insert({
         user_id: userId,
         name: "Aviso não lido",
-        amount: 0,
+        /* The table takes no zero; the row is never shown nor counted. */
+        amount: 0.01,
         type: "despesa",
         occurred_at: new Date().toISOString(),
         source: "aviso",
