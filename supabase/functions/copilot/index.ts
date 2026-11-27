@@ -239,7 +239,7 @@ serve(async (req) => {
        (status "ignorado", never shown in the app) so the next ways banks word things can be
        learned from what actually came in. */
     if (!n) {
-      await admin.from("copilot_pending").insert({
+      const { error: keepError } = await admin.from("copilot_pending").insert({
         user_id: userId,
         name: "Aviso não lido",
         amount: 0,
@@ -249,6 +249,8 @@ serve(async (req) => {
         status: "ignorado",
         raw: JSON.stringify({ notice: whole.slice(0, 400), app: second }).slice(0, 500),
       });
+      /* Until the table takes "ignorado", the notice is at least in the log, its digits hidden. */
+      if (keepError) console.log("copilot notice unread", whole.replace(/\d/g, "#").slice(0, 300));
       return json({ ok: true, ignored: true });
     }
 
