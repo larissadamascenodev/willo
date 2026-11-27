@@ -28,7 +28,7 @@ import { showToast } from "~/lib/toast";
 import TransactionExperience from "~/components/pass/TransactionExperience";
 import { nowTime, passRows } from "~/components/pass/passTheme";
 import { bankFor, colorFor } from "@/lib/banks";
-import { preloadConfirm } from "~/lib/sounds";
+import { playConfirm, preloadConfirm } from "~/lib/sounds";
 import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
 import { type as T } from "~/theme/type";
@@ -119,6 +119,12 @@ function CopilotScreen() {
     return () => clearTimeout(t);
   }, [reaction]);
   const leave = (id: string) => setExamples((l) => (l ? l.filter((i) => i.id !== id) : l));
+  /* Written: the coin, the small notice of the app, and Willo saying it at the top. */
+  const done = (said: { title: string; body: string }) => {
+    playConfirm();
+    showToast(`${said.title}${/[!.?]$/.test(said.title) ? "" : "."} ${said.body}`);
+    setReaction(`**${said.title}** ${said.body}`);
+  };
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
   const [editing, setEditing] = useState<CopilotItem | null>(null);
@@ -129,6 +135,8 @@ function CopilotScreen() {
   const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
+    /* The coin ready before the first Confirmar. */
+    preloadConfirm();
     getAccounts()
       .then((l) => setAccounts((l as unknown as Account[]).filter((a) => a.type !== "investment")))
       .catch(() => undefined);
@@ -180,7 +188,7 @@ function CopilotScreen() {
       const c = item.raw && /cr[eé]dito/i.test(item.raw) ? "na fatura do Nubank" : guessOf(item) ? `em ${guessOf(item)}` : null;
       const said = doneLine(item.type === "receita" ? "entrada" : "compra", { amount: money(item.amount), who: item.name, where: c });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-      setReaction(`**${said.title}** ${said.body}`);
+      done(said);
       return leave(item.id);
     }
     if (!user) return;
@@ -196,7 +204,7 @@ function CopilotScreen() {
       /* Said by Willo, with where it went: debit out of the account, credit onto the invoice. */
       const card = ready.credit_card_id ? cards.find((c) => c.id === ready.credit_card_id)?.name : null;
       const said = doneLine(ready.type === "receita" ? "entrada" : "compra", { amount: money(ready.amount), who: ready.name, where: card ? `na fatura do ${card}` : ready.category ? `em ${ready.category}` : null });
-      setReaction(`**${said.title}** ${said.body}`);
+      done(said);
     } catch {
       showToast("Não consegui confirmar agora. Tente de novo.");
     } finally {
@@ -211,7 +219,9 @@ function CopilotScreen() {
   const accountOfBank = (bank: string) => accounts.find((a) => bankFor(a.name)?.name === bank || plainWords(a.name).some((w) => plainWords(bank).includes(w))) ?? null;
   const otherThan = (id: string | null) => {
     const rest = (accounts as (Account & { is_default?: boolean })[]).filter((a) => a.id !== id);
-    return rest.find((a) => a.is_default) ?? rest[0] ?? null;
+    /* The main account; without one marked, a current account before a cash box or savings. */
+    const kind = (a: Account) => (a as { type?: string }).type;
+    return rest.find((a) => a.is_default) ?? rest.find((a) => kind(a) === "checking") ?? rest.find((a) => kind(a) !== "cash" && kind(a) !== "savings") ?? rest[0] ?? null;
   };
   const writeTransfer = async (item: CopilotItem, there: string | null) => {
     if (!user) return;
@@ -233,7 +243,7 @@ function CopilotScreen() {
       await settlePending(item.id, tx?.id ?? null);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       const said = doneLine("transferencia", { amount: money(item.amount), who: item.name });
-      setReaction(`**${said.title}** ${said.body}`);
+      done(said);
     } catch {
       showToast("Não consegui registrar agora. Tente de novo.");
     } finally {
@@ -245,7 +255,7 @@ function CopilotScreen() {
     if (examples) {
       if (bank && !accountOfBank(bank)) return setAdding({ item, bank });
       const said = doneLine("transferencia", { amount: money(item.amount), who: item.name });
-      setReaction(`**${said.title}** ${said.body}`);
+      done(said);
       return leave(item.id);
     }
     if (!bank) return void writeTransfer(item, otherThan(null)?.id ?? null);
@@ -258,7 +268,7 @@ function CopilotScreen() {
     const { item, bank } = adding;
     setAdding(null);
     if (examples) {
-      setReaction(yes ? `Pronto, adicionei o ${bank} e já coloquei ${money(item.amount)} lá.` : "Beleza, registrei a transferência sem criar conta nova.");
+      done(yes ? { title: `${bank} adicionado!`, body: `Já coloquei ${money(item.amount)} lá.` } : { title: "Transferência anotada", body: "Saiu da sua conta, sem contar como gasto." });
       return leave(item.id);
     }
     if (!yes) return void writeTransfer(item, null);
