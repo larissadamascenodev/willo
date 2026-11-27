@@ -374,7 +374,7 @@ function BankNotices() {
             title: "Volte para salvar",
             text: (
               <>
-                Toque na <B>setinha de voltar</B>, em cima à esquerda. Pronto. Se o campo <B>Aviso</B> aparecer vazio, toque nele e escolha o botão azul <B>Notificação</B>, acima do teclado, antes de voltar. Não use “Entrada do Atalho”.
+                Toque em <B>Aviso</B> e, acima do teclado, no botão azul <B>Notificação</B> (o do sininho). Toque nele de novo e escolha o <B>texto</B> da notificação. Depois toque na setinha da ação: em <B>App do banco</B>, escolha Notificação e depois o <B>título</B>. Assim o Willo lê se foi débito, crédito ou Pix. Volte na <B>setinha</B>, em cima à esquerda, para salvar.
               </>
             ),
             screen: <MockTrigger kind="notificacao" action="Registrar aviso do banco no Willo" />,

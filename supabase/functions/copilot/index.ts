@@ -227,13 +227,19 @@ serve(async (req) => {
 
   /* A bank's notification. */
   if (typeof body.notice === "string") {
-    const app = typeof body.app === "string" ? body.app.trim() : "";
-    const n = readNotice(body.notice, app);
+    /* "App do banco" may hold the notification's title ("Compra no débito aprovada") and "Aviso"
+       its text ("Compra de R$ 15,50 em PADARIA"): both are read, and the title is a name only when
+       it is short enough to be one ("Nubank"). */
+    const second = typeof body.app === "string" ? body.app.trim() : "";
+    const app = second.length <= 18 && !/\d/.test(second) && second.split(/\s+/).length <= 2 ? second : "";
+    const whole = [second, String(body.notice)].filter(Boolean).join(". ");
+    console.log("copilot notice", JSON.stringify({ notice: `text(${String(body.notice).length})`, app: `text(${second.length})` }));
+    const n = readNotice(whole, app);
     if (!n) return json({ ok: true, ignored: true });
     const word = n.method === "conta" ? "Débito" : n.method === "cartao" ? "Crédito" : "";
     const cardText = [app, word].filter(Boolean).join(" ");
     const cards = n.method === "cartao" ? await cardsOf() : [];
-    const creditCardId = n.method === "cartao" ? matchCard(`${app} ${body.notice}`, cards) : null;
+    const creditCardId = n.method === "cartao" ? matchCard(whole, cards) : null;
 
     const seen = n.type === "despesa" ? await twin(n.amount, "atalho") : null;
     if (seen) {
@@ -244,7 +250,7 @@ serve(async (req) => {
       } catch {
         raw = {};
       }
-      const merged = { ...raw, card: [raw.card, word].filter(Boolean).join(" ").trim(), notice: String(body.notice).slice(0, 200) };
+      const merged = { ...raw, card: [raw.card, word].filter(Boolean).join(" ").trim(), notice: whole.slice(0, 200) };
       await admin
         .from("copilot_pending")
         .update({
@@ -265,7 +271,7 @@ serve(async (req) => {
       credit_card_id: creditCardId,
       occurred_at: new Date().toISOString(),
       source: "aviso",
-      raw: JSON.stringify({ card: cardText, notice: String(body.notice).slice(0, 300), app }).slice(0, 500),
+      raw: JSON.stringify({ card: cardText, notice: whole.slice(0, 300), app }).slice(0, 500),
     });
     if (error) return json({ error: "Não foi possível guardar o aviso" }, 500);
     const what = n.type === "receita" ? "entrada" : n.method === "conta" ? "no débito" : n.method === "cartao" ? "no crédito" : "";
