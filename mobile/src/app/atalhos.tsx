@@ -298,10 +298,19 @@ function WalletCopilotAction() {
             ),
           },
           {
-            title: "Ligue a compra ao Willo",
+            title: "Ligue o valor",
             text: (
               <>
-                Na ação, toque no campo azul <B>Valor</B> e escolha <B>Entrada do Atalho</B>. Sem isso a compra chega vazia e aparece “Valor não encontrado”. É só esse campo: o Willo lê dele o valor, a loja e o cartão.
+                Na ação, toque no campo <B>Valor</B> e escolha <B>Entrada do Atalho</B>. Agora toque de novo no botão azul <B>Entrada do Atalho</B> que apareceu no campo e, na lista, escolha <B>Valor</B>. O campo tem que mostrar <B>Valor</B>, não “Entrada do Atalho”: a compra inteira chega vazia e aparece “Valor não encontrado”.
+              </>
+            ),
+            screen: <MockTrigger kind="carteira" action="Registrar compra no Willo" />,
+          },
+          {
+            title: "Ligue a loja e o cartão",
+            text: (
+              <>
+                Toque na setinha da ação para ver os outros campos. Faça igual: em <B>Comerciante</B>, escolha Entrada do Atalho e depois <B>Comerciante</B>; em <B>Cartão</B>, Entrada do Atalho e depois <B>Cartão ou Passe</B>.
               </>
             ),
             screen: <MockTrigger kind="carteira" action="Registrar compra no Willo" />,
