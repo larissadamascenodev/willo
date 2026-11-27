@@ -49,3 +49,22 @@ export function doneLine(kind: LineKind, e: { amount: string; who: string; where
           ];
   return choose(lines);
 }
+
+/* Today's number, so the line at the top stays the same through the day and changes the next. */
+const today = () => new Date().toISOString().slice(0, 10);
+
+/** Willo at the top of his page, about what is waiting. */
+export function moodLine(count: number) {
+  const lines =
+    count === 0
+      ? ["Tudo em dia por aqui. Pode relaxar!", "Nada esperando. Quando eu vir algo, te chamo.", "Zerado! Sigo de olho pra você.", "Fila vazia, coração tranquilo."]
+      : count === 1
+        ? ["Separei uma coisinha pra você conferir.", "Tem 1 aqui esperando seu ok.", "Só uma pendência. Rapidinho, vai?"]
+        : [`Juntei ${count} coisinhas pra você. Bora conferir?`, `${count} movimentações esperando seu ok. Vamos nessa?`, `Olha só, ${count} novidades no seu dinheiro. Confere comigo?`, `Tenho ${count} aqui pra você dar uma olhada.`];
+  return choose(lines, `${today()}-${Math.min(count, 2)}`);
+}
+
+/** When something is let go. */
+export function skipLine(seed?: string) {
+  return choose(["Beleza, deixei esse de fora.", "Tranquilo, esse não entra.", "Ok! Esse eu esqueço.", "Combinado, não vou anotar esse."], seed);
+}

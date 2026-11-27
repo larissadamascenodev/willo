@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { withPro } from "~/components/onboarding/RenewGate";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown, LinearTransition, SlideOutRight } from "react-native-reanimated";
@@ -14,12 +14,12 @@ import BottomSheet from "~/components/BottomSheet";
 import CategoryPicker from "~/components/CategoryPicker";
 import EntryForm, { type EntryValues } from "~/components/registro/EntryForm";
 import { Primary, type Account, type Card } from "~/components/registro/entryParts";
-import ParticleOrb from "~/components/registro/ParticleOrb";
 import SubLogo from "~/components/SubLogo";
-import { ArrowLeftRight, ChevronLeft, Clock, CreditCard, Landmark, Pencil } from "~/components/icons";
+import { ChevronLeft, Clock, CreditCard, Landmark, Pencil } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
 import { confirmPending, discardPending, listHistory, settlePending, useCopilot, type CopilotItem, type CopilotPast } from "~/lib/copilot";
-import { askLine, doneLine, type LineKind } from "~/lib/copilotLines";
+import { askLine, doneLine, moodLine, skipLine, type LineKind } from "~/lib/copilotLines";
+import { isLight } from "~/theme/theme";
 import { useAuth } from "~/lib/auth";
 import { syncDeviceNotifications } from "~/lib/deviceNotifications";
 import { showToast } from "~/lib/toast";
@@ -44,6 +44,29 @@ import { th, useThemeRedraw } from "~/theme/theme";
  */
 
 const ALLOWED = [...DEFAULT_EXPENSE_CATEGORIES, ...DEFAULT_INCOME_CATEGORIES];
+
+/* Willo's name, never the robot, until his mark is chosen. */
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const LOGO_WHITE = require("../../assets/images/brand/willo-white.png") as number;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const LOGO_BLACK = require("../../assets/images/brand/willo-black.png") as number;
+const LOGO_RATIO = 227 / 717;
+function Wordmark({ height }: { height: number }) {
+  return <Image source={isLight() ? LOGO_BLACK : LOGO_WHITE} style={{ width: height / LOGO_RATIO, height }} resizeMode="contain" accessibilityLabel="Willo" />;
+}
+
+/* Only in Expo Go: a list to look at the page with, never written anywhere. */
+const EXAMPLES = (): CopilotItem[] => {
+  const at = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
+  const base = { category: null, payment_method: null, account_id: null, credit_card_id: null, source: "aviso" };
+  return [
+    { ...base, id: "ex-1", name: "Padaria Cleide", amount: 15.5, type: "despesa", occurred_at: at(4), raw: JSON.stringify({ card: "Nubank Débito" }) },
+    { ...base, id: "ex-2", name: "H J Damasceno Empreendimentos e Bebidas", amount: 120, type: "receita", occurred_at: at(38), raw: JSON.stringify({ card: "Débito" }) },
+    { ...base, id: "ex-3", name: "Transferência entre suas contas", amount: 200, type: "receita", occurred_at: at(95), raw: JSON.stringify({ transfer: true, notice: "Você depositou R$ 200 via Pix e o valor já está rendendo na sua conta." }) },
+    { ...base, id: "ex-4", name: "Drogasil", amount: 42.9, type: "despesa", occurred_at: at(60 * 26), raw: JSON.stringify({ card: "Nubank Crédito" }) },
+    { ...base, id: "ex-5", name: "iFood", amount: 37.8, type: "despesa", occurred_at: at(60 * 27), raw: JSON.stringify({ card: "Nubank Crédito" }) },
+  ] as CopilotItem[];
+};
 const guessOf = (item: CopilotItem) => item.category ?? guessCategory(item.name, item.type, ALLOWED);
 const withGuess = (item: CopilotItem): CopilotItem => ({ ...item, category: guessOf(item) });
 
@@ -80,7 +103,17 @@ function CopilotScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { items } = useCopilot();
+  const { items: real } = useCopilot();
+  const [examples, setExamples] = useState<CopilotItem[] | null>(null);
+  const items = examples ?? real;
+  /* What Willo just said about an answer; his line at the top reads it, then goes back. */
+  const [reaction, setReaction] = useState<string | null>(null);
+  useEffect(() => {
+    if (!reaction) return;
+    const t = setTimeout(() => setReaction(null), 6000);
+    return () => clearTimeout(t);
+  }, [reaction]);
+  const leave = (id: string) => setExamples((l) => (l ? l.filter((i) => i.id !== id) : l));
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
   const [editing, setEditing] = useState<CopilotItem | null>(null);
@@ -138,6 +171,13 @@ function CopilotScreen() {
   };
 
   const save = async (item: CopilotItem) => {
+    if (examples) {
+      const c = item.raw && /cr[eé]dito/i.test(item.raw) ? "na fatura do Nubank" : guessOf(item) ? `em ${guessOf(item)}` : null;
+      const said = doneLine(item.type === "receita" ? "entrada" : "compra", { amount: money(item.amount), who: item.name, where: c });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+      setReaction(`${said.title} ${said.body}`);
+      return leave(item.id);
+    }
     if (!user) return;
     if (!modeOf(item)) {
       showToast(`${item.name}: escolha débito ou crédito antes de confirmar.`);
@@ -151,7 +191,7 @@ function CopilotScreen() {
       /* Said by Willo, with where it went: debit out of the account, credit onto the invoice. */
       const card = ready.credit_card_id ? cards.find((c) => c.id === ready.credit_card_id)?.name : null;
       const said = doneLine(ready.type === "receita" ? "entrada" : "compra", { amount: money(ready.amount), who: ready.name, where: card ? `na fatura do ${card}` : ready.category ? `em ${ready.category}` : null });
-      showToast(`${said.title} ${said.body}`);
+      setReaction(`${said.title} ${said.body}`);
     } catch {
       showToast("Não consegui confirmar agora. Tente de novo.");
     } finally {
@@ -188,7 +228,7 @@ function CopilotScreen() {
       await settlePending(item.id, tx?.id ?? null);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       const said = doneLine("transferencia", { amount: money(item.amount), who: item.name });
-      showToast(`${said.title} ${said.body}`);
+      setReaction(`${said.title} ${said.body}`);
     } catch {
       showToast("Não consegui registrar agora. Tente de novo.");
     } finally {
@@ -197,6 +237,12 @@ function CopilotScreen() {
   };
   const transfer = (item: CopilotItem) => {
     const bank = bankOfNotice(item);
+    if (examples) {
+      if (bank && !accountOfBank(bank)) return setAdding({ item, bank });
+      const said = doneLine("transferencia", { amount: money(item.amount), who: item.name });
+      setReaction(`${said.title} ${said.body}`);
+      return leave(item.id);
+    }
     if (!bank) return void writeTransfer(item, otherThan(null)?.id ?? null);
     const there = accountOfBank(bank);
     if (there) return void writeTransfer(item, there.id);
@@ -206,6 +252,10 @@ function CopilotScreen() {
     if (!adding || !user) return;
     const { item, bank } = adding;
     setAdding(null);
+    if (examples) {
+      setReaction(yes ? `Pronto, adicionei o ${bank} e já coloquei ${money(item.amount)} lá.` : "Beleza, registrei a transferência sem criar conta nova.");
+      return leave(item.id);
+    }
     if (!yes) return void writeTransfer(item, null);
     try {
       const made = (await createAccount(user.id, { name: bank, color: bankFor(bank)?.hex ?? null })) as unknown as Account;
@@ -247,7 +297,6 @@ function CopilotScreen() {
     for (const item of list) if (kindOf(item) !== "transferencia" && modeOf(item)) await save(item);
     if (open.length) showToast(`Escolha débito ou crédito em ${open.length === 1 ? "1 compra" : `${open.length} compras`} para confirmar.`);
   };
-  const total = list.reduce((t, i) => t + (i.type === "receita" ? 0 : i.amount), 0);
   const cardName = (id: string | null) => cards.find((c) => c.id === id)?.name ?? null;
   const accountName = (id: string | null) => accounts.find((a) => a.id === id)?.name ?? null;
   const placeOf = (raw: CopilotItem) => {
@@ -279,11 +328,9 @@ function CopilotScreen() {
             <ChevronLeft size={20} color={th("rgba(255,255,255,0.9)")} strokeWidth={2.4} />
           </RoundButton>
           <View pointerEvents="none" style={{ position: "absolute", left: 56, right: 56, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            <View style={{ width: 22, height: 22, borderRadius: 11, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
-              <ParticleOrb size={22} density={60} />
-            </View>
+            <Wordmark height={15} />
             <Text numberOfLines={1} style={{ fontSize: 14.5, fontWeight: "600", color: th("#fff") }}>
-              Willo Copilot
+              Copilot
             </Text>
           </View>
           <RoundButton label="Histórico" onPress={openHistory}>
@@ -291,14 +338,25 @@ function CopilotScreen() {
           </RoundButton>
         </View>
 
-        {/* Only in Expo Go: the simulation of the confirmation that will drop from the top. */}
+        {/* Only in Expo Go: the card that drops on the screen, and the page with a list to see it by. */}
         {__DEV__ && (
-          <Pressable onPress={() => router.push("/simulacao-aviso" as never)} style={{ marginTop: 10, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(103,205,103,0.16)" }}>
-            <Text style={{ fontSize: 13.5, fontWeight: "600", color: GREEN }}>Ver simulação do aviso na tela</Text>
-          </Pressable>
+          <View style={{ marginTop: 10, flexDirection: "row", gap: 8 }}>
+            <Pressable onPress={() => router.push("/simulacao-aviso" as never)} style={{ flex: 1, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.08)", "bg") }}>
+              <Text style={{ fontSize: 12.5, fontWeight: "600", color: th(INK.soft) }}>Simular aviso</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setReaction(null);
+                setExamples((e) => (e ? null : EXAMPLES()));
+              }}
+              style={{ flex: 1, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: th(examples ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)", "bg") }}
+            >
+              <Text style={{ fontSize: 12.5, fontWeight: "600", color: th(examples ? "#fff" : INK.soft) }}>{examples ? "Ver a fila real" : "Ver com exemplos"}</Text>
+            </Pressable>
+          </View>
         )}
 
-        <Hero count={list.length} loading={items === null} total={total} latest={list[0]?.occurred_at ?? null} onSetup={() => router.push("/atalhos" as never)} />
+        <Hero list={list} loading={items === null} say={reaction ?? moodLine(list.length)} onSetup={() => router.push("/atalhos" as never)} />
 
         {days.map((d) => (
           <View key={d.label} style={{ marginTop: 22 }}>
@@ -311,15 +369,17 @@ function CopilotScreen() {
                     kind={kindOf(item)}
                     bank={kindOf(item) === "transferencia" ? bankOfNotice(item) : (placeOf(item)?.name ?? null)}
                     mode={modeOf(item)}
-                    canCredit={kindOf(item) === "compra" && cards.length > 0}
+                    canCredit={kindOf(item) === "compra" && cards.length > 0 && (!modeOf(item) || !!modes[item.id])}
                     onMode={(m) => pickMode(item, m)}
                     busy={busy === item.id}
                     onConfirm={() => (kindOf(item) === "transferencia" ? transfer(item) : void save(item))}
                     onDiscard={() => {
                       void Haptics.selectionAsync().catch(() => undefined);
+                      setReaction(skipLine(item.id));
+                      if (examples) return leave(item.id);
                       void discardPending(item.id);
                     }}
-                    onReview={() => (kindOf(item) === "transferencia" ? transfer(item) : confirm(item))}
+                    onReview={() => (kindOf(item) === "transferencia" || examples ? (kindOf(item) === "transferencia" ? transfer(item) : void save(item)) : confirm(item))}
                     onEdit={() => {
                       if (kindOf(item) === "transferencia") return transfer(item);
                       setEditing(item);
@@ -483,38 +543,37 @@ function CopilotScreen() {
   );
 }
 
-/** What is waiting, in one line of glass: how much, how many. */
-function Hero({ count, loading, total, latest, onSetup }: { count: number; loading: boolean; total: number; latest: string | null; onSetup: () => void }) {
+/**
+ * The top of the page: Willo talking — about what is waiting, or about what was just answered —
+ * and what is waiting at a glance: how many, what goes out, what comes in, what only moves.
+ */
+function Hero({ list, loading, say, onSetup }: { list: CopilotItem[]; loading: boolean; say: string; onSetup: () => void }) {
+  const out = list.filter((i) => kindOf(i) === "compra").reduce((t, i) => t + i.amount, 0);
+  const inn = list.filter((i) => kindOf(i) === "entrada").reduce((t, i) => t + i.amount, 0);
+  const moves = list.filter((i) => kindOf(i) === "transferencia").length;
   return (
-    <View style={{ marginTop: 14, padding: 14, borderRadius: 22, borderCurve: "continuous", borderWidth: 1, borderColor: th("rgba(255,255,255,0.09)", "line"), backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
-      {loading ? (
-        <ActivityIndicator color={th(INK.soft)} />
-      ) : (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View style={{ width: 40, height: 40, borderRadius: 20, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
-            <ParticleOrb size={40} density={90} />
-          </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            {count ? (
-              <>
-                <Text style={{ fontSize: 20, fontWeight: "800", letterSpacing: -0.5, color: th("#fff"), fontVariant: ["tabular-nums"] }}>{money(total)}</Text>
-                <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 13, color: th(INK.soft) }}>
-                  {count} {count === 1 ? "esperando você" : "esperando você"}
-                  {latest ? ` · mais recente às ${timeOf(latest)}` : ""}
-                </Text>
-              </>
-            ) : (
-              <>
-                <Text style={{ fontSize: 16, fontWeight: "700", color: th("#fff") }}>Tudo em dia</Text>
-                <Text numberOfLines={2} style={{ marginTop: 1, fontSize: 13, color: th(INK.soft) }}>
-                  Compras, Pix e transferências que eu vir aparecem aqui.
-                </Text>
-              </>
-            )}
-          </View>
+    <View style={{ marginTop: 14, borderRadius: 28, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: th("rgba(255,255,255,0.1)", "line"), backgroundColor: th("rgba(255,255,255,0.06)", "bg") }}>
+      <View style={{ padding: 16 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Wordmark height={13} />
+          <Text style={{ fontSize: 12, fontWeight: "600", letterSpacing: 0.3, color: th(INK.softer) }}>COPILOT · AGORA</Text>
         </View>
-      )}
-      <View style={{ marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: th("rgba(255,255,255,0.07)", "line"), flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+        {/* What Willo says, changing as things are answered. */}
+        <Animated.Text key={say} entering={FadeInDown.duration(300)} style={{ marginTop: 10, fontSize: 19, lineHeight: 25, fontWeight: "700", letterSpacing: -0.4, color: th("#fff") }}>
+          {loading ? "Deixa eu dar uma olhada…" : say}
+        </Animated.Text>
+
+        {loading ? (
+          <ActivityIndicator style={{ marginTop: 14 }} color={th(INK.soft)} />
+        ) : list.length ? (
+          <View style={{ marginTop: 14, flexDirection: "row", gap: 8 }}>
+            <Stat label="Esperando" value={String(list.length)} />
+            <Stat label="Saídas" value={money(out)} />
+            {inn > 0 ? <Stat label="Entradas" value={money(inn)} /> : moves > 0 ? <Stat label="Transferências" value={String(moves)} /> : null}
+          </View>
+        ) : null}
+      </View>
+      <View style={{ paddingHorizontal: 16, paddingVertical: 11, borderTopWidth: 1, borderTopColor: th("rgba(255,255,255,0.07)", "line"), flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <Text numberOfLines={1} style={{ flex: 1, fontSize: 12.5, color: th(INK.softer) }}>
           Nada entra antes de você confirmar.
         </Text>
@@ -522,6 +581,19 @@ function Hero({ count, loading, total, latest, onSetup }: { count: number; loadi
           <Text style={{ fontSize: 12.5, fontWeight: "700", color: th(INK.soft) }}>Configurar ›</Text>
         </Pressable>
       </View>
+    </View>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ flex: 1, paddingVertical: 9, paddingHorizontal: 10, borderRadius: 16, backgroundColor: th("rgba(255,255,255,0.06)", "bg") }}>
+      <Text numberOfLines={1} style={{ fontSize: 11.5, color: th(INK.softer) }}>
+        {label}
+      </Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit style={{ marginTop: 2, fontSize: 15, fontWeight: "800", letterSpacing: -0.3, color: th("#fff"), fontVariant: ["tabular-nums"] }}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -588,13 +660,7 @@ function PendingCard({
       <View style={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14 }}>
         {/* Who, and the pencil in the corner. */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
-          {kind === "transferencia" ? (
-            <View style={{ width: 24, height: 24, borderRadius: 7, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.1)", "bg") }}>
-              <ArrowLeftRight size={13} color={th("#fff")} strokeWidth={2.4} />
-            </View>
-          ) : (
-            <SubLogo name={item.name} size={24} />
-          )}
+          <Wordmark height={12} />
           <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: "600", color: th("#fff") }}>
             {title}
             <Text style={{ fontWeight: "400", color: th(INK.softer) }}> · {timeOf(item.occurred_at)}</Text>
