@@ -29,7 +29,7 @@ export function amountOf(raw: unknown): number {
 }
 
 const MOVED = /(compra|pagamento|pagou|gastou|debitad|transacao|enviou|transferiu|pix|transfer|ted\b|doc\b|debito|credito|recebeu|recebid|aprovad|enviad|saque|deposito)/;
-const NOT_MOVED = /(fatura (fechou|fechada|disponivel|vence)|limite|vence (hoje|amanha|em)|lembrete|oferta|promoc|cashback|rendeu|rendimento|investimento|boleto disponivel|nao aprovad|recusad|negad|estornad|cancelad)/;
+const NOT_MOVED = /(fatura (fechou|fechada|disponivel|vence)|limite|cupom|desconto|resgate|ganhe|black friday|\boff\b|aproveite|convite|indique|sorteio|promo|tentamos te enviar|ocorreu um erro|vence (hoje|amanha|em)|lembrete|oferta|promoc|cashback|rendeu|rendimento|investimento|boleto disponivel|nao aprovad|recusad|negad|estornad|cancelad)/;
 const OUT = /(sua transferencia foi (enviada|realizada|concluida)|transferencia enviada|pix enviado|voce enviou|voce transferiu)/;
 const INCOME = /(voce depositou|depositou r\$|ja esta disponivel|esta rendendo na sua conta|rendendo na sua conta|voce recebeu|recebeu (um|uma|r\$)|pix recebido|transferencia recebida|deposito recebido|caiu na sua conta|recebido de|entrou na sua conta)/;
 const STOP = "(?:foi|com|no|na|nos|nas|pelo|pela|via|para|as|às|ao|em|e|do cartao|cartao|final|hoje|agora)";
