@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeIn, FadeInDown, FadeOut, SlideInUp, SlideOutUp } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, FadeOut, withTiming } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import BottomSheet from "~/components/BottomSheet";
 import TransactionExperience from "~/components/pass/TransactionExperience";
@@ -96,6 +96,33 @@ function doneFor(kind: Kind) {
   return next;
 }
 
+const SETTLE = Easing.bezier(0.2, 0.9, 0.25, 1);
+const AWAY = Easing.bezier(0.4, 0, 1, 1);
+function dropIn(locked: boolean) {
+  return () => {
+    "worklet";
+    return {
+      initialValues: locked ? { opacity: 0, transform: [{ translateY: 18 }, { scale: 0.96 }] } : { opacity: 0, transform: [{ translateY: -140 }, { scale: 0.98 }] },
+      animations: {
+        opacity: withTiming(1, { duration: locked ? 320 : 220 }),
+        transform: [{ translateY: withTiming(0, { duration: 460, easing: SETTLE }) }, { scale: withTiming(1, { duration: 460, easing: SETTLE }) }],
+      },
+    };
+  };
+}
+function liftOut(locked: boolean) {
+  return () => {
+    "worklet";
+    return {
+      initialValues: { opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }] },
+      animations: {
+        opacity: withTiming(0, { duration: locked ? 220 : 300, easing: AWAY }),
+        transform: [{ translateY: withTiming(locked ? 0 : -140, { duration: 300, easing: AWAY }) }, { scale: withTiming(locked ? 0.96 : 1, { duration: 300, easing: AWAY }) }],
+      },
+    };
+  };
+}
+
 export default function SimulacaoAviso() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -106,8 +133,6 @@ export default function SimulacaoAviso() {
   const [ask, setAsk] = useState(() => askFor("debito"));
   const [said, setSaid] = useState(() => doneFor("debito"));
   const e = EVENTS[kind];
-  /* Compact, always (her choice). */
-  const compact = true;
   const [opened, setOpened] = useState(false);
   const [writing, setWriting] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -150,69 +175,54 @@ export default function SimulacaoAviso() {
 
   /* Unlocked, it drops from the top; locked, it sits with the other notifications, under the clock. */
   const locked = scene === "bloqueada";
-  const top = locked ? insets.top + 300 : insets.top + 6;
-  const pad = compact ? 14 : 18;
-  const side = locked ? 12 : 8;
-  const enter = (damping: number) => (locked ? FadeInDown.springify().damping(damping) : SlideInUp.springify().damping(damping).stiffness(170));
-  const leave = locked ? FadeOut.duration(260) : SlideOutUp.duration(300);
+  /* Where the iPhone puts its notifications: just under the Dynamic Island, or in the list under the clock. */
+  const top = locked ? insets.top + 300 : insets.top + 2;
+  const side = 8;
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       {scene === "bloqueada" ? <LockScreen top={insets.top} /> : <OtherApp top={insets.top} />}
 
-      {/* The confirmation, dropping from the top. A tap on it opens the app's own confirmation. */}
+      {/* The confirmation, as a notification: the app's icon, its title and the time, the text; then
+          the amount and the two answers. A tap on it opens the app's own confirmation. */}
       {step === "aviso" && (
-        <Animated.View key={`card-${scene}`} entering={enter(19)} exiting={leave} style={{ position: "absolute", left: side, right: side, top }}>
+        <Animated.View key={`card-${scene}`} entering={dropIn(locked)} exiting={liftOut(locked)} style={{ position: "absolute", left: side, right: side, top }}>
           <Glass>
-            <Pressable onPress={open} accessibilityLabel="Abrir no Willo" style={{ paddingHorizontal: pad, paddingTop: compact ? 12 : 16, paddingBottom: pad }}>
-              {/* Willo, and the pencil in the corner. */}
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
-                <Image source={ICON} style={{ width: compact ? 24 : 30, height: compact ? 24 : 30, borderRadius: compact ? 6 : 8 }} />
-                {compact ? (
-                  <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: "#fff" }}>
-                    {e.income ? "Registrar entrada" : "Registrar gasto"}
-                    <Text style={{ fontWeight: "400", color: "rgba(255,255,255,0.5)" }}> · agora</Text>
-                  </Text>
-                ) : (
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13.5, fontWeight: "600", color: "#fff" }}>{e.income ? "Registrar entrada" : "Registrar gasto"}</Text>
-                    <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>Willo · agora</Text>
+            <Pressable onPress={open} accessibilityLabel="Abrir no Willo" style={{ paddingHorizontal: 14, paddingTop: 14, paddingBottom: 14 }}>
+              <View style={{ flexDirection: "row", gap: 11 }}>
+                <Image source={ICON} style={{ width: 38, height: 38, borderRadius: 9 }} />
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "600", color: "#fff" }}>
+                      {e.income ? "Registrar entrada" : "Registrar gasto"}
+                    </Text>
+                    <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.55)" }}>agora</Text>
+                    <Pressable onPress={open} hitSlop={10} accessibilityRole="button" accessibilityLabel="Editar" style={({ pressed }) => ({ width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.12)" })}>
+                      <Pencil size={12} color="#fff" strokeWidth={2.3} />
+                    </Pressable>
                   </View>
-                )}
-                <Pressable onPress={open} hitSlop={10} accessibilityRole="button" accessibilityLabel="Editar" style={({ pressed }) => ({ width: compact ? 28 : 34, height: compact ? 28 : 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)" })}>
-                  <Pencil size={compact ? 13 : 15} color="#fff" strokeWidth={2.2} />
-                </Pressable>
+                  {/* What Willo saw, said as Willo — a different line each time. */}
+                  <Text style={{ marginTop: 1, fontSize: 15, lineHeight: 20, color: "rgba(255,255,255,0.9)" }}>{ask}</Text>
+                </View>
               </View>
 
-              {/* What Willo saw, said as Willo — a different line each time. */}
-              <Text style={{ marginTop: compact ? 10 : 16, fontSize: compact ? 13.5 : 14, lineHeight: compact ? 18 : 19, color: "rgba(255,255,255,0.75)" }}>{ask}</Text>
-              {compact ? (
-                /* The amount first and larger, then who or what it was. */
-                <View style={{ marginTop: 6, flexDirection: "row", alignItems: "baseline", gap: 10 }}>
-                  <Text style={{ color: "#fff" }}>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: "rgba(255,255,255,0.55)" }}>R$ </Text>
-                    <Text style={{ fontSize: 28, fontWeight: "800", letterSpacing: -1 }}>{brl(e.amount)}</Text>
-                  </Text>
-                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "500", color: "rgba(255,255,255,0.85)" }}>
-                    {e.who}
-                  </Text>
-                </View>
-              ) : (
-                <>
-                  <Text style={{ marginTop: 4, color: "#fff" }}>
-                    <Text style={{ fontSize: 15, fontWeight: "700", color: "rgba(255,255,255,0.55)" }}>R$ </Text>
-                    <Text style={{ fontSize: 34, fontWeight: "800", letterSpacing: -1.2 }}>{brl(e.amount)}</Text>
-                  </Text>
-                  <Text style={{ fontSize: 15, fontWeight: "500", color: "rgba(255,255,255,0.85)" }}>{e.who}</Text>
-                </>
-              )}
+              {/* The amount first and larger, then who or what it was. */}
+              <View style={{ marginTop: 12, flexDirection: "row", alignItems: "baseline", gap: 10 }}>
+                <Text style={{ color: "#fff" }}>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: "rgba(255,255,255,0.55)" }}>R$ </Text>
+                  <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1 }}>{brl(e.amount)}</Text>
+                </Text>
+                <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "500", color: "rgba(255,255,255,0.85)" }}>
+                  {e.who}
+                </Text>
+              </View>
 
               {/* Confirmar first, Cancelar after. */}
-              <View style={{ marginTop: compact ? 12 : 16, flexDirection: "row", gap: 8 }}>
-                <Pressable onPress={confirm} accessibilityRole="button" accessibilityLabel="Confirmar" style={({ pressed }) => ({ flex: 1, height: compact ? 38 : 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: "#fff", opacity: pressed ? 0.85 : 1 })}>
-                  <Text style={{ fontSize: compact ? 14 : 15, fontWeight: "700", color: "#0B0B0B" }}>Confirmar</Text>
+              <View style={{ marginTop: 12, flexDirection: "row", gap: 8 }}>
+                <Pressable onPress={confirm} accessibilityRole="button" accessibilityLabel="Confirmar" style={({ pressed }) => ({ flex: 1, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "#fff", opacity: pressed ? 0.85 : 1 })}>
+                  <Text style={{ fontSize: 15, fontWeight: "700", color: "#0B0B0B" }}>Confirmar</Text>
                 </Pressable>
-                <Pressable onPress={() => setStep("nada")} accessibilityRole="button" accessibilityLabel="Cancelar" style={({ pressed }) => ({ flex: 1, height: compact ? 38 : 46, borderRadius: 23, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.1)" })}>
-                  <Text style={{ fontSize: compact ? 14 : 15, fontWeight: "600", color: "#fff" }}>Cancelar</Text>
+                <Pressable onPress={() => setStep("nada")} accessibilityRole="button" accessibilityLabel="Cancelar" style={({ pressed }) => ({ flex: 1, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: pressed ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.12)" })}>
+                  <Text style={{ fontSize: 15, fontWeight: "600", color: "#fff" }}>Cancelar</Text>
                 </Pressable>
               </View>
             </Pressable>
@@ -220,19 +230,21 @@ export default function SimulacaoAviso() {
         </Animated.View>
       )}
 
-      {/* The one notification after confirming: the iPhone's own, with Willo speaking. */}
+      {/* The one notification after confirming: the iPhone's own, at its own size, Willo speaking. */}
       {step === "notificacao" && (
-        <Animated.View key={`note-${scene}`} entering={enter(20)} exiting={leave} style={{ position: "absolute", left: side, right: side, top }}>
+        <Animated.View key={`note-${scene}`} entering={dropIn(locked)} exiting={liftOut(locked)} style={{ position: "absolute", left: side, right: side, top }}>
           <Pressable onPress={() => setStep("nada")}>
-            <Glass radius={compact ? 22 : 26}>
-              <View style={{ padding: compact ? 10 : 13, flexDirection: "row", gap: 10, alignItems: "center" }}>
-                <Image source={ICON} style={{ width: compact ? 30 : 38, height: compact ? 30 : 38, borderRadius: compact ? 7 : 9 }} />
+            <Glass>
+              <View style={{ paddingHorizontal: 14, paddingVertical: 14, flexDirection: "row", gap: 11, alignItems: "center" }}>
+                <Image source={ICON} style={{ width: 38, height: 38, borderRadius: 9 }} />
                 <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <Text style={{ fontSize: compact ? 13.5 : 14, fontWeight: "700", color: "#fff" }}>{said.title}</Text>
-                    <Text style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>agora</Text>
+                  <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
+                    <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "600", color: "#fff" }}>
+                      {said.title}
+                    </Text>
+                    <Text style={{ fontSize: 13, color: "rgba(255,255,255,0.55)" }}>agora</Text>
                   </View>
-                  <Text numberOfLines={compact ? 2 : 3} style={{ marginTop: 1, fontSize: compact ? 13 : 13.5, lineHeight: compact ? 17 : 18, color: "rgba(255,255,255,0.85)" }}>
+                  <Text numberOfLines={4} style={{ marginTop: 1, fontSize: 15, lineHeight: 20, color: "rgba(255,255,255,0.9)" }}>
                     {said.body}
                   </Text>
                 </View>
@@ -292,10 +304,11 @@ export default function SimulacaoAviso() {
   );
 }
 
-function Glass({ children, radius = 30 }: { children: React.ReactNode; radius?: number }) {
+/* The material of an iPhone notification: frosted, rounded at 26, a hairline edge, a soft shadow. */
+function Glass({ children, radius = 26 }: { children: React.ReactNode; radius?: number }) {
   return (
-    <View style={{ borderRadius: radius, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", shadowColor: "#000", shadowOpacity: 0.35, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } }}>
-      <BlurView intensity={60} tint="dark" style={{ backgroundColor: "rgba(24,24,28,0.6)" }}>
+    <View style={{ borderRadius: radius, borderCurve: "continuous", overflow: "hidden", borderWidth: 0.5, borderColor: "rgba(255,255,255,0.12)", shadowColor: "#000", shadowOpacity: 0.22, shadowRadius: 18, shadowOffset: { width: 0, height: 8 } }}>
+      <BlurView intensity={70} tint="dark" style={{ backgroundColor: "rgba(36,36,40,0.5)" }}>
         {children}
       </BlurView>
     </View>
