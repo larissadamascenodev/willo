@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeIn, FadeOut, SlideInUp, SlideOutUp } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, FadeOut, SlideInUp, SlideOutUp } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import BottomSheet from "~/components/BottomSheet";
 import TransactionExperience from "~/components/pass/TransactionExperience";
@@ -88,14 +88,19 @@ export default function SimulacaoAviso() {
     setOpened(true);
   };
 
-  const top = insets.top + 6;
+  /* Unlocked, it drops from the top; locked, it sits with the other notifications, under the clock. */
+  const locked = scene === "bloqueada";
+  const top = locked ? insets.top + 300 : insets.top + 6;
+  const side = locked ? 12 : 8;
+  const enter = (damping: number) => (locked ? FadeInDown.springify().damping(damping) : SlideInUp.springify().damping(damping).stiffness(170));
+  const leave = locked ? FadeOut.duration(260) : SlideOutUp.duration(300);
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       {scene === "bloqueada" ? <LockScreen top={insets.top} /> : <OtherApp top={insets.top} />}
 
       {/* The confirmation, dropping from the top. A tap on it opens the app's own confirmation. */}
       {step === "aviso" && (
-        <Animated.View entering={SlideInUp.springify().damping(19).stiffness(170)} exiting={SlideOutUp.duration(300)} style={{ position: "absolute", left: 8, right: 8, top }}>
+        <Animated.View key={`card-${scene}`} entering={enter(19)} exiting={leave} style={{ position: "absolute", left: side, right: side, top }}>
           <Glass>
             <Pressable onPress={open} accessibilityLabel="Abrir no Willo" style={{ paddingHorizontal: 18, paddingTop: 16, paddingBottom: 16 }}>
               {/* Willo, and the pencil in the corner. */}
@@ -136,7 +141,7 @@ export default function SimulacaoAviso() {
 
       {/* The one notification after confirming: the iPhone's own, with Willo speaking. */}
       {step === "notificacao" && (
-        <Animated.View entering={SlideInUp.springify().damping(20)} exiting={SlideOutUp.duration(300)} style={{ position: "absolute", left: 8, right: 8, top }}>
+        <Animated.View key={`note-${scene}`} entering={enter(20)} exiting={leave} style={{ position: "absolute", left: side, right: side, top }}>
           <Pressable onPress={() => setStep("nada")}>
             <Glass radius={26}>
               <View style={{ padding: 13, flexDirection: "row", gap: 11, alignItems: "center" }}>
