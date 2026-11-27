@@ -41,24 +41,32 @@ const greeting = () => {
   return h < 12 ? "Bom dia!" : h < 18 ? "Boa tarde!" : "Boa noite!";
 };
 
-/* What Willo says on the card: never the same line twice in a row, so it reads as someone, not a form. */
+/* What Willo says on the card: a purchase (debit or credit, the same lines) or a Pix received,
+   never the same line twice in a row, so it reads as someone and not a form. */
+let lastAsk = "";
 function askFor(kind: Kind) {
   const e = EVENTS[kind];
-  if (e.income)
-    return pick([
-      `Você recebeu um Pix no ${e.bank}. Posso anotar?`,
-      `Caiu um Pix na sua conta do ${e.bank}. Anoto pra você?`,
-      `Chegou um Pix agora no ${e.bank}. Registro como entrada?`,
-      `${greeting()} Entrou um Pix no ${e.bank}. Posso anotar?`,
-    ]);
-  const how = kind === "credito" ? "no crédito" : "no débito";
-  return pick([
-    `Vi uma compra ${how} do ${e.bank}. Posso anotar?`,
-    `Passou um gasto ${how} no ${e.bank}. Anoto pra você?`,
-    `Opa, gasto novo no ${e.bank}. Registro?`,
-    `Acabei de ver essa compra ${how}. Quer que eu anote?`,
-    `${greeting()} Vi uma compra no ${e.bank}. Posso anotar?`,
-  ]);
+  const lines = e.income
+    ? [
+        `Você recebeu um Pix no ${e.bank}. Posso anotar?`,
+        "Caiu um Pix na sua conta! Anoto como entrada?",
+        `Dinheiro chegando no ${e.bank}. Registro pra você?`,
+        `${greeting()} Chegou um Pix pra você. Quer que eu anote?`,
+        `Pix recebido no ${e.bank}! Deixo anotado?`,
+        "Entrou um dinheirinho agora. Conto no seu mês?",
+      ]
+    : [
+        `Vi um gasto novo no seu ${e.bank}. Posso anotar?`,
+        "Compra nova por aqui! Quer que eu registre?",
+        `Acabou de passar uma compra no ${e.bank}. Anoto pra você?`,
+        `${greeting()} Já peguei sua compra. Confirma pra eu anotar?`,
+        `Mais uma no ${e.bank}. Registro agora?`,
+        "Peguei essa compra no caminho. Deixo anotada?",
+        "Gasto novo à vista! Anoto no seu mês?",
+      ];
+  const next = pick(lines.filter((l) => l !== lastAsk));
+  lastAsk = next;
+  return next;
 }
 
 /* After a confirmation: Willo speaking, never a system receipt. */
