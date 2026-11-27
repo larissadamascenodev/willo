@@ -235,6 +235,8 @@ serve(async (req) => {
     const whole = [second, String(body.notice)].filter(Boolean).join(". ");
     console.log("copilot notice", JSON.stringify({ notice: `text(${String(body.notice).length})`, app: `text(${second.length})` }));
     const n = readNotice(whole, app);
+    /* For now, while the bank notices are being set up: what came in, its digits hidden, when it was left alone. */
+    if (!n) console.log("copilot notice ignored", whole.replace(/\d/g, "#").slice(0, 200));
     if (!n) return json({ ok: true, ignored: true });
     const word = n.method === "conta" ? "Débito" : n.method === "cartao" ? "Crédito" : "";
     const cardText = [app, word].filter(Boolean).join(" ");
