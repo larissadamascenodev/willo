@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown, LinearTransition, SlideOutRight } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { getAccounts, getCreditCards } from "@/services/transactionService";
+import { createAccount, createTransfer, getAccounts, getCreditCards } from "@/services/transactionService";
 import { categoryHex, DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "@/lib/categoryData";
 import { guessCategory } from "@/lib/quickEntry/parseLocal";
 import Room from "~/components/Room";
@@ -16,15 +16,16 @@ import EntryForm, { type EntryValues } from "~/components/registro/EntryForm";
 import { Primary, type Account, type Card } from "~/components/registro/entryParts";
 import ParticleOrb from "~/components/registro/ParticleOrb";
 import SubLogo from "~/components/SubLogo";
-import { Check, ChevronLeft, Clock, CreditCard, Landmark, Sparkles, X } from "~/components/icons";
+import { ArrowLeftRight, ChevronLeft, Clock, CreditCard, Landmark, Pencil } from "~/components/icons";
 import { categoryIcon } from "~/lib/categoryIcon";
-import { confirmPending, discardPending, listHistory, useCopilot, type CopilotItem, type CopilotPast } from "~/lib/copilot";
+import { confirmPending, discardPending, listHistory, settlePending, useCopilot, type CopilotItem, type CopilotPast } from "~/lib/copilot";
+import { askLine, doneLine, type LineKind } from "~/lib/copilotLines";
 import { useAuth } from "~/lib/auth";
 import { syncDeviceNotifications } from "~/lib/deviceNotifications";
 import { showToast } from "~/lib/toast";
 import TransactionExperience from "~/components/pass/TransactionExperience";
 import { nowTime, passRows } from "~/components/pass/passTheme";
-import { colorFor } from "@/lib/banks";
+import { bankFor, colorFor } from "@/lib/banks";
 import { preloadConfirm } from "~/lib/sounds";
 import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
@@ -147,16 +148,74 @@ function CopilotScreen() {
       const ready = withAccount(withGuess(item));
       await confirmPending(ready, user.id);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-      /* Said where it went: debit out of the account now, credit onto the open invoice. */
+      /* Said by Willo, with where it went: debit out of the account, credit onto the invoice. */
       const card = ready.credit_card_id ? cards.find((c) => c.id === ready.credit_card_id)?.name : null;
-      const account = ready.account_id ? accounts.find((a) => a.id === ready.account_id)?.name : null;
-      showToast(card ? `${ready.name}, ${money(ready.amount)} · na fatura do ${card}` : `${ready.name}, ${money(ready.amount)} · saiu da conta${account ? ` ${account}` : ""}`);
+      const said = doneLine(ready.type === "receita" ? "entrada" : "compra", { amount: money(ready.amount), who: ready.name, where: card ? `na fatura do ${card}` : ready.category ? `em ${ready.category}` : null });
+      showToast(`${said.title} ${said.body}`);
     } catch {
       showToast("Não consegui confirmar agora. Tente de novo.");
     } finally {
       setBusy(null);
     }
   };
+  /* A transfer between the person's own accounts: written as a transfer, never as spending or
+     income. If the bank it went to (or came from) is not in Willo yet, Willo asks to add it: yes
+     makes the account (the bank's name and colour, nothing else to fill) and moves the money into
+     it; no writes it as sent out of the account Willo keeps, which is not counted as spending. */
+  const [adding, setAdding] = useState<{ item: CopilotItem; bank: string } | null>(null);
+  const accountOfBank = (bank: string) => accounts.find((a) => bankFor(a.name)?.name === bank || plainWords(a.name).some((w) => plainWords(bank).includes(w))) ?? null;
+  const otherThan = (id: string | null) => {
+    const rest = (accounts as (Account & { is_default?: boolean })[]).filter((a) => a.id !== id);
+    return rest.find((a) => a.is_default) ?? rest[0] ?? null;
+  };
+  const writeTransfer = async (item: CopilotItem, there: string | null) => {
+    if (!user) return;
+    const here = otherThan(there);
+    const incoming = item.type === "receita";
+    /* In: from the account Willo keeps into the bank's; out: the other way. Either end may be outside Willo. */
+    const fromId = incoming ? (here?.id ?? null) : there;
+    const toId = incoming ? there : (here?.id ?? null);
+    if (!fromId && !toId) {
+      showToast("Não achei nenhuma conta sua para essa transferência. Crie uma conta primeiro.");
+      return;
+    }
+    setBusy(item.id);
+    try {
+      const tx = (await createTransfer(
+        { fromId, toId, amount: item.amount, date: item.occurred_at.slice(0, 10), name: "Transferência entre contas", category: "Transferência entre contas", observation: "Willo Copilot" },
+        user.id,
+      )) as { id?: string } | null;
+      await settlePending(item.id, tx?.id ?? null);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+      const said = doneLine("transferencia", { amount: money(item.amount), who: item.name });
+      showToast(`${said.title} ${said.body}`);
+    } catch {
+      showToast("Não consegui registrar agora. Tente de novo.");
+    } finally {
+      setBusy(null);
+    }
+  };
+  const transfer = (item: CopilotItem) => {
+    const bank = bankOfNotice(item);
+    if (!bank) return void writeTransfer(item, otherThan(null)?.id ?? null);
+    const there = accountOfBank(bank);
+    if (there) return void writeTransfer(item, there.id);
+    setAdding({ item, bank });
+  };
+  const answerAdd = async (yes: boolean) => {
+    if (!adding || !user) return;
+    const { item, bank } = adding;
+    setAdding(null);
+    if (!yes) return void writeTransfer(item, null);
+    try {
+      const made = (await createAccount(user.id, { name: bank, color: bankFor(bank)?.hex ?? null })) as unknown as Account;
+      setAccounts((l) => [...l, made]);
+      await writeTransfer(item, made.id);
+    } catch {
+      showToast(`Não consegui adicionar o ${bank} agora. Tente de novo.`);
+    }
+  };
+
   /* One purchase confirmed: the Willo review, the slide and the Pass. */
   const [reviewing, setReviewing] = useState<CopilotItem | null>(null);
   const [writing, setWriting] = useState(false);
@@ -185,7 +244,7 @@ function CopilotScreen() {
   }, [items?.length, user]);
   const confirmAll = async () => {
     const open = list.filter((i) => !modeOf(i));
-    for (const item of list) if (modeOf(item)) await save(item);
+    for (const item of list) if (kindOf(item) !== "transferencia" && modeOf(item)) await save(item);
     if (open.length) showToast(`Escolha débito ou crédito em ${open.length === 1 ? "1 compra" : `${open.length} compras`} para confirmar.`);
   };
   const total = list.reduce((t, i) => t + (i.type === "receita" ? 0 : i.amount), 0);
@@ -249,18 +308,20 @@ function CopilotScreen() {
                 <Animated.View key={item.id} entering={FadeInDown.delay(i * 50).duration(320)} exiting={SlideOutRight.duration(260)} layout={LinearTransition.duration(240)}>
                   <PendingCard
                     item={item}
-                    guess={guessOf(item)}
-                    place={placeOf(item)}
+                    kind={kindOf(item)}
+                    bank={kindOf(item) === "transferencia" ? bankOfNotice(item) : (placeOf(item)?.name ?? null)}
                     mode={modeOf(item)}
-                    canCredit={item.type !== "receita" && cards.length > 0}
+                    canCredit={kindOf(item) === "compra" && cards.length > 0}
                     onMode={(m) => pickMode(item, m)}
                     busy={busy === item.id}
-                    onConfirm={() => confirm(item)}
+                    onConfirm={() => (kindOf(item) === "transferencia" ? transfer(item) : void save(item))}
                     onDiscard={() => {
                       void Haptics.selectionAsync().catch(() => undefined);
                       void discardPending(item.id);
                     }}
-                    onOpen={() => {
+                    onReview={() => (kindOf(item) === "transferencia" ? transfer(item) : confirm(item))}
+                    onEdit={() => {
+                      if (kindOf(item) === "transferencia") return transfer(item);
                       setEditing(item);
                       setValues(toValues(withAccount(withGuess(item))));
                     }}
@@ -271,12 +332,12 @@ function CopilotScreen() {
           </View>
         ))}
 
-        {list.length > 0 && <Text style={{ marginTop: 16, textAlign: "center", fontSize: 12.5, color: th(INK.softer) }}>Toque numa compra para mudar nome, valor, categoria ou cartão.</Text>}
+        {list.length > 0 && <Text style={{ marginTop: 16, textAlign: "center", fontSize: 12.5, color: th(INK.softer) }}>Toque num card para conferir antes, ou no lápis para mudar.</Text>}
       </ScrollView>
 
       {list.length > 1 && (
         <View style={{ position: "absolute", left: 16, right: 16, bottom: insets.bottom + 14 }}>
-          <Primary label={`Confirmar todas · ${money(total)}`} busy={!!busy} onPress={() => void confirmAll()} />
+          <Primary label={`Confirmar todas · ${list.length}`} busy={!!busy} onPress={() => void confirmAll()} />
         </View>
       )}
 
@@ -321,6 +382,27 @@ function CopilotScreen() {
             />
           </View>
         )}
+      </BottomSheet>
+
+      {/* The bank of a transfer that is not in Willo yet. */}
+      <BottomSheet open={!!adding} onClose={() => setAdding(null)}>
+        {adding ? (
+          <View style={{ paddingHorizontal: 20, paddingBottom: 8, gap: 14 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={{ width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: th(`${bankFor(adding.bank)?.hex ?? "#8B5CF6"}33`, "bg") }}>
+                <Landmark size={20} color={th(bankFor(adding.bank)?.hex ?? "#fff")} strokeWidth={2.2} />
+              </View>
+              <Text style={{ flex: 1, fontSize: 18, fontWeight: "800", letterSpacing: -0.4, color: th("#fff") }}>Essa conta ainda não está no seu Willo</Text>
+            </View>
+            <Text style={{ fontSize: 14.5, lineHeight: 20, color: th(INK.soft) }}>
+              {adding.item.type === "receita" ? `${money(adding.item.amount)} foi pro seu ${adding.bank}` : `${money(adding.item.amount)} saiu do seu ${adding.bank}`}. Quer que eu adicione essa conta? Ela já entra com esse valor, sem precisar de cartão nem nada.
+            </Text>
+            <Primary label={`Sim, adicionar ${adding.bank}`} onPress={() => void answerAdd(true)} />
+            <Pressable onPress={() => void answerAdd(false)} style={({ pressed }) => ({ height: 44, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
+              <Text style={{ fontSize: 15, fontWeight: "600", color: th(INK.soft) }}>Não, só registrar a transferência</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </BottomSheet>
 
       {/* What came before. */}
@@ -417,7 +499,7 @@ function Hero({ count, loading, total, latest, onSetup }: { count: number; loadi
               <>
                 <Text style={{ fontSize: 20, fontWeight: "800", letterSpacing: -0.5, color: th("#fff"), fontVariant: ["tabular-nums"] }}>{money(total)}</Text>
                 <Text numberOfLines={1} style={{ marginTop: 1, fontSize: 13, color: th(INK.soft) }}>
-                  {count} {count === 1 ? "compra esperando" : "compras esperando"}
+                  {count} {count === 1 ? "esperando você" : "esperando você"}
                   {latest ? ` · mais recente às ${timeOf(latest)}` : ""}
                 </Text>
               </>
@@ -425,7 +507,7 @@ function Hero({ count, loading, total, latest, onSetup }: { count: number; loadi
               <>
                 <Text style={{ fontSize: 16, fontWeight: "700", color: th("#fff") }}>Tudo em dia</Text>
                 <Text numberOfLines={2} style={{ marginTop: 1, fontSize: 13, color: th(INK.soft) }}>
-                  Novas compras por aproximação aparecem aqui.
+                  Compras, Pix e transferências que eu vir aparecem aqui.
                 </Text>
               </>
             )}
@@ -456,24 +538,26 @@ function Chip({ icon, text }: { icon: React.ReactNode; text: string }) {
 }
 
 /**
- * One purchase waiting. Confirming lays a green glass over it with a tick that springs in,
- * then it slides away to the transactions.
+ * One thing waiting, in the style of the card that drops on the screen: who, Willo asking,
+ * the amount large and the name beside it, Confirmar then Cancelar; the pencil in the corner.
+ * A tap on the card opens the app's own confirmation.
  */
 function PendingCard({
   item,
-  guess,
-  place,
+  kind,
+  bank,
   busy,
   mode,
   canCredit,
   onMode,
   onConfirm,
   onDiscard,
-  onOpen,
+  onReview,
+  onEdit,
 }: {
   item: CopilotItem;
-  guess: string | null;
-  place: { card: boolean; name: string | null } | null;
+  kind: LineKind;
+  bank: string | null;
   busy: boolean;
   /** Null until chosen, when the card's name did not say. */
   mode: Mode | null;
@@ -481,52 +565,68 @@ function PendingCard({
   onMode: (m: Mode) => void;
   onConfirm: () => void;
   onDiscard: () => void;
-  onOpen: () => void;
+  onReview: () => void;
+  onEdit: () => void;
 }) {
-  const hex = categoryHex(guess ?? "Outros");
-  const Icon = categoryIcon(guess ?? "Outros");
   const income = item.type === "receita";
+  const title = kind === "transferencia" ? "Transferência entre contas" : income ? "Registrar entrada" : "Registrar gasto";
+  const blocked = canCredit && !mode;
   return (
     <Pressable
-      onPress={busy ? undefined : onOpen}
+      onPress={busy ? undefined : onReview}
       accessibilityRole="button"
-      accessibilityLabel={`${item.name}, ${money(item.amount)}. Revisar`}
+      accessibilityLabel={`${item.name}, ${money(item.amount)}. Conferir`}
       style={({ pressed }) => ({
-        borderRadius: 24,
+        borderRadius: 26,
         borderCurve: "continuous",
         overflow: "hidden",
         borderWidth: 1,
-        borderColor: th("rgba(255,255,255,0.09)", "line"),
+        borderColor: th("rgba(255,255,255,0.1)", "line"),
         backgroundColor: th(pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)", "bg"),
       })}
     >
-      <View style={{ padding: 14 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View>
-            <SubLogo name={item.name} size={46} />
-            {/* Paid on a card, or from an account. */}
-            <View style={{ position: "absolute", right: -4, bottom: -4, width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: th("#15171C", "bg"), borderWidth: 1.5, borderColor: th("rgba(255,255,255,0.12)", "line") }}>
-              {place?.card ? <CreditCard size={10} color={th("#fff")} strokeWidth={2.4} /> : <Landmark size={10} color={th("#fff")} strokeWidth={2.4} />}
+      <View style={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14 }}>
+        {/* Who, and the pencil in the corner. */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
+          {kind === "transferencia" ? (
+            <View style={{ width: 24, height: 24, borderRadius: 7, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(255,255,255,0.1)", "bg") }}>
+              <ArrowLeftRight size={13} color={th("#fff")} strokeWidth={2.4} />
             </View>
-          </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: "700", color: th("#fff") }}>
-              {item.name}
-            </Text>
-            <Text numberOfLines={1} style={{ marginTop: 2, fontSize: 12.5, color: th(INK.soft) }}>
-              {[place?.name, timeOf(item.occurred_at), SOURCE[item.source] ?? null].filter(Boolean).join(" · ")}
-            </Text>
-          </View>
-          <Text style={{ fontSize: 17, fontWeight: "800", letterSpacing: -0.4, color: th(income ? GREEN : "#fff"), fontVariant: ["tabular-nums"] }}>
-            {income ? "+" : "−"}
-            {money(item.amount)}
+          ) : (
+            <SubLogo name={item.name} size={24} />
+          )}
+          <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: "600", color: th("#fff") }}>
+            {title}
+            <Text style={{ fontWeight: "400", color: th(INK.softer) }}> · {timeOf(item.occurred_at)}</Text>
+          </Text>
+          <Pressable
+            onPress={busy ? undefined : onEdit}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Editar"
+            style={({ pressed }) => ({ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: th(pressed ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)", "bg") })}
+          >
+            <Pencil size={13} color={th("#fff")} strokeWidth={2.2} />
+          </Pressable>
+        </View>
+
+        {/* Willo asking, a line of his own for this one. */}
+        <Text style={{ marginTop: 10, fontSize: 13.5, lineHeight: 18, color: th(INK.soft) }}>{askLine(kind, bank, item.id)}</Text>
+
+        {/* The amount first and larger, then who or what. */}
+        <View style={{ marginTop: 6, flexDirection: "row", alignItems: "baseline", gap: 10 }}>
+          <Text style={{ color: th("#fff") }}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: th(INK.softer) }}>{income ? "+ R$ " : "R$ "}</Text>
+            <Text style={{ fontSize: 28, fontWeight: "800", letterSpacing: -1, fontVariant: ["tabular-nums"] }}>{money(item.amount).replace(/^R\$\s?/, "")}</Text>
+          </Text>
+          <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "500", color: th("rgba(255,255,255,0.85)") }}>
+            {kind === "transferencia" ? (bank ?? "Entre suas contas") : item.name}
           </Text>
         </View>
 
-        {/* Debit straight out of the account, or credit onto the invoice. */}
-        {canCredit && !mode && <Text style={{ marginTop: 12, fontSize: 12.5, fontWeight: "600", color: th("#F5C26B") }}>Foi no débito ou no crédito?</Text>}
+        {/* Only when the Wallet did not say: debit out of the account, or credit onto the invoice. */}
         {canCredit && (
-          <View style={{ marginTop: 12, flexDirection: "row", padding: 3, borderRadius: 14, backgroundColor: th("rgba(255,255,255,0.05)", "bg") }}>
+          <View style={{ marginTop: 12, flexDirection: "row", padding: 3, borderRadius: 16, backgroundColor: th("rgba(255,255,255,0.06)", "bg") }}>
             {(["conta", "cartao"] as const).map((m) => {
               const on = mode === m;
               return (
@@ -535,50 +635,66 @@ function PendingCard({
                   onPress={busy || on ? undefined : () => onMode(m)}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: on }}
-                  style={{ flex: 1, height: 30, borderRadius: 11, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: on ? th("rgba(255,255,255,0.14)", "bg") : "transparent" }}
+                  style={{ flex: 1, height: 30, borderRadius: 13, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: on ? th("rgba(255,255,255,0.16)", "bg") : "transparent" }}
                 >
                   {m === "conta" ? <Landmark size={12} color={th(on ? "#fff" : INK.softer)} strokeWidth={2.4} /> : <CreditCard size={12} color={th(on ? "#fff" : INK.softer)} strokeWidth={2.4} />}
-                  <Text style={{ fontSize: 12.5, fontWeight: on ? "700" : "500", color: th(on ? "#fff" : INK.softer) }}>{m === "conta" ? "Débito · sai da conta" : "Crédito · vai para a fatura"}</Text>
+                  <Text style={{ fontSize: 12.5, fontWeight: on ? "700" : "500", color: th(on ? "#fff" : INK.softer) }}>{m === "conta" ? "Débito" : "Crédito"}</Text>
                 </Pressable>
               );
             })}
           </View>
         )}
 
-        <View style={{ marginTop: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
-          {/* The category Willo suggests from the name; the card opens to change it. */}
-          <View style={{ flexShrink: 1, flexDirection: "row", alignItems: "center", gap: 6, height: 32, paddingHorizontal: 10, borderRadius: 16, backgroundColor: th(`${hex}24`, "bg") }}>
-            <Icon size={13} color={th(hex)} strokeWidth={2.3} />
-            <Text numberOfLines={1} style={{ fontSize: 12.5, fontWeight: "700", color: th(guess ? "#fff" : INK.soft) }}>
-              {guess ?? "Escolher categoria"}
-            </Text>
-            {guess && !item.category ? <Sparkles size={11} color={th(INK.softer)} strokeWidth={2.4} /> : null}
-          </View>
-          <View style={{ flex: 1 }} />
+        {/* Confirmar first, Cancelar after. */}
+        <View style={{ marginTop: 12, flexDirection: "row", gap: 8 }}>
           <Pressable
-            onPress={busy ? undefined : onDiscard}
-            accessibilityLabel="Descartar"
-            hitSlop={6}
-            style={({ pressed }) => ({ width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: th("rgba(248,113,113,0.12)", "bg"), opacity: pressed ? 0.6 : 1 })}
+            onPress={busy || blocked ? undefined : onConfirm}
+            accessibilityRole="button"
+            accessibilityLabel="Confirmar"
+            style={({ pressed }) => ({ flex: 1, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff"), opacity: blocked ? 0.35 : pressed ? 0.85 : 1 })}
           >
-            <X size={16} color={th(RED)} strokeWidth={2.6} />
+            {busy ? <ActivityIndicator size="small" color={th("#0B0B0B", "bg")} /> : <Text style={{ fontSize: 14, fontWeight: "700", color: th("#0B0B0B", "bg") }}>Confirmar</Text>}
           </Pressable>
           <Pressable
-            onPress={busy ? undefined : onConfirm}
-            accessibilityLabel="Confirmar"
-            style={({ pressed }) => ({ height: 38, paddingHorizontal: 16, borderRadius: 19, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff", "bg"), opacity: !mode ? 0.4 : pressed ? 0.85 : 1 })}
+            onPress={busy ? undefined : onDiscard}
+            accessibilityRole="button"
+            accessibilityLabel="Cancelar"
+            style={({ pressed }) => ({ flex: 1, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th(pressed ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)", "bg") })}
           >
-            {busy ? <ActivityIndicator size="small" color={th("#0B0B0B")} /> : <Check size={16} color={th("#0B0B0B")} strokeWidth={3} />}
-            <Text style={{ fontSize: 14, fontWeight: "800", color: th("#0B0B0B") }}>Confirmar</Text>
+            <Text style={{ fontSize: 14, fontWeight: "600", color: th("#fff") }}>Cancelar</Text>
           </Pressable>
         </View>
       </View>
-
     </Pressable>
   );
 }
 
 type Mode = "conta" | "cartao";
+
+/** A transfer between the person's own accounts, money in, or a purchase. */
+function kindOf(item: CopilotItem): LineKind {
+  try {
+    const raw = item.raw ? (JSON.parse(item.raw) as { transfer?: unknown }) : null;
+    if (raw?.transfer === true || /^transfer[eê]ncia entre/i.test(item.name)) return "transferencia";
+  } catch {
+    /* As it reads. */
+  }
+  return item.type === "receita" ? "entrada" : "compra";
+}
+
+/** The bank a notice came from, by how each one words it, or by its name. */
+function bankOfNotice(item: CopilotItem): string | null {
+  try {
+    const raw = item.raw ? (JSON.parse(item.raw) as { notice?: unknown; app?: unknown; card?: unknown; bank?: unknown }) : null;
+    const text = [raw?.bank, raw?.app, raw?.card, raw?.notice].filter((x) => typeof x === "string").join(" ");
+    const plain = text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    if (/recebemos sua transferencia/.test(plain)) return "Nubank";
+    if (/voce depositou .* rendendo/.test(plain)) return "Mercado Pago";
+    return bankFor(text)?.name ?? null;
+  } catch {
+    return null;
+  }
+}
 
 /** The card's name as the Wallet gave it ("Nubank", "Itaú Débito"…), from the purchase as it arrived. */
 function walletCard(item: CopilotItem): string {

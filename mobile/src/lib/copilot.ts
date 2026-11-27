@@ -70,6 +70,13 @@ export async function confirmPending(item: CopilotItem, userId: string, id?: str
   return { id: tx?.id ?? id ?? "", time: tx?.time ? String(tx.time).slice(0, 5) : null };
 }
 
+/** Answered some other way (a transfer between the person's accounts): off the list, with what it became. */
+export async function settlePending(id: string, transactionId: string | null) {
+  await table().update({ status: "confirmado", transaction_id: transactionId }).eq("id", id);
+  window.dispatchEvent(new CustomEvent("transaction-created"));
+  window.dispatchEvent(new CustomEvent("copilot-changed"));
+}
+
 export async function discardPending(id: string) {
   await table().update({ status: "descartado" }).eq("id", id);
   window.dispatchEvent(new CustomEvent("copilot-changed"));

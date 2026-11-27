@@ -161,7 +161,7 @@ export async function createTransaction(input: CreateTransactionInput, userId: s
  * is settled ("pago") — the database moves them.
  */
 export async function createTransfer(
-  input: { fromId: string; toId: string; amount: number; date: string; name: string; observation?: string | null; status?: "pago" | "pendente"; /** As createTransaction's: one per review, so a repeat never writes twice. */ id?: string },
+  input: { /** Null: money that came from an account of the person's own that Willo does not keep. */ fromId: string | null; /** Null: money sent to an account of the person's own that Willo does not keep — out of `fromId`, never spending. */ toId: string | null; amount: number; date: string; name: string; category?: string; observation?: string | null; status?: "pago" | "pendente"; /** As createTransaction's: one per review, so a repeat never writes twice. */ id?: string },
   userId: string,
 ) {
   const time = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -173,7 +173,7 @@ export async function createTransfer(
       name: input.name,
       type: "transferencia",
       amount: input.amount,
-      category: "Transferência",
+      category: input.category ?? "Transferência",
       date: input.date,
       time,
       status: input.status ?? "pago",

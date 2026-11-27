@@ -14,7 +14,8 @@ import { countUnread, generateNotifications } from "@/services/notificationServi
 import HomeHero from "~/components/home/HomeHero";
 import HomeShortcuts, { type Shortcut } from "~/components/home/HomeShortcuts";
 import { paramsForLine } from "~/components/home/OrbHero";
-import { CalendarClock, Flag, PiggyBank, Scale, Sun } from "~/components/icons";
+import { CalendarClock, Flag, PiggyBank, Scale, Sparkles, Sun } from "~/components/icons";
+import { useCopilot } from "~/lib/copilot";
 import { isIncome, isSettled } from "~/lib/events";
 import type { Greeting } from "~/lib/greeting";
 import { useGreeting } from "@/lib/greeting";
@@ -172,17 +173,20 @@ function HomeScreen() {
 
   /* The shortcuts: what used to be a card of its own, now a touch away. */
   const billsOpen = useMemo(() => events.filter((e) => !isIncome(e) && !isSettled(e)).length, [events]);
+  /* What the Copilot caught and is waiting for an answer. */
+  const copilotWaiting = useCopilot().items?.length ?? 0;
   const shortcuts = useMemo<Shortcut[]>(
     () => [
       /* From now outwards: the day, what is due, the month, what is kept, the long run. */
       /* In the app's quiet colours: the marks white, only the count lit. */
       { key: "hoje", label: "Hoje", Icon: Sun, tone: "#FFFFFF", onPress: () => router.push("/resumo" as never) },
+      { key: "copilot", label: "Copilot", Icon: Sparkles, tone: "#FFFFFF", badge: copilotWaiting, onPress: () => router.push("/copilot" as never) },
       { key: "contas", label: "Contas a pagar", Icon: CalendarClock, tone: "#FFFFFF", badge: billsOpen, onPress: () => router.push("/eventos" as never) },
       { key: "balanco", label: "Balanço", Icon: Scale, tone: "#FFFFFF", onPress: () => router.push("/balanco" as never) },
       { key: "caixinhas", label: "Caixinhas", Icon: PiggyBank, tone: "#FFFFFF", onPress: () => router.push("/caixinhas" as never) },
       { key: "jornada", label: "Jornada", Icon: Flag, tone: "#FFFFFF", onPress: () => router.push("/jornada" as never) },
     ],
-    [billsOpen, router],
+    [billsOpen, copilotWaiting, router],
   );
 
   /* What Willo says up top: his hello, what he noticed in the numbers, what he can do. */
