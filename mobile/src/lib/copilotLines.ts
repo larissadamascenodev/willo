@@ -59,8 +59,8 @@ export function moodLine(count: number) {
     count === 0
       ? ["Tudo **em dia** por aqui. Pode relaxar!", "Nada esperando. Quando eu vir algo, **te chamo**.", "**Zerado!** Sigo de olho pra você.", "Fila vazia, **coração tranquilo**."]
       : count === 1
-        ? ["Separei **uma coisinha** pra você conferir.", "Tem **1 aqui** esperando seu ok.", "Só **uma pendência**. Rapidinho, vai?"]
-        : [`Juntei **${count} coisinhas** pra você. Bora conferir?`, `**${count} movimentações** esperando seu ok.`, `Olha só, **${count} novidades** no seu dinheiro.`, `Tenho **${count} aqui** pra você dar uma olhada.`];
+        ? ["Tem **um lançamento** esperando seu ok.", "Peguei **uma movimentação** sua. Confere comigo?", "Só **um detalhe** pra deixar tudo certinho."]
+        : [`Peguei **${count} movimentações** suas. Bora deixar tudo certinho?`, `**${count} lançamentos** esperando seu ok.`, `Separei **${count} novidades** do seu dinheiro pra você conferir.`, `Rolaram **${count} movimentações** por aí. Confere comigo?`];
   return choose(lines, `${today()}-${Math.min(count, 2)}`);
 }
 

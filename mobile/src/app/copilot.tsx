@@ -53,6 +53,9 @@ const LOGO_WHITE = require("../../assets/images/brand/willo-white.png") as numbe
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const LOGO_BLACK = require("../../assets/images/brand/willo-black.png") as number;
 const LOGO_RATIO = 227 / 717;
+/* The app's own icon, as an iPhone notification shows it. */
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const APP_ICON = require("../../assets/images/app-icon.png") as number;
 function Wordmark({ height }: { height: number }) {
   return <Image source={isLight() ? LOGO_BLACK : LOGO_WHITE} style={{ width: height / LOGO_RATIO, height }} resizeMode="contain" accessibilityLabel="Willo" />;
 }
@@ -562,7 +565,11 @@ function Hero({ list, loading, say }: { list: CopilotItem[]; loading: boolean; s
   const out = list.filter((i) => kindOf(i) === "compra").reduce((t, i) => t + i.amount, 0);
   const inn = list.filter((i) => kindOf(i) === "entrada").reduce((t, i) => t + i.amount, 0);
   const moves = list.filter((i) => kindOf(i) === "transferencia").length;
-  const sub = [out ? `${money(out)} saindo` : null, inn ? `${money(inn)} entrando` : null, moves ? `${moves} ${moves === 1 ? "transferência" : "transferências"}` : null].filter(Boolean).join(" · ");
+  const figures = [
+    { label: "Gastos", value: money(out), show: out > 0 },
+    { label: "Entradas", value: money(inn), show: inn > 0 },
+    { label: moves === 1 ? "Transferência" : "Transferências", value: String(moves), show: moves > 0 },
+  ].filter((f) => f.show);
   /* "Juntei **5 coisinhas** pra você": the words between the stars are lit. */
   const parts = (loading ? "Deixa eu dar uma **olhada**…" : say).split("**").map((text, i) => ({ text, lit: i % 2 === 1 }));
   return (
@@ -581,7 +588,24 @@ function Hero({ list, loading, say }: { list: CopilotItem[]; loading: boolean; s
           )}
         </Text>
       </Animated.View>
-      {!loading && sub ? <Text style={{ marginTop: 8, fontSize: 14.5, lineHeight: 20, color: th(INK.soft), fontVariant: ["tabular-nums"] }}>{sub}</Text> : null}
+      {/* What is waiting, at a glance: what would go out, what would come in, what only moves. */}
+      {!loading && figures.length ? (
+        <View style={{ marginTop: 18 }}>
+          <Text style={{ marginBottom: 8, fontSize: 11.5, fontWeight: "700", letterSpacing: 0.8, color: th(INK.softer) }}>ESPERANDO SEU OK</Text>
+          <View style={{ flexDirection: "row" }}>
+          {figures.map((f, i) => (
+            <View key={f.label} style={{ flex: 1, paddingLeft: i ? 14 : 0, borderLeftWidth: i ? 1 : 0, borderLeftColor: th("rgba(255,255,255,0.1)", "line") }}>
+              <Text numberOfLines={1} style={{ fontSize: 12.5, color: th(INK.softer) }}>
+                {f.label}
+              </Text>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={{ marginTop: 3, fontSize: 18, fontWeight: "800", letterSpacing: -0.4, color: th("#fff"), fontVariant: ["tabular-nums"] }}>
+                {f.value}
+              </Text>
+            </View>
+          ))}
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -590,8 +614,8 @@ function Hero({ list, loading, say }: { list: CopilotItem[]; loading: boolean; s
 function Glass({ children }: { children: React.ReactNode }) {
   const light = isLight();
   return (
-    <View style={{ borderRadius: 28, borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: light ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.14)" }}>
-      <BlurView intensity={60} tint={light ? "light" : "dark"} style={{ backgroundColor: light ? "rgba(255,255,255,0.7)" : "rgba(24,24,28,0.6)" }}>
+    <View style={{ borderRadius: 26, borderCurve: "continuous", overflow: "hidden", borderWidth: 0.5, borderColor: light ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.12)" }}>
+      <BlurView intensity={70} tint={light ? "light" : "dark"} style={{ backgroundColor: light ? "rgba(255,255,255,0.6)" : "rgba(36,36,40,0.5)" }}>
         {children}
       </BlurView>
     </View>
@@ -640,33 +664,36 @@ function PendingCard({
       style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}
     >
       <Glass>
-      <View style={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14 }}>
-        {/* Who, and the pencil in the corner. */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
-          <Wordmark height={12} />
-          <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: "600", color: th("#fff") }}>
-            {title}
-            <Text style={{ fontWeight: "400", color: th(INK.softer) }}> · {timeOf(item.occurred_at)}</Text>
-          </Text>
-          <Pressable
-            onPress={busy ? undefined : onEdit}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel="Editar"
-            style={({ pressed }) => ({ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: th(pressed ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)", "bg") })}
-          >
-            <Pencil size={13} color={th("#fff")} strokeWidth={2.2} />
-          </Pressable>
+      <View style={{ padding: 14 }}>
+        {/* As the notification: the app's icon; the title, the time and the pencil; Willo's words under. */}
+        <View style={{ flexDirection: "row", gap: 11 }}>
+          <Image source={APP_ICON} style={{ width: 38, height: 38, borderRadius: 9 }} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "600", color: th("#fff") }}>
+                {title}
+              </Text>
+              <Text style={{ fontSize: 13, color: th(INK.softer) }}>{timeOf(item.occurred_at)}</Text>
+              <Pressable
+                onPress={busy ? undefined : onEdit}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Editar"
+                style={({ pressed }) => ({ width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: th(pressed ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.12)", "bg") })}
+              >
+                <Pencil size={12} color={th("#fff")} strokeWidth={2.3} />
+              </Pressable>
+            </View>
+            {/* Willo asking, a line of his own for this one. */}
+            <Text style={{ marginTop: 1, fontSize: 15, lineHeight: 20, color: th("rgba(255,255,255,0.9)") }}>{askLine(kind, bank, item.id)}</Text>
+          </View>
         </View>
 
-        {/* Willo asking, a line of his own for this one. */}
-        <Text style={{ marginTop: 10, fontSize: 13.5, lineHeight: 18, color: th(INK.soft) }}>{askLine(kind, bank, item.id)}</Text>
-
         {/* The amount first and larger, then who or what. */}
-        <View style={{ marginTop: 6, flexDirection: "row", alignItems: "baseline", gap: 10 }}>
+        <View style={{ marginTop: 12, flexDirection: "row", alignItems: "baseline", gap: 10 }}>
           <Text style={{ color: th("#fff") }}>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: th(INK.softer) }}>{income ? "+ R$ " : "R$ "}</Text>
-            <Text style={{ fontSize: 28, fontWeight: "800", letterSpacing: -1, fontVariant: ["tabular-nums"] }}>{money(item.amount).replace(/^R\$\s?/, "")}</Text>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: th(INK.softer) }}>{income ? "+ R$ " : "R$ "}</Text>
+            <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: -1, fontVariant: ["tabular-nums"] }}>{money(item.amount).replace(/^R\$\s?/, "")}</Text>
           </Text>
           <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: "500", color: th("rgba(255,255,255,0.85)") }}>
             {kind === "transferencia" ? (bank ?? "Entre suas contas") : item.name}
@@ -700,7 +727,7 @@ function PendingCard({
             onPress={busy || blocked ? undefined : onConfirm}
             accessibilityRole="button"
             accessibilityLabel="Confirmar"
-            style={({ pressed }) => ({ flex: 1, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff"), opacity: blocked ? 0.35 : pressed ? 0.85 : 1 })}
+            style={({ pressed }) => ({ flex: 1, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: th("#fff"), opacity: blocked ? 0.35 : pressed ? 0.85 : 1 })}
           >
             {busy ? <ActivityIndicator size="small" color={th("#0B0B0B", "bg")} /> : <Text style={{ fontSize: 14, fontWeight: "700", color: th("#0B0B0B", "bg") }}>Confirmar</Text>}
           </Pressable>
@@ -708,7 +735,7 @@ function PendingCard({
             onPress={busy ? undefined : onDiscard}
             accessibilityRole="button"
             accessibilityLabel="Cancelar"
-            style={({ pressed }) => ({ flex: 1, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: th(pressed ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)", "bg") })}
+            style={({ pressed }) => ({ flex: 1, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: th(pressed ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.12)", "bg") })}
           >
             <Text style={{ fontSize: 14, fontWeight: "600", color: th("#fff") }}>Cancelar</Text>
           </Pressable>
