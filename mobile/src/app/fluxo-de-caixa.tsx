@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Platform, Pressable, Text, View, useWindowDimensions, type TextStyle } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { Easing, FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
 import type { Transaction } from "@/types/finance";
 import type { CustomCategory } from "@/services/categoryService";
 import { useFinanceData } from "@/hooks/useFinanceData";
@@ -13,12 +13,15 @@ import RaisedButton from "~/components/RaisedButton";
 import MonthSelect from "~/components/transactions/MonthSelect";
 import RecentEntries from "~/components/transactions/RecentEntries";
 import { banksById, type EntryBank } from "~/components/transactions/WithBank";
-import { LineChart, PeriodTabs, monthLabels } from "~/components/charts/PageCharts";
-import { ChevronLeft, Eye, EyeOff } from "~/components/icons";
+import { PeriodTabs } from "~/components/charts/PageCharts";
+import DailyFlowChart from "~/components/charts/DailyFlowChart";
+import WilloInsight from "~/components/insight/WilloInsight";
+import { compare, daily, findInsight, monthName, monthShort } from "~/lib/flowInsight";
+import { ArrowLeftRight, Check, ChevronLeft, Eye, EyeOff } from "~/components/icons";
 import { useAuth } from "~/lib/auth";
 import { money } from "~/lib/money";
 import { GREEN, INK, RED } from "~/theme/tokens";
-import { th, useThemeRedraw } from "~/theme/theme";
+import { isLight, th, useThemeRedraw } from "~/theme/theme";
 
 /**
  * Fluxo de caixa: the money that came into the accounts and went out of them, in one month.
@@ -39,14 +42,9 @@ import { th, useThemeRedraw } from "~/theme/theme";
 
 const nums: TextStyle = Platform.select({ ios: { fontVariant: ["tabular-nums"] }, default: {} }) as TextStyle;
 const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
-const SHORT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const IN = GREEN;
 /** The red of money going out, at full strength: the softer one reads grey on the dark. */
 const OUT = "#FF4D4D";
-const CHART_H = 220;
-const PAD_X = 18;
-const TOP = 46;
-const FLOOR = 28;
 const LATEST = 5;
 
 type View3 = "geral" | "entradas" | "saidas";
@@ -56,7 +54,6 @@ const VIEWS: { key: View3; label: string }[] = [
   { key: "saidas", label: "Saídas" },
 ];
 
-const dayOf = (t: Transaction) => Number((t.rawDate ?? "").slice(8, 10)) || 1;
 
 export default function FluxoDeCaixa() {
   useThemeRedraw();
@@ -70,6 +67,10 @@ export default function FluxoDeCaixa() {
   const [view, setView] = useState<View3>("geral");
 
   const { data, loading } = useFinanceData(month, year);
+  /* The month before: the same stretch of it, for the comparisons. */
+  const prevKey = { month: month === 0 ? 11 : month - 1, year: month === 0 ? year - 1 : year };
+  const { data: prevData } = useFinanceData(prevKey.month, prevKey.year);
+  const [comparing, setComparing] = useState(false);
   const show = (v: number) => (hidden ? "R$ •••" : money(v));
   const when = year * 12 + month - (now.getFullYear() * 12 + now.getMonth());
   const future = when > 0;
@@ -139,29 +140,34 @@ export default function FluxoDeCaixa() {
     };
   })();
 
-  /* The month day by day: running totals of what came in and what went out. */
-  const series = useMemo(() => {
-    const last = new Date(year, month + 1, 0).getDate();
-    const inPer = new Array<number>(last + 1).fill(0);
-    const outPer = new Array<number>(last + 1).fill(0);
-    for (const t of data.transactions ?? []) {
-      const d = Math.min(last, Math.max(1, dayOf(t)));
-      if (t.type === "receita") inPer[d] += Number(t.amount) || 0;
-      else outPer[d] += Number(t.amount) || 0;
-    }
-    const run = (per: number[]) => {
-      const out = [0];
-      for (let d = 1; d <= last; d++) out.push(out[d - 1] + per[d]);
-      return out;
-    };
-    return {
-      inn: run(inPer),
-      out: run(outPer),
-      split: when < 0 ? last : when > 0 ? 0 : now.getDate(),
-      labels: monthLabels(last),
-      name: (i: number) => (i === 0 ? `Início de ${SHORT[month]}` : `${i} de ${SHORT[month]}`),
-    };
-  }, [data, month, year, when, now]);
+  /* Daily Precision: what moved each day (never added up), and the same for the month before. */
+  const last = new Date(year, month + 1, 0).getDate();
+  const prevLast = new Date(year, month, 0).getDate();
+  const running = when === 0;
+  const upto = when < 0 ? last : running ? now.getDate() : 0;
+  const days = useMemo(() => daily(data.transactions ?? [], last), [data.transactions, last]);
+  const prevDays = useMemo(() => daily(prevData.transactions ?? [], prevLast), [prevData.transactions, prevLast]);
+  const cmp = useMemo(() => compare(data.transactions ?? [], prevData.transactions ?? [], month, year, now, view), [data.transactions, prevData.transactions, month, year, now, view]);
+  const insight = useMemo(() => findInsight(data.transactions ?? [], cmp, month, year, now, view), [data.transactions, cmp, month, year, now, view]);
+  const centsMoney = (c: number) => money(c / 100);
+  const veil = (text: string) => (hidden ? text.replace(/R\$\s?[\d.,]+/g, "R$ •••") : text);
+  const chartLines = [
+    ...(view !== "saidas" ? [{ per: days.inn, color: th(IN), name: "Entradas" }] : []),
+    ...(view !== "entradas" ? [{ per: days.out, color: th(OUT), name: "Saídas" }] : []),
+    ...(comparing && view !== "saidas" ? [{ per: prevDays.inn, color: th(IN), name: `Entradas de ${monthShort(prevKey.month)}.`, past: true }] : []),
+    ...(comparing && view !== "entradas" ? [{ per: prevDays.out, color: th(OUT), name: `Saídas de ${monthShort(prevKey.month)}.`, past: true }] : []),
+  ];
+  const narrow = width < 360;
+
+  /* Over to the assistant, with what this page shows already said: he opens on the subject. */
+  const talk = () => {
+    const filtro = view === "geral" ? "Geral" : view === "entradas" ? "Entradas" : "Saídas";
+    const said = insight
+      ? `${insight.lead} ${insight.strong}${insight.tail ?? ""} ${insight.body}`
+      : `Vamos olhar o seu fluxo de ${monthName(month)}.`;
+    const facts = insight?.context ?? `Fluxo de ${monthName(month)} de ${year} (${filtro}).`;
+    router.push({ pathname: "/registro", params: { say: `${said}\n\n(${facts}) Quer que eu detalhe alguma parte?` } } as never);
+  };
 
   return (
     <Room lit sky>
@@ -184,7 +190,17 @@ export default function FluxoDeCaixa() {
           <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[nums, { marginTop: 4, fontSize: 44, fontWeight: "700", letterSpacing: -1.6, color: th(view === "geral" && head.value < -0.004 ? RED : "#fff"), opacity: loading ? 0.5 : 1 }]}>
             {hidden ? "R$ •••" : `${head.value < -0.004 ? "−" : ""}${money(Math.abs(head.value))}`}
           </Text>
-          <View style={{ marginTop: 10, gap: 6 }}>
+          {/* Against the same stretch of the month before, in one quiet line. */}
+          {cmp && (
+            <Animated.Text key={`cmp-${view}-${month}-${year}`} entering={FadeIn.duration(260)} numberOfLines={1} style={[nums, { marginTop: 4, fontSize: 11, color: th(INK.soft) }]}>
+              <Text style={{ fontWeight: "600", color: th(cmp.good === null ? INK.soft : cmp.good ? IN : RED) }}>
+                {cmp.diff > 0 ? "↗ +" : cmp.diff < 0 ? "↘ −" : "→ "}
+                {hidden ? "R$ •••" : centsMoney(Math.abs(cmp.diff))}
+              </Text>
+              {` vs. ${narrow ? cmp.short : cmp.label}`}
+            </Animated.Text>
+          )}
+          <View style={{ marginTop: 12, gap: 6 }}>
             {head.lines.map((l) => (
               <View key={l.label} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: th(l.color, "bg") }} />
@@ -194,27 +210,76 @@ export default function FluxoDeCaixa() {
               </View>
             ))}
           </View>
-          <Text style={{ marginTop: 12, fontSize: 12.5, lineHeight: 17, color: th(INK.softer) }}>
-            {future
-              ? "Com o que já está agendado para pagar e o que você deve receber neste mês."
-              : "Considera só o dinheiro que entrou e saiu das contas. Compras no cartão entram quando a fatura é paga."}
-          </Text>
         </View>
 
-        {/* The month, day by day. */}
-        <Animated.View key={`${view}-${month}-${year}`} entering={FadeInDown.duration(420).easing(Easing.out(Easing.cubic))} style={{ marginTop: 10, marginHorizontal: -16 }}>
-          <LineChart
+        {/* Compare with the month before: a small control of glass, right-aligned over the chart. */}
+        {!future && (
+          <View style={{ marginTop: 18, flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 10, paddingHorizontal: 4 }}>
+            {comparing && (
+              <Animated.View entering={FadeIn.duration(200)} style={{ flexDirection: "row", alignItems: "center", gap: 10, marginRight: "auto" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                  <View style={{ width: 14, height: 2, borderRadius: 1, backgroundColor: th(INK.soft, "bg") }} />
+                  <Text style={{ fontSize: 10, color: th(INK.soft) }}>{monthName(month)[0].toUpperCase() + monthName(month).slice(1)}</Text>
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                  <View style={{ flexDirection: "row", gap: 2 }}>
+                    {[0, 1, 2].map((i) => (
+                      <View key={i} style={{ width: 3, height: 2, borderRadius: 1, backgroundColor: th(INK.soft, "bg"), opacity: 0.6 }} />
+                    ))}
+                  </View>
+                  <Text style={{ fontSize: 10, color: th(INK.soft) }}>{monthName(prevKey.month)[0].toUpperCase() + monthName(prevKey.month).slice(1)}</Text>
+                </View>
+              </Animated.View>
+            )}
+            <Pressable
+              onPress={() => setComparing((v) => !v)}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: comparing }}
+              accessibilityLabel={`Comparar com ${monthName(prevKey.month)}`}
+              hitSlop={8}
+              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 5, height: 26, paddingHorizontal: 10, borderRadius: 13, borderWidth: 0.75, borderColor: th(isLight() ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.18)", "line"), backgroundColor: th(comparing ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)", "bg"), opacity: pressed ? 0.7 : 1 })}
+            >
+              {comparing ? <Check size={11} color={th("#fff")} strokeWidth={2.4} /> : <ArrowLeftRight size={11} color={th(INK.soft)} strokeWidth={2.2} />}
+              <Text style={{ fontSize: 11, fontWeight: "500", color: th(comparing ? "#fff" : INK.soft) }}>
+                {comparing ? monthName(prevKey.month)[0].toUpperCase() + monthName(prevKey.month).slice(1) : `Comparar com ${monthShort(prevKey.month)}.`}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* The month, day by day — what moved each day, never added up. */}
+        <Animated.View key={`${view}-${month}-${year}-${comparing}`} entering={FadeIn.duration(320)} style={{ marginTop: 6, marginHorizontal: -16 }}>
+          <DailyFlowChart
             width={width}
-            span={series.inn.length - 1}
-            labels={series.labels}
-            dayName={series.name}
+            last={last}
+            upto={upto}
+            today={running ? now.getDate() : null}
+            lines={chartLines}
             hidden={hidden}
-            series={[
-              ...(view !== "entradas" ? [{ values: series.out, color: th(OUT), name: "Saídas", fill: true, split: series.split, dot: true }] : []),
-              ...(view !== "saidas" ? [{ values: series.inn, color: th(IN), name: "Entradas", fill: true, split: series.split, dot: true }] : []),
-            ]}
+            dayName={(d) => `${d} de ${monthShort(month)}.`}
+            money={centsMoney}
           />
         </Animated.View>
+
+        {/* What the chart counts, under it. */}
+        <Text style={{ marginTop: 10, paddingHorizontal: 4, fontSize: 11, lineHeight: 16.5, color: th(INK.softer) }}>
+          {future
+            ? "Com o que já está agendado para pagar e o que você deve receber neste mês."
+            : "Considera só o dinheiro que entrou e saiu das contas. Compras no cartão entram quando a fatura é paga."}
+        </Text>
+
+        {/* What Willo noticed — only when there is something worth saying. */}
+        {insight && !loading && (
+          <View style={{ marginTop: 14, marginHorizontal: -16 }}>
+            <WilloInsight
+              key={`${view}-${month}-${year}`}
+              title={{ lead: insight.lead, strong: hidden && insight.strong.startsWith("R$") ? "R$ •••" : insight.strong, tail: insight.tail, tone: insight.tone }}
+              body={veil(insight.body)}
+              onTalk={talk}
+              glow={{ dark: "100, 145, 130", light: "120, 157, 137" }}
+            />
+          </View>
+        )}
 
         {/* The month's latest entries, as the card's statement lists them. */}
         <View style={{ marginTop: 26 }}>
