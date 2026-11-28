@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { amountOf, bankOf, plain, readNotice } from "./notice.ts";
 import { guessCategory } from "./category.ts";
+import { askOf, doneOf, titleOf, type Kind } from "./lines.ts";
 
 /**
  * Willo Copilot's door for the iPhone's Wallet shortcut.
@@ -109,8 +110,19 @@ serve(async (req) => {
 
   /* What the confirmation card shows for a waiting purchase: the shop, the amount, where it was
      paid and its category, and whether debit or credit still has to be asked. */
+  const kindOf = (type: string, name: string, raw: Record<string, unknown>): Kind => {
+    if (raw.bill === true) return "boleto";
+    if (raw.transfer === true || /^transfer[eê]ncia entre/i.test(name)) return "transferencia";
+    if (type === "receita") return "entrada";
+    return /\bpix\b|transfer|\bted\b/.test(plain(`${raw.notice ?? ""} ${name}`)) ? "saida" : "compra";
+  };
+  const routeOf = (type: string, raw: Record<string, unknown>) => {
+    const end = (v: unknown) => (typeof v === "string" && v ? v : null);
+    const bank = end(raw.bank);
+    return type === "receita" ? { from: end(raw.from), to: end(raw.to) ?? bank } : { from: end(raw.from) ?? bank, to: end(raw.to) };
+  };
   async function cardOf(id: string) {
-    const { data } = await admin.from("copilot_pending").select("id, name, amount, category, raw").eq("id", id).maybeSingle();
+    const { data } = await admin.from("copilot_pending").select("id, name, amount, type, category, raw").eq("id", id).maybeSingle();
     if (!data) return null;
     let raw: Record<string, unknown> = {};
     try {
@@ -118,16 +130,24 @@ serve(async (req) => {
     } catch {
       raw = {};
     }
+    const kind = kindOf(data.type, String(data.name), raw);
+    const route = routeOf(data.type, raw);
     const text = `${raw.card ?? ""} ${raw.notice ?? ""}`;
     const known = /d[eé]bito|debit/i.test(text) ? "Débito" : /cr[eé]dito|credit/i.test(text) ? "Crédito" : "";
-    const ask = !known && (await cardsOf()).length > 0;
-    const where = String(raw.card ?? "").split(/\r?\n/)[0].replace(/\s*(d[eé]bito|cr[eé]dito)\s*/gi, " ").trim().slice(0, 30);
+    const ask = kind === "compra" && !known && (await cardsOf()).length > 0;
+    const bank = typeof raw.bank === "string" ? raw.bank : String(raw.card ?? "").split(/\r?\n/)[0].replace(/\s*(d[eé]bito|cr[eé]dito)\s*/gi, " ").trim().slice(0, 30) || null;
     return {
       id: data.id,
-      name: String(data.name),
-      amount: `R$ ${Number(data.amount).toFixed(2).replace(".", ",")}`,
-      detail: [where, known || (ask ? "" : "Débito"), data.category].filter(Boolean).join(" · "),
+      kind,
+      title: titleOf(kind),
+      line: askOf(kind, bank, kind === "transferencia" ? route : undefined),
+      name: kind === "transferencia" ? [route.from, route.to].filter(Boolean).join(" → ") || "Entre suas contas" : String(data.name),
+      amount: raw.noAmount === true ? "Valor a definir" : `R$ ${Number(data.amount).toFixed(2).replace(".", ",")}`,
+      income: data.type === "receita" && kind !== "transferencia",
+      detail: [bank, known, data.category].filter(Boolean).join(" · "),
       ask,
+      /* A bill needs its due date, and a purchase debit or credit: answered in the app. */
+      inApp: kind === "boleto" || ask,
     };
   }
 
@@ -154,6 +174,50 @@ serve(async (req) => {
       raw = p.raw ? JSON.parse(p.raw) : {};
     } catch {
       raw = {};
+    }
+    const kind = kindOf(p.type, p.name, raw);
+    const value = `R$ ${Number(p.amount).toFixed(2).replace(".", ",")}`;
+    /* A bill is scheduled in the app, with its due date. */
+    if (kind === "boleto") return json({ ok: false, openApp: true, message: "Abra o Willo para escolher a data do boleto." });
+    if (kind === "transferencia") {
+      const { data: accs } = await admin.from("accounts").select("id, name, type, is_default, is_active").eq("user_id", userId);
+      const usable = ((accs ?? []) as { id: string; name: string; type: string | null; is_default: boolean | null; is_active: boolean | null }[]).filter((a) => a.type !== "investment" && a.is_active !== false);
+      const business = (s: string) => /\bpj\b|empresa/i.test(s);
+      const find = (bank: string | null) => (bank ? (usable.find((a) => business(a.name) === business(bank) && plain(a.name).split(/\s+/).some((w) => w.length > 2 && plain(bank).includes(w))) ?? null) : null);
+      const route = routeOf(p.type, raw);
+      /* A bank not in Willo yet: asked about in the app. */
+      if ((route.from && !find(route.from)) || (route.to && !find(route.to))) return json({ ok: false, openApp: true, message: "Essa conta ainda não está no seu Willo. Abra o app para adicionar." });
+      const main = (not: string | null) => usable.filter((a) => a.id !== not).sort((x, y) => Number(!!y.is_default) - Number(!!x.is_default) || Number(y.type === "checking") - Number(x.type === "checking"))[0]?.id ?? null;
+      let from = find(route.from)?.id ?? null;
+      let to = find(route.to)?.id ?? null;
+      if (!route.from && to && p.type === "receita") from = main(to);
+      if (!route.to && from && p.type === "despesa") to = main(from);
+      if (!from && !to) return json({ ok: false, openApp: true, message: "Abra o Willo para escolher as contas." });
+      const at = new Date(p.occurred_at);
+      const local = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", ...o }).format(at);
+      const { data: tx, error: txError } = await admin
+        .from("transactions")
+        .insert({
+          user_id: userId,
+          name: "Transferência entre contas",
+          type: "transferencia",
+          amount: Number(p.amount),
+          category: "Transferência entre contas",
+          date: local({ year: "numeric", month: "2-digit", day: "2-digit" }),
+          time: local({ hour: "2-digit", minute: "2-digit", hour12: false }).replace(/^24/, "00"),
+          status: "pago",
+          account_id: from,
+          to_account_id: to,
+          payment_method: "conta",
+          recurrence_type: "unica",
+          observation: "Willo Copilot",
+        })
+        .select("id")
+        .single();
+      if (txError || !tx) return json({ error: "Não foi possível registrar agora. Ela continua no Willo Copilot." }, 500);
+      await admin.from("copilot_pending").update({ status: "confirmado", transaction_id: tx.id }).eq("id", p.id);
+      const said = doneOf("transferencia", { amount: value, who: p.name, where: route.from && route.to ? `do ${route.from} pro ${route.to}` : null });
+      return json({ ok: true, title: said.title, message: said.body });
     }
     const walletText = `${raw.card ?? ""} ${raw.notice ?? ""}`;
     const asked = body.method === "conta" || body.method === "cartao" ? (body.method as "conta" | "cartao") : null;
@@ -220,9 +284,8 @@ serve(async (req) => {
       .update({ status: "confirmado", transaction_id: tx.id, category, payment_method: credit ? "cartao" : "conta", account_id: accountId, credit_card_id: cardId })
       .eq("id", p.id);
 
-    const value = `R$ ${Number(p.amount).toFixed(2).replace(".", ",")}`;
-    const title = p.type === "receita" ? "Receita registrada" : /pix/i.test(walletText) ? "Pix registrado" : "Compra registrada";
-    return json({ ok: true, title, message: `${value} ${p.type === "receita" ? "de" : "na"} ${name}, em ${category}.` });
+    const said = doneOf(kind, { amount: value, who: name, where: credit ? `na fatura` : kind === "saida" ? (typeof raw.bank === "string" ? `do ${raw.bank}` : null) : `em ${category}` });
+    return json({ ok: true, title: said.title, message: said.body });
   }
 
   /* A bank's notification. */
@@ -257,7 +320,7 @@ serve(async (req) => {
 
     /* A new bill found by the CPF: offered to be scheduled. The amount may not be in the notice. */
     if (n.bill) {
-      const { error: billError } = await admin.from("copilot_pending").insert({
+      const { data: billRow, error: billError } = await admin.from("copilot_pending").insert({
         user_id: userId,
         name: n.name.slice(0, 80),
         amount: n.amount > 0 ? Math.round(n.amount * 100) / 100 : 0.01,
@@ -266,9 +329,9 @@ serve(async (req) => {
         occurred_at: new Date().toISOString(),
         source: "aviso",
         raw: JSON.stringify({ bill: true, noAmount: !(n.amount > 0), bank: bankOf(whole), notice: whole.slice(0, 300) }).slice(0, 500),
-      });
-      if (billError) return json({ error: "Não foi possível guardar o boleto" }, 500);
-      return json({ ok: true, message: `Novo boleto de ${n.name} no Willo Copilot` });
+      }).select("id").single();
+      if (billError || !billRow) return json({ error: "Não foi possível guardar o boleto" }, 500);
+      return json({ ok: true, message: `Novo boleto de ${n.name} no Willo Copilot`, pending: await cardOf(billRow.id) });
     }
 
     /* Money between the person's own accounts: the bank that received it names the sender, and
@@ -370,11 +433,13 @@ serve(async (req) => {
         })
         .eq("id", keep);
       await admin.from("copilot_pending").update({ status: "ignorado" }).eq("id", drop);
-      return json({ ok: true, merged: true, message: `Transferência entre suas contas · R$ ${n.amount.toFixed(2).replace(".", ",")} no Willo Copilot` });
+      /* The other notice of the pair shows the card; this one stays quiet. */
+      return json({ ok: true, merged: true, quiet: keep !== made.id, message: `Transferência entre suas contas · R$ ${n.amount.toFixed(2).replace(".", ",")} no Willo Copilot`, pending: keep === made.id ? await cardOf(keep) : null });
     }
-    if (ownTransfer) return json({ ok: true, message: `Transferência entre suas contas · R$ ${n.amount.toFixed(2).replace(".", ",")} no Willo Copilot` });
+    const card = await cardOf(made.id);
+    if (ownTransfer) return json({ ok: true, message: `Transferência entre suas contas · R$ ${n.amount.toFixed(2).replace(".", ",")} no Willo Copilot`, pending: card });
     const what = n.type === "receita" ? "entrada" : n.method === "conta" ? "no débito" : n.method === "cartao" ? "no crédito" : "";
-    return json({ ok: true, message: `${n.name} · R$ ${n.amount.toFixed(2).replace(".", ",")} ${what} no Willo Copilot`.replace("  ", " ") });
+    return json({ ok: true, message: `${n.name} · R$ ${n.amount.toFixed(2).replace(".", ",")} ${what} no Willo Copilot`.replace("  ", " "), pending: card });
   }
 
   console.log("copilot in", JSON.stringify(Object.fromEntries(Object.entries(body).map(([k, v]) => [k, k === "code" ? "…" : typeof v === "string" ? `text(${v.length})` : typeof v]))));
